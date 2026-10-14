@@ -1,0 +1,31 @@
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Future application dependencies and build outputs
+node_modules/
+.expo/
+Pods/
+DerivedData/
+build/
+dist/
+coverage/
+*.ipa
+*.xcarchive
+*.xcuserstate
+xcuserdata/
+
+# Local configuration and signing material
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.mobileprovision
+*.keystore
+credentials.json
+
+# Personal import / integration fixtures
+private-fixtures/
+local-config/
