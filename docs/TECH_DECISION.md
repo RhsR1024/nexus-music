@@ -93,3 +93,7 @@ flowchart TD
 ## 功能级选型要求
 
 用户补充了wtfdelphia LX和自有Wayferar-Music，并要求连同悦音、Q-1515、CyMusic在后续每项功能实现前详细比较实现/维护/Android移植后再采纳。见 [REFERENCE_COMPARISON.md](REFERENCE_COMPARISON.md)。不以当前候选工程基线替代生产后端和宿主的功能级决策。
+
+## 多源、音质与PCM约束
+
+用户已明确多源同时启用、自动择源、同档跨源后降档，见 [决策0001](decisions/0001-multi-source-routing.md)。真实频谱/EQ首版必需；候选播放器必须验证实际PCM与音频处理路径，不能只因普通播放可用就锁定后端。

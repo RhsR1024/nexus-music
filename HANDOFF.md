@@ -1,6 +1,6 @@
 # 音枢 NexusMusic 交接备忘录
 
-更新日期：2026-10-14，Asia/Shanghai。此文件是后续开发的基础上下文，接手者应完整阅读。
+更新日期：2026-10-15，Asia/Shanghai。此文件是后续开发的基础上下文，接手者应完整阅读。
 
 ## 当前任务与成果
 
@@ -102,3 +102,9 @@ Navidrome 首选公开 Subsonic / OpenSubsonic `/rest/*`，探测扩展，避免
 ## SSH与远程同步接续（2026-10-15）
 
 已验证SSH认证为RhsR1024，origin切为git@github.com:RhsR1024/nexus-music.git；main跟踪origin/main，基线6ffa60b已push。Wayferar-Music已通过SSH取得，固定main / 8e47cdc701cdbb772577b2bf7abb699e285b0fa6，按README/docs/script稀疏检出且工作树干净。已核对构建文档的Smali权威与Java参考边界；后续按功能补取源码和测试。此前认证阻碍已解除，不再重复要求用户配置SSH。
+
+## 2026-10-15继续实施要求
+
+用户要求持续完成全部阶段并阶段提交push。多LX源批量启用，参考Wayferar-Music；用户音质偏好优先，同档跨源全部失败后逐级降档。临时缓存先做；保存离线、下载列表、暂停/重试、容量管理最后实现。Navidrome允许星标及编辑服务端歌单。真实频谱/EQ首版必需，不后置，播放器选型须验证PCM/EQ路径。上述决定取代旧的对应待决描述。
+
+本批新增SourceRegistry/MultiSourceResolver与Quality模型：各源代次、独立启停、批量部分成功，同档跨源后降档，超时/取消/旧源结果隔离；31项测试及类型检查通过。尚未接入生产原生宿主或UI，不能标记M3完成。TASK_PLAN新增M10最后实现迁移/离线；PRODUCT_SCOPE新增F21频谱EQ、F22下载管理，IMPLEMENTATION_PLAN同步验收。
