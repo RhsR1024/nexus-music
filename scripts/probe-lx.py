@@ -10,7 +10,7 @@ binary = root / 'build/lx-probe'
 report = []
 for path in sorted(folder.glob('*.js')):
     try:
-        run = subprocess.run([str(binary), str(root / 'native/script-host/bootstrap.js'), str(path)],
+        run = subprocess.run([str(binary), str(root / 'modules/nexus-native/ios/bootstrap.js'), str(path)],
                              capture_output=True, text=True, timeout=10)
         status = json.loads(run.stdout.strip()) if run.returncode == 0 else {'nativeProcessFailed': True}
     except subprocess.TimeoutExpired:

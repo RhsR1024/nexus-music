@@ -1,0 +1,6 @@
+{
+  "name": "nexus-native",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NexusMusic isolated LX runtime and native audio adapters"
+}

@@ -156,3 +156,15 @@ test('disable during initialization rejects late capabilities', async () => {
   assert.equal(registry.getSnapshot()[0]!.status, 'disabled');
   assert.deepEqual(registry.getSnapshot()[0]!.capabilities, []);
 });
+
+test('observer disabling a source during publication cannot leave an orphan runtime', async () => {
+  let initialized = 0;
+  const registry = new SourceRegistry({ initialize: async () => { initialized++; return capabilities; }, destroy: () => {} });
+  registry.register({ id: 'a', name: 'a', script: '// fixture' });
+  registry.subscribe(() => {
+    if (registry.getSnapshot()[0]?.status === 'initializing') void registry.setEnabled('a', false);
+  });
+  assert.equal(await registry.setEnabled('a', true), false);
+  assert.equal(initialized, 0);
+  assert.equal(registry.getSnapshot()[0]!.status, 'disabled');
+});

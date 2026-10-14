@@ -56,7 +56,7 @@
 
 - Expo54/RN0.81仅为已通过本机构建的工程候选基线，不自动决定播放器或音源引擎。
 - PlaybackBackend、MediaResolver、MetadataProvider、ScriptHost各自分离；队列与播放意图只有一个权威。
-- 现有LX bootstrap/探针是原创协议实验，没有复制上述native模块；生产桥与AES/RSA/zlib尚未采纳任何第三方实现。
+- LX bootstrap/Swift宿主为原创实现，没有复制上述native模块；生产桥与AES/RSA/zlib采用系统框架，逐字节测试通过；App导入/真实曲目播放待验收，见决策0002及LX_HOST_PROGRESS。
 - 最新功能优先级：LX→核心播放→Navidrome→在线/UI/歌词缓存；漫途导入后置。
 
 2026-10-15：五个参考仓库均已通过本地Git取得。Wayferar-Music为SSH部分克隆，当前稀疏检出README、docs及app/src/main/assets/script；未检出根目录大型APK。工作树干净，后续按具体功能补取对应Smali/importer源码及测试，不把“已取得参考仓库”当作已完成逐项比较或运行验收。

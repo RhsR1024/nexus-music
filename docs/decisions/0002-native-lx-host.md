@@ -1,0 +1,15 @@
+# iOS LX宿主实现决定
+
+状态：实施中；原生构建和真实曲目联调分别验收。
+
+固定参考提交见REFERENCE_COMPARISON。Q将网络/加密与AppDelegate混合，wtf拆分UserApiModule但Rust增加工具链，Cy独立runtime有generation但框架版本高；悦音探测器不提供完整宿主；Wayferar多源语义由决策0001承接。采用原创Swift JavaScriptCore运行时，通过本地Expo模块接入当前锁定工程；各源拥有独立串行队列、JSContext、临时URLSession、计时器与请求表。Android后续实现同一TS transport接口，Swift层不声称可直接移植。
+
+协议参考wtf assets/script/user-api-preload.js中utils及request定义，代码不直接复制：AES-128-CBC使用PKCS7，AES-128-ECB无padding；RSA公开密钥PKCS1/SPKI、无padding左补零；zlib提供Promise字节结果。使用Apple CommonCrypto/Security和系统zlib，不引入第三方Rust/JS加密包；用Node crypto/zlib作独立逐字节对照。
+
+bootstrap单一来源移动至modules/nexus-native/ios，Pod资源与离线探针共用。原生层不获得App账号仓储；URLSession不共享App cookie/cache。网络限HTTP(S)，支持headers/body/form/formData和二进制响应；限制响应、同时请求和计时器数量。错误只输出固定代码，不输出URL、原始异常、脚本或认证头。
+
+停用/替换销毁该源网络与计时器、拒绝待处理请求；TS路由额外校验revision。取消一次解析立即拒绝该请求并忽略迟到结果；脚本自身lx.request返回的取消函数终止对应HTTP。跨await的任意脚本HTTP不能可靠归属某个musicUrl Promise，不能宣称取消单次解析已中断其全部底层请求；HTTP本身有有限超时，销毁源会全部中止。
+
+JavaScriptCore没有在此使用私有强制中断API。无限循环脚本可能占用自身运行队列；独立context不是操作系统安全沙箱。后续真实脚本验证必须记录超时及资源行为，不能将离线初始化算作完整兼容。
+
+iOS的ATS允许用户自定义HTTP服务/脚本地址，保留TLS证书验证；不硬编码某个私有服务器的例外域名。局域网权限描述与app.json/受版本控制的Info.plist保持一致。关闭ATS的强制HTTPS要求不表示跳过HTTPS证书验证。

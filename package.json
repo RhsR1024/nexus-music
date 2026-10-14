@@ -15,7 +15,8 @@
     "check": "npm run typecheck && npm test",
     "ios:pods": "bash scripts/pods.sh",
     "ios:build": "bash scripts/build-ios.sh",
-    "lx:probe": "bash scripts/probe-lx.sh"
+    "lx:probe": "bash scripts/probe-lx.sh",
+    "test:native": "bash scripts/test-native.sh"
   },
   "dependencies": {
     "expo": "54.0.37",

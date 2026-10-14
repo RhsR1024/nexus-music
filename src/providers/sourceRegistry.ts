@@ -49,10 +49,11 @@ export class SourceRegistry {
     if (enabled && previous.status === 'ready' && previous.enabled) return true;
     this.invalidate(id);
     const revision = (this.revisions.get(id) ?? 0) + 1; this.revisions.set(id, revision);
+    const pending = new AbortController();
+    if (enabled) this.pending.set(id, pending);
     this.states.set(id, { ...previous, revision, enabled, status: enabled ? 'initializing' : 'disabled', capabilities: [] });
     this.publish();
     if (!enabled) return true;
-    const pending = new AbortController(); this.pending.set(id, pending);
     try {
       const capabilities = await bounded(signal => this.lifecycle.initialize(source, revision, signal), pending.signal, this.timeoutMs);
       if (pending.signal.aborted || this.states.get(id)?.revision !== revision) return false;

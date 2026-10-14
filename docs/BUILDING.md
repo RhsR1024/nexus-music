@@ -9,6 +9,7 @@ cd /Users/ningli/WorkSpace/NexusMusic
 source /Users/ningli/WorkSpace/Tools/env.sh
 npm ci
 npm run check
+npm run test:native
 npm run ios:pods
 npm run ios:build
 ```
@@ -31,3 +32,7 @@ Release模拟器产物：`build/DerivedData/Build/Products/Release-iphonesimulat
 - LX源/真实Navidrome/签名/后台播放：各自单独记录，真实手机不能由模拟器替代。
 
 LX离线探针与进度见 [LX_HOST_PROGRESS.md](LX_HOST_PROGRESS.md)。
+
+`modules/nexus-native/ios`保存原创Swift宿主与单一bootstrap资源，Expo默认扫描本地modules目录；新增/修改Podspec后运行ios:pods，不重新prebuild。原生工具测试在Mac上用同一Swift实现对照Node crypto/zlib及本地HTTP服务；不能替代iOS设备验证。
+
+实际脚本初始化（会执行脚本网络请求）：先运行test:native编译工具，再运行`python3 scripts/probe-lx-native.py`。仅在本机生成去除URL/原始异常的报告；resource、build和local-config保持Git排除。

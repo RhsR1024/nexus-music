@@ -8,7 +8,14 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.nexusmusic.app",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        },
+        "NSLocalNetworkUsageDescription": "连接你配置的局域网音乐服务器并播放音乐。"
+      }
     },
     "plugins": []
   }

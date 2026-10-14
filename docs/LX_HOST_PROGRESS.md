@@ -1,6 +1,23 @@
 # LX 宿主实现与验证边界
 
-首批代码采用独立 JavaScriptCore 兼容探针和原创建议宿主协议层；尚未接入应用原生模块。用户要求 LX 优先，测试资源保持在 Git 忽略的 resource/V261008。
+## 2026-10-15原生宿主增量（当前状态）
+
+- `modules/nexus-native`本地Expo模块，Pods自动发现；每源独立JSContext/串行队列/临时URLSession/计时器，registry维护revision。bootstrap为Pod资源与Mac工具的单一来源。
+- HTTP(S)、headers/body/form/formData、JSON/二进制、取消/超时；每源最多16个在途HTTP、响应8MiB上限、256个计时器；不共享App cookies/cache，错误不输出URL/原始脚本异常。
+- CommonCrypto AES-128-CBC/PKCS7及AES-128-ECB/NoPadding；Security RSA无padding（PKCS1/SPKI）；MD5/安全随机/UTF8/Base64/hex/binary；系统zlib压缩/解压/gzip解压。
+- SourceRegistry批量部分成功与版本隔离；MultiSourceResolver同档跨源后降档，保留原始档位传参。TS原生adapter按source/revision/requestID关联取消。来源/顺序持久化和管理UI尚未接入。
+- `npm run check`：类型检查、35项测试通过。`npm run test:native`：24项字节/crypto/zlib与Node独立对照；真实Mac JSC→URLSession→本地HTTP验证表单/multipart/JSON/二进制/大小上限/超时/取消；同进程双context隔离、取消后继续请求、销毁/迟到初始化通过。
+- Pods及iOS Release模拟器编译通过，包含NexusNative和bootstrap；安装/启动通过。尚未验收App内源管理和每个桥方法，不能将编译等同完整播放链路。
+- `python3 scripts/probe-lx-native.py`使用真实HTTP/计时器初始化24份：23份成功，一份SCRIPT_TIMEOUT。报告build/logs/lx-native-initialization.json只含文件名/平台/安全状态，保持Git忽略。**23份初始化不表示23份可播放或全协议兼容。**
+- 下一步：文件/URL导入、元信息/持久化/批量管理；真实五平台MusicInfo→musicUrl→单一播放后端；真实PCM频谱/EQ及锁屏下一首。剩余超时继续诊断，不默认判定脚本废弃。
+
+限制：Buffer仍是字节子集；单次解析取消立即拒绝并忽略迟到结果，跨await的任意脚本HTTP无法可靠归属该Promise，不承诺中断其全部HTTP；脚本取消函数和源销毁实际终止网络，其他请求受超时限制。JSC不是系统沙箱，未用私有强制中断API，无限循环可能占用自身队列。Mac工具以隔离进程+25秒上限保护探针，不表示App具备强制CPU中断。真实iOS服务/后台/手机验收仍待进行。
+
+实现原创，不复制第三方preload/加密代码；五项目比较与协议证据见[REFERENCE_COMPARISON](REFERENCE_COMPARISON.md)、[决策0001](decisions/0001-multi-source-routing.md)、[决策0002](decisions/0002-native-lx-host.md)。Android未来按相同transport契约替换原生实现。
+
+## 首批离线基线历史记录
+
+以下是此前离线探针记录，已实现内容以上方增量为准。测试资源保持在Git忽略的resource/V261008。
 
 ## 已实现 / 已验证
 

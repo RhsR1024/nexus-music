@@ -24,7 +24,7 @@ function host() {
       },
     },
   });
-  runInContext(readFileSync(new URL('../native/script-host/bootstrap.js', import.meta.url), 'utf8'), context);
+  runInContext(readFileSync(new URL('../modules/nexus-native/ios/bootstrap.js', import.meta.url), 'utf8'), context);
   return { context, messages, requests, aborted, timers };
 }
 

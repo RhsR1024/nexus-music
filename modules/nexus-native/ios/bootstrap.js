@@ -34,15 +34,20 @@
       return utility('encode', { bytes: Array.from(bytes(input)), encoding });
     },
   });
-  const unsupported = name => () => { throw new Error(`Host capability unavailable: ${name}`); };
   const utils = Object.freeze({
     buffer,
     crypto: Object.freeze({
       md5: input => utility('md5', { bytes: Array.from(bytes(input)) }),
       randomBytes: count => new Uint8Array(utility('randomBytes', { count })),
-      aesEncrypt: unsupported('AES'), rsaEncrypt: unsupported('RSA'),
+      aesEncrypt: (input, mode, key, iv = '') => new Uint8Array(utility('aesEncrypt', {
+        bytes: Array.from(bytes(input)), mode, key: Array.from(bytes(key)), iv: Array.from(bytes(iv)),
+      })),
+      rsaEncrypt: (input, key) => new Uint8Array(utility('rsaEncrypt', { bytes: Array.from(bytes(input)), key })),
     }),
-    zlib: Object.freeze({ inflate: unsupported('zlib.inflate'), deflate: unsupported('zlib.deflate') }),
+    zlib: Object.freeze({
+      inflate: async input => new Uint8Array(utility('inflate', { bytes: Array.from(bytes(input)) })),
+      deflate: async input => new Uint8Array(utility('deflate', { bytes: Array.from(bytes(input)) })),
+    }),
   });
   globalThis.setTimeout = (callback, delay = 0, ...args) => {
     if (typeof callback !== 'function') throw new Error('Timer callback required');
@@ -82,7 +87,8 @@
       if (typeof callback !== 'function') throw new Error('Request callback required');
       const id = ++sequence;
       httpCallbacks.set(id, callback);
-      native.http(id, String(url), JSON.stringify(options || {}));
+      native.http(id, String(url), JSON.stringify(options || {}, (_, value) =>
+        value instanceof ArrayBuffer || ArrayBuffer.isView(value) ? Array.from(bytes(value)) : value));
       return () => { httpCallbacks.delete(id); native.abortHttp(id); };
     },
   });
@@ -93,6 +99,8 @@
   };
   globalThis.__nexusHttp = (id, error, response) => {
     const callback = httpCallbacks.get(id); httpCallbacks.delete(id);
+    if (response?.__binary) response.body = bytes(response.body, 'base64');
+    if (response) delete response.__binary;
     if (callback) callback(error ? new Error(error) : null, response, response?.body);
   };
   globalThis.__nexusInvoke = (id, payload) => {
