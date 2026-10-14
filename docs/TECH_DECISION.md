@@ -85,3 +85,11 @@ flowchart TD
 - 若明确永远只做iOS且原生定制优先于现有资产复用，重新评估SwiftUI/UIKit。
 - 若未来Android变为同步首发、团队以Dart为主且愿意重写providers/宿主桥，重新评估Flutter。
 - 若RN在目标真机的可重复基准中无法满足歌词/手势/后台要求，先定位具体瓶颈；不能仅因Debug卡顿就重写全项目。
+
+## 开始实施的候选基线
+
+用户已授权开始实施，采用 Expo54 / RN0.81 候选验证本机构建；官方版本表最低 Xcode16.1，仍须实际构建。选择维护并提交 ios/ 工程，初建只生成一次，不执行覆盖性 clean prebuild。详细版本和验收见 TASK_PLAN.md、package-lock.json 与后续构建记录。播放器仍需独立验证后锁定，未直接复制参考依赖图。
+
+## 功能级选型要求
+
+用户补充了wtfdelphia LX和自有Wayferar-Music，并要求连同悦音、Q-1515、CyMusic在后续每项功能实现前详细比较实现/维护/Android移植后再采纳。见 [REFERENCE_COMPARISON.md](REFERENCE_COMPARISON.md)。不以当前候选工程基线替代生产后端和宿主的功能级决策。

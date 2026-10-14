@@ -29,3 +29,9 @@ credentials.json
 # Personal import / integration fixtures
 private-fixtures/
 local-config/
+
+# User-provided third-party music scripts; may include private keys/tokens
+resource/
+
+# Local Xcode Node location
+.xcode.env.local

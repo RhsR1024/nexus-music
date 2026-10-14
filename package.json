@@ -1,0 +1,31 @@
+{
+  "name": "nexus-music",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "engines": {
+    "node": ">=24.14.0 <25"
+  },
+  "packageManager": "npm@11.9.0",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "check": "npm run typecheck && npm test",
+    "ios:pods": "bash scripts/pods.sh",
+    "ios:build": "bash scripts/build-ios.sh",
+    "lx:probe": "bash scripts/probe-lx.sh"
+  },
+  "dependencies": {
+    "expo": "54.0.37",
+    "expo-status-bar": "3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.17",
+    "typescript": "5.9.3",
+    "@types/node": "24.10.0"
+  }
+}
