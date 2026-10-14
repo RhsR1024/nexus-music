@@ -81,3 +81,7 @@
 ## 验证边界
 
 本轮完成只读源码/文档研究、远程空仓库克隆和Markdown整理。未运行候选应用、未安装依赖、未编译iOS、未连接用户服务器/手机、未实测音频或续签。旧报告的Windows研究目录不是交接所必需输入；所需公开证据已固定链接，真实私人样本在实施阶段再获取。
+
+## 本机参考仓库接续（2026-10-15）
+
+悦音、Q-1515 ios-adaptation、wtfdelphia和CyMusic已完整克隆到本机ReferenceProject；固定提交与对比规则见 [REFERENCE_COMPARISON.md](REFERENCE_COMPARISON.md)。自有Wayferar-Music也已通过SSH取得，main / `8e47cdc701cdbb772577b2bf7abb699e285b0fa6`，当前检出README、docs和音源preload，其他Smali/importer文件按功能补取，避免下载根目录APK。README和docs/BUILDING.md已核实：正式构建以Smali及可编译importer源码为准，不能整体编译反编译Java。没有在本机运行参考项目构建，也没有复制其业务实现。

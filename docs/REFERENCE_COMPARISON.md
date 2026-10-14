@@ -10,7 +10,7 @@
 | Q-1515 `q1515-lx-music-mobile` | ios-adaptation / 547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a | 完整LX模型、宿主契约、原生音频/FLAC路径 |
 | wtfdelphia `wtfdelphia-lx-music-mobile` | main / 6624ab58cbd2f5bda52ab8006912d3c60dc1f847 | 模块化iOS宿主、Rust加密边界、脚本回归/维护组织 |
 | CyMusic `Cymusic` | main / bf0d4694acb52973bcd594d31b3c61f655e166cb | 独立JSC与生命周期、业务队列/播放意图、文件缓存与系统媒体控制 |
-| 自有车机恢复项目 `Wayferar-Music` | 当前Git与连接器均未获访问，待认证后拉取 | 既有用户行为与兼容需求的权威参考，尤其音源/队列/歌词/备份；不编译其反编译Java或将车机功能带入iOS |
+| 自有车机恢复项目 `Wayferar-Music` | main / 8e47cdc701cdbb772577b2bf7abb699e285b0fa6 | 既有用户行为与兼容需求的权威参考，尤其音源/队列/歌词/备份；不编译其反编译Java或将车机功能带入iOS |
 
 不得只看默认分支README否定fork的iOS实现，也不得未经检查切到其他分支后沿用本表证据。需要新版本时记录新提交及差异，再跑音枢自己的回归。
 
@@ -36,7 +36,7 @@
 | Q-1515 | RN0.73.11与新架构基线差距；AppDelegate承载多个模块，移植不能整文件覆盖 | 上游有Android协议资产；iOS自定义FLAC/DSP等需等价Android实现或明确能力差异 |
 | wtfdelphia | RN0.73.11；iOS模块拆分、spec/回归和上游合并记录可供学习；Rust加密与fork依赖增加工具链成本 | Android仍有QuickJS等实现；文档说明Rust当前仅供iOS，不能宣称已双端共享加密库。复用前需逐字节双端对照 |
 | CyMusic | Expo57/RN0.86.3；维护文档记录Xcode26.6和严格补丁，超出当前本机已验收基线；RNTP5另有独立许可 | TS与后端抽象有共享价值；iOS本地模块需要Android对应实现。新版本依赖不能未经构建证明直接复制 |
-| 自有恢复工程 | 旧交接记录提示需辨别Smali权威实现与Java参考；本次原仓库未取得，待认证后复核，不能把反编译代码当可编译源码 | 用作已有行为/测试向量基线；ECARX、Android文件路径、权限和后台服务不能直接搬到iOS |
+| 自有恢复工程 | 已阅读README与docs/BUILDING.md：正式入口tools/build_core_apk.ps1，app/src/main/smali为权威，Java为反编译参考；Windows构建工具链不能直接当作iOS工程 | 用作已有行为/测试向量基线；ECARX、Android文件路径、权限和后台服务不能直接搬到iOS |
 
 “更易维护/移植”在这里是基于职责边界、依赖数量与版本差距的工程判断；实际成本要用最小移植和双端契约证据复核，不以星数或最新版本排名。
 
@@ -58,3 +58,5 @@
 - PlaybackBackend、MediaResolver、MetadataProvider、ScriptHost各自分离；队列与播放意图只有一个权威。
 - 现有LX bootstrap/探针是原创协议实验，没有复制上述native模块；生产桥与AES/RSA/zlib尚未采纳任何第三方实现。
 - 最新功能优先级：LX→核心播放→Navidrome→在线/UI/歌词缓存；漫途导入后置。
+
+2026-10-15：五个参考仓库均已通过本地Git取得。Wayferar-Music为SSH部分克隆，当前稀疏检出README、docs及app/src/main/assets/script；未检出根目录大型APK。工作树干净，后续按具体功能补取对应Smali/importer源码及测试，不把“已取得参考仓库”当作已完成逐项比较或运行验收。

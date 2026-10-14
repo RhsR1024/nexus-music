@@ -9,7 +9,7 @@
 | 项目 | 实测 |
 | --- | --- |
 | 目录 | /Users/ningli/WorkSpace/NexusMusic，本机 SSD |
-| Git 拉取 | SSH 公钥认证失败；HTTPS 克隆成功，origin 使用 HTTPS |
+| Git 拉取 | 最初SSH认证失败，以HTTPS克隆；2026-10-15已验证SSH认证与push，origin切为SSH |
 | 硬件 | MacBookPro15,1，Intel 六核 i7 2.6 GHz，16 GB RAM，x86_64 |
 | macOS | 15.8.1，24H32 |
 | 磁盘 | 可用约 120 GiB（安装工具前） |

@@ -1,6 +1,8 @@
 # 本机GitHub认证与阶段提交
 
-已检测到Git提交身份，当前分支main，origin为HTTPS。原有RSA公钥尚未通过GitHub认证，ssh-agent没有已加载密钥。建议为本机新建独立Ed25519密钥；私钥留在用户.ssh，不能放入仓库或Tools公共资料。
+2026-10-15已验证SSH认证为RhsR1024，origin已切换到git@github.com:RhsR1024/nexus-music.git，main已设置跟踪origin/main；工程基线提交6ffa60b已成功push。用户不需要重复执行下面的初次配置步骤。
+
+以下保留初次配置方法。私钥留在用户.ssh，不能放入仓库或Tools公共资料。
 
 ## 用户在Mac终端完成
 
