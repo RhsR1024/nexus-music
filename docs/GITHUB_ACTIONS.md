@@ -34,3 +34,9 @@ main推送、PR及手动Run workflow都会触发 `.github/workflows/ios.yml`：
 ## 本地命令
 
 `npm ci` → `npm run check` → `npm run ios:pods` → `npm run ios:archive`。脚本使用相邻Tools/env.sh（若存在），也支持NEXUS_TOOLS_ENV；CI使用runner工具链。显式DEVELOPER_DIR优先。所有构建产物仍在build内，不提交Git。没有iOS27 SDK的本机继续正常编译26.2 SDK，不伪造清单中的SDK版本。
+
+## 阶段构建排队（2026-10-15）
+
+为保留阶段验收，concurrency 同分支设置 cancel-in-progress: false、queue: max：新的阶段 push 进入队列，不中断当前构建，也不以最新 pending 替换前一个 pending。GitHub 当前官方文档支持最多100个等待运行，达到上限后新的运行会取消；不能承诺无限排队或严格按提交时间排序。依据：https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency 。
+
+S1 2cb91a6 对应运行38728228483仍在验证iOS App。五皮肤功能提交b7d7226本地Release UI通过，并生成未签名IPA：build/distribution/NexusMusic-unsigned.ipa，arm64/iphoneos26.2，清洁构建清单记录b7d7226，SHA256 a5fb7627e40ab3ae403241b6dee7b99461126c08d227cf8b0ee46a429efdc644。此包不冒充云端iOS27包，云端后续运行状态另行记录。
