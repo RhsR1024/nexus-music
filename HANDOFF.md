@@ -144,3 +144,5 @@ scripts/probe-lx-resolve.py仅在忽略目录读取真实备份作私密WY样本
 云端99d3487运行 https://github.com/RhsR1024/nexus-music/actions/runs/38691008776 已失败：Linux、原生检查和Release模拟器编译通过，启动时iOS27因缺少UIScene生命周期终止App，两个UI测试失败，尚未进入IPA归档。诊断产物11953711775的xcresult已下载导出到忽略的build目录，标准错误明确为`UIScene life cycle is required for apps built with this SDK`。现维护AppDelegate.swift内单场景适配与Info.plist声明，窗口改由场景创建，保留同一React surface及链接/前后台转发；本地/云端复验分别记录到GITHUB_ACTIONS。之前bae412f因CFPropertyList3.0.9 Ruby上限失败，34cdbeb修复为3.0.8；随后Yoga动态podspec checksum不同，99d3487只放行已识别两种Yoga checksum，其余Pod锁变化仍失败。复验运行期间不要推送无关功能取消构建。用户已选择稍后连接手机。
 
 新功能：封面缓存和Player/Navidrome专辑展示；音乐库虚拟列表/批量操作、LX v2 JSON/LXMC预览原子追加；源指纹快照固定防更新竞态；恢复只隔离格式错误，IO/原生故障不移动数据；MG榜单/艺术家和MRC字段修复。主功能仍需收尾QRC网络密文、KG分类/分类筛选及长列表，随后进入M10漫途迁移/离线下载。不得把原生PCM或云端编译代替手机锁屏十首、真实Navidrome账号和签名验收。
+
+云端2e7da07运行38695984346已全部成功，iOS27 App界面/播放测试和设备IPA归档上传通过，UIScene启动崩溃已修复。用户要求消除upload-artifact的Node20弃用警告：两处上传Action改为官方v7.0.2固定SHA，原生node24；项目Node24不变。后续检查新运行的上传日志，不能仅因旧运行成功就声称升级后的Action已验收。工作树QRC/分类收尾已通过101项TS、33项原生utility及完整native检查；TX真实网络取得17行/82个字时间，KW专区/普通标签及MG分类分别返回17/30/30项，尚未随此环境修复提交。
