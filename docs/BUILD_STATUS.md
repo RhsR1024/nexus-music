@@ -150,3 +150,5 @@ bdb8018本地build/logs/archive-s4-s5.log成功，manifest commit=bdb8018e850980
 S6首条App链路 build/SourceUITests-1792082405934.xcresult 40.912秒通过：真实系统文件选择器选中原创合成MP3，App复制持久化、显示实际ID3与内嵌封面、实际播放/PCM频谱。已查看截图；原始静音频谱为基线，不使用随机条。后续重启/删除/ND集成另复验。
 
 S6本批最终：137项TS/类型检查通过。build/SourceUITests-1792082588688.xcresult 本地音频实际选择导入、重启播放/在用拒删/移除队列后删除61.161秒与ND实音/PCM/歌词/五皮肤99.008秒均通过；build/SourceUITests-1792082899195.xcresult补专辑封面网格/艺术家分组67.575秒通过。无私人素材，测试音频为原创合成MP3。最新TS修复覆盖缺失副本重新导入与不导出file://；未用UI通过代替设备媒体库/WebDAV验收。S6本地和云端新包仍随后分别记录。
+
+c798ab4657e37d88347db322dcb6dfa4f6719b24已push。本地archive-local-audio.log **ARCHIVE SUCCEEDED**，验证arm64/iphoneos26.2；manifest dirty=false/signed=false，SHA256 22885744c59b72cbe960f4d7bd8d1d7a5c2284ed59a1d85b24ffc9f932cf29a7。云端S6运行38772611477 pending；8a2e的38769479789正在App测试，与S6分开验收。
