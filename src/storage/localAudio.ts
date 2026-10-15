@@ -1,3 +1,4 @@
+import {PlaybackMessageError} from '../playback/errors.ts';
 import {InvalidRecordError} from './recovery.ts';
 import type {Repository} from './repository.ts';
 import {validateTrack,type Track} from '../domain/track.ts';
@@ -75,7 +76,7 @@ export class LocalAudioStore {
       try{await this.native.finishRemoval(token,false);return{pendingCleanup:false};}catch{return{pendingCleanup:true};}
     });this.tail=run.catch(()=>{});return run;
   }
-  async resolve(track:Track) {const file=this.files.find(file=>track.origin.kind==='local'&&file.id===track.origin.id);if(!file)throw new Error('本地音频未导入此设备，请重新导入');return{url:await this.native.resolveAudio(file.id,file.extension),quality:'original'};}
+  async resolve(track:Track) {const file=this.files.find(file=>track.origin.kind==='local'&&file.id===track.origin.id);if(!file)throw new PlaybackMessageError('本地音频未导入此设备，请重新导入');try{return{url:await this.native.resolveAudio(file.id,file.extension),quality:'original'};}catch{throw new PlaybackMessageError('本地音频文件不可用，请重新导入或检查存储空间');}}
   lyric(track:Track) {return this.files.find(file=>track.origin.kind==='local'&&file.id===track.origin.id)?.lyric??'';}
   async cover(track:Track) {return track.origin.kind==='local'?(await this.native.localArtwork(track.origin.id))??undefined:undefined;}
 }

@@ -1,6 +1,7 @@
 export type OnlinePlatform = 'wy' | 'tx' | 'kw' | 'kg' | 'mg';
 
 export type TrackOrigin =
+  | { kind: 'device'; libraryId:string; id:string }
   | { kind: 'local'; id: string }
   | { kind: 'online'; platform: OnlinePlatform; id: string }
   | { kind: 'imported'; platform: 'qishui'; id: string }
@@ -19,10 +20,10 @@ export interface Track {
 }
 
 export function trackKey(origin: TrackOrigin): string {
-  if (!origin || (origin.kind !== 'online' && origin.kind !== 'navidrome' && origin.kind !== 'imported' && origin.kind !== 'local') ||
+  if (!origin || (origin.kind !== 'online' && origin.kind !== 'navidrome' && origin.kind !== 'imported' && origin.kind !== 'local' && origin.kind !== 'device') ||
       (origin.kind === 'imported' && origin.platform !== 'qishui') ||
       (origin.kind === 'online' && !['wy','tx','kw','kg','mg'].includes(origin.platform))) throw new Error('歌曲来源无效');
-  const namespace = origin.kind === 'navidrome' ? origin.accountId : origin.kind==='local'?'files':origin.platform;
+  const namespace = origin.kind === 'device'?origin.libraryId:origin.kind === 'navidrome' ? origin.accountId : origin.kind==='local'?'files':origin.platform;
   if (typeof namespace !== 'string' || !namespace || typeof origin.id !== 'string' || !origin.id) {
     throw new Error('歌曲来源和 ID 必须是非空字符串');
   }

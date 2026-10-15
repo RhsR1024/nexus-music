@@ -1,3 +1,4 @@
+import {DeviceMediaLibrary} from './DeviceMediaLibrary.tsx';
 import {LocalAudioLibrary} from './LocalAudioLibrary.tsx';
 import {TrackListModal} from './TrackListModal.tsx';
 import {MatchModal} from './MatchModal.tsx';
@@ -58,7 +59,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
   }
   return <View>
     <Text style={styles.title}>我的音乐库</Text><Text style={styles.caption}>收藏 {library.favorites.length} · 歌单 {library.playlists.length} · 最近播放 {library.history.length}</Text>
-    <LocalAudioLibrary services={services}/>
+    <LocalAudioLibrary services={services}/><DeviceMediaLibrary services={services}/>
     {services.recoveryWarnings.map((warning,index)=><Text key={index} style={styles.caption}>{warning}</Text>)}
     <View style={styles.row}>{button('搜索歌曲',openSearch)}{button('音乐来源',openSettings)}</View>
     <View style={styles.row}>{(['favorites','history','playlists']as const).map((value,index)=><View key={value}>{button(['我的收藏','最近播放','我的歌单'][index]!,()=>{setTab(value);setSelected(null);})}</View>)}</View>
@@ -74,7 +75,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {!!tracks.length&&button('播放全部',()=>services.playTracks(tracks,0))}
     {tracks.length>0&&button('全部歌曲与批量管理',()=>setListOpen(true))}
     {tracks.slice(0,20).map((track,index)=><View key={playlist?.entries[index]?.id??`${index}-${track.origin.id}`} style={styles.trackRow}>
-      <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='local'?'本地音频':'私人曲库'}</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='local'?'本地音频':track.origin.kind==='device'?'设备媒体库':'私人曲库'}</Text></Pressable>
       <View style={styles.row}>{button(services.library.isFavorite(track)?'取消本地收藏':'本地收藏',()=>{void perform(async()=>{await services.library.favorite(track);});})}{button('下一首',()=>services.addToQueue(track,true))}{button('加入歌单',()=>setAdding([track]))}
         {track.origin.kind==='imported'&&button('匹配歌曲',()=>setMatchingTrack(track))}
         {playlist&&index>0&&button('上移',()=>{void perform(async()=>{await services.library.moveEntry(playlist.id,playlist.entries[index]!.id,index-1);});})}

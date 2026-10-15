@@ -3,6 +3,8 @@ import ImageIO
 import UniformTypeIdentifiers
 
 final class CoverCache {
+  static let queue = DispatchQueue(label: "nexus.covers")
+  static let shared = CoverCache()
   private(set) var epoch = 0
   private let directory: URL
   init(directory: URL? = nil) {

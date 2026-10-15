@@ -43,5 +43,6 @@ try {
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,0,cacheKey);
   await play('http://127.0.0.1:1/unreachable.wav',0,cacheKey);
   for(const mode of ['duration','track'])await play(pathToFileURL(resolve('build/tests/tone.wav')).href,0,undefined,mode);
+  const rejected=spawn('build/tests/native-playback',['ipod-library://item/untrusted']);let rejectedOutput='';rejected.stdout.on('data',data=>{rejectedOutput+=data;});const rejectedCode=await new Promise(resolve=>rejected.on('exit',resolve));assert.equal(rejectedCode,1);assert.equal(JSON.parse(rejectedOutput).failed,true);
   console.log('Native AVPlayer checks passed: WAV/AAC/MP3/16-bit FLAC/24-bit FLAC, initial seek, HTTP ranges, cached playback without network, real PCM tap/FFT, natural end, native timed/track-end pause');
 } finally { server.closeAllConnections(); server.close(); }

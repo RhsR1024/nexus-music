@@ -15,7 +15,7 @@ export class CoverService {
     const url=await this.privateURL(account,id,signal);return this.fetch(['navidrome',account,id],url,signal);
   }
   async loadTrack(track:Track,signal:AbortSignal):Promise<string|undefined>{
-    if(track.origin.kind==='local')return this.localCover?.(track);
+    if(track.origin.kind==='local'||track.origin.kind==='device')return this.localCover?.(track);
     if(track.origin.kind==='navidrome')return typeof track.metadata.coverArtId==='string'&&track.metadata.coverArtId?this.loadPrivate(track.origin.accountId,track.metadata.coverArtId,signal):undefined;
     if(track.artwork)return this.loadURL(track.artwork,signal);
     const platform=track.origin.platform;

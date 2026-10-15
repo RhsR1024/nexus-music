@@ -208,3 +208,13 @@ S6当前工作树：独立local来源/SHA256内容身份、LocalAudioStore原子
 S6文件音频最终本批：137项TS检查通过（check-local-audio-final.log），包含缺失文件重新导入保留恢复副本和备份不带file://路径。native-local-journal.log全套通过。build/SourceUITests-1792082588688.xcresult：文件真实导入/重启再播放/在用拒删/移除当前队列后删除61.161秒，ND回归99.008秒通过；build/SourceUITests-1792082899195.xcresult再加专辑封面网格/艺术家分组67.575秒通过。未引入UIFileSharing。CI增加testYLocalAudioFileImport并关闭克隆，Files夹具是真实系统目录的合成数据、无生产后门。将本批提交push后生成本地IPA、跟踪云端新模块；不要将旧8a2e运行误认为S6云端结果。后续先设备媒体库/WebDAV，再继续全部未完成S2/S3/S4/S7/S8/S9，保持完整目标active。
 
 文件音频阶段已提交并正常push c798ab4657e37d88347db322dcb6dfa4f6719b24。随后本地build/logs/archive-local-audio.log归档成功，manifest commit=c798ab4/dirty=false/arm64/iphoneos26.2/signed=false；IPA SHA256 22885744c59b72cbe960f4d7bd8d1d7a5c2284ed59a1d85b24ffc9f932cf29a7。云端S6运行38772611477创建并pending；前一8a2e运行38769479789已过native、在App UI步骤，不是S6结果。当前没有存量独立开发阻碍，下一步设备媒体库授权/独立身份/原生播放和WebDAV，继续完整目标，不要求用户再次说继续。
+
+## S6 设备媒体库增量（2026-10-16）
+
+已接入原创 MediaPlayer 原生模块、用户主动授权、歌曲/专辑/艺术家与分页搜索、内嵌歌词和共享封面缓存。device来源使用本机namespace + UInt64字符串ID + 元数据签名，播放时重新查询并检查授权/DRM/云端未下载；assetURL不进入曲库备份。权限撤销清空浏览并停止当前设备来源播放，失效引用显示可操作提示，仍使用同一队列/AVPlayer。参考与Android替代边界见[决策0017](docs/decisions/0017-device-media-library.md)。
+
+145项TS/类型检查（build/logs/check-device-media.log）和native-device-media.log全套通过，覆盖长ID、跨设备碰撞、快照分页/迟到结果/权限变化、备份无URI及未授权ipod-library拒绝。Release build/SourceUITests-1792084293006.xcresult：真实权限拒绝界面16.053秒、ND合成实音/PCM/原生歌词/五皮肤96.506秒均通过，已查看截图。模拟器没有真实音乐库，设备歌曲/后台播放尚待手机，不将授权测试等同媒体库实音。
+
+云端8a2e运行38769479789的native检查通过，App中ND播放通过、源管理失败；下载诊断11993526333，ui-catalog.log67209定位系统Files首启空白容器未出现取消按钮。测试改为中英文合并30秒有界等待，不跳过断言。c798文件阶段运行38772611477另在运行，不能以旧失败作为新阶段结论。S6 WebDAV仍待实施；全范围S2/S3/S4/S7/S8/S9和真机/真实ND验收继续，目标保持active。
+
+音源选择器等待修订本地复验：build/SourceUITests-1792084866977.xcresult源管理实际Files打开/取消→URL导入→启停→删除56.553秒通过；最终check-device-media-final.log为145/145，无失败/跳过。新授权测试已加入CI，云端尚待新提交实际运行。

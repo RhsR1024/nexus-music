@@ -1,3 +1,5 @@
+import {AppState} from 'react-native';
+import {DeviceMediaStore,type DeviceMediaNative} from '../providers/deviceMedia.ts';
 import {requireNativeModule} from 'expo';
 import {LocalAudioStore,type LocalAudioNative} from '../storage/localAudio.ts';
 import { DiscoveryProvider } from '../providers/discovery.ts';
@@ -31,8 +33,13 @@ import { decodeQueue, type SavedCursor, type SavedQueue } from '../storage/queue
 async function initialize() {
   const repository = await openRepository();
   const recoveryWarnings:string[]=[];
-  const restore=async(key:string,label:string,run:()=>Promise<void>)=>{if(!await restoreRecord(repository,key,run,Crypto.randomUUID))recoveryWarnings.push(`${label}数据无法读取，原始记录已隔离保留，其他功能继续可用。`);};
+  const restore=async(key:string,label:string,run:()=>Promise<void>)=>{const ok=await restoreRecord(repository,key,run,Crypto.randomUUID);if(!ok)recoveryWarnings.push(`${label}数据无法读取，原始记录已隔离保留，其他功能继续可用。`);return ok;};
   const localAudio=new LocalAudioStore(repository,requireNativeModule<LocalAudioNative>('NexusFiles'));await restore('localAudio.v1','本地音频',()=>localAudio.restore());
+  const mediaNative=requireNativeModule<DeviceMediaNative&{addListener(event:string,listener:()=>void):unknown}>('NexusMediaLibrary');
+  const deviceMedia=new DeviceMediaStore(repository,mediaNative,Crypto.randomUUID);
+  if(!await restore('deviceMedia.namespace.v1','设备媒体库',()=>deviceMedia.initialize()))await deviceMedia.initialize();
+  await deviceMedia.checkAuthorization();
+  mediaNative.addListener('changed',()=>{void deviceMedia.checkAuthorization().then(status=>{if(status==='authorized')deviceMedia.invalidate();}).catch(deviceMedia.invalidate);});
   const preferences = new PreferenceStore(repository); await restore('preferences.v1','偏好',()=>preferences.restore());
   const hash=(value:string)=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,value);
   const accounts=new NavidromeAccounts(repository,nativeSecrets,hash,(account,credentials)=>new NavidromeClient(account,credentials,{md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),salt:Crypto.randomUUID}));
@@ -44,7 +51,7 @@ async function initialize() {
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
   await restore('sources.v1','音源',()=>catalog.restore());
   void catalog.restoreEnabled();
-  const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size:512},signal),track=>localAudio.cover(track));
+  const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size:512},signal),track=>track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track));
   const online = new OnlineProvider({ md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
   const matching=new CrossPlatformMatcher(online);
@@ -52,6 +59,7 @@ async function initialize() {
   const matchedResolver=new MatchedResolver({matcher:matching,library,router:resolver,quality:()=>preferences.getSnapshot().quality,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
   const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
+    if(track.origin.kind==='device')return deviceMedia.resolve(track);
     if(track.origin.kind==='local')return localAudio.resolve(track);
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
     if(track.origin.kind==='imported')return matchedResolver.resolve(track,signal,excluded);
@@ -66,6 +74,8 @@ async function initialize() {
     const saved=await repository.get<SavedQueue>('queue.v1');
     if(saved){playback.controller.setQueue(decodeQueue(saved));const cursor=await repository.get<SavedCursor>('queue.cursor.v1');if(cursor)playback.controller.restoreCursor(cursor.entryId,cursor.seconds);}
   }catch{recoveryWarnings.push('上次播放队列无法恢复，已从暂停状态开始；音乐库仍保留。');}
+  deviceMedia.subscribe(()=>{const current=playback.controller.getSnapshot(),entry=current.queue.entries.find(entry=>entry.id===current.queue.currentId);if(entry?.track.origin.kind==='device'&&deviceMedia.getSnapshot().authorization!=='authorized')playback.controller.setQueue({...current.queue,currentId:null,priorityIds:[]});});
+  AppState.addEventListener('change',state=>{if(state==='active')void deviceMedia.checkAuthorization().catch(()=>{});});
   let previous=playback.controller.getSnapshot(),lastCursorWrite=Date.now();
   playback.controller.subscribe(()=>{
     const state=playback.controller.getSnapshot(),cursor={entryId:state.queue.currentId,seconds:state.position};
@@ -80,8 +90,9 @@ async function initialize() {
   });
   const discovery=new DiscoveryProvider(value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value));
   const search = new SearchCoordinator(online);
-  const lyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},undefined,decodeKRC,decodeQRC);
+  const lyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},undefined,decodeKRC,decodeQRC);
   accounts.subscribe(()=>lyrics.clear());
+  deviceMedia.subscribe(()=>{const state=deviceMedia.getSnapshot();if(state.authorization!=='authorized'||state.stale)lyrics.clear();});
   const playTracks = (tracks: readonly Track[], index: number) => {
     const entries = tracks.map(track => ({id:Crypto.randomUUID(),track}));
     if (entries[index]) void playback.controller.play(makeQueue(entries, entries[index]!.id));
@@ -90,7 +101,7 @@ async function initialize() {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
-  return { repository, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, matching, qishui, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { repository, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, matching, qishui, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof initialize>>;
 let pending: Promise<Services> | undefined;

@@ -5,8 +5,8 @@ public final class NexusNativeModule: Module {
   private var runtimes: [String: (revision: Int, runtime: ScriptRuntime)] = [:]
   private var revisions: [String: Int] = [:]
   private var downloads: [String: (client: ScriptHTTP, promise: Promise)] = [:]
-  private let coverQueue = DispatchQueue(label: "nexus.covers")
-  private let covers = CoverCache()
+  private let coverQueue = CoverCache.queue
+  private let covers = CoverCache.shared
   private var coverRequests: [String: (client: ScriptHTTP, promises: [Promise])] = [:]
 
   public func definition() -> ModuleDefinition {

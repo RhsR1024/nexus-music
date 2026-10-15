@@ -66,7 +66,7 @@ final class NativePlaybackEngine {
     sleepTimer.trackChanged(to: id)
     stop(newGeneration, preservingSleep: true); entryID = id
     guard let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
-          let rawURL = object["url"] as? String, let url = URL(string: rawURL), ["http", "https", "file"].contains(url.scheme ?? "") else { report("error"); return }
+          let rawURL = object["url"] as? String, let url = URL(string: rawURL), ["http", "https", "file", "ipod-library"].contains(url.scheme ?? ""), url.scheme != "ipod-library" || object["deviceMedia"] as? Bool == true else { report("error"); return }
     if LocalAudioFiles.shared.retain(url) { retainedLocalURL = url }
     originalPayload = object
     metadata = object["metadata"] as? [String: Any] ?? [:]
@@ -79,7 +79,7 @@ final class NativePlaybackEngine {
     cachedPlayback = cached != nil
     let asset: AVURLAsset
     if let cached { asset = AVURLAsset(url: cached) }
-    else if url.isFileURL || url.pathExtension.lowercased() == "m3u8" { asset = AVURLAsset(url: url) }
+    else if url.isFileURL || url.scheme == "ipod-library" || url.pathExtension.lowercased() == "m3u8" { asset = AVURLAsset(url: url) }
     else {
       loader = AudioResourceLoader(url: url, headers: object["headers"] as? [String: String] ?? [:], cacheKey: cacheKey)
       asset = loader!.asset

@@ -1,7 +1,9 @@
+import {PlaybackMessageError} from './errors.ts';
 import { currentEntry, advance, type QueueState } from '../domain/queue.ts';
 import type { Track } from '../domain/track.ts';
 
 export interface ResolvedMedia {
+  deviceMedia?:boolean;
   url: string;
   headers?: Readonly<Record<string, string>>;
   quality?: string;
@@ -107,10 +109,10 @@ export class PlaybackController {
       this.backend.load(media, token);
       if (this.state.intent === 'playing' && generation === this.generation) this.backend.play(token);
       this.update({ phase: 'ready', media });
-    } catch {
+    } catch (error) {
       if (pending.signal.aborted || generation !== this.generation || this.disposed) return;
       // Resolver errors can contain private tokens/URLs; do not surface raw messages.
-      this.update({ phase: 'error', intent: 'paused', error: '无法获取或加载歌曲，请重试或检查来源配置' });
+      this.update({ phase: 'error', intent: 'paused', error: error instanceof PlaybackMessageError?error.displayMessage:'无法获取或加载歌曲，请重试或检查来源配置' });
     }
   }
 

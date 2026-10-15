@@ -59,7 +59,7 @@ jobs:
       - name: Verify source management and Navidrome playback in the App
         shell: bash
         run: |
-          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testAppearancePersistenceAndPrimaryNavigation NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testGraphicalEQPresetPersistence NexusMusicUITests/SourceSettingsTests/testYLocalAudioFileImport NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials; then
+          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testAppearancePersistenceAndPrimaryNavigation NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testGraphicalEQPresetPersistence NexusMusicUITests/SourceSettingsTests/testXDeviceMediaAuthorization NexusMusicUITests/SourceSettingsTests/testYLocalAudioFileImport NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials; then
             tail -n 100 build/logs/ui-catalog.log
             exit 1
           fi

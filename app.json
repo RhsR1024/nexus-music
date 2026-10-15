@@ -17,7 +17,8 @@
         "NSLocalNetworkUsageDescription": "连接你配置的局域网音乐服务器并播放音乐。",
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "NSAppleMusicUsageDescription": "读取你授权的设备音乐库，用于浏览和播放已在本机可用的音乐。"
       }
     },
     "plugins": [

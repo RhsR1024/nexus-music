@@ -1,3 +1,4 @@
+import {PlaybackMessageError} from '../src/playback/errors.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PlaybackController, type ResolvedMedia, type PlaybackBackend } from '../src/playback/controller.ts';
@@ -115,4 +116,9 @@ test('restored cursor stays paused and is passed to native only after explicit p
   const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio'})},{load:media=>{loads.push(media);},play(){},stop(){},pause(){}},makeQueue([entry('a')]));
   controller.restoreCursor('a',32);assert.equal(controller.getSnapshot().intent,'paused');assert.equal(loads.length,0);
   await controller.play();assert.equal(loads[0]!.startPosition,32);
+});
+
+test('player shows only explicitly safe application messages for unavailable device or local files',async()=>{
+  const {controller,requests}=rig();const pending=controller.play();requests[0]!.reject(new PlaybackMessageError('请重新导入此设备的音频文件'));await pending;
+  assert.equal(controller.getSnapshot().intent,'paused');assert.equal(controller.getSnapshot().error,'请重新导入此设备的音频文件');
 });

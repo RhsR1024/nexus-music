@@ -82,3 +82,5 @@
 2026-10-15 S4/S5：新增决策 [0014](decisions/0014-graphical-eq.md) 与 [0015](decisions/0015-ttml-native-lyrics.md)。Q 的 SoundEffectControl/原生 adapter 与 Sollin WebAudio 比较后，原创扩展现有 C++ DSP 为用户前级 + 自动余量、图形精调和有界命名预设；不复制其音效后端。TTML 用有界 TS XML/时间子集，原生 TextKit 负责当前行累计裁切和强调，不采纳桌面全列表 30Hz React 更新；解析与原生绘制的 Android 替代边界分别保留。
 
 S6文件音频采纳边界见 [0016](decisions/0016-local-audio.md)：Cy的localFile.ts保留容器迁移/文件所有权问题，localMusic.tsx保留多选/曲库组织参考，但不采用文件名去重、绝对URI身份、在线结果改ID或打印私人元数据；不移植其JS ID3依赖。音枢用原创AVFoundation/CryptoKit/ImageIO与独立来源/相对标识，Android需替换对应原生实现；Sollin Electron目录扫描和Wayferar Android权限不直接搬入iOS。
+
+S6设备媒体库按[0017](decisions/0017-device-media-library.md)处理：四RN参考限定Swift/ObjC/TS/配置检索未发现可直接采用的MPMediaQuery/MPMediaLibrary/ipod-library管线，不推导全仓无此功能。Wayferar Android媒体权限和Sollin Electron扫描不直接移植；原创iOS MediaPlayer原生边界，TS身份/分页/权限状态模型保留可共享部分，Android需对应实现。145项TS/原生与本地授权拒绝UI通过，不冒充设备媒体播放已验收。

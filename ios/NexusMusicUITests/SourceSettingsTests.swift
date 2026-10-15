@@ -15,13 +15,11 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(importButton.waitForExistence(timeout: 15), "Native module/database must load before imports")
     for _ in 0..<5 { if importButton.isHittable { break }; app.swipeUp() }
     importButton.tap()
-    let cancel = app.buttons["取消"]
-    if cancel.waitForExistence(timeout: 5) { cancel.tap() }
-    else {
-      let englishCancel = app.buttons["Cancel"]
-      XCTAssertTrue(englishCancel.waitForExistence(timeout: 5))
-      englishCancel.tap()
-    }
+    // Files may need to initialize its provider on a fresh cloud simulator.
+    // Await either localization in one bounded wait; do not skip the picker assertion.
+    let cancel = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "Cancel"])).firstMatch
+    XCTAssertTrue(cancel.waitForExistence(timeout: 30), "System Files picker must finish loading")
+    cancel.tap()
     XCTAssertTrue(importButton.waitForExistence(timeout: 5))
     let url = app.textFields["音源订阅地址"]
     url.tap()
@@ -49,6 +47,27 @@ final class SourceSettingsTests: XCTestCase {
     add(screenshot)
   }
 
+  func testXDeviceMediaAuthorization() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","设备媒体库 ·")).firstMatch
+    XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap()
+    let grant=app.buttons["授权访问设备媒体库"]
+    if grant.waitForExistence(timeout:3) {
+      grant.tap()
+      let springboard=XCUIApplication(bundleIdentifier:"com.apple.springboard")
+      let decline=springboard.alerts.buttons.matching(NSPredicate(format:"label IN %@",["不允许","Don't Allow","不允許"])).firstMatch
+      if decline.waitForExistence(timeout:10){decline.tap()}
+    }
+    let denied=app.staticTexts["device-media-authorization"]
+    XCTAssertTrue(denied.waitForExistence(timeout:10))
+    let predicate=NSPredicate(format:"label != %@","尚未授权")
+    expectation(for:predicate,evaluatedWith:denied);waitForExpectations(timeout:10)
+    if denied.label=="已授权" {XCTAssertTrue(app.buttons["搜索或刷新设备音乐"].exists)}
+    else {XCTAssertTrue(app.buttons["前往系统设置"].exists);XCTAssertFalse(app.buttons["搜索或刷新设备音乐"].exists)}
+    let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
+    app.buttons["收起设备媒体库"].tap()
+  }
   func testYLocalAudioFileImport() throws {
     let app=XCUIApplication();app.launch()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
