@@ -194,3 +194,15 @@ S3已本地提交b7d7226b89869efbf90e49a29da5314025965e6a，并成功生成arm64
 当前工作树已补图形EQ/精调/独立前级±12/七内置与命名预设，原生睡眠时长/本曲后停/App音量，TTML有界时间/背景声子集与原生TextKit累计裁切/字光晕，单曲偏移与全局叠加/双击/对齐。新模块NexusLyricsModule，已更新expo-module.config并pod install；无新增npm依赖。原生绘制不逐帧React，字体从既有App导入沙箱读取。130项TS通过，native完整套件及真正AVPlayer到点/本曲结束暂停通过。build/SourceUITests-1792070370380.xcresult：EQ实际增益改变/预设重启/删除/睡眠取消和ND合成实音/PCM/原生歌词/五皮肤通过。测试曾把半露出的curve坐标拖到底栏，已要求整个控件在视口内并断言增益改变，不以第一次“可点”成功代替拖动证据。决策0014/0015记录参考/范围；后续歌词最终改动另复验。S4候选/深度样式/真实TTML和字体、S6–S9仍未完成，不把新代码当作所有计划落地；手机和真实ND仍保留外部验收。云端d96运行38735111951目前仍在App测试阶段，不能提前标成功。
 
 本批最终本地验收：build/SourceUITests-1792070741768.xcresult 110.910秒通过实音/PCM/五皮肤/逐字及单曲偏移重置/双击仍暂停；build/SourceUITests-1792071034072.xcresult 145.144秒通过曲线实际增益/预设重启删除/定时开启取消。已看原生逐字部分填色截图。130项TS及native-sleep-final全通过。CI已增加EQ/睡眠UI测试；d96ea74云端App步骤已通过，当前归档，不是本批新模块云端通过。
+
+## 2026-10-16 持续目标与 S6 进行中
+
+用户明确持续目标为“完成所有任务计划中的功能并集实现和测试调试，并通过本地和云端编译打包”，目标保持 active。不是仅完成S4/S5；S6设备媒体库/WebDAV、S7、S8、S9以及S4深度样式/候选、S2/S3视觉收尾、真机/真实ND验收均保留。
+
+S4/S5已提交push bdb8018e85098026d920ca9ba5f636885035fc1a，本地IPA arm64/SDK26.2/dirty=false/signed=false通过，SHA256 8a799140bd5f59730f692975edc98c4ccd3cd7356da81954566be4c2825f4c0b。旧d96云端38735111951最终成功，包含App UI和iOS27设备IPA。新bdb运行38744057327在native-utilities子进程status=null失败，未进入App编译；d643cb6把工具CLI改Release优化/90秒有界预算/逐项耗时及进程错误诊断，下一运行38768357550已通过33项utility、JSC/lifecycle，随后ARM DSP测试finite==original失败。8a2e572仅将“启用平直滤波”的数值断言改为1e-6/1e-5误差界限，关闭EQ逐样本位同一性仍严格断言，已push待新云端；不能把新阶段标云端通过。
+
+S6当前工作树：独立local来源/SHA256内容身份、LocalAudioStore原子批量导入、原创LocalAudioFiles/NexusFilesModule、原生标签/封面/内嵌歌词、App本地歌曲/专辑/艺术家/搜索/收藏歌单队列入口、原生在播文件保护。删除采用.pending-delete日志/暂存与SQLite提交、启动reconcile恢复；不导出绝对容器地址。135项TS及native格式检查通过，合成自制MP3已实际解码/PCM与提取ID3标题/艺术家/专辑/歌词/封面；WAV/M4A/AAC/AIFF/16和24FLAC也验证。测试脚本scripts/fixtures/silent-mp3.mjs为原创合成静音，无私人录音。设备媒体库/WebDAV尚未实现。
+
+本地文件App真实导入UI还在复验。首次build/SourceUITests-1792081703955.xcresult因FilesProvider首次就绪较慢，3秒Browse存在判断跳过，停在Recents；已改等待系统Browse页签20秒并按实际AX定位。新一轮正在运行，不能将原生CLI成功当作App完整导入已验。随后发现Xcode默认克隆测试设备导致预放文件与实际UI不在同一设备；现test-ui关闭parallel testing，监测测试启动后在指定模拟器Files的group.com.apple.FileProvider.LocalStorage/File Provider Storage/Nexus UITest Fixtures放合成MP3，使用真实系统选择器，结束清理。UIFileSharing/LSSupportsOpeningDocumentsInPlace已撤回，避免将原有Documents/SQLite显示到文件App；生产没有夹具导入后门。
+
+S6文件音频最终本批：137项TS检查通过（check-local-audio-final.log），包含缺失文件重新导入保留恢复副本和备份不带file://路径。native-local-journal.log全套通过。build/SourceUITests-1792082588688.xcresult：文件真实导入/重启再播放/在用拒删/移除当前队列后删除61.161秒，ND回归99.008秒通过；build/SourceUITests-1792082899195.xcresult再加专辑封面网格/艺术家分组67.575秒通过。未引入UIFileSharing。CI增加testYLocalAudioFileImport并关闭克隆，Files夹具是真实系统目录的合成数据、无生产后门。将本批提交push后生成本地IPA、跟踪云端新模块；不要将旧8a2e运行误认为S6云端结果。后续先设备媒体库/WebDAV，再继续全部未完成S2/S3/S4/S7/S8/S9，保持完整目标active。

@@ -140,3 +140,13 @@ S1云端失败原因已由下载诊断定位：源导入按钮被浮动导航遮
 S4/S5 本批最终：130项TS检查通过（build/logs/check-s4-s5-final.log）；build/SourceUITests-1792070741768.xcresult 实音/PCM/五皮肤/原生逐字、本曲+100ms/重置、全部歌词双击定位仍暂停110.910秒通过，已看截图确认逐字部分扫色；build/SourceUITests-1792071034072.xcresult 图形实际增益/命名恢复/删除/睡眠开启取消145.144秒通过。手势按释放坐标提交，取消不写入。native-sleep-final.log全套通过含真实音频时长/本曲结束暂停。本地设备IPA待本批提交后生成；未声称新模块云端和手机通过。
 
 前一基线d96ea74云端38735111951：checks、native与iOS27 App UI步骤通过，目前归档中；最终上传仍跟踪，不将它算作本批S4/S5新代码验收。
+
+## 2026-10-16 构建与 S6 在途证据
+
+bdb8018本地build/logs/archive-s4-s5.log成功，manifest commit=bdb8018e85098026d920ca9ba5f636885035fc1a、dirty=false、arm64/iphoneos26.2/signed=false，IPA SHA256 8a799140bd5f59730f692975edc98c4ccd3cd7356da81954566be4c2825f4c0b。d96运行38735111951最终全成功；bdb新阶段运行38744057327 native子进程status=null失败，d643运行38768357550 utility/JSC/lifecycle通过后ARM DSP的启用平直滤波位相等断言失败，8a2e572保持关闭旁路位精确，仅对启用状态增加严格数值容差并复验云端。
+
+本地文件阶段135项TS/类型检查通过，build/logs/check-local-audio-final.log；build/logs/native-local-journal.log全套native通过，包含MP3实解码/PCM以及WAV/M4A/AAC/AIFF/16和24FLAC导入、内容hash/去重、标签/内嵌歌词/封面、活动保护、删除日志恢复及坏文件/格式/暂存清理。App文件选择UI仍在复验，不把这些证据写成设备媒体库/WebDAV已完成。
+
+S6首条App链路 build/SourceUITests-1792082405934.xcresult 40.912秒通过：真实系统文件选择器选中原创合成MP3，App复制持久化、显示实际ID3与内嵌封面、实际播放/PCM频谱。已查看截图；原始静音频谱为基线，不使用随机条。后续重启/删除/ND集成另复验。
+
+S6本批最终：137项TS/类型检查通过。build/SourceUITests-1792082588688.xcresult 本地音频实际选择导入、重启播放/在用拒删/移除队列后删除61.161秒与ND实音/PCM/歌词/五皮肤99.008秒均通过；build/SourceUITests-1792082899195.xcresult补专辑封面网格/艺术家分组67.575秒通过。无私人素材，测试音频为原创合成MP3。最新TS修复覆盖缺失副本重新导入与不导出file://；未用UI通过代替设备媒体库/WebDAV验收。S6本地和云端新包仍随后分别记录。

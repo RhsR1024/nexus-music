@@ -80,3 +80,5 @@
 本轮采用结论：根据九张移动截图原创 RN 主题/导航/mini 布局，桌面代码仅用于职责和状态模型参考；不复制其图片、CSS、整仓依赖或二进制。与前五参考比较：悦音同 Expo54 页面组织更接近本项目；Q/wtf 保留协议与回归；Cy 新框架不升级；Wayferar 保留多源/队列/真实逐字行为；Sollin 提供用户指定视觉目标及桌面歌词/背景可读证据。Android 可共享 TS 设置和皮肤定义，iOS 模糊层/音频/未来原生歌词需要对应 Android 实现。
 
 2026-10-15 S4/S5：新增决策 [0014](decisions/0014-graphical-eq.md) 与 [0015](decisions/0015-ttml-native-lyrics.md)。Q 的 SoundEffectControl/原生 adapter 与 Sollin WebAudio 比较后，原创扩展现有 C++ DSP 为用户前级 + 自动余量、图形精调和有界命名预设；不复制其音效后端。TTML 用有界 TS XML/时间子集，原生 TextKit 负责当前行累计裁切和强调，不采纳桌面全列表 30Hz React 更新；解析与原生绘制的 Android 替代边界分别保留。
+
+S6文件音频采纳边界见 [0016](decisions/0016-local-audio.md)：Cy的localFile.ts保留容器迁移/文件所有权问题，localMusic.tsx保留多选/曲库组织参考，但不采用文件名去重、绝对URI身份、在线结果改ID或打印私人元数据；不移植其JS ID3依赖。音枢用原创AVFoundation/CryptoKit/ImageIO与独立来源/相对标识，Android需替换对应原生实现；Sollin Electron目录扫描和Wayferar Android权限不直接搬入iOS。

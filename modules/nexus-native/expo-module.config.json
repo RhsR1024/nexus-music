@@ -1,4 +1,4 @@
 {
   "platforms": ["apple"],
-  "apple": { "modules": ["NexusNativeModule", "NexusPlaybackModule", "NexusLyricsModule"] }
+  "apple": { "modules": ["NexusNativeModule", "NexusPlaybackModule", "NexusLyricsModule", "NexusFilesModule"] }
 }

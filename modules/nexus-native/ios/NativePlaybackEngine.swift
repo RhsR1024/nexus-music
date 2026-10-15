@@ -9,6 +9,7 @@ final class NativePlaybackEngine {
   private lazy var sleepTimer = PlaybackSleepTimer(changed: { [weak self] body in self?.emit("sleep", body) }, expired: { [weak self] in self?.remotePause() })
   private var wantsPlay = false
   private var loading: Task<Void, Never>?
+  private var retainedLocalURL: URL?
   private var loader: AudioResourceLoader?
   private var cacheKey: String?
   private var cachedPlayback = false
@@ -66,6 +67,7 @@ final class NativePlaybackEngine {
     stop(newGeneration, preservingSleep: true); entryID = id
     guard let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
           let rawURL = object["url"] as? String, let url = URL(string: rawURL), ["http", "https", "file"].contains(url.scheme ?? "") else { report("error"); return }
+    if LocalAudioFiles.shared.retain(url) { retainedLocalURL = url }
     originalPayload = object
     metadata = object["metadata"] as? [String: Any] ?? [:]
     initialPosition = object["startPosition"] as? Double ?? 0
@@ -152,6 +154,7 @@ final class NativePlaybackEngine {
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
     observation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
     player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
+    if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
     if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
     entryID = ""; metadata = [:]; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     initialPosition=0;initialSeekPending=false

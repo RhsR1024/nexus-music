@@ -49,6 +49,40 @@ final class SourceSettingsTests: XCTestCase {
     add(screenshot)
   }
 
+  func testYLocalAudioFileImport() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
+    XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
+    let browse=app.tabBars.buttons["浏览"].firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:20));browse.tap()
+    let fixture=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+    if !fixture.waitForExistence(timeout:3) {
+      let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch
+      XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()
+    }
+    XCTAssertTrue(fixture.waitForExistence(timeout:10));fixture.tap()
+    let file=app.descendants(matching:.any).matching(NSPredicate(format:"label CONTAINS %@","Synthetic Tagged Tone")).firstMatch;XCTAssertTrue(file.waitForExistence(timeout:5));file.tap()
+    let open=app.buttons["打开"];if open.waitForExistence(timeout:3){open.tap()}
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:15))
+    app.buttons["专辑"].tap();let albumGroup=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Fixture album")).firstMatch;XCTAssertTrue(albumGroup.waitForExistence(timeout:5));albumGroup.tap()
+    app.buttons["艺术家"].tap();let artistGroup=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Fixture artist")).firstMatch;XCTAssertTrue(artistGroup.waitForExistence(timeout:5));artistGroup.tap()
+    let song=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","Synthetic tagged tone")).firstMatch;XCTAssertTrue(song.waitForExistence(timeout:5));song.tap()
+    app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:10))
+    let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
+    if app.buttons["暂停"].firstMatch.exists{app.buttons["暂停"].firstMatch.tap()}
+    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    entry.tap();XCTAssertTrue(song.waitForExistence(timeout:10));song.tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:10));app.buttons["暂停"].firstMatch.tap()
+    let close=app.buttons["收起播放页"];for _ in 0..<8 {if close.isHittable{break};app.swipeDown()};close.tap()
+    entry.tap();app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertTrue(app.staticTexts["音频正在使用或删除失败，原数据保留"].waitForExistence(timeout:5))
+    app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap()
+    let remove=app.buttons["移除"].firstMatch;for _ in 0..<12 {if remove.isHittable{break};app.swipeUp()};remove.tap()
+    XCTAssertTrue(entry.waitForExistence(timeout:5));entry.tap();app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertTrue(app.staticTexts["音频已删除"].waitForExistence(timeout:5));XCTAssertFalse(song.exists)
+    app.buttons["收起本地音频"].tap()
+  }
   func testZNavidromePlaybackAndCredentials() throws {
     let app=XCUIApplication();app.launch()
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()

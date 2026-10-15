@@ -1,9 +1,20 @@
+import {silentMP3} from './fixtures/silent-mp3.mjs';
 import { createServer } from 'node:http';
-import { spawn } from 'node:child_process';
-import { openSync, closeSync,writeFileSync,readFileSync } from 'node:fs';
+import { spawn,execFileSync } from 'node:child_process';
+import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync } from 'node:fs';
 import {resolve,sep} from 'node:path';
 import { createHash } from 'node:crypto';
 
+let localFixtureDirectory;
+function seedLocalAudio() {
+  if(localFixtureDirectory)return;
+  try {
+    const groups=execFileSync('xcrun',['simctl','get_app_container',process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D','com.apple.DocumentsApp','groups'],{encoding:'utf8',stdio:['ignore','pipe','ignore']});
+    const container=groups.split('\n').find(line=>line.startsWith('group.com.apple.FileProvider.LocalStorage\t'))?.split('\t')[1];if(!container)return;
+    localFixtureDirectory=resolve(container,'File Provider Storage','Nexus UITest Fixtures');mkdirSync(localFixtureDirectory,{recursive:true});writeFileSync(resolve(localFixtureDirectory,'Synthetic Tagged Tone.mp3'),silentMP3(1200));
+  } catch { /* Fresh CI simulator: install happens after this process starts. */ }
+}
+seedLocalAudio();
 let fixture = `/**\n * @name Nexus UI Test Source\n * @version 1.0-test\n */\nlx.on('request', async()=>{throw new Error('test only')});\nlx.send('inited',{sources:{wy:{name:'Fixture',actions:['musicUrl'],qualitys:['128k']}}});`;
 if(process.env.NEXUS_LX_VALIDATION_SOURCE){
   const directory=resolve('resource/V261008'),path=resolve(directory,process.env.NEXUS_LX_VALIDATION_SOURCE);
@@ -19,7 +30,7 @@ let starred=false;
 const counts={requests:{},authFailures:0,authSuccesses:0};
 const song=()=>({id:'fixture-song',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:12,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
-  if(req.url==='/source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
+  if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
   const url=new URL(req.url,'http://127.0.0.1'),chunks=[];
   for await(const chunk of req)chunks.push(chunk);
   const params=req.method==='POST'?new URLSearchParams(Buffer.concat(chunks).toString()):url.searchParams;
@@ -46,9 +57,10 @@ const server = createServer(async (req, res) => {
   else respond({});
 });
 await new Promise((resolve, reject) => { server.once('error', reject); server.listen(18439, '127.0.0.1', resolve); });
-const log = openSync('build/logs/ui-catalog.log', 'w');
+const log = openSync('build/logs/ui-catalog.log', 'w+');
+const logWatcher=watch('build/logs/ui-catalog.log',()=>{if(localFixtureDirectory)return;const size=statSync('build/logs/ui-catalog.log').size,tail=Buffer.alloc(Math.min(4096,size));readSync(log,tail,0,tail.length,Math.max(0,size-tail.length));if(tail.toString().includes('Test Case')||tail.toString().includes('Running tests'))seedLocalAudio();});
 try {
-  const args = ['test', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', 'Release',
+  const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', 'Release',
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', `build/SourceUITests-${Date.now()}.xcresult`, 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
@@ -56,4 +68,4 @@ try {
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;
   console.log(`iOS source UI test exit: ${code}; log: build/logs/ui-catalog.log`);
-} finally { writeFileSync('build/logs/ui-server-counts.json',JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close(); }
+} finally { logWatcher.close();writeFileSync('build/logs/ui-server-counts.json',JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }
