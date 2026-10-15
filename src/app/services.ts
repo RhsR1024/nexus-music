@@ -1,4 +1,5 @@
 import { DiscoveryProvider } from '../providers/discovery.ts';
+import {throwIfAborted} from '../providers/async.ts';
 import { restoreRecord } from '../storage/recovery.ts';
 import { FontStore } from '../storage/fonts.ts';
 import { LyricService } from '../lyrics/service.ts';
@@ -38,10 +39,15 @@ async function initialize() {
   await restore('sources.v1','音源',()=>catalog.restore());
   void catalog.restoreEnabled();
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size:512},signal));
+  const online = new OnlineProvider({ md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
   const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
-    const media=await resolver.resolve(track,signal,excluded);
+    // Wayfarer v1 QQ tracks only contain MID. Exact-ID enrichment helps scripts
+    // that require numeric song ID/media_mid; a network failure still permits
+    // scripts whose declared contract can resolve directly from MID.
+    let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}
+    const media=await resolver.resolve(playable,signal,excluded);
     return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),media.sourceFingerprint,media.quality]))};
   }}, preferences);
   try{
@@ -60,7 +66,6 @@ async function initialize() {
     const state=playback.controller.getSnapshot(),origin=state.queue.entries.find(item=>item.id===state.queue.currentId)?.track.origin;
     if(origin?.kind==='navidrome'&&!accounts.getSnapshot().some(item=>item.id===origin.accountId)) playback.controller.setQueue({...state.queue,currentId:null,priorityIds:[]});
   });
-  const online = new OnlineProvider({ md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const discovery=new DiscoveryProvider(value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value));
   const search = new SearchCoordinator(online);
   const lyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},undefined,decodeKRC,decodeQRC);

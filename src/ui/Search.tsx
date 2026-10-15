@@ -1,6 +1,6 @@
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Discovery } from './Discovery.tsx';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Services } from '../app/services.ts';
 import type { OnlinePlatform } from '../domain/track.ts';
@@ -15,6 +15,13 @@ export function Search({ services }: { services: Services }) {
   const [query,setQuery] = useState(state.query), [platform,setPlatform] = useState<OnlinePlatform|'all'>('all');
   const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [adding,setAdding]=useState<readonly Track[]>([]);
+  const [pages,setPages]=useState<Partial<Record<OnlinePlatform,number>>>({});
+  useEffect(()=>setPages({}),[state.query]);
+  useEffect(()=>setPages(value=>{
+    const next={...value};let changed=false;
+    for(const group of state.groups){const max=Math.max(0,Math.ceil(group.items.length/50)-1);if((next[group.platform]??0)>max){next[group.platform]=max;changed=true;}}
+    return changed?next:value;
+  }),[state.groups]);
   const run = () => { Keyboard.dismiss(); void services.search.search(query,platform); };
   return <View><Discovery services={services}/>
     <Text style={styles.title}>寻找下一首喜欢的歌</Text>
@@ -24,7 +31,7 @@ export function Search({ services }: { services: Services }) {
     <Pressable accessibilityRole="button" onPress={run} style={styles.button}><Text style={styles.text}>搜索</Text></Pressable>
     {state.groups.map(group => <View key={group.platform} style={styles.group}>
       <Text style={styles.heading}>{platformNames[group.platform]}　<Text style={styles.caption}>{group.items.length} 首已载入{group.total!==undefined?` / ${group.total}`:''}</Text></Text>
-      {group.items.map((track,index) => <View key={trackKey(track.origin)} style={styles.trackRow}>
+      {group.items.slice((pages[group.platform]??0)*50,((pages[group.platform]??0)+1)*50).map((track,relativeIndex) => {const index=(pages[group.platform]??0)*50+relativeIndex;return <View key={`${index}-${trackKey(track.origin)}`} style={styles.trackRow}>
         <Pressable accessibilityRole="button" testID={`search-track-${group.platform}-${index}`} accessibilityLabel={`播放${track.title}`} onPress={() => services.playTracks(group.items,index)}>
           <Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''}</Text>
         </Pressable>
@@ -32,7 +39,12 @@ export function Search({ services }: { services: Services }) {
           <Pressable accessibilityRole="button" onPress={()=>{void services.library.favorite(track).catch(()=>{});}} style={styles.chip}><Text style={styles.text}>{library.favorites.some(item=>trackKey(item.origin)===trackKey(track.origin))?'取消本地收藏':'本地收藏'}</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={()=>setAdding([track])} style={styles.chip}><Text style={styles.text}>加入歌单</Text></Pressable>
         </View>
-      </View>)}
+      </View>;})}
+      {group.items.length>50&&<View style={styles.row}>
+        <Pressable accessibilityRole="button" disabled={!(pages[group.platform]??0)} onPress={()=>setPages(value=>({...value,[group.platform]:Math.max(0,(value[group.platform]??0)-1)}))} style={styles.chip}><Text style={styles.text}>上一页</Text></Pressable>
+        <Text style={styles.caption}>第 {(pages[group.platform]??0)+1} / {Math.ceil(group.items.length/50)} 页</Text>
+        <Pressable accessibilityRole="button" disabled={((pages[group.platform]??0)+1)*50>=group.items.length} onPress={()=>setPages(value=>({...value,[group.platform]:(value[group.platform]??0)+1}))} style={styles.chip}><Text style={styles.text}>下一页</Text></Pressable>
+      </View>}
       {group.loading && <Text style={styles.caption}>正在搜索…</Text>}
       {group.error && <Text style={styles.error}>{group.error}</Text>}
       {!group.loading&&!group.error&&!group.items.length&&<Text style={styles.caption}>没有匹配结果</Text>}

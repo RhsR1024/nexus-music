@@ -14,6 +14,7 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
   const [accountId,setAccountId]=useState(accounts[0]?.id??'');
   const [view,setView]=useState<ViewState>({kind:'albums'}),[items,setItems]=useState<readonly Item[]>([]),[title,setTitle]=useState('');
   const [query,setQuery]=useState(''),[name,setName]=useState(''),[error,setError]=useState(''),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[more,setMore]=useState(false);
+  const [visiblePage,setVisiblePage]=useState(0);
   const offset=useRef(0),generation=useRef(0),pending=useRef(new AbortController());
   useEffect(()=>{if(!accounts.some(item=>item.id===accountId))setAccountId(accounts[0]?.id??'');},[accounts,accountId]);
   async function load(append=false) {
@@ -30,6 +31,7 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
       else {const playlist=await client.playlistDetail(view.id!,signal);values=playlist.tracks.map(track=>({kind:'track',track}));label=playlist.title;}
       if(version!==generation.current||signal.aborted)return;
       setItems(current=>append?[...current,...values]:values);setMore(hasMore);setTitle(label);setName(label);offset.current=start+values.length;
+      setVisiblePage(append?Math.floor(start/50):0);
     } catch(value) {if(version===generation.current&&!signal.aborted)setError(value instanceof NavidromeError?value.message:'无法读取此连接，请重新连接后重试');}
     finally{if(version===generation.current)setLoading(false);}
   }
@@ -57,7 +59,8 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
         await(await services.accounts.client(accountId)).changePlaylist(view.id!,[current.origin.id],[]);
       });})}
     </View>}
-    {items.map((item,index)=>{
+    {items.slice(visiblePage*50,(visiblePage+1)*50).map((item,relativeIndex)=>{
+      const index=visiblePage*50+relativeIndex;
       if(item.kind==='track') {const track=item.track;return <View key={`${index}-${track.origin.id}`} style={styles.item}>
         <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist} · {track.album}</Text></Pressable>
         <View style={styles.row}>
@@ -74,6 +77,11 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
       const id=item.kind==='album'?item.album.id:item.kind==='artist'?item.id:item.playlist.id;
       return <Pressable accessibilityRole="button" testID={`navidrome-item-${item.kind}-${id}`} key={`${item.kind}-${id}`} onPress={()=>setView(item.kind==='album'?{kind:'album',id}:item.kind==='artist'?{kind:'artist',id}:{kind:'playlist',id})} style={[styles.item,{flexDirection:'row',alignItems:'center',gap:12}]}>{item.kind==='album'&&item.album.coverArtId&&<Cover services={services} privateCover={{accountId,id:item.album.coverArtId}}/>}<Text style={styles.track}>{label}</Text></Pressable>;
     })}
+    {items.length>50&&<View style={styles.row}>
+      {button('上一页歌曲/项目',()=>setVisiblePage(value=>Math.max(0,value-1)),visiblePage===0)}
+      <Text style={styles.caption}>第 {visiblePage+1} / {Math.ceil(items.length/50)} 页 · 已载入 {items.length} 项</Text>
+      {button('下一页歌曲/项目',()=>setVisiblePage(value=>value+1),(visiblePage+1)*50>=items.length)}
+    </View>}
     {loading&&<Text style={styles.caption}>正在读取服务器…</Text>}
     {!!error&&<Text style={styles.error}>{error}</Text>}
     {!loading&&!error&&!items.length&&<Text style={styles.caption}>此处暂无内容</Text>}

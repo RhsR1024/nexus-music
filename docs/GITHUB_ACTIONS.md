@@ -23,6 +23,8 @@ main推送、PR及手动Run workflow都会触发 `.github/workflows/ios.yml`：
 
 提交2e7da07的[云端运行38695984346](https://github.com/RhsR1024/nexus-music/actions/runs/38695984346)已全部成功：Linux、原生检查、iOS27两个App测试及设备IPA归档/上传通过。IPA产物11956175468保留至2026-10-29。此运行的Node20提示来自upload-artifact v4自带运行时，不是项目Node24配置或IPA错误；上传已成功。现两处上传步骤升级到官方[v7.0.2](https://github.com/actions/upload-artifact/releases/tag/v7.0.2)，固定SHA cf430e030ddbb5b0abf93d22962f4752f3646cd9，action.yml原生使用node24，保留默认ZIP与多文件上传方式。新版本仍需下一轮实际上传复验。
 
+升级已实际验收：[2b78e43运行38700544730](https://github.com/RhsR1024/nexus-music/actions/runs/38700544730)全部成功，两个v7.0.2上传步骤成功，IPA产物11957042787、诊断11957302431；日志无Node20弃用警告，设备归档仍为arm64/iphoneos27.0。
+
 ## 获取包
 
 在仓库Actions选择对应成功运行，下载 `NexusMusic-iOS27-unsigned-<commit>`；解压后包含NexusMusic-unsigned.ipa与build-manifest.json。清单记录commit、是否有本地未提交修改、主机架构、Xcode、iOS SDK、Node和Pods版本。未签名包需个人签名后安装，本工作流不要求Apple密码、证书或GitHub Secrets，也不会自动发布Release。

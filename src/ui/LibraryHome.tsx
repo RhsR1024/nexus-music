@@ -7,6 +7,7 @@ import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
 import {decodeBackup,encodeBackup} from '../storage/backup.ts';
 import {decodePlaylistJSON} from '../storage/playlistJSON.ts';
+import {decodeWayfarer} from '../storage/wayfarer.ts';
 import {decodeImportText} from '../providers/nativeLX.ts';
 import type {Track} from '../domain/track.ts';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
@@ -42,6 +43,15 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
       Alert.alert('导入LX歌单',`${preview.collections.length} 个歌单、${count} 首支持的歌曲。另有 ${preview.unsupported} 条来源不在首期范围内，将跳过。保留顺序和重复项，作为新歌单追加；不会导入账号、音源或下载文件。`,[{text:'取消',style:'cancel'},{text:'追加导入',onPress:()=>{void perform(async()=>{await services.library.importCollections(preview.collections);setMessage(`已导入 ${preview.collections.length} 个歌单、${count} 首歌曲`);});}}]);
     }finally{if(file.exists)file.delete();}
   }
+  async function importWayfarer(){
+    const result=await DocumentPicker.getDocumentAsync({type:'*/*',copyToCacheDirectory:true});if(result.canceled)return;
+    const file=new File(result.assets[0]!.uri);
+    try{
+      if(file.size>32*1024*1024)throw new Error('文件过大');
+      const preview=decodeWayfarer(await file.text()),count=preview.collections.reduce((sum,item)=>sum+item.tracks.length,0);
+      Alert.alert('导入漫途备份',`${preview.collections.length} 个歌单、${count} 条歌单歌曲、${preview.favorites.length} 首收藏。${preview.unsupported} 条未支持来源将跳过。\n保留顺序和重复项，作为新歌单追加；收藏去重。忽略 ${preview.ignoredSources} 个连接/音源配置及全部设置，不迁移账号、解析地址或下载文件。`,[{text:'取消',style:'cancel'},{text:'追加导入',onPress:()=>{void perform(async()=>{await services.library.importCollections(preview.collections,preview.favorites);setMessage(`漫途导入完成：${preview.collections.length} 个歌单、${count} 条歌曲`);});}}]);
+    }finally{if(file.exists)file.delete();}
+  }
   return <View>
     <Text style={styles.title}>我的音乐库</Text><Text style={styles.caption}>收藏 {library.favorites.length} · 歌单 {library.playlists.length} · 最近播放 {library.history.length}</Text>
     {services.recoveryWarnings.map((warning,index)=><Text key={index} style={styles.caption}>{warning}</Text>)}
@@ -70,7 +80,8 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {tab==='history'&&library.history.length>0&&button('清空播放历史',()=>Alert.alert('清空音枢播放历史？','不会修改服务端播放记录。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>{await services.library.clearHistory();});}}]))}
     <View style={styles.row}>{button('导出音乐库备份',()=>{void perform(exportBackup);})}{button('恢复音枢备份',()=>{void perform(importBackup);})}</View>
     {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
-    <Text style={styles.caption}>备份包含音乐库，不包含密码、JS音源或音频文件。漫途导入安排在最后阶段。</Text>
+    {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
+    <Text style={styles.caption}>备份包含音乐库，不包含密码、JS音源或音频文件。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
     <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} visible={listOpen} onClose={()=>setListOpen(false)}/>
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>

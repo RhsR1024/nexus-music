@@ -102,6 +102,19 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:40));app.alerts.buttons["取消"].tap()
     app.buttons["收起发现"].tap()
   }
+  func testWayfarerImportPickerCancellation() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let button=app.buttons["导入漫途版本1备份"]
+    XCTAssertTrue(button.waitForExistence(timeout:15))
+    for _ in 0..<10 {if button.isHittable{break};app.swipeUp()}
+    button.tap()
+    let cancel=app.buttons["取消"]
+    if cancel.waitForExistence(timeout:5){cancel.tap()}else{
+      let english=app.buttons["Cancel"];XCTAssertTrue(english.waitForExistence(timeout:5));english.tap()
+    }
+    XCTAssertTrue(button.waitForExistence(timeout:5))
+  }
   func testLiveLXPlayback() throws {
     let app=XCUIApplication();app.launch()
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()

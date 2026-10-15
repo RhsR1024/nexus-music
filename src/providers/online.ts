@@ -62,6 +62,15 @@ export class OnlineProvider {
   private http: HTTPClient; private md5: OnlineDependencies['md5']; private deviceId: () => string;
   private sha1: NonNullable<OnlineDependencies['sha1']>;
   constructor(dependencies: OnlineDependencies) { this.http = dependencies.http ?? requestJSON; this.md5 = dependencies.md5; this.deviceId = dependencies.deviceId; this.sha1 = dependencies.sha1 ?? (async () => { throw new Error('SHA1不可用'); }); }
+  async enrich(track:Track,signal:AbortSignal):Promise<Track>{
+    if(track.origin.kind!=='online'||track.origin.platform!=='tx'||track.metadata.needsMetadata!==true)return track;
+    const body=JSON.stringify({comm:{ct:19,cv:1859,uin:0},req:{module:'music.pf_song_detail_svr',method:'get_song_detail_yqq',param:{song_type:0,song_mid:track.origin.id}}});
+    const raw=row(await this.http(queryURL('https://u.y.qq.com/cgi-bin/musics.fcg',{sign:await qqSignature(body,this.sha1)}),{method:'POST',headers:{'Content-Type':'application/json',Referer:'https://y.qq.com/'},body},signal)),response=row(raw.req);
+    if(raw.code!==0||response.code!==0)throw new Error('歌曲元数据暂不可用');
+    const detail=onlineTrack('tx',row(response.data).track_info);
+    if(detail.origin.id!==track.origin.id)throw new Error('歌曲详情ID不匹配');
+    return{...track,metadata:{...track.metadata,...detail.metadata,needsMetadata:false},qualities:detail.qualities,artwork:track.artwork??detail.artwork,album:track.album??detail.album,durationMs:track.durationMs??detail.durationMs};
+  }
   async search(platform: OnlinePlatform, query: string, page: number, signal: AbortSignal, limit = 30): Promise<SearchPage> {
     if (!query.trim() || !Number.isInteger(page) || page < 1) throw new Error('搜索参数无效');
     let raw: unknown, rows: unknown[] = [], total: number | undefined;
