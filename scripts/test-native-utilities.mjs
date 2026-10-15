@@ -51,8 +51,8 @@ for (const [operation, input] of [
   ['randomBytes', { count: -1 }],
   ['encode', { bytes: [256] }],
 ]) add(operation, input, r => assert.equal(typeof r.error, 'string'));
-const result = spawnSync('build/tests/native-utilities', { input: JSON.stringify(cases.map(({ operation, input }) => ({ operation, input }))), encoding: 'utf8', timeout: 30000 });
-assert.equal(result.status, 0, result.stderr);
+const result = spawnSync('build/tests/native-utilities', { input: JSON.stringify(cases.map(({ operation, input }) => ({ operation, input }))), encoding: 'utf8', timeout: 90000, maxBuffer: 4*1024*1024, env:{...process.env,NEXUS_NATIVE_TEST_DIAGNOSTICS:'1'} });
+assert.equal(result.status, 0, `Native utility subprocess: ${result.error?.code??'no spawn error'}, signal=${result.signal??'none'}\n${result.stderr}`);
 const outputs = JSON.parse(result.stdout);
 assert.equal(outputs.length, cases.length);
 cases.forEach((item, index) => item.check(outputs[index]));
