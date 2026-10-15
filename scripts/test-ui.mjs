@@ -48,9 +48,9 @@ await new Promise((resolve, reject) => { server.once('error', reject); server.li
 const log = openSync('build/logs/ui-catalog.log', 'w');
 try {
   const args = ['test', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', 'Release',
-    '-destination', 'platform=iOS Simulator,id=BD3F486B-04DE-4BA7-9E58-64F10166B39D',
+    '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', `build/SourceUITests-${Date.now()}.xcresult`, 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
-  if(process.argv[2])args.push(`-only-testing:${process.argv[2]}`);
+  for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   const child = spawn('xcodebuild', args, { stdio: ['ignore', log, log] });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;

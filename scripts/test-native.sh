@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-source /Users/ningli/WorkSpace/Tools/env.sh
+source scripts/environment.sh
 mkdir -p build/tests
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/ScriptUtilities.swift tests/native/UtilitiesCLI.swift -lz -o build/tests/native-utilities
 node scripts/test-native-utilities.mjs

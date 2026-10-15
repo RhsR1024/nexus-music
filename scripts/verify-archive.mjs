@@ -1,0 +1,10 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync,statSync,writeFileSync} from 'node:fs';
+const app='build/distribution/NexusMusic.xcarchive/Products/Applications/app.app';
+const plist=key=>execFileSync('/usr/libexec/PlistBuddy',['-c',`Print :${key}`,`${app}/Info.plist`],{encoding:'utf8'}).trim();
+const manifest=JSON.parse(readFileSync('build/distribution/build-manifest.json','utf8'));
+const architecture=execFileSync('xcrun',['lipo','-archs',`${app}/${plist('CFBundleExecutable')}`],{encoding:'utf8'}).trim();
+if(architecture!=='arm64'||plist('DTPlatformName')!=='iphoneos'||plist('CFBundleIdentifier')!==manifest.bundleIdentifier||plist('DTSDKName')!==`iphoneos${manifest.iOSSDK}`||!statSync(`${app}/main.jsbundle`).size)throw new Error('Archive architecture, SDK, bundle ID or JavaScript bundle did not match the requested build');
+manifest.archive={architecture,SDK:plist('DTSDKName'),minimumOS:plist('MinimumOSVersion')};
+writeFileSync('build/distribution/build-manifest.json',JSON.stringify(manifest,null,2)+'\n');
+console.log(`Verified device archive: ${architecture}, ${manifest.archive.SDK}`);

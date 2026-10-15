@@ -1,0 +1,85 @@
+name: iOS checks and unsigned IPA
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+  ios:
+    needs: checks
+    runs-on: xcode-27
+    timeout-minutes: 90
+    env:
+      CI: 'true'
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+      NEXUS_EXPECTED_IOS_SDK_MAJOR: '27'
+      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
+      BUNDLE_FORCE_RUBY_PLATFORM: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1
+        with:
+          ruby-version: '3.3'
+          bundler: '2.4.22'
+          bundler-cache: true
+      - name: Verify Apple Silicon and iOS 27 toolchain
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcodebuild -showsdks
+          test "$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)" = 27
+      - run: npm ci
+      - run: npm run ios:pods
+      - name: Native contracts and audio processing
+        run: npm run test:native
+      - name: Create iOS 27 simulator
+        run: node scripts/ci-simulator.mjs
+      - name: Verify source management and Navidrome playback in the App
+        run: node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials
+      - name: Archive unsigned device IPA
+        shell: bash
+        run: |
+          mkdir -p build/logs
+          set -o pipefail
+          npm run ios:archive 2>&1 | tee build/logs/archive-unsigned.log
+      - name: Upload IPA and verified build environment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: NexusMusic-iOS27-unsigned-${{ github.sha }}
+          path: |
+            build/distribution/NexusMusic-unsigned.ipa
+            build/distribution/NexusMusic-unsigned.ipa.sha256
+            build/distribution/build-manifest.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ios-build-diagnostics-${{ github.sha }}
+          path: |
+            build/logs/
+            build/SourceUITests-*.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

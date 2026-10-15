@@ -31,5 +31,9 @@ scheme = Xcodeproj::XCScheme.new(scheme_path)
 unless scheme.test_action.testables.any? { |testable| testable.buildable_references.any? { |ref| ref.target_uuid == target.uuid } }
   scheme.add_build_target(target)
   scheme.add_test_target(target)
-  scheme.save_as(path, 'app', true)
 end
+entry = scheme.build_action.entries.find { |item| item.buildable_references.any? { |ref| ref.target_uuid == target.uuid } }
+if entry
+  %w[buildForRunning buildForProfiling buildForArchiving buildForAnalyzing].each { |key| entry.xml_element.attributes[key] = 'NO' }
+end
+scheme.save_as(path, 'app', true)

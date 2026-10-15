@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-source /Users/ningli/WorkSpace/Tools/env.sh
+source scripts/environment.sh
 cd ios
-pod install
+if [ "${CI:-}" = "true" ]; then
+  bundle exec pod install --deployment
+else
+  pod install
+fi

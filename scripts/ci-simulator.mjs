@@ -1,0 +1,12 @@
+import {execFileSync} from 'node:child_process';
+import {appendFileSync} from 'node:fs';
+const sim=(args)=>execFileSync('xcrun',['simctl',...args],{encoding:'utf8'}).trim();
+const inventory=JSON.parse(sim(['list','--json']));
+const runtime=inventory.runtimes.find(item=>item.isAvailable&&item.identifier.includes('iOS-27-0'));
+if(!runtime)throw new Error('Expected an available iOS 27.0 simulator runtime');
+const phone=inventory.devicetypes.find(item=>item.name==='iPhone 17');
+if(!phone)throw new Error('Expected iPhone 17 simulator device type');
+const id=sim(['create','NexusMusic CI',phone.identifier,runtime.identifier]);
+sim(['boot',id]);sim(['bootstatus',id,'-b']);
+if(!process.env.GITHUB_ENV)throw new Error('This helper expects a GitHub Actions environment file');
+appendFileSync(process.env.GITHUB_ENV,`NEXUS_SIMULATOR_ID=${id}\n`);
