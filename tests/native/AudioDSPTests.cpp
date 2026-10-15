@@ -36,7 +36,11 @@ int main() {
   }
   nexus::AudioDSP bounded; bounded.prepare(48000,true); bounded.configure(true,gains,999);
   auto limited=original; render(bounded,limited); assert(std::abs(rms(limited)/rms(original)-std::pow(10.,12./20.))<.0001);
-  bounded.configure(true,gains,NAN); auto finite=original; render(bounded,finite); assert(finite==original);
+  bounded.configure(true,gains,NAN); auto finite=original; render(bounded,finite);
+  // Enabled neutral biquads can retain sub-ULP history on ARM fused multiply-add.
+  // Only disabled bypass promises bit identity; NaN preamp must normalize to unity.
+  for(size_t i=0;i<finite.size();i++) assert(std::isfinite(finite[i]) && std::abs(finite[i]-original[i])<1e-6f);
+  assert(std::abs(rms(finite)/rms(original)-1.)<1e-5);
   nexus::AudioDSP silent; silent.prepare(48000,true); std::vector<float> zeros(8192); render(silent,zeros);
   for(float value:silent.spectrum()) assert(value==0);
   std::cout<<"Native DSP checks passed: bit-exact bypass/1kHz EQ attenuation/FFT peak/headroom/manual preamp RMS/clamping/finite output/silence\n";
