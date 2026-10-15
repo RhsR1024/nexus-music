@@ -49,10 +49,10 @@ struct NexusTapStorage { std::shared_ptr<nexus::AudioDSP> core; };
   CFRelease(tap);
   return mix;
 }
-- (void)configureEnabled:(BOOL)enabled gains:(NSArray<NSNumber *> *)gains {
+- (void)configureEnabled:(BOOL)enabled gains:(NSArray<NSNumber *> *)gains preampDB:(double)preampDB {
   std::array<float,10> values{};
   for(NSUInteger i=0;i<MIN(10,gains.count);i++) values[i]=gains[i].floatValue;
-  _core->configure(enabled,values);
+  _core->configure(enabled,values,static_cast<float>(preampDB));
 }
 - (NSDictionary<NSString *,id> *)snapshot {
   auto bands=_core->spectrum(); NSMutableArray *values=[NSMutableArray arrayWithCapacity:32];

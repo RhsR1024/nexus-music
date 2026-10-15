@@ -16,6 +16,7 @@ export interface LyricResult {document:LyricDocument;variants:readonly LyricVari
 function lyricText(value:string) {
   // QRC can wrap decoded timing in a QrcInfos XML attribute. Extract before
   // unescaping so a quoted lyric cannot prematurely terminate the attribute.
+  if(/<(?:[\w-]+:)?tt[\s>]/.test(value))return value;
   const content=value.match(/\bLyricContent\s*=\s*(?:"([^"]*)"|'([^']*)')/);
   return decodeEntities(content?(content[1]??content[2]??''):value);
 }
@@ -55,7 +56,7 @@ export function normalizeLyrics(raw:unknown):LyricResult {
   if(sets.length){const variants=sets.map((value,index)=>({label:[string(value.lang),string(value.kind)||`版本${index+1}`].filter(Boolean).join(' · '),document:structured(value)}));
     const selected=Math.max(0,sets.findIndex(value=>!value.kind||value.kind==='main'));return{document:variants[selected]!.document,variants};}
   const text=(input:unknown)=>lyricText(typeof input==='string'?input:string(object(input).lyric));
-  const rich=text(value.lxlyric??value.yrc??value.krc??value.qrc),plain=text(value.lyric??value.lrc??value.value);
+  const rich=text(value.ttml??value.lxlyric??value.yrc??value.krc??value.qrc),plain=text(value.lyric??value.lrc??value.value);
   const richDocument=parseLyrics(rich),base=richDocument.synced?richDocument:parseLyrics(plain);
   return{document:mergeLyrics(base,text(value.tlyric??value.tlrc),text(value.rlyric??value.romalrc)),variants:[]};
 }

@@ -15,6 +15,7 @@ export function FontSettings({services}:{services:Services}){
     {button(fonts.selected?'恢复系统字体':'系统字体 · 已选择',()=>{void perform(()=>services.fonts.select(null));})}
     {fonts.fonts.map(item=><View key={item.id} style={{gap:8}}>{button(`${item.name}${fonts.selected===item.id?' · 已选择':''}`,()=>{void perform(()=>services.fonts.select(item.id));})}{button(`删除字体：${item.name}`,()=>Alert.alert('删除导入字体？','歌词恢复为系统字体。',[{text:'取消',style:'cancel'},{text:'删除',style:'destructive',onPress:()=>{void perform(()=>services.fonts.remove(item.id));}}]))}</View>)}
     <View style={{flexDirection:'row',gap:12}}>{button('字号−',()=>{void services.preferences.update({fontScale:Math.max(.7,Math.round((preferences.fontScale-.1)*10)/10)});})}<Text style={{color:theme.color('#BFC8D9')}}>{Math.round(preferences.fontScale*100)}%</Text>{button('字号＋',()=>{void services.preferences.update({fontScale:Math.min(2,Math.round((preferences.fontScale+.1)*10)/10)});})}</View>
+    <Text style={{color:theme.palette.secondary}}>歌词对齐</Text><View style={{flexDirection:'row',gap:10}}>{(['auto','left','center'] as const).map(value=><View key={value}>{button(`${{auto:'跟随皮肤',left:'左对齐',center:'居中'}[value]}${preferences.lyricAlignment===value?' ✓':''}`,()=>{void services.preferences.update({lyricAlignment:value}).catch(()=>setMessage('设置未保存'));})}</View>)}</View>
     {!!message&&<Text style={{color:theme.color('#D6B69A')}}>{message}</Text>}
   </View>;
 }

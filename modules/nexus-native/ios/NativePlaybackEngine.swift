@@ -6,6 +6,7 @@ final class NativePlaybackEngine {
   private let player = AVPlayer()
   private let emit: (String, [String: Any]) -> Void
   private var generation = 0, entryID = ""
+  private lazy var sleepTimer = PlaybackSleepTimer(changed: { [weak self] body in self?.emit("sleep", body) }, expired: { [weak self] in self?.remotePause() })
   private var wantsPlay = false
   private var loading: Task<Void, Never>?
   private var loader: AudioResourceLoader?
@@ -13,6 +14,7 @@ final class NativePlaybackEngine {
   private var cachedPlayback = false
   private var originalPayload: [String: Any]?
   private var dsp: NexusAudioDSP?
+  private var preampDB = 0.0
   private var eqEnabled = false, gains = [Double](repeating: 0, count: 10)
   private var observation: NSKeyValueObservation?
   private var playerObservation: NSKeyValueObservation?
@@ -60,7 +62,8 @@ final class NativePlaybackEngine {
   }
   func load(_ json: String, _ id: String, _ newGeneration: Int) {
     guard newGeneration >= generation else { return }
-    stop(newGeneration); entryID = id
+    sleepTimer.trackChanged(to: id)
+    stop(newGeneration, preservingSleep: true); entryID = id
     guard let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
           let rawURL = object["url"] as? String, let url = URL(string: rawURL), ["http", "https", "file"].contains(url.scheme ?? "") else { report("error"); return }
     originalPayload = object
@@ -86,7 +89,7 @@ final class NativePlaybackEngine {
         await MainActor.run {
           guard self.generation == newGeneration, self.entryID == id else { return }
           let item = AVPlayerItem(asset: asset), dsp = NexusAudioDSP()
-          dsp.configure(enabled: self.eqEnabled, gains: self.gains.map(NSNumber.init(value:)))
+          dsp.configure(enabled: self.eqEnabled, gains: self.gains.map(NSNumber.init(value:)), preampDB: self.preampDB)
           if let track = tracks.first { item.audioMix = dsp.audioMix(for: track) }
           self.dsp = dsp
           self.observation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
@@ -110,7 +113,7 @@ final class NativePlaybackEngine {
           }
           self.endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             guard let self, self.player.currentItem === item, self.entryID == id else { return }
-            self.report("ended")
+            if !self.sleepTimer.ended(id) { self.report("ended") }
           }
           self.player.replaceCurrentItem(with: item)
           self.updateNowPlaying()
@@ -143,8 +146,9 @@ final class NativePlaybackEngine {
     pause(generation + 1)
     emit("remote", ["action": "pause", "generation": generation])
   }
-  func stop(_ newGeneration: Int) {
+  func stop(_ newGeneration: Int, preservingSleep: Bool = false) {
     guard newGeneration >= generation else { return }
+    if !preservingSleep { sleepTimer.trackChanged(to: "") }
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
     observation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
     player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
@@ -165,10 +169,19 @@ final class NativePlaybackEngine {
     let duration = player.currentItem?.duration.seconds ?? .infinity
     player.seek(to: CMTime(seconds: min(seconds, duration.isFinite ? duration : seconds), preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
   }
-  func configureEQ(_ enabled: Bool, _ values: [Double]) {
-    guard values.count == 10, values.allSatisfy({ $0.isFinite }) else { return }
-    eqEnabled = enabled; gains = values.map { min(12, max(-12, $0)) }
-    dsp?.configure(enabled: enabled, gains: gains.map(NSNumber.init(value:)))
+  func configureVolume(_ value: Double) {
+    guard value.isFinite else { return }; player.volume = Float(min(1, max(0, value)))
+  }
+  func configureSleep(_ seconds: Double, _ finishCurrent: Bool) -> [String: Any] {
+    if finishCurrent && entryID.isEmpty { return sleepTimer.snapshot() }
+    _ = sleepTimer.set(seconds: finishCurrent ? 0 : seconds, entryID: finishCurrent ? entryID : nil)
+    return sleepTimer.snapshot()
+  }
+  func sleepSnapshot() -> [String: Any] { sleepTimer.snapshot() }
+  func configureEQ(_ enabled: Bool, _ values: [Double], _ preamp: Double = 0) {
+    guard preamp.isFinite, values.count == 10, values.allSatisfy({ $0.isFinite }) else { return }
+    preampDB = min(12, max(-12, preamp)); eqEnabled = enabled; gains = values.map { min(12, max(-12, $0)) }
+    dsp?.configure(enabled: enabled, gains: gains.map(NSNumber.init(value:)), preampDB: preampDB)
   }
   private func report(_ kind: String) {
     let seconds = player.currentTime().seconds, duration = player.currentItem?.duration.seconds ?? 0
@@ -187,7 +200,7 @@ final class NativePlaybackEngine {
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
   }
   func dispose() {
-    stop(generation + 1); spectrumTimer?.invalidate(); spectrumTimer = nil
+    sleepTimer.dispose(); stop(generation + 1); spectrumTimer?.invalidate(); spectrumTimer = nil
     if let progress { player.removeTimeObserver(progress) }; progress = nil
     playerObservation = nil
     for observer in [interruption, routeObserver].compactMap({ $0 }) { NotificationCenter.default.removeObserver(observer) }

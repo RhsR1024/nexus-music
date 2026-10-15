@@ -1,3 +1,4 @@
+import {SleepStore} from './sleep.ts';
 import { ShuffleNavigator } from '../domain/shuffle.ts';
 import { requireNativeModule } from 'expo';
 import { currentEntry, emptyQueue, advance, select } from '../domain/queue.ts';
@@ -12,7 +13,10 @@ interface NativePlayback {
   seek(seconds: number, id: string, generation: number): Promise<void>;
   cacheStatistics():Promise<{bytes:number;files:number;limitBytes:number}>;
   clearCache():Promise<void>;configureCache(megabytes:number):Promise<void>;
-  configureEQ(enabled: boolean, gains: readonly number[]): Promise<void>;
+  configureSleep(seconds:number,finishCurrent:boolean):Promise<Record<string,unknown>>;
+  sleepSnapshot():Promise<Record<string,unknown>>;
+  configureVolume(value:number):Promise<void>;
+  configureEQ(enabled: boolean, gains: readonly number[], preampDB: number): Promise<void>;
   addListener(event: string, callback: (event: Record<string, unknown>) => void): { remove(): void };
 }
 export class SpectrumStore {
@@ -27,7 +31,9 @@ export class SpectrumStore {
 }
 export function createPlaybackSession(resolver: MediaResolver, preferences: PreferenceStore) {
   const native = requireNativeModule<NativePlayback>('NexusPlayback');
-  const spectrum = new SpectrumStore();
+  const spectrum = new SpectrumStore(),sleepStore=new SleepStore();
+  native.addListener('sleep',sleepStore.update);
+  void native.sleepSnapshot().then(sleepStore.update).catch(()=>{});
   const playedListeners=new Set<(track:Track)=>void>();let lastPlayedGeneration=-1;
   const safe = (work: Promise<unknown>, token?: PlaybackToken) => { void work.catch(() => { if (token) void controller.onError(token); }); };
   const controller = new PlaybackController(resolver, {
@@ -82,7 +88,7 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
     else if (event.action === 'next') next(); else if (event.action === 'previous') next(-1);
     else if (event.action === 'seek') controller.seek(Number(event.seconds));
   });
-  const configure = () => { const value = preferences.getSnapshot(); safe(native.configureEQ(value.eqEnabled, value.gains));safe(native.configureCache(value.cacheLimitMB)); };
+  const configure = () => { const value = preferences.getSnapshot(); safe(native.configureVolume(value.volume)); safe(native.configureEQ(value.eqEnabled, value.gains, value.preampDB));safe(native.configureCache(value.cacheLimitMB)); };
   preferences.subscribe(configure); configure();
-  return { controller, spectrum, next, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};} };
+  return { controller, spectrum, next, sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};} };
 }

@@ -140,3 +140,32 @@ test('appearance failed writes and invalid fields preserve the last valid settin
   await assert.rejects(preferences.update({accent:'blue'}));assert.equal(preferences.getSnapshot(),before);
   repository.put=write;await preferences.update({visualTheme:'soft'});assert.equal(preferences.getSnapshot().accent,'purple');assert.equal(preferences.getSnapshot().visualTheme,'soft');db.close();
 });
+
+test('EQ migrates legacy records and serializes named preset capture with pending edits',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {preampDB,eqPresets,...legacy}=defaults;await repository.put('preferences.v1',legacy);
+  const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().preampDB,0);assert.deepEqual(preferences.getSnapshot().eqPresets,[]);
+  const values=[3,2,1,0,-1,0,1,2,3,4];const edit=preferences.update({preampDB:-3.5,gains:values});const save=preferences.saveEQPreset('  夜间  ');await Promise.all([edit,save]);
+  values[0]=12;assert.equal(preferences.getSnapshot().eqPresets[0]!.gains[0],3);
+  const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().eqPresets[0]!.name,'夜间');assert.equal(restored.getSnapshot().eqPresets[0]!.preampDB,-3.5);
+  await restored.update({preampDB:2});await restored.saveEQPreset('夜间');assert.equal(restored.getSnapshot().eqPresets.length,1);assert.equal(restored.getSnapshot().eqPresets[0]!.preampDB,2);
+  await restored.deleteEQPreset('夜间');assert.deepEqual(restored.getSnapshot().eqPresets,[]);db.close();
+});
+
+test('EQ rejects malformed presets, excess gain and failed persistence without changing the snapshot',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');const preferences=new PreferenceStore(repository);const before=preferences.getSnapshot();
+  for(const preampDB of [NaN,Infinity,12.1,-12.1])await assert.rejects(preferences.update({preampDB}));
+  for(const name of ['', ' '.repeat(3), 'x'.repeat(33), 'bad\nname'])await assert.rejects(preferences.saveEQPreset(name));
+  await assert.rejects(preferences.update({eqPresets:[{name:'bad',gains:[0],preampDB:0}]}));
+  await assert.rejects(preferences.update({eqPresets:Array.from({length:25},(_,i)=>({name:String(i),gains:Array(10).fill(0),preampDB:0}))}));
+  repository.put=async()=>{throw new Error('disk full');};await assert.rejects(preferences.saveEQPreset('test'));assert.equal(preferences.getSnapshot(),before);db.close();
+});
+
+test('per-track lyric offset persists independently from global offset and rejects malformed values',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');const {lyricOffset}=await import('../src/lyrics/settings.ts');
+  const key='["online","wy","fixture"]',other='["online","wy","other"]',preferences=new PreferenceStore(repository);
+  await preferences.update({lyricOffsetMs:500,lyricAlignment:'center'});await preferences.setLyricOffset(key,-100);
+  const restored=new PreferenceStore(repository);await restored.restore();assert.equal(lyricOffset(restored.getSnapshot().lyricOffsetMs,restored.getSnapshot().lyricOffsets,key),400);assert.equal(lyricOffset(500,restored.getSnapshot().lyricOffsets,other),500);
+  const before=restored.getSnapshot();for(const offset of [NaN,Infinity,600001,-600001])await assert.rejects(restored.setLyricOffset(key,offset));assert.equal(restored.getSnapshot(),before);
+  await restored.setLyricOffset(key,0);assert.equal(Object.keys(restored.getSnapshot().lyricOffsets).length,0);assert.equal(restored.getSnapshot().lyricAlignment,'center');db.close();
+});

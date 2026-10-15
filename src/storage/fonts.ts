@@ -11,6 +11,7 @@ export class FontStore {
   private directory=new Directory(Paths.document,'lyric-fonts');
   constructor(private repository:Repository){}
   getSnapshot=()=>this.value;
+  selectedURI=()=>this.value.selected?new File(this.directory,`${this.value.selected}.font`).uri:undefined;
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
   private publish(value:FontState){this.value=value;for(const listener of this.listeners)listener();}
   async restore(){

@@ -102,6 +102,15 @@ final class SourceSettingsTests: XCTestCase {
     }
     app.buttons["更多播放控制"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch.tap()
+    let fullLyrics=app.buttons["全部歌词 · 双击行定位，长按打开设置"]
+    for _ in 0..<8 {if fullLyrics.isHittable{break};app.swipeUp()};fullLyrics.tap()
+    app.buttons["+100ms"].tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","本曲 100ms")).firstMatch.waitForExistence(timeout:5))
+    app.buttons["重置"].tap()
+    let lyric=app.buttons["定位歌词：Synthetic lyric one"];XCTAssertTrue(lyric.waitForExistence(timeout:5));lyric.doubleTap()
+    let lyricImage=XCTAttachment(screenshot:app.screenshot());lyricImage.lifetime = .keepAlways;add(lyricImage)
+    app.buttons["收起全部歌词"].tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Lyric seeking must preserve paused intent")
     for _ in 0..<4 {if app.buttons["收起播放页"].isHittable{break};app.swipeDown()}
     app.buttons["收起播放页"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
@@ -153,6 +162,40 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(app.buttons["读取并预览汽水歌单"].isEnabled)
     app.buttons["收起汽水导入"].tap()
     XCTAssertTrue(button.waitForExistence(timeout:5))
+  }
+  func testGraphicalEQPresetPersistence() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    func reveal(_ element:XCUIElement) {
+      for _ in 0..<36 {
+        if element.exists && element.isHittable && element.frame.minY >= 110 && element.frame.maxY <= app.frame.height-180 { return }
+        let above=element.exists && element.frame.minY < 110
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.60 : 0.40)))
+      }
+      XCTFail("Control not fully visible: \(element)")
+    }
+    let flat=app.buttons["平直"];reveal(flat);flat.tap()
+    let slider=app.descendants(matching:.any).matching(identifier:"eq-preamp-slider").firstMatch;reveal(slider)
+    slider.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.1,thenDragTo:slider.coordinate(withNormalizedOffset:CGVector(dx:0.75,dy:0.5)))
+    let value=app.staticTexts["eq-preamp-slider-value"];XCTAssertTrue(value.label.contains("+"));let savedValue=value.label
+    let curve=app.descendants(matching:.any).matching(identifier:"eq-curve").firstMatch;reveal(curve)
+    curve.coordinate(withNormalizedOffset:CGVector(dx:0.45,dy:0.5)).press(forDuration:0.1,thenDragTo:curve.coordinate(withNormalizedOffset:CGVector(dx:0.45,dy:0.25)))
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.isSelected)
+    let band=app.staticTexts["eq-band-slider-value"];XCTAssertNotEqual(band.label,"0.0 dB");let savedBand=band.label
+    let name=app.textFields["eq-preset-name"];reveal(name)
+    name.tap();for character in "Nexus EQ Test" {name.typeText(String(character))};name.typeText("\n")
+    let save=app.buttons["eq-save-preset"];reveal(save);save.tap()
+    XCTAssertTrue(app.buttons["Nexus EQ Test"].waitForExistence(timeout:5))
+    let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
+    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let preset=app.buttons["Nexus EQ Test"];reveal(preset);preset.tap()
+    app.buttons["删除预设Nexus EQ Test"].tap();XCTAssertFalse(preset.exists)
+    reveal(slider);XCTAssertEqual(value.label,savedValue)
+    let restoredBand=app.staticTexts["eq-gain-4"];reveal(restoredBand);XCTAssertEqual(restoredBand.label,savedBand)
+    reveal(flat);flat.tap();reveal(value);XCTAssertEqual(value.label,"0.0 dB")
+    let timer=app.buttons["15分钟"];reveal(timer);timer.tap()
+    XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
+    let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")
   }
   func testAppearancePersistenceAndPrimaryNavigation() throws {
     let app=XCUIApplication();app.launch()

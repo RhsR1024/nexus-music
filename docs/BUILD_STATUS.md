@@ -130,3 +130,13 @@ S1云端失败原因已由下载诊断定位：源导入按钮被浮动导航遮
 本地新增iPhone17/iOS26.3.1模拟器CACFEADC-4D00-4BBF-AD37-503CDD1BE24A，120项TS/类型检查通过；Release UI源导入/启停删通过69.151秒，ND实音/PCM/歌词、暂停、AM拖动定位及五皮肤切换/控制可达通过85.659秒。它覆盖云端同类紧凑尺寸，但仍不替代iOS27云端复验。九张用户参考截图已保留在忽略目录resource/reference-ui/sollin-v2，未作为App素材或提交Git。
 
 修复版最终产物：d96ea74，build/SourceUITests-1792066875571.xcresult两个紧凑布局UI用例通过；build/distribution/NexusMusic-unsigned.ipa归档成功、arm64/iphoneos26.2、signed=false、dirty=false，SHA256 bd6ce7b6903915fbab041c52c2c75d64587156cfcb1d656add65ecef83615afe。构建清单和校验文件同目录。云端38735111951已排队，尚未称通过。
+
+## S4/S5 在途验证（2026-10-15）
+
+- 128 项 TS 测试及类型检查通过，build/logs/check-sleep-lyrics-eq.log：TTML 相对/帧/tick 时间、声部/翻译、XML坏数据/限制、缩进词时间；EQ旧设置迁移/有界预设/原子失败与排队捕获；睡眠迟到响应代次保护。
+- build/logs/native-sleep-final.log：完整 native suite 通过，原生 DSP ±6dB RMS/钳位/逐样本旁路；实际 AVPlayer WAV/AAC/16/24FLAC、HTTP/缓存/PCM；新增实际音频按时暂停和本曲后暂停、不发布自然 ended；原生睡眠策略取消/替换/旧回调/一次性测试。
+- build/SourceUITests-1792069586855.xcresult：图形 EQ 拖动/命名保存/重启/删除本地通过。下一轮联合歌词/控制测试仍在复验，不将第一次 UI 通过当作最终全部通过。
+
+S4/S5 本批最终：130项TS检查通过（build/logs/check-s4-s5-final.log）；build/SourceUITests-1792070741768.xcresult 实音/PCM/五皮肤/原生逐字、本曲+100ms/重置、全部歌词双击定位仍暂停110.910秒通过，已看截图确认逐字部分扫色；build/SourceUITests-1792071034072.xcresult 图形实际增益/命名恢复/删除/睡眠开启取消145.144秒通过。手势按释放坐标提交，取消不写入。native-sleep-final.log全套通过含真实音频时长/本曲结束暂停。本地设备IPA待本批提交后生成；未声称新模块云端和手机通过。
+
+前一基线d96ea74云端38735111951：checks、native与iOS27 App UI步骤通过，目前归档中；最终上传仍跟踪，不将它算作本批S4/S5新代码验收。

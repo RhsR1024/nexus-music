@@ -110,3 +110,5 @@
 
 
 2026-10-15：已拉取 Sollin-Music-Desktop 到本机 ReferenceProject，固定 c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8。桌面 AMLL/TTML/背景/WebDAV 证据及 MIT/第三方边界见 REFERENCE_COMPARISON；不证明 iOS 同实现，不移植其全列表 30Hz 更新。增量任务已细分 S0–S9（TASK_PLAN，对应并集 J01–J58），S1 开始主题、一级发现页、悬浮导航与 mini 基础。旧本地文件/评论/同步排除已被本次并集目标覆盖；仍区分目标与已验收。
+
+2026-10-15 S4/S5增量：TTML时间子集、原生累计绘制、单曲偏移/双击/对齐、图形EQ/独立前级/命名预设、原生睡眠定时与App音量已实现，证据见FEATURE_STATUS/BUILD_STATUS与决策0014/0015。不是全部增量计划完成；S4候选与深度样式、S6本地/WebDAV、S7在线扩展、S8同步/适配、S9永久下载及手机验收继续保留。

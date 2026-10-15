@@ -188,3 +188,9 @@ S3已本地提交b7d7226b89869efbf90e49a29da5314025965e6a，并成功生成arm64
 紧凑视口复验已通过：新iPhone17模拟器源导入/启停删69.151秒，ND合成实音/PCM/歌词/暂停、AM拖动/五皮肤控制可达85.659秒，全部成功；120项TS通过。内容区实测chrome高度约束修复待随本批提交上云；旧基线云端成功不能替代新修复验收。九张截图本地持久保存在resource/reference-ui/sollin-v2（忽略Git），不作为打包资产。
 
 最终本批状态：d96ea74d8e4d67c3de8426a7fa0af0613adaae5d 已正常push（无force）。紧凑视口最终证据 build/SourceUITests-1792066875571.xcresult 两项通过。修复版本地IPA再次成功，build/distribution/build-manifest.json记录d96ea74/dirty=false/arm64/iphoneos26.2/signed=false；SHA256 bd6ce7b6903915fbab041c52c2c75d64587156cfcb1d656add65ecef83615afe。修复云端运行38735111951已创建，当前pending；前面的4db78c4运行38732185670仍可能重现已知旧遮挡，不把它作为d96修复结果。两个本地项目测试模拟器均已shutdown节约Intel内存，UDID保留可再boot。
+
+## S4/S5 增量接续（2026-10-15）
+
+当前工作树已补图形EQ/精调/独立前级±12/七内置与命名预设，原生睡眠时长/本曲后停/App音量，TTML有界时间/背景声子集与原生TextKit累计裁切/字光晕，单曲偏移与全局叠加/双击/对齐。新模块NexusLyricsModule，已更新expo-module.config并pod install；无新增npm依赖。原生绘制不逐帧React，字体从既有App导入沙箱读取。130项TS通过，native完整套件及真正AVPlayer到点/本曲结束暂停通过。build/SourceUITests-1792070370380.xcresult：EQ实际增益改变/预设重启/删除/睡眠取消和ND合成实音/PCM/原生歌词/五皮肤通过。测试曾把半露出的curve坐标拖到底栏，已要求整个控件在视口内并断言增益改变，不以第一次“可点”成功代替拖动证据。决策0014/0015记录参考/范围；后续歌词最终改动另复验。S4候选/深度样式/真实TTML和字体、S6–S9仍未完成，不把新代码当作所有计划落地；手机和真实ND仍保留外部验收。云端d96运行38735111951目前仍在App测试阶段，不能提前标成功。
+
+本批最终本地验收：build/SourceUITests-1792070741768.xcresult 110.910秒通过实音/PCM/五皮肤/逐字及单曲偏移重置/双击仍暂停；build/SourceUITests-1792071034072.xcresult 145.144秒通过曲线实际增益/预设重启删除/定时开启取消。已看原生逐字部分填色截图。130项TS及native-sleep-final全通过。CI已增加EQ/睡眠UI测试；d96ea74云端App步骤已通过，当前归档，不是本批新模块云端通过。

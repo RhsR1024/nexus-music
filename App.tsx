@@ -1,3 +1,4 @@
+import {PlaybackSettings} from './src/ui/PlaybackSettings';
 import {FutureRecordError} from './src/storage/recovery.ts';
 import {ThemeContext,useAppearance} from './src/ui/theme.tsx';
 import {AmbientBackground,GlassSurface} from './src/ui/Materials.tsx';
@@ -41,7 +42,7 @@ function MusicApp(){
         </>:tab==='search'?<Search services={services}/>:<>
           <Text accessibilityRole="header" style={[text,{fontSize:36,fontWeight:'700',marginBottom:8}]}>设置</Text>
           <Text style={[caption,{lineHeight:23,marginBottom:12}]}>连接你的曲库，让音乐更像你。</Text>
-          <NavidromeSettings services={services}/><SourceSettings catalog={services.catalog}/><AppearanceSettings services={services}/><AudioSettings services={services}/><FontSettings services={services}/><CacheSettings services={services}/>
+          <NavidromeSettings services={services}/><SourceSettings catalog={services.catalog}/><AppearanceSettings services={services}/><AudioSettings services={services}/><PlaybackSettings services={services}/><FontSettings services={services}/><CacheSettings services={services}/>
         </>}
       </ScrollView>}
     </View>

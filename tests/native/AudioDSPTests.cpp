@@ -26,7 +26,18 @@ int main() {
   gains.fill(12); dsp.configure(true,gains); auto boosted=original; render(dsp,boosted);
   for(float value:boosted) assert(std::isfinite(value) && std::abs(value)<=1);
   assert(dsp.headroomDB()==-18);
+  // Flat EQ isolates the manual preamp from filter response and automatic headroom.
+  gains.fill(0);
+  for(float gain:{-6.f,6.f}) {
+    nexus::AudioDSP preamp; preamp.prepare(48000,true); preamp.configure(true,gains,gain);
+    auto actual=original; render(preamp,actual);
+    assert(std::abs(rms(actual)/rms(original)-std::pow(10.,gain/20.))<.0001);
+    preamp.configure(false,gains,gain); auto off=original; render(preamp,off); assert(off==original);
+  }
+  nexus::AudioDSP bounded; bounded.prepare(48000,true); bounded.configure(true,gains,999);
+  auto limited=original; render(bounded,limited); assert(std::abs(rms(limited)/rms(original)-std::pow(10.,12./20.))<.0001);
+  bounded.configure(true,gains,NAN); auto finite=original; render(bounded,finite); assert(finite==original);
   nexus::AudioDSP silent; silent.prepare(48000,true); std::vector<float> zeros(8192); render(silent,zeros);
   for(float value:silent.spectrum()) assert(value==0);
-  std::cout<<"Native DSP checks passed: bit-exact bypass/1kHz EQ attenuation/FFT peak/headroom/finite output/silence\n";
+  std::cout<<"Native DSP checks passed: bit-exact bypass/1kHz EQ attenuation/FFT peak/headroom/manual preamp RMS/clamping/finite output/silence\n";
 }

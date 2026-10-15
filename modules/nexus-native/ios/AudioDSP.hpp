@@ -18,6 +18,7 @@ class AudioDSP {
   std::array<Filter,10> filters{};
   std::array<std::array<Memory,10>,8> memory{};
   std::atomic<bool> enabled{false};
+  std::atomic<float> manualPreampDB{0};
   std::atomic<double> sampleRate{44100};
   std::array<float,fftSize> history{};
   size_t historyPosition=0,historyCount=0;
@@ -31,7 +32,8 @@ public:
     sampleRate.store(rate>0?rate:44100); supported.store(floatingPoint);
     for(auto& channel:memory) for(auto& state:channel) state={};
   }
-  void configure(bool on, const std::array<float,10>& values) {
+  void configure(bool on, const std::array<float,10>& values, float preampDB=0) {
+    manualPreampDB.store(std::isfinite(preampDB)?std::clamp(preampDB,-12.f,12.f):0.f);
     for(size_t i=0;i<10;i++) gains[i].store(std::isfinite(values[i])?std::clamp(values[i],-12.f,12.f):0.f);
     enabled.store(on);
   }
@@ -45,7 +47,7 @@ public:
       filters[i]={(1+alpha*amplitude)/a0, -2*cosine/a0, (1-alpha*amplitude)/a0,
                   -2*cosine/a0, (1-alpha/amplitude)/a0};
     }
-    preamp=static_cast<float>(std::pow(10.,-1.5*largest/20.));
+    preamp=static_cast<float>(std::pow(10.,(manualPreampDB.load()-1.5*largest)/20.));
   }
   float headroomDB() const {
     float largest=0; for(const auto& gain:gains) largest=std::max(largest,gain.load()); return -1.5f*largest;

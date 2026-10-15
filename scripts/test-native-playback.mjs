@@ -25,12 +25,12 @@ const server = createServer((req, res) => {
   } else res.end(wav);
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-async function play(url,start=0,key) {
-  const child = spawn('build/tests/native-playback', [url,String(start),...(key?[key]:[])]);
+async function play(url,start=0,key,sleepMode) {
+  const child = spawn('build/tests/native-playback', [url,String(start),...(key||sleepMode?[key??'']:[]),...(sleepMode?[sleepMode]:[])]);
   let stdout = '', stderr = ''; child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
   const code = await new Promise(resolve => child.on('exit', resolve));
   assert.equal(code, 0, `Native playback failed: ${stdout}; ${stderr.slice(-1000)}`);
-  const result = JSON.parse(stdout); assert.equal(result.pcmSupported, true); assert.equal(result.ended, true);
+  const result = JSON.parse(stdout); assert.equal(result.pcmSupported, true); assert.equal(result.ended, !sleepMode);if(sleepMode)assert.equal(result.sleepPaused,true);
 }
 try {
   await play(pathToFileURL(resolve('build/tests/tone.wav')).href);
@@ -40,5 +40,6 @@ try {
   const cacheKey=createHash('sha256').update(randomUUID()).digest('hex');
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,0,cacheKey);
   await play('http://127.0.0.1:1/unreachable.wav',0,cacheKey);
-  console.log('Native AVPlayer checks passed: WAV/AAC/16-bit FLAC/24-bit FLAC, initial seek, HTTP ranges, cached playback without network, real PCM tap/FFT, natural end');
+  for(const mode of ['duration','track'])await play(pathToFileURL(resolve('build/tests/tone.wav')).href,0,undefined,mode);
+  console.log('Native AVPlayer checks passed: WAV/AAC/16-bit FLAC/24-bit FLAC, initial seek, HTTP ranges, cached playback without network, real PCM tap/FFT, natural end, native timed/track-end pause');
 } finally { server.closeAllConnections(); server.close(); }

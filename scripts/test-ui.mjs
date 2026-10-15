@@ -39,7 +39,7 @@ const server = createServer(async (req, res) => {
   else if(method==='getAlbumList2')respond({albumList2:{album:[{id:'fixture-album',name:'Synthetic album',artist:'Fixture artist',coverArt:'fixture-cover',songCount:1}]}});
   else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:[song()]}});
   else if(method==='search3')respond({searchResult3:{song:[song()]}});
-  else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}]}]}});
+  else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:12000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:12000,value:'two'}]}]}]}});
   else if(method==='star'||method==='unstar'){starred=method==='star';respond({});}
   else if(method==='getArtists')respond({artists:{index:[]}});
   else if(method==='getPlaylists')respond({playlists:{playlist:[]}});

@@ -1,5 +1,6 @@
+import {parseTTML} from './ttml.ts';
 export interface LyricWord {startMs:number;endMs:number;text:string}
-export interface LyricLine {startMs:number;endMs?:number;text:string;words?:readonly LyricWord[];translation?:string;romanization?:string}
+export interface LyricLine {background?:boolean;agent?:string;startMs:number;endMs?:number;text:string;words?:readonly LyricWord[];translation?:string;romanization?:string}
 export interface LyricDocument {lines:readonly LyricLine[];plain:readonly string[];synced:boolean}
 const maxTime=86400000;
 function timestamp(minutes:string,seconds:string,fraction='') {
@@ -21,6 +22,7 @@ function tokens(body:string,start:number,kind:'lx'|'yrc'|'krc'|'qrc'):{text:stri
   return{text,words};
 }
 export function parseLyrics(input:string):LyricDocument {
+  if(/<(?:[\w-]+:)?tt[\s/>]/.test(input.replace(/^\uFEFF/,'')))return parseTTML(input);
   if(input.length>2*1024*1024)throw new Error('歌词数据过大');
   const offset=Number([...input.matchAll(/\[offset:([+-]?\d+)\]/gi)].at(-1)?.[1]??0);
   const shift=Number.isFinite(offset)?offset:0;
@@ -59,5 +61,5 @@ export function mergeLyrics(base:LyricDocument,translation?:string,romanization?
 export function activeLyric(lines:readonly LyricLine[],positionMs:number,userOffsetMs=0):number {
   const time=positionMs-userOffsetMs;let low=0,high=lines.length-1,result=-1;
   while(low<=high){const middle=(low+high)>>>1;if(lines[middle]!.startMs<=time){result=middle;low=middle+1;}else high=middle-1;}
-  const line=lines[result];return line&&line.endMs!==undefined&&time>=line.endMs?-1:result;
+  for(let i=result;i>=0;i--){const line=lines[i]!;if(!line.background&&(line.endMs===undefined||time<line.endMs))return i;}return -1;
 }
