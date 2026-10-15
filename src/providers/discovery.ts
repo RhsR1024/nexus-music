@@ -1,6 +1,6 @@
 import type {OnlinePlatform,Track} from '../domain/track.ts';
 import {onlineTrack} from './online.ts';
-import {queryURL,requestJSON,type HTTPClient} from './http.ts';
+import {parseProviderJSON,queryURL,requestJSON,requestText,type TextHTTPClient,type HTTPClient} from './http.ts';
 import {throwIfAborted} from './async.ts';
 import {qqSignature} from './qqSignature.ts';
 type Row=Record<string,unknown>;
@@ -17,8 +17,8 @@ function tree(value:unknown,depth=0):Row[]{if(depth>12)return[];if(Array.isArray
 function unique(items:BrowseItem[]){return [...new Map(items.map(item=>[item.id,item])).values()];}
 function item(id:unknown,title:unknown,artwork?:unknown,description?:unknown,total?:unknown):BrowseItem {const name=text(title);if(!name)throw new Error('平台响应缺少名称');return{id:required(id),title:name,...(text(artwork)?{artwork:text(artwork)}:{}),...(text(description)?{description:text(description)}:{}),...(count(total)!==undefined?{count:count(total)}:{})};}
 export class DiscoveryProvider {
-  private http:HTTPClient;private sha1:(value:string)=>Promise<string>;
-  constructor(sha1:(value:string)=>Promise<string>,http:HTTPClient=requestJSON){this.sha1=sha1;this.http=http;}
+  private http:HTTPClient;private textHTTP:TextHTTPClient;private sha1:(value:string)=>Promise<string>;
+  constructor(sha1:(value:string)=>Promise<string>,http:HTTPClient=requestJSON,textHTTP:TextHTTPClient=requestText){this.sha1=sha1;this.http=http;this.textHTTP=textHTTP;}
   private async qq(module:string,method:string,param:Row,signal:AbortSignal){
     const body=JSON.stringify({comm:{ct:24,cv:0,format:'json',uin:0},req:{module,method,param}});
     const raw=row(await this.http(queryURL('https://u.y.qq.com/cgi-bin/musics.fcg',{sign:await qqSignature(body,this.sha1)}),{method:'POST',headers:{'Content-Type':'application/json',Referer:'https://y.qq.com/'},body},signal));
@@ -84,8 +84,19 @@ export class DiscoveryProvider {
       const url=rank?queryURL('https://kbangserver.kuwo.cn/ksong.s',{from:'pc',fmt:'json',pn:page-1,rn:limit,type:'bang',data:'content',id,show_copyright_off:0,pcmp4:1,isbang:1}):queryURL('https://nplserver.kuwo.cn/pl.svc',{op:'getlistinfo',pid:id,pn:page-1,rn:limit,encode:'utf8',keyset:'pl2012',identity:'kuwo',pcmp4:1,newver:1,vipver:'MUSIC_9.0.5.0_W1'});
       const data=row(await this.http(url,{},signal));const values=data.musiclist;if(!Array.isArray(values))throw new Error('酷我歌单响应无效');title=text(data.title??data.name);total=count(data.total??data.totalmusic);rows=list(values).map(value=>{const v=row(value);return{...v,rid:v.id??v.rid,name:v.name,artist:v.artist,album:v.album,duration:v.duration,N_MINFO:v.n_minfo};});hasMore=total!==undefined?page*limit<total:rows.length>=limit;
     }else if(platform==='kg'){
+      if(!rank){
+        // The mobile endpoint exposes a preview that repeats on subsequent pages.
+        // The public PC page includes the complete ordered hash list.
+        const html=await this.textHTTP(`http://www2.kugou.kugou.com/yueku/v9/special/single/${id}-5-9999.html`,{headers:{'User-Agent':'Mozilla/5.0'}},signal);
+        const embedded=html.match(/global\.data\s*=\s*(\[[\s\S]*?\]);/);
+        if(!embedded)throw new Error('酷狗完整歌单暂不可用，未导入预览列表');
+        const values=parseProviderJSON(embedded[1]!) as unknown;if(!Array.isArray(values))throw new Error('酷狗完整歌单格式无效');
+        const name=html.match(/specialname\s*:\s*"([^"\n]*)"/)?.[1]??html.match(/<title>([^<]*)<\/title>/)?.[1]??'酷狗公开歌单';
+        const mapped=values.map(value=>{const v=row(value),filename=text(v.filename??v.FileName??v.songname),split=filename.indexOf(' - ');return onlineTrack('kg',{...v,FileHash:v.hash??v.FileHash,Audioid:v.audio_id??v.audioid,SongName:split>=0?filename.slice(split+3):filename,SingerName:split>=0?filename.slice(0,split):text(v.singername),Duration:count(v.duration)!==undefined?Number(v.duration)/1000:undefined,FileSize:v.filesize,AlbumID:v.album_id,AlbumName:v.album_name,HQFileHash:v.hash_320,HQFileSize:v.filesize_320,SQFileHash:v.hash_flac,SQFileSize:v.filesize_flac});});
+        return{title:name,items:mapped.slice((page-1)*limit,page*limit),total:mapped.length,hasMore:page*limit<mapped.length,page};
+      }
       const url=rank?queryURL('https://m.kugou.com/rank/info',{rankid:id,page,json:true}):queryURL(`https://m.kugou.com/plist/list/${id}/`,{page,json:true});
-      const raw=row(await this.http(url,{},signal)),data=row(raw.songs??raw.list),nested=row(data.list);const values=Array.isArray(data.list)?data.list:nested.info;
+      const raw=row(await this.http(url,{headers:{'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148'}},signal)),data=row(raw.songs??raw.list),nested=row(data.list);const values=Array.isArray(data.list)?data.list:nested.info;
       if(!Array.isArray(values))throw new Error('酷狗歌曲响应无效');const info=row(list(row(raw.info).list)[0]);title=text(info.specialname??row(raw.info).rankname);total=count(data.total??nested.total);rows=list(values).map(value=>{const v=row(value),filename=text(v.filename),split=filename.indexOf(' - ');return{...v,FileHash:v.hash,Audioid:v.audio_id,SongName:split>=0?filename.slice(split+3):filename,SingerName:split>=0?filename.slice(0,split):'',Duration:v.duration,FileSize:v.filesize,AlbumID:v.album_id};});hasMore=total!==undefined?page*Number(raw.pagesize??30)<total:rows.length>=30;
     }else{
       const url=rank?queryURL('https://app.c.nf.migu.cn/MIGUM2.0/v1.0/content/querycontentbyId.do',{columnId:id,needAll:0}):queryURL('https://app.c.nf.migu.cn/MIGUM3.0/resource/playlist/song/v2.0',{pageNo:page,pageSize:limit,playlistId:id});

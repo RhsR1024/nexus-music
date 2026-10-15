@@ -1,3 +1,4 @@
+import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Services } from '../app/services.ts';
@@ -7,6 +8,7 @@ import type { Track } from '../domain/track.ts';
 type ViewState={kind:'songs'|'albums'|'artists'|'playlists'|'album'|'artist'|'playlist';id?:string;query?:string};
 type Item={kind:'track';track:Track}|{kind:'album';album:ServerAlbum}|{kind:'artist';id:string;name:string}|{kind:'playlist';playlist:ServerPlaylist};
 export function NavidromeLibrary({services,openSettings}:{services:Services;openSettings:()=>void}) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const accounts=useSyncExternalStore(services.accounts.subscribe,services.accounts.getSnapshot);
   const [accountId,setAccountId]=useState(accounts[0]?.id??'');
   const [view,setView]=useState<ViewState>({kind:'albums'}),[items,setItems]=useState<readonly Item[]>([]),[title,setTitle]=useState('');
@@ -78,4 +80,4 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
     {more&&button('加载更多',()=>{void load(true);},loading||busy)}
   </View>;
 }
-const styles=StyleSheet.create({title:{color:'#F1EDE7',fontSize:27,fontWeight:'600'},heading:{color:'#D5DCE7',fontSize:19,marginVertical:16},caption:{color:'#929CAB',fontSize:11,lineHeight:20,marginTop:5},track:{color:'#DFE4EE',fontSize:15,lineHeight:23},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{backgroundColor:'#303A32',borderRadius:10,padding:12,marginVertical:5},buttonText:{color:'#D9F49B',fontSize:12},input:{color:'#EEECE7',borderColor:'#414754',borderWidth:1,borderRadius:11,padding:12,fontSize:13},item:{paddingVertical:16,borderBottomWidth:1,borderColor:'#303744'},error:{color:'#D3AB94',fontSize:12,marginVertical:14}});
+const makeStyles=(theme:Theme)=>StyleSheet.create({title:{color:theme.color('#F1EDE7'),fontSize:27,fontWeight:'600'},heading:{color:theme.color('#D5DCE7'),fontSize:19,marginVertical:16},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:20,marginTop:5},track:{color:theme.color('#DFE4EE'),fontSize:15,lineHeight:23},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{backgroundColor:theme.color('#303A32'),borderRadius:10,padding:12,marginVertical:5},buttonText:{color:theme.color('#D9F49B'),fontSize:12},input:{color:theme.color('#EEECE7'),borderColor:theme.color('#414754'),borderWidth:1,borderRadius:11,padding:12,fontSize:13},item:{paddingVertical:16,borderBottomWidth:1,borderColor:theme.color('#303744')},error:{color:theme.color('#D3AB94'),fontSize:12,marginVertical:14}});

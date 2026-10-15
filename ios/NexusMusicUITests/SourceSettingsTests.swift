@@ -83,4 +83,52 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
   }
+  func testDiscoveryAndAppearance() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let dark=app.descendants(matching:.any).matching(identifier:"theme-dark").firstMatch
+    for _ in 0..<14 {if dark.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(dark.exists);dark.tap()
+    let darkImage=XCTAttachment(screenshot:app.screenshot());darkImage.lifetime = .keepAlways;add(darkImage)
+    app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
+    let lightImage=XCTAttachment(screenshot:app.screenshot());lightImage.lifetime = .keepAlways;add(lightImage)
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let discover=app.buttons["发现 · 分类 · 排行榜 · 歌单导入"]
+    XCTAssertTrue(discover.waitForExistence(timeout:10));discover.tap()
+    let first=app.descendants(matching:.any).matching(identifier:"discovery-item-0").firstMatch
+    XCTAssertTrue(first.waitForExistence(timeout:20));first.tap()
+    let importButton=app.buttons["导入完整歌单到音乐库"]
+    XCTAssertTrue(importButton.waitForExistence(timeout:15));importButton.tap()
+    XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:40));app.alerts.buttons["取消"].tap()
+    app.buttons["收起发现"].tap()
+  }
+  func testLiveLXPlayback() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let field=app.textFields["音源订阅地址"]
+    for _ in 0..<8 {if field.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(field.exists);field.tap();for character in "http://127.0.0.1:18439/source.js" {field.typeText(String(character))};field.typeText("\n")
+    app.buttons["从地址导入"].tap()
+    let enable=app.buttons["启用音源：Nexus Live Validation Source"]
+    for _ in 0..<5 {if enable.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(enable.waitForExistence(timeout:15));enable.tap()
+    XCTAssertTrue(app.staticTexts["已启用"].waitForExistence(timeout:25))
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10))
+    app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    query.tap();query.typeText("test\n")
+    let first=app.descendants(matching:.any).matching(identifier:"search-track-wy-0").firstMatch
+    XCTAssertTrue(first.waitForExistence(timeout:25));first.tap()
+    app.buttons["打开播放页"].tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:45))
+    for _ in 0..<3 {if app.buttons["暂停"].firstMatch.isHittable{break};app.swipeUp()}
+    app.buttons["暂停"].firstMatch.tap()
+    for _ in 0..<5 {if app.buttons["收起播放页"].isHittable{break};app.swipeDown()};app.buttons["收起播放页"].tap()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Live Validation Source").firstMatch
+    for _ in 0..<8 {if selected.isHittable{break};app.swipeUp()}
+    selected.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
+  }
+
 }

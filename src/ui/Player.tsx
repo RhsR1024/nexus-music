@@ -1,3 +1,5 @@
+import {QueueView} from './QueueView.tsx';
+import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
 import { useState, useSyncExternalStore } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -5,6 +7,7 @@ import type { Services } from '../app/services.ts';
 import { currentEntry, remove, move } from '../domain/queue.ts';
 function time(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2, '0')}`; }
 function Spectrum({ services }: { services: Services }) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const state = useSyncExternalStore(services.playback.spectrum.subscribe, services.playback.spectrum.getSnapshot);
   const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   return <View>
@@ -13,6 +16,7 @@ function Spectrum({ services }: { services: Services }) {
   </View>;
 }
 export function Player({ services }: { services: Services }) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const { controller } = services.playback;
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
@@ -49,7 +53,8 @@ export function Player({ services }: { services: Services }) {
           {button(`随机：${preferences.shuffle ? '开' : '关'}`, () => { void services.preferences.update({ shuffle: !preferences.shuffle }); })}
         </View>
         <Text style={styles.artist}>播放队列 · {state.queue.entries.length}</Text>
-        {state.queue.entries.map((item, index) => <View key={item.id} style={styles.queueRow}>
+        <QueueView services={services}/>
+        {state.queue.entries.slice(0,5).map((item, index) => <View key={item.id} style={styles.queueRow}>
           <Pressable onPress={() => { void controller.play({ ...state.queue, currentId: item.id, priorityIds: [] }); }} style={{ flex: 1 }}><Text style={[styles.track, item.id === state.queue.currentId && styles.current]}>{index+1}. {item.track.title}</Text><Text style={styles.caption}>{item.track.artist}</Text></Pressable>
           {index > 0 && button('上移', () => controller.setQueue(move(state.queue, item.id, index-1)))}
           {button('移除', () => {
@@ -61,14 +66,14 @@ export function Player({ services }: { services: Services }) {
     </Modal>
   </>;
 }
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#111318' }, content: { padding: 24, paddingTop: 65, gap: 18 },
-  mini: { paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#252D2A' },
-  track: { color: '#E8E9E4', fontSize: 14, lineHeight: 21 }, caption: { color: '#959EAC', fontSize: 11, lineHeight: 20 },
-  title: { color: '#F1EDE7', fontSize: 30, fontWeight: '600' }, artist: { color: '#BFC8D9', fontSize: 18 },
-  button: { backgroundColor: '#303A32', padding: 12, borderRadius: 12 }, buttonText: { color: '#D9F49B', fontSize: 13 },
-  row: { flexDirection: 'row', gap: 14, flexWrap: 'wrap' }, error: { color: '#D6B69A', fontSize: 12 },
-  progress: { width: 300, height: 24, borderRadius: 12, backgroundColor: '#303745', overflow: 'hidden' }, fill: { height: 24, backgroundColor: '#A0BE79' },
-  spectrum: { height: 80, flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginVertical: 15 }, bar: { flex: 1, backgroundColor: '#BCD994', borderRadius: 2 },
-  queueRow: { borderTopWidth: 1, borderTopColor: '#333946', paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center' }, current: { color: '#D9F49B' },
+const makeStyles=(theme:Theme)=>StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.color('#111318') }, content: { padding: 24, paddingTop: 65, gap: 18 },
+  mini: { paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: theme.color('#252D2A') },
+  track: { color: theme.color('#E8E9E4'), fontSize: 14, lineHeight: 21 }, caption: { color: theme.color('#959EAC'), fontSize: 11, lineHeight: 20 },
+  title: { color: theme.color('#F1EDE7'), fontSize: 30, fontWeight: '600' }, artist: { color: theme.color('#BFC8D9'), fontSize: 18 },
+  button: { backgroundColor: theme.color('#303A32'), padding: 12, borderRadius: 12 }, buttonText: { color: theme.color('#D9F49B'), fontSize: 13 },
+  row: { flexDirection: 'row', gap: 14, flexWrap: 'wrap' }, error: { color: theme.color('#D6B69A'), fontSize: 12 },
+  progress: { width: 300, height: 24, borderRadius: 12, backgroundColor: theme.color('#303745'), overflow: 'hidden' }, fill: { height: 24, backgroundColor: theme.color('#A0BE79') },
+  spectrum: { height: 80, flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginVertical: 15 }, bar: { flex: 1, backgroundColor: theme.color('#BCD994'), borderRadius: 2 },
+  queueRow: { borderTopWidth: 1, borderTopColor: theme.color('#333946'), paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center' }, current: { color: theme.color('#D9F49B') },
 });

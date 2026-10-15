@@ -1,9 +1,11 @@
+import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { Services } from '../app/services.ts';
 import { qualityOrder } from '../domain/quality.ts';
 const frequencies = ['31', '62', '125', '250', '500', '1k', '2k', '4k', '8k', '16k'];
 export function AudioSettings({ services }: { services: Services }) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const value = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   const spectrum = useSyncExternalStore(services.playback.spectrum.subscribe, services.playback.spectrum.getSnapshot);
   const update = (patch: Parameters<typeof services.preferences.update>[0]) => { void services.preferences.update(patch).catch(() => {}); };
@@ -28,11 +30,11 @@ export function AudioSettings({ services }: { services: Services }) {
     <Text style={styles.caption}>提升频段时自动降低前级，为输出留出余量。关闭均衡器后原样旁路。</Text>
   </View>;
 }
-const styles = StyleSheet.create({
-  card: { padding: 18, marginTop: 24, borderRadius: 20, backgroundColor: '#1D222B', gap: 12 },
-  title: { color: '#ECEBF3', fontSize: 18, fontWeight: '600' }, caption: { color: '#9296A2', fontSize: 11, lineHeight: 20 },
-  text: { color: '#D9E1CE', fontSize: 12 }, wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+const makeStyles=(theme:Theme)=>StyleSheet.create({
+  card: { padding: 18, marginTop: 24, borderRadius: 20, backgroundColor: theme.color('#1D222B'), gap: 12 },
+  title: { color: theme.color('#ECEBF3'), fontSize: 18, fontWeight: '600' }, caption: { color: theme.color('#9296A2'), fontSize: 11, lineHeight: 20 },
+  text: { color: theme.color('#D9E1CE'), fontSize: 12 }, wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  button: { backgroundColor: '#303A32', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 9 }, selected: { borderWidth: 1, borderColor: '#D9F49B' },
-  band: { color: '#C2C7D3', fontSize: 12, width: 70 }, value: { color: '#D9F49B', fontSize: 12, width: 50, textAlign: 'center' },
+  button: { backgroundColor: theme.color('#303A32'), paddingHorizontal: 12, paddingVertical: 9, borderRadius: 9 }, selected: { borderWidth: 1, borderColor: theme.color('#D9F49B') },
+  band: { color: theme.color('#C2C7D3'), fontSize: 12, width: 70 }, value: { color: theme.color('#D9F49B'), fontSize: 12, width: 50, textAlign: 'center' },
 });

@@ -1,3 +1,4 @@
+import { DiscoveryProvider } from '../providers/discovery.ts';
 import { restoreRecord } from '../storage/recovery.ts';
 import { FontStore } from '../storage/fonts.ts';
 import { LyricService } from '../lyrics/service.ts';
@@ -58,6 +59,7 @@ async function initialize() {
     if(origin?.kind==='navidrome'&&!accounts.getSnapshot().some(item=>item.id===origin.accountId)) playback.controller.setQueue({...state.queue,currentId:null,priorityIds:[]});
   });
   const online = new OnlineProvider({ md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
+  const discovery=new DiscoveryProvider(value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value));
   const search = new SearchCoordinator(online);
   const lyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);});
   accounts.subscribe(()=>lyrics.clear());
@@ -69,7 +71,7 @@ async function initialize() {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
-  return { repository, nativeLX, registry, catalog, preferences, resolver, playback, online, search, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { repository, nativeLX, registry, catalog, preferences, resolver, playback, online, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof initialize>>;
 let pending: Promise<Services> | undefined;

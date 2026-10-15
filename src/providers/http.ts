@@ -12,14 +12,17 @@ export class HTTPResponseError extends Error {
   constructor(status: number) { super('服务暂时不可用'); this.status=status; }
 }
 export type HTTPClient = (url: string, request: HTTPRequest, signal: AbortSignal) => Promise<unknown>;
-export const requestJSON: HTTPClient = (url, request, signal) => bounded(async child => {
+export type TextHTTPClient=(url:string,request:HTTPRequest,signal:AbortSignal)=>Promise<string>;
+export const requestText: TextHTTPClient = (url, request, signal) => bounded(async child => {
   const response = await fetch(url, { ...request, signal: child });
   if (!response.ok) throw new HTTPResponseError(response.status);
   const text = await response.text();
   if (text.length > 16 * 1024 * 1024) throw new Error('服务响应过大');
-  return parseProviderJSON(text);
+  return text;
 }, signal, 12000);
 export function queryURL(base: string, params: Readonly<Record<string, unknown>>) {
   const query = Object.entries(params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join('&');
   return `${base}${base.includes('?') ? '&' : '?'}${query}`;
 }
+
+export const requestJSON:HTTPClient=async(url,request,signal)=>parseProviderJSON(await requestText(url,request,signal));

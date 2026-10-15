@@ -1,9 +1,11 @@
+import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useState, useSyncExternalStore } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Services } from '../app/services.ts';
 import { NavidromeError } from '../providers/navidrome.ts';
 import {CredentialStorageError} from '../providers/navidromeAccounts.ts';
 export function NavidromeSettings({services}:{services:Services}) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const accounts=useSyncExternalStore(services.accounts.subscribe,services.accounts.getSnapshot);
   const [url,setURL]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState('');
   const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
@@ -30,4 +32,4 @@ export function NavidromeSettings({services}:{services:Services}) {
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
   </View>;
 }
-const styles=StyleSheet.create({card:{marginTop:24,padding:18,borderRadius:20,backgroundColor:'#1D222B',gap:12},title:{color:'#ECEBF3',fontSize:18,fontWeight:'600'},caption:{color:'#929CAB',fontSize:11,lineHeight:20},text:{color:'#D9E1CE',fontSize:12},button:{backgroundColor:'#303A32',borderRadius:10,padding:12},row:{flexDirection:'row',flexWrap:'wrap',gap:8},input:{color:'#EEECE7',borderColor:'#414754',borderWidth:1,borderRadius:11,padding:12,fontSize:13},account:{borderBottomWidth:1,borderColor:'#343B49',paddingBottom:14,gap:8}});
+const makeStyles=(theme:Theme)=>StyleSheet.create({card:{marginTop:24,padding:18,borderRadius:20,backgroundColor:theme.color('#1D222B'),gap:12},title:{color:theme.color('#ECEBF3'),fontSize:18,fontWeight:'600'},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:20},text:{color:theme.color('#D9E1CE'),fontSize:12},button:{backgroundColor:theme.color('#303A32'),borderRadius:10,padding:12},row:{flexDirection:'row',flexWrap:'wrap',gap:8},input:{color:theme.color('#EEECE7'),borderColor:theme.color('#414754'),borderWidth:1,borderRadius:11,padding:12,fontSize:13},account:{borderBottomWidth:1,borderColor:theme.color('#343B49'),paddingBottom:14,gap:8}});

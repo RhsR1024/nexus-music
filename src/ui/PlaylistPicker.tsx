@@ -1,8 +1,10 @@
+import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useState,useSyncExternalStore} from 'react';
 import {Modal,Pressable,ScrollView,StyleSheet,Text,TextInput} from 'react-native';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 export function PlaylistPicker({services,tracks,visible,onClose}:{services:Services;tracks:readonly Track[];visible:boolean;onClose:()=>void}) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [name,setName]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   async function add(id?:string){setBusy(true);setError('');try{if(id)await services.library.addTracks(id,tracks);else await services.library.createPlaylist(name,tracks);setName('');onClose();}catch{setError('未能保存，原歌单保留，请重试');}finally{setBusy(false);}}
@@ -17,4 +19,4 @@ export function PlaylistPicker({services,tracks,visible,onClose}:{services:Servi
     </ScrollView>
   </Modal>;
 }
-const styles=StyleSheet.create({root:{flex:1,backgroundColor:'#111318'},content:{padding:24,paddingTop:70,gap:18},title:{color:'#EEECE7',fontSize:26},caption:{color:'#929CAB',fontSize:12,lineHeight:22},action:{color:'#D9F49B',fontSize:14},text:{color:'#E5E8EE',fontSize:14},button:{padding:16,borderRadius:12,backgroundColor:'#263329'},input:{color:'#EEECE7',borderWidth:1,borderColor:'#414754',padding:14,borderRadius:12}});
+const makeStyles=(theme:Theme)=>StyleSheet.create({root:{flex:1,backgroundColor:theme.color('#111318')},content:{padding:24,paddingTop:70,gap:18},title:{color:theme.color('#EEECE7'),fontSize:26},caption:{color:theme.color('#929CAB'),fontSize:12,lineHeight:22},action:{color:theme.color('#D9F49B'),fontSize:14},text:{color:theme.color('#E5E8EE'),fontSize:14},button:{padding:16,borderRadius:12,backgroundColor:theme.color('#263329')},input:{color:theme.color('#EEECE7'),borderWidth:1,borderColor:theme.color('#414754'),padding:14,borderRadius:12}});

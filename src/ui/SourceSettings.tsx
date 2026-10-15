@@ -1,3 +1,4 @@
+import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useState, useSyncExternalStore } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -14,6 +15,7 @@ async function downloadScript(url: string) {
   return fetchSourceScript(parsed.toString());
 }
 export function SourceSettings({ catalog }: { catalog: SourceCatalog }) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const sources = useSyncExternalStore(catalog.subscribe, catalog.getSnapshot);
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
@@ -89,18 +91,18 @@ export function SourceSettings({ catalog }: { catalog: SourceCatalog }) {
     {busy && <Text accessibilityLiveRegion="polite" style={styles.caption}>正在处理，其他音源会继续工作…</Text>}
   </View>;
 }
-const styles = StyleSheet.create({
-  card: { marginTop: 24, padding: 18, borderRadius: 20, backgroundColor: '#1D222B', borderWidth: 1, borderColor: '#2A303A' },
+const makeStyles=(theme:Theme)=>StyleSheet.create({
+  card: { marginTop: 24, padding: 18, borderRadius: 20, backgroundColor: theme.color('#1D222B'), borderWidth: 1, borderColor: theme.color('#2A303A') },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  title: { color: '#ECEBF3', fontSize: 18, fontWeight: '600' },
-  description: { color: '#9296A2', fontSize: 12, lineHeight: 21, marginVertical: 12 },
-  caption: { color: '#9296A2', fontSize: 11, lineHeight: 20, flexShrink: 1 },
+  title: { color: theme.color('#ECEBF3'), fontSize: 18, fontWeight: '600' },
+  description: { color: theme.color('#9296A2'), fontSize: 12, lineHeight: 21, marginVertical: 12 },
+  caption: { color: theme.color('#9296A2'), fontSize: 11, lineHeight: 20, flexShrink: 1 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  button: { backgroundColor: '#303A32', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, marginVertical: 5 },
-  buttonText: { color: '#D9F49B', fontSize: 12 }, disabled: { opacity: 0.4 },
-  input: { color: '#EEECE7', borderColor: '#414754', borderWidth: 1, borderRadius: 10, padding: 12, marginTop: 12, fontSize: 12 },
-  source: { borderTopWidth: 1, borderTopColor: '#353A46', paddingTop: 15, marginTop: 14 },
-  name: { color: '#ECEBF3', fontSize: 15, lineHeight: 23 },
-  state: { color: '#C7AC90', fontSize: 12, marginVertical: 8 }, ready: { color: '#D9F49B' },
-  message: { color: '#C4C8D4', fontSize: 12, lineHeight: 20, marginTop: 12 },
+  button: { backgroundColor: theme.color('#303A32'), borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, marginVertical: 5 },
+  buttonText: { color: theme.color('#D9F49B'), fontSize: 12 }, disabled: { opacity: 0.4 },
+  input: { color: theme.color('#EEECE7'), borderColor: theme.color('#414754'), borderWidth: 1, borderRadius: 10, padding: 12, marginTop: 12, fontSize: 12 },
+  source: { borderTopWidth: 1, borderTopColor: theme.color('#353A46'), paddingTop: 15, marginTop: 14 },
+  name: { color: theme.color('#ECEBF3'), fontSize: 15, lineHeight: 23 },
+  state: { color: theme.color('#C7AC90'), fontSize: 12, marginVertical: 8 }, ready: { color: theme.color('#D9F49B') },
+  message: { color: theme.color('#C4C8D4'), fontSize: 12, lineHeight: 20, marginTop: 12 },
 });

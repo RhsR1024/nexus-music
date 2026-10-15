@@ -1,3 +1,4 @@
+import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {Alert,Pressable,Share,StyleSheet,Text,TextInput,View} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -7,6 +8,7 @@ import {decodeBackup,encodeBackup} from '../storage/backup.ts';
 import type {Track} from '../domain/track.ts';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 export function LibraryHome({services,openSearch,openSettings}:{services:Services;openSearch:()=>void;openSettings:()=>void}) {
+  const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [tab,setTab]=useState<'favorites'|'history'|'playlists'>('favorites'),[selected,setSelected]=useState<string|null>(null);
   const [name,setName]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]);
@@ -57,4 +59,4 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
   </View>;
 }
-const styles=StyleSheet.create({title:{color:'#F1EDE7',fontSize:28,fontWeight:'600'},heading:{color:'#D8DFEA',fontSize:19,marginVertical:12},caption:{color:'#929CAB',fontSize:11,lineHeight:21,marginTop:5},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{padding:11,borderRadius:11,backgroundColor:'#2B3730'},action:{color:'#D9F49B',fontSize:12},track:{color:'#E1E6F0',fontSize:15,lineHeight:24},trackRow:{paddingVertical:14,borderBottomWidth:1,borderColor:'#303744'},input:{color:'#EEECE7',borderWidth:1,borderColor:'#414754',padding:13,borderRadius:11},empty:{padding:24,marginVertical:22,borderWidth:1,borderColor:'#303744',borderRadius:18}});
+const makeStyles=(theme:Theme)=>StyleSheet.create({title:{color:theme.color('#F1EDE7'),fontSize:28,fontWeight:'600'},heading:{color:theme.color('#D8DFEA'),fontSize:19,marginVertical:12},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:21,marginTop:5},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{padding:11,borderRadius:11,backgroundColor:theme.color('#2B3730')},action:{color:theme.color('#D9F49B'),fontSize:12},track:{color:theme.color('#E1E6F0'),fontSize:15,lineHeight:24},trackRow:{paddingVertical:14,borderBottomWidth:1,borderColor:theme.color('#303744')},input:{color:theme.color('#EEECE7'),borderWidth:1,borderColor:theme.color('#414754'),padding:13,borderRadius:11},empty:{padding:24,marginVertical:22,borderWidth:1,borderColor:theme.color('#303744'),borderRadius:18}});
