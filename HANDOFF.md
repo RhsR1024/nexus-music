@@ -136,3 +136,11 @@ scripts/probe-lx-resolve.py仅在忽略目录读取真实备份作私密WY样本
 用户新增：本地继续尝试IPA，同时支持GitHub Actions Apple Silicon/iOS27构建。已核实官方xcode-27 runner（Public Preview）和镜像Xcode27.0/iOS27.0；不可用macos-latest泛称最新SDK。新增共享environment.sh、Gemfile/锁文件、显式SDK检查和build-manifest、工作流。云端成功状态必须看实际运行，不能仅写工作流即勾完成。详见GITHUB_ACTIONS.md。
 
 本机unsigned IPA已生成，arm64、JS包与bundle ID已检查；用户选择稍后连接手机，继续独立开发。发现/主题UI测试已通过（build/SourceUITests-1792027535934.xcresult）。五平台完整公开歌单探测网易98/QQ104/酷我121/酷狗156/咪咕68首成功，返回可动态变化。最新代码基线包含用户提交cbe1f49，不重置或覆盖该提交。
+
+## 真实LX与当前云端接续
+
+真实LX App纵向测试已通过：build/SourceUITests-1792045322336.xcresult，实际导入本机脚本、网易搜索→解析→解码→PCM→暂停→删除。原测试失败暴露外层ScrollView吞键盘首击，已加keyboardShouldPersistTaps和显式收键盘。真实音源仅localhost可选探针读取，不提交也不上云。Native格式测试已覆盖WAV/AAC/16-bit FLAC/24-bit FLAC、定位、PCM/FFT、自然结束与无网络缓存；新增封面缩略图/配额/代次、KRC/gzip字节检查。当前97项TS测试通过。
+
+云端99d3487运行 https://github.com/RhsR1024/nexus-music/actions/runs/38691008776 已失败：Linux、原生检查和Release模拟器编译通过，启动时iOS27因缺少UIScene生命周期终止App，两个UI测试失败，尚未进入IPA归档。诊断产物11953711775的xcresult已下载导出到忽略的build目录，标准错误明确为`UIScene life cycle is required for apps built with this SDK`。现维护AppDelegate.swift内单场景适配与Info.plist声明，窗口改由场景创建，保留同一React surface及链接/前后台转发；本地/云端复验分别记录到GITHUB_ACTIONS。之前bae412f因CFPropertyList3.0.9 Ruby上限失败，34cdbeb修复为3.0.8；随后Yoga动态podspec checksum不同，99d3487只放行已识别两种Yoga checksum，其余Pod锁变化仍失败。复验运行期间不要推送无关功能取消构建。用户已选择稍后连接手机。
+
+新功能：封面缓存和Player/Navidrome专辑展示；音乐库虚拟列表/批量操作、LX v2 JSON/LXMC预览原子追加；源指纹快照固定防更新竞态；恢复只隔离格式错误，IO/原生故障不移动数据；MG榜单/艺术家和MRC字段修复。主功能仍需收尾QRC网络密文、KG分类/分类筛选及长列表，随后进入M10漫途迁移/离线下载。不得把原生PCM或云端编译代替手机锁屏十首、真实Navidrome账号和签名验收。

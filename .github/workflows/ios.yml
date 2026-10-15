@@ -56,7 +56,12 @@ jobs:
       - name: Create iOS 27 simulator
         run: node scripts/ci-simulator.mjs
       - name: Verify source management and Navidrome playback in the App
-        run: node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials
+        shell: bash
+        run: |
+          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials; then
+            tail -n 100 build/logs/ui-catalog.log
+            exit 1
+          fi
       - name: Archive unsigned device IPA
         shell: bash
         run: |

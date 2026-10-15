@@ -17,6 +17,10 @@ main推送、PR及手动Run workflow都会触发 `.github/workflows/ios.yml`：
 
 首次运行发现并修复CFPropertyList3.0.9的Ruby上限，固定跨Ruby版本可用的3.0.8。第二次进入Pods，Yoga本地生成podspec在Intel和Apple Silicon出现已识别的checksum差异。CI在pod install后逐项比较锁文件，只接受两种已验证Yoga checksum之间的变化，任何依赖版本、其他checksum或配置变化仍失败；不会运行pod update或忽略整份锁文件。
 
+运行38691008776的原生检查及Release模拟器编译通过，但App启动被iOS27终止。下载诊断产物11953711775并导出xcresult，App标准错误明确报告`UIScene life cycle is required for apps built with this SDK`，崩溃主线程为`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`。这不是签名、依赖编译或音源网络错误。按[Apple迁移说明](https://developer.apple.com/documentation/uikit/transitioning-to-the-uikit-scene-based-life-cycle)在维护的AppDelegate.swift内增加单场景SceneDelegate和Info.plist场景声明：场景创建window并启动React，AppDelegate继续持有factory/window，重连复用同一React surface，转发URL、用户活动及前后台回调到Expo订阅者。Expo54没有新版ExpoAppSceneDelegate，故采用项目内适配，不升级整套依赖或覆盖prebuild。修复后的本地和云端结果需分别记录，不把此前编译成功算作启动通过。
+
+迁移后本机Xcode26.3/iOS26.3.1 Release回归通过：`build/SourceUITests-1792047430065.xcresult`，音源导入/启停/删除、合成Navidrome登录/解码/PCM频谱/歌词/暂停/移除凭据两项测试均成功；97项TS检查通过。该本地证据不替代iOS27云端复验。
+
 ## 获取包
 
 在仓库Actions选择对应成功运行，下载 `NexusMusic-iOS27-unsigned-<commit>`；解压后包含NexusMusic-unsigned.ipa与build-manifest.json。清单记录commit、是否有本地未提交修改、主机架构、Xcode、iOS SDK、Node和Pods版本。未签名包需个人签名后安装，本工作流不要求Apple密码、证书或GitHub Secrets，也不会自动发布Release。

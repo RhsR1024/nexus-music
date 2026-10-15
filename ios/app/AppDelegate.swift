@@ -21,14 +21,6 @@ public class AppDelegate: ExpoAppDelegate {
     reactNativeFactory = factory
     bindReactNativeFactory(factory)
 
-#if os(iOS) || os(tvOS)
-    window = UIWindow(frame: UIScreen.main.bounds)
-    factory.startReactNative(
-      withModuleName: "main",
-      in: window,
-      launchOptions: launchOptions)
-#endif
-
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -50,6 +42,58 @@ public class AppDelegate: ExpoAppDelegate {
     let result = RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)
     return super.application(application, continue: userActivity, restorationHandler: restorationHandler) || result
   }
+}
+
+// The maintained Expo 54 project supplies its own scene adapter. UIKit requires
+// scene lifecycle adoption for apps linked against the iOS 27 SDK.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+  var window: UIWindow?
+  private var appDelegate: AppDelegate? { UIApplication.shared.delegate as? AppDelegate }
+
+  func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options: UIScene.ConnectionOptions) {
+    guard let scene = scene as? UIWindowScene, let delegate = appDelegate,
+          let factory = delegate.reactNativeFactory else { return }
+    // Reattach the existing React surface if UIKit reconnects the single scene.
+    // There must remain one JS runtime and one authoritative playback queue.
+    if let existing = delegate.window {
+      window = existing
+      existing.windowScene = scene
+      existing.makeKeyAndVisible()
+      open(options.urlContexts)
+      for activity in options.userActivities { continueActivity(activity) }
+      return
+    }
+    let window = UIWindow(windowScene: scene)
+    self.window = window
+    delegate.window = window
+    var launchOptions: [UIApplication.LaunchOptionsKey: Any] = [:]
+    if let context = options.urlContexts.first {
+      launchOptions[.url] = context.url
+      launchOptions[.sourceApplication] = context.options.sourceApplication
+    }
+    if let activity = options.userActivities.first {
+      launchOptions[.userActivityDictionary] = ["UIApplicationLaunchOptionsUserActivityKey": activity]
+    }
+    factory.startReactNative(withModuleName: "main", in: window, launchOptions: launchOptions)
+  }
+
+  func scene(_ scene: UIScene, openURLContexts contexts: Set<UIOpenURLContext>) { open(contexts) }
+  private func open(_ contexts: Set<UIOpenURLContext>) {
+    for context in contexts {
+      var options: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: context.options.openInPlace]
+      options[.sourceApplication] = context.options.sourceApplication
+      options[.annotation] = context.options.annotation
+      _ = appDelegate?.application(UIApplication.shared, open: context.url, options: options)
+    }
+  }
+  func scene(_ scene: UIScene, continue userActivity: NSUserActivity) { continueActivity(userActivity) }
+  private func continueActivity(_ activity: NSUserActivity) {
+    _ = appDelegate?.application(UIApplication.shared, continue: activity, restorationHandler: { _ in })
+  }
+  func sceneDidBecomeActive(_ scene: UIScene) { appDelegate?.applicationDidBecomeActive(UIApplication.shared) }
+  func sceneWillResignActive(_ scene: UIScene) { appDelegate?.applicationWillResignActive(UIApplication.shared) }
+  func sceneWillEnterForeground(_ scene: UIScene) { appDelegate?.applicationWillEnterForeground(UIApplication.shared) }
+  func sceneDidEnterBackground(_ scene: UIScene) { appDelegate?.applicationDidEnterBackground(UIApplication.shared) }
 }
 
 class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
