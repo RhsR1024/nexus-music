@@ -1,13 +1,31 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getServices, type Services } from './src/app/services';
+import { SourceSettings } from './src/ui/SourceSettings';
+import { AudioSettings } from './src/ui/AudioSettings';
+import { Player } from './src/ui/Player';
+import { Search } from './src/ui/Search';
 import { StatusBar } from 'expo-status-bar';
 import {
-  Pressable, ScrollView, StyleSheet, Text, View,
+  Linking, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
-type Tab = 'library' | 'settings';
+type Tab = 'library' | 'search' | 'settings';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('library');
+  const [services, setServices] = useState<Services>();
+  const [startupError, setStartupError] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void getServices().then(value => { if (active) setServices(value); }, () => { if (active) setStartupError(true); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    const open = (url: string | null) => { if (url?.startsWith('com.nexusmusic.app://settings')) setTab('settings'); };
+    void Linking.getInitialURL().then(open);
+    const subscription = Linking.addEventListener('url', event => open(event.url));
+    return () => subscription.remove();
+  }, []);
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
@@ -38,10 +56,10 @@ export default function App() {
           <View style={styles.empty}>
             <View style={styles.emptyIcon}><Text style={styles.note}>♫</Text></View>
             <Text style={styles.emptyTitle}>为下一次聆听留个位置</Text>
-            <Text style={styles.emptyText}>收藏、歌单和最近播放将在这里汇集。{ '\n'}当前还没有连接音乐来源。</Text>
+            <Text style={styles.emptyText}>收藏、歌单和最近播放将在这里汇集。{ '\n'}可以先搜索歌曲，或连接私人音乐服务。</Text>
           </View>
           <View style={styles.captionRow}><View style={styles.accentLine}/><Text style={styles.caption}>属于你的收藏，保持原有的顺序与记忆。</Text></View>
-        </> : <>
+        </> : tab === 'search' ? (services ? <Search services={services}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : <>
           <Text style={styles.pageTitle}>音乐来源</Text>
           <Text style={styles.description}>连接你的曲库，选择播放来源。</Text>
           <View style={styles.sourceCard}>
@@ -49,16 +67,14 @@ export default function App() {
             <Text style={styles.emptyText}>浏览自己的歌曲、专辑、歌手与服务端歌单。</Text>
             <Text style={styles.pending}>连接功能正在接入，暂不收集账号信息。</Text>
           </View>
-          <View style={styles.sourceCard}>
-            <View style={styles.sourceTop}><Text style={styles.sourceTitle}>LX 音源</Text><Text style={styles.sourceState}>尚未配置</Text></View>
-            <Text style={styles.emptyText}>使用你提供的音源脚本解析播放地址。</Text>
-            <Text style={styles.pending}>脚本导入功能正在接入。</Text>
-          </View>
-          <Text style={styles.footnote}>音枢 · 0.1 开发版{ '\n'}当前为首个工程基线，音乐播放尚未开放。</Text>
+          {services ? <SourceSettings catalog={services.catalog} /> : <Text style={styles.pending}>{startupError ? '无法打开本地数据库或原生模块，请重新启动应用；已有数据保留。' : '正在打开音乐数据…'}</Text>}
+          {services && <AudioSettings services={services} />}
+          <Text style={styles.footnote}>音枢 · 0.1 开发版{ '\n'}播放与真机后台验收进行中。</Text>
         </>}
       </ScrollView>
+      {services && <Player services={services} />}
       <View style={styles.tabBar}>
-        {([['library', '♫', '音乐库'], ['settings', '☷', '来源设置']] as const).map(([key, icon, title]) =>
+        {([['library', '♫', '音乐库'], ['search', '⌕', '搜索'], ['settings', '☷', '来源设置']] as const).map(([key, icon, title]) =>
           <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: tab === key }}
             onPress={() => setTab(key)} style={styles.tab}>
             <Text style={[styles.tabIcon, tab === key && styles.active]}>{icon}</Text>

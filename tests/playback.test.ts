@@ -83,3 +83,29 @@ test('replacing current entry aborts old work and waits for explicit play', asyn
   assert.equal(controller.getSnapshot().intent, 'paused');
   assert.deepEqual(calls, ['stop', 'stop']);
 });
+
+test('ready media resumes in place after pause without resolving or resetting position', async () => {
+  const { controller, requests, calls } = rig();
+  const pending = controller.play(); requests[0]!.resolve({ url: 'https://example.test/a.mp3' }); await pending;
+  const old = controller.getSnapshot().token!;
+  controller.onReady(old); controller.onProgress(old, 32, 100, false);
+  controller.pause(); await controller.play();
+  assert.equal(requests.length, 1);
+  assert.equal(controller.getSnapshot().position, 32);
+  assert.ok(controller.getSnapshot().token!.generation > old.generation);
+  assert.equal(calls.at(-1), 'play');
+  await controller.onEnded(old); assert.equal(requests.length, 1);
+});
+
+test('native decode failure retries resolver with only the failed route excluded', async () => {
+  const calls: ReadonlySet<string>[] = [];
+  const controller = new PlaybackController({ resolve: async (_, __, excluded) => {
+    calls.push(new Set(excluded)); return { url: 'https://example.test/audio', routeKey: calls.length === 1 ? 'a:flac' : 'b:flac' };
+  } }, { load() {}, stop() {}, pause() {}, play() {} }, makeQueue([entry('a')]));
+  await controller.play(); const old = controller.getSnapshot().token!;
+  await controller.onError(old);
+  assert.equal(calls.length, 2); assert.deepEqual([...calls[1]!], ['a:flac']);
+  await controller.onError(old); assert.equal(calls.length, 2);
+  controller.pause(); await controller.onError(controller.getSnapshot().token ?? old);
+  assert.equal(calls.length, 2);
+});

@@ -44,3 +44,13 @@
 - Pods安装与iOS Release模拟器构建通过，自动链接NexusNative及bootstrap资源；模拟器安装/启动通过。
 - 24份真实本地脚本以原生HTTP/timer初始化，23份发出inited，一份SCRIPT_TIMEOUT；报告只在build/logs，不提交。
 - 本批没有实现App脚本导入/持久化/批量管理UI，也没有证明真实musicUrl、音频解码、后台、PCM频谱/EQ或Navidrome联调。单次解析取消与底层HTTP取消的边界见LX_HOST_PROGRESS及决策0002。
+
+## 2026-10-15来源管理、播放DSP及搜索增量
+
+- SQLite版本迁移/事务仓储、脚本文件/地址导入、SHA256去重、批量启停/删除、优先级顺序、订阅更新/旧版恢复已接入App；默认导入停用。来源批量初始化并发最多3项，较新批次阻止旧批次继续启动待处理源。
+- Release XCUITest真实走通：进入来源页、文件选择器取消、从本地HTTP导入合成脚本、原生初始化/启用、停用、删除（测试后清理合成源）。首次UI测试发现URL输入字符丢失，配置URL键盘并按实际输入节奏复测通过；结果在build/SourceUITests-*.xcresult。
+- 原创AVPlayer单后端、HTTP byte-range资源加载、MediaPlayer/音频会话/中断与路由控制、10段EQ与原生PCM→FFT→32频带。Mac同一生产播放引擎验证本地WAV与HTTP分段WAV：自然结束、真实PCM tap和频谱事件通过；C++黄金验证旁路逐样本相同、1kHz衰减、FFT峰值、余量/静音/有限输出。iOS Release构建通过，**App播放页真实播放与手机后台仍待单独验收**。
+- 五平台真实搜索探测每平台返回3首，保留LX元数据与分页。TX采用签名请求，许可/来源见THIRD_PARTY_NOTICES；修复长整数解析对长小数的误识别，未静默舍入ID。聚合搜索分平台失败/分页/取消，不按同名合并。
+- `npm run check`：类型检查与52项测试通过；原生测试含24项utility对照、HTTP/context生命周期、DSP及AVPlayer纵向验证。发现/榜单/公开歌单、歌词、收藏历史、临时音频缓存、Navidrome和M10仍未完成。
+- 本地备份仅作为私密曲目输入做6份WY脚本真实解析：5份返回HTTP URL，3份读到可识别音频头；不提交地址/曲名/ID，不等于完整解码和真实手机播放。Python探测明确使用本机系统CA文件，未关闭TLS验证。
+- 当前未发现已连接的iPhone；签名/覆盖安装/锁屏十首仍未验收。

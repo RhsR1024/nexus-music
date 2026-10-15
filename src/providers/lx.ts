@@ -48,7 +48,11 @@ export function makeLXRequest(track: Track, quality: string, source: LXSource) {
   const seconds = track.durationMs === undefined ? undefined : Math.floor(track.durationMs / 1000);
   const interval = seconds === undefined ? null : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   const meta: Record<string, unknown> & { songId: string; albumName: string } = {
-    ...track.metadata, songId: track.origin.id, albumName: track.album ?? '',
+    ...track.metadata,
+    songId: typeof track.metadata.songId === 'string' && track.metadata.songId ? track.metadata.songId : track.origin.id,
+    albumName: track.album ?? '',
+    qualitys: track.qualities.map(item => ({ type: item.id, ...(item.sizeBytes !== undefined ? { size: `${(item.sizeBytes/1048576).toFixed(2)}MB` } : {}) })),
+    _qualitys: track.metadata._qualitys ?? track.metadata._types ?? {},
     ...(track.artwork ? { picUrl: track.artwork } : {}),
   };
   return {
@@ -57,7 +61,7 @@ export function makeLXRequest(track: Track, quality: string, source: LXSource) {
     info: {
       type: quality,
       musicInfo: {
-        id: track.origin.id,
+        id: track.origin.platform === 'kg' ? track.origin.id : `${track.origin.platform}_${track.origin.id}`,
         name: track.title,
         singer: track.artist,
         source: track.origin.platform,

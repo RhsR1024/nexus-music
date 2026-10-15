@@ -43,6 +43,14 @@ test('all sources at preferred quality precede any lower quality', async () => {
   assert.equal(media.quality, 'flac');
 });
 
+test('unplayable URL route exclusion continues at the same quality on another source', async () => {
+  const { registry } = await setup();
+  const resolver = new MultiSourceResolver(registry, { request: async source => `https://example.test/${source.id}` }, () => 'flac');
+  const first = await resolver.resolve(track, idleSignal());
+  const second = await resolver.resolve(track, idleSignal(), new Set([first.routeKey!]));
+  assert.equal(second.sourceId, 'b'); assert.equal(second.quality, 'flac');
+});
+
 test('downgrade occurs only after all eligible same-quality sources fail', async () => {
   const { registry } = await setup();
   const calls: string[] = [];

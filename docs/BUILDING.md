@@ -35,4 +35,8 @@ LX离线探针与进度见 [LX_HOST_PROGRESS.md](LX_HOST_PROGRESS.md)。
 
 `modules/nexus-native/ios`保存原创Swift宿主与单一bootstrap资源，Expo默认扫描本地modules目录；新增/修改Podspec后运行ios:pods，不重新prebuild。原生工具测试在Mac上用同一Swift实现对照Node crypto/zlib及本地HTTP服务；不能替代iOS设备验证。
 
+原生测试另覆盖原创C++EQ/FFT及生产AVPlayer引擎的合成WAV/HTTP播放。`source /Users/ningli/WorkSpace/Tools/env.sh; node scripts/test-ui.mjs`在本地18439端口提供无凭据的合成脚本，运行Release XCUITest导入/启停/删除；日志及xcresult保存在build，不提交。测试目标只在testing构建，不作为IPA内容。
+
+`node --experimental-strip-types scripts/probe-online.mjs`对五平台真实搜索做小样本探测，报告只包含数量/字段保留标记。`scripts/probe-lx-resolve.py`使用本机私密样本，报告仅留状态及音频头验证，不输出URL或曲目。
+
 实际脚本初始化（会执行脚本网络请求）：先运行test:native编译工具，再运行`python3 scripts/probe-lx-native.py`。仅在本机生成去除URL/原始异常的报告；resource、build和local-config保持Git排除。

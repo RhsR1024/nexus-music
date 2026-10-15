@@ -20,13 +20,18 @@
   },
   "dependencies": {
     "expo": "54.0.37",
+    "expo-crypto": "15.0.9",
+    "expo-document-picker": "14.0.8",
+    "expo-file-system": "19.0.24",
+    "expo-secure-store": "15.0.8",
+    "expo-sqlite": "16.0.10",
     "expo-status-bar": "3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5"
   },
   "devDependencies": {
+    "@types/node": "24.10.0",
     "@types/react": "19.1.17",
-    "typescript": "5.9.3",
-    "@types/node": "24.10.0"
+    "typescript": "5.9.3"
   }
 }

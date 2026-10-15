@@ -9,3 +9,8 @@ xcrun swiftc -swift-version 5 modules/nexus-native/ios/ScriptUtilities.swift mod
 node scripts/test-native-runtime.mjs
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/ScriptUtilities.swift modules/nexus-native/ios/ScriptHTTP.swift modules/nexus-native/ios/ScriptRuntime.swift tests/native/LifecycleTests.swift -framework JavaScriptCore -lz -o build/tests/native-lifecycle
 build/tests/native-lifecycle
+xcrun clang++ -std=c++20 -O2 tests/native/AudioDSPTests.cpp -o build/tests/native-dsp
+build/tests/native-dsp
+xcrun clang++ -std=c++20 -fobjc-arc -c modules/nexus-native/ios/NexusAudioDSP.mm -o build/tests/audio-dsp.o
+xcrun swiftc -swift-version 5 -import-objc-header modules/nexus-native/ios/NexusAudioDSP.h modules/nexus-native/ios/NativePlaybackEngine.swift modules/nexus-native/ios/AudioResourceLoader.swift tests/native/PlaybackCLI.swift build/tests/audio-dsp.o -framework AVFoundation -framework MediaToolbox -framework MediaPlayer -lc++ -o build/tests/native-playback
+node scripts/test-native-playback.mjs

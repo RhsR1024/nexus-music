@@ -1,0 +1,29 @@
+import type { Repository } from '../storage/repository.ts';
+import { normalizeQuality, type Quality } from '../domain/quality.ts';
+export interface Preferences { quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number }
+export const defaults: Preferences = { quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, theme: 'system', cacheLimitMB: 256 };
+export class PreferenceStore {
+  private repository: Repository; private value: Preferences = defaults;
+  private listeners = new Set<() => void>(); private tail: Promise<unknown> = Promise.resolve();
+  constructor(repository: Repository) { this.repository = repository; }
+  getSnapshot = () => this.value;
+  subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+  async restore() {
+    const value = await this.repository.get<Preferences>('preferences.v1');
+    if (value) this.value = this.validate({ ...defaults, ...value });
+  }
+  private validate(value: Preferences): Preferences {
+    if (!normalizeQuality(value.quality) || value.gains.length !== 10 || !value.gains.every(gain => Number.isFinite(gain) && Math.abs(gain) <= 12) ||
+      !['off', 'all', 'one'].includes(value.repeat) || !Number.isFinite(value.lyricOffsetMs) || !Number.isFinite(value.fontScale) || value.fontScale < .7 || value.fontScale > 2 ||
+      !['system', 'dark', 'light'].includes(value.theme) || !Number.isFinite(value.cacheLimitMB) || value.cacheLimitMB < 32 || value.cacheLimitMB > 2048) throw new Error('设置数据无效');
+    return { ...value, gains: [...value.gains] };
+  }
+  update(patch: Partial<Preferences>) {
+    const next = this.tail.then(async () => {
+      const value = this.validate({ ...this.value, ...patch });
+      await this.repository.put('preferences.v1', value); this.value = value;
+      for (const listener of this.listeners) listener();
+    });
+    this.tail = next.catch(() => {}); return next;
+  }
+}

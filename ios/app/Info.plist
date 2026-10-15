@@ -48,6 +48,8 @@
     <string>连接你配置的局域网音乐服务器并播放音乐。</string>
     <key>RCTNewArchEnabled</key>
     <true/>
+    <key>UIBackgroundModes</key>
+    <array><string>audio</string></array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

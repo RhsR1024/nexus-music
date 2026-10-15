@@ -40,7 +40,14 @@ final class ScriptRuntime {
       let clear: @convention(block) (Int) -> Void = { [weak self] id in self?.timers.removeValue(forKey: id)?.cancel() }
       let utility: @convention(block) (String, String) -> String = { ScriptUtilities.call($0, $1) }
       context.setObject(["emit": emit, "http": httpStart, "abortHttp": abort, "timer": timer, "clearTimer": clear, "utility": utility], forKeyedSubscript: "__nexusNative" as NSString)
-      context.setObject(["name": name, "version": "", "author": "", "description": "", "rawScript": script], forKeyedSubscript: "__nexusScriptInfo" as NSString)
+      var info = ["name": name, "version": "", "author": "", "description": "", "rawScript": script]
+      let header = String(script.prefix(16384))
+      for field in ["version", "author", "description", "homepage"] {
+        if let expression = try? NSRegularExpression(pattern: "@\(field)\\s+([^\\r\\n]*)"),
+           let match = expression.firstMatch(in: header, range: NSRange(header.startIndex..., in: header)),
+           let range = Range(match.range(at: 1), in: header) { info[field] = String(header[range]).replacingOccurrences(of: "*/", with: "").trimmingCharacters(in: .whitespaces) }
+      }
+      context.setObject(info, forKeyedSubscript: "__nexusScriptInfo" as NSString)
       let deadline = DispatchWorkItem { [weak self] in
         guard let self, let pending = self.initialization else { return }
         self.initialization = nil; pending(.failure(.timeout)); self.teardown()

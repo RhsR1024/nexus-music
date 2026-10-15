@@ -8,25 +8,40 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		2C42AB83F4711381D4AEF239 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E1D5099D48B87003F0EBDA31 /* Foundation.framework */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		79D37501D51AC75A1364B323 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2C9C47FACBDD281CBF3DFBA8 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		D902FDA5F109D2E2F0B2566F /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 969E710B19833E1A9559BDCE /* ExpoModulesProvider.swift */; };
 		E621B7B36E8D4E893A99B3EF /* libPods-app.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2531D76195D25EC356A9B6DC /* libPods-app.a */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F33B72B641FAB77ED1765B5F /* SourceSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4CEC9A66FF7CE6C3FB1DDD /* SourceSettingsTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E10C96099404C4ACC176F606 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 13B07F861A680F5B00A75B9A;
+			remoteInfo = app;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0E4949C5537408AC76335C17 /* Pods-app.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-app.release.xcconfig"; path = "Target Support Files/Pods-app/Pods-app.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* app.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = app.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = app/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = app/Info.plist; sourceTree = "<group>"; };
+		1D4CEC9A66FF7CE6C3FB1DDD /* SourceSettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceSettingsTests.swift; sourceTree = "<group>"; };
 		2531D76195D25EC356A9B6DC /* libPods-app.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-app.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C9C47FACBDD281CBF3DFBA8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = app/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		7143EFB1F6C2AC9B2F36A8CC /* Pods-app.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-app.debug.xcconfig"; path = "Target Support Files/Pods-app/Pods-app.debug.xcconfig"; sourceTree = "<group>"; };
+		7D966649C755B99BFCF4C2A6 /* NexusMusicUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NexusMusicUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		969E710B19833E1A9559BDCE /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-app/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = app/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		E1D5099D48B87003F0EBDA31 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = app/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* app-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "app-Bridging-Header.h"; path = "app/app-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -38,6 +53,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				E621B7B36E8D4E893A99B3EF /* libPods-app.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		91ACB9FB962649EBC46DEA55 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C42AB83F4711381D4AEF239 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -63,6 +86,7 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				2531D76195D25EC356A9B6DC /* libPods-app.a */,
+				70C55ACC2BE6ED570DCB0890 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -85,6 +109,14 @@
 			path = Pods;
 			sourceTree = "<group>";
 		};
+		70C55ACC2BE6ED570DCB0890 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				E1D5099D48B87003F0EBDA31 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
@@ -101,6 +133,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				4C383CDC3ECFD723A56B8B7F /* Pods */,
 				E69A23DC4C08EC5E6C62FB6F /* ExpoModulesProviders */,
+				9EDAC1565CC60B9B8553BAEC /* NexusMusicUITests */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -111,8 +144,18 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* app.app */,
+				7D966649C755B99BFCF4C2A6 /* NexusMusicUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		9EDAC1565CC60B9B8553BAEC /* NexusMusicUITests */ = {
+			isa = PBXGroup;
+			children = (
+				1D4CEC9A66FF7CE6C3FB1DDD /* SourceSettingsTests.swift */,
+			);
+			name = NexusMusicUITests;
+			path = NexusMusicUITests;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -157,6 +200,24 @@
 			productReference = 13B07F961A680F5B00A75B9A /* app.app */;
 			productType = "com.apple.product-type.application";
 		};
+		7DBACAE3F77326B9F3B8BA52 /* NexusMusicUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C34F2CED688696B39FB7675E /* Build configuration list for PBXNativeTarget "NexusMusicUITests" */;
+			buildPhases = (
+				65BC1BF656DE4FDDD5B3D706 /* Sources */,
+				91ACB9FB962649EBC46DEA55 /* Frameworks */,
+				AB0606A7DBA21DFEDA51F34B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5EBCDDD15FE5E4EDF024C4FB /* PBXTargetDependency */,
+			);
+			name = NexusMusicUITests;
+			productName = NexusMusicUITests;
+			productReference = 7D966649C755B99BFCF4C2A6 /* NexusMusicUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -167,6 +228,9 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+					};
+					7DBACAE3F77326B9F3B8BA52 = {
+						TestTargetID = 13B07F861A680F5B00A75B9A;
 					};
 				};
 			};
@@ -184,6 +248,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* app */,
+				7DBACAE3F77326B9F3B8BA52 /* NexusMusicUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -197,6 +262,13 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				79D37501D51AC75A1364B323 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0606A7DBA21DFEDA51F34B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,9 +400,43 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		65BC1BF656DE4FDDD5B3D706 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F33B72B641FAB77ED1765B5F /* SourceSettingsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		5EBCDDD15FE5E4EDF024C4FB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = app;
+			target = 13B07F861A680F5B00A75B9A /* app */;
+			targetProxy = E10C96099404C4ACC176F606 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		13466BA3D2E93E4821CE6D33 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = com.nexusmusic.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = app;
+			};
+			name = Debug;
+		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7143EFB1F6C2AC9B2F36A8CC /* Pods-app.debug.xcconfig */;
@@ -394,6 +500,24 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		1B8BD281D014250B88656A0E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = com.nexusmusic.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = app;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -532,6 +656,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C34F2CED688696B39FB7675E /* Build configuration list for PBXNativeTarget "NexusMusicUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1B8BD281D014250B88656A0E /* Release */,
+				13466BA3D2E93E4821CE6D33 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

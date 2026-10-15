@@ -30,7 +30,7 @@ export class MultiSourceResolver implements MediaResolver {
   constructor(registry: SourceRegistry, transport: LXTransport, preference: () => Quality, timeoutMs = 8000) {
     this.registry = registry; this.transport = transport; this.preference = preference; this.timeoutMs = timeoutMs;
   }
-  async resolve(track: Track, signal: AbortSignal): Promise<RoutedMedia> {
+  async resolve(track: Track, signal: AbortSignal, excluded: ReadonlySet<string> = new Set()): Promise<RoutedMedia> {
     throwIfAborted(signal);
     if (track.origin.kind !== 'online') throw new Error('LX仅处理在线平台歌曲');
     const platform = track.origin.platform;
@@ -41,6 +41,8 @@ export class MultiSourceResolver implements MediaResolver {
       for (const source of sources) {
         throwIfAborted(signal);
         if (!this.registry.isCurrent(source)) continue;
+        const routeKey = JSON.stringify([source.id, source.revision, quality]);
+        if (excluded.has(routeKey)) continue;
         const capability = source.capabilities.find(item => item.platform === platform && item.actions.includes('musicUrl'));
         const scriptQuality = capability?.qualities.find(type => normalizeQuality(type) === quality);
         if (!capability || !scriptQuality) continue;
@@ -50,7 +52,7 @@ export class MultiSourceResolver implements MediaResolver {
           if (!this.registry.isCurrent(source)) { attempts.push({ sourceId: source.id, quality, reason: 'source-changed' }); continue; }
           const url = mediaURL(result);
           if (!url) { attempts.push({ sourceId: source.id, quality, reason: 'invalid-url' }); continue; }
-          return { url, sourceId: source.id, sourceRevision: source.revision, requestedQuality: preference, quality, scriptQuality };
+          return { url, routeKey, sourceId: source.id, sourceRevision: source.revision, requestedQuality: preference, quality, scriptQuality };
         } catch (error) {
           throwIfAborted(signal);
           attempts.push({ sourceId: source.id, quality, reason: error instanceof DeadlineError ? 'timeout' : 'failed' });
