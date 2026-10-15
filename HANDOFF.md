@@ -182,3 +182,7 @@ S1 原生模糊/渐变、安全区域、语义色/强调色、悬浮导航/封�
 S1已提交并push：2cb91a6605b0bf37704c007633d9bdbb8c5d5947。云端38728228483：Linux通过，iOS检查运行中；不要新push取消首次静态材质/渐变/SafeArea依赖验证。S3在本地继续：ModernPlayer/PlayerVisuals新增AM、沉浸、写真封面背景、黑胶和真实FFT声波核，保留经典；只改Preferences.playerLayout，不建第二播放器。120项TS通过。最终UI build/SourceUITests-1792065306216.xcresult：ND合成实音/PCM/歌词→暂停→五皮肤切换、AM进度拖动且仍暂停、按钮首屏可达→回经典→删凭据全部通过；已看截图并修复控件超屏/状态栏对比。照片目前来自歌曲封面，没有独立写真库/图片导入；无完整扫色/字强调/TTML、动态取色或真机性能验收。决策0013记录边界，不能写成已经全功能/视觉完全对齐。
 
 S3已本地提交b7d7226b89869efbf90e49a29da5314025965e6a，并成功生成arm64/SDK26.2未签名IPA，manifest dirty=false，产物在build/distribution，SHA见BUILD_STATUS。为允许阶段push且保留S1云端证据，工作流按官方当前文档改为cancel-in-progress:false + queue:max，新阶段排队而非打断当前运行；未声称云端新包成功。
+
+重要云端纠正：S1 38728228483失败，外观与ND合成实音两个测试通过，仅SourceManager失败；不是编译/通用播放故障。已下载11971211239，ui-catalog.log68351源启用按钮缺失，点击导入的hit point{-1,-1}，失败AX显示误进tab-library。实际是iPhone17较小视口的源导入按钮被浮动底栏遮挡，尾部大padding不足以约束ScrollView可见区域。当前工作树按chrome实际高度/安全区缩小滚动视口，并加导入后仍在设置tab断言；新建本地iPhone17模拟器CACFEADC-4D00-4BBF-AD37-503CDD1BE24A（iOS26.3.1）复验。原iPhone15ProMax测试模拟器暂时shutdown以节约Intel16GB内存。4db78c4已push，运行38732185670已启动，包含旧布局，不能称修复已上云。S3功能和本地IPA提交b7d7226已在远端。
+
+紧凑视口复验已通过：新iPhone17模拟器源导入/启停删69.151秒，ND合成实音/PCM/歌词/暂停、AM拖动/五皮肤控制可达85.659秒，全部成功；120项TS通过。内容区实测chrome高度约束修复待随本批提交上云；云端386...旧成功不能替代新修复验收。九张截图本地持久保存在resource/reference-ui/sollin-v2（忽略Git），不作为打包资产。

@@ -22,6 +22,7 @@ type Tab='discover'|'library'|'search'|'settings';
 export default function App(){return <SafeAreaProvider><MusicApp/></SafeAreaProvider>;}
 function MusicApp(){
   const [tab,setTab]=useState<Tab>('discover'),[privateLibrary,setPrivateLibrary]=useState(false);
+  const [chromeHeight,setChromeHeight]=useState(80);
   const [services,setServices]=useState<Services>(),[startupError,setStartupError]=useState<string>();
   const insets=useSafeAreaInsets();
   const startup=()=>{setStartupError(undefined);void getServices().then(setServices,error=>setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。'));};
@@ -31,8 +32,8 @@ function MusicApp(){
   const text={color:p.text},caption={color:p.secondary};
   return <ThemeContext.Provider value={theme}><View style={{flex:1,backgroundColor:p.background[0]}}>
     <AmbientBackground/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
-    <View style={{flex:1,paddingTop:insets.top+12}}>
-      {tab==='discover'&&services&&!startupError?<Discovery services={services} embedded/>:<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:14,paddingBottom:210+insets.bottom}}>
+    <View style={{flex:1,paddingTop:insets.top+12,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
+      {tab==='discover'&&services&&!startupError?<Discovery services={services} embedded/>:<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:14,paddingBottom:32}}>
         <Text style={[caption,{fontSize:11,letterSpacing:3,marginBottom:12}]}>音枢 · NEXUS MUSIC</Text>
         {startupError?<View><Text style={caption}>{startupError}</Text><Pressable accessibilityRole="button" onPress={startup} style={{padding:16}}><Text style={{color:p.accent}}>重试打开</Text></Pressable></View>:!services?<Text style={caption}>正在打开音乐数据…</Text>:tab==='library'?<>
           <View style={{flexDirection:'row',gap:12,marginBottom:22}}>{([false,true]as const).map(value=><Pressable key={String(value)} testID={value?'tab-private':'library-local'} accessibilityRole="tab" accessibilityState={{selected:privateLibrary===value}} onPress={()=>setPrivateLibrary(value)} style={{paddingHorizontal:18,paddingVertical:12,borderRadius:22,backgroundColor:privateLibrary===value?p.selected:p.surface}}><Text style={{color:privateLibrary===value?p.accent:p.secondary,fontWeight:'600'}}>{value?'私人曲库':'我的音乐'}</Text></Pressable>)}</View>
@@ -44,7 +45,7 @@ function MusicApp(){
         </>}
       </ScrollView>}
     </View>
-    <View pointerEvents="box-none" style={{position:'absolute',bottom:Math.max(insets.bottom,12),left:16,right:16,gap:10}}>
+    <View pointerEvents="box-none" onLayout={event=>{const height=event.nativeEvent.layout.height;setChromeHeight(previous=>Math.abs(previous-height)<.5?previous:height);}} style={{position:'absolute',bottom:Math.max(insets.bottom,12),left:16,right:16,gap:10}}>
       {services&&<Player services={services}/>}
       <View style={{flexDirection:'row',gap:10,alignItems:'center'}}>
         <GlassSurface style={{flex:1}}><View style={{flexDirection:'row',paddingVertical:9}}>{([

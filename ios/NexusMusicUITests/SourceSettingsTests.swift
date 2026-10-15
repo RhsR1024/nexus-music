@@ -30,6 +30,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(url.value as? String, sourceURL)
     url.typeText("\n")
     app.buttons["从地址导入"].tap()
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.isSelected, "Import must not hit the floating navigation underneath")
     let enable = app.buttons["启用音源：Nexus UI Test Source"]
     for _ in 0..<5 { if enable.isHittable { break }; app.swipeUp() }
     XCTAssertTrue(enable.waitForExistence(timeout: 10))

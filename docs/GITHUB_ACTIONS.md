@@ -40,3 +40,9 @@ main推送、PR及手动Run workflow都会触发 `.github/workflows/ios.yml`：
 为保留阶段验收，concurrency 同分支设置 cancel-in-progress: false、queue: max：新的阶段 push 进入队列，不中断当前构建，也不以最新 pending 替换前一个 pending。GitHub 当前官方文档支持最多100个等待运行，达到上限后新的运行会取消；不能承诺无限排队或严格按提交时间排序。依据：https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency 。
 
 S1 2cb91a6 对应运行38728228483仍在验证iOS App。五皮肤功能提交b7d7226本地Release UI通过，并生成未签名IPA：build/distribution/NexusMusic-unsigned.ipa，arm64/iphoneos26.2，清洁构建清单记录b7d7226，SHA256 a5fb7627e40ab3ae403241b6dee7b99461126c08d227cf8b0ee46a429efdc644。此包不冒充云端iOS27包，云端后续运行状态另行记录。
+
+## S1 云端失败定位（38728228483）
+
+2cb91a6：Linux/原生检查/Release编译通过；外观持久化测试通过、Navidrome真实合成流/PCM/歌词/暂停/删凭据通过，只有SourceManager失败。诊断产物11971211239已下载到忽略的build/s1-ios27-diagnostics（未提交）。ui-catalog.log:68351 为源启用按钮不存在；68260附近显示“从地址导入”点击点{-1,-1}，最终AX树F39BFE1E显示意外进入tab-library，源未导入。iPhone17视口402×874，按钮y771附近被悬浮底栏覆盖。日志之后的600秒诊断收集超时是额外耗时，不是唯一测试失败原因，不应归因为普遍模拟器坏掉。
+
+修复：根内容区按底部chrome的实际onLayout高度+安全区收缩可滚动视口，保留浮动视觉；移除原来仅靠内容尾部大padding的方案。UI测试新增导入后仍在设置tab的断言，并在本地iPhone17紧凑视口复验源管理和五皮肤/播放回归。4db78c4运行38732185670在定位时已启动，仍包含旧布局；修复将正常提交push并排队，不将旧运行结果冒充修复验收。
