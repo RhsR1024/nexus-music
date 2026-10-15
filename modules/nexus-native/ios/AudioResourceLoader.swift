@@ -8,8 +8,11 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
   private final class Job {
     let request: AVAssetResourceLoadingRequest
     var offset: Int64 = 0
+    var total: Int64 = 0
+    var mime: String?
     init(_ request: AVAssetResourceLoadingRequest) { self.request = request }
   }
+  private var cacheWriter: AudioCache.Writer?
   private let url: URL
   private let headers: [String: String]
   private let queue = DispatchQueue(label: "nexus.audio.resource")
@@ -18,12 +21,13 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
   private var tasks: [ObjectIdentifier: URLSessionDataTask] = [:]
   let asset: AVURLAsset
 
-  init(url: URL, headers: [String: String]) {
+  init(url: URL, headers: [String: String], cacheKey: String? = nil) {
     self.url = url; self.headers = headers
     var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
     components.scheme = "nexus-audio"
     asset = AVURLAsset(url: components.url!)
     super.init()
+    if let cacheKey { cacheWriter = AudioCache.shared.writer(cacheKey) }
     let configuration = URLSessionConfiguration.ephemeral
     configuration.urlCache = nil; configuration.httpCookieStorage = nil
     configuration.timeoutIntervalForRequest = 20; configuration.timeoutIntervalForResource = 3600
@@ -50,7 +54,7 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
   func destroy() {
     queue.async { [self] in
       for job in jobs.values { job.request.finishLoading(with: URLError(.cancelled)) }
-      jobs.removeAll(); tasks.removeAll(); session.invalidateAndCancel()
+      jobs.removeAll(); tasks.removeAll(); session.invalidateAndCancel(); cacheWriter?.cancel(); cacheWriter = nil
     }
   }
   private func finish(_ task: URLSessionTask, error: Error? = nil) {
@@ -72,6 +76,7 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
         total = Int64(parts[1]) ?? total
       }
     }
+    job.total = total; job.mime = response.mimeType
     if let info = job.request.contentInformationRequest {
       let mime = response.mimeType ?? "application/octet-stream"
       info.contentType = UTType(mimeType: mime)?.identifier ?? "public.audio"
@@ -83,6 +88,7 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
   }
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
     guard let job = jobs[dataTask.taskIdentifier], let requested = job.request.dataRequest else { return }
+    cacheWriter?.write(data, offset: job.offset, total: job.total, mime: job.mime)
     let wanted = max(requested.requestedOffset, requested.currentOffset)
     let upper = requested.requestsAllDataToEndOfResource ? Int64.max : requested.requestedOffset + Int64(requested.requestedLength)
     let lower = max(wanted, job.offset), end = min(upper, job.offset + Int64(data.count))

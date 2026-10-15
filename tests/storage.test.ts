@@ -103,3 +103,13 @@ test('failed source persistence does not alter runtime or existing catalog', asy
   await assert.rejects(catalog.batch([a.id], 'enable'));
   assert.equal(catalog.getSnapshot()[0]!.status, 'disabled'); db.close();
 });
+
+test('quarantine preserves exact malformed JSON atomically before removing the active record',async()=>{
+  const {db,repository}=store();await repository.migrate();
+  db.prepare('INSERT INTO records(key,value) VALUES(?,?)').run('broken','{malformed private payload');
+  await assert.rejects(repository.get('broken'),SyntaxError);
+  await repository.quarantine('broken','recovery.broken.fixture');
+  assert.equal(await repository.get('broken'),undefined);
+  assert.equal((db.prepare('SELECT value FROM records WHERE key=?').get('recovery.broken.fixture') as {value:string}).value,'{malformed private payload');
+  await repository.put('broken',{version:1});assert.deepEqual(await repository.get('broken'),{version:1});db.close();
+});

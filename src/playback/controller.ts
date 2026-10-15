@@ -6,6 +6,8 @@ export interface ResolvedMedia {
   headers?: Readonly<Record<string, string>>;
   quality?: string;
   routeKey?: string;
+  startPosition?: number;
+  cacheKey?: string;
 }
 
 export interface MediaResolver {
@@ -47,6 +49,7 @@ export class PlaybackController {
   private playable = false;
   private loadedTrack: Track | undefined;
   private rejectedRoutes = new Set<string>();
+  private cursor: {entryId:string;seconds:number}|undefined;
 
   constructor(resolver: MediaResolver, backend: PlaybackBackend, queue: QueueState) {
     this.resolver = resolver;
@@ -94,10 +97,11 @@ export class PlaybackController {
     const token = { entryId: entry.id, generation };
     const pending = new AbortController();
     this.pending = pending;
-    this.update({ queue, intent: 'playing', phase: 'resolving', error: null, token, position: 0, duration: 0, media: null });
+    this.update({ queue, intent: 'playing', phase: 'resolving', error: null, token, position: this.cursor?.entryId===entry.id?this.cursor.seconds:0, duration: 0, media: null });
     try {
-      const media = await this.resolver.resolve(entry.track, pending.signal, this.rejectedRoutes);
+      const resolved = await this.resolver.resolve(entry.track, pending.signal, this.rejectedRoutes);
       if (pending.signal.aborted || generation !== this.generation || this.disposed) return;
+      const media = this.cursor?.entryId === entry.id ? {...resolved,startPosition:this.cursor.seconds} : resolved;
       const url = new URL(media.url);
       if (!['https:', 'http:', 'file:'].includes(url.protocol)) throw new Error('音频地址协议不支持');
       this.backend.load(media, token);
@@ -122,6 +126,7 @@ export class PlaybackController {
     const changed = queue.currentId !== this.state.queue.currentId ||
       currentEntry(queue)?.track !== currentEntry(this.state.queue)?.track;
     if (changed) {
+      this.cursor = undefined;
       this.playable = false; this.loadedTrack = undefined;
       this.backend.stop(this.invalidate());
       this.update({ queue, token: null, phase: 'idle', intent: 'paused', error: null, position: 0, duration: 0, media: null });
@@ -138,6 +143,7 @@ export class PlaybackController {
   onReady(token: PlaybackToken) {
     if (!this.matches(token)) return;
     this.playable = true; this.loadedTrack = currentEntry(this.state.queue)?.track;
+    this.cursor = undefined;
     this.update({ phase: 'ready', token });
   }
   onProgress(token: PlaybackToken, position: number, duration: number, buffering: boolean) {
@@ -155,10 +161,16 @@ export class PlaybackController {
     const route = this.state.media?.routeKey;
     this.playable = false;
     if (route && this.state.intent === 'playing' && !this.rejectedRoutes.has(route) && this.rejectedRoutes.size < 64) {
+      const seconds=this.state.position||this.state.media?.startPosition||0;
+      if(seconds>0)this.cursor={entryId:token.entryId,seconds};
       this.rejectedRoutes.add(route); await this.start(this.state.queue); return;
     }
     this.backend.stop(this.invalidate());
     this.update({ phase: 'error', intent: 'paused', token: null, error: '音频加载失败，请重试或检查来源', buffering: false });
+  }
+  restoreCursor(entryId:string|null,seconds:number) {
+    if(!entryId||entryId!==this.state.queue.currentId||!Number.isFinite(seconds)||seconds<0)return;
+    this.cursor={entryId,seconds};this.update({position:seconds});
   }
 
   dispose(): void {

@@ -42,10 +42,11 @@ export class SourceCatalog {
   }
   async restore() {
     const stored = await this.repository.get<StoredSource[]>('sources.v1') ?? [];
-    if (!Array.isArray(stored) || stored.length > 32 || stored.some(item => !item || typeof item.id !== 'string' || typeof item.name !== 'string' || typeof item.script !== 'string' || typeof item.enabled !== 'boolean') || new Set(stored.map(item => item.id)).size !== stored.length) throw new Error('音源数据损坏');
+    if (!Array.isArray(stored) || stored.length > 32 || stored.some(item => !item || typeof item.id !== 'string' || !item.id || typeof item.name !== 'string' || !item.name.trim() || typeof item.script !== 'string' || !item.script.trim() || item.script.length>8*1024*1024 || typeof item.enabled !== 'boolean') || new Set(stored.map(item => item.id)).size !== stored.length) throw new Error('音源数据损坏');
     this.records = stored;
     for (const item of stored) this.registry.register(item);
   }
+  async fingerprint(id:string){const source=this.records.find(item=>item.id===id);if(!source)throw new Error('音源已删除');return this.hash(source.script);}
   async restoreEnabled() { return this.registry.setManyEnabled(this.records.filter(item => item.enabled).map(item => item.id), true); }
   async import(script: string, filename: string, subscription?: string) {
     return this.mutate(() => this.importInner(script, filename, subscription));

@@ -4,10 +4,14 @@ import type { Services } from '../app/services.ts';
 import type { OnlinePlatform } from '../domain/track.ts';
 import { trackKey } from '../domain/track.ts';
 import { platforms } from '../providers/searchCoordinator.ts';
+import {PlaylistPicker} from './PlaylistPicker.tsx';
+import type {Track} from '../domain/track.ts';
 export const platformNames: Readonly<Record<OnlinePlatform,string>> = {wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕'};
 export function Search({ services }: { services: Services }) {
   const state = useSyncExternalStore(services.search.subscribe,services.search.getSnapshot);
   const [query,setQuery] = useState(state.query), [platform,setPlatform] = useState<OnlinePlatform|'all'>('all');
+  const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  const [adding,setAdding]=useState<readonly Track[]>([]);
   const run = () => { void services.search.search(query,platform); };
   return <View>
     <Text style={styles.title}>寻找下一首喜欢的歌</Text>
@@ -21,13 +25,17 @@ export function Search({ services }: { services: Services }) {
         <Pressable accessibilityRole="button" accessibilityLabel={`播放${track.title}`} onPress={() => services.playTracks(group.items,index)}>
           <Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''}</Text>
         </Pressable>
-        <View style={styles.row}><Pressable accessibilityRole="button" onPress={() => services.addToQueue(track,true)} style={styles.chip}><Text style={styles.text}>下一首</Text></Pressable><Pressable accessibilityRole="button" onPress={() => services.addToQueue(track)} style={styles.chip}><Text style={styles.text}>加入队列</Text></Pressable></View>
+        <View style={styles.row}><Pressable accessibilityRole="button" onPress={() => services.addToQueue(track,true)} style={styles.chip}><Text style={styles.text}>下一首</Text></Pressable><Pressable accessibilityRole="button" onPress={() => services.addToQueue(track)} style={styles.chip}><Text style={styles.text}>加入队列</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={()=>{void services.library.favorite(track).catch(()=>{});}} style={styles.chip}><Text style={styles.text}>{library.favorites.some(item=>trackKey(item.origin)===trackKey(track.origin))?'取消本地收藏':'本地收藏'}</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={()=>setAdding([track])} style={styles.chip}><Text style={styles.text}>加入歌单</Text></Pressable>
+        </View>
       </View>)}
       {group.loading && <Text style={styles.caption}>正在搜索…</Text>}
       {group.error && <Text style={styles.error}>{group.error}</Text>}
       {!group.loading&&!group.error&&!group.items.length&&<Text style={styles.caption}>没有匹配结果</Text>}
       {(group.hasMore||group.error)&&<Pressable accessibilityRole="button" disabled={group.loading} onPress={() => { void (group.error ? services.search.retry(group.platform) : services.search.more(group.platform)); }} style={styles.button}><Text style={styles.text}>{group.error?'重试':'加载更多'}</Text></Pressable>}
     </View>)}
+    <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
   </View>;
 }
 const styles=StyleSheet.create({

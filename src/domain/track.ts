@@ -17,6 +17,8 @@ export interface Track {
 }
 
 export function trackKey(origin: TrackOrigin): string {
+  if (!origin || (origin.kind !== 'online' && origin.kind !== 'navidrome') ||
+      (origin.kind === 'online' && !['wy','tx','kw','kg','mg'].includes(origin.platform))) throw new Error('歌曲来源无效');
   const namespace = origin.kind === 'online' ? origin.platform : origin.accountId;
   if (!namespace || typeof origin.id !== 'string' || !origin.id) {
     throw new Error('歌曲来源和 ID 必须是非空字符串');
@@ -26,6 +28,7 @@ export function trackKey(origin: TrackOrigin): string {
 }
 
 export function validateTrack(track: Track): void {
+  if (!track || typeof track !== 'object') throw new Error('歌曲数据无效');
   trackKey(track.origin);
   if (typeof track.title !== 'string' || typeof track.artist !== 'string') {
     throw new Error('歌曲名称与歌手必须是字符串');
@@ -34,4 +37,6 @@ export function validateTrack(track: Track): void {
       (!Number.isFinite(track.durationMs) || track.durationMs < 0)) {
     throw new Error('歌曲时长无效');
   }
+  if (!track.metadata || typeof track.metadata !== 'object' || Array.isArray(track.metadata) || !Array.isArray(track.qualities) ||
+      track.qualities.some(item => !item || typeof item.id !== 'string' || !item.id || (item.sizeBytes !== undefined && (!Number.isFinite(item.sizeBytes) || item.sizeBytes < 0)))) throw new Error('歌曲元数据无效');
 }

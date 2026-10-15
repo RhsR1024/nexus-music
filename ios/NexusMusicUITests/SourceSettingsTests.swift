@@ -1,6 +1,7 @@
 import XCTest
 
 final class SourceSettingsTests: XCTestCase {
+  override func setUpWithError() throws {continueAfterFailure=false}
   func testSourceManagerAndFilePicker() throws {
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
     if springboard.alerts.firstMatch.exists {
@@ -9,13 +10,10 @@ final class SourceSettingsTests: XCTestCase {
     }
     let app = XCUIApplication()
     app.launch()
-    let settingsTab = app.buttons["☷, 来源设置"]
-    let settingsText = app.staticTexts["来源设置"]
-    if settingsTab.exists { settingsTab.tap() }
-    else if settingsText.exists { settingsText.tap() }
-    else { app.buttons["查看来源设置　↗"].tap() }
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     let importButton = app.buttons["导入本地 JS（可多选）"]
     XCTAssertTrue(importButton.waitForExistence(timeout: 15), "Native module/database must load before imports")
+    for _ in 0..<5 { if importButton.isHittable { break }; app.swipeUp() }
     importButton.tap()
     let cancel = app.buttons["取消"]
     if cancel.waitForExistence(timeout: 5) { cancel.tap() }
@@ -48,5 +46,41 @@ final class SourceSettingsTests: XCTestCase {
     let screenshot = XCTAttachment(screenshot: app.screenshot())
     screenshot.lifetime = .keepAlways
     add(screenshot)
+  }
+
+  func testZNavidromePlaybackAndCredentials() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let address=app.textFields["Navidrome服务器地址"]
+    XCTAssertTrue(address.waitForExistence(timeout:15))
+    address.tap();for character in "http://127.0.0.1:18439" {address.typeText(String(character))};address.typeText("\n")
+    XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439")
+    let username=app.textFields["Navidrome用户名"];username.tap();for character in "fixture-user" {username.typeText(String(character))};username.typeText("\n")
+    XCTAssertEqual(username.value as? String,"fixture-user")
+    let password=app.secureTextFields["Navidrome密码"];password.tap();for character in "fixture-password" {password.typeText(String(character))};password.typeText("\n")
+    XCTAssertTrue(app.buttons["验证并保存连接"].isEnabled)
+    app.buttons["验证并保存连接"].tap()
+    let connected=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch
+    if !connected.waitForExistence(timeout:15) {
+      let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
+      XCTFail("Connection did not finish; inspect the retained screenshot and local fixture counters");return
+    }
+    app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
+    XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
+    let play=app.buttons["播放全部"];XCTAssertTrue(play.waitForExistence(timeout:10));play.tap()
+    let open=app.buttons["打开播放页"];XCTAssertTrue(open.waitForExistence(timeout:10));open.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.buttons["Synthetic lyric one"].waitForExistence(timeout:5)||app.buttons["Synthetic lyric two"].exists)
+    for _ in 0..<3 {if app.buttons["暂停"].firstMatch.isHittable{break};app.swipeUp()}
+    app.buttons["暂停"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5))
+    for _ in 0..<4 {if app.buttons["收起播放页"].isHittable{break};app.swipeDown()}
+    app.buttons["收起播放页"].tap()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    for _ in 0..<5 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
+    app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
+    let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
   }
 }

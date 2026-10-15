@@ -16,13 +16,15 @@
     "ios:pods": "bash scripts/pods.sh",
     "ios:build": "bash scripts/build-ios.sh",
     "lx:probe": "bash scripts/probe-lx.sh",
-    "test:native": "bash scripts/test-native.sh"
+    "test:native": "bash scripts/test-native.sh",
+    "ios:archive": "bash scripts/archive-unsigned.sh"
   },
   "dependencies": {
     "expo": "54.0.37",
     "expo-crypto": "15.0.9",
     "expo-document-picker": "14.0.8",
     "expo-file-system": "19.0.24",
+    "expo-font": "14.0.12",
     "expo-secure-store": "15.0.8",
     "expo-sqlite": "16.0.10",
     "expo-status-bar": "3.0.9",

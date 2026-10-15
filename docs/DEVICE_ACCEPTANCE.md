@@ -1,0 +1,17 @@
+# 设备交付与待验收记录
+
+使用本机工具链执行 `bash scripts/archive-unsigned.sh`，输出位于被Git忽略的build/distribution。脚本生成设备架构xcarchive及Payload结构unsigned IPA；不会提交、创建或导出任何Apple签名材料。未签名包需要个人签名后才能安装。实际构建结果记录在BUILD_STATUS，不以脚本存在作为成功证据。
+
+开发期间保持bundle identifier不变；重新签名/覆盖安装前导出音枢音乐库备份。设备端钥匙串与沙箱保留取决于实际签名身份、entitlements和安装方式，不能用模拟器覆盖安装推断免费续签后一定保留。不得先卸载现有App来测试覆盖安装。
+
+待真机验收：
+
+- iPhone15 Pro Max连接/信任/开发者模式；实际iOS版本与本机Xcode设备支持分别记录。
+- 个人账号配置签名、安装、启动、Keychain保存/后台读取、重启及覆盖安装数据保留。
+- 真实LX搜索→同档跨源→降档→实际解码，连续至少十首锁屏后台自动下一首。
+- Navidrome真实账号浏览/搜索/原文件播放、星标/编辑服务端歌单和歌词；密码只在App中输入。
+- MP3/AAC/FLAC及24-bitFLAC实际格式、定位、长时间缓冲、耳机/蓝牙/来电/拔出、暂停后的迟到解析。
+- 真实PCM频谱、EQ开关/增益、余量、音量和中断恢复；Release CPU/内存/电量与长列表/歌词滚动。
+- 临时缓存命中、清理时继续播放、坏文件恢复、账号/来源版本/音质隔离；M10持久离线另测。
+
+最近 `xcrun devicectl list devices` 返回No devices found。设备未连接不阻碍独立功能和unsigned构建，不能因此伪造真机验收或将其从任务中删掉。

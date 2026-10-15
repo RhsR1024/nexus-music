@@ -1,13 +1,17 @@
+import { ShuffleNavigator } from '../domain/shuffle.ts';
 import { requireNativeModule } from 'expo';
 import { currentEntry, emptyQueue, advance, select } from '../domain/queue.ts';
 import { PlaybackController, type MediaResolver, type PlaybackToken } from './controller.ts';
 import type { PreferenceStore } from '../app/preferences.ts';
+import type { Track } from '../domain/track.ts';
 
 interface NativePlayback {
   load(json: string, id: string, generation: number): Promise<void>;
   play(id: string, generation: number): Promise<void>;
   pause(generation: number): Promise<void>; stop(generation: number): Promise<void>;
   seek(seconds: number, id: string, generation: number): Promise<void>;
+  cacheStatistics():Promise<{bytes:number;files:number;limitBytes:number}>;
+  clearCache():Promise<void>;configureCache(megabytes:number):Promise<void>;
   configureEQ(enabled: boolean, gains: readonly number[]): Promise<void>;
   addListener(event: string, callback: (event: Record<string, unknown>) => void): { remove(): void };
 }
@@ -24,6 +28,7 @@ export class SpectrumStore {
 export function createPlaybackSession(resolver: MediaResolver, preferences: PreferenceStore) {
   const native = requireNativeModule<NativePlayback>('NexusPlayback');
   const spectrum = new SpectrumStore();
+  const playedListeners=new Set<(track:Track)=>void>();let lastPlayedGeneration=-1;
   const safe = (work: Promise<unknown>, token?: PlaybackToken) => { void work.catch(() => { if (token) void controller.onError(token); }); };
   const controller = new PlaybackController(resolver, {
     stop: generation => safe(native.stop(generation)), pause: generation => safe(native.pause(generation)),
@@ -34,15 +39,20 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
     play: token => safe(native.play(token.entryId, token.generation), token),
     seek: (seconds, token) => safe(native.seek(seconds, token.entryId, token.generation), token),
   }, emptyQueue);
+  let previousIntent=controller.getSnapshot().intent;
+  controller.subscribe(()=>{const intent=controller.getSnapshot().intent;if(intent==='paused'&&previousIntent==='playing')spectrum.update({...spectrum.getSnapshot(),bands:[]});previousIntent=intent;});
+  const shuffle=new ShuffleNavigator();
+  let lastShuffle=preferences.getSnapshot().shuffle;
+  controller.subscribe(()=>{if(preferences.getSnapshot().shuffle)shuffle.observe(controller.getSnapshot().queue);});
+  preferences.subscribe(()=>{const enabled=preferences.getSnapshot().shuffle;if(enabled!==lastShuffle){shuffle.reset();lastShuffle=enabled;}if(enabled)shuffle.observe(controller.getSnapshot().queue);});
   const next = (direction: 1 | -1 = 1) => {
     const state = controller.getSnapshot(), settings = preferences.getSnapshot();
     const entries = state.queue.entries;
     let queue = advance(state.queue, settings.repeat === 'all' ? 'all' : 'off');
-    if (settings.shuffle && entries.length > 1 && !state.queue.priorityIds.length) {
-      const eligible = entries.filter(entry => entry.id !== state.queue.currentId);
-      queue = select(state.queue, eligible[Math.floor(Math.random() * eligible.length)]!.id);
+    if(direction===-1&&state.position>3){controller.seek(0);return;}
+    if (settings.shuffle && (direction===-1||!state.queue.priorityIds.length)) {
+      queue=shuffle.next(state.queue,settings.repeat==='all',direction);
     } else if (direction === -1) {
-      if (state.position > 3) { controller.seek(0); return; }
       const index = entries.findIndex(entry => entry.id === state.queue.currentId);
       const previous = entries[index-1] ?? (settings.repeat === 'all' ? entries.at(-1) : entries[0]);
       if (previous) queue = select(state.queue, previous.id);
@@ -52,6 +62,10 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   native.addListener('playback', event => {
     const token = { entryId: String(event.entryId), generation: Number(event.generation) };
     controller.onProgress(token, Number(event.position), Number(event.duration), event.buffering === true);
+    const current=controller.getSnapshot();
+    if(event.playing===true&&Number(event.position)>0&&current.intent==='playing'&&token.generation===current.token?.generation&&token.entryId===current.queue.currentId&&lastPlayedGeneration!==token.generation){
+      lastPlayedGeneration=token.generation;const track=currentEntry(current.queue)?.track;if(track)for(const listener of playedListeners)listener(track);
+    }
     if (event.kind === 'ready') controller.onReady(token);
     if (event.kind === 'error') void controller.onError(token);
     if (event.kind === 'ended' && controller.getSnapshot().intent === 'playing' && controller.getSnapshot().token?.generation === token.generation && controller.getSnapshot().queue.currentId === token.entryId) {
@@ -68,7 +82,7 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
     else if (event.action === 'next') next(); else if (event.action === 'previous') next(-1);
     else if (event.action === 'seek') controller.seek(Number(event.seconds));
   });
-  const configure = () => { const value = preferences.getSnapshot(); safe(native.configureEQ(value.eqEnabled, value.gains)); };
+  const configure = () => { const value = preferences.getSnapshot(); safe(native.configureEQ(value.eqEnabled, value.gains));safe(native.configureCache(value.cacheLimitMB)); };
   preferences.subscribe(configure); configure();
-  return { controller, spectrum, next };
+  return { controller, spectrum, next, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};} };
 }

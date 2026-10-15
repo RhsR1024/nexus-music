@@ -7,10 +7,14 @@ export function parseProviderJSON(text: string): unknown {
   return JSON.parse(preserved);
 }
 export interface HTTPRequest { method?: string; headers?: Readonly<Record<string, string>>; body?: string }
+export class HTTPResponseError extends Error {
+  readonly status: number;
+  constructor(status: number) { super('服务暂时不可用'); this.status=status; }
+}
 export type HTTPClient = (url: string, request: HTTPRequest, signal: AbortSignal) => Promise<unknown>;
 export const requestJSON: HTTPClient = (url, request, signal) => bounded(async child => {
   const response = await fetch(url, { ...request, signal: child });
-  if (!response.ok) throw new Error('服务暂时不可用');
+  if (!response.ok) throw new HTTPResponseError(response.status);
   const text = await response.text();
   if (text.length > 16 * 1024 * 1024) throw new Error('服务响应过大');
   return parseProviderJSON(text);

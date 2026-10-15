@@ -2,7 +2,7 @@ import Foundation
 
 @main enum PlaybackCLI {
   static func main() {
-    guard CommandLine.arguments.count == 2 else { exit(2) }
+    guard CommandLine.arguments.count >= 2 else { exit(2) }
     var done = false, failed = false, supported = false, samples = 0, ended = false
     var engine: NativePlaybackEngine!
     engine = NativePlaybackEngine(muted: true) { event, body in
@@ -12,7 +12,8 @@ import Foundation
       }
       if event == "spectrum" { samples += 1; supported = supported || body["supported"] as? Bool == true }
     }
-    let object: [String: Any] = ["url": CommandLine.arguments[1], "metadata": ["title": "Synthetic playback fixture"]]
+    var object: [String: Any] = ["url": CommandLine.arguments[1], "startPosition": CommandLine.arguments.count>2 ? Double(CommandLine.arguments[2]) ?? 0 : 0, "metadata": ["title": "Synthetic playback fixture"]]
+    if CommandLine.arguments.count > 3 { object["cacheKey"] = CommandLine.arguments[3] }
     let data = try! JSONSerialization.data(withJSONObject: object)
     engine.load(String(data: data, encoding: .utf8)!, "fixture", 1)
     engine.play("fixture", 1)

@@ -1,3 +1,4 @@
+import { Lyrics } from './Lyrics.tsx';
 import { useState, useSyncExternalStore } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Services } from '../app/services.ts';
@@ -5,15 +6,17 @@ import { currentEntry, remove, move } from '../domain/queue.ts';
 function time(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2, '0')}`; }
 function Spectrum({ services }: { services: Services }) {
   const state = useSyncExternalStore(services.playback.spectrum.subscribe, services.playback.spectrum.getSnapshot);
+  const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   return <View>
     <View accessible={false} style={styles.spectrum}>{state.bands.map((value, index) => <View key={index} style={[styles.bar, { height: Math.max(2, value*72) }]} />)}</View>
-    <Text style={styles.caption}>{state.supported ? '实时音频频谱' : '等待可处理的PCM；此媒体尚未提供频谱/EQ处理能力。'}</Text>
+    <Text style={styles.caption}>{playback.intent==='paused'?'频谱已暂停':state.supported ? '实时音频频谱' : '等待可处理的PCM；此媒体尚未提供频谱/EQ处理能力。'}</Text>
   </View>;
 }
 export function Player({ services }: { services: Services }) {
   const { controller } = services.playback;
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
+  const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
   const [open, setOpen] = useState(false);
   const entry = currentEntry(state.queue);
   if (!entry) return null;
@@ -31,6 +34,7 @@ export function Player({ services }: { services: Services }) {
         <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
         <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
         <Spectrum services={services} />
+        {open&&<Lyrics services={services} track={entry.track} font={fonts.selected??undefined}/>}
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10))}

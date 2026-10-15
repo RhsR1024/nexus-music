@@ -15,9 +15,13 @@
           "NSAllowsLocalNetworking": true
         },
         "NSLocalNetworkUsageDescription": "连接你配置的局域网音乐服务器并播放音乐。",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
-    "plugins": []
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

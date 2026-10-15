@@ -39,10 +39,13 @@ export function readLXCapabilities(payload: unknown): LXSource[] {
 }
 
 export function makeLXRequest(track: Track, quality: string, source: LXSource) {
+  return makeLXActionRequest(track, 'musicUrl', source, quality);
+}
+export function makeLXActionRequest(track: Track, action: LXAction, source: LXSource, quality = '') {
   if (track.origin.kind !== 'online' || track.origin.platform !== source.platform) {
     throw new Error('歌曲平台与音源能力不匹配');
   }
-  if (!source.actions.includes('musicUrl') || !source.qualities.includes(quality)) {
+  if (!source.actions.includes(action) || (action === 'musicUrl' && !source.qualities.includes(quality))) {
     throw new Error('音源未声明该播放动作或音质');
   }
   const seconds = track.durationMs === undefined ? undefined : Math.floor(track.durationMs / 1000);
@@ -57,7 +60,7 @@ export function makeLXRequest(track: Track, quality: string, source: LXSource) {
   };
   return {
     source: track.origin.platform,
-    action: 'musicUrl' as const,
+    action,
     info: {
       type: quality,
       musicInfo: {

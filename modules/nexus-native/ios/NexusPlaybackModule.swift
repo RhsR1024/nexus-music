@@ -7,6 +7,10 @@ public final class NexusPlaybackModule: Module {
   public func definition() -> ModuleDefinition {
     Name("NexusPlayback")
     Events("playback", "spectrum", "remote")
+    AsyncFunction("cacheStatistics") { AudioCache.shared.statistics() }
+    AsyncFunction("clearCache") { AudioCache.shared.clear() }
+    AsyncFunction("configureCache") { (megabytes: Int) in AudioCache.shared.configure(megabytes: megabytes) }
+
     AsyncFunction("load") { (json: String, entryID: String, generation: Int) in self.engine.load(json, entryID, generation) }.runOnQueue(.main)
     AsyncFunction("play") { (entryID: String, generation: Int) in self.engine.play(entryID, generation) }.runOnQueue(.main)
     AsyncFunction("pause") { (generation: Int) in self.engine.pause(generation) }.runOnQueue(.main)

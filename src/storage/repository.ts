@@ -25,6 +25,13 @@ export class Repository {
     return row ? JSON.parse(row.value) as T : undefined;
   }
   put(key: string, value: unknown) { return this.putMany([[key, value]]); }
+  quarantine(key:string,backupKey:string):Promise<void> {
+    const next=this.tail.then(()=>this.db.transaction(async tx=>{
+      await tx.run('INSERT INTO records(key,value) SELECT ?,value FROM records WHERE key = ?',backupKey,key);
+      await tx.run('DELETE FROM records WHERE key = ?',key);
+    }));
+    this.tail=next.catch(()=>{});return next;
+  }
   putMany(entries: readonly (readonly [string, unknown])[]): Promise<void> {
     // Serialize before touching the database; invalid/circular values cannot
     // leave a partially written snapshot. One failed write does not poison later writes.

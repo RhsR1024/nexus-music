@@ -109,3 +109,10 @@ test('native decode failure retries resolver with only the failed route excluded
   controller.pause(); await controller.onError(controller.getSnapshot().token ?? old);
   assert.equal(calls.length, 2);
 });
+
+test('restored cursor stays paused and is passed to native only after explicit play',async()=>{
+  const loads:ResolvedMedia[]=[];
+  const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio'})},{load:media=>{loads.push(media);},play(){},stop(){},pause(){}},makeQueue([entry('a')]));
+  controller.restoreCursor('a',32);assert.equal(controller.getSnapshot().intent,'paused');assert.equal(loads.length,0);
+  await controller.play();assert.equal(loads[0]!.startPosition,32);
+});

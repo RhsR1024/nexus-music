@@ -9,6 +9,9 @@ final class NativePlaybackEngine {
   private var wantsPlay = false
   private var loading: Task<Void, Never>?
   private var loader: AudioResourceLoader?
+  private var cacheKey: String?
+  private var cachedPlayback = false
+  private var originalPayload: [String: Any]?
   private var dsp: NexusAudioDSP?
   private var eqEnabled = false, gains = [Double](repeating: 0, count: 10)
   private var observation: NSKeyValueObservation?
@@ -17,6 +20,8 @@ final class NativePlaybackEngine {
   private var progress: Any?, spectrumTimer: Timer?
   private var remoteTargets: [(MPRemoteCommand, Any)] = []
   private var metadata: [String: Any] = [:]
+  private var initialPosition: Double = 0
+  private var initialSeekPending = false
   init(muted: Bool = false, emit: @escaping (String, [String: Any]) -> Void) {
     self.emit = emit
     player.isMuted = muted
@@ -58,11 +63,20 @@ final class NativePlaybackEngine {
     stop(newGeneration); entryID = id
     guard let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
           let rawURL = object["url"] as? String, let url = URL(string: rawURL), ["http", "https", "file"].contains(url.scheme ?? "") else { report("error"); return }
+    originalPayload = object
     metadata = object["metadata"] as? [String: Any] ?? [:]
+    initialPosition = object["startPosition"] as? Double ?? 0
+    if !initialPosition.isFinite || initialPosition < 0 { initialPosition = 0 }
+    initialSeekPending = true
+    cacheKey = object["cacheKey"] as? String
+    if let cacheKey { AudioCache.shared.retain(cacheKey) }
+    let cached = object["skipCache"] as? Bool == true ? nil : cacheKey.flatMap { AudioCache.shared.hit($0) }
+    cachedPlayback = cached != nil
     let asset: AVURLAsset
-    if url.isFileURL || url.pathExtension.lowercased() == "m3u8" { asset = AVURLAsset(url: url) }
+    if let cached { asset = AVURLAsset(url: cached) }
+    else if url.isFileURL || url.pathExtension.lowercased() == "m3u8" { asset = AVURLAsset(url: url) }
     else {
-      loader = AudioResourceLoader(url: url, headers: object["headers"] as? [String: String] ?? [:])
+      loader = AudioResourceLoader(url: url, headers: object["headers"] as? [String: String] ?? [:], cacheKey: cacheKey)
       asset = loader!.asset
     }
     loading = Task { [weak self] in
@@ -78,8 +92,20 @@ final class NativePlaybackEngine {
           self.observation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             DispatchQueue.main.async {
               guard let self, self.player.currentItem === item, self.entryID == id else { return }
-              if item.status == .failed { self.wantsPlay = false; self.player.pause(); self.report("error") }
-              else if item.status == .readyToPlay { self.report("ready"); if self.wantsPlay { self.player.play() } }
+              if item.status == .failed { if self.retryCorruptCache() { return }; self.wantsPlay = false; self.player.pause(); self.invalidateCachedPlayback(); self.report("error") }
+              else if item.status == .readyToPlay {
+                self.report("ready")
+                if self.initialSeekPending && self.initialPosition > 0 {
+                  let duration=item.duration.seconds
+                  let position=duration.isFinite ? min(self.initialPosition,duration) : self.initialPosition
+                  self.player.seek(to: CMTime(seconds:position,preferredTimescale:600),toleranceBefore:.zero,toleranceAfter:.zero) { [weak self] _ in
+                    DispatchQueue.main.async {
+                      guard let self,self.player.currentItem === item else { return }
+                      self.initialSeekPending=false;if self.wantsPlay {self.player.play()}
+                    }
+                  }
+                } else {self.initialSeekPending=false;if self.wantsPlay {self.player.play()}}
+              }
             }
           }
           self.endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
@@ -87,13 +113,12 @@ final class NativePlaybackEngine {
             self.report("ended")
           }
           self.player.replaceCurrentItem(with: item)
-          if self.wantsPlay { self.player.play() }
           self.updateNowPlaying()
         }
       } catch {
         await MainActor.run { [weak self] in
           guard let self, self.generation == newGeneration, !Task.isCancelled else { return }
-          self.wantsPlay = false; self.report("error")
+          if self.retryCorruptCache() { return }; self.wantsPlay = false; self.invalidateCachedPlayback(); self.report("error")
         }
       }
     }
@@ -106,7 +131,7 @@ final class NativePlaybackEngine {
       try session.setCategory(.playback, mode: .default, options: [])
       try session.setActive(true)
       #endif
-      wantsPlay = true; if player.currentItem != nil { player.play() }; report("status")
+      wantsPlay = true; if player.currentItem?.status == .readyToPlay && !initialSeekPending { player.play() }; report("status")
     } catch { report("error") }
   }
   func pause(_ newGeneration: Int) {
@@ -123,8 +148,18 @@ final class NativePlaybackEngine {
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
     observation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
     player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
+    if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
     entryID = ""; metadata = [:]; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    initialPosition=0;initialSeekPending=false
   }
+  private func retryCorruptCache() -> Bool {
+    guard cachedPlayback, var payload = originalPayload else { return false }
+    invalidateCachedPlayback(); payload["skipCache"] = true
+    guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return false }
+    let resume = wantsPlay, id = entryID, currentGeneration = generation
+    load(json, id, currentGeneration); if resume { play(id, currentGeneration) }; return true
+  }
+  private func invalidateCachedPlayback() { if cachedPlayback, let cacheKey { AudioCache.shared.invalidate(cacheKey) }; cachedPlayback = false }
   func seek(_ seconds: Double, _ id: String, _ newGeneration: Int) {
     guard seconds.isFinite, seconds >= 0, id == entryID, newGeneration == generation else { return }
     let duration = player.currentItem?.duration.seconds ?? .infinity

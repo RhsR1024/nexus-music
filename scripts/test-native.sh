@@ -12,5 +12,7 @@ build/tests/native-lifecycle
 xcrun clang++ -std=c++20 -O2 tests/native/AudioDSPTests.cpp -o build/tests/native-dsp
 build/tests/native-dsp
 xcrun clang++ -std=c++20 -fobjc-arc -c modules/nexus-native/ios/NexusAudioDSP.mm -o build/tests/audio-dsp.o
-xcrun swiftc -swift-version 5 -import-objc-header modules/nexus-native/ios/NexusAudioDSP.h modules/nexus-native/ios/NativePlaybackEngine.swift modules/nexus-native/ios/AudioResourceLoader.swift tests/native/PlaybackCLI.swift build/tests/audio-dsp.o -framework AVFoundation -framework MediaToolbox -framework MediaPlayer -lc++ -o build/tests/native-playback
+xcrun swiftc -swift-version 5 -import-objc-header modules/nexus-native/ios/NexusAudioDSP.h modules/nexus-native/ios/AudioCache.swift modules/nexus-native/ios/NativePlaybackEngine.swift modules/nexus-native/ios/AudioResourceLoader.swift tests/native/PlaybackCLI.swift build/tests/audio-dsp.o -framework AVFoundation -framework MediaToolbox -framework MediaPlayer -lc++ -o build/tests/native-playback
 node scripts/test-native-playback.mjs
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/AudioCache.swift tests/native/AudioCacheTests.swift -o build/tests/native-cache
+build/tests/native-cache

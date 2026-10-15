@@ -10,7 +10,7 @@ function id(value: unknown) {
   if (typeof value === 'number' && !Number.isSafeInteger(value)) throw new Error('服务返回了不安全的歌曲ID');
   const result = text(value); if (!result) throw new Error('歌曲缺少ID'); return result;
 }
-const number = (value: unknown) => { const parsed = Number(value); return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined; };
+const number = (value: unknown) => { if(value===undefined||value===null||value==='')return undefined; const parsed = Number(value); return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined; };
 function names(value: unknown, key = 'name') { return list(value).map(item => text(row(item)[key])).filter(Boolean).join(' / '); }
 function decoded(value: unknown) { return text(value).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }
 function qualities(values: Readonly<Record<string, unknown>>) { return Object.entries(values).filter(([,size]) => (number(size) ?? 0) > 0).map(([id,size]) => ({ id, sizeBytes: number(size)! })); }

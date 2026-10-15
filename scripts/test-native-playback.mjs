@@ -1,3 +1,4 @@
+import {createHash,randomUUID} from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { writeFileSync } from 'node:fs';
@@ -20,8 +21,8 @@ const server = createServer((req, res) => {
   } else res.end(wav);
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-async function play(url) {
-  const child = spawn('build/tests/native-playback', [url]);
+async function play(url,start=0,key) {
+  const child = spawn('build/tests/native-playback', [url,String(start),...(key?[key]:[])]);
   let stdout = '', stderr = ''; child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
   const code = await new Promise(resolve => child.on('exit', resolve));
   assert.equal(code, 0, `Native playback failed: ${stdout}; ${stderr.slice(-1000)}`);
@@ -30,5 +31,9 @@ async function play(url) {
 try {
   await play(pathToFileURL(resolve('build/tests/tone.wav')).href);
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`);
+  await play(`http://127.0.0.1:${server.address().port}/tone.wav`,.5);
+  const cacheKey=createHash('sha256').update(randomUUID()).digest('hex');
+  await play(`http://127.0.0.1:${server.address().port}/tone.wav`,0,cacheKey);
+  await play('http://127.0.0.1:1/unreachable.wav',0,cacheKey);
   console.log('Native AVPlayer checks passed: local/progressive HTTP range playback, real PCM tap/FFT, natural end');
 } finally { server.closeAllConnections(); server.close(); }

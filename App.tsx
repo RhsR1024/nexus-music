@@ -4,12 +4,17 @@ import { SourceSettings } from './src/ui/SourceSettings';
 import { AudioSettings } from './src/ui/AudioSettings';
 import { Player } from './src/ui/Player';
 import { Search } from './src/ui/Search';
+import { NavidromeSettings } from './src/ui/NavidromeSettings';
+import { NavidromeLibrary } from './src/ui/NavidromeLibrary';
+import { CacheSettings } from './src/ui/CacheSettings';
+import { FontSettings } from './src/ui/FontSettings';
+import { LibraryHome } from './src/ui/LibraryHome';
 import { StatusBar } from 'expo-status-bar';
 import {
   Linking, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
-type Tab = 'library' | 'search' | 'settings';
+type Tab = 'library' | 'search' | 'private' | 'settings';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('library');
@@ -37,45 +42,19 @@ export default function App() {
           </View>
           <View style={styles.badge}><Text style={styles.badgeText}>私人音乐空间</Text></View>
         </View>
-        {tab === 'library' ? <>
-          <View style={styles.hero}>
-            <View accessible={false} style={styles.record}>
-              <View style={styles.groove}><View style={styles.label}><View style={styles.spindle} /></View></View>
-            </View>
-            <Text style={styles.kicker}>让音乐回到你身边</Text>
-            <Text accessibilityRole="header" style={styles.title}>不同的来源，{'\n'}同一个音乐世界。</Text>
-            <Text style={styles.description}>把喜欢的歌与私人曲库放在一起。{ '\n'}从连接你的第一个来源开始。</Text>
-            <Pressable accessibilityRole="button" onPress={() => setTab('settings')}
-              style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
-              <Text style={styles.primaryText}>查看来源设置　↗</Text>
-            </Pressable>
-          </View>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>我的音乐库</Text><Text style={styles.muted}>尚无歌曲</Text>
-          </View>
-          <View style={styles.empty}>
-            <View style={styles.emptyIcon}><Text style={styles.note}>♫</Text></View>
-            <Text style={styles.emptyTitle}>为下一次聆听留个位置</Text>
-            <Text style={styles.emptyText}>收藏、歌单和最近播放将在这里汇集。{ '\n'}可以先搜索歌曲，或连接私人音乐服务。</Text>
-          </View>
-          <View style={styles.captionRow}><View style={styles.accentLine}/><Text style={styles.caption}>属于你的收藏，保持原有的顺序与记忆。</Text></View>
-        </> : tab === 'search' ? (services ? <Search services={services}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : <>
+        {tab === 'library' ? (services ? <LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={()=>setTab('settings')}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : tab === 'search' ? (services ? <Search services={services}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : tab==='private' ? (services?<NavidromeLibrary services={services} openSettings={()=>setTab('settings')}/>:<Text style={styles.pending}>正在打开音乐数据…</Text>) : <>
           <Text style={styles.pageTitle}>音乐来源</Text>
           <Text style={styles.description}>连接你的曲库，选择播放来源。</Text>
-          <View style={styles.sourceCard}>
-            <View style={styles.sourceTop}><Text style={styles.sourceTitle}>Navidrome</Text><Text style={styles.sourceState}>尚未连接</Text></View>
-            <Text style={styles.emptyText}>浏览自己的歌曲、专辑、歌手与服务端歌单。</Text>
-            <Text style={styles.pending}>连接功能正在接入，暂不收集账号信息。</Text>
-          </View>
+          {services&&<NavidromeSettings services={services}/>}
           {services ? <SourceSettings catalog={services.catalog} /> : <Text style={styles.pending}>{startupError ? '无法打开本地数据库或原生模块，请重新启动应用；已有数据保留。' : '正在打开音乐数据…'}</Text>}
-          {services && <AudioSettings services={services} />}
+          {services && <><AudioSettings services={services} /><FontSettings services={services}/><CacheSettings services={services}/></>}
           <Text style={styles.footnote}>音枢 · 0.1 开发版{ '\n'}播放与真机后台验收进行中。</Text>
         </>}
       </ScrollView>
       {services && <Player services={services} />}
       <View style={styles.tabBar}>
-        {([['library', '♫', '音乐库'], ['search', '⌕', '搜索'], ['settings', '☷', '来源设置']] as const).map(([key, icon, title]) =>
-          <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: tab === key }}
+        {([['library', '♫', '音乐库'], ['search', '⌕', '搜索'], ['private','▦','私人曲库'], ['settings', '☷', '来源设置']] as const).map(([key, icon, title]) =>
+          <Pressable key={key} testID={`tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{ selected: tab === key }}
             onPress={() => setTab(key)} style={styles.tab}>
             <Text style={[styles.tabIcon, tab === key && styles.active]}>{icon}</Text>
             <Text style={[styles.tabText, tab === key && styles.active]}>{title}</Text>
