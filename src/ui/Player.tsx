@@ -1,5 +1,7 @@
+import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
 import {GlassSurface} from './Materials.tsx';
+import {ArtworkBackdrop,ModernPlayer} from './ModernPlayer.tsx';
 import {Cover} from './Cover.tsx';
 import {MatchModal} from './MatchModal.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
@@ -30,27 +32,20 @@ export function Player({ services }: { services: Services }) {
   useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
+  const [details,setDetails]=useState(false);
   const entry = currentEntry(state.queue);
   if (!entry) return null;
   const match=entry.track.origin.kind==='imported'?services.library.matchFor(entry.track):undefined;
   const toggle = () => { if (state.intent === 'playing') controller.pause(); else void controller.play(); };
   const button = (label: string, action: () => void) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.button}><Text style={styles.buttonText}>{label}</Text></Pressable>;
-  return <>
-    <GlassSurface><View style={styles.mini}>
-      <Cover services={services} track={entry.track} size={44}/>
-      <Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={() => setOpen(true)} style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text><Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase === 'resolving' ? '正在选择音源…' : state.error ?? (state.buffering ? '缓冲中…' : time(state.position))}</Text>
-      </Pressable><Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{padding:10,minHeight:44,minWidth:44}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={25} color={theme.palette.text}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={{padding:8,minHeight:44,minWidth:44}}><Ionicons name="play-skip-forward" size={24} color={theme.palette.text}/></Pressable>
-    </View></GlassSurface>
-    <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-        {button('收起播放页', () => setOpen(false))}
+  const skinSelector=(<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{([['classic','经典'],['am','AM 风格'],['immersive','封面沉浸'],['photo','写真歌词'],['vinyl','黑胶唱机'],['wave','声波核']]as const).map(([id,title])=><Pressable key={id} testID={`play-skin-${id}`} accessibilityRole="radio" accessibilityState={{selected:preferences.playerLayout===id}} onPress={()=>{void services.preferences.update({playerLayout:id}).then(()=>setDetails(false)).catch(()=>Alert.alert('界面未保存'));}} style={{padding:10,borderRadius:16,backgroundColor:preferences.playerLayout===id?theme.palette.selected:theme.palette.surface}}><Text style={{color:theme.palette.accent}}>{title}</Text></Pressable>)}</View>);
+  const detailContent=(<>
         <Cover services={services} track={entry.track} size={240}/>
         <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
         <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
         <Spectrum services={services} />
         {entry.track.origin.kind==='imported'&&<View style={styles.row}><Text style={styles.caption}>{match?`汽水原曲 · 已匹配 ${match.target.origin.kind==='online'?match.target.origin.platform:''}`:'汽水原曲 · 待匹配'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
-        {open&&<Lyrics services={services} track={match?.target??entry.track} font={fonts.selected??undefined}/>}
+        {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={match?.target??entry.track} font={fonts.selected??undefined}/>}
         <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
@@ -75,7 +70,31 @@ export function Player({ services }: { services: Services }) {
             if (item.id === state.queue.currentId && state.intent === 'playing') void controller.play(queue); else controller.setQueue(queue);
           })}
         </View>)}
-      </ScrollView>
+  </>);
+  return <>
+    <GlassSurface><View style={styles.mini}>
+      <Cover services={services} track={entry.track} size={44}/>
+      <Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={() => setOpen(true)} style={{ flex: 1 }}>
+        <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text><Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase === 'resolving' ? '正在选择音源…' : state.error ?? (state.buffering ? '缓冲中…' : time(state.position))}</Text>
+      </Pressable><Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{padding:10,minHeight:44,minWidth:44}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={25} color={theme.palette.text}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={{padding:8,minHeight:44,minWidth:44}}><Ionicons name="play-skip-forward" size={24} color={theme.palette.text}/></Pressable>
+    </View></GlassSurface>
+    <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
+      {open&&<StatusBar style={preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
+      <View style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:'#183647'}}>
+      {open&&preferences.playerLayout!=='classic'&&<ArtworkBackdrop services={services} track={entry.track} photo={preferences.playerLayout==='photo'}/>}
+      <ScrollView style={{flex:1}} contentContainerStyle={styles.content}>
+        {preferences.playerLayout==='classic'?button('收起播放页',()=>setOpen(false)):<Pressable accessibilityRole="button" accessibilityLabel="收起播放页" onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:30,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
+        {preferences.playerLayout==='classic'&&skinSelector}
+        {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={entry.track} lyricTrack={match?.target??entry.track} font={fonts.selected??undefined} layout={preferences.playerLayout} onMore={()=>setDetails(true)}/>}
+        {preferences.playerLayout==='classic'&&detailContent}
+      </ScrollView></View>
+      <Modal visible={details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={()=>setDetails(false)}>
+        {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
+        <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+          {button('收起播放选项',()=>setDetails(false))}
+          <Text style={styles.title}>播放选项</Text>{skinSelector}{detailContent}
+        </ScrollView>
+      </Modal>
       <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
       <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
     </Modal>

@@ -124,10 +124,10 @@ test('source version fingerprints change on update while an older routing snapsh
 test('appearance defaults migrate older preferences without changing playback settings',async()=>{
   const {db,repository}=store();await repository.migrate();
   const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
-  const {visualTheme,accent,backgroundStyle,glassNavigation,...legacy}=defaults;
+  const {visualTheme,accent,backgroundStyle,glassNavigation,playerLayout,...legacy}=defaults;
   await repository.put('preferences.v1',{...legacy,quality:'320k',lyricOffsetMs:350});
   const preferences=new PreferenceStore(repository);await preferences.restore();
-  assert.equal(preferences.getSnapshot().visualTheme,'blush');assert.equal(preferences.getSnapshot().quality,'320k');assert.equal(preferences.getSnapshot().lyricOffsetMs,350);
+  assert.equal(preferences.getSnapshot().playerLayout,'classic');assert.equal(preferences.getSnapshot().visualTheme,'blush');assert.equal(preferences.getSnapshot().quality,'320k');assert.equal(preferences.getSnapshot().lyricOffsetMs,350);
   await preferences.update({accent:'blue',glassNavigation:false});
   const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().accent,'blue');assert.equal(restored.getSnapshot().glassNavigation,false);db.close();
 });

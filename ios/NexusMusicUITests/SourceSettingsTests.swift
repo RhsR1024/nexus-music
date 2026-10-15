@@ -76,6 +76,31 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<3 {if app.buttons["暂停"].firstMatch.isHittable{break};app.swipeUp()}
     app.buttons["暂停"].firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5))
+    let am=app.descendants(matching:.any).matching(identifier:"play-skin-am").firstMatch
+    for _ in 0..<5 {if am.isHittable{break};app.swipeDown()};am.tap()
+    XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5), "Skin change must preserve paused intent")
+    XCTAssertTrue(app.staticTexts["Synthetic tone"].firstMatch.exists)
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    let beforeSeek=progress.value as? String
+    progress.coordinate(withNormalizedOffset:CGVector(dx:0.25,dy:0.5)).press(forDuration:0.1,thenDragTo:progress.coordinate(withNormalizedOffset:CGVector(dx:0.7,dy:0.5)))
+    XCTAssertTrue(app.buttons["播放"].exists, "Seeking must preserve paused intent")
+    XCTAssertNotEqual(progress.value as? String,beforeSeek)
+    let amImage=XCTAttachment(screenshot:app.screenshot());amImage.lifetime = .keepAlways;add(amImage)
+    app.buttons["更多播放控制"].tap()
+    app.descendants(matching:.any).matching(identifier:"play-skin-immersive").firstMatch.tap()
+    XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
+    XCTAssertTrue(app.buttons["播放"].isHittable, "Immersive transport controls must fit on screen")
+    let immersiveImage=XCTAttachment(screenshot:app.screenshot());immersiveImage.lifetime = .keepAlways;add(immersiveImage)
+    for layout in ["photo","vinyl","wave"] {
+      app.buttons["更多播放控制"].tap()
+      app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
+      XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
+      XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
+      XCTAssertTrue(app.staticTexts["Synthetic tone"].firstMatch.exists)
+      let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
+    }
+    app.buttons["更多播放控制"].tap()
+    app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch.tap()
     for _ in 0..<4 {if app.buttons["收起播放页"].isHittable{break};app.swipeDown()}
     app.buttons["收起播放页"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()

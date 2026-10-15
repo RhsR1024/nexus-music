@@ -22,3 +22,5 @@
 
 
 初次实测发现 expo-blur 15.0.8 的 BlurEffectView.swift:draw 使用长期未完成的 UIViewPropertyAnimator 调整 intensity，XCUITest 每操作等待 60 秒动画空闲；已中断该测试，移除该依赖，用原创静态系统材质替换，不使用测试专用伪装参数掩盖。系统降低透明度仍回退实色。发现页封面实测还发现网易旧 HTTP CDN 被 ATS 阻止：仅对已知公开支持 TLS 的网易/QQ CDN 升级 HTTPS，不放宽全局安全策略，不改私人服务器地址。
+
+S1 已于 2cb91a6 提交并 push，120项TS、本地外观/发现/来源/汽水入口/ND合成实音回归通过。云端新运行单独跟踪；不推送无关阶段取消它。
