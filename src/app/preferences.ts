@@ -1,3 +1,4 @@
+import {InvalidRecordError} from '../storage/recovery.ts';
 import type { Repository } from '../storage/repository.ts';
 import { normalizeQuality, type Quality } from '../domain/quality.ts';
 export interface Preferences { quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number }
@@ -10,7 +11,7 @@ export class PreferenceStore {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   async restore() {
     const value = await this.repository.get<Preferences>('preferences.v1');
-    if (value) this.value = this.validate({ ...defaults, ...value });
+    if (value) {try{this.value = this.validate({ ...defaults, ...value });}catch{throw new InvalidRecordError();}}
   }
   private validate(value: Preferences): Preferences {
     if (!normalizeQuality(value.quality) || value.gains.length !== 10 || !value.gains.every(gain => Number.isFinite(gain) && Math.abs(gain) <= 12) ||

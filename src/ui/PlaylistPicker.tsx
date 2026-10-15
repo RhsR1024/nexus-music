@@ -9,7 +9,7 @@ export function PlaylistPicker({services,tracks,visible,onClose}:{services:Servi
   const [name,setName]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   async function add(id?:string){setBusy(true);setError('');try{if(id)await services.library.addTracks(id,tracks);else await services.library.createPlaylist(name,tracks);setName('');onClose();}catch{setError('未能保存，原歌单保留，请重试');}finally{setBusy(false);}}
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={styles.root} contentContainerStyle={styles.content}>
       <Pressable accessibilityRole="button" onPress={onClose}><Text style={styles.action}>取消添加</Text></Pressable>
       <Text style={styles.title}>加入音枢歌单</Text><Text style={styles.caption}>加入 {tracks.length} 首；已存在的歌曲也会保留为独立条目。</Text>
       {library.playlists.map(playlist=><Pressable accessibilityRole="button" key={playlist.id} disabled={busy} onPress={()=>{void add(playlist.id);}} style={styles.button}><Text style={styles.text}>{playlist.title} · {playlist.entries.length} 首</Text></Pressable>)}

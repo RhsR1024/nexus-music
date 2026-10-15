@@ -5,9 +5,33 @@ public final class NexusNativeModule: Module {
   private var runtimes: [String: (revision: Int, runtime: ScriptRuntime)] = [:]
   private var revisions: [String: Int] = [:]
   private var downloads: [String: (client: ScriptHTTP, promise: Promise)] = [:]
+  private let coverQueue = DispatchQueue(label: "nexus.covers")
+  private let covers = CoverCache()
+  private var coverRequests: [String: (client: ScriptHTTP, promises: [Promise])] = [:]
 
   public func definition() -> ModuleDefinition {
     Name("NexusNative")
+    AsyncFunction("decodeImportText") { (base64: String) throws -> String in try ScriptUtilities.perform("importText", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
+    AsyncFunction("decodeKRC") { (base64: String) throws -> String in try ScriptUtilities.perform("krcDecode", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
+    AsyncFunction("decodeQRC") { (hex: String) throws -> String in try ScriptUtilities.perform("qrcDecode", ["input": hex]) as! String }.runOnQueue(runtimeQueue)
+    AsyncFunction("coverStatistics") { self.covers.statistics() }.runOnQueue(coverQueue)
+    AsyncFunction("clearCovers") { self.covers.clear() }.runOnQueue(coverQueue)
+    AsyncFunction("fetchCover") { (key: String, url: String, promise: Promise) in
+      if let hit = self.covers.hit(key) { promise.resolve(hit); return }
+      if var pending = self.coverRequests[key] { pending.promises.append(promise); self.coverRequests[key] = pending; return }
+      guard self.coverRequests.count < 4 else { promise.reject("COVER_BUSY", "封面加载繁忙"); return }
+      let client = ScriptHTTP(queue: self.coverQueue)
+      let epoch = self.covers.epoch
+      self.coverRequests[key] = (client, [promise])
+      client.start(id: 1, url: url, optionsJSON: "{\"binary\":true,\"timeout\":10000}") { [weak self] error, response in
+        guard let self, let pending = self.coverRequests.removeValue(forKey: key) else { return }
+        pending.client.destroy()
+        let status = response?["statusCode"] as? Int ?? 0
+        let data = (response?["body"] as? String).flatMap { Data(base64Encoded: $0) }
+        let result = error == nil && epoch == self.covers.epoch && (200..<300).contains(status) ? data.flatMap { self.covers.store($0, key: key) } : nil
+        for promise in pending.promises { if let result { promise.resolve(result) } else { promise.reject("COVER_FAILED", "封面暂不可用") } }
+      }
+    }.runOnQueue(coverQueue)
     AsyncFunction("fetchScript") { (url: String, promise: Promise) in
       guard self.downloads.count < 4 else { promise.reject("DOWNLOAD_LIMIT", "请等待其他导入完成"); return }
       let id = UUID().uuidString, client = ScriptHTTP(queue: self.runtimeQueue)
@@ -54,6 +78,10 @@ public final class NexusNativeModule: Module {
     }.runOnQueue(runtimeQueue)
 
     OnDestroy {
+      self.coverQueue.async { [self] in
+        for pending in coverRequests.values { pending.client.destroy(); for promise in pending.promises { promise.reject("COVER_CANCELLED", "封面加载已结束") } }
+        coverRequests.removeAll()
+      }
       self.runtimeQueue.async { [self] in
         for entry in runtimes.values { entry.runtime.destroy() }
         runtimes.removeAll(); revisions.removeAll()

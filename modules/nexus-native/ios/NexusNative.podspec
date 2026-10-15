@@ -14,7 +14,7 @@ Pod::Spec.new do |s|
   s.source_files = '**/*.{swift,h,hpp,mm}'
   s.public_header_files = 'NexusAudioDSP.h'
   s.resource_bundles = { 'NexusNative' => ['bootstrap.js'] }
-  s.frameworks = 'JavaScriptCore', 'Security', 'AVFoundation', 'MediaToolbox', 'MediaPlayer'
+  s.frameworks = 'JavaScriptCore', 'Security', 'AVFoundation', 'MediaToolbox', 'MediaPlayer', 'ImageIO', 'CoreGraphics', 'UniformTypeIdentifiers'
   s.pod_target_xcconfig = { 'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20' }
   s.libraries = 'z'
 end

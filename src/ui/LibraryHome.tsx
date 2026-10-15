@@ -1,3 +1,4 @@
+import {TrackListModal} from './TrackListModal.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {Alert,Pressable,Share,StyleSheet,Text,TextInput,View} from 'react-native';
@@ -5,6 +6,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
 import {decodeBackup,encodeBackup} from '../storage/backup.ts';
+import {decodePlaylistJSON} from '../storage/playlistJSON.ts';
+import {decodeImportText} from '../providers/nativeLX.ts';
 import type {Track} from '../domain/track.ts';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 export function LibraryHome({services,openSearch,openSettings}:{services:Services;openSearch:()=>void;openSettings:()=>void}) {
@@ -12,6 +15,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
   const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [tab,setTab]=useState<'favorites'|'history'|'playlists'>('favorites'),[selected,setSelected]=useState<string|null>(null);
   const [name,setName]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]);
+  const [listOpen,setListOpen]=useState(false);
   const playlist=library.playlists.find(item=>item.id===selected);
   useEffect(()=>{if(selected&&!playlist)setSelected(null);setName(playlist?.title??'');},[selected,playlist?.title]);
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('保存未完成，已有音乐库保留；请重试');}finally{setBusy(false);}}
@@ -26,6 +30,16 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
       Alert.alert('恢复音枢备份',`包含 ${backup.library.playlists.length} 个歌单、${backup.library.favorites.length} 首收藏和 ${backup.library.history.length} 条历史。确认后替换当前音乐库，播放队列不变。`,[
         {text:'取消',style:'cancel'},{text:'替换音乐库',style:'destructive',onPress:()=>{void perform(async()=>{await services.library.replace(backup.library);setMessage('音乐库已恢复');});}},
       ]);
+    }finally{if(file.exists)file.delete();}
+  }
+  async function importLX(){
+    const result=await DocumentPicker.getDocumentAsync({type:'*/*',copyToCacheDirectory:true});if(result.canceled)return;
+    const asset=result.assets[0]!,file=new File(asset.uri);
+    try{
+      const plain=/\.json$/i.test(asset.name);if(file.size>(plain?32:8)*1024*1024)throw new Error('文件过大');
+      const preview=decodePlaylistJSON(plain?await file.text():await decodeImportText(await file.base64()));
+      const count=preview.collections.reduce((sum,item)=>sum+item.tracks.length,0);
+      Alert.alert('导入LX歌单',`${preview.collections.length} 个歌单、${count} 首支持的歌曲。另有 ${preview.unsupported} 条来源不在首期范围内，将跳过。保留顺序和重复项，作为新歌单追加；不会导入账号、音源或下载文件。`,[{text:'取消',style:'cancel'},{text:'追加导入',onPress:()=>{void perform(async()=>{await services.library.importCollections(preview.collections);setMessage(`已导入 ${preview.collections.length} 个歌单、${count} 首歌曲`);});}}]);
     }finally{if(file.exists)file.delete();}
   }
   return <View>
@@ -43,7 +57,8 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
       {library.playlists.map(item=><Pressable accessibilityRole="button" key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首</Text></Pressable>)}
     </View>:null}
     {!!tracks.length&&button('播放全部',()=>services.playTracks(tracks,0))}
-    {tracks.map((track,index)=><View key={playlist?.entries[index]?.id??`${index}-${track.origin.id}`} style={styles.trackRow}>
+    {tracks.length>0&&button('全部歌曲与批量管理',()=>setListOpen(true))}
+    {tracks.slice(0,20).map((track,index)=><View key={playlist?.entries[index]?.id??`${index}-${track.origin.id}`} style={styles.trackRow}>
       <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:'私人曲库'}</Text></Pressable>
       <View style={styles.row}>{button(services.library.isFavorite(track)?'取消本地收藏':'本地收藏',()=>{void perform(async()=>{await services.library.favorite(track);});})}{button('下一首',()=>services.addToQueue(track,true))}{button('加入歌单',()=>setAdding([track]))}
         {playlist&&index>0&&button('上移',()=>{void perform(async()=>{await services.library.moveEntry(playlist.id,playlist.entries[index]!.id,index-1);});})}
@@ -54,8 +69,10 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {!tracks.length&&tab!=='playlists'&&<View style={styles.empty}><Text style={styles.heading}>为下一次聆听留个位置</Text><Text style={styles.caption}>{tab==='favorites'?'搜索后可以把喜欢的歌收藏到这里。':'真正开始播放后，音乐会出现在这里。'}</Text></View>}
     {tab==='history'&&library.history.length>0&&button('清空播放历史',()=>Alert.alert('清空音枢播放历史？','不会修改服务端播放记录。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>{await services.library.clearHistory();});}}]))}
     <View style={styles.row}>{button('导出音乐库备份',()=>{void perform(exportBackup);})}{button('恢复音枢备份',()=>{void perform(importBackup);})}</View>
+    {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
     <Text style={styles.caption}>备份包含音乐库，不包含密码、JS音源或音频文件。漫途导入安排在最后阶段。</Text>
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
+    <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} visible={listOpen} onClose={()=>setListOpen(false)}/>
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
   </View>;
 }

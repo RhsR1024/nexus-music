@@ -13,6 +13,12 @@ export function decodeEntities(value:string) {
 }
 export interface LyricVariant {label:string;document:LyricDocument}
 export interface LyricResult {document:LyricDocument;variants:readonly LyricVariant[]}
+function lyricText(value:string) {
+  // QRC can wrap decoded timing in a QrcInfos XML attribute. Extract before
+  // unescaping so a quoted lyric cannot prematurely terminate the attribute.
+  const content=value.match(/\bLyricContent\s*=\s*(?:"([^"]*)"|'([^']*)')/);
+  return decodeEntities(content?(content[1]??content[2]??''):value);
+}
 function bytes(value:string) {const result:number[]=[];for(const character of value){let point=character.codePointAt(0)!;if(point>=0xd800&&point<=0xdfff)point=0xfffd;if(point<128)result.push(point);else if(point<2048)result.push(192|(point>>6),128|(point&63));else if(point<65536)result.push(224|(point>>12),128|((point>>6)&63),128|(point&63));else result.push(240|(point>>18),128|((point>>12)&63),128|((point>>6)&63),128|(point&63));}return result;}
 function decodedBytes(value:readonly number[]) {try{return decodeURIComponent(value.map(byte=>`%${byte.toString(16).padStart(2,'0')}`).join(''));}catch{return undefined;}}
 function structured(raw:unknown):LyricDocument {
@@ -43,12 +49,12 @@ function structured(raw:unknown):LyricDocument {
 }
 export function normalizeLyrics(raw:unknown):LyricResult {
   if(JSON.stringify(raw)?.length>2097152)throw new Error('歌词数据过大');
-  if(typeof raw==='string')return{document:parseLyrics(decodeEntities(raw)),variants:[]};
+  if(typeof raw==='string')return{document:parseLyrics(lyricText(raw)),variants:[]};
   const value=object(raw);
   const sets=array(value.structuredLyrics??object(value.lyricsList).structuredLyrics).slice(0,16).map(object);
   if(sets.length){const variants=sets.map((value,index)=>({label:[string(value.lang),string(value.kind)||`版本${index+1}`].filter(Boolean).join(' · '),document:structured(value)}));
     const selected=Math.max(0,sets.findIndex(value=>!value.kind||value.kind==='main'));return{document:variants[selected]!.document,variants};}
-  const text=(input:unknown)=>decodeEntities(typeof input==='string'?input:string(object(input).lyric));
+  const text=(input:unknown)=>lyricText(typeof input==='string'?input:string(object(input).lyric));
   const rich=text(value.lxlyric??value.yrc??value.krc??value.qrc),plain=text(value.lyric??value.lrc??value.value);
   const richDocument=parseLyrics(rich),base=richDocument.synced?richDocument:parseLyrics(plain);
   return{document:mergeLyrics(base,text(value.tlyric??value.tlrc),text(value.rlyric??value.romalrc)),variants:[]};

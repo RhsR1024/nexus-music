@@ -1,5 +1,5 @@
 import {createHash,randomUUID} from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { spawn,execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -11,6 +11,10 @@ header.write('RIFF'); header.writeUInt32LE(36 + body.length, 4); header.write('W
 header.writeUInt16LE(1, 20); header.writeUInt16LE(1, 22); header.writeUInt32LE(rate, 24); header.writeUInt32LE(rate * 2, 28);
 header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34); header.write('data', 36); header.writeUInt32LE(body.length, 40);
 const wav = Buffer.concat([header, body]); writeFileSync('build/tests/tone.wav', wav);
+execFileSync('/usr/bin/afconvert',['-f','m4af','-d','aac','-b','128000','build/tests/tone.wav','build/tests/tone-aac.m4a']);
+execFileSync('/usr/bin/afconvert',['-f','WAVE','-d','LEI24','build/tests/tone.wav','build/tests/tone24.wav']);
+execFileSync('/usr/bin/afconvert',['-f','flac','-d','flac','build/tests/tone.wav','build/tests/tone-16.flac']);
+execFileSync('/usr/bin/afconvert',['-f','flac','-d','flac','build/tests/tone24.wav','build/tests/tone-24.flac']);
 const server = createServer((req, res) => {
   res.setHeader('Content-Type', 'audio/wav'); res.setHeader('Accept-Ranges', 'bytes');
   const range = req.headers.range?.match(/bytes=(\d+)-(\d*)/);
@@ -32,8 +36,9 @@ try {
   await play(pathToFileURL(resolve('build/tests/tone.wav')).href);
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`);
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,.5);
+  for(const format of ['tone-aac.m4a','tone-16.flac','tone-24.flac'])await play(pathToFileURL(resolve(`build/tests/${format}`)).href,.25);
   const cacheKey=createHash('sha256').update(randomUUID()).digest('hex');
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,0,cacheKey);
   await play('http://127.0.0.1:1/unreachable.wav',0,cacheKey);
-  console.log('Native AVPlayer checks passed: local/progressive HTTP range playback, real PCM tap/FFT, natural end');
+  console.log('Native AVPlayer checks passed: WAV/AAC/16-bit FLAC/24-bit FLAC, initial seek, HTTP ranges, cached playback without network, real PCM tap/FFT, natural end');
 } finally { server.closeAllConnections(); server.close(); }

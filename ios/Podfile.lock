@@ -1959,7 +1959,7 @@ SPEC CHECKSUMS:
   ExpoSQLite: 087db2057a7f1e9da38a8126f4388a324f9a4522
   FBLazyVector: e95a291ad2dadb88e42b06e0c5fb8262de53ec12
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
-  NexusNative: 38582fcc1ae5f5b725d47f22a5f1666a7c70be4c
+  NexusNative: 583d3beafca3bdcb21ad3a24f64a7d5e611b1108
   RCTDeprecation: 943572d4be82d480a48f4884f670135ae30bf990
   RCTRequired: 8f3cfc90cc25cf6e420ddb3e7caaaabc57df6043
   RCTTypeSafety: 16a4144ca3f959583ab019b57d5633df10b5e97c

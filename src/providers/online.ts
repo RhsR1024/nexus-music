@@ -50,9 +50,9 @@ export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
     const formats = list(value.audioFormats ?? value.newRateFormats).map(row), types: Row = {};
     const mapping: Record<string, string> = { PQ: '128k', HQ: '320k', SQ: 'flac', ZQ24: 'flac24bit', ZQ: 'flac24bit' };
     for (const format of formats) { const key = mapping[text(format.formatType)]; if (key) types[key] = format.asize ?? format.isize ?? format.size; }
-    track = { origin: { kind: 'online', platform, id: songId }, title: text(value.name ?? value.songName), artist: names(value.singerList ?? value.singers), album: text(value.album),
+    track = { origin: { kind: 'online', platform, id: songId }, title: text(value.name ?? value.songName), artist: names(value.singerList ?? value.singers ?? value.artists) || text(value.singer), album: text(value.album),
       ...(duration !== undefined ? { durationMs: duration*1000 } : {}), artwork: text(value.img3 ?? value.img2 ?? value.img1) || undefined,
-      metadata: { copyrightId, albumId: text(value.albumId), lrcUrl: text(value.lrcUrl), mrcUrl: text(value.mrcurl), trcUrl: text(value.trcUrl), _types: types }, qualities: qualities(types) };
+      metadata: { copyrightId, albumId: text(value.albumId), lrcUrl: text(value.lrcUrl), mrcUrl: text(value.mrcUrl ?? value.mrcurl), trcUrl: text(value.trcUrl), _types: types }, qualities: qualities(types) };
   }
   if (!track.title) throw new Error('歌曲缺少名称'); return track;
 }

@@ -1,3 +1,4 @@
+import {Cover} from './Cover.tsx';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
@@ -35,6 +36,7 @@ export function Player({ services }: { services: Services }) {
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
       <ScrollView style={styles.root} contentContainerStyle={styles.content}>
         {button('收起播放页', () => setOpen(false))}
+        <Cover services={services} track={entry.track} size={240}/>
         <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
         <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
         <Spectrum services={services} />

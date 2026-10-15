@@ -1,9 +1,9 @@
 import type { LXSource } from './lx.ts';
 import { bounded } from './async.ts';
 
-export interface SourceDefinition { id: string; name: string; script: string }
+export interface SourceDefinition { id: string; name: string; script: string; fingerprint?: string }
 export interface SourceState {
-  readonly id: string; readonly name: string; readonly revision: number;
+  readonly id: string; readonly name: string; readonly revision: number; readonly fingerprint?: string;
   readonly enabled: boolean; readonly status: 'disabled' | 'initializing' | 'ready' | 'failed';
   readonly capabilities: readonly LXSource[];
 }
@@ -37,7 +37,7 @@ export class SourceRegistry {
     const revision = (this.revisions.get(source.id) ?? 0) + 1;
     this.revisions.set(source.id, revision); this.definitions.set(source.id, { ...source });
     // Replacing a script requires initialization again; never keep stale capabilities.
-    this.states.set(source.id, { id: source.id, name: source.name, revision, enabled: false, status: 'disabled', capabilities: [] });
+    this.states.set(source.id, { id: source.id, name: source.name, revision, fingerprint: source.fingerprint, enabled: false, status: 'disabled', capabilities: [] });
     this.publish();
   }
   isCurrent(source: SourceState): boolean {

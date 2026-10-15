@@ -1,3 +1,4 @@
+import {InvalidRecordError} from '../storage/recovery.ts';
 import type { Repository } from '../storage/repository.ts';
 import { NavidromeClient, normalizeServerURL, type NavidromeAccount, type NavidromeCredentials } from './navidrome.ts';
 export interface SecretStore {get(key:string):Promise<string|null>;set(key:string,value:string):Promise<void>;remove(key:string):Promise<void>}
@@ -18,7 +19,7 @@ export class NavidromeAccounts {
   private mutate<T>(run:()=>Promise<T>) {const next=this.tail.then(run);this.tail=next.catch(()=>{});return next;}
   async restore() {
     const value=await this.repository.get<NavidromeAccount[]>('navidrome.accounts.v1')??[];
-    if(!Array.isArray(value)||value.some(item=>!item||typeof item.id!=='string'||typeof item.username!=='string'||normalizeServerURL(item.url)!==item.url)) throw new Error('连接数据损坏');
+    try{if(!Array.isArray(value)||value.some(item=>!item||typeof item.id!=='string'||typeof item.username!=='string'||normalizeServerURL(item.url)!==item.url)) throw new Error();}catch{throw new InvalidRecordError();}
     this.publish(value);
   }
   connect(url:string,username:string,password:string) {

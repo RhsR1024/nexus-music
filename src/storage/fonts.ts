@@ -1,3 +1,4 @@
+import {InvalidRecordError} from './recovery.ts';
 import {Directory,File,Paths} from 'expo-file-system';
 import * as Font from 'expo-font';
 import * as Crypto from 'expo-crypto';
@@ -14,8 +15,8 @@ export class FontStore {
   private publish(value:FontState){this.value=value;for(const listener of this.listeners)listener();}
   async restore(){
     const saved=await this.repository.get<FontState>('fonts.v1');if(!saved)return;
-    if(saved.version!==1||!Array.isArray(saved.fonts)||saved.fonts.length>16)throw new Error('字体配置无效');
-    const fonts=saved.fonts.filter(item=>typeof item.id==='string'&&/^nexusfont_[a-f0-9]{64}$/.test(item.id)&&typeof item.name==='string'&&item.file===`${item.id}.font`&&new File(this.directory,item.file).exists);
+    if(saved.version!==1||!Array.isArray(saved.fonts)||saved.fonts.length>16)throw new InvalidRecordError();
+    const fonts=saved.fonts.filter(item=>item&&typeof item.id==='string'&&/^nexusfont_[a-f0-9]{64}$/.test(item.id)&&typeof item.name==='string'&&item.file===`${item.id}.font`&&new File(this.directory,item.file).exists);
     let selected=fonts.find(item=>item.id===saved.selected)?.id??null;
     if(selected){try{await Font.loadAsync({[selected]:new File(this.directory,`${selected}.font`).uri});}catch{selected=null;}}
     this.publish({version:1,fonts,selected});

@@ -1,3 +1,4 @@
+import {InvalidRecordError} from '../storage/recovery.ts';
 import { SourceRegistry, type SourceDefinition, type SourceState } from './sourceRegistry.ts';
 import type { Repository } from '../storage/repository.ts';
 
@@ -42,9 +43,10 @@ export class SourceCatalog {
   }
   async restore() {
     const stored = await this.repository.get<StoredSource[]>('sources.v1') ?? [];
-    if (!Array.isArray(stored) || stored.length > 32 || stored.some(item => !item || typeof item.id !== 'string' || !item.id || typeof item.name !== 'string' || !item.name.trim() || typeof item.script !== 'string' || !item.script.trim() || item.script.length>8*1024*1024 || typeof item.enabled !== 'boolean') || new Set(stored.map(item => item.id)).size !== stored.length) throw new Error('音源数据损坏');
-    this.records = stored;
-    for (const item of stored) this.registry.register(item);
+    if (!Array.isArray(stored) || stored.length > 32 || stored.some(item => !item || typeof item.id !== 'string' || !item.id || typeof item.name !== 'string' || !item.name.trim() || typeof item.script !== 'string' || !item.script.trim() || item.script.length>8*1024*1024 || typeof item.enabled !== 'boolean') || new Set(stored.map(item => item.id)).size !== stored.length) throw new InvalidRecordError();
+    const restored=await Promise.all(stored.map(async item=>({...item,fingerprint:await this.hash(item.script)})));
+    this.records = restored;
+    for (const item of restored) this.registry.register(item);
   }
   async fingerprint(id:string){const source=this.records.find(item=>item.id===id);if(!source)throw new Error('音源已删除');return this.hash(source.script);}
   async restoreEnabled() { return this.registry.setManyEnabled(this.records.filter(item => item.enabled).map(item => item.id), true); }
@@ -57,7 +59,7 @@ export class SourceCatalog {
     const existing = this.records.find(item => item.id === id || item.script === script);
     if (existing) return { id, duplicate: true };
     if (this.records.length >= 32) throw new Error('最多保存32个音源，请先删除不需要的音源');
-    const source: StoredSource = { id, script, ...metadata, enabled: false, ...(subscription ? { subscription } : {}) };
+    const source: StoredSource = { id, script, fingerprint:id, ...metadata, enabled: false, ...(subscription ? { subscription } : {}) };
     const records = [...this.records, source];
     await this.repository.put('sources.v1', records);
     this.records = records; this.registry.register(source);
@@ -86,7 +88,7 @@ export class SourceCatalog {
     if (!previous) throw new Error('音源不存在');
     if (script === previous.script) return false;
     const metadata = scriptMetadata(script, previous.name);
-    const updated: StoredSource = { ...previous, ...metadata, script, enabled: false, previous: { script: previous.script, version: previous.version } };
+    const updated: StoredSource = { ...previous, ...metadata, script, fingerprint:await this.hash(script), enabled: false, previous: { script: previous.script, version: previous.version } };
     const records = this.records.map(item => item.id === id ? updated : item);
     await this.repository.put('sources.v1', records);
     this.records = records; this.registry.register(updated); return true;

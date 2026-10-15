@@ -1,3 +1,4 @@
+import {FutureRecordError} from './src/storage/recovery.ts';
 import {ThemeContext,useAppearance,type Theme} from './src/ui/theme.tsx';
 import {AppearanceSettings} from './src/ui/AppearanceSettings.tsx';
 import { useEffect, useState } from 'react';
@@ -21,10 +22,10 @@ type Tab = 'library' | 'search' | 'private' | 'settings';
 export default function App() {
   const [tab, setTab] = useState<Tab>('library');
   const [services, setServices] = useState<Services>();
-  const [startupError, setStartupError] = useState(false);
+  const [startupError, setStartupError] = useState<string>();
   useEffect(() => {
     let active = true;
-    void getServices().then(value => { if (active) setServices(value); }, () => { if (active) setStartupError(true); });
+    void getServices().then(value => { if (active) setServices(value); }, error => { if (active) setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。'); });
     return () => { active = false; };
   }, []);
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function App() {
   return (
     <ThemeContext.Provider value={theme}><View style={styles.root}>
       <StatusBar style={theme.mode==='dark'?'light':'dark'} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>NEXUS MUSIC</Text>
@@ -45,7 +46,7 @@ export default function App() {
           </View>
           <View style={styles.badge}><Text style={styles.badgeText}>私人音乐空间</Text></View>
         </View>
-        {tab === 'library' ? (services ? <LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={()=>setTab('settings')}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : tab === 'search' ? (services ? <Search services={services}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : tab==='private' ? (services?<NavidromeLibrary services={services} openSettings={()=>setTab('settings')}/>:<Text style={styles.pending}>正在打开音乐数据…</Text>) : <>
+        {startupError?<View><Text style={styles.pending}>{startupError}</Text><Pressable accessibilityRole="button" onPress={()=>{setStartupError(undefined);void getServices().then(setServices,error=>setStartupError(error instanceof FutureRecordError?error.message:'仍无法打开本地数据，请检查可用空间或重新启动应用。'));}}><Text style={styles.active}>重试打开</Text></Pressable></View>:tab === 'library' ? (services ? <LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={()=>setTab('settings')}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : tab === 'search' ? (services ? <Search services={services}/> : <Text style={styles.pending}>正在打开音乐数据…</Text>) : tab==='private' ? (services?<NavidromeLibrary services={services} openSettings={()=>setTab('settings')}/>:<Text style={styles.pending}>正在打开音乐数据…</Text>) : <>
           <Text style={styles.pageTitle}>音乐来源</Text>
           <Text style={styles.description}>连接你的曲库，选择播放来源。</Text>
           {services&&<NavidromeSettings services={services}/>}

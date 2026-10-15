@@ -4,7 +4,8 @@ import { FontStore } from '../storage/fonts.ts';
 import { LyricService } from '../lyrics/service.ts';
 import * as Crypto from 'expo-crypto';
 import { openRepository } from '../storage/nativeDatabase.ts';
-import { loadNativeLX } from '../providers/nativeLX.ts';
+import {CoverService} from '../providers/covers.ts';
+import { decodeKRC, decodeQRC, loadNativeCovers, loadNativeLX } from '../providers/nativeLX.ts';
 import { SourceRegistry } from '../providers/sourceRegistry.ts';
 import { SourceCatalog } from '../providers/sourceCatalog.ts';
 import { PreferenceStore } from './preferences.ts';
@@ -36,11 +37,12 @@ async function initialize() {
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
   await restore('sources.v1','音源',()=>catalog.restore());
   void catalog.restoreEnabled();
+  const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size:512},signal));
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
   const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
     const media=await resolver.resolve(track,signal,excluded);
-    return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),await catalog.fingerprint(media.sourceId),media.quality]))};
+    return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),media.sourceFingerprint,media.quality]))};
   }}, preferences);
   try{
     const saved=await repository.get<SavedQueue>('queue.v1');
@@ -61,7 +63,7 @@ async function initialize() {
   const online = new OnlineProvider({ md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const discovery=new DiscoveryProvider(value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value));
   const search = new SearchCoordinator(online);
-  const lyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);});
+  const lyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},undefined,decodeKRC,decodeQRC);
   accounts.subscribe(()=>lyrics.clear());
   const playTracks = (tracks: readonly Track[], index: number) => {
     const entries = tracks.map(track => ({id:Crypto.randomUUID(),track}));
@@ -71,7 +73,7 @@ async function initialize() {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
-  return { repository, nativeLX, registry, catalog, preferences, resolver, playback, online, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { repository, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof initialize>>;
 let pending: Promise<Services> | undefined;

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {LyricService,decodeBase64Text} from '../src/lyrics/service.ts';
 import {SourceRegistry} from '../src/providers/sourceRegistry.ts';
 import type {Track} from '../src/domain/track.ts';
+import {normalizeLyrics} from '../src/lyrics/normalize.ts';
 const track:Track={origin:{kind:'online',platform:'wy',id:'123'},title:'Synthetic',artist:'Fixture',metadata:{songId:'123'},qualities:[]};
 test('lyrics try enabled capable sources in order and cache only successful results',async()=>{
   const registry=new SourceRegistry({initialize:async()=>[{platform:'wy',name:'Fixture',actions:['lyric'],qualities:[]}],destroy(){}});
@@ -33,4 +34,28 @@ test('private lyrics stay scoped to account and cache clears on account change',
 test('base64 lyric decoding preserves UTF8 and rejects malformed payloads',()=>{
   assert.equal(decodeBase64Text(Buffer.from('合成😀').toString('base64')),'合成😀');
   assert.throws(()=>decodeBase64Text('%%%='));assert.throws(()=>decodeBase64Text('/w=='));
+});
+test('QRC XML extracts and unescapes actual word times and independent variants',async()=>{
+  const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});
+  const tx:Track={...track,origin:{kind:'online',platform:'tx',id:'MID'},metadata:{id:'12345',songId:'MID'}};
+  const service=new LyricService(registry,{request:async()=>''},async()=>'',async(url,request)=>{
+    assert.match(url,/musicu/);assert.equal(JSON.parse(request.body!).req.param.songID,12345);
+    return{code:0,req:{code:0,data:{lyric:'main-hex',trans:'broken',roma:'roman-hex'}}};
+  },undefined,async hex=>{
+    if(hex==='broken')throw Error('invalid');
+    return hex==='main-hex'?'<QrcInfos><LyricInfo LyricContent="[1000,600]合(1000,100)成&amp;🎵(1100,500)&#10;"/></QrcInfos>':'[00:01]roman';
+  });
+  const value=await service.load(tx,new AbortController().signal),line=value.document.lines[0]!;
+  assert.equal(line.text,'合成&🎵');assert.equal(line.words?.[1]?.startMs,1100);assert.equal(line.romanization,'roman');assert.equal(line.translation,undefined);
+  assert.equal(normalizeLyrics('<LyricInfo LyricContent="[00:01]A &quot;quote&quot;"/>').document.lines[0]?.text,'A "quote"');
+});
+test('QRC failure falls back to line lyrics and cancellation cannot publish stale decode',async()=>{
+  const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});
+  const tx:Track={...track,origin:{kind:'online',platform:'tx',id:'MID'},metadata:{id:'12345',songId:'MID'}};
+  let calls=0;
+  const service=new LyricService(registry,{request:async()=>''},async()=>'',async()=>++calls===1?{code:0,req:{code:0,data:{lyric:'bad'}}}:{lyric:'[00:01]Fallback'},undefined,async()=>{throw Error('invalid');});
+  assert.equal((await service.load(tx,new AbortController().signal)).document.lines[0]?.text,'Fallback');assert.equal(calls,2);
+  const controller=new AbortController();let started!:()=>void;const decoding=new Promise<void>(resolve=>{started=resolve;});
+  const cancelled=new LyricService(registry,{request:async()=>''},async()=>'',async()=>({code:0,req:{code:0,data:{lyric:'valid'}}}),undefined,async()=>{started();await new Promise(resolve=>setTimeout(resolve,10));return '[00:01]Stale';});
+  const pending=cancelled.load(tx,controller.signal);await decoding;controller.abort();await assert.rejects(pending);
 });

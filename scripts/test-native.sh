@@ -16,3 +16,6 @@ xcrun swiftc -swift-version 5 -import-objc-header modules/nexus-native/ios/Nexus
 node scripts/test-native-playback.mjs
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/AudioCache.swift tests/native/AudioCacheTests.swift -o build/tests/native-cache
 build/tests/native-cache
+
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/CoverCache.swift tests/native/CoverCacheTests.swift -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers -o build/tests/native-covers
+build/tests/native-covers

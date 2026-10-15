@@ -1,3 +1,4 @@
+import {Cover} from './Cover.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -71,7 +72,7 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
       </View>;}
       const label=item.kind==='album'?`${item.album.title} · ${item.album.artist}`:item.kind==='artist'?item.name:item.playlist.title;
       const id=item.kind==='album'?item.album.id:item.kind==='artist'?item.id:item.playlist.id;
-      return <Pressable accessibilityRole="button" testID={`navidrome-item-${item.kind}-${id}`} key={`${item.kind}-${id}`} onPress={()=>setView(item.kind==='album'?{kind:'album',id}:item.kind==='artist'?{kind:'artist',id}:{kind:'playlist',id})} style={styles.item}><Text style={styles.track}>{label}</Text></Pressable>;
+      return <Pressable accessibilityRole="button" testID={`navidrome-item-${item.kind}-${id}`} key={`${item.kind}-${id}`} onPress={()=>setView(item.kind==='album'?{kind:'album',id}:item.kind==='artist'?{kind:'artist',id}:{kind:'playlist',id})} style={[styles.item,{flexDirection:'row',alignItems:'center',gap:12}]}>{item.kind==='album'&&item.album.coverArtId&&<Cover services={services} privateCover={{accountId,id:item.album.coverArtId}}/>}<Text style={styles.track}>{label}</Text></Pressable>;
     })}
     {loading&&<Text style={styles.caption}>正在读取服务器…</Text>}
     {!!error&&<Text style={styles.error}>{error}</Text>}

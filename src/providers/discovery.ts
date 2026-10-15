@@ -27,10 +27,11 @@ export class DiscoveryProvider {
   async categories(platform:OnlinePlatform,signal:AbortSignal):Promise<readonly BrowseCategory[]>{
     if(platform==='wy'){const raw=row(await this.http('https://music.163.com/api/playlist/catalogue',{},signal));if(raw.code!==200||!Array.isArray(raw.sub))throw new Error('分类响应无效');return list(raw.sub).map(value=>{const v=row(value);return{id:required(v.name),title:text(v.name),group:text(row(raw.categories)[text(v.category)])};});}
     if(platform==='tx'){const data=await this.qq('playlist.PlaylistAllCategoriesServer','get_all_categories',{qq:''},signal);return list(data.v_group).flatMap(group=>list(row(group).v_item).map(value=>({id:required(row(value).id),title:text(row(value).name),group:text(row(group).group_name)})));}
-    if(platform==='kw'){const raw=await this.http('https://wapi.kuwo.cn/api/pc/classify/playlist/getTagList?cmd=rcm_keyword_playlist&user=0&prod=kwplayer_pc_9.0.5.0',{},signal);const items=tree(raw).filter(value=>value.id&&value.name&&value.digest);if(!items.length)throw new Error('分类响应无效');return items.map(value=>({id:required(value.id),title:text(value.name),group:text(value.digest)}));}
+    if(platform==='kw'){const raw=await this.http('https://wapi.kuwo.cn/api/pc/classify/playlist/getTagList?cmd=rcm_keyword_playlist&user=0&prod=kwplayer_pc_9.0.5.0',{},signal);const items=tree(raw).filter(value=>value.id&&value.name&&['43','10000'].includes(text(value.digest)));if(!items.length)throw new Error('分类响应无效');return items.map(value=>({id:`${required(value.id)}-${text(value.digest)}`,title:text(value.name)}));}
     if(platform==='mg'){const raw=await this.http('https://app.c.nf.migu.cn/pc/v1.0/template/musiclistplaza-taglist/release',{},signal);const items=tree(raw).filter(value=>Array.isArray(value.texts)&&list(value.texts).length>=2);if(!items.length)throw new Error('分类暂不可用');return items.map(value=>({id:required(list(value.texts)[1]),title:text(list(value.texts)[0])}));}
-    // Kugou's mobile public plaza exposes recommendations but no category tree.
-    return[];
+    const raw=row(await this.http('http://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_smarty=1&',{},signal));
+    if(raw.status!==1||!Object.keys(row(row(raw.data).tagids)).length)throw new Error('酷狗分类响应无效');
+    return Object.entries(row(row(raw.data).tagids)).flatMap(([group,value])=>list(row(value).data).map(item=>({id:required(row(item).id),title:text(row(item).name),group})));
   }
   async playlists(platform:OnlinePlatform,page:number,category:string|undefined,signal:AbortSignal,limit=30):Promise<BrowsePage>{
     if(!Number.isInteger(page)||page<1||!Number.isInteger(limit)||limit<1||limit>100)throw new Error('分页参数无效');
@@ -44,17 +45,33 @@ export class DiscoveryProvider {
       const rows=category?row(data.content).v_item:list(row(data.FeedRsp).List).map(value=>row(value).Playlist);if(!Array.isArray(rows))throw new Error('QQ歌单响应无效');
       items=list(rows).map(value=>{const v=row(value),basic=row(v.basic);return item(v.tid??v.dissid??basic.tid,v.title??v.dissname??basic.title,v.cover_url_big??v.imgurl??row(basic.cover).medium_url??row(basic.cover).default_url,v.desc);});hasMore=items.length>=limit;
     }else if(platform==='kw'){
+      const tag=category?.match(/^(\d+)-(43|10000)$/);
+      if(category&&!tag)throw new Error('酷我分类无效');
+      if(tag?.[2]==='43'){
+        const raw=await this.http(queryURL('https://mobileinterfaces.kuwo.cn/er.s',{type:'get_pc_qz_data',f:'web',id:tag[1],prod:'pc'}),{},signal);
+        if(!Array.isArray(raw))throw new Error('酷我专区响应无效');
+        // Zones mix albums, artists and playlists. Only list/songlist entries
+        // have the playlist detail contract implemented by this provider.
+        const values=unique(tree(raw).filter(v=>['songlist','list'].includes(text(v.type))&&['5','8'].includes(text(v.digest))).map(v=>item(v.id,v.name,v.img,v.desc,v.total)));
+        return{items:values.slice((page-1)*limit,page*limit),hasMore:page*limit<values.length,page};
+      }
       const url=category?'https://wapi.kuwo.cn/api/pc/classify/playlist/getTagPlayList':'https://wapi.kuwo.cn/api/pc/classify/playlist/getRcmPlayList';
-      const raw=row(await this.http(queryURL(url,{loginUid:0,loginSid:0,appUid:76039576,pn:page,rn:limit,order:'hot',...(category?{id:category}:{})}),{},signal)),data=row(raw.data);
+      const raw=row(await this.http(queryURL(url,{loginUid:0,loginSid:0,appUid:76039576,pn:page,rn:limit,order:'hot',...(tag?{id:tag[1]}:{})}),{},signal)),data=row(raw.data);
       if(!Array.isArray(data.data))throw new Error('酷我歌单服务暂时不可用');items=list(data.data).map(value=>{const v=row(value);return item(v.id,v.name,v.img,v.desc,v.total);});hasMore=count(data.total)!==undefined?page*limit<Number(data.total):items.length>=limit;
     }else if(platform==='kg'){
+      if(category){const raw=row(await this.http(queryURL('http://www2.kugou.kugou.com/yueku/v9/special/getSpecial',{is_ajax:1,cdn:'cdn',t:5,c:category,p:page}),{},signal));if(raw.status!==1||!Array.isArray(raw.special_db))throw new Error('酷狗分类歌单响应无效');
+        const values=list(raw.special_db).map(value=>{const v=row(value);return item(v.specialid,v.specialname,v.img,v.intro,v.song_count);});return{items:values,hasMore:values.length>=20,page};}
       const raw=row(await this.http(queryURL('https://m.kugou.com/plist/index',{json:true,page}),{},signal)),data=row(raw.plist);
       const values=row(data.list).info;if(!Array.isArray(values))throw new Error('酷狗歌单响应无效');items=list(values).map(value=>{const v=row(value);return item(v.specialid,v.specialname,text(v.imgurl).replace('{size}','400'),v.intro,v.songcount);});hasMore=count(row(data.list).total)!==undefined?page*Number(raw.pagesize??30)<Number(row(data.list).total):items.length>=30;
     }else{
       const url=category?queryURL('https://app.c.nf.migu.cn/pc/v1.0/template/musiclistplaza-listbytag/release',{pageNumber:page,templateVersion:2,tagId:category}):queryURL('https://app.c.nf.migu.cn/pc/bmw/page-data/playlist-square-recommend/v1.0',{templateVersion:2,pageNo:page});
       const raw=row(await this.http(url,{},signal));if(raw.code!=='000000')throw new Error('咪咕歌单服务暂时不可用');
-      items=unique(tree(raw.data).filter(v=>v.resourceType==='2021'&&v.resourceId&&v.contentName).map(v=>item(v.resourceId,v.contentName)));
-      const next=count(row(row(raw.data).header).nextPageNo);hasMore=next!==undefined&&next>page;
+      items=unique(tree(raw.data).flatMap(v=>{
+        if(v.resourceType==='2021'&&v.resourceId&&v.contentName)return[item(v.resourceId,v.contentName)];
+        const event=row(v.logEvent);return event.contentType==='2021'&&event.contentId&&v.title?[item(event.contentId,v.title,v.imageUrl)]:[];
+      }));
+      const next=count(row(row(raw.data).header).nextPageNo),nextURL=text(row(raw.data).nextPageUrl);
+      hasMore=next!==undefined?next>page:!!nextURL&&Number(nextURL.match(/[?&]pageNumber=(\d+)/)?.[1]??0)>page;
     }
     return{items,hasMore,page};
   }
@@ -100,7 +117,7 @@ export class DiscoveryProvider {
       if(!Array.isArray(values))throw new Error('酷狗歌曲响应无效');const info=row(list(row(raw.info).list)[0]);title=text(info.specialname??row(raw.info).rankname);total=count(data.total??nested.total);rows=list(values).map(value=>{const v=row(value),filename=text(v.filename),split=filename.indexOf(' - ');return{...v,FileHash:v.hash,Audioid:v.audio_id,SongName:split>=0?filename.slice(split+3):filename,SingerName:split>=0?filename.slice(0,split):'',Duration:v.duration,FileSize:v.filesize,AlbumID:v.album_id};});hasMore=total!==undefined?page*Number(raw.pagesize??30)<total:rows.length>=30;
     }else{
       const url=rank?queryURL('https://app.c.nf.migu.cn/MIGUM2.0/v1.0/content/querycontentbyId.do',{columnId:id,needAll:0}):queryURL('https://app.c.nf.migu.cn/MIGUM3.0/resource/playlist/song/v2.0',{pageNo:page,pageSize:limit,playlistId:id});
-      const raw=row(await this.http(url,{headers:{channel:'0146921',Referer:'https://m.music.migu.cn/'}},signal)),data=row(raw.data);const values=data.songList??raw.contentList;if(!Array.isArray(values))throw new Error('咪咕歌单响应无效');rows=list(values);title=text(data.name??data.title);total=count(data.totalCount);hasMore=!rank&&(total!==undefined?page*limit<total:rows.length>=limit);
+      const raw=row(await this.http(url,{headers:{channel:'0146921',Referer:'https://m.music.migu.cn/'}},signal)),data=row(raw.data);const values=data.songList??raw.contentList??(Array.isArray(row(raw.columnInfo).contents)?list(row(raw.columnInfo).contents).map(value=>row(value).objectInfo):undefined);if(!Array.isArray(values))throw new Error('咪咕歌单响应无效');rows=list(values);title=text(data.name??data.title??row(raw.columnInfo).columnTitle);total=count(data.totalCount??row(raw.columnInfo).contentsCount);hasMore=!rank&&(total!==undefined?page*limit<total:rows.length>=limit);
     }
     return{title,items:rows.map(value=>onlineTrack(platform,value)),total,hasMore,page};
   }

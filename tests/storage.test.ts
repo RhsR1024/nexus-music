@@ -113,3 +113,10 @@ test('quarantine preserves exact malformed JSON atomically before removing the a
   assert.equal((db.prepare('SELECT value FROM records WHERE key=?').get('recovery.broken.fixture') as {value:string}).value,'{malformed private payload');
   await repository.put('broken',{version:1});assert.deepEqual(await repository.get('broken'),{version:1});db.close();
 });
+
+test('source version fingerprints change on update while an older routing snapshot retains its digest',async()=>{
+  const {db,repository}=store();await repository.migrate();const runtime=registry();const catalog=new SourceCatalog(runtime,repository,hash);
+  const imported=await catalog.import(script('fixture','1'),'fixture.js');await catalog.batch([imported.id],'enable');const old=runtime.getSnapshot()[0]!;
+  await catalog.update(imported.id,script('fixture','2'));const current=runtime.getSnapshot()[0]!;
+  assert.equal(old.fingerprint,await hash(script('fixture','1')));assert.equal(current.fingerprint,await hash(script('fixture','2')));assert.notEqual(old.fingerprint,current.fingerprint);assert.equal(old.id,current.id);db.close();
+});

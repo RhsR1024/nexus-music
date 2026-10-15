@@ -111,12 +111,12 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["从地址导入"].tap()
     let enable=app.buttons["启用音源：Nexus Live Validation Source"]
     for _ in 0..<5 {if enable.isHittable{break};app.swipeUp()}
-    XCTAssertTrue(enable.waitForExistence(timeout:15));enable.tap()
+    if enable.waitForExistence(timeout:3) {enable.tap()} else {XCTAssertTrue(app.buttons["停用音源：Nexus Live Validation Source"].exists)}
     XCTAssertTrue(app.staticTexts["已启用"].waitForExistence(timeout:25))
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
     let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10))
     app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
-    query.tap();query.typeText("test\n")
+    query.tap();query.typeText("test\n");app.buttons["搜索"].firstMatch.tap()
     let first=app.descendants(matching:.any).matching(identifier:"search-track-wy-0").firstMatch
     XCTAssertTrue(first.waitForExistence(timeout:25));first.tap()
     app.buttons["打开播放页"].tap()

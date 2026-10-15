@@ -9,7 +9,7 @@ export interface LXTransport {
   request(source: SourceState, payload: ReturnType<typeof makeLXRequest>, signal: AbortSignal): Promise<unknown>;
 }
 export interface RoutedMedia extends ResolvedMedia {
-  sourceId: string; sourceRevision: number; requestedQuality: Quality; quality: Quality; scriptQuality: string;
+  sourceId: string; sourceRevision: number; sourceFingerprint?:string; requestedQuality: Quality; quality: Quality; scriptQuality: string;
 }
 export interface RouteAttempt { sourceId: string; quality: Quality; reason: 'failed' | 'timeout' | 'invalid-url' | 'source-changed' }
 export class RoutingError extends Error {
@@ -52,7 +52,7 @@ export class MultiSourceResolver implements MediaResolver {
           if (!this.registry.isCurrent(source)) { attempts.push({ sourceId: source.id, quality, reason: 'source-changed' }); continue; }
           const url = mediaURL(result);
           if (!url) { attempts.push({ sourceId: source.id, quality, reason: 'invalid-url' }); continue; }
-          return { url, routeKey, sourceId: source.id, sourceRevision: source.revision, requestedQuality: preference, quality, scriptQuality };
+          return { url, routeKey, sourceId: source.id, sourceRevision: source.revision, sourceFingerprint:source.fingerprint, requestedQuality: preference, quality, scriptQuality };
         } catch (error) {
           throwIfAborted(signal);
           attempts.push({ sourceId: source.id, quality, reason: error instanceof DeadlineError ? 'timeout' : 'failed' });

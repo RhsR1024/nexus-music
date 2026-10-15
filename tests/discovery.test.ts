@@ -20,3 +20,18 @@ test('nested Kugou plaza and Migu template categories use actual wire fields',as
   const page=await p.playlists('kg',1,undefined,new AbortController().signal);assert.equal(page.items[0]?.id,'123');assert.equal(page.hasMore,false);
   assert.deepEqual(await p.categories('mg',new AbortController().signal),[{id:'123',title:'Fixture tag'}]);
 });
+test('Kuwo category digest chooses zone versus tag and excludes unsupported album entries',async()=>{
+  const signal=new AbortController().signal;
+  const p=new DiscoveryProvider(sha,async url=>{
+    if(url.includes('getTagList'))return{data:[{data:[{id:'211',name:'Synthetic zone',digest:'43'},{id:'12',name:'Synthetic tag',digest:'10000'}]}]};
+    if(url.includes('get_pc_qz_data'))return[{list:[{type:'album',digest:'13',id:'9',name:'album'},{type:'songlist',digest:'8',id:'1',name:'playlist'}]}];
+    assert.equal(new URL(url).searchParams.get('id'),'12');return{data:{data:[{id:'2',name:'Tag playlist'}],total:1}};
+  });
+  assert.deepEqual((await p.categories('kw',signal)).map(c=>c.id),['211-43','12-10000']);
+  assert.deepEqual((await p.playlists('kw',1,'211-43',signal)).items.map(v=>v.id),['1']);
+  assert.equal((await p.playlists('kw',1,'12-10000',signal)).items[0]?.id,'2');
+});
+test('Migu category template retains playlist identity, art and explicit next page',async()=>{
+  const p=new DiscoveryProvider(sha,async()=>({code:'000000',data:{nextPageUrl:'http://app.c.nf.migu.cn/path?pageNumber=2',contentItemList:[{itemList:[{title:'Fixture',imageUrl:'https://example.test/cover',logEvent:{contentType:'2021',contentId:'123'}}]}]}}));
+  const page=await p.playlists('mg',1,'1',new AbortController().signal);assert.equal(page.items[0]?.id,'123');assert.equal(page.hasMore,true);assert.equal(page.items[0]?.artwork,'https://example.test/cover');
+});

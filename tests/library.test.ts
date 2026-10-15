@@ -38,3 +38,9 @@ test('queue recovery preserves FIFO insertion order and rejects corrupted entry 
   assert.throws(()=>decodeQueue({version:1,queue:{...queue,currentId:'missing'}}));
   assert.throws(()=>decodeQueue({version:1,queue:{...queue,priorityIds:['b','next']}}));
 });
+
+test('bulk removal is one atomic library update and preserves duplicate entries not selected',async()=>{
+  const {library}=setup();const id=await library.createPlaylist('Fixture',[track,track,{...track,origin:{...track.origin,id:'2'}}]);
+  const first=library.getSnapshot().playlists[0]!.entries[0]!.id;
+  await library.removeEntries(id,[first]);assert.equal(library.getSnapshot().playlists[0]!.entries.length,2);assert.equal(library.getSnapshot().playlists[0]!.entries[0]!.track.origin.id,track.origin.id);
+});

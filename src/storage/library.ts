@@ -1,3 +1,4 @@
+import {InvalidRecordError} from './recovery.ts';
 import { trackKey, validateTrack, type Track } from '../domain/track.ts';
 import type { Repository } from './repository.ts';
 export interface LocalEntry {id:string;track:Track}
@@ -25,7 +26,7 @@ export class LibraryStore {
   constructor(repository:Pick<Repository,'get'|'put'>,uuid:()=>string,now:()=>number=Date.now){this.repository=repository;this.uuid=uuid;this.now=now;}
   getSnapshot=()=>this.value;
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
-  async restore(){const value=await this.repository.get<unknown>('library.v1');if(value)this.value=validateLibrary(value);}
+  async restore(){const value=await this.repository.get<unknown>('library.v1');if(value){try{this.value=validateLibrary(value);}catch{throw new InvalidRecordError();}}}
   private change(run:(current:LibraryState)=>LibraryState) {
     const next=this.tail.then(async()=>{const value=validateLibrary(run(this.value));await this.repository.put('library.v1',value);this.value=value;for(const listener of this.listeners)listener();});
     this.tail=next.catch(()=>{});return next;
@@ -40,6 +41,9 @@ export class LibraryStore {
   deletePlaylist(id:string){return this.change(current=>({...current,playlists:current.playlists.filter(item=>item.id!==id)}));}
   addTracks(id:string,tracks:readonly Track[]){tracks.forEach(validateTrack);return this.updatePlaylist(id,playlist=>({...playlist,entries:[...playlist.entries,...tracks.map(track=>({id:this.uuid(),track}))]}));}
   removeEntry(id:string,entryId:string){return this.updatePlaylist(id,playlist=>({...playlist,entries:playlist.entries.filter(item=>item.id!==entryId)}));}
+  removeEntries(id:string,entryIds:readonly string[]){const wanted=new Set(entryIds);return this.updatePlaylist(id,playlist=>({...playlist,entries:playlist.entries.filter(item=>!wanted.has(item.id))}));}
+  removeFavorites(tracks:readonly Track[]){const wanted=new Set(tracks.map(track=>trackKey(track.origin)));return this.change(current=>({...current,favorites:current.favorites.filter(track=>!wanted.has(trackKey(track.origin)))}));}
+  removeHistoryTracks(tracks:readonly Track[]){const wanted=new Set(tracks.map(track=>trackKey(track.origin)));return this.change(current=>({...current,history:current.history.filter(item=>!wanted.has(trackKey(item.track.origin)))}));}
   moveEntry(id:string,entryId:string,to:number){return this.updatePlaylist(id,playlist=>{
     const entries=[...playlist.entries],from=entries.findIndex(item=>item.id===entryId);
     if(from<0||!Number.isInteger(to)||to<0||to>=entries.length)throw new Error('移动位置无效');
@@ -54,4 +58,11 @@ export class LibraryStore {
     const keys=new Set(current.favorites.map(track=>trackKey(track.origin))),added= favorites.filter(track=>{const key=trackKey(track.origin);if(keys.has(key))return false;keys.add(key);return true;});
     return{...current,playlists:[...current.playlists,...playlists],favorites:[...current.favorites,...added]};
   });}
+  importCollections(collections:readonly {title:string;tracks:readonly Track[]}[],favorites:readonly Track[]=[]){
+    return this.change(current=>{
+      const time=this.now(),playlists=collections.map(item=>({id:this.uuid(),title:item.title,createdAt:time,updatedAt:time,entries:item.tracks.map(track=>({id:this.uuid(),track}))}));
+      const keys=new Set(current.favorites.map(track=>trackKey(track.origin))),added=favorites.filter(track=>{const key=trackKey(track.origin);if(keys.has(key))return false;keys.add(key);return true;});
+      return{...current,playlists:[...current.playlists,...playlists],favorites:[...current.favorites,...added]};
+    });
+  }
 }

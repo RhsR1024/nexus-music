@@ -60,3 +60,5 @@
 - 最新功能优先级：LX→核心播放→Navidrome→在线/UI/歌词缓存；漫途导入后置。
 
 2026-10-15：五个参考仓库均已通过本地Git取得。Wayferar-Music为SSH部分克隆，当前稀疏检出README、docs及app/src/main/assets/script；未检出根目录大型APK。工作树干净，后续按具体功能补取对应Smali/importer源码及测试，不把“已取得参考仓库”当作已完成逐项比较或运行验收。
+
+歌词/缓存/LX导入收尾按[决策0008](decisions/0008-lyrics-fonts-cache.md)复核五项目：Q/wtf保留实际字时间、压缩容器和LXMC结构；悦音提供普通LRC与库交互，Cy缓存抽象但不引入其RNTP/新框架，Wayferar保序与数据边界继续采用。QRC仅协议常量适配并注明Apache来源，原生有界执行；其余解析/仓储/缓存原创。分类收尾按[决策0009](decisions/0009-discovery-playlist-import.md)：KW必须保留43/10000的不同协议，MG分类与推荐模板不同，不能用返回空数组掩盖未识别字段。TS可用于Android，QRC/图片缓存等原生接口需对应实现。

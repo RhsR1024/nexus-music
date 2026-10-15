@@ -20,7 +20,7 @@ export function trackKey(origin: TrackOrigin): string {
   if (!origin || (origin.kind !== 'online' && origin.kind !== 'navidrome') ||
       (origin.kind === 'online' && !['wy','tx','kw','kg','mg'].includes(origin.platform))) throw new Error('歌曲来源无效');
   const namespace = origin.kind === 'online' ? origin.platform : origin.accountId;
-  if (!namespace || typeof origin.id !== 'string' || !origin.id) {
+  if (typeof namespace !== 'string' || !namespace || typeof origin.id !== 'string' || !origin.id) {
     throw new Error('歌曲来源和 ID 必须是非空字符串');
   }
   // JSON encoding prevents collisions when provider IDs contain separators.
@@ -33,6 +33,7 @@ export function validateTrack(track: Track): void {
   if (typeof track.title !== 'string' || typeof track.artist !== 'string') {
     throw new Error('歌曲名称与歌手必须是字符串');
   }
+  if ((track.album!==undefined&&typeof track.album!=='string')||(track.artwork!==undefined&&typeof track.artwork!=='string'))throw new Error('歌曲专辑或封面格式无效');
   if (track.durationMs !== undefined &&
       (!Number.isFinite(track.durationMs) || track.durationMs < 0)) {
     throw new Error('歌曲时长无效');

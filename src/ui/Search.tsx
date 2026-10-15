@@ -1,7 +1,7 @@
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Discovery } from './Discovery.tsx';
 import { useState, useSyncExternalStore } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Services } from '../app/services.ts';
 import type { OnlinePlatform } from '../domain/track.ts';
 import { trackKey } from '../domain/track.ts';
@@ -15,7 +15,7 @@ export function Search({ services }: { services: Services }) {
   const [query,setQuery] = useState(state.query), [platform,setPlatform] = useState<OnlinePlatform|'all'>('all');
   const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [adding,setAdding]=useState<readonly Track[]>([]);
-  const run = () => { void services.search.search(query,platform); };
+  const run = () => { Keyboard.dismiss(); void services.search.search(query,platform); };
   return <View><Discovery services={services}/>
     <Text style={styles.title}>寻找下一首喜欢的歌</Text>
     <Text style={styles.caption}>五个平台分别搜索、分别展示。导入并启用LX音源后可解析播放。</Text>
