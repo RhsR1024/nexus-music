@@ -25,3 +25,6 @@ build/tests/native-sleep
 
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/LocalAudioFiles.swift tests/native/LocalFilesCLI.swift -framework AVFoundation -framework ImageIO -framework UniformTypeIdentifiers -o build/tests/native-local-files
 node scripts/test-local-files.mjs
+
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/DAVHTTP.swift tests/native/DAVHTTPCLI.swift -o build/tests/native-webdav-http
+node scripts/test-webdav-http.mjs
