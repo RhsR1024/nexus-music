@@ -128,3 +128,5 @@ b7d7226 五皮肤本地设备归档成功：build/distribution/NexusMusic-unsign
 S1云端失败原因已由下载诊断定位：源导入按钮被浮动导航遮挡，XCTest命中音乐库页，非通用播放失败（云端外观/ND均通过）。根内容区现按底部chrome的实测高度与安全区约束ScrollView可见区域，发现列表尾部移除重复预留；新测试断言导入后仍在设置tab。
 
 本地新增iPhone17/iOS26.3.1模拟器CACFEADC-4D00-4BBF-AD37-503CDD1BE24A，120项TS/类型检查通过；Release UI源导入/启停删通过69.151秒，ND实音/PCM/歌词、暂停、AM拖动定位及五皮肤切换/控制可达通过85.659秒。它覆盖云端同类紧凑尺寸，但仍不替代iOS27云端复验。九张用户参考截图已保留在忽略目录resource/reference-ui/sollin-v2，未作为App素材或提交Git。
+
+修复版最终产物：d96ea74，build/SourceUITests-1792066875571.xcresult两个紧凑布局UI用例通过；build/distribution/NexusMusic-unsigned.ipa归档成功、arm64/iphoneos26.2、signed=false、dirty=false，SHA256 bd6ce7b6903915fbab041c52c2c75d64587156cfcb1d656add65ecef83615afe。构建清单和校验文件同目录。云端38735111951已排队，尚未称通过。

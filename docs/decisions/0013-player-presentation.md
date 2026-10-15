@@ -1,4 +1,4 @@
-# 0013：AM 与封面沉浸播放布局
+# 0013：五种移动播放布局
 
 2026-10-15，S3 首批，对应 J26/J41/J48 部分；不是五皮肤、完整 AMLL 或原生累计扫色验收。
 
@@ -6,7 +6,7 @@
 
 ## 行为与边界
 
-- 新增 Preferences.playerLayout：classic/am/immersive。旧记录缺值默认 classic，保留现有行为；设置和播放选项均可选，原子保存，坏值拒绝。
+- 新增 Preferences.playerLayout：classic/am/immersive/photo/vinyl/wave。旧记录缺值默认 classic，保留现有行为；设置和播放选项均可选，原子保存，坏值拒绝。
 - ModernPlayer 只订阅现有 PlaybackController、PreferenceStore、LibraryStore；切换布局只更新外观，不调用 play/load/stop、不替换原始歌曲或队列。汽水仍用原曲身份收藏，歌词使用已确认匹配目标。
 - AM：小封面头、大字左对齐有界歌词区域、大播放控制和进度；沉浸：大封面、曲目头、居中歌词及控制。当前背景为既有缓存封面原生模糊加暗渐变，缺图深蓝回退；不是新实现的色彩提取、流动背景或动态封面。
 - 歌词只显示局部3–4行，沿用真实词时间与原生透明度动画；完整累计扫色、邻行实时模糊、字强调/弹簧滚动、TTML 与五皮肤仍按 S3/S4 继续。不声称已经复制 AMLL 动画。

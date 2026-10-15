@@ -185,4 +185,6 @@ S3已本地提交b7d7226b89869efbf90e49a29da5314025965e6a，并成功生成arm64
 
 重要云端纠正：S1 38728228483失败，外观与ND合成实音两个测试通过，仅SourceManager失败；不是编译/通用播放故障。已下载11971211239，ui-catalog.log68351源启用按钮缺失，点击导入的hit point{-1,-1}，失败AX显示误进tab-library。实际是iPhone17较小视口的源导入按钮被浮动底栏遮挡，尾部大padding不足以约束ScrollView可见区域。当前工作树按chrome实际高度/安全区缩小滚动视口，并加导入后仍在设置tab断言；新建本地iPhone17模拟器CACFEADC-4D00-4BBF-AD37-503CDD1BE24A（iOS26.3.1）复验。原iPhone15ProMax测试模拟器暂时shutdown以节约Intel16GB内存。4db78c4已push，运行38732185670已启动，包含旧布局，不能称修复已上云。S3功能和本地IPA提交b7d7226已在远端。
 
-紧凑视口复验已通过：新iPhone17模拟器源导入/启停删69.151秒，ND合成实音/PCM/歌词/暂停、AM拖动/五皮肤控制可达85.659秒，全部成功；120项TS通过。内容区实测chrome高度约束修复待随本批提交上云；云端386...旧成功不能替代新修复验收。九张截图本地持久保存在resource/reference-ui/sollin-v2（忽略Git），不作为打包资产。
+紧凑视口复验已通过：新iPhone17模拟器源导入/启停删69.151秒，ND合成实音/PCM/歌词/暂停、AM拖动/五皮肤控制可达85.659秒，全部成功；120项TS通过。内容区实测chrome高度约束修复待随本批提交上云；旧基线云端成功不能替代新修复验收。九张截图本地持久保存在resource/reference-ui/sollin-v2（忽略Git），不作为打包资产。
+
+最终本批状态：d96ea74d8e4d67c3de8426a7fa0af0613adaae5d 已正常push（无force）。紧凑视口最终证据 build/SourceUITests-1792066875571.xcresult 两项通过。修复版本地IPA再次成功，build/distribution/build-manifest.json记录d96ea74/dirty=false/arm64/iphoneos26.2/signed=false；SHA256 bd6ce7b6903915fbab041c52c2c75d64587156cfcb1d656add65ecef83615afe。修复云端运行38735111951已创建，当前pending；前面的4db78c4运行38732185670仍可能重现已知旧遮挡，不把它作为d96修复结果。两个本地项目测试模拟器均已shutdown节约Intel内存，UDID保留可再boot。
