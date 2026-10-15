@@ -5,6 +5,8 @@
 
 # Future application dependencies and build outputs
 node_modules/
+.bundle/
+vendor/bundle/
 .expo/
 Pods/
 DerivedData/
