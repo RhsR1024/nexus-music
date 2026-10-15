@@ -24,6 +24,7 @@ function run(path,cancel=false){return new Promise((resolve,reject)=>{
 });}
 try{
   assert.equal(await run('music'),`status=207 bytes=${Buffer.byteLength(xml)}`);assert.match(await run('redirect'),/^status=207/);
+  assert.match(await run('100%25.mp3'),/^status=207/);assert.match(await run('literal%2520name.mp3'),/^status=207/);assert.equal(await run('%252e%252e/private'),'error=2');
   assert.equal(await run('outside'),'error=2');assert.equal(await run('external'),'error=2');assert.equal(externalHits,0);assert.equal(outsideHits,0);
   assert.equal(await run('loop'),'error=2');assert.equal(await run('large'),'error=4');assert.equal(await run('unauthorized'),'status=401 bytes=0');
   assert.equal(await run('slow',true),'error=-999');assert.equal(await run('%2e%2e/private'),'error=2');assert.equal(await run('encoded%2fprivate'),'error=2');

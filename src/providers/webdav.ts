@@ -12,7 +12,11 @@ function safeRaw(raw:string) {
   const path=raw.replace(/^https?:\/\/[^/]+/i,'');
   for(const segment of path.split('/')){
     let value:string;try{value=decodeURIComponent(segment);}catch{return fail('configuration');}
-    if(value==='.'||value==='..'||/[\u0000-\u001f\u007f\\/%]/.test(value))fail('configuration');
+    for(let depth=0;;depth++){
+      if(value==='.'||value==='..'||/[\u0000-\u001f\u007f\\/]/.test(value))fail('configuration');
+      if(!/%[\da-f]{2}/i.test(value))break;if(depth>=8)fail('configuration');
+      let next:string;try{next=decodeURIComponent(value);}catch{break;}if(next===value)break;value=next;
+    }
   }
 }
 const encodePath=(path:string)=>path.split('/').map(part=>encodeURIComponent(decodeURIComponent(part))).join('/');
@@ -70,6 +74,7 @@ export function parseDAVListing(xml:string,root:string,requestPath=''):DAVEntry[
     if(directory&&path&&!path.endsWith('/'))path+='/';
     if(seen.has(path))return fail('protocol');seen.add(path);
     const name=text(properties.get('displayname'))||decodeURIComponent(path.replace(/\/$/,'').split('/').at(-1)??'');
+    if(name.length>1024||text(properties.get('getetag')).length>8192||text(properties.get('getlastmodified')).length>256||text(properties.get('getcontenttype')).length>256)return fail('protocol');
     entries.push({path,name,directory,...(bytes!==undefined?{bytes}:{}),...(text(properties.get('getetag'))?{etag:text(properties.get('getetag'))}:{}),...(text(properties.get('getlastmodified'))?{modified:text(properties.get('getlastmodified'))}:{}),...(text(properties.get('getcontenttype'))?{contentType:text(properties.get('getcontenttype'))}:{})});
   }
   return entries;

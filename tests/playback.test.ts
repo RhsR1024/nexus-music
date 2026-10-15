@@ -122,3 +122,23 @@ test('player shows only explicitly safe application messages for unavailable dev
   const {controller,requests}=rig();const pending=controller.play();requests[0]!.reject(new PlaybackMessageError('请重新导入此设备的音频文件'));await pending;
   assert.equal(controller.getSnapshot().intent,'paused');assert.equal(controller.getSnapshot().error,'请重新导入此设备的音频文件');
 });
+test('controller admits ipod-library only for a device track with an explicit device media resolution',async()=>{
+  for(const trusted of [false,true]){
+    const f=rig(),song=entry('a');f.controller.setQueue(makeQueue([{...song,track:{...song.track,origin:{kind:'device',libraryId:'local-fixture',id:'1'}}}]));
+    const pending=f.controller.play();f.requests[0]!.resolve({url:'ipod-library://item/fixture.m4a',...(trusted?{deviceMedia:true}:{})});await pending;
+    assert.equal(f.calls.some(call=>call.startsWith('load:')),trusted);
+  }
+  const f=rig(),pending=f.controller.play();f.requests[0]!.resolve({url:'ipod-library://item/fixture.m4a',deviceMedia:true});await pending;assert.equal(f.calls.some(call=>call.startsWith('load:')),false);
+});
+test('resolver metadata updates the authoritative queue before load without changing identity or paused resume',async()=>{
+  const f=rig(),song=f.queue.entries[0]!.track,pending=f.controller.play();
+  f.requests[0]!.resolve({url:'https://example.test/audio',resolvedTrack:{...song,title:'Enriched fixture'}});await pending;
+  assert.equal(f.controller.getSnapshot().queue.entries[0]!.track.title,'Enriched fixture');assert.deepEqual(f.controller.getSnapshot().queue.entries[0]!.track.origin,song.origin);
+  assert.equal(f.controller.getSnapshot().media?.resolvedTrack,undefined);f.controller.onReady(f.controller.getSnapshot().token!);f.controller.pause();await f.controller.play();assert.equal(f.requests.length,1);
+  const bad=rig(),rejected=bad.controller.play();bad.requests[0]!.resolve({url:'https://example.test/audio',resolvedTrack:{...song,origin:{kind:'local',id:'another'}}});await rejected;assert.equal(bad.calls.some(call=>call.startsWith('load:')),false);
+});
+test('a pause triggered by metadata publication still prevents the resolved media from loading',async()=>{
+  const f=rig();let paused=false;f.controller.subscribe(()=>{if(!paused&&f.controller.getSnapshot().queue.entries[0]!.track.title==='Enriched'){paused=true;f.controller.pause();}});
+  const pending=f.controller.play();f.requests[0]!.resolve({url:'https://example.test/audio',resolvedTrack:{...f.queue.entries[0]!.track,title:'Enriched'}});await pending;
+  assert.equal(f.calls.some(call=>call.startsWith('load:')),false);assert.equal(f.controller.getSnapshot().intent,'paused');
+});

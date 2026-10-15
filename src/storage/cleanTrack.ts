@@ -10,7 +10,7 @@ export function cleanTrack(track:Track):Track {
     }
     return value;
   })) as Record<string,unknown>;
-  return {origin:track.origin.kind==='device'?{kind:'device',libraryId:track.origin.libraryId,id:track.origin.id}:track.origin.kind==='local'?{kind:'local',id:track.origin.id}:track.origin.kind==='online'?{kind:'online',platform:track.origin.platform,id:track.origin.id}:track.origin.kind==='imported'?{kind:'imported',platform:'qishui',id:track.origin.id}:{kind:'navidrome',accountId:track.origin.accountId,id:track.origin.id},title:track.title,artist:track.artist,
+  return {origin:track.origin.kind==='webdav'?{kind:'webdav',accountId:track.origin.accountId,id:track.origin.id}:track.origin.kind==='device'?{kind:'device',libraryId:track.origin.libraryId,id:track.origin.id}:track.origin.kind==='local'?{kind:'local',id:track.origin.id}:track.origin.kind==='online'?{kind:'online',platform:track.origin.platform,id:track.origin.id}:track.origin.kind==='imported'?{kind:'imported',platform:'qishui',id:track.origin.id}:{kind:'navidrome',accountId:track.origin.accountId,id:track.origin.id},title:track.title,artist:track.artist,
     ...(track.album!==undefined?{album:track.album}:{}),...(track.durationMs!==undefined?{durationMs:track.durationMs}:{}),
-    ...(track.origin.kind!=='navidrome'&&track.artwork&&safeURL(track.artwork)?{artwork:track.artwork}:{}),metadata,qualities:track.qualities.map(item=>({...item}))};
+    ...(track.origin.kind!=='navidrome'&&track.origin.kind!=='webdav'&&track.artwork&&safeURL(track.artwork)?{artwork:track.artwork}:{}),metadata,qualities:track.qualities.map(item=>({...item}))};
 }

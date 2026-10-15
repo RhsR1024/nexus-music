@@ -5,7 +5,7 @@ import type {Track} from '../domain/track.ts';
 import {useTheme} from './theme.tsx';
 export function Cover({services,track,url,privateCover,size=56}:{services:Services;track?:Track;url?:string;privateCover?:{accountId:string;id:string};size?:number}){
   const theme=useTheme(),[file,setFile]=useState<string>();
-  const key=JSON.stringify([track?.origin,track?.artwork,track?.metadata.coverArtId,url,privateCover]);
+  const key=JSON.stringify([track?.origin,track?.artwork,track?.metadata.coverArtId,track?.metadata.davVersion,url,privateCover]);
   useEffect(()=>{const abort=new AbortController();setFile(undefined);
     const pending=track?services.covers.loadTrack(track,abort.signal):privateCover?services.covers.loadPrivate(privateCover.accountId,privateCover.id,abort.signal):url?services.covers.loadURL(url,abort.signal):Promise.resolve(undefined);
     pending.then(value=>{if(!abort.signal.aborted)setFile(value);}).catch(()=>{});return()=>abort.abort();

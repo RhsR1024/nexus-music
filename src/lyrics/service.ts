@@ -16,10 +16,10 @@ export class LyricService {
   async load(track:Track,signal:AbortSignal):Promise<LyricResult>{
     throwIfAborted(signal);
     const sources=this.registry.getSnapshot().filter(source=>this.registry.isCurrent(source));
-    const key=JSON.stringify([trackKey(track.origin),sources.map(source=>[source.id,source.revision])]);
+    const key=JSON.stringify([trackKey(track.origin),track.origin.kind==='webdav'?track.metadata.davVersion:null,sources.map(source=>[source.id,source.revision])]);
     const cached=this.cache.get(key);if(cached&&cached.expires>Date.now())return cached.value;
     const save=(value:LyricResult)=>{throwIfAborted(signal);if(usable(value)){this.cache.delete(key);this.cache.set(key,{value,expires:Date.now()+1800000});while(this.cache.size>20)this.cache.delete(this.cache.keys().next().value!);}return value;};
-    if(track.origin.kind==='navidrome'||track.origin.kind==='local'||track.origin.kind==='device')return save(normalizeLyrics(await this.privateLyrics(track,signal)));
+    if(track.origin.kind==='navidrome'||track.origin.kind==='local'||track.origin.kind==='device'||track.origin.kind==='webdav')return save(normalizeLyrics(await this.privateLyrics(track,signal)));
     const platform=track.origin.platform;
     for(const source of sources){
       const capability=source.capabilities.find(item=>item.platform===platform&&item.actions.includes('lyric'));

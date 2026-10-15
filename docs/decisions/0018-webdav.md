@@ -13,3 +13,5 @@
 - TS目录/身份/竞态可共享Android；原生鉴权网络、AVAsset标签读取与音频Loader需各平台实现。真实服务兼容性、App合成服务器、缓存、账号移除与真机后台分别验收。
 
 当前为实施决策，尚不代表WebDAV功能或云备份完成。
+
+实施接入已推进：NexusDAVModule/DAVNativeTransport、WebDAVMedia与WebDAVLibrary连接到唯一播放器；RemoteAudioMetadata设置15秒/16MiB预算，分配两并发/64等待上限，标签缓存8MiB/100项，封面沿用现有32MiB缓存。强ETag配合If-Match与响应校验，cacheOnly缺缓存拒绝；原生和合成App验证见BUILD_STATUS。resolvedTrack仅允许同源身份的元数据补全，按版本刷新歌词/封面，保持队列权威。当前支持Basic，不声称所有WebDAV认证/个人服务均已验证；云备份与冲突同步继续后续实现。

@@ -8,14 +8,23 @@ struct DAVScope {
           ["http", "https"].contains(parts.scheme ?? ""), parts.host != nil,
           parts.user == nil, parts.password == nil, parts.query == nil, parts.fragment == nil,
           parts.percentEncodedPath.hasSuffix("/"), DAVScope.safePath(parts.percentEncodedPath) else { throw DAVHTTP.failure(1) }
-    self.root = root; prefix = parts.percentEncodedPath
+    self.root = root; prefix = DAVScope.canonicalPath(parts.percentEncodedPath)!
+  }
+  private static func canonicalPath(_ path: String) -> String? {
+    let allowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/%?#"))
+    let parts = path.components(separatedBy: "/").map { $0.removingPercentEncoding?.addingPercentEncoding(withAllowedCharacters: allowed) }
+    guard parts.allSatisfy({ $0 != nil }) else { return nil }; return parts.map { $0! }.joined(separator: "/")
   }
   static func safePath(_ path: String) -> Bool {
     if path.contains("\\") { return false }
     for part in path.components(separatedBy: "/") {
-      guard let value = part.removingPercentEncoding, value != ".", value != "..",
-            !value.contains("/"), !value.contains("\\"), !value.contains("%"),
-            !value.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else { return false }
+      guard var value = part.removingPercentEncoding else { return false }
+      for depth in 0...8 {
+        guard value != ".", value != "..", !value.contains("/"), !value.contains("\\"),
+              !value.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else { return false }
+        guard let next = value.removingPercentEncoding, next != value else { break }
+        if depth == 8 { return false }; value = next
+      }
     }
     return true
   }
@@ -24,7 +33,7 @@ struct DAVScope {
           parts.user == nil, parts.password == nil, parts.query == nil, parts.fragment == nil,
           parts.scheme == base.scheme, parts.host?.lowercased() == base.host?.lowercased(),
           (parts.port ?? (parts.scheme == "https" ? 443 : 80)) == (base.port ?? (base.scheme == "https" ? 443 : 80)),
-          DAVScope.safePath(parts.percentEncodedPath), parts.percentEncodedPath.hasPrefix(prefix) else { return false }
+          DAVScope.safePath(parts.percentEncodedPath), DAVScope.canonicalPath(parts.percentEncodedPath)?.hasPrefix(prefix) == true else { return false }
     return true
   }
   func url(_ path: String) throws -> URL {
@@ -46,6 +55,12 @@ final class DAVHTTP: NSObject, URLSessionDataDelegate {
   private var status = 0
   private var redirects = 0
   private static let properties = "<?xml version=\"1.0\" encoding=\"utf-8\"?><d:propfind xmlns:d=\"DAV:\"><d:prop><d:displayname/><d:resourcetype/><d:getcontentlength/><d:getlastmodified/><d:getetag/><d:getcontenttype/></d:prop></d:propfind>"
+  static func media(root: String, path: String, username: String, password: String) throws -> [String: Any] {
+    let scope = try DAVScope(root)
+    guard !username.isEmpty, !username.contains(":"), !password.isEmpty, !username.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else { throw failure(1) }
+    return ["url": try scope.url(path).absoluteString, "redirectRoot": root,
+            "headers": ["Authorization": "Basic " + Data((username + ":" + password).utf8).base64EncodedString()]]
+  }
   init(root: String, path: String, username: String, password: String, depth: Int) throws {
     scope = try DAVScope(root)
     guard [0, 1].contains(depth), !username.isEmpty, !username.contains(":"), !password.isEmpty,

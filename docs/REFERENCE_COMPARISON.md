@@ -86,3 +86,5 @@ S6文件音频采纳边界见 [0016](decisions/0016-local-audio.md)：Cy的local
 S6设备媒体库按[0017](decisions/0017-device-media-library.md)处理：四RN参考限定Swift/ObjC/TS/配置检索未发现可直接采用的MPMediaQuery/MPMediaLibrary/ipod-library管线，不推导全仓无此功能。Wayferar Android媒体权限和Sollin Electron扫描不直接移植；原创iOS MediaPlayer原生边界，TS身份/分页/权限状态模型保留可共享部分，Android需对应实现。145项TS/原生与本地授权拒绝UI通过，不冒充设备媒体播放已验收。
 
 WebDAV连接/协议基础采纳见[0018](decisions/0018-webdav.md)：比较Sollin目录/备份、Cy配置与其余限定检索后原创实现，不移植明文配置/响应日志/DOM。154项业务检查、真实原生合成HTTP与iOS SDK类型检查通过；App远程播放和元数据仍待接入。
+
+WebDAV App接入继续按0018原创实现：AVFoundation远程读取复用0016的标签问题边界，音频仍是现有AVPlayer与队列。未复制Sollin的DOM/明文持久化/日志；未引入新npm依赖。已验证七种格式远程PCM与定位、合成App重启播放及账号移除；Basic之外的服务兼容性、手机后台、云备份/同步继续分别验证。

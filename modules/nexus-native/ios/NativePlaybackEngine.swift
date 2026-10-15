@@ -69,6 +69,8 @@ final class NativePlaybackEngine {
           let rawURL = object["url"] as? String, let url = URL(string: rawURL), ["http", "https", "file", "ipod-library"].contains(url.scheme ?? ""), url.scheme != "ipod-library" || object["deviceMedia"] as? Bool == true else { report("error"); return }
     if LocalAudioFiles.shared.retain(url) { retainedLocalURL = url }
     originalPayload = object
+    let redirectRoot = object["redirectRoot"] as? String
+    if let redirectRoot { guard let scope = try? DAVScope(redirectRoot), scope.contains(url) else { report("error"); return } }
     metadata = object["metadata"] as? [String: Any] ?? [:]
     initialPosition = object["startPosition"] as? Double ?? 0
     if !initialPosition.isFinite || initialPosition < 0 { initialPosition = 0 }
@@ -76,12 +78,13 @@ final class NativePlaybackEngine {
     cacheKey = object["cacheKey"] as? String
     if let cacheKey { AudioCache.shared.retain(cacheKey) }
     let cached = object["skipCache"] as? Bool == true ? nil : cacheKey.flatMap { AudioCache.shared.hit($0) }
+    if object["cacheOnly"] as? Bool == true && cached == nil { report("error"); return }
     cachedPlayback = cached != nil
     let asset: AVURLAsset
     if let cached { asset = AVURLAsset(url: cached) }
-    else if url.isFileURL || url.scheme == "ipod-library" || url.pathExtension.lowercased() == "m3u8" { asset = AVURLAsset(url: url) }
+    else if url.isFileURL || url.scheme == "ipod-library" || (redirectRoot == nil && url.pathExtension.lowercased() == "m3u8") { asset = AVURLAsset(url: url) }
     else {
-      loader = AudioResourceLoader(url: url, headers: object["headers"] as? [String: String] ?? [:], cacheKey: cacheKey)
+      loader = AudioResourceLoader(url: url, headers: object["headers"] as? [String: String] ?? [:], cacheKey: cacheKey, redirectRoot: redirectRoot)
       asset = loader!.asset
     }
     loading = Task { [weak self] in

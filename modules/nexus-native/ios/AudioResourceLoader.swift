@@ -10,19 +10,26 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
     var offset: Int64 = 0
     var total: Int64 = 0
     var mime: String?
+    var redirects = 0
     init(_ request: AVAssetResourceLoadingRequest) { self.request = request }
   }
   private var cacheWriter: AudioCache.Writer?
   private let url: URL
   private let headers: [String: String]
+  private let scope: DAVScope?
+  private let invalidScope: Bool
+  private let byteBudget: Int?
+  private var receivedBytes = 0
   private let queue = DispatchQueue(label: "nexus.audio.resource")
   private var session: URLSession!
   private var jobs: [Int: Job] = [:]
   private var tasks: [ObjectIdentifier: URLSessionDataTask] = [:]
   let asset: AVURLAsset
 
-  init(url: URL, headers: [String: String], cacheKey: String? = nil) {
+  init(url: URL, headers: [String: String], cacheKey: String? = nil, redirectRoot: String? = nil, byteBudget: Int? = nil) {
     self.url = url; self.headers = headers
+    let scope = redirectRoot.flatMap { try? DAVScope($0) }
+    self.scope = scope; self.invalidScope = redirectRoot != nil && (scope == nil || scope?.contains(url) == false); self.byteBudget = byteBudget
     var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
     components.scheme = "nexus-audio"
     asset = AVURLAsset(url: components.url!)
@@ -35,7 +42,21 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
     session = URLSession(configuration: configuration, delegate: self, delegateQueue: operations)
     asset.resourceLoader.setDelegate(self, queue: queue)
   }
+  func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                  newRequest: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+    guard let scope else { completionHandler(newRequest); return }
+    guard let job = jobs[task.taskIdentifier], let target = newRequest.url, scope.contains(target), job.redirects < 5 else {
+      completionHandler(nil); finish(task, error: URLError(.redirectToNonExistentLocation)); return
+    }
+    job.redirects += 1
+    var next = newRequest
+    // Authentication and byte range remain scoped to the configured DAV root.
+    for (name, value) in headers { next.setValue(value, forHTTPHeaderField: name) }
+    if let range = task.originalRequest?.value(forHTTPHeaderField: "Range") { next.setValue(range, forHTTPHeaderField: "Range") }
+    completionHandler(next)
+  }
   func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource request: AVAssetResourceLoadingRequest) -> Bool {
+    guard !invalidScope else { request.finishLoading(with: URLError(.badURL)); return true }
     guard jobs.count < 16 else { request.finishLoading(with: URLError(.resourceUnavailable)); return true }
     var outgoing = URLRequest(url: url)
     for (name, value) in headers { outgoing.setValue(value, forHTTPHeaderField: name) }
@@ -68,6 +89,10 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
           (200..<300).contains(http.statusCode) else {
       finish(dataTask, error: URLError(.badServerResponse)); completionHandler(.cancel); return
     }
+    if scope != nil, let expected = headers["If-Match"], let actual = http.value(forHTTPHeaderField: "ETag"), expected != actual {
+      cacheWriter?.cancel(); cacheWriter = nil
+      finish(dataTask, error: URLError(.resourceUnavailable)); completionHandler(.cancel); return
+    }
     var total = response.expectedContentLength
     if let range = http.value(forHTTPHeaderField: "Content-Range") {
       let parts = range.replacingOccurrences(of: "bytes ", with: "").split(separator: "/")
@@ -88,6 +113,8 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
   }
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
     guard let job = jobs[dataTask.taskIdentifier], let requested = job.request.dataRequest else { return }
+    if let byteBudget, receivedBytes > byteBudget - data.count { finish(dataTask, error: URLError(.dataLengthExceedsMaximum)); return }
+    receivedBytes += data.count
     cacheWriter?.write(data, offset: job.offset, total: job.total, mime: job.mime)
     let wanted = max(requested.requestedOffset, requested.currentOffset)
     let upper = requested.requestsAllDataToEndOfResource ? Int64.max : requested.requestedOffset + Int64(requested.requestedLength)

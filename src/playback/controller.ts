@@ -1,8 +1,11 @@
 import {PlaybackMessageError} from './errors.ts';
+import {trackKey,validateTrack} from '../domain/track.ts';
 import { currentEntry, advance, type QueueState } from '../domain/queue.ts';
 import type { Track } from '../domain/track.ts';
 
 export interface ResolvedMedia {
+  resolvedTrack?:Track;
+  redirectRoot?:string;cacheOnly?:boolean;
   deviceMedia?:boolean;
   url: string;
   headers?: Readonly<Record<string, string>>;
@@ -103,9 +106,15 @@ export class PlaybackController {
     try {
       const resolved = await this.resolver.resolve(entry.track, pending.signal, this.rejectedRoutes);
       if (pending.signal.aborted || generation !== this.generation || this.disposed) return;
-      const media = this.cursor?.entryId === entry.id ? {...resolved,startPosition:this.cursor.seconds} : resolved;
+      const {resolvedTrack,...baseMedia}=resolved;
+      const media = this.cursor?.entryId === entry.id ? {...baseMedia,startPosition:this.cursor.seconds} : baseMedia;
       const url = new URL(media.url);
-      if (!['https:', 'http:', 'file:'].includes(url.protocol)) throw new Error('音频地址协议不支持');
+      if (!['https:', 'http:', 'file:'].includes(url.protocol) && !(url.protocol==='ipod-library:'&&entry.track.origin.kind==='device'&&media.deviceMedia===true)) throw new Error('音频地址协议不支持');
+      if(resolvedTrack){
+        validateTrack(resolvedTrack);if(trackKey(resolvedTrack.origin)!==trackKey(entry.track.origin))throw new Error('解析不能替换原始歌曲身份');
+        const queue=this.state.queue;this.update({queue:{...queue,entries:queue.entries.map(item=>item.id===entry.id?{...item,track:resolvedTrack}:item)}});
+      }
+      if(pending.signal.aborted||generation!==this.generation||this.disposed)return;
       this.backend.load(media, token);
       if (this.state.intent === 'playing' && generation === this.generation) this.backend.play(token);
       this.update({ phase: 'ready', media });

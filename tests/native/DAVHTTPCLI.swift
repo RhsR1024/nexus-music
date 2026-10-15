@@ -4,6 +4,10 @@ import Foundation
     guard CommandLine.arguments.count >= 3 else { exit(2) }
     var done = false
     do {
+      let scope = try DAVScope("https://fixture.example/%E9%9F%B3/")
+      guard scope.contains(URL(string: "https://fixture.example/%e9%9f%b3/100%25.mp3")!),
+            !scope.contains(URL(string: "https://fixture.example/other/tone.mp3")!),
+            (try? scope.url("%252e%252e/private")) == nil else { exit(5) }
       let request = try DAVHTTP(root: CommandLine.arguments[1], path: CommandLine.arguments[2], username: "fixture-user", password: "fixture-password", depth: 1)
       request.start { result in
         switch result {

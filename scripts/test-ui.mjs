@@ -31,6 +31,23 @@ const counts={requests:{},authFailures:0,authSuccesses:0};
 const song=()=>({id:'fixture-song',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:12,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
+  if(req.url.startsWith('/dav/')){
+    counts.dav??={propfind:0,ranges:0,authFailures:0};
+    if(req.headers.authorization!=='Basic '+Buffer.from('fixture-user:fixture-password').toString('base64')){counts.dav.authFailures++;res.writeHead(401);res.end();return;}
+    const bytes=silentMP3(1200),file='/dav/album/Remote%20Fixture.mp3';
+    if(req.method==='PROPFIND'){
+      counts.dav.propfind++;res.statusCode=207;res.setHeader('Content-Type','application/xml');
+      const row=(href,name,directory)=>`<d:response><d:href>${href}</d:href><d:propstat><d:prop><d:displayname>${name}</d:displayname><d:resourcetype>${directory?'<d:collection/>':''}</d:resourcetype>${directory?'':`<d:getcontentlength>${bytes.length}</d:getcontentlength><d:getetag>&quot;fixture-v1&quot;</d:getetag>`}</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
+      const rows=req.url==='/dav/'?row('/dav/','Root',true)+row('/dav/album/','Fixture album',true):req.url==='/dav/album/'?row('/dav/album/','Fixture album',true)+row(file,'Remote Fixture.mp3',false):row(file,'Remote Fixture.mp3',false);
+      res.end(`<d:multistatus xmlns:d="DAV:">${rows}</d:multistatus>`);return;
+    }
+    if(req.url!==file){res.writeHead(404);res.end();return;}
+    res.setHeader('Content-Type','audio/mpeg');res.setHeader('ETag','"fixture-v1"');res.setHeader('Accept-Ranges','bytes');
+    if(req.headers['if-match']&&req.headers['if-match']!=='"fixture-v1"'){res.writeHead(412);res.end();return;}
+    const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+    if(range){counts.dav.ranges++;const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),bytes.length-1):bytes.length-1;if(start>=bytes.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${bytes.length}`);res.end(bytes.subarray(start,end+1));}else res.end(bytes);return;
+  }
+
   const url=new URL(req.url,'http://127.0.0.1'),chunks=[];
   for await(const chunk of req)chunks.push(chunk);
   const params=req.method==='POST'?new URLSearchParams(Buffer.concat(chunks).toString()):url.searchParams;

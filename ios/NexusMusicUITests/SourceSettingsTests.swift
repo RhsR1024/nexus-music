@@ -2,6 +2,41 @@ import XCTest
 
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
+  func testWWebDAVBrowseTagsPlaybackAndRemoval() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch
+    XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap()
+    let later=app.buttons.matching(NSPredicate(format:"label IN %@",["以后","Not Now"])).firstMatch
+    if later.waitForExistence(timeout:2){later.tap()}
+    let address=app.textFields["WebDAV服务器根目录"]
+    if !address.waitForExistence(timeout:2){
+      app.buttons["管理WebDAV连接"].tap()
+      XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/dav/"].exists,"Only remove this test's fixture connection")
+      app.buttons["移除WebDAV连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
+    }
+    XCTAssertTrue(address.waitForExistence(timeout:10))
+    address.tap();for character in "http://127.0.0.1:18439/dav/"{address.typeText(String(character))};address.typeText("\n")
+    let user=app.textFields["WebDAV用户名"];user.tap();for character in "fixture-user"{user.typeText(String(character))};user.typeText("\n")
+    let password=app.secureTextFields["WebDAV密码"];password.tap();for character in "fixture-password"{password.typeText(String(character))};password.typeText("\n")
+    app.buttons["验证并保存WebDAV"].tap()
+    if later.waitForExistence(timeout:3){later.tap()}
+    let folder=app.buttons["文件夹：Fixture album"];XCTAssertTrue(folder.waitForExistence(timeout:20))
+    if later.exists{later.tap()};folder.tap()
+    let tagged=app.buttons.matching(NSPredicate(format:"identifier == %@ AND label CONTAINS %@","webdav-track-album/Remote%20Fixture.mp3","已读取远程音频标签")).firstMatch
+    XCTAssertTrue(tagged.waitForExistence(timeout:20));XCTAssertTrue(tagged.label.contains("Synthetic tagged tone"))
+    let song=app.buttons["webdav-track-album/Remote%20Fixture.mp3"];XCTAssertTrue(song.isEnabled);song.tap()
+    app.buttons["收起WebDAV"].tap();app.buttons["打开播放页"].tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:10));XCTAssertTrue(app.buttons["Synthetic embedded lyric"].waitForExistence(timeout:10))
+    let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
+    app.buttons["暂停"].firstMatch.tap();app.terminate();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();entry.tap();XCTAssertTrue(folder.waitForExistence(timeout:10));folder.tap()
+    XCTAssertTrue(tagged.waitForExistence(timeout:20));song.tap();app.buttons["管理WebDAV连接"].tap()
+    app.buttons["移除WebDAV连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10));app.buttons["收起WebDAV"].tap()
+    XCTAssertTrue(app.buttons["WebDAV · 0个连接"].waitForExistence(timeout:5))
+    XCTAssertFalse(app.buttons["打开播放页"].exists,"Removing the active account must clear its playback entry")
+  }
   func testSourceManagerAndFilePicker() throws {
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
     if springboard.alerts.firstMatch.exists {
@@ -56,7 +91,7 @@ final class SourceSettingsTests: XCTestCase {
     if grant.waitForExistence(timeout:3) {
       grant.tap()
       let springboard=XCUIApplication(bundleIdentifier:"com.apple.springboard")
-      let decline=springboard.alerts.buttons.matching(NSPredicate(format:"label IN %@",["不允许","Don't Allow","不允許"])).firstMatch
+      let decline=springboard.alerts.buttons.matching(NSPredicate(format:"label IN %@",["不允许","Don't Allow","Don’t Allow","不允許"])).firstMatch
       if decline.waitForExistence(timeout:10){decline.tap()}
     }
     let denied=app.staticTexts["device-media-authorization"]
@@ -73,7 +108,7 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
     XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
-    let browse=app.tabBars.buttons["浏览"].firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:20));browse.tap()
+    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
     let fixture=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
     if !fixture.waitForExistence(timeout:3) {
       let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch
@@ -81,7 +116,7 @@ final class SourceSettingsTests: XCTestCase {
     }
     XCTAssertTrue(fixture.waitForExistence(timeout:10));fixture.tap()
     let file=app.descendants(matching:.any).matching(NSPredicate(format:"label CONTAINS %@","Synthetic Tagged Tone")).firstMatch;XCTAssertTrue(file.waitForExistence(timeout:5));file.tap()
-    let open=app.buttons["打开"];if open.waitForExistence(timeout:3){open.tap()}
+    let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch;if open.waitForExistence(timeout:3){open.tap()}
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:15))
     app.buttons["专辑"].tap();let albumGroup=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Fixture album")).firstMatch;XCTAssertTrue(albumGroup.waitForExistence(timeout:5));albumGroup.tap()
     app.buttons["艺术家"].tap();let artistGroup=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Fixture artist")).firstMatch;XCTAssertTrue(artistGroup.waitForExistence(timeout:5));artistGroup.tap()

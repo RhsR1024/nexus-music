@@ -12,6 +12,8 @@ test('WebDAV canonical paths retain Unicode and encoding, containing all resourc
   assert.equal(scopedDAVPath(root,'tone%20a.mp3','album/'),'album/tone%20a.mp3');
   assert.equal(scopedDAVPath(root,'/dav/fixture.mp3'),'fixture.mp3');
   assert.equal(scopedDAVPath(root,'/dav'),'');
+  assert.equal(davURL(root,'100%25.mp3'),root+'100%25.mp3');
+  assert.equal(scopedDAVPath(root,'/dav/literal%2520name.mp3'),'literal%2520name.mp3');
   for(const path of ['../private.mp3','%2e%2e/private.mp3','%2E/private.mp3','safe%2foutside.mp3','%252e%252e/private.mp3','safe%5Cprivate.mp3','bad%00.mp3','bad%xy.mp3'])assert.throws(()=>davURL(root,path),WebDAVError);
   for(const href of ['https://outside.example/dav/tone.mp3','https://music.example:444/dav/tone.mp3','/dav-other/tone.mp3','/private/tone.mp3','//outside.example/dav/tone.mp3','https://a:b@music.example/dav/tone.mp3'])assert.throws(()=>scopedDAVPath(root,href),WebDAVError);
   for(const url of ['file:///dav','https://a:b@music.example/dav','https://music.example/dav?token=private','https://music.example/dav#hash','https://music.example/dav/%2e%2e/private'])assert.throws(()=>normalizeDAVRoot(url),WebDAVError);
@@ -25,6 +27,7 @@ test('WebDAV parses DAV namespace properties only from successful propstat, pres
   assert.throws(()=>parseDAVListing('<multistatus xmlns="unrelated"/>',root));
   assert.deepEqual(parseDAVListing('<multistatus xmlns="DAV:" xmlns:x="other"><x:response/></multistatus>',root),[]);
   assert.throws(()=>parseDAVListing(xml(response('/dav/tone.mp3',file)+response('/dav/tone.mp3',file)),root));
+  assert.throws(()=>parseDAVListing(xml(response('/dav/tone.mp3',`<d:displayname>${'x'.repeat(1025)}</d:displayname>`)),root));
   assert.equal(parseDAVListing(xml(response('/dav/album',collection)),root)[0]!.path,'album/');
 });
 test('WebDAV XML rejects entity expansion, malformed structures and external hrefs without leaking server data',()=>{

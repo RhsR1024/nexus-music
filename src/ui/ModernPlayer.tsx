@@ -11,7 +11,7 @@ import {Lyrics} from './Lyrics.tsx';
 const time=(value:number)=>`${Math.floor(Math.max(0,value)/60)}:${String(Math.floor(Math.max(0,value)%60)).padStart(2,'0')}`;
 export function ArtworkBackdrop({services,track,photo=false}:{services:Services;track:Track;photo?:boolean}){
   const [file,setFile]=useState<string>();
-  const key=JSON.stringify([track.origin,track.artwork,track.metadata.coverArtId]);
+  const key=JSON.stringify([track.origin,track.artwork,track.metadata.davVersion,track.metadata.coverArtId]);
   useEffect(()=>{const abort=new AbortController();setFile(undefined);services.covers.loadTrack(track,abort.signal).then(value=>{if(!abort.signal.aborted)setFile(value);}).catch(()=>{});return()=>abort.abort();},[services,key]);
   return <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:'#183647'}]}>
     {file&&<Image source={{uri:file}} blurRadius={photo?0:55} resizeMode="cover" style={StyleSheet.absoluteFill}/>}

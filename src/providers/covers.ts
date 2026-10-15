@@ -7,15 +7,15 @@ export interface CoverNative {fetchCover(key:string,url:string):Promise<string>;
 export class CoverService {
   private active=0;private epoch=0;private waiting:{run:()=>void;cancel:()=>void}[]=[];
   private native:CoverNative;private hash:(value:string)=>Promise<string>;private registry:SourceRegistry;private transport:LXTransport;private privateURL:(account:string,id:string,signal:AbortSignal)=>Promise<string>;
-  private localCover?:(track:Track)=>Promise<string|undefined>;
-  constructor(native:CoverNative,hash:(value:string)=>Promise<string>,registry:SourceRegistry,transport:LXTransport,privateURL:(account:string,id:string,signal:AbortSignal)=>Promise<string>,localCover?:(track:Track)=>Promise<string|undefined>){this.localCover=localCover;this.native=native;this.hash=hash;this.registry=registry;this.transport=transport;this.privateURL=privateURL;}
+  private localCover?:(track:Track,signal:AbortSignal)=>Promise<string|undefined>;
+  constructor(native:CoverNative,hash:(value:string)=>Promise<string>,registry:SourceRegistry,transport:LXTransport,privateURL:(account:string,id:string,signal:AbortSignal)=>Promise<string>,localCover?:(track:Track,signal:AbortSignal)=>Promise<string|undefined>){this.localCover=localCover;this.native=native;this.hash=hash;this.registry=registry;this.transport=transport;this.privateURL=privateURL;}
   statistics(){return this.native.coverStatistics();}
   clear(){this.epoch++;for(const job of [...this.waiting])job.cancel();return this.native.clearCovers();}
   async loadPrivate(account:string,id:string,signal:AbortSignal){
     const url=await this.privateURL(account,id,signal);return this.fetch(['navidrome',account,id],url,signal);
   }
   async loadTrack(track:Track,signal:AbortSignal):Promise<string|undefined>{
-    if(track.origin.kind==='local'||track.origin.kind==='device')return this.localCover?.(track);
+    if(track.origin.kind==='local'||track.origin.kind==='device'||track.origin.kind==='webdav')return this.localCover?.(track,signal);
     if(track.origin.kind==='navidrome')return typeof track.metadata.coverArtId==='string'&&track.metadata.coverArtId?this.loadPrivate(track.origin.accountId,track.metadata.coverArtId,signal):undefined;
     if(track.artwork)return this.loadURL(track.artwork,signal);
     const platform=track.origin.platform;
