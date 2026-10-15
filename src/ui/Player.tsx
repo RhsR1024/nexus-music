@@ -1,9 +1,14 @@
+import {Ionicons} from '@expo/vector-icons';
+import {GlassSurface} from './Materials.tsx';
 import {Cover} from './Cover.tsx';
+import {MatchModal} from './MatchModal.tsx';
+import {PlaylistPicker} from './PlaylistPicker.tsx';
+import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
 import { useState, useSyncExternalStore } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Services } from '../app/services.ts';
 import { currentEntry, remove, move } from '../domain/queue.ts';
 function time(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2, '0')}`; }
@@ -22,17 +27,21 @@ export function Player({ services }: { services: Services }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
+  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
   const entry = currentEntry(state.queue);
   if (!entry) return null;
+  const match=entry.track.origin.kind==='imported'?services.library.matchFor(entry.track):undefined;
   const toggle = () => { if (state.intent === 'playing') controller.pause(); else void controller.play(); };
   const button = (label: string, action: () => void) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.button}><Text style={styles.buttonText}>{label}</Text></Pressable>;
   return <>
-    <View style={styles.mini}>
+    <GlassSurface><View style={styles.mini}>
+      <Cover services={services} track={entry.track} size={44}/>
       <Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={() => setOpen(true)} style={{ flex: 1 }}>
         <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text><Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase === 'resolving' ? '正在选择音源…' : state.error ?? (state.buffering ? '缓冲中…' : time(state.position))}</Text>
-      </Pressable>{button(state.intent === 'playing' ? '暂停' : '播放', toggle)}
-    </View>
+      </Pressable><Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{padding:10,minHeight:44,minWidth:44}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={25} color={theme.palette.text}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={{padding:8,minHeight:44,minWidth:44}}><Ionicons name="play-skip-forward" size={24} color={theme.palette.text}/></Pressable>
+    </View></GlassSurface>
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
       <ScrollView style={styles.root} contentContainerStyle={styles.content}>
         {button('收起播放页', () => setOpen(false))}
@@ -40,7 +49,9 @@ export function Player({ services }: { services: Services }) {
         <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
         <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
         <Spectrum services={services} />
-        {open&&<Lyrics services={services} track={entry.track} font={fonts.selected??undefined}/>}
+        {entry.track.origin.kind==='imported'&&<View style={styles.row}><Text style={styles.caption}>{match?`汽水原曲 · 已匹配 ${match.target.origin.kind==='online'?match.target.origin.platform:''}`:'汽水原曲 · 待匹配'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
+        {open&&<Lyrics services={services} track={match?.target??entry.track} font={fonts.selected??undefined}/>}
+        <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10))}
@@ -65,12 +76,14 @@ export function Player({ services }: { services: Services }) {
           })}
         </View>)}
       </ScrollView>
+      <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
+      <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
     </Modal>
   </>;
 }
 const makeStyles=(theme:Theme)=>StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color('#111318') }, content: { padding: 24, paddingTop: 65, gap: 18 },
-  mini: { paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: theme.color('#252D2A') },
+  mini: { paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
   track: { color: theme.color('#E8E9E4'), fontSize: 14, lineHeight: 21 }, caption: { color: theme.color('#959EAC'), fontSize: 11, lineHeight: 20 },
   title: { color: theme.color('#F1EDE7'), fontSize: 30, fontWeight: '600' }, artist: { color: theme.color('#BFC8D9'), fontSize: 18 },
   button: { backgroundColor: theme.color('#303A32'), padding: 12, borderRadius: 12 }, buttonText: { color: theme.color('#D9F49B'), fontSize: 13 },

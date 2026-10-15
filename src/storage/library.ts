@@ -1,9 +1,12 @@
 import {InvalidRecordError} from './recovery.ts';
 import { trackKey, validateTrack, type Track } from '../domain/track.ts';
 import type { Repository } from './repository.ts';
+import {originalSignature} from '../domain/matching.ts';
+import {cleanTrack} from './cleanTrack.ts';
 export interface LocalEntry {id:string;track:Track}
 export interface LocalPlaylist {id:string;title:string;entries:readonly LocalEntry[];createdAt:number;updatedAt:number}
-export interface LibraryState {version:1;favorites:readonly Track[];history:readonly {track:Track;playedAt:number}[];playlists:readonly LocalPlaylist[]}
+export interface TrackMatch {original:Track;target:Track;method:'automatic'|'manual';updatedAt:number}
+export interface LibraryState {version:1;favorites:readonly Track[];history:readonly {track:Track;playedAt:number}[];playlists:readonly LocalPlaylist[];matches?:readonly TrackMatch[]}
 export const emptyLibrary:LibraryState={version:1,favorites:[],history:[],playlists:[]};
 export function validateLibrary(value:unknown):LibraryState {
   if(!value||typeof value!=='object')throw new Error('音乐库格式无效');
@@ -17,6 +20,12 @@ export function validateLibrary(value:unknown):LibraryState {
     if(!playlist||typeof playlist.id!=='string'||!playlist.id||playlistIds.has(playlist.id)||typeof playlist.title!=='string'||!playlist.title.trim()||!Array.isArray(playlist.entries)||!Number.isFinite(playlist.createdAt)||!Number.isFinite(playlist.updatedAt))throw new Error('歌单结构无效');
     playlistIds.add(playlist.id);const entries=new Set<string>();
     for(const entry of playlist.entries){if(!entry||!entry.id||typeof entry.id!=='string'||entries.has(entry.id))throw new Error('歌单条目ID无效');entries.add(entry.id);validateTrack(entry.track);}
+  }
+  if(library.matches!==undefined){
+    if(!Array.isArray(library.matches))throw new Error('匹配记录格式无效');const keys=new Set<string>();
+    for(const match of library.matches){validateTrack(match.original);validateTrack(match.target);const key=trackKey(match.original.origin);
+      if(match.original.origin.kind!=='imported'||match.target.origin.kind!=='online'||keys.has(key)||!['automatic','manual'].includes(match.method)||!Number.isFinite(match.updatedAt)||match.updatedAt<0)throw new Error('匹配记录无效');keys.add(key);
+    }
   }
   return library;
 }
@@ -32,6 +41,11 @@ export class LibraryStore {
     this.tail=next.catch(()=>{});return next;
   }
   isFavorite(track:Track){const key=trackKey(track.origin);return this.value.favorites.some(item=>trackKey(item.origin)===key);}
+  matchFor(track:Track){const signature=originalSignature(track);return this.value.matches?.find(value=>originalSignature(value.original)===signature);}
+  setMatch(original:Track,target:Track,method:'automatic'|'manual'){
+    return this.change(current=>({...current,matches:[...(current.matches??[]).filter(value=>trackKey(value.original.origin)!==trackKey(original.origin)),{original:cleanTrack(original),target:cleanTrack(target),method,updatedAt:this.now()}]}));
+  }
+  removeMatch(original:Track){return this.change(current=>({...current,matches:(current.matches??[]).filter(value=>trackKey(value.original.origin)!==trackKey(original.origin))}));}
   favorite(track:Track){validateTrack(track);return this.change(current=>{const key=trackKey(track.origin),exists=current.favorites.some(item=>trackKey(item.origin)===key);return{...current,favorites:exists?current.favorites.filter(item=>trackKey(item.origin)!==key):[track,...current.favorites]};});}
   played(track:Track){validateTrack(track);return this.change(current=>({...current,history:[{track,playedAt:this.now()},...current.history.filter(item=>trackKey(item.track.origin)!==trackKey(track.origin))].slice(0,300)}));}
   clearHistory(){return this.change(current=>({...current,history:[]}));}

@@ -120,3 +120,23 @@ test('source version fingerprints change on update while an older routing snapsh
   await catalog.update(imported.id,script('fixture','2'));const current=runtime.getSnapshot()[0]!;
   assert.equal(old.fingerprint,await hash(script('fixture','1')));assert.equal(current.fingerprint,await hash(script('fixture','2')));assert.notEqual(old.fingerprint,current.fingerprint);assert.equal(old.id,current.id);db.close();
 });
+
+test('appearance defaults migrate older preferences without changing playback settings',async()=>{
+  const {db,repository}=store();await repository.migrate();
+  const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {visualTheme,accent,backgroundStyle,glassNavigation,...legacy}=defaults;
+  await repository.put('preferences.v1',{...legacy,quality:'320k',lyricOffsetMs:350});
+  const preferences=new PreferenceStore(repository);await preferences.restore();
+  assert.equal(preferences.getSnapshot().visualTheme,'blush');assert.equal(preferences.getSnapshot().quality,'320k');assert.equal(preferences.getSnapshot().lyricOffsetMs,350);
+  await preferences.update({accent:'blue',glassNavigation:false});
+  const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().accent,'blue');assert.equal(restored.getSnapshot().glassNavigation,false);db.close();
+});
+
+test('appearance failed writes and invalid fields preserve the last valid settings',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');
+  const preferences=new PreferenceStore(repository);await preferences.update({accent:'purple'});const before=preferences.getSnapshot();
+  await assert.rejects(preferences.update({visualTheme:'unknown' as never}));assert.equal(preferences.getSnapshot(),before);
+  const write=repository.put.bind(repository);repository.put=async()=>{throw new Error('disk full');};
+  await assert.rejects(preferences.update({accent:'blue'}));assert.equal(preferences.getSnapshot(),before);
+  repository.put=write;await preferences.update({visualTheme:'soft'});assert.equal(preferences.getSnapshot().accent,'purple');assert.equal(preferences.getSnapshot().visualTheme,'soft');db.close();
+});

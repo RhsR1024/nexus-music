@@ -1,4 +1,6 @@
 import {TrackListModal} from './TrackListModal.tsx';
+import {MatchModal} from './MatchModal.tsx';
+import {QishuiImport} from './QishuiImport.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {Alert,Pressable,Share,StyleSheet,Text,TextInput,View} from 'react-native';
@@ -17,6 +19,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
   const [tab,setTab]=useState<'favorites'|'history'|'playlists'>('favorites'),[selected,setSelected]=useState<string|null>(null);
   const [name,setName]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]);
   const [listOpen,setListOpen]=useState(false);
+  const [matchingTrack,setMatchingTrack]=useState<Track|null>(null);
   const playlist=library.playlists.find(item=>item.id===selected);
   useEffect(()=>{if(selected&&!playlist)setSelected(null);setName(playlist?.title??'');},[selected,playlist?.title]);
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('保存未完成，已有音乐库保留；请重试');}finally{setBusy(false);}}
@@ -69,8 +72,9 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {!!tracks.length&&button('播放全部',()=>services.playTracks(tracks,0))}
     {tracks.length>0&&button('全部歌曲与批量管理',()=>setListOpen(true))}
     {tracks.slice(0,20).map((track,index)=><View key={playlist?.entries[index]?.id??`${index}-${track.origin.id}`} style={styles.trackRow}>
-      <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:'私人曲库'}</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:'私人曲库'}</Text></Pressable>
       <View style={styles.row}>{button(services.library.isFavorite(track)?'取消本地收藏':'本地收藏',()=>{void perform(async()=>{await services.library.favorite(track);});})}{button('下一首',()=>services.addToQueue(track,true))}{button('加入歌单',()=>setAdding([track]))}
+        {track.origin.kind==='imported'&&button('匹配歌曲',()=>setMatchingTrack(track))}
         {playlist&&index>0&&button('上移',()=>{void perform(async()=>{await services.library.moveEntry(playlist.id,playlist.entries[index]!.id,index-1);});})}
         {playlist&&button('从歌单移除',()=>{void perform(async()=>{await services.library.removeEntry(playlist.id,playlist.entries[index]!.id);});})}
         {!playlist&&tab==='history'&&button(`移除此条历史：${track.title}`,()=>{void perform(async()=>{await services.library.removeHistory(track);});})}
@@ -81,10 +85,12 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     <View style={styles.row}>{button('导出音乐库备份',()=>{void perform(exportBackup);})}{button('恢复音枢备份',()=>{void perform(importBackup);})}</View>
     {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
     {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
+    <QishuiImport services={services}/>
     <Text style={styles.caption}>备份包含音乐库，不包含密码、JS音源或音频文件。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
     <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} visible={listOpen} onClose={()=>setListOpen(false)}/>
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
+    <MatchModal services={services} track={matchingTrack} onClose={()=>setMatchingTrack(null)}/>
   </View>;
 }
 const makeStyles=(theme:Theme)=>StyleSheet.create({title:{color:theme.color('#F1EDE7'),fontSize:28,fontWeight:'600'},heading:{color:theme.color('#D8DFEA'),fontSize:19,marginVertical:12},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:21,marginTop:5},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{padding:11,borderRadius:11,backgroundColor:theme.color('#2B3730')},action:{color:theme.color('#D9F49B'),fontSize:12},track:{color:theme.color('#E1E6F0'),fontSize:15,lineHeight:24},trackRow:{paddingVertical:14,borderBottomWidth:1,borderColor:theme.color('#303744')},input:{color:theme.color('#EEECE7'),borderWidth:1,borderColor:theme.color('#414754'),padding:13,borderRadius:11},empty:{padding:24,marginVertical:22,borderWidth:1,borderColor:theme.color('#303744'),borderRadius:18}});

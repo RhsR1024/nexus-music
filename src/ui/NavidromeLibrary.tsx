@@ -1,4 +1,5 @@
 import {Cover} from './Cover.tsx';
+import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -15,6 +16,8 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
   const [view,setView]=useState<ViewState>({kind:'albums'}),[items,setItems]=useState<readonly Item[]>([]),[title,setTitle]=useState('');
   const [query,setQuery]=useState(''),[name,setName]=useState(''),[error,setError]=useState(''),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[more,setMore]=useState(false);
   const [visiblePage,setVisiblePage]=useState(0);
+  const [adding,setAdding]=useState<readonly Track[]>([]);
+  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const offset=useRef(0),generation=useRef(0),pending=useRef(new AbortController());
   useEffect(()=>{if(!accounts.some(item=>item.id===accountId))setAccountId(accounts[0]?.id??'');},[accounts,accountId]);
   async function load(append=false) {
@@ -66,6 +69,8 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
         <View style={styles.row}>
           {button(track.metadata.starred?'取消服务端星标':'服务端星标',()=>{void write(async()=>{await(await services.accounts.client(accountId)).star(track.origin.id,!track.metadata.starred);});})}
           {button('下一首',()=>services.addToQueue(track,true))}
+          {button(services.library.isFavorite(track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(track).catch(()=>setError('本地收藏保存失败，请重试。'));})}
+          {button('加入本地歌单',()=>setAdding([track]))}
           {view.kind==='playlist'&&button('从歌单移除',()=>{void write(async()=>{await(await services.accounts.client(accountId)).changePlaylist(view.id!,[],[index]);});})}
           {view.kind==='playlist'&&index>0&&button('上移',()=>{void write(async()=>{
             const moved=[...tracks];[moved[index-1],moved[index]]=[moved[index]!,moved[index-1]!];
@@ -87,6 +92,7 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
     {!loading&&!error&&!items.length&&<Text style={styles.caption}>此处暂无内容</Text>}
     {button(error?'重试':'刷新',()=>{void load();},loading||busy)}
     {more&&button('加载更多',()=>{void load(true);},loading||busy)}
+    <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
   </View>;
 }
 const makeStyles=(theme:Theme)=>StyleSheet.create({title:{color:theme.color('#F1EDE7'),fontSize:27,fontWeight:'600'},heading:{color:theme.color('#D5DCE7'),fontSize:19,marginVertical:16},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:20,marginTop:5},track:{color:theme.color('#DFE4EE'),fontSize:15,lineHeight:23},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{backgroundColor:theme.color('#303A32'),borderRadius:10,padding:12,marginVertical:5},buttonText:{color:theme.color('#D9F49B'),fontSize:12},input:{color:theme.color('#EEECE7'),borderColor:theme.color('#414754'),borderWidth:1,borderRadius:11,padding:12,fontSize:13},item:{paddingVertical:16,borderBottomWidth:1,borderColor:theme.color('#303744')},error:{color:theme.color('#D3AB94'),fontSize:12,marginVertical:14}});

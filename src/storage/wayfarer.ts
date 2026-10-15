@@ -8,13 +8,13 @@ const row=(value:unknown):Row=>value&&typeof value==='object'&&!Array.isArray(va
 export interface WayfarerPreview {collections:readonly PlaylistCollection[];favorites:readonly Track[];unsupported:number;total:number;ignoredSources:number}
 function track(value:unknown):Track|undefined {
   const raw=row(value),provider=typeof raw.providerId==='string'?raw.providerId:'';
-  if(!['lx:wy','lx:tx','lx:kw'].includes(provider))return;
-  const platform=provider.slice(3) as 'wy'|'tx'|'kw';
+  if(!['lx:wy','lx:tx','lx:kw','lx:qishui'].includes(provider))return;
+  const platform=provider.slice(3) as 'wy'|'tx'|'kw'|'qishui';
   if(typeof raw.id!=='string'||!raw.id.startsWith(provider+':'))throw new Error('漫途歌曲与平台ID不匹配');
   const id=raw.id.slice(provider.length+1);
-  if(!(platform==='tx'?/^[A-Za-z0-9]+$/:/^\d+$/).test(id)||typeof raw.title!=='string'||!raw.title.trim()||typeof raw.artist!=='string')throw new Error('漫途歌曲结构无效');
+  if(!(platform==='qishui'?/^[A-Za-z0-9_-]{1,128}$/:platform==='tx'?/^[A-Za-z0-9]+$/:/^\d+$/).test(id)||typeof raw.title!=='string'||!raw.title.trim()||typeof raw.artist!=='string')throw new Error('漫途歌曲结构无效');
   const metadata:Record<string,unknown>={songId:id,...(platform==='tx'?{songmid:id,needsMetadata:true}:{}),wayfarerId:raw.id};
-  const result=cleanTrack({origin:{kind:'online',platform,id},title:raw.title,artist:raw.artist,
+  const result=cleanTrack({origin:platform==='qishui'?{kind:'imported',platform,id}:{kind:'online',platform,id},title:raw.title,artist:raw.artist,
     ...(typeof raw.album==='string'?{album:raw.album}:{}),...(typeof raw.durationMs==='number'?{durationMs:raw.durationMs}:{}),
     ...(typeof raw.artworkUri==='string'?{artwork:raw.artworkUri}:{}),metadata,qualities:[]});
   validateTrack(result);return result;

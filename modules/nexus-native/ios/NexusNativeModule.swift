@@ -11,6 +11,9 @@ public final class NexusNativeModule: Module {
 
   public func definition() -> ModuleDefinition {
     Name("NexusNative")
+    View(NexusMaterialView.self) {
+      Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }
+    }
     AsyncFunction("decodeImportText") { (base64: String) throws -> String in try ScriptUtilities.perform("importText", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("decodeKRC") { (base64: String) throws -> String in try ScriptUtilities.perform("krcDecode", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("decodeQRC") { (hex: String) throws -> String in try ScriptUtilities.perform("qrcDecode", ["input": hex]) as! String }.runOnQueue(runtimeQueue)

@@ -62,3 +62,19 @@
 2026-10-15：五个参考仓库均已通过本地Git取得。Wayferar-Music为SSH部分克隆，当前稀疏检出README、docs及app/src/main/assets/script；未检出根目录大型APK。工作树干净，后续按具体功能补取对应Smali/importer源码及测试，不把“已取得参考仓库”当作已完成逐项比较或运行验收。
 
 歌词/缓存/LX导入收尾按[决策0008](decisions/0008-lyrics-fonts-cache.md)复核五项目：Q/wtf保留实际字时间、压缩容器和LXMC结构；悦音提供普通LRC与库交互，Cy缓存抽象但不引入其RNTP/新框架，Wayferar保序与数据边界继续采用。QRC仅协议常量适配并注明Apache来源，原生有界执行；其余解析/仓储/缓存原创。分类收尾按[决策0009](decisions/0009-discovery-playlist-import.md)：KW必须保留43/10000的不同协议，MG分类与推荐模板不同，不能用返回空数组掩盖未识别字段。TS可用于Android，QRC/图片缓存等原生接口需对应实现。
+
+
+## Sollin 桌面端补充参考（2026-10-15）
+
+本地 `/Users/ningli/WorkSpace/ReferenceProject/Sollin-Music-Desktop`，origin `https://github.com/Ryderwe/Sollin-Music-Desktop.git`，固定提交 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8`，package.json 版本 1.3.8。根 LICENSE 为 MIT / Copyright 2026 Sollin contributors；vendor/lxmusic、AMLL、Mineradio 与其他资源许可独立核对，不能用根 MIT 覆盖第三方。未安装/执行参考工程及其原生二进制。
+
+| 源码证据（固定提交） | 能参考什么 | iOS/Android 与维护边界 |
+| --- | --- | --- |
+| src/components/player/AmllFullPlayer.tsx:2，PlayerBackdrop.tsx:2 | 确认桌面使用 AMLL LyricPlayer/BackgroundRender，背景与歌词分离；非“推测用某库” | React DOM/CSS/canvas 不是 RN 组件；不证明 iOS 用 AMLL；当前不引入 WebView/第二播放器 |
+| src/components/player/ttmlLyrics.ts:167–171 | TTML 分词时间、agent、背景人声的结构参考 | 依赖 DOMParser，RN 无相同 DOM；需有界 XML 解析、坏数据测试和独立许可审查 |
+| src/components/player/TtmlLyricPlayer.tsx:86–111 | 时间轴、焦点行、行/词样式 | 约 30Hz setDisplayTime 重渲染列表，与音枢约定不符，不移植该循环 |
+| src/stores/uiStore.ts:12、52、388、423 | 外观模式、背景设置和默认值迁移 | 参考设置职责，音枢继续用自己的原子 PreferenceStore；不引入 Zustand/localStorage |
+| src/constants/playerModes.ts:12 | 皮肤是配置，业务播放独立 | 桌面三模式不等于移动五皮肤，不照搬 Electron 布局 |
+| src/services/webdavBackup.ts:9、178、212、259 | PROPFIND/目录/备份流程、兼容请求头 | DOM/XML/桌面持久化不可直接搬；iOS 凭据继续 Keychain，不照搬明文配置存储 |
+
+本轮采用结论：根据九张移动截图原创 RN 主题/导航/mini 布局，桌面代码仅用于职责和状态模型参考；不复制其图片、CSS、整仓依赖或二进制。与前五参考比较：悦音同 Expo54 页面组织更接近本项目；Q/wtf 保留协议与回归；Cy 新框架不升级；Wayferar 保留多源/队列/真实逐字行为；Sollin 提供用户指定视觉目标及桌面歌词/背景可读证据。Android 可共享 TS 设置和皮肤定义，iOS 模糊层/音频/未来原生歌词需要对应 Android 实现。

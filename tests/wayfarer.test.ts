@@ -4,7 +4,7 @@ import {decodeWayfarer} from '../src/storage/wayfarer.ts';
 import {LibraryStore} from '../src/storage/library.ts';
 import {OnlineProvider} from '../src/providers/online.ts';
 const song=(platform='wy',id='123')=>({id:`lx:${platform}:${id}`,providerId:`lx:${platform}`,title:'Synthetic',artist:'Fixture',durationMs:1000,artworkUri:'http://example.test/cover?token=private',sourceUri:'https://example.test/media?password=private',sourceUserAgent:'private',lyricUri:'file:///android/private'});
-const backup=()=>({version:1,createdAtMs:1,sources:[{password:'private',script:'private'}],settings:{password:'private'},favorites:{ids:['lx:tx:MID'],tracks:[song('tx','MID')]},playlists:[{id:'private-playlist',title:'Fixture',tracks:[song(),song('wy','12345678901234567890'),song(),song('qishui','1')]}]});
+const backup=()=>({version:1,createdAtMs:1,sources:[{password:'private',script:'private'}],settings:{password:'private'},favorites:{ids:['lx:tx:MID'],tracks:[song('tx','MID')]},playlists:[{id:'private-playlist',title:'Fixture',tracks:[song(),song('wy','12345678901234567890'),song(),song('unsupported','1')]}]});
 test('Wayfarer v1 retains long IDs, ordering and duplicates while dropping private settings and URLs',()=>{
   const value=decodeWayfarer(JSON.stringify(backup()));
   assert.deepEqual(value.collections[0]?.tracks.map(t=>t.origin.id),['123','12345678901234567890','123']);assert.equal(value.unsupported,1);assert.equal(value.total,5);
@@ -33,4 +33,8 @@ test('imported QQ metadata is enriched by exact MID without replacing the import
   const track=decodeWayfarer(JSON.stringify(backup())).favorites[0]!;
   const enriched=await provider.enrich(track,new AbortController().signal);assert.equal(enriched.origin.id,'MID');assert.equal(enriched.title,'Synthetic');assert.equal(enriched.metadata.id,'123');assert.equal(enriched.metadata.strMediaMid,'MEDIA');
   mismatched=true;await assert.rejects(provider.enrich(track,new AbortController().signal),/不匹配/);
+});
+test('Wayfarer Qishui songs now retain an independent original identity instead of being skipped',()=>{
+  const value=backup();value.playlists[0]!.tracks=[song('qishui','12345678901234567890'),song('qishui','video_ID')];
+  const parsed=decodeWayfarer(JSON.stringify(value));assert.equal(parsed.unsupported,0);assert.equal(parsed.collections[0]?.tracks[0]?.origin.kind,'imported');assert.equal(parsed.collections[0]?.tracks[1]?.origin.id,'video_ID');
 });

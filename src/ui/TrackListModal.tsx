@@ -4,8 +4,10 @@ import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {useTheme} from './theme.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
+import {MatchModal} from './MatchModal.tsx';
 export function TrackListModal({services,tracks,entryIds,title,visible,onClose,playlistId,kind}:{services:Services;tracks:readonly Track[];entryIds?:readonly string[];title:string;visible:boolean;onClose:()=>void;playlistId?:string;kind:'favorites'|'history'|'playlist'}){
   const theme=useTheme(),[selected,setSelected]=useState<ReadonlySet<number>>(new Set()),[adding,setAdding]=useState<readonly Track[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
+  const [matching,setMatching]=useState<Track|null>(null);
   useEffect(()=>{setSelected(new Set());setMessage('');},[visible,playlistId,kind]);
   const chosen=[...selected].sort((a,b)=>a-b).flatMap(index=>tracks[index]?[tracks[index]!]:[]);
   const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} onPress={action} style={{padding:11,backgroundColor:theme.color('#303A32'),borderRadius:10,opacity:disabled?.4:1}}><Text style={{color:theme.color('#D9F49B')}}>{label}</Text></Pressable>;
@@ -20,9 +22,10 @@ export function TrackListModal({services,tracks,entryIds,title,visible,onClose,p
       renderItem={({item,index})=><View style={{paddingVertical:16,borderTopWidth:1,borderColor:theme.color('#303744'),flexDirection:'row',gap:10}}>
         <Pressable accessibilityRole="checkbox" accessibilityLabel={`选择歌曲：${item.title}`} accessibilityState={{checked:selected.has(index)}} onPress={()=>setSelected(old=>{const next=new Set(old);if(next.has(index))next.delete(index);else next.add(index);return next;})} style={{width:35,paddingVertical:10}}><Text style={{color:theme.color('#D9F49B'),fontSize:22}}>{selected.has(index)?'☑':'☐'}</Text></Pressable>
         <View style={{flex:1}}><Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={{color:theme.color('#E1E6F0'),fontSize:16}}>{index+1}. {item.title}</Text><Text style={{color:theme.color('#959EAC'),marginTop:7}}>{item.artist} · {item.album}</Text></Pressable>
-          <View style={{flexDirection:'row',gap:10,marginTop:10}}>{button('下一首',()=>services.addToQueue(item,true))}{playlistId&&index>0&&button('上移',()=>{void services.library.moveEntry(playlistId,entryIds![index]!,index-1).then(()=>setSelected(new Set())).catch(()=>setMessage('移动失败'));})}</View>
+          <View style={{flexDirection:'row',gap:10,marginTop:10,flexWrap:'wrap'}}>{button('下一首',()=>services.addToQueue(item,true))}{item.origin.kind==='imported'&&button('匹配歌曲',()=>setMatching(item))}{playlistId&&index>0&&button('上移',()=>{void services.library.moveEntry(playlistId,entryIds![index]!,index-1).then(()=>setSelected(new Set())).catch(()=>setMessage('移动失败'));})}</View>
         </View>
       </View>}/>
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
+    <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
   </View></Modal>;
 }

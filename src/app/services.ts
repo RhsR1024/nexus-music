@@ -1,4 +1,7 @@
 import { DiscoveryProvider } from '../providers/discovery.ts';
+import {CrossPlatformMatcher} from '../providers/crossPlatformMatcher.ts';
+import {MatchedResolver} from '../providers/matchedResolver.ts';
+import {QishuiProvider} from '../providers/qishui.ts';
 import {throwIfAborted} from '../providers/async.ts';
 import { restoreRecord } from '../storage/recovery.ts';
 import { FontStore } from '../storage/fonts.ts';
@@ -41,8 +44,13 @@ async function initialize() {
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size:512},signal));
   const online = new OnlineProvider({ md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
+  const matching=new CrossPlatformMatcher(online);
+  const qishui=new QishuiProvider();
+  const matchedResolver=new MatchedResolver({matcher:matching,library,router:resolver,quality:()=>preferences.getSnapshot().quality,hash,
+    available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
   const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
+    if(track.origin.kind==='imported')return matchedResolver.resolve(track,signal,excluded);
     // Wayfarer v1 QQ tracks only contain MID. Exact-ID enrichment helps scripts
     // that require numeric song ID/media_mid; a network failure still permits
     // scripts whose declared contract can resolve directly from MID.
@@ -78,7 +86,7 @@ async function initialize() {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
-  return { repository, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { repository, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, matching, qishui, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof initialize>>;
 let pending: Promise<Services> | undefined;

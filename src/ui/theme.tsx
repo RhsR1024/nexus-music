@@ -1,7 +1,8 @@
 import {createContext,useContext,useMemo,useSyncExternalStore} from 'react';
 import {useColorScheme} from 'react-native';
 import {defaults,type PreferenceStore} from '../app/preferences.ts';
-export interface Theme {mode:'light'|'dark';color:(original:string)=>string}
+import {appearancePalette,type AppearanceOptions} from '../domain/appearance.ts';
+export interface Theme {mode:'light'|'dark';color:(original:string)=>string;palette:ReturnType<typeof appearancePalette>;appearance:AppearanceOptions}
 const lightColors:Record<string,string>={};
 function assign(colors:string[],target:string){for(const color of colors)lightColors[color]=target;}
 assign(['#111318','#171A20'],'#F5F7FA');
@@ -14,14 +15,20 @@ assign(['#C6B7D9','#C7A1E2'],'#74528C');
 assign(['#B9B39F','#C7AC90','#D3AB94','#D6B69A'],'#8F4C25');
 assign(['#B7C3DA','#BFC8D9','#C2C7D3','#C4C8D4','#D5D7DF','#D5DCE7','#D8DFEA','#DFE4EE','#E1E6F0','#E5E8E0','#E5E8EE','#E8E9E4','#ECEBF3','#EEECE7','#F1EDE7','#F3F0E9','#F7F3ED'],'#253142');
 lightColors['#202919']='#F5F9ED';
-export const darkTheme:Theme={mode:'dark',color:original=>original};
-export const lightTheme:Theme={mode:'light',color:original=>lightColors[original.toUpperCase()]??original};
+function createTheme(mode:'light'|'dark',appearance:AppearanceOptions):Theme{
+  const palette=appearancePalette(mode,appearance);
+  const targets:Record<string,string>={'#F5F7FA':palette.background[0],'#E7EBF1':palette.surface,'#E0EAD9':palette.selected,'#C7D0DC':palette.border,'#606D7F':palette.secondary,'#3C6015':palette.accent,'#253142':palette.text};
+  return {mode,palette,appearance,color:original=>{const mapped=lightColors[original.toUpperCase()];return mapped?(targets[mapped]??(mode==='light'?mapped:original)):original;}};
+}
+export const darkTheme=createTheme('dark',defaults);
+export const lightTheme=createTheme('light',defaults);
 export const ThemeContext=createContext<Theme>(darkTheme);
 export const useTheme=()=>useContext(ThemeContext);
 const emptySubscribe=()=>()=>{};
 const defaultSnapshot=()=>defaults;
 export function useAppearance(store?:PreferenceStore){
   const preferences=useSyncExternalStore(store?.subscribe??emptySubscribe,store?.getSnapshot??defaultSnapshot),system=useColorScheme();
-  return(preferences.theme==='system'?system==='light':preferences.theme==='light')?lightTheme:darkTheme;
+  const mode=(preferences.theme==='system'?system==='light':preferences.theme==='light')?'light':'dark';
+  return useMemo(()=>createTheme(mode,preferences),[mode,preferences.visualTheme,preferences.accent,preferences.backgroundStyle,preferences.glassNavigation]);
 }
 export function useThemedStyles<T>(factory:(theme:Theme)=>T):T {const theme=useTheme();return useMemo(()=>factory(theme),[factory,theme]);}

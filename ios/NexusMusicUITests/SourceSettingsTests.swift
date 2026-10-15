@@ -65,6 +65,7 @@ final class SourceSettingsTests: XCTestCase {
       let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
       XCTFail("Connection did not finish; inspect the retained screenshot and local fixture counters");return
     }
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
     XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
@@ -114,6 +115,45 @@ final class SourceSettingsTests: XCTestCase {
       let english=app.buttons["Cancel"];XCTAssertTrue(english.waitForExistence(timeout:5));english.tap()
     }
     XCTAssertTrue(button.waitForExistence(timeout:5))
+  }
+  func testQishuiImportEntry() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let button=app.buttons["导入汽水公开歌单"]
+    XCTAssertTrue(button.waitForExistence(timeout:15))
+    for _ in 0..<10 {if button.isHittable{break};app.swipeUp()}
+    button.tap()
+    XCTAssertTrue(app.textFields["汽水公开歌单链接或ID"].waitForExistence(timeout:10))
+    XCTAssertFalse(app.buttons["读取并预览汽水歌单"].isEnabled)
+    app.buttons["收起汽水导入"].tap()
+    XCTAssertTrue(button.waitForExistence(timeout:5))
+  }
+  func testAppearancePersistenceAndPrimaryNavigation() throws {
+    let app=XCUIApplication();app.launch()
+    let discover=app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch
+    XCTAssertTrue(discover.waitForExistence(timeout:15));discover.tap()
+    XCTAssertTrue(app.staticTexts["发现"].firstMatch.exists)
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let blue=app.descendants(matching:.any).matching(identifier:"accent-blue").firstMatch
+    for _ in 0..<14 {if blue.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(blue.isHittable);blue.tap()
+    let classic=app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch
+    for _ in 0..<3 {if classic.isHittable{break};app.swipeDown()};classic.tap()
+    let light=app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch
+    for _ in 0..<3 {if light.isHittable{break};app.swipeDown()};light.tap()
+    let settingsImage=XCTAttachment(screenshot:app.screenshot());settingsImage.lifetime = .keepAlways;add(settingsImage)
+    app.terminate();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let restored=app.descendants(matching:.any).matching(identifier:"accent-blue").firstMatch
+    for _ in 0..<14 {if restored.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(restored.isSelected)
+    let pink=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
+    for _ in 0..<3 {if pink.isHittable{break};app.swipeDown()};pink.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["私人曲库"].firstMatch.exists)
+    discover.tap()
+    let homeImage=XCTAttachment(screenshot:app.screenshot());homeImage.lifetime = .keepAlways;add(homeImage)
   }
   func testLiveLXPlayback() throws {
     let app=XCUIApplication();app.launch()

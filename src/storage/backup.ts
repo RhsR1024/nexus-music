@@ -1,23 +1,11 @@
 import { validateLibrary, type LibraryState } from './library.ts';
-import type {Track} from '../domain/track.ts';
+import {cleanTrack} from './cleanTrack.ts';
+export {cleanTrack} from './cleanTrack.ts';
 export interface LibraryBackup {format:'nexus-music';version:1;exportedAt:string;library:LibraryState}
-export function cleanTrack(track:Track):Track {
-  const secret=/password|authorization|cookie|api[_-]?key|token|credential|secret|rawscript/i;
-  const safeURL=(value:string)=>{try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&![...url.searchParams.keys()].some(key=>secret.test(key)||['u','p','t','s'].includes(key));}catch{return false;}};
-  const metadata=JSON.parse(JSON.stringify(track.metadata,(key,value)=>{
-    if(secret.test(key))return undefined;
-    if(typeof value==='string'&&/^https?:\/\//i.test(value)){
-      try{const url=new URL(value);if(url.username||url.password||[...url.searchParams.keys()].some(key=>secret.test(key)||['u','p','t','s'].includes(key)))return undefined;}catch{return undefined;}
-    }
-    return value;
-  })) as Record<string,unknown>;
-  return {origin:track.origin.kind==='online'?{kind:'online',platform:track.origin.platform,id:track.origin.id}:{kind:'navidrome',accountId:track.origin.accountId,id:track.origin.id},title:track.title,artist:track.artist,
-    ...(track.album!==undefined?{album:track.album}:{}),...(track.durationMs!==undefined?{durationMs:track.durationMs}:{}),
-    ...(track.origin.kind==='online'&&track.artwork&&safeURL(track.artwork)?{artwork:track.artwork}:{}),metadata,qualities:track.qualities.map(item=>({...item}))};
-}
 function cleanLibrary(library:LibraryState):LibraryState {
   return{version:1,favorites:library.favorites.map(cleanTrack),history:library.history.map(item=>({track:cleanTrack(item.track),playedAt:item.playedAt})),
-    playlists:library.playlists.map(playlist=>({id:playlist.id,title:playlist.title,createdAt:playlist.createdAt,updatedAt:playlist.updatedAt,entries:playlist.entries.map(entry=>({id:entry.id,track:cleanTrack(entry.track)}))}))};
+    playlists:library.playlists.map(playlist=>({id:playlist.id,title:playlist.title,createdAt:playlist.createdAt,updatedAt:playlist.updatedAt,entries:playlist.entries.map(entry=>({id:entry.id,track:cleanTrack(entry.track)}))})),
+    ...(library.matches?{matches:library.matches.map(match=>({...match,original:cleanTrack(match.original),target:cleanTrack(match.target)}))}:{})};
 }
 export function encodeBackup(library:LibraryState,now=new Date()):string {
   validateLibrary(library);

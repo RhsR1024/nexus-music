@@ -30,14 +30,14 @@ export class MultiSourceResolver implements MediaResolver {
   constructor(registry: SourceRegistry, transport: LXTransport, preference: () => Quality, timeoutMs = 8000) {
     this.registry = registry; this.transport = transport; this.preference = preference; this.timeoutMs = timeoutMs;
   }
-  async resolve(track: Track, signal: AbortSignal, excluded: ReadonlySet<string> = new Set()): Promise<RoutedMedia> {
+  async resolve(track: Track, signal: AbortSignal, excluded: ReadonlySet<string> = new Set(), qualityScope?:readonly Quality[]): Promise<RoutedMedia> {
     throwIfAborted(signal);
     if (track.origin.kind !== 'online') throw new Error('LX仅处理在线平台歌曲');
     const platform = track.origin.platform;
     const preference = this.preference();
     const sources = this.registry.getSnapshot().filter(source => this.registry.isCurrent(source));
     const attempts: RouteAttempt[] = [];
-    for (const quality of fallbackQualities(preference)) {
+    for (const quality of qualityScope??fallbackQualities(preference)) {
       for (const source of sources) {
         throwIfAborted(signal);
         if (!this.registry.isCurrent(source)) continue;
