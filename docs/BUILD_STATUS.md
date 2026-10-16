@@ -2,7 +2,7 @@
 
 - 详情歌曲行增加收藏状态与加入本地歌单，复用现有存储和选择器。
 - `npm run check`：302/302；`git diff --check`：通过。
-- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端 iOS27、真实平台长列表和真机待新提交运行。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38958299530`（`6fc6123`）当前 `pending`，真实平台长列表和真机待终态。
 
 ## 2026-10-17 A05 切歌后封面失败缓存隔离代码批次
 
