@@ -100,3 +100,5 @@ F34本地实际播放统计按[0023](decisions/0023-playback-statistics.md)原�
 S4跨平台歌词选择按[0024](decisions/0024-lyric-selection.md)原创实现：Q/wtf候选循环、Cy歌词搜索与悦音行级/翻译、Sollin多平台协议、Wayferar实际时间职责逐项对比；不复制原实现、DOM或依赖。候选/持久化可共享Android，原生绘制继续分别适配。
 
 S4/J41/J44字体与深度样式按[0025](decisions/0025-fonts-lyric-style.md)比较六参考后原创实现：公共Text/输入入口、全局与独立歌词字体优先级、私有字体文件与串行提交、TextKit静态模糊和原生累计绘制；不复制DOM字体、资产、动画或新依赖。设置/仓储可共享Android，字体文件和原生绘制分别适配。实际Files导入及重启已验证，完整App验收继续。
+
+S10系统媒体按[0026](decisions/0026-system-now-playing-island.md)复核五参考后原创实现：Q封面requestId与命令可用性、wtf真实字段回查、Cy下一曲元数据、悦音expo-audio边界及自有Wayferar期望状态幂等收藏。复用唯一AVPlayer、CoverService与LibraryStore，不复制RNTP补丁/假音频/第二队列，不新增依赖或资产。TS协调语义可共享Android，MediaPlayer/UIImage另需Android适配。

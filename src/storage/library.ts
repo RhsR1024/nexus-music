@@ -66,6 +66,14 @@ export class LibraryStore {
   }
   removeMatch(original:Track){return this.change(current=>({...current,matches:(current.matches??[]).filter(value=>trackKey(value.original.origin)!==trackKey(original.origin))}));}
   favorite(track:Track){validateTrack(track);return this.change(current=>{const key=trackKey(track.origin),exists=current.favorites.some(item=>trackKey(item.origin)===key);return{...current,favorites:exists?current.favorites.filter(item=>trackKey(item.origin)!==key):[track,...current.favorites]};});}
+  setFavorite(track:Track,favorite:boolean,valid:()=>boolean=()=>true){
+    validateTrack(track);return this.change(current=>{
+      if(!valid())throw new Error('媒体已更改');
+      const key=trackKey(track.origin),exists=current.favorites.some(item=>trackKey(item.origin)===key);
+      if(exists===favorite)return current;
+      return{...current,favorites:favorite?[cleanTrack(track),...current.favorites]:current.favorites.filter(item=>trackKey(item.origin)!==key)};
+    });
+  }
   played(track:Track){validateTrack(track);return this.change(current=>({...current,history:[{track,playedAt:this.now()},...current.history.filter(item=>trackKey(item.track.origin)!==trackKey(track.origin))].slice(0,300)}));}
   clearHistory(){return this.change(current=>({...current,history:[]}));}
   removeHistory(track:Track){return this.change(current=>({...current,history:current.history.filter(item=>trackKey(item.track.origin)!==trackKey(track.origin))}));}

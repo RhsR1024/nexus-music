@@ -19,7 +19,7 @@
 
 优先扩展现有 MediaPlayer 接入。此目标没有证明需要独立 ActivityKit/Widget Extension，不先添加新 target、后台高频更新或第二套播放状态。以后如出现标准面板不能覆盖的明确自定义需求，另行核验系统公开能力并记录方案，不能通过自定义扩展承诺强制常驻/任意后台动画/复制系统路由控件。
 
-## 当前代码证据
+## 开工前代码证据
 
 - `modules/nexus-native/ios/NativePlaybackEngine.swift`：init注册 play/pause/toggle/next/previous/changePlaybackPosition；play配置音频会话；updateNowPlaying发布标题、歌手、时长、进度及播放速率。
 - 同文件未接入 `MPMediaItemArtwork`、`likeCommand`/收藏状态；已有封面 UI/缓存不能当作系统封面已实现。
@@ -40,4 +40,25 @@
 - 用户iPhone15 Pro Max/iOS27：真实后台紧凑封面/律动、长按展开/轻点返回、曲名/歌手/进度、暂停/继续/切歌/收藏/路由；长标题/无封面/弱网/快速切歌/自然结束/停止/其他媒体App接管/减少动态效果。
 - 无灵动岛设备仍保留系统锁屏/控制中心。模拟器不具备的交互、签名/后台和设备路由，明确保留为真机缺口。
 
-此记录只确定用户需求和系统职责；尚未实施的封面/收藏及未完成的验收不标完成。后续生产代码变更前继续按REFERENCE_COMPARISON复核五参考的具体系统媒体实现和许可；本次无第三方代码、资产或依赖采纳。Android需要自己的MediaSession/通知集成，不适用iOS灵动岛UI。
+初始记录确定需求与系统职责；后续实施与证据见下文。未完成的验收不标完成。生产代码变更前已按REFERENCE_COMPARISON复核五参考的具体系统媒体实现和许可；无第三方代码、资产或依赖采纳。Android需要自己的MediaSession/通知集成，不适用iOS灵动岛UI。
+
+## 实施前参考比较（2026-10-16）
+
+已按REFERENCE_COMPARISON固定提交亲读：
+
+| 参考 | 具体证据 | 采纳与维护边界 |
+| --- | --- | --- |
+| 悦音 d6f1af7 | src/core/player/expoav.ts:148 updateLockScreen，setActiveForLockScreen传title/artist/albumTitle/artworkUrl | 参考元数据职责，不引入expo-audio第二后端；本项目已有AVPlayer |
+| Q 547ccfe | ios/LxMusicMobile/AppDelegate.mm:534/560/614 注册命令、按内容开关、取消封面并核对requestId；src/plugins/player/trackPlayerCore.ts:126 当前媒体元数据通道 | 采纳封面过期隔离/空图清理问题边界，原创Swift按媒体项标识实现；不复制AppDelegate或RNTP补丁 |
+| wtf 6624ab | ios/LxMusicMobile/Modules/UtilsModule.m:539 可读元数据回查，src/plugins/player/playList.ts:292 封面/标题更新 | 参考真实字段核验；不沿用prevArtwork跨歌回退，避免无封面歌曲显示上一首图；无依赖移植 |
+| Cy bf0d46 | src/helpers/trackPlayerIndex.ts:291/453 下一曲元数据与原生队列镜像 | 参考明确媒体身份；不采用假音频/第二原生队列或升级RNTP5，保持唯一业务队列 |
+| 自有Wayferar 8e47cdc | docs/CAR_FAVORITES.md:12–17、NAVIDROME_IMPORT_FAVORITES.md:17，指定状态幂等/原仓库/串行队列内重新检查身份 | 在音枢LibraryStore复用串行写入并按期望状态操作，禁止重复事件当toggle；Android MediaSession/ECARX不直接搬iOS |
+
+实现采用原创TypeScript协调层与现有Swift引擎，不复制第三方实现/封面/补丁，不新增依赖，来源许可仍按REFERENCE_COMPARISON保留。TS收藏与竞态语义可共享Android；MediaPlayer/UIImage原生适配需对应MediaSession实现。Apple SDK MPFeedbackCommandEvent.isNegative明确表示撤销like，使用期望true/false而非盲目切换；isActive来自成功落库状态。封面经现有CoverService受限缓存后只传本机图片路径，原生受限解码，不向系统字典放认证URL。媒体项标识独立于播放意图generation，暂停后当前封面仍可到达，换曲/停止必拒绝旧图。回归覆盖原曲收藏/匹配录音封面、写入失败/排队后切歌、重复命令、无图与迟到图及暂停/恢复。
+
+
+## 当前实施与验证
+
+原创SystemMediaSession已连接生产nativeSession/LibraryStore/CoverService：实际录音用于封面/标题，收藏绑定原曲；等待原生load接受后发布，换曲/停止取消旧请求，暂停不废弃当前媒体项。Swift受限本地图片解码后发布MPMediaItemArtwork/专辑/媒体类型，停播清理元数据和命令；远控携带媒体项身份，like按isNegative表达期望状态，落库后回写isActive，外部App内收藏变化同步。原生暂停立即生效，JS拒绝已换项的迟到控制。没有新增扩展/第二播放器/逐帧React循环。
+
+本地235项业务/类型检查、完整native格式/DSP/缓存/WebDAV与独立SystemMediaCLI均通过。后者实际读取MPNowPlayingInfoCenter、MPMediaItemArtwork及MPRemoteCommandCenter状态，验证空项/停止、封面迟到、暂停代次、收藏状态和命令身份/路径边界；不是只验证自建字典。但该CLI运行在macOS，本地iOS App回归、arm64 IPA与本批云端iOS27继续分别验证。系统收藏入口是否可见、后台面板外观/路由与真实iPhone仍未验收。

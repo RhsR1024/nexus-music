@@ -4,7 +4,7 @@
 
 ## 当前任务与成果
 
-当前持续目标为F01–F37/J01–J59全部功能与本地/云端双构建。901954a/38854140339已全成功并下载核验IPA；92f4836/38857771291为7项核心UI通过、图标失败，已定位iOS27空AX树但录屏图标可见，按截图精确OCR修正复验。S4/J41/J44字体和深度样式228项业务/完整native/实际Files及五皮肤/删除回退通过，本地78e4827清洁IPA通过并push，新云端38871835008执行中。用户新增系统灵动岛封面/律动/展开控制和收藏，已纳入S10与决策0026，未误设ActivityKit前置。其余S2/S3/S4真实TTML/S7/S8/S9及真机/个人服务仍未完成。
+当前持续目标为F01–F37/J01–J59全部功能与本地/云端双构建。901954a/38854140339已全成功并下载核验IPA；92f4836/38857771291为7项核心UI通过、图标失败，已定位iOS27空AX树但录屏图标可见，按截图精确OCR修正复验。S4/J41/J44字体和深度样式228项业务/完整native/实际Files及五皮肤/删除回退通过，本地78e4827清洁IPA通过并push，新云端38871835008执行中。用户新增系统灵动岛封面/律动/展开控制和收藏，已纳入S10与决策0026，封面/收藏代码及本地契约/App回归通过，本批双构建继续；未误设ActivityKit前置。其余S2/S3/S4真实TTML/S7/S8/S9及真机/个人服务仍未完成。
 
 用户希望先确定功能清单、技术框架和实现边界，之后在自己的 MBP 上开发。初期形成交接文档；用户于2026-10-14明确要求列出详细任务计划并开始实施，现推进工程基线与领域模块。
 
@@ -343,3 +343,9 @@ S4/J38阶段已正常push `92f4836eaa29c4196c3f1de0b6e75831f96eeed2` 并核对�
 字体/歌词样式与图标测试修复已提交并正常push `78e482785a50fdb9da01507f1f95ed50dc30431c`，远端main已核对一致。`build/logs/archive-fonts-clean.log`归档成功，`build/distribution/build-manifest.json`为commit=78e4827、dirty=false、workingTreeChanges=[]、arm64、iphoneos26.2、min15.1、signed=false；正式JS入口隔离和IPA重新校验通过。IPA SHA256 `ca6b2cd381c733bee12135df2d62106ce2f099657dc53041509a65dcf8bfd8d6`。此前dirty工作树包仅作历史证据，以此清洁包为准。
 
 对应云端[38871835008](https://github.com/RhsR1024/nexus-music/actions/runs/38871835008)已于16:09（Asia/Shanghai）触发，16:15核对checks 28秒通过、iOS任务执行中，未提前标通过、未重复派发/取消。iOS27图标OCR分支、字体专项与IPA以本次实际结束结果为准。接着实施S10系统媒体封面/收藏；用户手机、真实私人服务与其他未完成并集继续保留，目标active。
+
+## 2026-10-16 S10 系统媒体接入本地验收
+
+已按决策0026亲读五参考并原创实现系统封面/专辑/媒体类型与收藏命令。SystemMediaSession复用CoverService和原LibraryStore：匹配录音用于封面文字、原曲用于收藏；独立媒体项标识跨暂停保留，换曲/停止清理，迟到图拒绝。原生like按明确期望状态处理，落库后更新isActive；App内收藏变更同步，串行写入时复核项身份，重复命令不切换。无新依赖、扩展或第二播放器。
+
+`build/logs/check-system-media.log`为235/235通过，`native-system-media.log`完整套件及`native-system-media-contract.log`专项均通过。后者实际读取MPNowPlayingInfoCenter封面/专辑/速率与MPRemoteCommandCenter状态，覆盖暂停代次、迟到图、过期收藏、停止和受限路径；运行于macOS，不能称iOS灵动岛实测。本地iOS Release `build/SourceUITests-1792139174008.xcresult`通过Navidrome合成实音/PCM/歌词、暂停定位/五皮肤与统计重启；这仍不是用户真实Navidrome服务或系统面板实机验收。接下来本批生产IPA/阶段提交push及云端iOS27，保留后台面板/收藏入口/路由/真机与其余并集未完成项。

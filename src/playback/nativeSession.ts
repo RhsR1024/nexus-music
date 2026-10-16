@@ -1,3 +1,6 @@
+import {SystemMediaSession,type SystemMediaNative} from './systemMedia.ts';
+import type {CoverService} from '../providers/covers.ts';
+import type {LibraryStore} from '../storage/library.ts';
 import {SleepStore} from './sleep.ts';
 import { ShuffleNavigator } from '../domain/shuffle.ts';
 import { requireNativeModule } from 'expo';
@@ -8,7 +11,7 @@ import type { Track } from '../domain/track.ts';
 import type {ListeningSample} from '../storage/playbackStats.ts';
 import {ListeningSessions} from './listening.ts';
 
-interface NativePlayback {
+interface NativePlayback extends SystemMediaNative {
   load(json: string, id: string, generation: number): Promise<void>;
   play(id: string, generation: number): Promise<void>;
   pause(generation: number): Promise<void>; stop(generation: number): Promise<void>;
@@ -31,8 +34,9 @@ export class SpectrumStore {
     for (const listener of this.listeners) listener();
   }
 }
-export function createPlaybackSession(resolver: MediaResolver, preferences: PreferenceStore) {
+export function createPlaybackSession(resolver: MediaResolver, preferences: PreferenceStore,system:{covers:CoverService;library:LibraryStore}) {
   const native = requireNativeModule<NativePlayback>('NexusPlayback');
+  const systemMedia=new SystemMediaSession(native,system.covers,system.library);
   const spectrum = new SpectrumStore(),sleepStore=new SleepStore();
   native.addListener('sleep',sleepStore.update);
   void native.sleepSnapshot().then(sleepStore.update).catch(()=>{});
@@ -41,11 +45,14 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   const listeningSessions=new ListeningSessions();
   const safe = (work: Promise<unknown>, token?: PlaybackToken) => { void work.catch(() => { if (token) void controller.onError(token); }); };
   const controller = new PlaybackController(resolver, {
-    stop: generation => safe(native.stop(generation)), pause: generation => safe(native.pause(generation)),
+    stop: generation => {systemMedia.clear();safe(native.stop(generation));}, pause: generation => safe(native.pause(generation)),
     load: (resolved, token) => {
       const {matchedTrack,...media}=resolved;
-      const track = matchedTrack??currentEntry(controller.getSnapshot().queue)?.track;
-      safe(native.load(JSON.stringify({ ...media, metadata: track ? { title: track.title, artist: track.artist, album: track.album } : {} }), token.entryId, token.generation), token);
+      const original=currentEntry(controller.getSnapshot().queue)?.track,track=matchedTrack??original;
+      const itemID=`${token.generation}:${token.entryId}`;
+      const loaded=native.load(JSON.stringify({ ...media,systemItemID:itemID,systemFavorite:original?system.library.isFavorite(original):false, metadata: track ? { title: track.title, artist: track.artist, album: track.album } : {} }), token.entryId, token.generation);
+      if(original&&track)systemMedia.load(original,track,itemID,loaded);
+      safe(loaded,token);
     },
     play: token => safe(native.play(token.entryId, token.generation), token),
     seek: (seconds, token) => safe(native.seek(seconds, token.entryId, token.generation), token),
@@ -90,7 +97,10 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
     if (event.generation === controller.getSnapshot().token?.generation && event.entryId === controller.getSnapshot().queue.currentId) spectrum.update(event);
   });
   native.addListener('remote', event => {
-    if (event.action === 'pause') controller.pause(Number(event.generation) || 0);
+    if(event.action==='pause'){if(event.itemID&&!systemMedia.isCurrent(event.itemID))return;}
+    else if(!systemMedia.isCurrent(event.itemID))return;
+    if (event.action === 'favorite') {void systemMedia.favorite(event).catch(()=>{});}
+    else if (event.action === 'pause') controller.pause(Number(event.generation) || 0);
     else if (event.action === 'play') void controller.play();
     else if (event.action === 'toggle') { if (controller.getSnapshot().intent === 'playing') controller.pause(); else void controller.play(); }
     else if (event.action === 'next') next(); else if (event.action === 'previous') next(-1);

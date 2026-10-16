@@ -83,7 +83,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     if(track.origin.kind==='local')return localAudio.resolve(track);
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
     return matchedResolver.resolve(track,signal,excluded);
-  }}, preferences);
+  }}, preferences,{covers,library});
   bindManualMatches(library,playback.controller);bindMatchPolicy(library,preferences,playback.controller);
   try{
     const saved=await repository.get<SavedQueue>('queue.v1');

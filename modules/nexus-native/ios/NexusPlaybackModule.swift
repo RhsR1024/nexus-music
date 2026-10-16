@@ -12,6 +12,8 @@ public final class NexusPlaybackModule: Module {
     AsyncFunction("configureCache") { (megabytes: Int) in AudioCache.shared.configure(megabytes: megabytes) }
 
     AsyncFunction("load") { (json: String, entryID: String, generation: Int) in self.engine.load(json, entryID, generation) }.runOnQueue(.main)
+    AsyncFunction("setSystemArtwork") { (file: String, itemID: String) in self.engine.setSystemArtwork(file, itemID) }.runOnQueue(.main)
+    AsyncFunction("setSystemFavorite") { (favorite: Bool, itemID: String) in self.engine.setSystemFavorite(favorite, itemID) }.runOnQueue(.main)
     AsyncFunction("play") { (entryID: String, generation: Int) in self.engine.play(entryID, generation) }.runOnQueue(.main)
     AsyncFunction("pause") { (generation: Int) in self.engine.pause(generation) }.runOnQueue(.main)
     AsyncFunction("stop") { (generation: Int) in self.engine.stop(generation) }.runOnQueue(.main)

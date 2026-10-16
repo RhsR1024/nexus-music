@@ -1,6 +1,12 @@
 import Foundation
 import AVFoundation
 import MediaPlayer
+import ImageIO
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 final class NativePlaybackEngine {
   private let player = AVPlayer()
@@ -23,6 +29,11 @@ final class NativePlaybackEngine {
   private var progress: Any?, spectrumTimer: Timer?
   private var listeningTimer:Timer?
   private var remoteTargets: [(MPRemoteCommand, Any)] = []
+  private var systemItemID = ""
+  private var systemFavorite = false
+  private var systemArtwork: MPMediaItemArtwork?
+  private var artworkRevision = 0
+  private static let artworkQueue = DispatchQueue(label: "nexus.system-artwork", qos: .utility)
   private var metadata: [String: Any] = [:]
   private var initialPosition: Double = 0
   private var initialSeekPending = false
@@ -53,19 +64,74 @@ final class NativePlaybackEngine {
     #endif
     let commands = MPRemoteCommandCenter.shared()
     for (command, action) in [(commands.playCommand, "play"), (commands.pauseCommand, "pause"), (commands.togglePlayPauseCommand, "toggle"), (commands.nextTrackCommand, "next"), (commands.previousTrackCommand, "previous")] {
-      let target = command.addTarget { [weak self] _ in DispatchQueue.main.async {
-        guard let self else { return }
-        if action == "pause" || (action == "toggle" && self.wantsPlay) { self.remotePause() }
-        else { self.emit("remote", ["action": action == "toggle" ? "play" : action]) }
-      }; return .success }
+      let target = command.addTarget { [weak self] _ in self?.handleSystemCommand(action) ?? .commandFailed }
       remoteTargets.append((command, target))
     }
     let target = commands.changePlaybackPositionCommand.addTarget { [weak self] event in
       guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
-      DispatchQueue.main.async { self?.emit("remote", ["action": "seek", "seconds": event.positionTime]) }; return .success
+      return self?.handleSystemCommand("seek", seconds: event.positionTime) ?? .commandFailed
     }
     remoteTargets.append((commands.changePlaybackPositionCommand, target))
+    commands.likeCommand.localizedTitle = "音枢收藏"
+    commands.likeCommand.localizedShortTitle = "收藏"
+    let favoriteTarget = commands.likeCommand.addTarget { [weak self] event in
+      guard let event = event as? MPFeedbackCommandEvent else { return .commandFailed }
+      return self?.handleSystemCommand("favorite", favorite: !event.isNegative) ?? .commandFailed
+    }
+    remoteTargets.append((commands.likeCommand, favoriteTarget))
+    updateSystemCommands()
   }
+  // All system callbacks enter the same main-thread authority as load/pause/stop.
+  func handleSystemCommand(_ action: String, seconds: Double? = nil, favorite: Bool? = nil) -> MPRemoteCommandHandlerStatus {
+    if !Thread.isMainThread { return DispatchQueue.main.sync { self.handleSystemCommand(action, seconds: seconds, favorite: favorite) } }
+    guard !entryID.isEmpty, !systemItemID.isEmpty else { return .noSuchContent }
+    if action == "pause" || (action == "toggle" && wantsPlay) { remotePause(); return .success }
+    var body: [String: Any] = ["action": action == "toggle" ? "play" : action, "entryId": entryID, "itemID": systemItemID, "generation": generation]
+    if action == "seek" {
+      guard let seconds, seconds.isFinite, seconds >= 0 else { return .commandFailed }
+      body["seconds"] = seconds
+    }
+    if action == "favorite" { guard let favorite else { return .commandFailed }; body["favorite"] = favorite }
+    emit("remote", body); return .success
+  }
+  private func updateSystemCommands() {
+    let available = !entryID.isEmpty && !systemItemID.isEmpty
+    let commands = MPRemoteCommandCenter.shared()
+    for (command, _) in remoteTargets { command.isEnabled = available }
+    commands.likeCommand.isActive = available && systemFavorite
+  }
+  func setSystemFavorite(_ favorite: Bool, _ itemID: String) {
+    guard !itemID.isEmpty, itemID == systemItemID else { return }
+    systemFavorite = favorite; updateSystemCommands()
+  }
+  func setSystemArtwork(_ raw: String, _ itemID: String) {
+    guard !itemID.isEmpty, itemID == systemItemID else { return }
+    artworkRevision += 1
+    let revision = artworkRevision
+    systemArtwork = nil; updateNowPlaying()
+    guard let file = URL(string: raw), file.isFileURL, file.host == nil || file.host == "" || file.host == "localhost" else { return }
+    let resolved = file.resolvingSymlinksInPath().standardizedFileURL
+    let roots = [FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first, FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first].compactMap { $0?.resolvingSymlinksInPath().standardizedFileURL.path }
+    guard roots.contains(where: { resolved.path.hasPrefix($0 + "/") }) else { return }
+    Self.artworkQueue.async { [weak self] in
+      guard let values = try? resolved.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), values.isRegularFile == true,
+        let size = values.fileSize, size > 0, size <= 8 * 1024 * 1024,
+        let data = try? Data(contentsOf: resolved), data.count <= 8 * 1024 * 1024,
+        let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+        let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 512] as CFDictionary) else { return }
+      DispatchQueue.main.async { [weak self] in
+        guard let self, self.systemItemID == itemID, self.artworkRevision == revision else { return }
+        #if os(iOS)
+        let picture = UIImage(cgImage: image)
+        #else
+        let picture = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+        #endif
+        self.systemArtwork = MPMediaItemArtwork(boundsSize: picture.size) { _ in picture }
+        self.updateNowPlaying()
+      }
+    }
+  }
+
   func load(_ json: String, _ id: String, _ newGeneration: Int) {
     guard newGeneration >= generation else { return }
     sleepTimer.trackChanged(to: id)
@@ -78,10 +144,14 @@ final class NativePlaybackEngine {
     originalPayload = object
     let redirectRoot = object["redirectRoot"] as? String
     if let redirectRoot { guard let scope = try? DAVScope(redirectRoot), scope.contains(url) else { report("error"); return } }
+    systemItemID = object["systemItemID"] as? String ?? "\(newGeneration):\(id)"
+    systemFavorite = object["systemFavorite"] as? Bool ?? false
+    updateSystemCommands()
     metadata = object["metadata"] as? [String: Any] ?? [:]
     initialPosition = object["startPosition"] as? Double ?? 0
     if !initialPosition.isFinite || initialPosition < 0 { initialPosition = 0 }
     initialSeekPending = true
+    updateNowPlaying()
     cacheKey = object["cacheKey"] as? String
     if let cacheKey { AudioCache.shared.retain(cacheKey) }
     let cached = object["skipCache"] as? Bool == true ? nil : cacheKey.flatMap { AudioCache.shared.hit($0) }
@@ -155,8 +225,9 @@ final class NativePlaybackEngine {
     if player.currentItem == nil { loading?.cancel(); loading = nil; loader?.destroy(); loader = nil }
   }
   private func remotePause() {
+    let id = entryID, itemID = systemItemID
     pause(generation + 1)
-    emit("remote", ["action": "pause", "generation": generation])
+    emit("remote", ["action": "pause", "generation": generation, "entryId": id, "itemID": itemID])
   }
   func stop(_ newGeneration: Int, preservingSleep: Bool = false) {
     guard newGeneration >= generation else { return }
@@ -167,7 +238,10 @@ final class NativePlaybackEngine {
     player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
     if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
     if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
-    entryID = ""; metadata = [:]; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    entryID = ""; metadata = [:]; systemItemID = ""; systemFavorite = false; systemArtwork = nil; artworkRevision += 1
+    updateSystemCommands()
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    MPNowPlayingInfoCenter.default().playbackState = .stopped
     initialPosition=0;initialSeekPending=false
   }
   private func retryCorruptCache() -> Bool {
@@ -212,11 +286,15 @@ final class NativePlaybackEngine {
   private func updateNowPlaying() {
     guard !entryID.isEmpty else { return }
     var info: [String: Any] = [MPMediaItemPropertyTitle: metadata["title"] as? String ?? "音枢", MPMediaItemPropertyArtist: metadata["artist"] as? String ?? "",
+      MPMediaItemPropertyAlbumTitle: metadata["album"] as? String ?? "",
+      MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
       MPNowPlayingInfoPropertyPlaybackRate: player.rate]
+    if let systemArtwork { info[MPMediaItemPropertyArtwork] = systemArtwork }
     let seconds = player.currentTime().seconds, duration = player.currentItem?.duration.seconds ?? 0
     if seconds.isFinite { info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = seconds }
     if duration.isFinite && duration > 0 { info[MPMediaItemPropertyPlaybackDuration] = duration }
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    MPNowPlayingInfoCenter.default().playbackState = wantsPlay && player.rate > 0 ? .playing : .paused
   }
   func dispose() {
     sleepTimer.dispose(); stop(generation + 1); spectrumTimer?.invalidate(); spectrumTimer = nil;listeningTimer?.invalidate();listeningTimer=nil
