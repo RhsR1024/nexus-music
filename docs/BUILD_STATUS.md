@@ -439,3 +439,12 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 本地Release专项 `build/SourceUITests-1792160728178.xcresult` 48.992秒通过：实际iPad idiom、635点系统窄窗口底部导航→通过系统真实Zoom-button扩大→宽屏侧栏/隐藏底栏→搜索内容与实际窗口横屏旋转→同步弹窗转回竖屏并关闭→发现区域在侧栏右侧且不越界。已查看竖屏侧栏、横屏搜索及弹窗附件（build/ipad-rotation-passed）。首次宽屏断言失败保留，系统AX窗口控制和实际交互完成前未将其记为通过。
 
 手机交叉回归 `build/SourceUITests-1792161115531.xcresult` WebDAV83.124秒通过，含真实合成服务解码/PCM/暂停定位/重启/移除连接；PROPFIND15、Range4、认证失败0。未改音频/脚本原生后端，没有新依赖或复制参考资产；完整native沿本轮native-sync-full.log证据。CI新增独立iOS27 iPad专项，尚未由本批提交触发/执行，清洁本地IPA继续。真正分屏切换、大字/无障碍、硬件键盘和真机仍保留，不能称整个F35/J56完成。
+
+
+## 2026-10-16 iPad清洁交付与F32云端闭环
+
+原生iPad修正与Sollin范围已正常提交/push `678a5ef869f6a5c1a5f1575d8661b15638aca4ab`，远端main一致。`archive-ipad-clean.log`为ARCHIVE SUCCEEDED；manifest dirty=false/workingTreeChanges=[]、arm64/iphoneos26.2/min15.1/signed=false，实际UIDeviceFamily=[1,2]、正式入口隔离与IPA SHA256校验通过。IPA SHA256 `f3c02028e0e3aaa5307ad43f2092b29a1f0114ee91d18a110890f4c789e9c286`，包另保留于忽略目录build/local-ipad-678a5ef。新云端[38924137682](https://github.com/RhsR1024/nexus-music/actions/runs/38924137682)为pending，独立iPad专项尚未执行。
+
+F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs/38894434005)已全部成功：checks、完整native、核心App、歌词/匹配/健康、设备归档与上传。产物12053367117实际下载到build/ci-38894434005，9,768,014字节ZIP SHA256 `5c4404c9832fa88911e07e8ab1a4514164aa5e3606f805df0a7e425bd4ad8cf0`与API digest一致；所有ZIP/IPA CRC、自带摘要、正式bundle无测试适配器与xctest检查通过。内部IPA SHA256 `9028c67e56d992fdc01710c0d19d446ad1edd4b0e7b8fb4da499ea107461c020`，arm64/Xcode27.0 27A266a/iphoneos27.0/min15.1/signed=false。dirty=true唯一M ios/Podfile.lock，旧设备族[1]不用于新iPad验收。核验摘要见忽略目录verification.json。
+
+7c12023/38899071423已过checks/native，核心App运行中；其后dc3bb66、26830df及678a5ef等按原队列等待，未取消/重复派发。文档或旧包不能替代新提交的云端结果。

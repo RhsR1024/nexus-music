@@ -114,3 +114,5 @@ S10系统媒体按[0026](decisions/0026-system-now-playing-island.md)复核五�
 S3 图片/取色/播放背景按[0028](decisions/0028-visual-assets-and-player-backgrounds.md)比较五参考及 Sollin 后原创实现：采纳职责隔离、有界取色与图片身份保护，不引入参考图片、图片依赖、DOM/WebGL 或 Android 路径。TS 资产槽位与设置可共享，ImageIO 解码/去元数据和取色需 Android 适配。实际 Files/UI 与双构建以 BUILD_STATUS 后续证据为准。
 
 J40/J49 按[0029](decisions/0029-mini-player-controls-and-lyrics.md)亲读五参考及 Sollin 后原创实现：采用可达控制、共享意图和按身份取消，保留最多四按钮与必留播放暂停、原队列和歌词选择仓储；不引入 RNTP/Slider/BlurView/Android窗口或 Electron 特性。TS 配置/预览可共享 Android，原生适配分别维护，无复制代码/资产/新依赖。
+
+2026-10-17用户明确调整执行顺序：**先按Sollin IPA逆向信息对齐已有UI/交互和音乐核心，截图仅补充；保留音枢特有能力，再扩展其他功能**。补充图筛选后68张/35组只留本机忽略目录，1张Apple ID/签名验证图剔除，原文件不动。全局封面主体色/模糊与切歌更新列为优先移植项；IPA已有全局作用文案和主题符号，但算法/调用关系尚待恢复，不能把播放页模糊当全局完成。最新逐项门槛见[对齐清单](SOLLIN_ALIGNMENT_PLAN.md)和[IPA专项](SOLLIN_IPA_ANALYSIS.md)，本条覆盖早期“根据九图原创布局”的证据优先级，不改变五参考的来源、许可及Android边界。

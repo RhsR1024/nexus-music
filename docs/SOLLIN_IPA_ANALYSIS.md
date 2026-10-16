@@ -56,3 +56,29 @@
 - 下载、同步和备份按音枢自身数据模型实现，不设置参考 App 的商业门槛，也不复制其后台 API、品牌资源或 AOT 二进制。
 
 这条路线能显著改善移动端对齐的证据质量，但尚不能用此次包检查提高开发完成百分比。已有RN/原生实现继续保留，先利用直接移动证据完善剩余工作，避免重写已验收的播放、队列和存储边界。
+
+## 2026-10-16 深入逆向：snapshot与设置结构
+
+用户最新要求：**IPA逆向信息优先，已有九图作为补充**。不是先按截图拟定交互再从包中找同名词。主代理已用`nm -nm`/`otool -l`亲核App仅保留四个snapshot导出：VM指令0x4000、isolate指令0x10000、VM数据0x97c000、isolate数据0x988000（均为arm64切片VA）。完整FAT文件切片基址0x4000；文案原文件偏移与VA不能混用。`lipo -thin arm64`的纯切片与原包均仅留忽略目录。
+
+两份snapshot头格式hash相同：`ace654289f5abc240509fc941453ebc5`；features明确`product no-code_comments no-dwarf_stack_traces_mode dedup_instructions arm64 ios no-compressed-pointers`。包内Flutter引擎包含同hash及Dart `3.12.2 (stable)` / `ios_arm64`版本字符串（完整Flutter文件偏移0x7ed42b/0x7ed44c）。这些是包内事实，不借桌面/官网猜测编译版本。
+
+已进一步找到`_SettingsCategoryPage`、`_OrganizedSettingsTab`、`_SettingsCategory`、`_showPlayerInterfaceStyleSheet`、`_PlayerInterfaceStyleSheet`、`_showThemedModalBottomSheet`和`_pushSecondaryPage`等名称。它们分别给出分类页、组织后的设置Tab、样式选择sheet、主题化bottom sheet和二级页的直接命名证据；**共存不等于已还原相互调用图**，仍需对象引用/函数级证据。此前“约252个应用文件”只是路径候选，不能说取得源码。
+
+皮肤标签静态包含“原始”“经典”“写真歌词”“封面沉浸”“声波核”“Apple Music 播放器”“Apple Music 2 播放器”。原五皮肤是用户截图/需求映射，不是已确认的IPA完整选择枚举；`classic_vinyl_turntable`不能单独证明黑胶是独立皮肤项。后续先还原样式选择/设置分类的真实数据关系，再调整名称与入口，不按截图固化五项。
+
+当前App没有DWARF或函数起点表，导出符号不足以直接定位业务函数。Dart clustered snapshot需要匹配版本与平台的对象布局/反序列化，不能把普通strings邻近关系当成Widget树。官方格式实现参考[Dart app_snapshot.cc](https://github.com/dart-lang/sdk/blob/3.12.2/runtime/vm/app_snapshot.cc)，用作解析原理依据，不声称已用它还原该包。精简偏移证据位于忽略目录`build/sollin-ipa-review/existing-ui-static-evidence.md`；函数/对象关联仍继续分析。
+
+## 2026-10-17 封面驱动软件全局背景优先调查
+
+最新证据顺序为**IPA逆向优先，补充截图其次**；68张/35组参考画面与非Sollin剔除情况见[对齐清单](SOLLIN_ALIGNMENT_PLAN.md)。全局背景是已有功能对齐的优先缺口，不能用播放页已有模糊背景代替。
+
+App原FAT文件raw偏移0xe4bed0（arm64切片VA 0xe47ed0）存在文案“使用封面主体色，应用到全局及原始、经典播放器”；raw 0xdef130为“背景随封面变化”，raw 0xef9d10为“从封面取色，保持静止”。这是全局作用范围和静态取色选项的直接静态证据，仍不是已恢复的算法正文。
+
+同一主命名空间保留`_resolveCoverTheme`（raw 0xdb6f00）、`_loadResilientCoverTheme`（0xef5160）、`_applyCoverTheme`（0xd920b0）、`_effectiveAppTheme`（0xdf7210）、`_ThemedPageScaffold`（0xf38130）、`_bindPlayer`（0xe39ce0）、`AppThemeBackground`（0xe3dfb0）及`AppThemeTokens`（0xf3f6b0）。另有backgroundKind、backgroundOpacity、backgroundBlur与gradientStart/Middle/EndColor字段。它们支持继续追踪封面解析→主题→页面背景的方向；名称共存或字符串邻近不构成调用关系证明。
+
+设置键`sollin_dynamic_cover_background_v1`、`sollin_dynamic_flow_background_v1`、`sollin_song_dynamic_cover_v1`分别存在，不能把静态主题取色、图像流动与动态视频封面合并为一个已验收开关。通用封面服务有`_StaleCoverRequest`、取消/替换请求及缓存线索，但尚未证明这些守卫如何接入主题更新。粉色播放器、歌词舞台、AM2分别有不同命名空间的取色/缓存符号；`extractPalette`、rawRgba、HSV或material_color_utilities的存在，均不能单独证明全局主题采用的算法。
+
+音枢现状已亲核：`AmbientBackground`只有固定主题/用户图片；`ModernPlayer`的`ArtworkBackdrop`已有按封面取色、模糊与运动，但只作用于完整播放页。A05因此仍未完成。后续以既有原生有界取色服务原创补齐全局主题、权威实际播放身份、迟到请求隔离、缓存和无图降级，逐项标注行为重实现与待运行观察的部分，不把它写成直接复制Sollin源码。
+
+详细原始偏移与分命名空间证据仅在忽略目录`build/sollin-ipa-review/cover-global-background-review.md`、`cover-global-background-symbols.json`；原IPA、私有二进制和业务字符串全集不提交。
