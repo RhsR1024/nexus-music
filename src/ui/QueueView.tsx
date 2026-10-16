@@ -1,3 +1,4 @@
+import {Ionicons} from '@expo/vector-icons';
 import {Text} from './Typography.tsx';
 import {useRef,useState,useSyncExternalStore} from 'react';
 import {Alert, Animated, FlatList, Modal, PanResponder, Pressable, View} from 'react-native';
@@ -23,9 +24,9 @@ function QueueRow({entry,index,services}:{entry:QueueEntry;index:number;services
     <View {...responder.panHandlers} accessible accessibilityRole="adjustable" accessibilityLabel={`拖动排序：${entry.track.title}`} accessibilityActions={[{name:'increment'},{name:'decrement'}]} onAccessibilityAction={event=>{const queue=services.playback.controller.getSnapshot().queue,from=queue.entries.findIndex(item=>item.id===entry.id),to=from+(event.nativeEvent.actionName==='increment'?1:-1);if(to>=0&&to<queue.entries.length)services.playback.controller.setQueue(move(queue,entry.id,to));}} style={{width:50,justifyContent:'center',alignItems:'center'}}><Text style={{fontSize:28,color:theme.color('#959EAC')}}>☰</Text></View>
   </Animated.View>;
 }
-export function QueueView({services}:{services:Services}){
+export function QueueView({services,compact=false}:{services:Services;compact?:boolean}){
   const theme=useTheme(),state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot),[open,setOpen]=useState(false);
-  return <><Pressable accessibilityRole="button" onPress={()=>setOpen(true)} style={{padding:14,backgroundColor:theme.color('#303A32'),borderRadius:12}}><Text style={{color:theme.color('#D9F49B')}}>完整队列与拖动排序 · {state.queue.entries.length} 首</Text></Pressable>
+  return <><Pressable testID={compact?"mini-action-queue":undefined} accessibilityRole="button" accessibilityLabel={compact?"播放队列":undefined} onPress={()=>setOpen(true)} style={compact?{minWidth:44,minHeight:44,alignItems:"center",justifyContent:"center"}:{padding:14,backgroundColor:theme.color('#303A32'),borderRadius:12}}>{compact?<Ionicons name="list" size={24} color={theme.palette.text}/>:<Text style={{color:theme.color('#D9F49B')}}>完整队列与拖动排序 · {state.queue.entries.length} 首</Text>}</Pressable>
     <Modal visible={open} onRequestClose={()=>setOpen(false)} animationType="slide"><View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:65}}>
       <View style={{flexDirection:'row',justifyContent:'space-between',paddingBottom:24}}><Pressable accessibilityRole="button" onPress={()=>setOpen(false)}><Text style={{color:theme.color('#D9F49B'),fontSize:18}}>收起队列</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>Alert.alert('清空播放队列？','当前播放会停止。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>services.playback.controller.setQueue(emptyQueue)}])}><Text style={{color:theme.color('#D6B69A')}}>清空队列</Text></Pressable></View>
       <Text style={{color:theme.color('#959EAC'),marginBottom:12}}>拖动右侧手柄调整顺序；下一首插入仍按先后次序。</Text>

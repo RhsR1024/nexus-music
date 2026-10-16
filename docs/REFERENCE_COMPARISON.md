@@ -104,3 +104,5 @@ S4/J41/J44字体与深度样式按[0025](decisions/0025-fonts-lyric-style.md)比
 S10系统媒体按[0026](decisions/0026-system-now-playing-island.md)复核五参考后原创实现：Q封面requestId与命令可用性、wtf真实字段回查、Cy下一曲元数据、悦音expo-audio边界及自有Wayferar期望状态幂等收藏。复用唯一AVPlayer、CoverService与LibraryStore，不复制RNTP补丁/假音频/第二队列，不新增依赖或资产。TS协调语义可共享Android，MediaPlayer/UIImage另需Android适配。
 
 S3 图片/取色/播放背景按[0028](decisions/0028-visual-assets-and-player-backgrounds.md)比较五参考及 Sollin 后原创实现：采纳职责隔离、有界取色与图片身份保护，不引入参考图片、图片依赖、DOM/WebGL 或 Android 路径。TS 资产槽位与设置可共享，ImageIO 解码/去元数据和取色需 Android 适配。实际 Files/UI 与双构建以 BUILD_STATUS 后续证据为准。
+
+J40/J49 按[0029](decisions/0029-mini-player-controls-and-lyrics.md)亲读五参考及 Sollin 后原创实现：采用可达控制、共享意图和按身份取消，保留最多四按钮与必留播放暂停、原队列和歌词选择仓储；不引入 RNTP/Slider/BlurView/Android窗口或 Electron 特性。TS 配置/预览可共享 Android，原生适配分别维护，无复制代码/资产/新依赖。

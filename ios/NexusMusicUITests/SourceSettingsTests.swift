@@ -106,10 +106,10 @@ final class SourceSettingsTests: XCTestCase {
     let selection=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Health Fixture").firstMatch
     for _ in 0..<3 {if selection.isHittable{break};app.swipeDown()};selection.tap()
     let health=app.buttons["音源健康批测"];for _ in 0..<5 {if health.isHittable{break};app.swipeDown()};health.tap()
-    let query=app.textFields["音源检查关键词"];XCTAssertTrue(query.waitForExistence(timeout:10));query.tap();query.typeText("slow\n")
+    let query=app.textFields["音源检查关键词"];XCTAssertTrue(query.waitForExistence(timeout:10));query.tap();for character in "slow" {query.typeText(String(character))};expectation(for:NSPredicate(format:"value == %@","slow"),evaluatedWith:query);waitForExpectations(timeout:5);app.buttons["health-start"].tap()
     let cancel=app.buttons["health-cancel"];XCTAssertTrue(cancel.waitForExistence(timeout:5));cancel.tap()
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已取消，已完成项保留")).firstMatch.waitForExistence(timeout:10))
-    query.tap();query.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:4));query.typeText("fixture\n")
+    query.tap();for _ in 0..<4 {query.typeText(XCUIKeyboardKey.delete.rawValue)};for character in "fixture" {query.typeText(String(character))};expectation(for:NSPredicate(format:"value == %@","fixture"),evaluatedWith:query);waitForExpectations(timeout:5);app.buttons["health-start"].tap()
     let completed=app.staticTexts["health-progress"];XCTAssertTrue(completed.waitForExistence(timeout:5))
     let finished=NSPredicate(format:"label == %@","检查结束 · 6 / 6")
     expectation(for:finished,evaluatedWith:completed);waitForExpectations(timeout:35)
@@ -510,7 +510,26 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     XCTAssertTrue(statistic.waitForExistence(timeout:10));XCTAssertEqual(count(),previousCount+1,"Actual listening statistics must survive restart")
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
-    for _ in 0..<5 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
+    func miniReach(_ element:XCUIElement){for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))};XCTAssertTrue(element.isHittable)}
+    func miniChoose(_ id:String){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;miniReach(control);control.tap()}
+    miniChoose("mini-reset")
+    miniChoose("mini-choice-previous");miniChoose("mini-choice-favorite");miniChoose("mini-choice-queue")
+    XCTAssertTrue(app.staticTexts["mini-settings-error"].waitForExistence(timeout:10),"Fifth mini button must be rejected")
+    XCTAssertEqual(app.staticTexts["mini-actions-count"].label,"已选 4/4")
+    miniChoose("mini-choice-previous");miniChoose("mini-choice-queue");miniChoose("mini-order-favorite--1")
+    let miniLyrics=app.switches["mini-lyrics-enabled"];miniReach(miniLyrics);if miniLyrics.value as? String != "1" {miniLyrics.tap()}
+    app.terminate();app.launch()
+    let miniToggle=app.buttons["mini-action-toggle"],miniFavorite=app.buttons["mini-action-favorite"],miniNext=app.buttons["mini-action-next"],miniQueue=app.buttons["mini-action-queue"]
+    XCTAssertTrue(miniQueue.waitForExistence(timeout:15));XCTAssertTrue(miniToggle.isHittable&&miniFavorite.isHittable&&miniNext.isHittable&&miniQueue.isHittable,"Four mini controls must fit")
+    XCTAssertEqual(miniToggle.label,"播放","Configuring and restoring mini must preserve paused intent")
+    XCTAssertLessThan(miniFavorite.frame.minX,miniNext.frame.minX,"Saved button order must survive restart")
+    let miniLine=app.staticTexts["mini-lyric"];expectation(for:NSPredicate(format:"label CONTAINS %@","Synthetic lyric"),evaluatedWith:miniLine);waitForExpectations(timeout:20)
+    let favoriteBefore=miniFavorite.value as? String;XCTAssertNotNil(favoriteBefore);miniFavorite.tap();expectation(for:NSPredicate(format:"value != %@",favoriteBefore ?? ""),evaluatedWith:miniFavorite);waitForExpectations(timeout:10)
+    miniFavorite.tap();expectation(for:NSPredicate(format:"value == %@",favoriteBefore ?? ""),evaluatedWith:miniFavorite);waitForExpectations(timeout:10)
+    miniQueue.tap();XCTAssertTrue(app.buttons["收起队列"].waitForExistence(timeout:10));app.buttons["收起队列"].tap();XCTAssertEqual(miniToggle.label,"播放")
+    let miniImage=XCTAttachment(screenshot:app.screenshot());miniImage.name="Four persisted mini controls and actual recording lyric";miniImage.lifetime = .keepAlways;add(miniImage)
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap();miniChoose("mini-reset");expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
+    for _ in 0..<45 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
     app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)

@@ -4,9 +4,10 @@ import {InvalidRecordError} from '../storage/recovery.ts';
 import type { Repository } from '../storage/repository.ts';
 import { normalizeQuality, type Quality } from '../domain/quality.ts';
 import {appearanceDefaults,type AppearanceOptions} from '../domain/appearance.ts';
+import {miniPlayerDefaults,normalizeMiniActions,toggleMiniAction,moveMiniAction,type MiniPlayerOptions,type MiniAction} from '../domain/miniPlayer.ts';
 export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave';
-export interface Preferences extends AppearanceOptions { lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number }
-export const defaults: Preferences = { ...appearanceDefaults,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, theme: 'system', cacheLimitMB: 256 };
+export interface Preferences extends AppearanceOptions,MiniPlayerOptions { lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number }
+export const defaults: Preferences = { ...appearanceDefaults,...miniPlayerDefaults,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, theme: 'system', cacheLimitMB: 256 };
 export class PreferenceStore {
   private repository: Repository; private value: Preferences = defaults;
   private listeners = new Set<() => void>(); private tail: Promise<unknown> = Promise.resolve();
@@ -18,6 +19,7 @@ export class PreferenceStore {
     if (value) {try{this.value = this.validate({ ...defaults, ...value });}catch{throw new InvalidRecordError();}}
   }
   private validate(value: Preferences): Preferences {
+    if(typeof value.miniLyrics!=='boolean')throw new Error('迷你歌词设置无效');
     if(typeof value.autoMatch!=='boolean')throw new Error('自动匹配设置无效');
     if(!['auto','left','center'].includes(value.lyricAlignment))throw new Error('歌词对齐方式无效');
     if(!['classic','am','immersive','photo','vinyl','wave'].includes(value.playerLayout))throw new Error('播放界面无效');
@@ -26,8 +28,10 @@ export class PreferenceStore {
     if (!Number.isFinite(value.volume)||value.volume<0||value.volume>1||!normalizeQuality(value.quality) || !validGains(value.gains) || !validPreamp(value.preampDB) ||
       !['off', 'all', 'one'].includes(value.repeat) || !Number.isFinite(value.lyricOffsetMs) || Math.abs(value.lyricOffsetMs)>600000 || !Number.isFinite(value.fontScale) || value.fontScale < .7 || value.fontScale > 2 ||
       !['system', 'dark', 'light'].includes(value.theme) || !Number.isFinite(value.cacheLimitMB) || value.cacheLimitMB < 32 || value.cacheLimitMB > 2048) throw new Error('设置数据无效');
-    return { ...value, lyricStyle:normalizeLyricStyle(value.lyricStyle), gains: [...value.gains], eqPresets:normalizePresets(value.eqPresets),lyricOffsets:normalizeLyricOffsets(value.lyricOffsets) };
+    return { ...value, miniActions:normalizeMiniActions(value.miniActions), lyricStyle:normalizeLyricStyle(value.lyricStyle), gains: [...value.gains], eqPresets:normalizePresets(value.eqPresets),lyricOffsets:normalizeLyricOffsets(value.lyricOffsets) };
   }
+  toggleMiniAction(action:MiniAction){return this.mutate(value=>({miniActions:toggleMiniAction(value.miniActions,action)}));}
+  moveMiniAction(action:MiniAction,delta:-1|1){return this.mutate(value=>({miniActions:moveMiniAction(value.miniActions,action,delta)}));}
   setLyricOffset(key:string,offset:number) {return this.mutate(value=>({lyricOffsets:{...value.lyricOffsets,[key]:offset}}));}
   updateLyricStyle(patch:Partial<LyricStyle>) {return this.mutate(value=>({lyricStyle:{...value.lyricStyle,...patch}}));}
   adjustLyricStyle(field:'lineHeight'|'spacing'|'blur',delta:number) {

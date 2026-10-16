@@ -1,3 +1,5 @@
+import {miniActionLabels} from '../domain/miniPlayer.ts';
+import {MiniLyric} from './MiniLyric.tsx';
 import {effectiveLyricFont} from '../storage/fontCatalog.ts';
 import {Text} from './Typography.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
@@ -79,9 +81,16 @@ export function Player({ services }: { services: Services }) {
   return <>
     <GlassSurface><View style={styles.mini}>
       <Cover services={services} track={entry.track} size={44}/>
-      <Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={() => setOpen(true)} style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text><Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase === 'resolving' ? '正在选择音源…' : state.error ?? (state.buffering ? '缓冲中…' : time(state.position))}</Text>
-      </Pressable><Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{padding:10,minHeight:44,minWidth:44}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={25} color={theme.palette.text}/></Pressable><Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={{padding:8,minHeight:44,minWidth:44}}><Ionicons name="play-skip-forward" size={24} color={theme.palette.text}/></Pressable>
+      <View style={{flex:1,minWidth:80}}><Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={()=>setOpen(true)} style={{minHeight:44,justifyContent:'center'}}>
+        <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text>{(!preferences.miniLyrics||open)&&<Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase==='resolving'?'正在选择音源…':state.error??(state.buffering?'缓冲中…':time(state.position))}</Text>}
+      </Pressable>{preferences.miniLyrics&&!open&&<MiniLyric key={JSON.stringify(lyricTrack.origin)} services={services} track={lyricTrack}/>}</View><View style={{flexDirection:'row',flexShrink:0,alignItems:'center'}}>{preferences.miniActions.map(action=>{
+        if(action==='queue')return <QueueView key={action} services={services} compact/>;
+        const favorite=services.library.isFavorite(entry.track),label=action==='toggle'?(state.intent==='playing'?'暂停':'播放'):miniActionLabels[action];
+        const icon=action==='previous'?'play-skip-back':action==='toggle'?(state.intent==='playing'?'pause':'play'):action==='next'?'play-skip-forward':favorite?'heart':'heart-outline';
+        return <Pressable key={action} testID={`mini-action-${action}`} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={action==='favorite'?{text:favorite?'已收藏':'未收藏'}:undefined} onPress={()=>{
+          if(action==='toggle')toggle();else if(action==='previous')services.playback.next(-1);else if(action==='next')services.playback.next();else void services.library.favorite(entry.track).catch(()=>Alert.alert('收藏未保存','原有数据保留，请重试。'));
+        }} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={24} color={theme.palette.text}/></Pressable>;
+      })}</View>
     </View></GlassSurface>
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
       {open&&<StatusBar style={preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
@@ -108,7 +117,7 @@ export function Player({ services }: { services: Services }) {
 }
 const makeStyles=(theme:Theme)=>StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color('#111318') }, content: { padding: 24, paddingTop: 65, gap: 18 },
-  mini: { paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mini: { paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row',flexWrap:'wrap', alignItems: 'center', gap: 10 },
   track: { color: theme.color('#E8E9E4'), fontSize: 14, lineHeight: 21 }, caption: { color: theme.color('#959EAC'), fontSize: 11, lineHeight: 20 },
   title: { color: theme.color('#F1EDE7'), fontSize: 30, fontWeight: '600' }, artist: { color: theme.color('#BFC8D9'), fontSize: 18 },
   button: { backgroundColor: theme.color('#303A32'), padding: 12, borderRadius: 12 }, buttonText: { color: theme.color('#D9F49B'), fontSize: 13 },
