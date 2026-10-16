@@ -1,5 +1,7 @@
 # 本地与GitHub Actions双构建
 
+2026-10-16同步批次：冲突/重启/删除专项加入核心App组。根据13dc450的iOS任务实际耗时约84分钟及新增专项，iOS job预算从90增至120分钟；失败仍按原断言和诊断处理。push仅含docs/**或Markdown时不再启动完整iOS归档，代码/原生/工作流变更仍完整运行，pull_request与workflow_dispatch保留。配置以新提交实际结果验证，原有队列不取消/重复派发；文档变更本地执行链接与一致性校验。
+
 本地Intel MBP继续用于开发、类型/契约检查、Xcode26.3模拟器和设备IPA构建；GitHub Actions另外执行Apple Silicon/iOS27构建。两条路径共享维护中的ios工程和archive脚本，不运行覆盖性prebuild。
 
 2026-10-15核实官方[runner列表](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)与[xcode-27镜像](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)：`xcode-27`为arm64 Public Preview，列有Xcode27.0和iOS27.0 SDK。工作流明确选择此标签和Xcode27.0路径，检查host架构和SDK主版本。镜像标签不是不可变快照，环境可能更新/下线；实际版本以产物build-manifest.json和当次日志为准，不把macos-latest视为固定SDK。

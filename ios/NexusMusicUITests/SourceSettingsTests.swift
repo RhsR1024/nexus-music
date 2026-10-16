@@ -3,6 +3,13 @@ import Vision
 
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
+  private func replaceText(_ field:XCUIElement,with value:String,in app:XCUIApplication){
+    field.tap();field.press(forDuration:1.1)
+    let selectAll=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
+    XCTAssertTrue(selectAll.waitForExistence(timeout:5),"Replace the full field using the actual selection menu, independent of its insertion point")
+    selectAll.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
+    XCTAssertEqual(field.value as? String,value)
+  }
   private func dismissPasswordSuggestion(in container:XCUIElement) -> Bool {
     // iOS 27 can present this remote sheet only after the credential modal closes.
     // Match its title so unrelated alerts (including our removal confirmation) stay visible.
@@ -193,6 +200,37 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<20 {if fixture.isHittable{break};app.swipeDown()};XCTAssertTrue(fixture.isHittable);fixture.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
+  func testUCloudSyncPreviewConflictRestartAndDeletion() throws {
+    let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
+    defer{removeUIInterruptionMonitor(monitor)}
+    let app=XCUIApplication();app.launch()
+    func reveal(_ element:XCUIElement){for _ in 0..<18{if element.isHittable{return};app.swipeUp()};XCTAssertTrue(element.isHittable)}
+    func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();for _ in 0..<8{app.swipeDown()}}
+    func sync(){let entry=app.buttons["cloud-sync-open"];reveal(entry);entry.tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
+    func confirm(){let button=app.buttons["cloud-sync-commit"];reveal(button);XCTAssertTrue(button.isEnabled);button.tap();XCTAssertTrue(app.alerts["确认同步音乐库？"].waitForExistence(timeout:5));app.alerts.buttons["确认同步两端"].tap();XCTAssertTrue(app.staticTexts["同步已完成，音乐库与基线已保存；本机历史、统计和播放队列保留"].waitForExistence(timeout:20))}
+    library();let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch;reveal(webdav);webdav.tap()
+    let address=app.textFields["WebDAV服务器根目录"];if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
+    let prior=app.buttons["移除WebDAV连接：Sync fixture"];if prior.exists{XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/sync-dav/"].exists);prior.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
+    address.tap();for character in "http://127.0.0.1:18439/sync-dav/"{address.typeText(String(character))};address.typeText("\n");XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/sync-dav/")
+    let user=app.textFields["WebDAV用户名"];user.tap();for character in "fixture-user"{user.typeText(String(character))};user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
+    let password=app.secureTextFields["WebDAV密码"];password.tap();for character in "fixture-password"{password.typeText(String(character))};password.typeText("\n")
+    let label=app.textFields["WebDAV连接名称"];label.tap();for character in "Sync fixture"{label.typeText(String(character))};label.typeText("\n");XCTAssertEqual(label.value as? String,"Sync fixture");app.buttons["验证并保存WebDAV"].tap()
+    XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
+    let suffix=String(Int(Date().timeIntervalSince1970)),original="Sync original "+suffix,local="Sync local "+suffix,cloud="Sync cloud "+suffix,folder="nexus-sync-"+suffix+"/"
+    let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in original{input.typeText(String(character))};input.typeText("\n");app.buttons["创建歌单"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
+    sync();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","同步连接：Sync fixture")).firstMatch;reveal(connection);connection.tap()
+    let directory=app.textFields["多设备同步相对目录"];reveal(directory);replaceText(directory,with:folder,in:app)
+    let save=app.buttons["cloud-sync-save"];reveal(save);save.tap();XCTAssertTrue(app.staticTexts["同步目录已保存，请读取合并预览"].waitForExistence(timeout:5));let preview=app.buttons["cloud-sync-preview"];reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15));confirm();app.buttons["收起多设备同步"].tap()
+    let edit=try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/remote-edit")!,encoding:.utf8);XCTAssertEqual(edit,"ok")
+    for _ in 0..<8{app.swipeDown()};let originalRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",original+" ·")).firstMatch;reveal(originalRow);originalRow.tap();let rename=app.textFields["音枢歌单名称"];reveal(rename);rename.tap();rename.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:(rename.value as? String)?.count ?? 0));for character in local{rename.typeText(String(character))};rename.typeText("\n");XCTAssertEqual(rename.value as? String,local);app.buttons["保存名称"].tap();app.buttons["返回歌单列表"].tap()
+    sync();reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["发现 1 项冲突，请逐项选择后确认"].waitForExistence(timeout:15));let commit=app.buttons["cloud-sync-commit"];reveal(commit);XCTAssertFalse(commit.isEnabled);let remoteChoice=app.buttons["cloud-sync-remote-0"];reveal(remoteChoice);XCTAssertTrue(app.staticTexts["云端："+cloud+" · 0 首"].exists)
+    let image=XCTAttachment(screenshot:app.screenshot());image.name="Three-way conflict preview";image.lifetime = .keepAlways;add(image)
+    for (button,title) in [("预览本机版本",local),("预览云端版本",cloud)]{let detail=app.buttons[button];reveal(detail);detail.tap();XCTAssertTrue(app.buttons["关闭版本预览"].waitForExistence(timeout:5));XCTAssertTrue(app.staticTexts[title+" · 0 首"].exists);app.buttons["关闭版本预览"].tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
+    app.buttons["收起多设备同步"].tap();for _ in 0..<8{app.swipeDown()};let localRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",local+" ·")).firstMatch;reveal(localRow);XCTAssertTrue(localRow.exists,"Canceling a conflict preview must keep the local edit")
+    sync();reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["发现 1 项冲突，请逐项选择后确认"].waitForExistence(timeout:15));reveal(remoteChoice);remoteChoice.tap();reveal(commit);confirm();app.buttons["收起多设备同步"].tap();app.terminate();app.launch();library();reveal(playlists);playlists.tap();let cloudRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",cloud+" ·")).firstMatch;reveal(cloudRow);XCTAssertTrue(cloudRow.exists);XCTAssertFalse(localRow.exists)
+    cloudRow.tap();let removePlaylist=app.buttons["删除歌单"];reveal(removePlaylist);removePlaylist.tap();app.alerts.buttons["删除"].tap();sync();XCTAssertEqual(directory.value as? String,folder);reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15));confirm();app.buttons["收起多设备同步"].tap();app.terminate();app.launch();library();reveal(playlists);playlists.tap();XCTAssertFalse(cloudRow.exists)
+    library();reveal(webdav);webdav.tap();app.buttons["管理WebDAV连接"].tap();let remove=app.buttons["移除WebDAV连接：Sync fixture"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10));app.buttons["收起WebDAV"].tap()
+  }
   func testVCloudBackupUploadRestartPreviewRestore() throws {
     let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
     defer{removeUIInterruptionMonitor(monitor)}
@@ -216,10 +254,7 @@ final class SourceSettingsTests: XCTestCase {
     let suffix=String(Int(Date().timeIntervalSince1970)),kept="Cloud kept "+suffix,later="Cloud later "+suffix,backupPath="nexus-backup-"+suffix+"/"
     makePlaylist(kept);cloud()
     let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","备份连接：Backup fixture")).firstMatch;XCTAssertTrue(connection.waitForExistence(timeout:5));connection.tap()
-    let directory=app.textFields["云备份相对目录"];directory.tap()
-    let oldDirectoryLength=(directory.value as? String)?.count ?? 0
-    directory.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:oldDirectoryLength))
-    for character in backupPath{directory.typeText(String(character))};directory.typeText("\n");XCTAssertEqual(directory.value as? String,backupPath)
+    let directory=app.textFields["云备份相对目录"];replaceText(directory,with:backupPath,in:app)
     app.buttons["cloud-backup-save"].tap();XCTAssertTrue(app.staticTexts["备份目录已保存"].waitForExistence(timeout:5));app.buttons["cloud-backup-upload"].tap()
     XCTAssertTrue(app.staticTexts["备份已上传并通过回读摘要与格式校验"].waitForExistence(timeout:20));app.buttons["收起云备份"].tap();app.terminate();app.launch()
     library();makePlaylist(later);cloud();XCTAssertEqual(app.textFields["云备份相对目录"].value as? String,backupPath)
@@ -247,8 +282,11 @@ final class SourceSettingsTests: XCTestCase {
     let address=app.textFields["WebDAV服务器根目录"]
     if !address.waitForExistence(timeout:2){
       app.buttons["管理WebDAV连接"].tap()
-      XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/dav/"].exists,"Only remove this test's fixture connection")
-      app.buttons["移除WebDAV连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
+      let prior=app.buttons["移除WebDAV连接：fixture-user"]
+      if prior.exists{
+        XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/dav/"].exists,"Only remove this test's fixture connection")
+        prior.tap();app.alerts.buttons["移除"].tap()
+      }
     }
     XCTAssertTrue(address.waitForExistence(timeout:10))
     address.tap();for character in "http://127.0.0.1:18439/dav/"{address.typeText(String(character))};address.typeText("\n")

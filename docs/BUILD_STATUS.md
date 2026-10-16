@@ -1,5 +1,21 @@
 # 首批实现验收记录
 
+2026-10-16 iPad证据更正：主App Debug/Release的TARGETED_DEVICE_FAMILY仍为1，当前Release模拟器App的UIDeviceFamily实读仅1。此前iPad截图不能解释为Stage Manager/分屏验证，也不能据此验收原生平板布局；详见[0031更正](decisions/0031-adaptive-ipad-layout.md)。下一批修正原生工程后重新验证，保留旧构建成功但收回平板窗口解释。
+
+## 2026-10-16 S8/F33 多设备同步本地验证中
+
+按[决策0032](decisions/0032-webdav-device-sync.md)实现收藏/歌单（条目ID、曲序、重复项）/音频匹配/歌词选择的三方基线同步、逐项冲突选择、持久删除标记、账号和目录隔离。原生条件PUT创建/更新、条件GET回读，412废弃旧方案；共用MutationQueue复核本机快照并串行保存，基线/音乐库一个SQLite事务。历史/统计/队列/凭据/文件/音源/外观保留本机。无新依赖/参考资产，不宣称自动实时或两台真实设备已验。
+
+`check-sync-final.log`类型与296/296业务通过（原269 + 同步27），包含两独立客户端、并发改名/改序/删除冲突、CAS、重启、预览后编辑、网络期间排队编辑、远端成功本地事务失败恢复、缺失删除标记拒绝、列表展示顺序保留、超限/畸形/未知版本与私密字段剥离。`native-sync-full.log`完整原生通过，含真实HTTP条件PUT更新、旧ETag PUT/GET412、当前GET成功，保留F32创建不覆盖及重定向/限额检查。
+
+首次正式App `build/SourceUITests-1792157529159.xcresult` 同步210.933秒通过：真实连接/目录/首次同步、服务端合成编辑、本机改名、1冲突/未选时禁用/取消保留本机、选择云端/重启、删除传播/再次重启、只移除自身夹具连接。冲突截图已导出亲看。随后 `1792158115833` 同步215.301秒再通过并增加两侧版本详情预览；交叉组旧备份输入留下末尾斜杠导致目录断言失败，后续DAV误认为残留备份连接是自身夹具而停止，未计整组通过。已保存日志/附件，修正为实际全选菜单替换字段，以及仅发现自身夹具才核对/移除，保留全部原断言重验。最终交叉回归、本批清洁IPA和新iOS27运行继续。
+
+## 2026-10-16 mini／源健康 iOS27 验证闭环
+
+`13dc4505d7b85a8839c226173d6455d6e3e7ce37` / [38889054633](https://github.com/RhsR1024/nexus-music/actions/runs/38889054633) 已完整成功：checks、完整native、核心App、歌词/匹配/评论/源健康、设备归档和上传均成功。IPA artifact `12049450647` 已下载至忽略目录 `build/ci-38889054633`；完整ZIP SHA256 `58d6afe199afac1fbf34351004ef8529470250e15f5b8b4f3db835c96d2542dc` 与API digest一致，CRC/长度及内部IPA摘要通过，IPA SHA256 `adbcea0af31564f29b84734dc34b339f6c661b424f79ca0f588e32f7b3a03b09`。manifest为arm64 / Xcode27.0 27A266a / iphoneos27.0 / min15.1 / signed=false；dirty=true且唯一变化为ios/Podfile.lock，不称云工作树清洁。该批闭合了此前健康关键词漏字修复的iOS27验证，旧失败仍保留。
+
+F32 `38894434005` 当前已过checks/native，核心App运行中；`38899071423`及后续正常排队，未取消或重复派发。同步新批次尚未上云；手机/个人签名与私人服务不由本结果替代。
+
 ## 已完成
 
 | 检查 | 实际结果 |
@@ -397,6 +413,13 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 
 当前工作区在 `dc3bb66` 上补齐基础响应式壳：`app.json` 开放横屏并支持平板，iOS `Info.plist` 增加横屏方向；主壳在宽屏使用安全区域侧栏、最大内容列和播放器区域，窄屏保留底部导航；发现页按窗口宽度和 `fontScale` 计算 1–4 列。代码没有新增音频、队列或原生依赖，设计见 `docs/decisions/0031-adaptive-ipad-layout.md`。
 
-本地证据：`npm run typecheck` 通过；`npm test` 269/269 通过；本地 iPad Pro 13-inch 模拟器 arm64 Release `xcodebuild` 成功，已安装启动并查看 `build/ipad-portrait.png`、`build/ipad-dark.png`；当前为窄分屏/Stage Manager 窗口，验证了窄窗口底部导航与双列发现网格。生产 `npm run ios:archive` 也已成功，`build/distribution/NexusMusic-unsigned.ipa` 为 arm64、iphoneos26.2、min15.1、signed=false，SHA256 `0bc8ef6f7ec88d84ad5a2ebf9df34a9a57e708d09867d3a95f84d0f714502d56`。宽屏侧栏、旋转、分屏切换、键盘、大字、无障碍和真机仍是验收缺口。
+本地证据：`npm run typecheck` 通过；`npm test` 269/269 通过；本地 iPad Pro 13-inch 模拟器 universal Release `xcodebuild` 成功，已安装启动并查看 `build/ipad-portrait.png`、`build/ipad-dark.png`；当前为窄分屏/Stage Manager 窗口，验证了窄窗口底部导航与双列发现网格。生产 `npm run ios:archive` 也已成功，`build/distribution/NexusMusic-unsigned.ipa` 为 arm64、iphoneos26.2、min15.1、signed=false，SHA256 `0bc8ef6f7ec88d84ad5a2ebf9df34a9a57e708d09867d3a95f84d0f714502d56`。宽屏侧栏、旋转、分屏切换、键盘、大字、无障碍和真机仍是验收缺口。
 
 本批提交并推送为 `dc3bb66` 后，新云端 [38902069374](https://github.com/RhsR1024/nexus-music/actions/runs/38902069374) 已创建并排队；此前 `38889054633`（13dc450）、`38894434005`（a0ee5bb）、`38899071423`（7c12023）仍按原队列跟踪。不把排队或本地结果记作 iOS27 通过。
+
+
+## 2026-10-16 F33最终本地联合验收
+
+正式入口`build/SourceUITests-1792158625194.xcresult`三项全通过、零失败/跳过：同步222.425秒（含实际全选替换目录及两侧版本预览）、云备份204.159秒、DAV实音70.122秒。计数备份/同步合计PROPFIND17/MKCOL2/PUT4/GET11、模拟远端编辑1，DAV PROPFIND15/Range6，认证失败均0。296项业务/类型及完整native通过；首次冲突截图亲看，最终附件已导出。修正版保留取消/恢复/坏文件/重启/PCM/移除断言。阶段提交、清洁本地SDK26.2 IPA和新云端继续，不将合成服务当真实双设备/私人服务。
+
+按全部F01–F37/J01–J59工作量加权：代码约75%（75.35%），整体交付约57%（56.65%，区间51%–61%），见[PROGRESS_ESTIMATE.md](PROGRESS_ESTIMATE.md)。同步新增证据与iPad设备族缺口同时计入，不按功能项或测试数量计算；全部目标仍active。下一批先修正主App iPad设备族，再继续真实宽屏/旋转与其余S2/S3/S4/S7/S8/S9，永久下载最后。

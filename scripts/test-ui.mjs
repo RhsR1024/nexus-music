@@ -33,7 +33,7 @@ const audio = Buffer.alloc(44+48000*2*12);
 audio.write('RIFF');audio.writeUInt32LE(audio.length-8,4);audio.write('WAVEfmt ',8);audio.writeUInt32LE(16,16);audio.writeUInt16LE(1,20);audio.writeUInt16LE(1,22);audio.writeUInt32LE(48000,24);audio.writeUInt32LE(96000,28);audio.writeUInt16LE(2,32);audio.writeUInt16LE(16,34);audio.write('data',36);audio.writeUInt32LE(audio.length-44,40);
 for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.sin(2*Math.PI*1000*i/48000)),44+i*2);
 let starred=false;
-const backupDirectories=new Set(['/backup-dav/']),backupFiles=new Map();
+const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments'));
 const matchingAudio=Buffer.alloc(44+48000*2*120);audio.copy(matchingAudio,0,0,44);matchingAudio.writeUInt32LE(matchingAudio.length-8,4);matchingAudio.writeUInt32LE(matchingAudio.length-44,40);
@@ -85,20 +85,32 @@ const server = createServer(async (req, res) => {
     res.writeHead(400);res.end();return;
   }
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
-  if(req.url.startsWith('/backup-dav/')){
+  if(req.url==='/sync-fixture/remote-edit'){
+    counts.syncEdits=(counts.syncEdits??0)+1;
+    const entry=[...backupFiles].find(([path,body])=>path.startsWith('/sync-dav/')&&path.endsWith('/library-v1.json'));
+    if(!entry){res.writeHead(404);res.end();return;}
+    const [path,body]=entry,document=JSON.parse(body),playlist=document.records.find(record=>record.kind==='playlist'&&!record.deleted&&record.payload.title.startsWith('Sync original '));
+    if(!playlist){res.writeHead(400);res.end();return;}
+    playlist.payload.title=playlist.payload.title.replace('Sync original ','Sync cloud ');playlist.payload.updatedAt+=1;document.revision+=1;document.deviceId='d'.repeat(32);
+    backupFiles.set(path,JSON.stringify(document));res.end('ok');return;
+  }
+  if(req.url.startsWith('/backup-dav/')||req.url.startsWith('/sync-dav/')){
     counts.backup??={propfind:0,mkcol:0,put:0,get:0,authFailures:0};
     if(req.headers.authorization!=='Basic '+Buffer.from('fixture-user:fixture-password').toString('base64')){counts.backup.authFailures++;res.writeHead(401);res.end();return;}
     if(req.method==='MKCOL'){counts.backup.mkcol++;const status=backupDirectories.has(req.url)?405:201;backupDirectories.add(req.url);res.writeHead(status);res.end();return;}
     if(req.method==='PUT'){
-      counts.backup.put++;if(req.headers['if-none-match']!=='*'){res.writeHead(400);res.end();return;}if(backupFiles.has(req.url)){res.writeHead(412);res.end();return;}
+      counts.backup.put++;const previous=backupFiles.get(req.url),tag=previous===undefined?'':'"'+createHash('sha256').update(previous).digest('hex')+'"';
+      if(req.headers['if-match']){if(req.headers['if-none-match']||req.headers['if-match']!==tag){res.writeHead(412);res.end();return;}}
+      else if(req.headers['if-none-match']!=='*'){res.writeHead(400);res.end();return;}
+      else if(previous!==undefined){res.writeHead(412);res.end();return;}
       const parts=[];for await(const part of req)parts.push(part);const body=Buffer.concat(parts).toString('utf8');const parsed=JSON.parse(body);
-      if(parsed.format!=='nexus-music'||/fixture-password|fixture-secret|Authorization/.test(body)){res.writeHead(400);res.end();return;}
-      backupFiles.set(req.url,body);backupFiles.set(req.url.slice(0,req.url.lastIndexOf('/')+1)+'broken.json','{synthetic invalid JSON');res.writeHead(201,{ETag:'"fixture-backup"'});res.end();return;
+      if(!['nexus-music','nexus-music-sync'].includes(parsed.format)||/fixture-password|fixture-secret|Authorization/.test(body)){res.writeHead(400);res.end();return;}
+      backupFiles.set(req.url,body);if(parsed.format==='nexus-music')backupFiles.set(req.url.slice(0,req.url.lastIndexOf('/')+1)+'broken.json','{synthetic invalid JSON');res.writeHead(previous===undefined?201:204,{ETag:'"'+createHash('sha256').update(body).digest('hex')+'"'});res.end();return;
     }
-    if(req.method==='GET'){counts.backup.get++;if(!backupFiles.has(req.url)){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':'application/json',ETag:'"fixture-backup"'});res.end(backupFiles.get(req.url));return;}
+    if(req.method==='GET'){counts.backup.get++;if(!backupFiles.has(req.url)){res.writeHead(404);res.end();return;}const body=backupFiles.get(req.url),tag='"'+createHash('sha256').update(body).digest('hex')+'"';if(req.headers['if-match']&&req.headers['if-match']!==tag){res.writeHead(412);res.end();return;}res.writeHead(200,{'Content-Type':'application/json',ETag:tag});res.end(body);return;}
     if(req.method==='PROPFIND'){
       counts.backup.propfind++;if(!backupDirectories.has(req.url)&&!backupFiles.has(req.url)){res.writeHead(404);res.end();return;}
-      const row=(path,directory)=>`<d:response><d:href>${path}</d:href><d:propstat><d:prop><d:resourcetype>${directory?'<d:collection/>':''}</d:resourcetype>${directory?'':`<d:getcontentlength>${Buffer.byteLength(backupFiles.get(path))}</d:getcontentlength><d:getetag>&quot;fixture-backup&quot;</d:getetag>`}</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
+      const row=(path,directory)=>`<d:response><d:href>${path}</d:href><d:propstat><d:prop><d:resourcetype>${directory?'<d:collection/>':''}</d:resourcetype>${directory?'':`<d:getcontentlength>${Buffer.byteLength(backupFiles.get(path))}</d:getcontentlength><d:getetag>&quot;${createHash('sha256').update(backupFiles.get(path)).digest('hex')}&quot;</d:getetag>`}</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
       const children=req.headers.depth==='1'?[...backupDirectories,...backupFiles.keys()].filter(path=>path!==req.url&&path.startsWith(req.url)&&!path.slice(req.url.length).replace(/\/$/,'').includes('/')):[];
       res.writeHead(207,{'Content-Type':'application/xml'});res.end(`<d:multistatus xmlns:d="DAV:">${[req.url,...children].map(path=>row(path,backupDirectories.has(path))).join('')}</d:multistatus>`);return;
     }

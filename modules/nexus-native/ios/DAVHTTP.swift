@@ -80,15 +80,18 @@ final class DAVHTTP: NSObject, URLSessionDataDelegate {
   convenience init(root: String, path: String, username: String, password: String, operation: String, body: String, etag: String) throws {
     guard ["GET", "PUT", "MKCOL"].contains(operation), body.utf8.count <= 32 * 1024 * 1024,
           operation == "PUT" ? !body.isEmpty : body.isEmpty,
-          operation == "GET" || etag.isEmpty,
+          operation != "MKCOL" || etag.isEmpty,
           etag.isEmpty || (etag.utf8.count <= 8192 && etag.first == "\"" && etag.last == "\"" && etag.count >= 2 && etag.dropFirst().dropLast().unicodeScalars.allSatisfy({ $0.value == 33 || (35...126).contains($0.value) || (128...255).contains($0.value) })) else { throw DAVHTTP.failure(1) }
     try self.init(root: root, path: path, username: username, password: password, depth: 0)
     request.httpMethod = operation; request.httpBody = operation == "PUT" ? Data(body.utf8) : nil
     request.setValue(nil, forHTTPHeaderField: "Depth")
     request.setValue(operation == "PUT" ? "application/json; charset=utf-8" : nil, forHTTPHeaderField: "Content-Type")
     request.setValue("application/json, application/octet-stream, */*", forHTTPHeaderField: "Accept")
-    if operation == "PUT" { request.setValue("*", forHTTPHeaderField: "If-None-Match") }
-    if !etag.isEmpty { request.setValue(etag, forHTTPHeaderField: "If-Match") }
+    if operation == "PUT" {
+      if etag.isEmpty { request.setValue("*", forHTTPHeaderField: "If-None-Match") }
+      else { request.setValue(etag, forHTTPHeaderField: "If-Match") }
+    }
+    if operation == "GET", !etag.isEmpty { request.setValue(etag, forHTTPHeaderField: "If-Match") }
     bodyLimit = operation == "GET" ? 32 * 1024 * 1024 : 2 * 1024 * 1024
     allowsRedirects = operation == "GET"; resourceTimeout = 180
   }

@@ -54,6 +54,8 @@
 
 ## 当前已经做出的决定
 
+- S8/F33按[0032](decisions/0032-webdav-device-sync.md)亲读五参考及Sollin后原创实现：采用持久三方基线、显式冲突选择、删除标记、条件写/回读与同一SQLite事务。TS合并/状态可共享Android，URLSession/Keychain另适配，无新依赖或复制代码。真实设备/个人服务和自动触发仍单独验收。
+
 - S8/F32云备份按[决策0030](decisions/0030-webdav-backups.md)亲读五参考及Sollin固定源码：采用职责分离和确认恢复；原创实现条件版本上传、回读SHA256、MKCOL后目录核验、Keychain复用及事务恢复。不复制明文配置/URL日志/吞错覆盖；F33同步另外设计。TS数据与状态可共享Android，URLSession/Keychain需另实现，不宣称Android交付。
 
 - Expo54/RN0.81仅为已通过本机构建的工程候选基线，不自动决定播放器或音源引擎。

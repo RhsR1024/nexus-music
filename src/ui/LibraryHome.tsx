@@ -2,6 +2,7 @@ import {Cover} from './Cover.tsx';
 import {Text,TextInput} from './Typography.tsx';
 import {WebDAVLibrary} from './WebDAVLibrary.tsx';
 import {CloudBackup} from './CloudBackup.tsx';
+import {CloudSync} from './CloudSync.tsx';
 import {DeviceMediaLibrary} from './DeviceMediaLibrary.tsx';
 import {LocalAudioLibrary} from './LocalAudioLibrary.tsx';
 import {TrackListModal} from './TrackListModal.tsx';
@@ -92,7 +93,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {!tracks.length&&tab!=='playlists'&&<View style={styles.empty}><Text style={styles.heading}>为下一次聆听留个位置</Text><Text style={styles.caption}>{tab==='favorites'?'搜索后可以把喜欢的歌收藏到这里。':'真正开始播放后，音乐会出现在这里。'}</Text></View>}
     {tab==='history'&&library.history.length>0&&button('清空播放历史',()=>Alert.alert('清空音枢播放历史？','不会修改服务端播放记录。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>{await services.library.clearHistory();});}}]))}
     <View style={styles.row}>{button('导出音乐库备份',()=>{void perform(exportBackup);})}{button('恢复音枢备份',()=>{void perform(importBackup);})}</View>
-    <CloudBackup services={services}/>
+    <CloudBackup services={services}/><CloudSync services={services}/>
     {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
     {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
     <QishuiImport services={services}/>
