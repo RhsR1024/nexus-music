@@ -8,6 +8,8 @@
 
 独立图形 EQ 页已按参考 EQ 画面的层级重排为顶部开关、前级面板、频率/增益面板、声音预设和自定义预设。新增曲线整体重置，保留原生 PCM/DSP、前级归零、频段精调、预设保存/删除和失败保留。现有 UI testID 未变，`npm run check` 302/302、`git diff --check` 通过。本机只有 Command Line Tools，未重跑本地 UI/IPA；后续新提交需跟踪 iOS27 云端终态和 IPA 校验。
 
+前级滑杆补充 `-12 / +12` 边界标记，并保留独立无障碍名称；业务与类型检查继续为 302/302。
+
 ## 2026-10-17 优先补充完成的执行清单
 
 最新权威清单为[SOLLIN_ALIGNMENT_PLAN.md](docs/SOLLIN_ALIGNMENT_PLAN.md)，逐页映射见[SOLLIN_UI_ALIGNMENT.md](docs/SOLLIN_UI_ALIGNMENT.md)。用户要求先补齐文档，再开始对齐；后续执行严格按以下优先级：

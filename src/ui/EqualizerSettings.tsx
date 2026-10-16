@@ -16,7 +16,7 @@ export function EqualizerSettings({services}:{services:Services}){
     <Text style={styles.caption}>{spectrum.supported?`当前音频可处理 · 前级余量 ${spectrum.headroomDB.toFixed(1)} dB`:'播放后检测 PCM 支持；不支持处理的媒体会明确提示。'}</Text>
     <View style={styles.panel}>
       <View style={styles.panelHeader}><Text style={styles.panelTitle}>整体增益 · 前置放大器</Text><Pressable accessibilityRole="button" accessibilityLabel="前级归零" onPress={()=>update({preampDB:0})}><Text style={styles.link}>归零</Text></Pressable></View>
-      <GainSlider testID="eq-preamp-slider" label="" value={value.preampDB} onChange={preampDB=>update({preampDB})}/>
+      <GainSlider testID="eq-preamp-slider" label="" accessibilityLabel="整体增益 · 前置放大器" value={value.preampDB} onChange={preampDB=>update({preampDB})} showBounds/>
       <Text style={styles.panelCaption}>在频段调节前统一调整输入电平。提升频段时可降低此增益，留出余量；正增益可能引起削波。</Text>
     </View>
     <View style={styles.panel}>

@@ -4,19 +4,19 @@ import {StyleSheet, View, type GestureResponderEvent} from 'react-native';
 import {dbAtY,eqFrequencies} from '../domain/equalizer.ts';
 import {useTheme} from './theme.tsx';
 const db = (value:number)=>`${value>0?'+':''}${value.toFixed(1)} dB`;
-export function GainSlider({value,onChange,label,testID,format=db}:{value:number;onChange:(value:number)=>void;label:string;testID?:string;format?:(value:number)=>string}) {
+export function GainSlider({value,onChange,label,testID,format=db,showBounds=false,accessibilityLabel}:{value:number;onChange:(value:number)=>void;label:string;testID?:string;format?:(value:number)=>string;showBounds?:boolean;accessibilityLabel?:string}) {
   const {palette}=useTheme(),width=useRef(1),pending=useRef<number|null>(null),[preview,setPreview]=useState<number|null>(null);
   const move=(event:GestureResponderEvent)=>{const next=Math.round(Math.max(-12,Math.min(12,event.nativeEvent.locationX/width.current*24-12))*10)/10;pending.current=next;setPreview(next);};
   const shown=preview??value;
-  return <View style={{gap:8}}><View style={styles.label}><Text style={{color:palette.text}}>{label}</Text><Text testID={testID?`${testID}-value`:undefined} style={{color:palette.accent,fontWeight:'700'}}>{format(shown)}</Text></View>
-    <View testID={testID} accessible accessibilityRole="adjustable" accessibilityLabel={label} accessibilityValue={{min:-12,max:12,now:shown,text:format(shown)}} accessibilityActions={[{name:'increment'},{name:'decrement'}]} onAccessibilityAction={event=>onChange(Math.max(-12,Math.min(12,value+(event.nativeEvent.actionName==='increment'?.1:-.1))))}
+  return <View style={{gap:8}}><View style={styles.label}>{label?<Text style={{color:palette.text}}>{label}</Text>:<View/>}<Text testID={testID?`${testID}-value`:undefined} style={{color:palette.accent,fontWeight:'700'}}>{format(shown)}</Text></View>
+    <View style={showBounds?styles.bounds:undefined}>{showBounds&&<Text style={styles.boundLabel}>−12</Text>}<View testID={testID} accessible accessibilityRole="adjustable" accessibilityLabel={accessibilityLabel??label} accessibilityValue={{min:-12,max:12,now:shown,text:format(shown)}} accessibilityActions={[{name:'increment'},{name:'decrement'}]} onAccessibilityAction={event=>onChange(Math.max(-12,Math.min(12,value+(event.nativeEvent.actionName==='increment'?.1:-.1))))}
       onLayout={event=>{width.current=event.nativeEvent.layout.width;}} onStartShouldSetResponder={()=>true} onMoveShouldSetResponder={()=>true}
       onResponderGrant={move} onResponderMove={move} onResponderTerminationRequest={()=>false}
       onResponderRelease={event=>{move(event);if(pending.current!==null)onChange(pending.current);pending.current=null;setPreview(null);}}
-      onResponderTerminate={()=>{pending.current=null;setPreview(null);}} style={{height:44,justifyContent:'center'}}>
+      onResponderTerminate={()=>{pending.current=null;setPreview(null);}} style={{height:44,justifyContent:'center',flex:1}}>
       <View pointerEvents="none" style={{height:5,borderRadius:3,backgroundColor:palette.border}}/>
       <View pointerEvents="none" style={{position:'absolute',left:`${(shown+12)/24*100}%`,marginLeft:-10,width:20,height:20,borderRadius:10,backgroundColor:palette.accent}}/>
-    </View></View>;
+    </View>{showBounds&&<Text style={styles.boundLabel}>+12</Text>}</View></View>;
 }
 export function EqualizerGraph({gains,onChange}:{gains:readonly number[];onChange:(gains:readonly number[])=>void}) {
   const {palette}=useTheme(),[width,setWidth]=useState(1),[selected,setSelected]=useState(0),[draft,setDraft]=useState<readonly number[]|null>(null),pending=useRef<readonly number[]|null>(null),band=useRef(0);
@@ -40,4 +40,4 @@ export function EqualizerGraph({gains,onChange}:{gains:readonly number[];onChang
     <GainSlider testID="eq-band-slider" label={`${eqFrequencies[selected]} Hz 精调`} value={gains[selected]!} onChange={gain=>onChange(gains.map((value,i)=>i===selected?gain:value))}/>
   </View>;
 }
-const styles=StyleSheet.create({label:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}});
+const styles=StyleSheet.create({label:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},bounds:{flexDirection:'row',alignItems:'center',gap:10},boundLabel:{fontSize:12,color:'#9296A2',minWidth:24,textAlign:'center'}});

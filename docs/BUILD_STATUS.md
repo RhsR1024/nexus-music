@@ -13,6 +13,8 @@
 - `npm run check`：类型检查通过，自动测试 302/302 通过；`git diff --check` 通过。
 - 本机仍只有 Command Line Tools，未重新执行本地 iOS UI/IPA；本批提交后以新云端 iOS27 运行验证。
 
+- 前级滑杆补充 `-12 / +12` 视觉边界和无障碍名称；`npm run check` 继续为 302/302，未改变原生 DSP 或播放状态。
+
 - `npm run check`：类型检查通过，自动测试 **302/302** 通过。
 - `git diff --check`：通过。
 - 本地 UI：`build/SourceUITests-1792169130948.xcresult` 分组设置导航/草稿/滚动恢复与发现/外观专项通过；`build/SourceUITests-1792168820230.xcresult` 的实际全局封面专项通过，最终结果以对应 result bundle 记录。专项覆盖红/蓝封面跨音乐库、发现、外观页切换，关闭恢复及重启恢复。
