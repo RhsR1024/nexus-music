@@ -135,3 +135,10 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 验证：`npm run typecheck`、`npm test`（269/269）和本地 iPad Pro 13-inch 模拟器 universal Release `xcodebuild` 通过；已安装启动并查看 iPad 窗口截图。当前模拟器运行在窄分屏/Stage Manager 窗口，因此截图验证的是窄窗口底部导航与双列发现网格；宽屏侧栏、旋转、分屏切换、键盘、大字、无障碍和真机显示仍未验收。生产 arm64 unsigned IPA 已由同一批代码归档并核验，摘要见 BUILD_STATUS。
 
 本批已提交并推送为 `dc3bb66`；新云端 [38902069374](https://github.com/RhsR1024/nexus-music/actions/runs/38902069374) 已创建并排队。`38889054633`（13dc450）、`38894434005`（a0ee5bb）、`38899071423`（7c12023）按原队列继续跟踪；保持队列，不取消或重复派发，云端成功后再更新本批 iOS27 结论。
+
+
+## 2026-10-16 F33阶段提交与双构建
+
+三方同步已正常提交/push `26830dfde3e8243ae8eb845a98f54f792dbc6756`，远端main复核一致。`archive-sync-clean.log`为ARCHIVE SUCCEEDED；manifest commit=26830df、dirty=false、workingTreeChanges=[]、arm64/iphoneos26.2/min15.1/signed=false，正式JS入口隔离通过。IPA SHA256 `b14c0f058a7904405a68795d972a602d0a465bb34f0e5c67e7d04a3f9d173f7e`已再次校验，另保留于忽略目录build/local-sync-26830df。新云端[38913246781](https://github.com/RhsR1024/nexus-music/actions/runs/38913246781)为pending；F32/38894434005运行中，既有串行队列不取消/重复派发。
+
+下一批修正主App iPad设备族（目前仍仅1）与RN弹窗横屏支持，验证真实宽屏/旋转。代码约75%、整体交付约57%，不将新排队或unsigned包计作真机/签名验收；F33自动触发及真实双设备/私人服务、全部其他余项仍保留，目标active。
