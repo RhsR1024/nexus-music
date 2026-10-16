@@ -16,6 +16,10 @@
 
 `testDiscoveryAndAppearance` 已补充刷新按钮可达、点击后继续导入的 UI 断言；本机未执行 XCTest，需以新云端运行结果为准。
 
+## 2026-10-17 A09 mini 排序控件
+
+迷你播放器设置的上移/下移操作改为上下箭头图标；无障碍标签、testID、边界禁用和偏好持久化不变。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode，云端 iOS27 仍排队。
+
 ## 2026-10-17 A06 外观选择行视觉收口
 
 主题、背景和播放界面样式选择改为纵向设置行与选中图标，更接近 Sollin 外观页；既有选项、图片导入禁用门槛、即时保存、错误恢复和 testID 均保留。`npm run check` 302/302、`git diff --check` 通过。本机仍无完整 Xcode，云端 iOS27 运行继续排队。
