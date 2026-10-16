@@ -1,3 +1,4 @@
+import {Cover} from './Cover.tsx';
 import {Text,TextInput} from './Typography.tsx';
 import {WebDAVLibrary} from './WebDAVLibrary.tsx';
 import {DeviceMediaLibrary} from './DeviceMediaLibrary.tsx';
@@ -74,7 +75,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     </View></View>:tab==='playlists'?<View>
       <TextInput accessibilityLabel="创建音枢歌单名称" value={name} onChangeText={setName} placeholder="新歌单名称" placeholderTextColor="#768191" style={styles.input}/>
       {button('创建歌单',()=>{void perform(async()=>{const id=await services.library.createPlaylist(name);setSelected(id);});},busy||!name.trim())}
-      {library.playlists.map(item=><Pressable accessibilityRole="button" key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首</Text></Pressable>)}
+      {library.playlists.map(item=><Pressable accessibilityRole="button" accessibilityLabel={`${item.title} · ${item.entries.length}首`} key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><View style={{flexDirection:"row",gap:14,alignItems:"center"}}><Cover services={services} track={item.entries[0]?.track} size={58}/><View style={{flex:1}}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首</Text></View></View></Pressable>)}
     </View>:null}
     {!!tracks.length&&button('播放全部',()=>services.playTracks(tracks,0))}
     {tracks.length>0&&button('全部歌曲与批量管理',()=>setListOpen(true))}

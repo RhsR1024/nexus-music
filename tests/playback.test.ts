@@ -2,7 +2,7 @@ import {PlaybackMessageError} from '../src/playback/errors.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PlaybackController, type ResolvedMedia, type PlaybackBackend } from '../src/playback/controller.ts';
-import { makeQueue, select } from '../src/domain/queue.ts';
+import { makeQueue, select, appendMany } from '../src/domain/queue.ts';
 import { deferred, entry } from './fixtures.ts';
 
 function rig() {
@@ -169,4 +169,13 @@ test('clearing a saved automatic match invalidates already loaded media instead 
   const {LibraryStore}=await import('../src/storage/library.ts'),{bindManualMatches}=await import('../src/playback/matchBinding.ts');const f=rig(),store=new LibraryStore({get:async()=>undefined,put:async()=>{}},()=> 'uuid'),song=f.queue.entries[0]!.track,target={...song,origin:{kind:'online' as const,platform:'tx' as const,id:'matched'}};
   await store.setMatch(song,target,'automatic');const unbind=bindManualMatches(store,f.controller),play=f.controller.play();f.requests[0]!.resolve({url:'https://example.test/old',matchedTrack:target});await play;const token=f.controller.getSnapshot().token!;f.controller.onReady(token);f.controller.onProgress(token,20,100,false);
   await store.removeMatch(song);assert.equal(f.controller.getSnapshot().media,null);assert.equal(f.controller.getSnapshot().intent,'paused');const next=f.controller.play();assert.equal(f.requests.length,2);f.requests[1]!.resolve({url:'https://example.test/new'});await next;assert.equal(f.controller.getSnapshot().media?.startPosition,20);unbind();
+});
+
+test('bulk list append leaves an active native session and paused cursor unchanged',async()=>{
+  const {controller,requests,calls}=rig();const loading=controller.play();requests[0]!.resolve({url:'https://example.test/a.mp3'});await loading;
+  const token=controller.getSnapshot().token!;controller.onProgress(token,42,120,false);const before=calls.slice();
+  controller.setQueue(appendMany(controller.getSnapshot().queue,[entry('extra1'),entry('extra2')]));
+  assert.deepEqual(calls,before);assert.equal(controller.getSnapshot().token,token);assert.equal(controller.getSnapshot().position,42);assert.equal(controller.getSnapshot().intent,'playing');
+  controller.pause();const paused=controller.getSnapshot();controller.setQueue(appendMany(paused.queue,[entry('extra3')]));
+  assert.equal(controller.getSnapshot().token,paused.token);assert.equal(controller.getSnapshot().position,42);assert.equal(controller.getSnapshot().intent,'paused');
 });

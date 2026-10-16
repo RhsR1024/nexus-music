@@ -35,6 +35,12 @@ export function append(queue: QueueState, entry: QueueEntry): QueueState {
   return { ...queue, entries: [...queue.entries, entry], currentId: queue.currentId ?? entry.id };
 }
 
+export function appendMany(queue:QueueState,entries:readonly QueueEntry[]):QueueState {
+  const ids=new Set(queue.entries.map(item=>item.id));
+  for(const entry of entries){validateEntry(entry);if(ids.has(entry.id))throw new Error('队列条目 ID 已存在');ids.add(entry.id);}
+  return entries.length?{...queue,entries:[...queue.entries,...entries],currentId:queue.currentId??entries[0]!.id}:queue;
+}
+
 export function enqueueNext(queue: QueueState, entry: QueueEntry): QueueState {
   const validated = append(queue, entry);
   if (!queue.currentId) return validated;

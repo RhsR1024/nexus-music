@@ -30,7 +30,7 @@ import { MultiSourceResolver } from '../providers/multiSourceResolver.ts';
 import { createPlaybackSession } from '../playback/nativeSession.ts';
 import { OnlineProvider } from '../providers/online.ts';
 import { SearchCoordinator } from '../providers/searchCoordinator.ts';
-import { makeQueue, append, enqueueNext } from '../domain/queue.ts';
+import { makeQueue, append, appendMany, enqueueNext } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
 import type { Track } from '../domain/track.ts';
 import type {HTTPClient} from '../providers/http.ts';
@@ -120,6 +120,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
+  const addTracksToQueue=(tracks:readonly Track[])=>{const queue=playback.controller.getSnapshot().queue;playback.controller.setQueue(appendMany(queue,tracks.map(track=>({id:Crypto.randomUUID(),track}))));};
   const restoreBackup=async(savedLibrary:import('../storage/library.ts').LibraryState,stats:PlaybackStatsState)=>{
     validateLibrary(savedLibrary);const safeStats=cleanPlaybackStats(stats);
     await libraryMutations.run(async()=>{
@@ -127,7 +128,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
       await Promise.all([library.restore(),playbackStats.restore(true)]);
     });
   };
-  return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

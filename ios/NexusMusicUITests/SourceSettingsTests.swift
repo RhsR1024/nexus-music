@@ -304,6 +304,51 @@ final class SourceSettingsTests: XCTestCase {
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     app.buttons["收起设备媒体库"].tap()
   }
+  func testPlaylistSearchSortAndDuplicateRemoval() throws {
+    let app=XCUIApplication();app.launch()
+    func reach(_ element:XCUIElement){
+      for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()}
+    library();let initialPlaylists=app.buttons["我的歌单"];reach(initialPlaylists);initialPlaylists.tap()
+    let prior=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch
+    while prior.exists {reach(prior);prior.tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()}
+    let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
+    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+    XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+    let folder=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+    if !folder.waitForExistence(timeout:3){let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch;XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()}
+    XCTAssertTrue(folder.waitForExistence(timeout:10));folder.tap()
+    let file=app.descendants(matching:.any).matching(NSPredicate(format:"label CONTAINS %@","Nexus Playlist Fixture")).firstMatch
+    XCTAssertTrue(file.waitForExistence(timeout:10));file.tap()
+    let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch;if open.waitForExistence(timeout:3){open.tap()}
+    XCTAssertTrue(app.alerts["导入LX歌单"].waitForExistence(timeout:15));app.alerts.buttons["追加导入"].tap()
+    XCTAssertTrue(app.staticTexts["已导入 1 个歌单、1000 首歌曲"].waitForExistence(timeout:15))
+    let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
+    let playlist=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch;reach(playlist);playlist.tap()
+    let manage=app.buttons["全部歌曲与批量管理"];reach(manage);manage.tap()
+    let search=app.textFields["搜索列表歌曲歌手专辑"];XCTAssertTrue(search.waitForExistence(timeout:10));search.tap();search.typeText("duplicate\n")
+    let count=app.staticTexts["track-list-count"]
+    func expectCount(_ label:String){expectation(for:NSPredicate(format:"label == %@",label),evaluatedWith:count);waitForExpectations(timeout:10)}
+    expectCount("显示 2 / 1000 首 · 已选 0 条")
+    let second=app.descendants(matching:.any).matching(identifier:"track-select-1").firstMatch;reach(second);second.tap()
+    reach(search);app.buttons["选择歌曲排序"].tap();app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","时长从长到短")).firstMatch.tap()
+    expectCount("显示 2 / 1000 首 · 已选 1 条")
+    let remove=app.buttons["移除所选"];reach(remove);remove.tap();app.alerts.buttons["移除"].tap()
+    expectCount("显示 1 / 999 首 · 已选 0 条")
+    reach(search);app.buttons["清空歌曲筛选"].tap();expectCount("显示 999 / 999 首 · 已选 0 条")
+    let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
+    app.buttons["收起歌曲列表"].tap();app.terminate();app.launch();library()
+    reach(playlists);playlists.tap();reach(playlist);playlist.tap();reach(manage);manage.tap()
+    search.tap();search.typeText("duplicate\n");expectCount("显示 1 / 999 首 · 已选 0 条")
+    let row=app.descendants(matching:.any).matching(identifier:"track-row-0").firstMatch;reach(row);row.swipeLeft()
+    let swipe=app.buttons["确认移除：Duplicate fixture"];XCTAssertTrue(swipe.waitForExistence(timeout:5));swipe.tap();app.alerts.buttons["移除"].tap()
+    expectCount("显示 0 / 998 首 · 已选 0 条")
+    app.buttons["收起歌曲列表"].tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertFalse(playlist.exists)
+  }
   func testYLocalAudioFileImport() throws {
     let app=XCUIApplication();app.launch()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
