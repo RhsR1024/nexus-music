@@ -1,3 +1,9 @@
+## 2026-10-17 A09 播放器内部面板 page sheet 代码批次
+
+- 现代播放器三个内部面板使用 iOS `pageSheet`，其他业务 Modal 不变。
+- `npm run check`：302/302；`git diff --check`：通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端 iOS27、page sheet 手势/旋转、IPA 和真机待新提交运行。
+
 ## 2026-10-17 A08 音乐库长列表分批加载代码批次
 
 - 音乐库正文增加每次 20 项的“加载更多歌曲”，长歌单 UI 回归覆盖入口；完整批量管理弹层与既有筛选/排序不变。

@@ -17,7 +17,7 @@ import { Lyrics } from './Lyrics.tsx';
 import { FontSettings } from './FontSettings.tsx';
 import { useState, useSyncExternalStore } from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, View} from 'react-native';
-import {Modal} from './AdaptiveModal.tsx';
+import {Modal,SheetModal} from './AdaptiveModal.tsx';
 import type { Services } from '../app/services.ts';
 import type { PlayerLayout } from '../app/preferences.ts';
 import { currentEntry, remove, move } from '../domain/queue.ts';
@@ -107,7 +107,7 @@ export function Player({ services }: { services: Services }) {
         {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setDetailPanel('menu');setDetails(true);}}/>}
         {preferences.playerLayout==='classic'&&detailContent}
       </ScrollView></View>
-      <Modal visible={details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={closeDetails}>
+      <SheetModal visible={details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={closeDetails}>
         {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
         <ScrollView style={styles.root} contentContainerStyle={styles.content}>
           {button('收起播放选项',closeDetails)}
@@ -121,23 +121,23 @@ export function Player({ services }: { services: Services }) {
             <Text style={styles.title}>队列与播放选项</Text>{detailContent}
           </>}
         </ScrollView>
-      </Modal>
-      <Modal visible={styleSheet&&details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={()=>setStyleSheet(false)}>
+      </SheetModal>
+      <SheetModal visible={styleSheet&&details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={()=>setStyleSheet(false)}>
         {styleSheet&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
         <ScrollView style={styles.root} contentContainerStyle={styles.content}>
           {button('收起播放界面样式',()=>setStyleSheet(false))}
           <Text style={styles.title}>播放界面样式</Text>
           {skinSelector}
         </ScrollView>
-      </Modal>
-      <Modal visible={lyricSheet&&details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={()=>setLyricSheet(false)}>
+      </SheetModal>
+      <SheetModal visible={lyricSheet&&details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={()=>setLyricSheet(false)}>
         {lyricSheet&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
         <ScrollView style={styles.root} contentContainerStyle={styles.content}>
           {button('收起歌词显示设置',()=>setLyricSheet(false))}
           <Text style={styles.title}>歌词显示设置</Text>
           <FontSettings services={services}/>
         </ScrollView>
-      </Modal>
+      </SheetModal>
       <CommentsModal services={services} track={commenting} onClose={()=>setCommenting(null)}/>
       <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
       <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
