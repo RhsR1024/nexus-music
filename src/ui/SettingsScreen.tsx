@@ -16,7 +16,7 @@ import {NavidromeSettings} from './NavidromeSettings.tsx';
 import {SourceSettings} from './SourceSettings.tsx';
 
 export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'storage'|'sources'|AppearanceSection;
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'图形均衡器',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
   const {palette:p}=useTheme();
