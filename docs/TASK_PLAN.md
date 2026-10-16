@@ -1,6 +1,6 @@
 ## 2026-10-17 云端队列最新约定
 
-用户授权覆盖历史“不取消排队”规则：同工作流/分支保留正在运行任务，仅最新提交排队。采用 `queue: single`、`cancel-in-progress: false`；旧pending取消不记为通过，最新完整回归验证累计代码，失败继续定位和修复。策略及88分钟真实执行耗时分解见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。实施前运行1/排队40；push后验证实际收敛。
+用户授权覆盖历史“不取消排队”规则：同工作流/分支保留正在运行任务，仅最新提交排队。采用 `queue: single`、`cancel-in-progress: false`；旧pending取消不记为通过，最新完整回归验证累计代码，失败继续定位和修复。策略及88分钟真实执行耗时分解见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。`d9317f2` push后已核实40旧pending取消、运行中保留/最新pending为1；以后每次push核对运行≤1/排队≤1。最新工作量加权约77%代码/58%整体交付（52%–64%），见[PROGRESS_ESTIMATE.md](PROGRESS_ESTIMATE.md)。
 
 ## 2026-10-17 F33 云端阶段验收补录
 

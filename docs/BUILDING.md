@@ -1,5 +1,7 @@
 # 开发与构建
 
+云端执行[最新队列规则](GITHUB_ACTIONS.md)：同工作流/分支保留运行中、仅最新一个pending（`queue: single`、`cancel-in-progress: false`）。阶段先完成本地验证再正常push，之后核对队列已收敛；旧pending由新提交替换，不重派旧版本。最新完整云端成功验证累计代码，取消的中间版本不能写为通过；本地SDK26.2、云端SDK27、签名/真机分别记证据。
+
 基础候选：Expo 54.0.37 / React Native 0.81.5（新架构）/ React 19.1.0 / TypeScript 5.9.3，npm单锁文件。Node24.14.0 / npm11.9.0；Xcode26.3（17C529）；CocoaPods1.16.2。
 
 ## 本机命令

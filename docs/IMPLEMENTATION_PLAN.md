@@ -1,6 +1,6 @@
 ## 2026-10-17 云端队列最新约定
 
-用户已授权保留运行中构建、让最新提交替换旧排队提交。工作流 concurrency 改为 `queue: single`、`cancel-in-progress: false`，覆盖下文所有旧“不取消排队/queue:max”历史记录。每个实现阶段仍本地验证、更新文档/交接、分批提交push；最新完整云端回归验证累计状态，取消的旧运行不计作通过。新功能如Sollin有对应能力则先参考其IPA实现线索/UI/交互，否则沿项目风格原创实现。耗时证据与验收见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。
+用户已授权保留运行中构建、让最新提交替换旧排队提交。工作流 concurrency 已改为 `queue: single`、`cancel-in-progress: false`，覆盖下文所有旧“不取消排队/queue:max”历史记录。`d9317f2` push后已核对40旧pending取消、运行中未打断；以后每次push核对运行≤1/排队≤1。每个实现阶段仍本地验证、更新文档/交接、分批提交push；最新完整云端回归验证累计状态，取消的旧运行不计作通过。新功能如Sollin有对应能力则先参考其IPA实现线索/UI/交互，否则沿项目风格原创实现。耗时证据与验收见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)，工作量进度见[PROGRESS_ESTIMATE.md](PROGRESS_ESTIMATE.md)。
 
 ## 2026-10-17 F33 云端阶段验收补录
 

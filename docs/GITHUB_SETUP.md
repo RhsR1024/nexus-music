@@ -1,5 +1,7 @@
 # 本机GitHub认证与阶段提交
 
+2026-10-17新增当前约定：阶段验证后正常push；云端同工作流/分支保留运行中的构建，仅最新一个提交排队。配置为 `queue: single`、`cancel-in-progress: false`，push后核对运行≤1/pending≤1；取消的旧pending不记为通过，不手动重派旧版本。此条覆盖其他文档的历史排队保留要求，完整规则见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。
+
 2026-10-15已验证SSH认证为RhsR1024，origin已切换到git@github.com:RhsR1024/nexus-music.git，main已设置跟踪origin/main；工程基线提交6ffa60b已成功push。用户不需要重复执行下面的初次配置步骤。
 
 以下保留初次配置方法。私钥留在用户.ssh，不能放入仓库或Tools公共资料。

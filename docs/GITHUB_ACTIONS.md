@@ -4,7 +4,7 @@
 
 用户明确要求压缩积压，覆盖本文历史上的 `queue: max` 约定。工作流保留原 concurrency group，改用 `queue: single` 与 `cancel-in-progress: false`：同一工作流/分支运行中的任务继续，后来的提交替换旧 pending，只保留最新一个。正常线性 main 提交包含此前代码及仍保留的测试，可由最新整套回归验证累计状态；旧提交被取消不记为成功，也不补称每个中间版本都有独立 IPA。不同分支/PR 不互相覆盖，失败诊断及历史成功产物保留。
 
-依据为 [GitHub concurrency 官方文档](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)。2026-10-17 盘点为运行1/排队40；`38934924631` 创建于北京时间00:49:22，iOS job实际07:39:52才开始，不能把约7小时等待算成编译耗时。新策略 push 后须核实旧 pending 实际取消及运行中任务未被打断。
+依据为 [GitHub concurrency 官方文档](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)。2026-10-17 盘点为运行1/排队40；`38934924631` 创建于北京时间00:49:22，iOS job实际07:39:52才开始，不能把约7小时等待算成编译耗时。策略提交 `d9317f2` push 后已通过API核实：40个旧pending取消，只剩运行中`38934924631`和最新pending`38983886757`，运行中未被打断。以后每次push同样核对运行≤1/pending≤1；异常先检查group/分支及工作流版本，不重复派发。
 
 最近完整成功的 `38913246781` iOS job实际88分06秒：核心 App 编译/UI组59分03秒，匹配/歌词/健康组20分01秒，原生契约1分49秒，模拟器准备2分07秒，设备归档3分21秒。核心组包含编译和测试，不能全算编译；两组 App 验证合计约90%的job时间。失败的 `38924137682` 另在测试结束后等待600秒诊断收集；这属于失败额外开销。后续优化应先量测慢测试/重复构建与空闲等待，保持播放/持久化/竞态断言，不通过删除验收换取短耗时。
 
@@ -45,7 +45,7 @@ main推送、PR及手动Run workflow都会触发 `.github/workflows/ios.yml`：
 
 `npm ci` → `npm run check` → `npm run ios:pods` → `npm run ios:archive`。脚本使用相邻Tools/env.sh（若存在），也支持NEXUS_TOOLS_ENV；CI使用runner工具链。显式DEVELOPER_DIR优先。所有构建产物仍在build内，不提交Git。没有iOS27 SDK的本机继续正常编译26.2 SDK，不伪造清单中的SDK版本。
 
-## 阶段构建排队（2026-10-15）
+## 历史：阶段构建全部排队（2026-10-15，已被2026-10-17 single策略覆盖）
 
 为保留阶段验收，concurrency 同分支设置 cancel-in-progress: false、queue: max：新的阶段 push 进入队列，不中断当前构建，也不以最新 pending 替换前一个 pending。GitHub 当前官方文档支持最多100个等待运行，达到上限后新的运行会取消；不能承诺无限排队或严格按提交时间排序。依据：https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency 。
 

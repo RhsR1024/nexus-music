@@ -1,5 +1,7 @@
 # 功能开发与验收状态
 
+2026-10-17云端状态修正：`d9317f2` 已将队列改为single，原40个旧pending已由GitHub自动取消；核对时仅`38934924631`运行、`38983886757`最新排队。后文旧“排队/不取消”仅为当时历史，不能继续照执行或计作通过。当前规则为[保留运行中/只留最新排队](GITHUB_ACTIONS.md)，push后核对实际队列。整体工作量评估见[PROGRESS_ESTIMATE.md](PROGRESS_ESTIMATE.md)。
+
 2026-10-17 A08：音乐库收藏、最近播放和本地歌单歌曲行改为紧凑省略号入口，Sheet 以图标行提供下一首、加入队列、收藏、加入歌单、匹配、歌单上移/移除和历史删除；保留音枢权威队列、来源身份和失败保留。分段控件改为按钮角色并保留选中态，修复既有 iOS UI 查询。`npm run check` 302/302；本地 `testPlaylistSearchSortAndDuplicateRemoval` 1/1 通过，121.062 秒；清洁 IPA SHA256 `1adf6d5587bf81135ef2cbf7e86a039fb5dcc7e176e590e1e0f71e1f7ed87532`。iOS 27 运行 `38975058418` 当前 `pending`，不计作云端通过。
 
 2026-10-17 A09：迷你播放器支持上滑打开完整播放页，完整播放页顶部手柄支持下滑收起；点击入口、按钮顺序、队列和暂停意图保持。`npm run check` 302/302，本地 `testCrossPlatformLyrics` 1/1 通过，清洁本地 unsigned IPA SHA256 `69dee96f8c4e462b960fb42c24f93b393470341219c4ba3afed1d2e6dee7ac4b`。iOS 27 运行 `38972668259` 当前 `pending`，不计作云端通过。

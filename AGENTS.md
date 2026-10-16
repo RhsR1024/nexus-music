@@ -16,3 +16,5 @@
 - 用户要求功能移植前详细比较本机 ReferenceProject 中的悦音、Q-1515、wtfdelphia、CyMusic及自有Wayferar-Music；按 docs/REFERENCE_COMPARISON.md 记录实现、维护、Android边界、许可和验收后再采纳。
 
 - 用户已明确授权阶段验收后提交并push到RhsR1024/nexus-music。先验证、检查diff及私人资源排除，核对远程再正常push；认证失败保留本地提交并说明，不force push。
+
+- 云端CI最新规则（2026-10-17）：同工作流/分支保留正在运行的构建，仅保留最新一个排队提交，使用 `queue: single` 与 `cancel-in-progress: false`。新提交自动替换旧pending，不手动重派旧版本、不取消运行中任务；每次push后核对实际队列至多运行1/排队1。此规则覆盖文档中历史“不取消排队/queue:max”约定；取消的旧运行不算通过，最新成功运行仅证明其实际包含的代码/测试。详见docs/GITHUB_ACTIONS.md。
