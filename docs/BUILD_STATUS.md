@@ -590,4 +590,4 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 - 详情歌曲行将四个文字动作收敛为 `ellipsis-horizontal` 图标，复用既有下一首、加入队列、本地收藏和加入歌单。
 - 更多操作使用 `SheetModal`（iOS `pageSheet`），保留 44pt 点击区域、无障碍标签和失败保留提示。
 - `npm run check`：302/302；`git diff --check`：通过。
-- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；推送后查询新的 iOS27 云端运行，不能把 `pending` 记为通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38959060803`（`4ccbb25`）已创建，当前 `pending` 且 jobs=0，不能记为 iOS27 通过。
