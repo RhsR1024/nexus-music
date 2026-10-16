@@ -132,6 +132,6 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 
 工作区当前批次补齐基础响应式壳：横屏和平板在 `app.json`/`Info.plist` 中启用；宽屏使用安全区域内的侧栏导航、居中最大内容列和播放器区域，窄屏继续使用底部悬浮导航；发现页卡片按窗口宽度和 `fontScale` 自适应列数。未新增播放器、队列、原生音频或数据模型，设计记录见[决策0031](decisions/0031-adaptive-ipad-layout.md)。
 
-验证：`npm run typecheck`、`npm test`（269/269）和 `npm run ios:build` 通过；`npm run ios:archive` 通过，manifest 为 arm64/iphoneos26.2/min15.1/signed=false，IPA SHA256 为 `0bc8ef6f7ec88d84ad5a2ebf9df34a9a57e708d09867d3a95f84d0f714502d56`。本机没有可用 iPad 模拟器命令，故未把旋转、分屏、键盘、大字、无障碍或真机显示写成已验收。
+验证：`npm run typecheck`、`npm test`（269/269）和本地 iPad Pro 13-inch 模拟器 arm64 Release `xcodebuild` 通过；已安装启动并查看 iPad 窗口截图。当前模拟器运行在窄分屏/Stage Manager 窗口，因此截图验证的是窄窗口底部导航与双列发现网格；宽屏侧栏、旋转、分屏切换、键盘、大字、无障碍和真机显示仍未验收。生产 arm64 unsigned IPA 已由同一批代码归档并核验，摘要见 BUILD_STATUS。
 
-本批尚未提交时，云端已有 `38889054633`（13dc450，执行中）、`38894434005`（a0ee5bb，排队）、`38899071423`（7c12023，排队）；本批当前 HEAD `3d4a0e9` 对应 `38899634815`，排队。保持队列，不取消或重复派发；云端成功后再更新本批 iOS27 结论。
+本批已提交并推送为 `dc3bb66`；新云端 [38902069374](https://github.com/RhsR1024/nexus-music/actions/runs/38902069374) 已创建并排队。`38889054633`（13dc450）、`38894434005`（a0ee5bb）、`38899071423`（7c12023）按原队列继续跟踪；保持队列，不取消或重复派发，云端成功后再更新本批 iOS27 结论。

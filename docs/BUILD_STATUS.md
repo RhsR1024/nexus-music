@@ -395,8 +395,8 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 
 ## 2026-10-16 S8/J56 横屏与平板自适应本地验证
 
-当前工作区在 3d4a0e9 上补齐基础响应式壳：`app.json` 开放横屏并支持平板，iOS `Info.plist` 增加横屏方向；主壳在宽屏使用安全区域侧栏、最大内容列和播放器区域，窄屏保留底部导航；发现页按窗口宽度和 `fontScale` 计算 1–4 列。代码没有新增音频、队列或原生依赖，设计见 `docs/decisions/0031-adaptive-ipad-layout.md`。
+当前工作区在 `dc3bb66` 上补齐基础响应式壳：`app.json` 开放横屏并支持平板，iOS `Info.plist` 增加横屏方向；主壳在宽屏使用安全区域侧栏、最大内容列和播放器区域，窄屏保留底部导航；发现页按窗口宽度和 `fontScale` 计算 1–4 列。代码没有新增音频、队列或原生依赖，设计见 `docs/decisions/0031-adaptive-ipad-layout.md`。
 
-本地证据：`npm run typecheck` 通过；`npm test` 269/269 通过；`npm run ios:build` 使用 Xcode 26.3 / SDK 26.2 的 Release 模拟器构建成功；`npm run ios:archive` 成功，`build/distribution/NexusMusic-unsigned.ipa` 为 arm64、iphoneos26.2、min15.1、signed=false，SHA256 `0bc8ef6f7ec88d84ad5a2ebf9df34a9a57e708d09867d3a95f84d0f714502d56`。本机当前 `xcrun simctl` 不在可用开发者工具路径，未执行 iPad 模拟器专项；旋转、分屏、键盘、大字、无障碍和真机仍是验收缺口。
+本地证据：`npm run typecheck` 通过；`npm test` 269/269 通过；本地 iPad Pro 13-inch 模拟器 arm64 Release `xcodebuild` 成功，已安装启动并查看 `build/ipad-portrait.png`、`build/ipad-dark.png`；当前为窄分屏/Stage Manager 窗口，验证了窄窗口底部导航与双列发现网格。生产 `npm run ios:archive` 也已成功，`build/distribution/NexusMusic-unsigned.ipa` 为 arm64、iphoneos26.2、min15.1、signed=false，SHA256 `0bc8ef6f7ec88d84ad5a2ebf9df34a9a57e708d09867d3a95f84d0f714502d56`。宽屏侧栏、旋转、分屏切换、键盘、大字、无障碍和真机仍是验收缺口。
 
-本批未提交前已存在的云端运行保持原队列：`38889054633`（13dc450，in_progress）、`38894434005`（a0ee5bb，pending）、`38899071423`（7c12023，pending）；HEAD `3d4a0e9` 对应 `38899634815`（pending）。不把排队或本地结果记作 iOS27 通过；提交本批后再跟踪新运行。
+本批提交并推送为 `dc3bb66` 后，新云端 [38902069374](https://github.com/RhsR1024/nexus-music/actions/runs/38902069374) 已创建并排队；此前 `38889054633`（13dc450）、`38894434005`（a0ee5bb）、`38899071423`（7c12023）仍按原队列跟踪。不把排队或本地结果记作 iOS27 通过。
