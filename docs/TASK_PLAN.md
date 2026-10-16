@@ -409,3 +409,6 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 - [x] 本地 `build/SourceUITests-1792183369784.xcresult` 1/1 通过；`npm run check` 302/302。
 - [x] 提交 `7c8075c` 已 push；清洁 arm64 unsigned IPA SHA256 `5ec7ec1f64698cb61da74a9e3403da6615f348a6838d92ce4aea297639f3c933`。
 - [ ] iOS 27 云端运行 `38964697049` 当前 pending；签名、真机、后台/功耗仍待验收。
+## 2026-10-17 当前批次证据
+
+`bea1fbd` 已 push。音乐库歌曲行更多操作 Sheet 的最终本地 UI 回归为 `build/SourceUITests-1792189902252.xcresult`（音乐库专项 1/1，123.773 秒），本地清洁 unsigned IPA manifest 为 `dirty=false`、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`，SHA256 `9da2021825fad953b5cf37b8400d02456d67edf520d63209f2613bf492c90642`。对应 iOS 27 运行 [38976733431](https://github.com/RhsR1024/nexus-music/actions/runs/38976733431) 截至 2026-10-17 仍为 `pending`，不能记为云端通过。

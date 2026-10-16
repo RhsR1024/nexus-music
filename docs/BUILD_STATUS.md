@@ -675,3 +675,12 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a2054838581ef064a3304e5005af37332dc0115d19d1bbc0fbc6` 与API digest一致，ZIP CRC通过。内部IPA SHA256 `fdc0696bdab9b87f75ece602e7abb20a64f162a2c670c6e489b69f9bf0b1430f` 与随包sha256一致，内部ZIP CRC通过；已检查bundle ID、正式JS无测试adapter、arm64、iphoneos27.0、最低15.1。manifest为Xcode27.0/27A266a、signed=false、dirty=true且仅 `M ios/Podfile.lock`。设备族仍为[1]，不算后续iPad原生窗口或近期UI改动通过。
 
 诊断artifact `12075332518`（353132621字节）仅保存API元信息，未下载，不能声称其摘要已核验。旧38902977651写真导入错误仍保留根因定位项；本次成功不证明间歇性错误已被修复。F33 `38913246781` 正常执行，最新功能提交排队；没有取消/重派或干扰其他上下文的修改。
+## 2026-10-17 A08 音乐库动作 Sheet 最终本地归档
+
+- 提交 `bea1fbdd2e05468977ae98c8ecb987aae78c8dcb` 已 push；在 `b0139bb` 的歌曲行更多操作 Sheet 基础上，补充 UI 回归对“加入队列”和“本地收藏”入口的断言。
+- `npm run check`：302/302；`git diff --check`：通过。
+- 本地 UI：`build/SourceUITests-1792189642512.xcresult` 的 `testDiscoveryAndAppearance` 1/1 通过；本轮最终音乐库专项结果见下条。
+- 本地最终音乐库 UI：`build/SourceUITests-1792189902252.xcresult`，音乐库歌曲行/歌单搜索排序/重复移除/滑动删除/更多操作覆盖通过，1/1，123.773 秒，0 failures。
+- 本地 Release archive：成功；`build/distribution/build-manifest.json` 为 commit=`bea1fbdd2e05468977ae98c8ecb987aae78c8dcb`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`。
+- IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `9da2021825fad953b5cf37b8400d02456d67edf520d63209f2613bf492c90642`。
+- 云端 iOS 27：[38976733431](https://github.com/RhsR1024/nexus-music/actions/runs/38976733431) 对应 `bea1fbd`，截至 2026-10-17 仍为 `pending`，不计作通过；签名、真机、后台/功耗和大字手势仍待验收。

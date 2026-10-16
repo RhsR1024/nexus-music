@@ -679,3 +679,6 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 # 2026-10-17 本机工具链更正与 A08/A09 本地验证
 
 `source scripts/environment.sh` 后本机实际使用 Xcode 26.3（17C529）/iOS 26.2 SDK，不是仅有 Command Line Tools。当前 HEAD `31f1ebc` 已完成本轮增量本地验证：`build/SourceUITests-1792181776488.xcresult` 的 `testCrossPlatformLyrics` 与 `testDiscoveryAndAppearance` 共 2/2 通过；`build/distribution/build-manifest.json` 记录 `dirty=false`、arm64、`iphoneos26.2`、设备族 `[1,2]`、unsigned，IPA SHA256 `b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。这仍不替代 iOS 27 云端终态、签名和真机验收。
+# 2026-10-17 A08 音乐库动作 Sheet 最终证据
+
+`bea1fbd` 已正常提交并 push。音乐库歌曲行更多操作 Sheet 的最终本地 UI 回归为 `build/SourceUITests-1792189902252.xcresult`，1/1 通过、123.773 秒，覆盖歌单创建、1000 首长列表分批加载、搜索排序、重复项移除、滑动删除及加入队列/本地收藏入口；`npm run check` 为 302/302，`git diff --check` 通过。清洁本地归档 manifest 为 commit=`bea1fbdd2e05468977ae98c8ecb987aae78c8dcb`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 为 `9da2021825fad953b5cf37b8400d02456d67edf520d63209f2613bf492c90642`。对应 iOS 27 运行 [38976733431](https://github.com/RhsR1024/nexus-music/actions/runs/38976733431) 截至 2026-10-17 仍为 `pending`，不计作通过；签名、真机、后台/功耗和大字手势仍待验收。
