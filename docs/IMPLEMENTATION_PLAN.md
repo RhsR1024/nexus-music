@@ -1,3 +1,7 @@
+## 2026-10-17 A08 发现详情歌曲动作
+
+`Discovery` 订阅本地音乐库状态，仅用于显示当前收藏；收藏写入仍走 `LibraryStore`，加入歌单复用 `PlaylistPicker`，不改变在线详情分页和完整导入。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode，云端/真机待验证。
+
 ## 2026-10-17 A05 切歌后封面失败缓存隔离
 
 `ArtworkBackdrop` 的封面加载 effect 在新的 track key 上同时清空 artwork 与失败 URI 集合；不会改变取色缓存或播放状态。`npm run check` 302/302、`git diff --check` 通过；本机无完整 Xcode；运行 `38957768659`（`06a75bf`）当前 `pending`，云端/真机待验证。

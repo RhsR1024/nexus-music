@@ -1,6 +1,6 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {Alert, FlatList, Pressable, View, useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Modal} from './AdaptiveModal.tsx';
@@ -12,18 +12,20 @@ import {Cover} from './Cover.tsx';
 import {trackRows,viewTrackRows,type TrackSort} from '../domain/trackList.ts';
 import {TrackListTools} from './TrackListTools.tsx';
 import {QishuiImport} from './QishuiImport.tsx';
+import {PlaylistPicker} from './PlaylistPicker.tsx';
 type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易'],['tx','QQ'],['kw','酷我'],['kg','酷狗'],['mg','咪咕']]as const;
 export function Discovery({services,embedded=false}:{services:Services;embedded?:boolean}){
   const theme=useTheme(),{width,fontScale}=useWindowDimensions();
+  const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [contentWidth,setContentWidth]=useState<number>();
   const [tools,setTools]=useState(false),[descriptionOpen,setDescriptionOpen]=useState(false);
   const [query,setQuery]=useState(''),[sort,setSort]=useState<TrackSort>('original');
   const [total,setTotal]=useState<number>();
 
   const [open,setOpen]=useState(false),[platform,setPlatform]=useState<OnlinePlatform>('wy'),[view,setView]=useState<PageView>({kind:'playlists'}),[category,setCategory]=useState<string>();
-  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false);
+  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]);
   const page=useRef(0),generation=useRef(0),pending=useRef(new AbortController()),importAbort=useRef(new AbortController());
   async function load(append=false){
     const version=++generation.current;pending.current.abort();pending.current=new AbortController();const signal=pending.current.signal,next=append?page.current+1:1;
@@ -41,7 +43,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
     finally{if(version===generation.current)setLoading(false);}
   }
   useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();};},[open,embedded,platform,view,category]);
-  function close(){importAbort.current.abort();setImporting(false);setOpen(false);}
+  function close(){importAbort.current.abort();setImporting(false);setAdding([]);setOpen(false);}
   async function importPlaylist(){
     if(view.kind!=='detail')return;importAbort.current.abort();importAbort.current=new AbortController();const signal=importAbort.current.signal;
     setImporting(true);setMessage('');
@@ -87,13 +89,13 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
     <FlatList key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:40}} keyboardShouldPersistTaps="handled"
       renderItem={({item,index})=>item.kind==='track'?<View style={{paddingVertical:14,borderTopWidth:1,borderColor:theme.palette.border}}>
         <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)} style={{flexDirection:'row',alignItems:'center',gap:14}}><Cover services={services} track={item.track} size={50}/><View style={{flex:1,gap:6}}><Text style={{color:theme.palette.text,fontSize:16,fontWeight:'600'}}>{item.track.title}</Text><Text numberOfLines={1} style={{color:theme.palette.secondary}}>{item.track.artist}{item.track.album?` · ${item.track.album}`:''}</Text></View></Pressable>
-        <View style={{flexDirection:'row',gap:10,marginTop:10}}>{button('下一首',()=>services.addToQueue(item.track,true))}{button('加入队列',()=>services.addToQueue(item.track))}</View>
+        <View style={{flexDirection:'row',gap:10,marginTop:10,flexWrap:'wrap'}}>{button('下一首',()=>services.addToQueue(item.track,true))}{button('加入队列',()=>services.addToQueue(item.track))}{button(services.library.isFavorite(item.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(item.track).catch(()=>setMessage('收藏未保存，原数据保留；请重试'));})}{button('加入歌单',()=>setAdding([item.track]))}</View>
       </View>:<Pressable testID={`discovery-item-${index}`} accessibilityRole="button" onPress={()=>item.kind==='category'?(setCategory(item.id),setView({kind:'playlists'})):openCollection(item.value,item.rank)} style={{flex:1,marginBottom:24,gap:9,maxWidth:cardWidth}}>
         {item.kind==='collection'?<Cover services={services} url={item.value.artwork} size={cardWidth}/>:<View style={{padding:22,borderRadius:22,backgroundColor:theme.palette.surface}}><Text style={{color:theme.palette.accent,fontSize:22}}>♫</Text></View>}
         <Text numberOfLines={2} style={{color:theme.palette.text,fontSize:15,fontWeight:'600',lineHeight:21}}>{item.kind==='category'?item.title:item.value.title}</Text><Text numberOfLines={1} style={{color:theme.palette.secondary,fontSize:12}}>{item.kind==='category'?item.group:item.value.count!==undefined?`${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
       ListFooterComponent={<View style={{gap:12,paddingVertical:24}}>{loading&&<Text style={{color:theme.palette.secondary}}>正在获取平台数据…</Text>}{!!error&&<Text style={{color:theme.palette.accent}}>{error}</Text>}{!loading&&!error&&!items.length&&<Text style={{color:theme.palette.secondary}}>此平台暂未返回可展示内容</Text>}{button(error?'重试':'刷新',()=>{void load();},loading)}{more&&button('加载更多',()=>{void load(true);},loading)}</View>}/>
   </View>;
-  if(embedded)return content;
-  return <><View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View><Modal visible={open} animationType="slide" onRequestClose={close}>{content}</Modal></>;
+  if(embedded)return <><View style={{flex:1}}>{content}</View><PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/></>;
+  return <><View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View><Modal visible={open} animationType="slide" onRequestClose={close}>{content}<PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/></Modal></>;
 }
