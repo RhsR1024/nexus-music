@@ -7,6 +7,7 @@ import {useTheme} from './theme.tsx';
 import {AppearanceSettings,type AppearanceSection} from './AppearanceSettings.tsx';
 import {AppearanceOverview} from './AppearanceOverview.tsx';
 import {AudioSettings} from './AudioSettings.tsx';
+import {EqualizerSettings} from './EqualizerSettings.tsx';
 import {PlaybackSettings} from './PlaybackSettings.tsx';
 import {FontSettings} from './FontSettings.tsx';
 import {CacheSettings} from './CacheSettings.tsx';
@@ -14,8 +15,8 @@ import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {NavidromeSettings} from './NavidromeSettings.tsx';
 import {SourceSettings} from './SourceSettings.tsx';
 
-export type SettingsPage='home'|'playback'|'appearance'|'typography'|'storage'|'sources'|AppearanceSection;
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
+export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'storage'|'sources'|AppearanceSection;
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'图形均衡器',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
   const {palette:p}=useTheme();
@@ -51,7 +52,8 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
     switch(key){
       case 'home':return <View style={{gap:14}}>
         <Text style={{color:p.secondary,lineHeight:23,marginBottom:8}}>让每一次聆听，更像你。</Text>
-        {row('playback',`${preferences.quality} · 音质、均衡器、睡眠与歌词`,'musical-notes-outline')}
+        {row('playback',`${preferences.quality} · 音质、睡眠与歌词`,'musical-notes-outline')}
+        {row('equalizer','10 段曲线、前级、预设与实时 PCM 处理','options-outline')}
         {row('appearance','主题、背景、播放界面与迷你播放器','color-palette-outline')}
         {row('storage','缓存、备份、同步与歌单迁移','folder-outline')}
         <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13,marginTop:12}}>曲库与播放来源</Text>
@@ -59,6 +61,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       </View>;
       case 'sources':return <><NavidromeSettings services={services}/><SourceSettings catalog={services.catalog} health={services.sourceHealth}/></>;
       case 'playback':return <>{row('typography','歌词字体、颜色、对齐与逐字效果','text-outline')}<AudioSettings services={services}/><PlaybackSettings services={services}/></>;
+      case 'equalizer':return <EqualizerSettings services={services}/>;
       case 'appearance':return <AppearanceOverview services={services} open={open}/>;
       case 'theme':case 'background':case 'skins':case 'mini':case 'navigation':case 'accent':return <AppearanceSettings services={services} section={key}/>;
       case 'typography':return <FontSettings services={services}/>;

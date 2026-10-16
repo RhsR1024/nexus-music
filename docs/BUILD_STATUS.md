@@ -14,6 +14,12 @@
 - 本地 `testGroupedSettingsNavigationAndDrafts`：通过，iOS 26.3.1 模拟器，`build/SourceUITests-1792169818700.xcresult`，1/1，约 178.9 秒。
 - 当前 `build/distribution/build-manifest.json` 仍是提交前 dirty 归档，不能作为本修复的交付包；修复提交后重新归档。
 
+## 2026-10-17 独立图形均衡器设置页
+
+- 按 Sollin 设置分组把 EQ 从“播放与歌词”拆为独立 `图形均衡器` 二级页；播放页保留音质、音量、睡眠与歌词入口。原生 PCM/EQ、前级、10 段曲线、内置预设和自定义预设继续共用原偏好存储与播放后端。
+- `npm run check`：类型检查与 302 项业务测试通过；`git diff --check` 通过。`testGraphicalEQPresetPersistence` 已改为通过 `settings-open-equalizer` 进入，并继续覆盖拖动、重启、删除预设和睡眠定时。
+- 本机当前只有 Command Line Tools，没有完整 Xcode，因此本轮未能重新执行本地 iOS UI 专项或 unsigned IPA 归档；不能把上一批 IPA 当作本轮交付包。提交后以新的 iOS 27 云端运行验证。
+
 # 首批实现验收记录
 
 2026-10-16 iPad证据更正：主App Debug/Release的TARGETED_DEVICE_FAMILY仍为1，当前Release模拟器App的UIDeviceFamily实读仅1。此前iPad截图不能解释为Stage Manager/分屏验证，也不能据此验收原生平板布局；详见[0031更正](decisions/0031-adaptive-ipad-layout.md)。本批已修正为1,2且实际窗口/旋转专项通过，证据见文末；保留旧构建成功但收回旧平板窗口解释。

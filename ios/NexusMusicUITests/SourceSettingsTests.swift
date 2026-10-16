@@ -14,7 +14,7 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(row.isHittable);row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5))
     }
     let appearancePages=["theme","background","skins","accent","navigation","mini"]
-    enter(page=="typography" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
+    enter(page=="typography" ? "playback" : page=="equalizer" ? "equalizer" : appearancePages.contains(page) ? "appearance" : page)
     if page=="typography"{enter("typography")}else if appearancePages.contains(page){enter(page)}
   }
   private func replaceText(_ field:XCUIElement,with value:String,in app:XCUIApplication){
@@ -121,13 +121,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["settings-title-home"].exists);evidence("Grouped mobile settings home")
     let sources=app.buttons["settings-open-sources"];reveal(sources);sources.tap()
     XCTAssertTrue(source.isHittable);XCTAssertEqual(source.value as? String,"https://example.invalid/draft.js");XCTAssertEqual(source.frame.midY,previousY,accuracy:2,"Back must restore the original scroll position")
-    openSettings(app,page:"playback")
+    openSettings(app,page:"equalizer")
     let name=app.textFields["eq-preset-name"];reveal(name);name.tap();for character in "Retained draft"{name.typeText(String(character))};name.typeText("\n")
     openSettings(app,page:"appearance");XCTAssertFalse(name.exists)
     let fontEntry=app.buttons["settings-open-typography"];reveal(fontEntry);fontEntry.tap()
     XCTAssertTrue(app.staticTexts["settings-title-typography"].exists);XCTAssertTrue(app.buttons["font-import"].isHittable)
     app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
-    openSettings(app,page:"playback");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
+    openSettings(app,page:"equalizer");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
     openSettings(app,page:"appearance");app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the active settings tab must return to the settings root")
     openSettings(app,page:"storage");XCTAssertFalse(name.exists)
@@ -804,10 +804,10 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testGraphicalEQPresetPersistence() throws {
     let app=XCUIApplication();app.launch()
-    openSettings(app,page:"playback")
+    openSettings(app,page:"equalizer")
     func reveal(_ element:XCUIElement) {
       for _ in 0..<36 {
-        let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-playback").firstMatch.frame
+        let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-equalizer").firstMatch.frame
         if element.exists && element.isHittable && element.frame.minY >= viewport.minY+8 && element.frame.maxY <= viewport.maxY-8 { return }
         let above=element.exists && element.frame.minY < viewport.minY+8
         app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.60 : 0.40)))
@@ -827,12 +827,13 @@ final class SourceSettingsTests: XCTestCase {
     let save=app.buttons["eq-save-preset"];reveal(save);save.tap()
     XCTAssertTrue(app.buttons["Nexus EQ Test"].waitForExistence(timeout:5))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
-    app.terminate();app.launch();openSettings(app,page:"playback")
+    app.terminate();app.launch();openSettings(app,page:"equalizer")
     let preset=app.buttons["Nexus EQ Test"];reveal(preset);preset.tap()
     app.buttons["删除预设Nexus EQ Test"].tap();XCTAssertFalse(preset.exists)
     reveal(slider);XCTAssertEqual(value.label,savedValue)
     let restoredBand=app.staticTexts["eq-gain-4"];reveal(restoredBand);XCTAssertEqual(restoredBand.label,savedBand)
     reveal(flat);flat.tap();reveal(value);XCTAssertEqual(value.label,"0.0 dB")
+    openSettings(app,page:"playback")
     let timer=app.buttons["15分钟"];reveal(timer);timer.tap()
     XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
     let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")
