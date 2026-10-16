@@ -343,3 +343,9 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 - [x] 展开歌词支持下拉/返回关闭，保留全部歌词、歌词来源和偏移设置。
 - [x] `npm run check`：302/302；`git diff --check` 通过。
 - [ ] 本机完整 Xcode UI/IPA、真机和大字/减少动态效果仍待验证；云端运行 `38960563962`（`40faff5`）已创建，当前 `pending`，不能记为 iOS27 通过。
+## 2026-10-17 本地 A08/A09 验证与工具链更正
+
+- [x] `source scripts/environment.sh` 后使用 Xcode 26.3 / iOS 26.2 SDK；本机完整归档路径可用。
+- [x] `build/SourceUITests-1792181776488.xcresult`：发现详情、歌词路径共 2/2 通过。
+- [x] 当前 HEAD `31f1ebc` 清洁设备归档：arm64、`iphoneos26.2`、设备族 `[1,2]`、unsigned；IPA SHA256 `b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。
+- [ ] iOS 27 云端运行、签名、真机和后台/功耗仍待终态；本地结果不能替代这些验收。

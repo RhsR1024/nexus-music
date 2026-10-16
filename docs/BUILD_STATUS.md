@@ -614,3 +614,9 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 - 完整歌词展开层统一使用共享 `SheetModal`，保留歌词来源、偏移、双击定位、逐字绘制和 `FlatList` 有界渲染。
 - `npm run check`：302/302；`git diff --check`：通过。
 - 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38960563962`（`40faff5`）已创建，当前 `pending`，不能记为 iOS27 通过。
+## 2026-10-17 A08/A09 本地 UI 与设备归档验证
+
+- 工具链更正：`source scripts/environment.sh` 后为 Xcode 26.3（17C529）/iOS 26.2 SDK。
+- `build/SourceUITests-1792181776488.xcresult`：`testCrossPlatformLyrics`、`testDiscoveryAndAppearance` 2/2 通过，0 failures，iOS 26.3.1 iPhone 15 Pro Max 模拟器。
+- 当前 HEAD `31f1ebc` 的 `npm run ios:archive` 成功；manifest `dirty=false`、`workingTreeChanges=[]`、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`、signed=false。
+- `build/distribution/NexusMusic-unsigned.ipa` SHA256：`b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。该包不代表 iOS 27、签名或真机通过。

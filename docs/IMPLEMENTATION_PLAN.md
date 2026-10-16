@@ -276,3 +276,6 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 ## 2026-10-17 A09 全部歌词 page sheet
 
 `Lyrics` 的完整歌词展开层改用 `SheetModal`（`presentationStyle="pageSheet"`），复用现有 `FlatList` 虚拟化、双击定位、歌词来源选择、偏移设置和原生逐字绘制。播放会话、队列与歌词请求取消边界不变。`npm run check` 302/302、`git diff --check` 通过；本机无完整 Xcode；云端运行 `38960563962`（`40faff5`）当前 `pending`，IPA/真机待终态。
+## 2026-10-17 本地 A08/A09 验证与工具链更正
+
+此前“本机只有 Command Line Tools”的描述已更正：通过 `scripts/environment.sh` 可使用 Xcode 26.3（17C529）和 iOS 26.2 SDK。当前 HEAD `31f1ebc` 的 `build/SourceUITests-1792181776488.xcresult` 中发现详情与歌词专项 2/2 通过；清洁设备归档 manifest 为 `dirty=false`、arm64、`iphoneos26.2`、设备族 `[1,2]`，IPA SHA256 `b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。云端 iOS 27、签名和真机仍单独记录。

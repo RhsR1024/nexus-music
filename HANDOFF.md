@@ -624,3 +624,6 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 # 2026-10-17 A09 全部歌词 page sheet
 
 播放器中的“全部歌词”展开层已改用共享 `SheetModal`，与其他播放器子设置保持 page sheet 层级；歌词来源、偏移、双击定位、原生逐字绘制、FlatList 有界渲染和播放队列不变。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；云端运行 `38960563962`（`40faff5`）当前 `pending`，真机和大字/减少动态效果仍待验证。
+# 2026-10-17 本机工具链更正与 A08/A09 本地验证
+
+`source scripts/environment.sh` 后本机实际使用 Xcode 26.3（17C529）/iOS 26.2 SDK，不是仅有 Command Line Tools。当前 HEAD `31f1ebc` 已完成本轮增量本地验证：`build/SourceUITests-1792181776488.xcresult` 的 `testCrossPlatformLyrics` 与 `testDiscoveryAndAppearance` 共 2/2 通过；`build/distribution/build-manifest.json` 记录 `dirty=false`、arm64、`iphoneos26.2`、设备族 `[1,2]`、unsigned，IPA SHA256 `b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。这仍不替代 iOS 27 云端终态、签名和真机验收。
