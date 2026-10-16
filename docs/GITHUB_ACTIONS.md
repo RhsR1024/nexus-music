@@ -11,7 +11,7 @@ main推送、PR及手动Run workflow都会触发 `.github/workflows/ios.yml`：
 1. Linux锁定Node24.14.0、npm ci、类型与合成契约检查。
 2. Apple Silicon选择Xcode27/iOS27，Ruby3.3、Bundler2.4.22及Gemfile.lock中的CocoaPods1.16.2；npm ci、Pods deployment检查。
 3. 原生宿主/HTTP/加密/DSP/缓存检查，以及iOS27模拟器的合成源管理、合成Navidrome登录/播放/PCM/歌词测试。不会向云端上传resource、真实音源/备份或局域网账号。
-4. 同一脚本生成设备arm64 unsigned IPA，上传IPA和build-manifest作为14天Artifacts；构建日志保存7天。Actions使用固定提交SHA、只读contents权限，取消同分支过期构建。
+4. 同一脚本生成设备arm64 unsigned IPA，上传IPA和build-manifest作为14天Artifacts；构建日志保存7天。Actions使用固定提交SHA、只读contents权限；同分支按下文设置保留阶段运行并排队。
 
 首次云端运行结果仍须实际检查。不能以YAML存在宣称云端验收成功。Public Preview可用性和账户Actions限制也以实际运行结果为准。
 
@@ -48,3 +48,7 @@ S1 2cb91a6 对应运行38728228483仍在验证iOS App。五皮肤功能提交b7d
 修复：根内容区按底部chrome的实际onLayout高度+安全区收缩可滚动视口，保留浮动视觉；移除原来仅靠内容尾部大padding的方案。UI测试新增导入后仍在设置tab的断言，并在本地iPhone17紧凑视口复验源管理和五皮肤/播放回归。4db78c4运行38732185670在定位时已启动，仍包含旧布局；修复将正常提交push并排队，不将旧运行结果冒充修复验收。
 
 WebDAV云端38826891584（258772e）最终成功：checks、native、7项App UI步骤、arm64/iOS27归档与上传全部通过。下载产物12016923864已校验IPA SHA256 3d19c67ffdc5f1cd3b1078aa82318e2e377a46a93a5d949dfb6eda79d1fad99b，manifest为arm64/macOS27.0.1/Xcode27.0 27A266a/iphoneos27.0/min15.1/signed=false。dirty=true如实保留；日志确认已知Intel/ARM Yoga podspec checksum差异且Pod锁版本比较通过，不称清洁云端工作树。本批构建清单新增workingTreeChanges，后续可直接定位变化文件，不隐藏dirty。S7匹配代码仍待新运行。
+
+## 2026-10-16 08:54 运行失败
+
+38832172978的完整诊断产物12019301035定位为WebDAV测试关闭页面后，iOS系统Save Password?远程sheet遮挡mini播放器；旧Swift第73行频谱等待失败，点击hit point为{-1,-1}。不是匹配组、原生编译或IPA归档失败；详细日志/AX证据与定向修复见BUILD_STATUS最新记录。测试必须识别对应系统标题并选择Not Now，再验证播放页打开和PCM/歌词，不降低断言。用户要求每次本地打包后继续实际云端测试，待新修复commit对应运行确认。

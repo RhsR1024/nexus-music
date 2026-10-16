@@ -59,7 +59,7 @@ git push -u origin main
 
 本机全局及本仓库 `user.name/user.email` 均设为上述身份，仓库开启 `user.useConfigOnly=true` 与 `core.hooksPath=.githooks`。受版本控制的 pre-commit 同时检查实际作者、提交者，拒绝错误身份（包括环境变量覆盖）。新克隆需执行 `git config core.hooksPath .githooks`；Git hook 可被人工绕过，因此后续阶段 push 前仍须核对 `git show --format=fuller HEAD`。
 
-原记录仅为核验保留在本地；按用户要求，在新身份阶段提交正常 push 并核对后删除专用旧历史备份引用和 `build/history-identity/`。实际清理结果见 HANDOFF/BUILD_STATUS，不提前声明已删除。
+新身份阶段2ff7557正常push、32提交内容/说明/时间/父子映射及本地清洁归档核对后，已按用户要求删除专用旧历史备份引用和 `build/history-identity/`。`git log --all` 的作者/提交者均为RhsR1024；Codex checkpoint为tree对象并保留，CI证据已移至独立build目录。实际记录见 HANDOFF/BUILD_STATUS。
 
 官方文档：
 - https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent

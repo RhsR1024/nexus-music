@@ -2,6 +2,23 @@ import XCTest
 
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
+  private func dismissPasswordSuggestion(in container:XCUIElement) -> Bool {
+    // iOS 27 can present this remote sheet only after the credential modal closes.
+    // Match its title so unrelated alerts (including our removal confirmation) stay visible.
+    let title=container.staticTexts.matching(NSPredicate(format:"label IN %@",["Save Password?","存储密码？","储存密码？","保存密码？","儲存密碼？"])).firstMatch
+    guard title.exists else{return false}
+    let later=container.buttons.matching(NSPredicate(format:"label IN %@",["Not Now","以后","稍后","暫時不要"])).firstMatch
+    guard later.isHittable else{return false}
+    let evidence=XCTAttachment(screenshot:XCUIScreen.main.screenshot());evidence.name="System password suggestion";evidence.lifetime = .keepAlways;add(evidence)
+    later.tap();return true
+  }
+  private func waitForWebDAVControl(_ control:XCUIElement,in app:XCUIApplication) {
+    let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      _=self.dismissPasswordSuggestion(in:app)
+      return control.isHittable
+    },object:control)
+    XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed,"WebDAV control must be reachable after dismissing the system password sheet")
+  }
   func testAppIconOnHomeScreen() throws {
     let app=XCUIApplication();app.launch();XCUIDevice.shared.press(.home)
     let home=XCUIApplication(bundleIdentifier:"com.apple.springboard"),icon=home.icons["音枢"].firstMatch
@@ -107,6 +124,8 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
   func testWWebDAVBrowseTagsPlaybackAndRemoval() throws {
+    let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
+    defer{removeUIInterruptionMonitor(monitor)}
     let app=XCUIApplication();app.launch()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch
@@ -126,11 +145,19 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["验证并保存WebDAV"].tap()
     if later.waitForExistence(timeout:3){later.tap()}
     let folder=app.buttons["文件夹：Fixture album"];XCTAssertTrue(folder.waitForExistence(timeout:20))
-    if later.exists{later.tap()};folder.tap()
+    waitForWebDAVControl(folder,in:app);folder.tap()
     let tagged=app.buttons.matching(NSPredicate(format:"identifier == %@ AND label CONTAINS %@","webdav-track-album/Remote%20Fixture.mp3","已读取远程音频标签")).firstMatch
     XCTAssertTrue(tagged.waitForExistence(timeout:20));XCTAssertTrue(tagged.label.contains("Synthetic tagged tone"))
-    let song=app.buttons["webdav-track-album/Remote%20Fixture.mp3"];XCTAssertTrue(song.isEnabled);song.tap()
-    app.buttons["收起WebDAV"].tap();app.buttons["打开播放页"].tap()
+    let song=app.buttons["webdav-track-album/Remote%20Fixture.mp3"];XCTAssertTrue(song.isEnabled);waitForWebDAVControl(song,in:app);song.tap()
+    app.buttons["收起WebDAV"].tap()
+    // The failed cloud run had a remote Save Password? sheet above this button.
+    // Wait for the actual presentation boundary, then dismiss that specific prompt.
+    let closed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["收起WebDAV"])
+    XCTAssertEqual(XCTWaiter.wait(for:[closed],timeout:10),.completed)
+    _=dismissPasswordSuggestion(in:app)
+    let player=app.buttons["打开播放页"]
+    waitForWebDAVControl(player,in:app)
+    player.tap();XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:10))
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:10));XCTAssertTrue(app.buttons["Synthetic embedded lyric"].waitForExistence(timeout:10))
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     app.buttons["暂停"].firstMatch.tap();app.terminate();app.launch()

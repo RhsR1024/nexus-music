@@ -213,8 +213,14 @@ WebDAV云端38826891584（258772e）最终成功：checks、native、7项App UI�
 
 S7 c4613a5已正常push，新云端运行[38832172978](https://github.com/RhsR1024/nexus-music/actions/runs/38832172978)已创建，当前queued；新增独立匹配App验收步骤及生产入口归档隔离，须等待实际结果。不要重跑/取消正常排队的运行；可继续下一批独立实现。当前目标active，未把本批或整个任务表标记为全部完成。
 
-## 2026-10-16 云端 iOS27 失败复盘与本批修复
+## 2026-10-16 云端 iOS27 失败定位更正与定向修复
 
-旧 S7 提交 `c4613a5` 的 GitHub Actions `38832172978` 已确认失败：Linux checks 通过，iOS job 失败于第一组 `Verify source management and Navidrome playback in the App`，exit code 1；GitHub 页面显示的失败步骤和页面快照保存在被忽略的 `build/history-identity/previous-ci.*`、`job-116753350795.*`。详细 job 日志因 GitHub 登录状态不可见，不能伪造更细的云端断言。结合本地复现，失败点是旧源管理 UI 测试在 iPhone17 视口滚动后用 `isHittable` 查找深设置页自动匹配按钮，按钮被跳过/不可点击；不是原生编译、签名或归档失败。
+2026-10-16 08:54（Asia/Shanghai）启动的运行 38832172978 / job 116753350795 已下载完整诊断产物 12019301035。`build/ci-38832172978/logs/ui-catalog.log:73581–73618` 明确失败为 `testWWebDAVBrowseTagsPlaybackAndRemoval`，旧 Swift 第73行等待“实时音频频谱”失败；点击 mini 时 hit point 为 {-1,-1}。失败附件 `D5173DA0-F73D-4283-A0D1-4097E23760D1.txt` 的第二窗口包含系统 `Save Password?` sheet 和 `Not Now`/`Save` 按钮，遮挡播放页入口。DAV请求计数为 propfind=8、ranges=9、authFailures=0。不能把该失败写成原生构建、网络认证、音频解码或匹配开关故障。
 
-当前修复：`PlaybackSettings` 增加 `automatic-online-matching` 稳定 testID；`SourceSettingsTests.testOnlineMatching` 使用短距离滚动，同时断言 accessibility label、真实点击和重启后的开启/关闭状态；CI 第一组新增 `testAppIconOnHomeScreen`。本地 Release UI：`build/SourceUITests-1792120970586.xcresult` 的匹配/健康/评论通过，图标和 Navidrome正式入口随后分别 9.080/99.670 秒通过。正式本地归档 `build/logs/archive-icon.log` 为 ARCHIVE SUCCEEDED，IPA SHA256 `b12c741930cf52468d1144ca80be4a7a9926b5ec223d5c08068ac2bcf5148946`。必须以本批 push 后的新 xcode-27 云端运行结果确认修复有效。
+此前仅按步骤页面与本地独立问题把云端根因归为深设置页滚动，证据不足，现更正。自动匹配稳定 testID/短滚动是另一个已通过本地验证的问题；该运行尚未执行匹配组。测试定向处理密码建议 sheet：仅识别对应标题并选“Not Now”，覆盖关闭 WebDAV 后延迟弹出的窗口，等待播放入口可点和播放页实际打开，仍保留PCM、歌词、重启与移除连接断言。生产密码自动填充和安全存储不变。600秒诊断收集超时为失败后的额外开销。
+
+本地和新云端验证结果按后续实际记录更新，不提前标记修复通过。上一批 `2ff7557` 的运行 38846783693 已启动，仍可能遇到旧密码建议问题。
+
+## Git 作者与旧备份清理（2026-10-16）
+
+新身份阶段2ff7557已push并核对远端main哈希一致；清洁本地归档通过。再次逐条比较原32提交的tree、提交说明、作者/提交者时间与父子映射一致，仅作者身份更新。已删除refs/backup/before-author-rewrite、refs/author-rewrite/main及build/history-identity中的bundle/隔离review仓库，并清理main/远端/HEAD不可达旧历史reflog；CI页面证据迁至build/ci-38832172978/page-snapshots。Codex checkpoint为tree对象而非旧作者提交，完整保留。git log --all的33条提交作者/提交者均为RhsR1024 <497334557@qq.com>。全局/仓库配置与受版本控制pre-commit双重检查已生效；人工绕过hook不在自动防错保证内。
