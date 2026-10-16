@@ -1,6 +1,6 @@
 # 2026-10-17 A09 歌词显示设置 Sheet
 
-现代播放器“更多播放控制”菜单新增独立“歌词显示设置”入口，依据 Sollin IPA 的 `_showLyricDisplaySettingsSheet` 静态线索实现为单独 Sheet；复用现有 `FontSettings`，覆盖字体、字号、颜色、对齐、行距、模糊和逐字效果，所有写入仍走既有偏好存储与失败保留逻辑。新增 UI 回归覆盖入口、Sheet 标题和返回；歌词来源、偏移、双击定位、原生逐字绘制和播放意图不变。 `npm run check` 302/302，`git diff --check` 通过。本机仍只有 Command Line Tools，未声称本地 iOS UI/IPA 或真机通过；上一批云端运行 `38951198950` 对应 `51b4933` 仍为 `pending`，本批提交后需跟踪新 iOS27 运行终态。
+现代播放器“更多播放控制”菜单新增独立“歌词显示设置”入口，依据 Sollin IPA 的 `_showLyricDisplaySettingsSheet` 静态线索实现为单独 Sheet；复用现有 `FontSettings`，覆盖字体、字号、颜色、对齐、行距、模糊和逐字效果，所有写入仍走既有偏好存储与失败保留逻辑。新增 UI 回归覆盖入口、Sheet 标题和返回；歌词来源、偏移、双击定位、原生逐字绘制和播放意图不变。 `npm run check` 302/302，`git diff --check` 通过。本机仍只有 Command Line Tools，未声称本地 iOS UI/IPA 或真机通过；新云端运行 `38952134532` 对应 `d2b698f` 当前仍为 `pending`，不能记为 iOS27 通过。
 
 # 音枢 NexusMusic 交接备忘录
 
