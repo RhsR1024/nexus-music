@@ -877,6 +877,8 @@ final class SourceSettingsTests: XCTestCase {
       selectLocalFixture("Nexus Visual Fixture",in:app)
     }
     openSettings(app,page:"background")
+    let imageBackground=app.descendants(matching:.any).matching(identifier:"background-image").firstMatch
+    reveal(imageBackground);XCTAssertFalse(imageBackground.isEnabled,"Image background must stay unavailable until a theme image is imported")
     let background=app.buttons["visual-import-background"];reveal(background);importFixture("visual-import-background")
     expectation(for:NSPredicate(format:"label CONTAINS %@","Nexus Visual Fixture.png"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:20)
     let photo=app.buttons["visual-import-photo"];reveal(photo);importFixture("visual-import-photo")
