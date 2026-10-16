@@ -1,6 +1,7 @@
+import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {useEffect,useRef,useState} from 'react';
-import {Alert,FlatList,Modal,Pressable,Text,TextInput,View,useWindowDimensions} from 'react-native';
+import {Alert, FlatList, Modal, Pressable, View, useWindowDimensions} from 'react-native';
 import type {Services} from '../app/services.ts';
 import type {OnlinePlatform,Track} from '../domain/track.ts';
 import type {BrowseItem} from '../providers/discovery.ts';

@@ -1,6 +1,7 @@
 import ExpoModulesCore
 import UIKit
 import CoreText
+import CoreImage
 
 public final class NexusLyricsModule: Module {
   public func definition() -> ModuleDefinition {
@@ -27,6 +28,10 @@ final class NexusLyricLineView: ExpoView {
   private var position = 0.0, anchor = 0.0, playing = false
   private var signature = "", color = UIColor.white
   private var observers: [NSObjectProtocol] = []
+  private var blur = 0.0, emphasis = true
+  private var blurred: UIImage?
+  private var blurredSize = CGSize.zero
+  private static let imageContext = CIContext(options: [.cacheIntermediates: false])
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
@@ -34,14 +39,14 @@ final class NexusLyricLineView: ExpoView {
     storage.addLayoutManager(manager); manager.addTextContainer(container)
     container.lineFragmentPadding = 0
     clockTarget.view = self
-    for name in [UIApplication.didBecomeActiveNotification, UIApplication.willResignActiveNotification, UIAccessibility.reduceMotionStatusDidChangeNotification] {
-      observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.updateClock() })
+    for name in [UIApplication.didBecomeActiveNotification, UIApplication.willResignActiveNotification, UIAccessibility.reduceMotionStatusDidChangeNotification, UIAccessibility.reduceTransparencyStatusDidChangeNotification] {
+      observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.blurred = nil; self?.updateClock(); self?.setNeedsDisplay() })
     }
   }
   deinit { clock?.invalidate(); for observer in observers { NotificationCenter.default.removeObserver(observer) } }
   override func didMoveToWindow() { super.didMoveToWindow(); updateClock() }
   override func layoutSubviews() {
-    super.layoutSubviews(); container.size = bounds.size; setNeedsDisplay()
+    super.layoutSubviews(); if container.size != bounds.size { blurred = nil }; container.size = bounds.size; setNeedsDisplay()
   }
   func configure(_ json: String) {
     guard json.utf8.count < 262144, let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
@@ -50,13 +55,16 @@ final class NexusLyricLineView: ExpoView {
     anchor = CACurrentMediaTime(); playing = object["playing"] as? Bool == true
     let size = min(100, max(10, object["size"] as? Double ?? 24))
     let center = object["center"] as? Bool == true
+    let height = min(2, max(1.1, (object["lineHeight"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 1.35))
+    let radius = min(4, max(0, (object["blur"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
+    emphasis = object["emphasis"] as? Bool != false
     let hex = object["color"] as? String ?? "#FFFFFF"
     let fontURI = object["fontURI"] as? String ?? ""
     let rawWords = object["words"] as? [[String: Any]] ?? []
     let wordData = (try? JSONSerialization.data(withJSONObject: rawWords)) ?? Data()
-    let layoutKey = "\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(wordData.base64EncodedString())"
+    let layoutKey = "\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(height)|\(radius)|\(wordData.base64EncodedString())"
     if signature != layoutKey {
-      signature = layoutKey
+      signature = layoutKey; blur = radius; blurred = nil
       let value = UInt32(hex.replacingOccurrences(of: "#", with: ""), radix: 16) ?? 0xFFFFFF
       color = UIColor(red: CGFloat((value >> 16) & 255) / 255, green: CGFloat((value >> 8) & 255) / 255, blue: CGFloat(value & 255) / 255, alpha: 1)
       var font = UIFont.systemFont(ofSize: size, weight: .semibold)
@@ -65,7 +73,7 @@ final class NexusLyricLineView: ExpoView {
          let provider = CGDataProvider(url: url as CFURL), let cgFont = CGFont(provider), let name = cgFont.postScriptName,
          let custom = UIFont(name: name as String, size: size) { font = custom }
       let paragraph = NSMutableParagraphStyle(); paragraph.alignment = center ? .center : .left
-      paragraph.minimumLineHeight = ceil(size * 1.35); paragraph.maximumLineHeight = ceil(size * 1.35)
+      paragraph.minimumLineHeight = ceil(size * height); paragraph.maximumLineHeight = ceil(size * height)
       storage.setAttributedString(NSAttributedString(string: text, attributes: [.font: font, .paragraphStyle: paragraph, .foregroundColor: color]))
       words.removeAll(keepingCapacity: true); var offset = 0
       if rawWords.count <= 2000 {
@@ -93,6 +101,15 @@ final class NexusLyricLineView: ExpoView {
   override func draw(_ rect: CGRect) {
     guard let context = UIGraphicsGetCurrentContext() else { return }
     let all = manager.glyphRange(for: container)
+    if blur > 0 && words.isEmpty && !UIAccessibility.isReduceTransparencyEnabled && bounds.width > 0 && bounds.height > 0 && bounds.width * bounds.height <= 500000 {
+      if blurred == nil || blurredSize != bounds.size {
+        let format = UIGraphicsImageRendererFormat(); format.scale = 1
+        let image = UIGraphicsImageRenderer(size: bounds.size, format: format).image { _ in manager.drawGlyphs(forGlyphRange: all, at: .zero) }
+        if let input = CIImage(image: image), let output = CIFilter(name: "CIGaussianBlur", parameters: [kCIInputImageKey: input, kCIInputRadiusKey: blur])?.outputImage,
+           let cg = Self.imageContext.createCGImage(output, from: input.extent) { blurred = UIImage(cgImage: cg); blurredSize = bounds.size }
+      }
+      if let image = blurred { image.draw(in: bounds); return }
+    }
     context.saveGState(); context.setAlpha(words.isEmpty ? 1 : 0.32); manager.drawGlyphs(forGlyphRange: all, at: .zero); context.restoreGState()
     let time = position + (playing && clock != nil ? min(1000, (CACurrentMediaTime() - anchor) * 1000) : 0)
     for word in words {
@@ -105,7 +122,7 @@ final class NexusLyricLineView: ExpoView {
       for region in rectangles {
         let width = min(region.width, remaining); remaining -= width; if width <= 0 { continue }
         context.saveGState(); context.clip(to: CGRect(x: region.minX, y: region.minY, width: width, height: region.height))
-        if fraction < 1 && !UIAccessibility.isReduceMotionEnabled { context.setShadow(offset: .zero, blur: 3, color: color.withAlphaComponent(0.45).cgColor) }
+        if emphasis && fraction < 1 && !UIAccessibility.isReduceMotionEnabled { context.setShadow(offset: .zero, blur: 3, color: color.withAlphaComponent(0.45).cgColor) }
         manager.drawGlyphs(forGlyphRange: glyphs, at: .zero); context.restoreGState()
       }
     }

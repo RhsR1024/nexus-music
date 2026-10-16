@@ -1,3 +1,4 @@
+import {Text,TextInput} from './Typography.tsx';
 import {WebDAVLibrary} from './WebDAVLibrary.tsx';
 import {DeviceMediaLibrary} from './DeviceMediaLibrary.tsx';
 import {LocalAudioLibrary} from './LocalAudioLibrary.tsx';
@@ -6,7 +7,7 @@ import {MatchModal} from './MatchModal.tsx';
 import {QishuiImport} from './QishuiImport.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {Alert,Pressable,Share,StyleSheet,Text,TextInput,View} from 'react-native';
+import {Alert, Pressable, Share, StyleSheet, View} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';

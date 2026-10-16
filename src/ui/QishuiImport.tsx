@@ -1,5 +1,6 @@
+import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useRef,useState} from 'react';
-import {FlatList,Modal,Pressable,Text,TextInput,View} from 'react-native';
+import {FlatList, Modal, Pressable, View} from 'react-native';
 import type {Services} from '../app/services.ts';
 import type {QishuiPlaylist} from '../providers/qishui.ts';
 import {useTheme} from './theme.tsx';

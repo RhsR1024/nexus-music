@@ -1,5 +1,6 @@
+import {Text} from './Typography.tsx';
 import {useState,useSyncExternalStore} from 'react';
-import {Pressable,Switch,Text,View} from 'react-native';
+import {Pressable, Switch, View} from 'react-native';
 import type {Services} from '../app/services.ts';
 import {accentColors,type Accent,type VisualTheme} from '../domain/appearance.ts';
 import {useTheme} from './theme.tsx';

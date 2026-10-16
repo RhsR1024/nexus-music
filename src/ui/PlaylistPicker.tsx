@@ -1,6 +1,7 @@
+import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useState,useSyncExternalStore} from 'react';
-import {Modal,Pressable,ScrollView,StyleSheet,Text,TextInput} from 'react-native';
+import {Modal, Pressable, ScrollView, StyleSheet} from 'react-native';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 export function PlaylistPicker({services,tracks,visible,onClose}:{services:Services;tracks:readonly Track[];visible:boolean;onClose:()=>void}) {

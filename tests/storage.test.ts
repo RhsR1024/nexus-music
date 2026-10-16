@@ -185,3 +185,21 @@ test('automatic policy change clears matched or resolving media, preserving orig
   await library.setMatch(track,target,'manual');matched=true;await controller.play();const manualStops=stops;await preferences.update({autoMatch:false});assert.equal(stops,manualStops);unbind();
   const pending=deferred<{url:string}>();const resolving=new PlaybackController({resolve:async()=>pending.promise},{stop(){},pause(){},play(){},load(){assert.fail('cancelled policy cannot load');}},makeQueue([{id:'a',track:{...track,origin:{kind:'online',platform:'wy',id:'other'}}}]));const unbindPending=bindMatchPolicy(library,preferences,resolving),play=resolving.play();await preferences.update({autoMatch:true});pending.resolve({url:'https://example.test/stale'});await play;assert.equal(resolving.getSnapshot().intent,'paused');unbindPending();db.close();
 });
+
+test('lyric style migrates old settings and persists independently from audio and fonts',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {lyricStyle,...legacy}=defaults;await repository.put('preferences.v1',{...legacy,quality:'320k'});const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().lyricStyle.lineHeight,1.35);
+  await preferences.update({lyricStyle:{...lyricStyle,lineHeight:1.6,spacing:14,blur:2,activeColor:'#FFD7A0',emphasis:false}});
+  const next=new PreferenceStore(repository);await next.restore();assert.equal(next.getSnapshot().lyricStyle.blur,2);assert.equal(next.getSnapshot().quality,'320k');assert.equal(next.getSnapshot().lyricStyle.emphasis,false);db.close();
+});
+test('invalid or failed lyric style writes preserve the previous valid style',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');const preferences=new PreferenceStore(repository),before=preferences.getSnapshot(),style=before.lyricStyle;
+  for(const patch of [{blur:NaN},{blur:5},{spacing:-1},{lineHeight:Infinity},{lineHeight:1},{activeColor:'url(private)'},{inactiveColor:'#ff'},{emphasis:'yes'}])await assert.rejects(preferences.update({lyricStyle:{...style,...patch} as never}));
+  assert.equal(preferences.getSnapshot(),before);repository.put=async()=>{throw Error('full');};await assert.rejects(preferences.update({lyricStyle:{...style,blur:2}}));assert.equal(preferences.getSnapshot(),before);db.close();
+});
+
+test('queued lyric style changes merge fields and repeated adjustments against the committed value',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');const preferences=new PreferenceStore(repository);
+  await Promise.all([preferences.updateLyricStyle({activeColor:'#FFFFFF'}),preferences.updateLyricStyle({emphasis:false}),preferences.adjustLyricStyle('spacing',2),preferences.adjustLyricStyle('spacing',2)]);
+  const style=preferences.getSnapshot().lyricStyle;assert.equal(style.activeColor,'#FFFFFF');assert.equal(style.emphasis,false);assert.equal(style.spacing,12);db.close();
+});

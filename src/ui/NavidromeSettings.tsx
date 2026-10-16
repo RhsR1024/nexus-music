@@ -1,6 +1,7 @@
+import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useState, useSyncExternalStore } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import type { Services } from '../app/services.ts';
 import { NavidromeError } from '../providers/navidrome.ts';
 import {CredentialStorageError} from '../providers/navidromeAccounts.ts';

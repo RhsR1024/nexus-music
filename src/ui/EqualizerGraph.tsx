@@ -1,5 +1,6 @@
+import {Text} from './Typography.tsx';
 import {useRef,useState} from 'react';
-import {StyleSheet,Text,View,type GestureResponderEvent} from 'react-native';
+import {StyleSheet, View, type GestureResponderEvent} from 'react-native';
 import {dbAtY,eqFrequencies} from '../domain/equalizer.ts';
 import {useTheme} from './theme.tsx';
 const db = (value:number)=>`${value>0?'+':''}${value.toFixed(1)} dB`;

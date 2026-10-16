@@ -1,6 +1,7 @@
+import {Text} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {Pressable,Text,View} from 'react-native';
+import {Pressable, View} from 'react-native';
 import type {Services} from '../app/services.ts';
 export function CacheSettings({services}:{services:Services}){
   const theme=useTheme();

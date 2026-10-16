@@ -1,5 +1,6 @@
+import {Text} from './Typography.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {Alert,Image,Pressable,StyleSheet,Text,View,useWindowDimensions,type GestureResponderEvent} from 'react-native';
+import {Alert, Image, Pressable, StyleSheet, View, useWindowDimensions, type GestureResponderEvent} from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';

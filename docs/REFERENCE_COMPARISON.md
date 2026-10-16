@@ -98,3 +98,5 @@ S7网易公开评论按[0021](decisions/0021-public-comments.md)比较六参考�
 F34本地实际播放统计按[0023](decisions/0023-playback-statistics.md)原创实现，保留原生单调时钟与单一队列归属；参考中的歌单热度不当作个人聆听次数。TS仓储可共享，Android需替换原生计时采样；无新依赖或复制源码。
 
 S4跨平台歌词选择按[0024](decisions/0024-lyric-selection.md)原创实现：Q/wtf候选循环、Cy歌词搜索与悦音行级/翻译、Sollin多平台协议、Wayferar实际时间职责逐项对比；不复制原实现、DOM或依赖。候选/持久化可共享Android，原生绘制继续分别适配。
+
+S4/J41/J44字体与深度样式按[0025](decisions/0025-fonts-lyric-style.md)比较六参考后原创实现：公共Text/输入入口、全局与独立歌词字体优先级、私有字体文件与串行提交、TextKit静态模糊和原生累计绘制；不复制DOM字体、资产、动画或新依赖。设置/仓储可共享Android，字体文件和原生绘制分别适配。实际Files导入及重启已验证，完整App验收继续。

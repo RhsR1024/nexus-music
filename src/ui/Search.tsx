@@ -1,9 +1,10 @@
+import {Text,TextInput} from './Typography.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
 import {MatchModal} from './MatchModal.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Discovery } from './Discovery.tsx';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {Keyboard, Pressable, StyleSheet, View} from 'react-native';
 import type { Services } from '../app/services.ts';
 import type { OnlinePlatform } from '../domain/track.ts';
 import { trackKey } from '../domain/track.ts';

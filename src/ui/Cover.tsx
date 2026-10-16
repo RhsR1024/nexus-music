@@ -1,5 +1,6 @@
+import {Text} from './Typography.tsx';
 import {useEffect,useState} from 'react';
-import {Image,Text,View} from 'react-native';
+import {Image, View} from 'react-native';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {useTheme} from './theme.tsx';

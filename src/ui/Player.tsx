@@ -1,3 +1,5 @@
+import {effectiveLyricFont} from '../storage/fontCatalog.ts';
+import {Text} from './Typography.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
 import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
@@ -11,7 +13,7 @@ import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
 import { useState, useSyncExternalStore } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {Alert, Modal, Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import type { Services } from '../app/services.ts';
 import { currentEntry, remove, move } from '../domain/queue.ts';
 function time(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2, '0')}`; }
@@ -48,7 +50,7 @@ export function Player({ services }: { services: Services }) {
         <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
         <Spectrum services={services} />
         {(entry.track.origin.kind==='imported'||entry.track.origin.kind==='online')&&<View style={styles.row}><Text style={styles.caption}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
-        {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={fonts.selected??undefined}/>}
+        {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)}/>}
         <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
@@ -88,7 +90,7 @@ export function Player({ services }: { services: Services }) {
       <ScrollView style={{flex:1}} contentContainerStyle={styles.content}>
         {preferences.playerLayout==='classic'?button('收起播放页',()=>setOpen(false)):<Pressable accessibilityRole="button" accessibilityLabel="收起播放页" onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:30,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
         {preferences.playerLayout==='classic'&&skinSelector}
-        {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={entry.track} lyricTrack={lyricTrack} font={fonts.selected??undefined} layout={preferences.playerLayout} onMore={()=>setDetails(true)}/>}
+        {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>setDetails(true)}/>}
         {preferences.playerLayout==='classic'&&detailContent}
       </ScrollView></View>
       <Modal visible={details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={()=>setDetails(false)}>

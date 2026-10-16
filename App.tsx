@@ -1,3 +1,5 @@
+import {TypographyProvider} from './src/ui/Typography.tsx';
+import {Text} from './src/ui/Typography.tsx';
 import {PlaybackSettings} from './src/ui/PlaybackSettings';
 import {FutureRecordError} from './src/storage/recovery.ts';
 import {ThemeContext,useAppearance} from './src/ui/theme.tsx';
@@ -18,7 +20,7 @@ import {LibraryHome} from './src/ui/LibraryHome';
 import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaProvider,useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Linking,Pressable,ScrollView,Text,View} from 'react-native';
+import {Linking, Pressable, ScrollView, View} from 'react-native';
 type Tab='discover'|'library'|'search'|'settings';
 export default function App(){return <MusicApplication initialize={getServices}/>;}
 export function MusicApplication({initialize}:{initialize:()=>Promise<Services>}){return <SafeAreaProvider><MusicApp initialize={initialize}/></SafeAreaProvider>;}
@@ -32,7 +34,7 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
   useEffect(()=>{const open=(url:string|null)=>{if(url?.startsWith('com.nexusmusic.app://settings'))setTab('settings');};void Linking.getInitialURL().then(open);const subscription=Linking.addEventListener('url',event=>open(event.url));return()=>subscription.remove();},[]);
   const theme=useAppearance(services?.preferences),p=theme.palette;
   const text={color:p.text},caption={color:p.secondary};
-  return <ThemeContext.Provider value={theme}><View style={{flex:1,backgroundColor:p.background[0]}}>
+  return <ThemeContext.Provider value={theme}><TypographyProvider store={services?.fonts}><View style={{flex:1,backgroundColor:p.background[0]}}>
     <AmbientBackground/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
     <View style={{flex:1,paddingTop:insets.top+12,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
       {tab==='discover'&&services&&!startupError?<Discovery services={services} embedded/>:<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:14,paddingBottom:32}}>
@@ -58,5 +60,5 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
         <GlassSurface style={{width:70,height:70,borderRadius:35}}><Pressable testID="tab-search" accessibilityLabel="搜索" accessibilityRole="tab" accessibilityState={{selected:tab==='search'}} onPress={()=>setTab('search')} style={{flex:1,alignItems:'center',justifyContent:'center'}}><Ionicons name="search-outline" size={28} color={tab==='search'?p.accent:p.text}/></Pressable></GlassSurface>
       </View>
     </View>
-  </View></ThemeContext.Provider>;
+  </View></TypographyProvider></ThemeContext.Provider>;
 }

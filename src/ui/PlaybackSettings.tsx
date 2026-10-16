@@ -1,5 +1,6 @@
+import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {Pressable,Text,TextInput,View} from 'react-native';
+import {Pressable, View} from 'react-native';
 import type {Services} from '../app/services.ts';
 import {GainSlider} from './EqualizerGraph.tsx';
 import {useTheme} from './theme.tsx';

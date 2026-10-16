@@ -1,4 +1,5 @@
 import XCTest
+import Vision
 
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
@@ -22,10 +23,22 @@ final class SourceSettingsTests: XCTestCase {
   func testAppIconOnHomeScreen() throws {
     let app=XCUIApplication();app.launch();XCUIDevice.shared.press(.home)
     let home=XCUIApplication(bundleIdentifier:"com.apple.springboard"),icon=home.icons["音枢"].firstMatch
-    for _ in 0..<4 {if icon.isHittable{break};home.swipeLeft()}
-    XCTAssertTrue(icon.isHittable)
-    let image=XCTAttachment(screenshot:home.screenshot());image.lifetime = .keepAlways;add(image)
-    icon.tap();XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15))
+    // iOS 27 can expose only an empty UISystemShellApplication AX root even
+    // while the icon is visible. Locate its exact label in the actual screen;
+    // never replace this icon-launch check with app.activate() or a fixed point.
+    func visibleLabel() throws -> CGPoint? {
+      guard let image=XCUIScreen.main.screenshot().image.cgImage else{return nil}
+      let request=VNRecognizeTextRequest();request.recognitionLevel = .accurate;request.recognitionLanguages=["zh-Hans","en-US"]
+      try VNImageRequestHandler(cgImage:image,options:[:]).perform([request])
+      guard let match=request.results?.first(where:{$0.topCandidates(1).first.map{$0.string=="音枢" && $0.confidence>=0.8} ?? false}) else{return nil}
+      return CGPoint(x:match.boundingBox.midX,y:1-match.boundingBox.midY)
+    }
+    var label=try visibleLabel()
+    for _ in 0..<4 {if icon.isHittable || label != nil{break};home.swipeLeft();label=try visibleLabel()}
+    let image=XCTAttachment(screenshot:XCUIScreen.main.screenshot());image.name="Home screen icon and exact display label";image.lifetime = .keepAlways;add(image)
+    XCTAssertTrue(icon.isHittable || label != nil,"The actual Home screen must expose or visibly render the 音枢 icon label")
+    if let label {home.coordinate(withNormalizedOffset:CGVector(dx:label.x,dy:label.y)).tap()}else{icon.tap()}
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15))
   }
   func testCrossPlatformLyrics() throws {
     let app=XCUIApplication();app.launch()
@@ -325,11 +338,48 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["音频已删除"].waitForExistence(timeout:5));XCTAssertFalse(song.exists)
     app.buttons["收起本地音频"].tap()
   }
+  func testFontImportAndLyricStyle() throws {
+    let app=XCUIApplication();app.launch()
+    func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;let start=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)),end=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35));start.press(forDuration:0.05,thenDragTo:end)};XCTAssertTrue(element.isHittable,"Control must scroll into view: \(element.identifier)")}
+    func settings(){app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()}
+    settings();let resetInitial=app.buttons["lyric-style-reset"];reach(resetInitial);resetInitial.tap();let importer=app.buttons["font-import"];reach(importer);importer.tap()
+    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+    let fixture=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+    if !fixture.waitForExistence(timeout:3){let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch;XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()}
+    XCTAssertTrue(fixture.waitForExistence(timeout:10));fixture.tap()
+    let file=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus Fixture.ttf")).firstMatch;XCTAssertTrue(file.waitForExistence(timeout:10));file.tap()
+    let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch;if open.waitForExistence(timeout:3){open.tap()}
+    let global=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-global-nexusfont_")).firstMatch
+    XCTAssertTrue(global.waitForExistence(timeout:15));reach(global);global.tap()
+    let inherit=app.buttons["font-lyrics-inherit"];reach(inherit,up:false);inherit.tap()
+    let globalStatus=app.staticTexts["font-global-status"],lyricStatus=app.staticTexts["font-lyric-status"]
+    XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));XCTAssertTrue(lyricStatus.label.contains("跟随全局"));XCTAssertTrue(lyricStatus.label.contains("Nexus Fixture.ttf"))
+    let preview=XCTAttachment(screenshot:app.screenshot());preview.name="Imported original triangle font with system glyph fallback";preview.lifetime = .keepAlways;add(preview)
+    let system=app.buttons["font-lyrics-system"];system.tap();XCTAssertTrue(lyricStatus.label.contains("系统字体"));XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));inherit.tap()
+    let height=app.buttons["行高倍数＋"];reach(height);height.tap();let spacing=app.buttons["行间距＋"];reach(spacing);spacing.tap();let blur=app.buttons["其他行模糊＋"];reach(blur);blur.tap();app.buttons["lyric-emphasis"].tap()
+    let golden=app.buttons["lyric-activeColor-2"];reach(golden,up:false);golden.tap()
+    app.terminate();app.launch();settings();reach(importer)
+    XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));XCTAssertTrue(lyricStatus.label.contains("跟随全局"));XCTAssertTrue(lyricStatus.label.contains("Nexus Fixture.ttf"))
+    reach(app.staticTexts["lyric-style-blur"]);XCTAssertEqual(app.staticTexts["lyric-style-blur"].label,"其他行模糊：1");XCTAssertTrue(app.buttons["逐字强调：关"].exists)
+    // Exercise the actual renderer with imported glyphs and persisted styles.
+    app.terminate();try testZNavidromePlaybackAndCredentials()
+    settings();
+    let remove=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-delete-nexusfont_")).firstMatch;reach(remove);remove.tap();app.alerts.buttons["删除"].tap();
+    expectation(for:NSPredicate(format:"label CONTAINS %@","系统字体"),evaluatedWith:globalStatus);waitForExpectations(timeout:10);XCTAssertTrue(lyricStatus.label.contains("跟随全局"));
+    let reset=app.buttons["lyric-style-reset"];reach(reset);reset.tap();XCTAssertTrue(app.buttons["逐字强调：开"].exists)
+    app.terminate();app.launch();settings();reach(importer);XCTAssertFalse(app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-delete-nexusfont_")).firstMatch.exists);XCTAssertTrue(globalStatus.label.contains("系统字体"))
+  }
   func testZNavidromePlaybackAndCredentials() throws {
     let app=XCUIApplication();app.launch()
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
+    // Establish the initial layout through the actual setting, including when a
+    // previous interrupted test left a different persisted skin selected.
+    let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
+    reveal(classic);classic.tap()
     let address=app.textFields["Navidrome服务器地址"]
     XCTAssertTrue(address.waitForExistence(timeout:15))
+    reveal(address)
     address.tap();for character in "http://127.0.0.1:18439" {address.typeText(String(character))};address.typeText("\n")
     XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439")
     let username=app.textFields["Navidrome用户名"];username.tap();for character in "fixture-user" {username.typeText(String(character))};username.typeText("\n")
@@ -364,9 +414,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["Synthetic tone"].firstMatch.exists)
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
     let beforeSeek=progress.value as? String
-    progress.coordinate(withNormalizedOffset:CGVector(dx:0.25,dy:0.5)).press(forDuration:0.1,thenDragTo:progress.coordinate(withNormalizedOffset:CGVector(dx:0.7,dy:0.5)))
+    // Setup duration varies with font registration and simulator load. Choose a
+    // different whole-second target while keeping the second lyric active.
+    let currentSeconds=beforeSeek?.components(separatedBy:" / ").first?.components(separatedBy:":").last.flatMap(Int.init) ?? 0
+    let target:CGFloat=currentSeconds>=7 && currentSeconds<=9 ? 0.9 : 0.7
+    progress.coordinate(withNormalizedOffset:CGVector(dx:0.25,dy:0.5)).press(forDuration:0.1,thenDragTo:progress.coordinate(withNormalizedOffset:CGVector(dx:target,dy:0.5)))
     XCTAssertTrue(app.buttons["播放"].exists, "Seeking must preserve paused intent")
-    XCTAssertNotEqual(progress.value as? String,beforeSeek)
+    expectation(for:NSPredicate(format:"value != %@",beforeSeek ?? ""),evaluatedWith:progress);waitForExpectations(timeout:5)
     let amImage=XCTAttachment(screenshot:app.screenshot());amImage.lifetime = .keepAlways;add(amImage)
     app.buttons["更多播放控制"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-immersive").firstMatch.tap()

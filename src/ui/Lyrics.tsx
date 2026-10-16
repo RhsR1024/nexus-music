@@ -1,6 +1,7 @@
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,FlatList,Modal,Pressable,Text,View} from 'react-native';
+import {AccessibilityInfo,FlatList,Modal,Pressable,Text as LyricText,View} from 'react-native';
+import {Text} from './Typography.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {trackKey} from '../domain/track.ts';
@@ -36,7 +37,9 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
   const count=visibleLines??(presentation==='am'?3:presentation?2:4),firstVisible=Math.max(0,active-(count===1?0:1));
   useEffect(()=>{if(expanded&&active>=0)list.current?.scrollToIndex({index:active,animated:true,viewPosition:.45});},[active,expanded]);
   const size=(presentation==='am'?32:presentation==='photo'?26:presentation?22:20)*preferences.fontScale;
-  const activeColor=presentation?'#FFFFFF':theme.color('#D9F49B'),inactiveColor=presentation?'rgba(255,255,255,0.38)':theme.color('#959EAC');
+  const style=preferences.lyricStyle;
+  const auxiliaryFont={fontFamily:font,fontSize:14,lineHeight:Math.ceil(14*style.lineHeight)};
+  const activeColor=style.activeColor==='auto'?(presentation?'#FFFFFF':theme.color('#D9F49B')):style.activeColor,inactiveColor=style.inactiveColor==='auto'?(presentation?'#A0A0A8':theme.color('#959EAC')):style.inactiveColor;
   return <View style={{gap:12,...(presentation?{height:'100%'}:{})}}>
     <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
     <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:presentation?'#FFFFFF':theme.palette.accent,fontSize:13}}>选择歌词来源</Text></Pressable>
@@ -51,12 +54,12 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
     {document?.synced&&!presentation&&<Pressable accessibilityRole="button" onPress={()=>setExpanded(true)}><Text style={{color:theme.color('#D9F49B')}}>全部歌词 · 双击行定位，长按打开设置</Text></Pressable>}
     {document?.synced&&!expanded&&document.lines.slice(firstVisible,firstVisible+count).map((item,index)=>{
       const actual=firstVisible+index,time=state.position*1000-offset,singing=time>=item.startMs&&(item.endMs===undefined||time<item.endMs);
-      return <Pressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} onPress={()=>seek(item.startMs,actual)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:item.background?4:count===1?0:presentation==='am'?16:8,opacity:item.background?.65:1}}>
-        {(actual===active||item.background&&singing)&&item.words?<NativeLyricLine line={item} position={state.position*1000-offset} playing={state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={activeColor} center={center}/>:<Text style={{fontSize:size,color:actual===active?activeColor:inactiveColor,fontFamily:font,fontWeight:presentation?'700':'400',textAlign:center?'center':'left'}}>{item.text}</Text>}
-        {item.translation&&<Text style={{fontSize:14,color:theme.color('#BFC8D9')}}>{item.translation}</Text>}{item.romanization&&<Text style={{fontSize:13,color:theme.color('#959EAC')}}>{item.romanization}</Text>}
+      return <Pressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} onPress={()=>seek(item.startMs,actual)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:item.background?4:count===1?0:style.spacing,opacity:item.background?.65:1}}>
+        <NativeLyricLine line={actual===active||item.background&&singing?item:{...item,words:undefined}} position={actual===active||item.background&&singing?state.position*1000-offset:0} playing={(actual===active||!!item.background&&singing)&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={actual===active||item.background&&singing?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={actual===active||item.background&&singing?0:style.blur} emphasis={style.emphasis}/>
+        {item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:13,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
       </Pressable>;
     })}
-    {!document?.synced&&document?.plain.slice(0,300).map((line,index)=><Text key={index} style={{fontSize:size,color:theme.color('#BFC8D9'),fontFamily:font}}>{line}</Text>)}
+    {!document?.synced&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
     </View>
     <Modal visible={expanded} onRequestClose={()=>setExpanded(false)} animationType="slide">
       <View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:64}}>
@@ -66,8 +69,8 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
         {expanded&&chooser}
         <FlatList ref={list} data={document?.lines??[]} extraData={[active,font,size,state.position,state.intent,offset]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
           onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
-          renderItem={({item,index})=><Pressable accessibilityRole="button" accessibilityLabel={`定位歌词：${item.text}`} onPress={()=>seek(item.startMs,index)} accessibilityHint="双击歌词定位" style={{paddingVertical:18}}>
-            <View>{index===active&&item.words?<NativeLyricLine line={item} position={state.position*1000-offset} playing={state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={theme.palette.accent} center={center}/>:<Text style={{fontSize:size,color:index===active?theme.palette.accent:theme.palette.secondary,fontFamily:font,textAlign:center?'center':'left'}}>{item.text}</Text>}</View>{item.translation&&<Text style={{color:theme.color('#BFC8D9')}}>{item.translation}</Text>}{item.romanization&&<Text style={{color:theme.color('#959EAC')}}>{item.romanization}</Text>}
+          renderItem={({item,index})=><Pressable accessibilityRole="button" accessibilityLabel={`定位歌词：${item.text}`} onPress={()=>seek(item.startMs,index)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
+            <View><NativeLyricLine line={index===active?item:{...item,words:undefined}} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={index===active?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
           </Pressable>}/>
       </View>
     </Modal>

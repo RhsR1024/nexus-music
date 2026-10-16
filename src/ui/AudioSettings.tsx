@@ -1,6 +1,7 @@
+import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useState,useSyncExternalStore } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import {Pressable, StyleSheet, Switch, View} from 'react-native';
 import type { Services } from '../app/services.ts';
 import { qualityOrder } from '../domain/quality.ts';
 import {EqualizerGraph,GainSlider} from './EqualizerGraph.tsx';

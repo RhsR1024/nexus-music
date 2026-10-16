@@ -1,6 +1,7 @@
+import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useState, useSyncExternalStore } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import type { SourceCatalog } from '../providers/sourceCatalog.ts';
