@@ -53,6 +53,14 @@ git push -u origin main
 
 资源脚本/漫途备份/local-config、node_modules、Pods、DerivedData、签名材料与构建日志不提交。用户已授权阶段性提交与push，无需每次重复确认。
 
+## 2026-10-16 作者身份
+
+用户已授权一次使用指定旧哈希的 force-with-lease 修订历史。32条 main 提交的作者/提交者统一为 `RhsR1024 <497334557@qq.com>`；逐提交树、说明与时间保持一致。该次例外不改变后续正常 push 规则。
+
+本机全局及本仓库 `user.name/user.email` 均设为上述身份，仓库开启 `user.useConfigOnly=true` 与 `core.hooksPath=.githooks`。受版本控制的 pre-commit 同时检查实际作者、提交者，拒绝错误身份（包括环境变量覆盖）。新克隆需执行 `git config core.hooksPath .githooks`；Git hook 可被人工绕过，因此后续阶段 push 前仍须核对 `git show --format=fuller HEAD`。
+
+原记录仅为核验保留在本地；按用户要求，在新身份阶段提交正常 push 并核对后删除专用旧历史备份引用和 `build/history-identity/`。实际清理结果见 HANDOFF/BUILD_STATUS，不提前声明已删除。
+
 官方文档：
 - https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
 - https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account

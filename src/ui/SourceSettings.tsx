@@ -4,6 +4,8 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import type { SourceCatalog } from '../providers/sourceCatalog.ts';
+import type {SourceHealth} from '../providers/sourceHealth.ts';
+import {SourceHealthModal} from './SourceHealthModal.tsx';
 import { fetchSourceScript } from '../providers/nativeLX.ts';
 
 const labels = { disabled: '已停用', initializing: '初始化中…', ready: '已启用', failed: '初始化失败 · 可重试' };
@@ -14,12 +16,13 @@ async function downloadScript(url: string) {
   if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) throw new SourceInputError('请输入完整的HTTP(S)音源地址');
   return fetchSourceScript(parsed.toString());
 }
-export function SourceSettings({ catalog }: { catalog: SourceCatalog }) {
+export function SourceSettings({ catalog,health }: { catalog: SourceCatalog;health:SourceHealth }) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const sources = useSyncExternalStore(catalog.subscribe, catalog.getSnapshot);
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const [url, setURL] = useState('');
+  const [checking,setChecking]=useState(false);
   async function perform(work: () => Promise<void>) {
     setBusy(true); setMessage('');
     try { await work(); } catch (error) { setMessage(error instanceof SourceInputError ? error.message : '操作失败。请检查文件、地址或网络后重试；已有数据已保留。'); }
@@ -52,6 +55,8 @@ export function SourceSettings({ catalog }: { catalog: SourceCatalog }) {
   return <View style={styles.card}>
     <View style={styles.row}><Text style={styles.title}>LX 音源</Text><Text style={styles.caption}>{sources.filter(item => item.status === 'ready').length} / {sources.length} 已启用</Text></View>
     <Text style={styles.description}>多个音源可同时启用。播放时先尝试所有音源的偏好音质，再逐级降档。</Text>
+    {button('音源健康批测',()=>setChecking(true),busy||!sources.length)}
+    <Text style={styles.caption}>检查勾选的音源；未勾选时检查已启用音源，不改变当前播放。</Text>
     {button('导入本地 JS（可多选）', () => { void perform(importFiles); })}
     <TextInput accessibilityLabel="音源订阅地址" placeholder="HTTP(S) 音源或订阅地址" placeholderTextColor="#6E7788" autoCapitalize="none" autoCorrect={false} spellCheck={false} keyboardType="url" textContentType="URL"
       value={url} onChangeText={setURL} editable={!busy} style={styles.input} />
@@ -89,6 +94,7 @@ export function SourceSettings({ catalog }: { catalog: SourceCatalog }) {
     </>}
     {!!message && <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>}
     {busy && <Text accessibilityLiveRegion="polite" style={styles.caption}>正在处理，其他音源会继续工作…</Text>}
+    <SourceHealthModal health={health} ids={selected.length?selected:sources.filter(s=>s.enabled).map(s=>s.id)} visible={checking} onClose={()=>setChecking(false)}/>
   </View>;
 }
 const makeStyles=(theme:Theme)=>StyleSheet.create({

@@ -90,3 +90,7 @@ WebDAV连接/协议基础采纳见[0018](decisions/0018-webdav.md)：比较Solli
 WebDAV App接入继续按0018原创实现：AVFoundation远程读取复用0016的标签问题边界，音频仍是现有AVPlayer与队列。未复制Sollin的DOM/明文持久化/日志；未引入新npm依赖。已验证七种格式远程PCM与定位、合成App重启播放及账号移除；Basic之外的服务兼容性、手机后台、云备份/同步继续分别验证。
 
 S7普通在线匹配按[0019](decisions/0019-online-fallback-matching.md)比较Q/wtf getOtherSource/findMusic、Cy findMusic、悦音URL重试与Wayferar imported守卫后原创实现；保留严格版本/时长和原始身份，不照搬宽松首项、共享取消Promise或第二播放器。TS匹配/记录/路由可供Android共享，原生播放后端仍分别适配；无新第三方依赖/复制源码。179项业务检查、合成App自动/人工/取消/重启已通过，真实服务及双构建按BUILD_STATUS实际记录。
+
+S7音源平台/音质批测按[0020](decisions/0020-source-health.md)比较：Cy固定128k/非空URL、Sollin显式sourceId逐档、Q/wtf单宿主生命周期、悦音自动重试、Wayferar更新检查隔离，原创实现精确源/档位和原生有界响应检查。不复制打印地址/错误的路径，不把响应头当解码成功；TS调度/报告可共享Android，URLSession探测需对应平台实现。188项业务与完整原生/HTTP已通过，App集成验证中，无新依赖。
+
+S7网易公开评论按[0021](decisions/0021-public-comments.md)比较六参考后原创实现，精确原曲身份/普通行数游标、热门与普通分区、失败留旧内容及取消隔离；其他平台不因参考存在代码就算已接入，无新依赖。2026-10-16用户另明确授权暂用漫途图标，固定素材路径、尺寸/无透明通道适配及许可边界见[0022](decisions/0022-temporary-app-icon.md)，不重新生成或改造其标志造型。

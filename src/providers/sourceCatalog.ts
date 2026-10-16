@@ -29,6 +29,11 @@ export class SourceCatalog {
     registry.subscribe(() => this.publish());
   }
   getSnapshot = () => this.snapshot;
+  diagnosticDefinition(source:SourceState):SourceDefinition {
+    const value=this.records.find(item=>item.id===source.id);
+    if(!value||!this.registry.isCurrent(source)||value.fingerprint!==source.fingerprint)throw new Error('音源已变化，请重新检查');
+    return{id:value.id,name:value.name,script:value.script,fingerprint:value.fingerprint};
+  }
   private mutate<T>(run: () => Promise<T>): Promise<T> {
     const next = this.tail.then(run); this.tail = next.catch(() => {}); return next;
   }

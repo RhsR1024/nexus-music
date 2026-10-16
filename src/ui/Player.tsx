@@ -1,3 +1,4 @@
+import {CommentsModal} from './CommentsModal.tsx';
 import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
 import {GlassSurface} from './Materials.tsx';
@@ -30,6 +31,7 @@ export function Player({ services }: { services: Services }) {
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
   useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  const [commenting,setCommenting]=useState<Track|null>(null);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
   const [details,setDetails]=useState(false);
@@ -47,7 +49,7 @@ export function Player({ services }: { services: Services }) {
         <Spectrum services={services} />
         {(entry.track.origin.kind==='imported'||entry.track.origin.kind==='online')&&<View style={styles.row}><Text style={styles.caption}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
         {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={fonts.selected??undefined}/>}
-        <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}</View>
+        <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10))}
@@ -96,6 +98,7 @@ export function Player({ services }: { services: Services }) {
           <Text style={styles.title}>播放选项</Text>{skinSelector}{detailContent}
         </ScrollView>
       </Modal>
+      <CommentsModal services={services} track={commenting} onClose={()=>setCommenting(null)}/>
       <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
       <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
     </Modal>

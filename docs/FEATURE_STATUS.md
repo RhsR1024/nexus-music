@@ -125,3 +125,7 @@ WebDAV独立来源、Expo原生桥、多账号Keychain、目录/当前目录搜�
 隔离后的正式入口实曲最终通过：build/SourceUITests-1792111577110.xcresult，gdstudio/公开Shape of You/显式128k，95.548秒完成真实在线搜索→LX→原生PCM频谱→暂停→删临时源并恢复flac偏好。正式HBC无测试适配器，服务端计数无matching-audio请求；原HelloWorld失败记录保留。ND正式入口99.020秒回归已通过。本批为179项业务与合成/实曲App验收，不代替手机后台和所有真实平台。
 
 本批c4613a5a15ea868e03de4a709be72111c4998ee5已完成本地设备归档：archive-online-matching.log为ARCHIVE SUCCEEDED，manifest commit=c4613a5/dirty=false/workingTreeChanges=[]/arm64/iphoneos26.2/min15.1/signed=false，正式bundle无测试适配器。IPA SHA256 96f37a92ce7aeb9293e6517f7ad7603c1366e1cf91cc616ca3661f1b30f2ca8b，位于build/distribution/NexusMusic-unsigned.ipa；校验通过。源码保持清洁至归档结束；随后正常push并跟踪本批新云端，不能用上一批258772e成功替代S7结果。后续优先S7源健康/平台音质批测，S2/S3/S4/S8/S9及手机/真实个人服务等其余目标保持active。
+
+## 2026-10-16 云端失败复盘与本批本地证据
+
+旧 `c4613a5` 云端运行 `38832172978` 的 checks 通过，iOS 第一组 App 回归失败，原因定位到旧 UI 测试对深设置页自动匹配按钮的脆弱可见性/视口定位；当前已改稳定 testID、短滚动和重启状态断言，并把临时图标主屏检查加入 CI。新本地证据 `build/SourceUITests-1792120970586.xcresult` 通过匹配、评论、源健康；图标/NAV回归也通过。云端新运行尚未形成结果前，不标记 CI 完成。

@@ -1,4 +1,8 @@
+import {PublicComments} from '../providers/comments.ts';
 import {bindManualMatches,bindMatchPolicy} from '../playback/matchBinding.ts';
+import {SourceHealth} from '../providers/sourceHealth.ts';
+import {loadAudioProbe,loadNativeDiagnosticLX} from '../providers/nativeLX.ts';
+import {createSourceDiagnostics} from '../providers/sourceDiagnostics.ts';
 import {DAVNativeTransport,type DAVNativeModule} from '../providers/davNativeTransport.ts';
 import {WebDAVAccounts} from '../providers/webdavAccounts.ts';
 import {WebDAVMedia} from '../providers/webdavMedia.ts';
@@ -63,6 +67,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
   const matching=new CrossPlatformMatcher(online);
+  const comments=new PublicComments(options.onlineHTTP);
+  const sourceHealth=new SourceHealth({registry,open:createSourceDiagnostics(catalog,loadNativeDiagnosticLX(),Crypto.randomUUID),online,probe:loadAudioProbe(Crypto.randomUUID)});
   const qishui=new QishuiProvider();
   const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
@@ -107,7 +113,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
-  return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, matching, qishui, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

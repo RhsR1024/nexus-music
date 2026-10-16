@@ -1,5 +1,8 @@
 import { requireNativeModule } from 'expo';
-import { createNativeLX } from './nativeLXAdapter.ts';
+import { createNativeLX,createNativeDiagnosticLX,type NativeDiagnosticLX } from './nativeLXAdapter.ts';
+export const loadNativeDiagnosticLX=()=>createNativeDiagnosticLX(requireNativeModule<NativeDiagnosticLX>('NexusNative'));
+import {createAudioProbe,type AudioProbeNative} from './audioProbe.ts';
+export const loadAudioProbe=(uuid:()=>string)=>createAudioProbe(requireNativeModule<AudioProbeNative>('NexusNative'),uuid);
 
 export function loadNativeLX() {
   return createNativeLX(requireNativeModule<Parameters<typeof createNativeLX>[0]>('NexusNative'));

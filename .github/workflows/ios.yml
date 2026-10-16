@@ -59,16 +59,16 @@ jobs:
       - name: Verify source management and Navidrome playback in the App
         shell: bash
         run: |
-          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testAppearancePersistenceAndPrimaryNavigation NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testGraphicalEQPresetPersistence NexusMusicUITests/SourceSettingsTests/testWWebDAVBrowseTagsPlaybackAndRemoval NexusMusicUITests/SourceSettingsTests/testXDeviceMediaAuthorization NexusMusicUITests/SourceSettingsTests/testYLocalAudioFileImport NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials; then
+          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testAppIconOnHomeScreen NexusMusicUITests/SourceSettingsTests/testAppearancePersistenceAndPrimaryNavigation NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testGraphicalEQPresetPersistence NexusMusicUITests/SourceSettingsTests/testWWebDAVBrowseTagsPlaybackAndRemoval NexusMusicUITests/SourceSettingsTests/testXDeviceMediaAuthorization NexusMusicUITests/SourceSettingsTests/testYLocalAudioFileImport NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials; then
             tail -n 100 build/logs/ui-catalog.log
             exit 1
           fi
-      - name: Verify original-to-matched playback and manual version selection
+      - name: Verify matched playback, manual versions and source health
         shell: bash
         run: |
           cp build/logs/ui-catalog.log build/logs/ui-core.log
           cp build/logs/ui-server-counts.json build/logs/ui-core-counts.json
-          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testOnlineMatching; then
+          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testOnlineMatching NexusMusicUITests/SourceSettingsTests/testSourceHealth NexusMusicUITests/SourceSettingsTests/testPublicComments; then
             tail -n 100 build/logs/ui-catalog.log
             exit 1
           fi

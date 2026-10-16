@@ -1,0 +1,66 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {SourceHealth} from '../src/providers/sourceHealth.ts';import type {LXTransport} from '../src/providers/multiSourceResolver.ts';import{SourceRegistry}from'../src/providers/sourceRegistry.ts';import{createAudioProbe}from'../src/providers/audioProbe.ts';import{deferred,track}from'./fixtures.ts';import type{LXSource}from'../src/providers/lx.ts';
+function testHealth({transport,...deps}:Omit<ConstructorParameters<typeof SourceHealth>[0],'open'>&{transport:LXTransport}){return new SourceHealth({...deps,open:async source=>({capabilities:source.capabilities,request:(payload,signal)=>transport.request(source,payload,signal),dispose(){}})});}
+const cap=(platform:'wy'|'tx'='wy',qualities=['flac','320k','128k']):LXSource=>({platform,name:'Fixture',actions:['musicUrl'],qualities});
+async function registry(declarations:Record<string,LXSource[]>={a:[cap()],b:[cap('tx')]}){const value=new SourceRegistry({initialize:async source=>declarations[source.id]!,destroy(){}});for(const id of Object.keys(declarations)){value.register({id,name:`Source ${id}`,script:'fixture',fingerprint:`hash-${id}`});await value.setEnabled(id,true);}return value;}
+const song=(platform:'wy'|'tx')=>({...track,origin:{kind:'online' as const,platform,id:`${platform}-id`}});
+const online={search:async(platform:any)=>({items:[song(platform)],page:1,hasMore:false})};
+const probe=async()=>({state:'header' as const,bytes:12,status:206,format:'wav' as const});
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+test('health targets exact source and declared quality without fallback, isolating failures and leaving registry untouched',async()=>{
+ const sources=await registry({a:[cap('wy',['flac','320k','128'])],b:[cap('tx',['128k'])]}),before=sources.getSnapshot(),calls:string[]=[];let probes=0;
+ const health=testHealth({registry:sources,online,probe:async()=>{probes++;return probe();},transport:{request:async(source,payload)=>{calls.push(`${source.id}:${payload.source}:${payload.info.type}`);assert.equal(payload.info.musicInfo.meta.songId,`${payload.source}-id`);if(payload.info.type==='320k')throw Error('https://secret.test/?token=PRIVATE');return 'https://media.example/audio?token=PRIVATE';}}});
+ await health.run(['a','b'],'fixture',['flac','320k','128k']);assert.deepEqual(calls.sort(),['a:wy:128','a:wy:320k','a:wy:flac','b:tx:128k']);assert.equal(probes,3);assert.equal(health.getSnapshot().rows.filter(r=>r.status==='url-error').length,1);assert.equal(health.getSnapshot().running,false);assert.equal(sources.getSnapshot(),before);assert.doesNotMatch(health.report(),/PRIVATE|secret\.test|media\.example|https?:/);health.dispose();
+});
+test('health has at most two source workers, one request per source, and shares platform search',async()=>{
+ const sources=await registry({a:[cap()],b:[cap()],c:[cap()]}),bySource=new Map<string,number>();let active=0,max=0,searches=0;
+ const health=testHealth({registry:sources,online:{search:async()=>{searches++;await tick();return{items:[song('wy')],page:1,hasMore:false};}},probe,transport:{request:async source=>{active++;max=Math.max(max,active);bySource.set(source.id,(bySource.get(source.id)??0)+1);assert.equal(bySource.get(source.id),1);await new Promise(resolve=>setTimeout(resolve,5));active--;bySource.set(source.id,0);return 'https://example.test/audio';}}});
+ await health.run(['a','b','c'],'fixture');assert.equal(searches,1);assert.equal(max,2);assert.equal(health.getSnapshot().rows.length,9);assert.ok(health.getSnapshot().rows.every(r=>r.status==='header'));health.dispose();
+});
+test('source removal cancels only health request and rejects late result; completed reports become stale on revision changes',async()=>{
+ const sources=await registry({a:[cap('wy',['128k'])]}),pending=deferred<unknown>();let signal:AbortSignal|undefined,probes=0;
+ const health=testHealth({registry:sources,online,probe:async()=>{probes++;return probe();},transport:{request:async(_s,_p,s)=>{signal=s;return pending.promise;}}});const run=health.run(['a'],'fixture');while(!signal)await tick();await sources.setEnabled('a',false);assert.equal(signal.aborted,true);pending.resolve('https://example.test/late');await run;assert.equal(probes,0);assert.equal(health.getSnapshot().rows[0]!.status,'source-changed');
+ await sources.setEnabled('a',true);const rerun=testHealth({registry:sources,online,probe,transport:{request:async()=> 'https://example.test/audio'}});await rerun.run(['a'],'fixture');assert.equal(rerun.getSnapshot().rows[0]!.status,'header');sources.remove('a');assert.equal(rerun.getSnapshot().rows[0]!.status,'source-changed');health.dispose();rerun.dispose();
+});
+test('cancel keeps finished rows, marks active rows and cannot publish ignored late transport completion',async()=>{
+ const sources=await registry({a:[cap('wy',['flac','128k'])]}),late=deferred<unknown>();let active:AbortSignal|undefined;
+ const health=testHealth({registry:sources,online,probe,transport:{request:async(_s,p,s)=>{if(p.info.type==='128k'){active=s;return late.promise;}return'https://example.test/audio';}}});const run=health.run(['a'],'fixture');while(!active)await tick();health.cancel();const before=health.getSnapshot();assert.equal(active.aborted,true);assert.deepEqual(before.rows.map(r=>r.status),['header','cancelled']);late.resolve('https://private.test/?token=PRIVATE');await run;assert.equal(health.getSnapshot(),before);health.dispose();
+});
+test('replacement health run wins even if old transport ignores abort',async()=>{
+ const sources=await registry({a:[cap('wy',['128k'])]}),late=deferred<unknown>();let count=0,first=false;
+ const health=testHealth({registry:sources,online,probe,transport:{request:async()=>{count++;if(count===1){first=true;return late.promise;}return'https://example.test/new';}}});const old=health.run(['a'],'old');while(!first)await tick();await health.run(['a'],'new');const latest=health.getSnapshot();late.resolve('https://example.test/old');await old;assert.equal(health.getSnapshot(),latest);assert.equal(latest.rows[0]!.status,'header');health.dispose();
+});
+test('health distinguishes unsupported, disabled, missing songs and search errors; never requests wrong-platform results',async()=>{
+ const sources=await registry({a:[cap('wy',['128k'])],b:[cap('tx',['128k'])]});await sources.setEnabled('b',false);let requested=0;
+ const health=testHealth({registry:sources,online:{search:async()=>({items:[song('tx')],page:1,hasMore:false})},probe,transport:{request:async()=>{requested++;return'https://example.test/audio';}}});await health.run(['a','b'],'fixture',['flac']);assert.deepEqual(health.getSnapshot().rows.map(r=>r.status),['unsupported','not-ready']);await health.run(['a'],'fixture',['128k']);assert.equal(health.getSnapshot().rows[0]!.status,'no-song');assert.equal(requested,0);await assert.rejects(health.run(['missing'],'fixture'));health.dispose();
+ const failed=testHealth({registry:sources,online:{search:async()=>{throw Error('PRIVATE_TOKEN');}},probe,transport:{request:async()=>{throw Error('must not request');}}});await failed.run(['a'],'fixture');assert.equal(failed.getSnapshot().rows[0]!.status,'search-error');assert.doesNotMatch(failed.report(),/PRIVATE/);failed.dispose();
+});
+test('health rejects unsafe URLs and separates response errors from address resolution',async()=>{
+ const sources=await registry({a:[cap('wy',['flac','320k','128k'])]});let probes=0;
+ const health=testHealth({registry:sources,online,probe:async()=>{probes++;return{state:'http-error',bytes:0,status:403};},transport:{request:async(_s,p)=>p.info.type==='flac'?'file:///PRIVATE':p.info.type==='320k'?'https://user:PRIVATE@example.test/a':'https://example.test/audio?token=PRIVATE'}});await health.run(['a'],'fixture');assert.deepEqual(health.getSnapshot().rows.map(r=>r.status),['url-error','url-error','http-error']);assert.equal(health.getSnapshot().rows[2]!.httpStatus,403);assert.equal(probes,1);assert.doesNotMatch(health.report(),/PRIVATE/);health.dispose();
+});
+test('health timeout remains bounded when search or script ignores cancellation',async()=>{
+ const sources=await registry({a:[cap('wy',['128k'])]});for(const phase of ['search','script']){const health=testHealth({registry:sources,timeoutMs:10,online:phase==='search'?{search:async()=>new Promise(()=>{})}:online,probe,transport:{request:async()=>new Promise(()=>{})}});await health.run(['a'],'fixture');assert.equal(health.getSnapshot().rows[0]!.status,'timeout');health.dispose();}
+});
+test('audio probe adapter cancels only its request, strips unexpected fields, and rejects invalid native payloads',async()=>{
+ const late=deferred<unknown>(),cancelled:string[]=[];const native={probeAudioURL:async()=>late.promise,cancelAudioProbe:async(id:string)=>{cancelled.push(id);}};const adapter=createAudioProbe(native,()=> 'probe-id'),abort=new AbortController(),pending=adapter('https://example.test/private',abort.signal);abort.abort();await assert.rejects(pending,{name:'AbortError'});assert.deepEqual(cancelled,['probe-id']);late.resolve({state:'header',bytes:12,format:'wav',url:'PRIVATE'});
+ const clean=createAudioProbe({...native,probeAudioURL:async()=>({state:'header',bytes:12,status:206,format:'wav',url:'PRIVATE'})},()=> 'next');assert.deepEqual(await clean('https://example.test',new AbortController().signal),{state:'header',bytes:12,status:206,format:'wav'});
+ const bad=createAudioProbe({...native,probeAudioURL:async()=>({state:'header',bytes:4097,format:'wav'})},()=> 'bad');await assert.rejects(bad('https://example.test',new AbortController().signal));
+});
+test('diagnostic sessions use separate native IDs and dispose without destroying the regular source',async()=>{
+ const {createSourceDiagnostics}=await import('../src/providers/sourceDiagnostics.ts'),{createNativeDiagnosticLX}=await import('../src/providers/nativeLXAdapter.ts');const sources=await registry({a:[cap('wy',['128k'])]}),source=sources.getSnapshot()[0]!,regular=new Set(['a']),diagnostics=new Set<string>(),operations:string[]=[];
+ const native=createNativeDiagnosticLX({initializeHealthSource:async(id,_name,script)=>{assert.equal(script,'PRIVATE SCRIPT');assert.notEqual(id,'a');diagnostics.add(id);operations.push('init');return JSON.stringify({sources:{wy:{name:'Fixture',actions:['musicUrl'],qualitys:['128k']}}});},requestHealthSource:async(id,_request,payload)=>{assert.ok(diagnostics.has(id));assert.equal(JSON.parse(payload).source,'wy');return JSON.stringify('https://example.test/private');},cancelHealthRequest:async()=>{},destroyHealthSource:async id=>{assert.notEqual(id,'a');diagnostics.delete(id);operations.push('destroy');}});
+ const open=createSourceDiagnostics({diagnosticDefinition:()=>({id:'a',name:'Fixture',script:'PRIVATE SCRIPT',fingerprint:'hash-a'})},native,()=> 'uuid');const abort=new AbortController(),session=await open(source,abort.signal);
+ const {makeLXRequest}=await import('../src/providers/lx.ts');assert.equal(await session.request(makeLXRequest(song('wy'),'128k',cap('wy',['128k'])),new AbortController().signal),'https://example.test/private');abort.abort();session.dispose();assert.equal(diagnostics.size,0);assert.deepEqual([...regular],['a']);assert.equal(sources.isCurrent(source),true);assert.ok(operations.includes('destroy'));
+});
+test('diagnostic init failure is separate from URL failure and a late opening session is always disposed after cancellation',async()=>{
+ const sources=await registry({a:[cap('wy',['128k'])]});let searches=0;
+ const failed=new SourceHealth({registry:sources,online:{search:async()=>{searches++;throw Error('must not search');}},probe,open:async()=>{throw Error('PRIVATE INIT');}});await failed.run(['a'],'fixture');assert.equal(failed.getSnapshot().rows[0]!.status,'init-error');assert.equal(searches,0);assert.doesNotMatch(failed.report(),/PRIVATE/);failed.dispose();
+ const opening=deferred<import('../src/providers/sourceDiagnostics.ts').DiagnosticSession>();let started=false,disposed=0;
+ const late=new SourceHealth({registry:sources,online,probe,open:async()=>{started=true;return opening.promise;}}),run=late.run(['a'],'fixture');while(!started)await tick();late.cancel();await run;const before=late.getSnapshot();opening.resolve({capabilities:[cap()],request:async()=> 'PRIVATE',dispose(){disposed++;}});await tick();assert.equal(disposed,1);assert.equal(late.getSnapshot(),before);late.dispose();
+});
+test('catalog diagnostic snapshot rejects an outdated script/revision without changing source enablement',async()=>{
+ const {SourceCatalog}=await import('../src/providers/sourceCatalog.ts');const sources=new SourceRegistry({initialize:async()=>[cap('wy',['128k'])],destroy(){}}),catalog=new SourceCatalog(sources,{get:async()=>undefined,put:async()=>{}} as never,async script=>`hash:${script}`);
+ const imported=await catalog.import('/** @name Fixture */\nold','fixture.js');await catalog.batch([imported.id],'enable');const source=sources.getSnapshot()[0]!;assert.equal(catalog.diagnosticDefinition(source).script,'/** @name Fixture */\nold');
+ await catalog.update(imported.id,'/** @name Fixture */\nnew');assert.throws(()=>catalog.diagnosticDefinition(source));assert.equal(sources.getSnapshot()[0]!.status,'disabled');
+});

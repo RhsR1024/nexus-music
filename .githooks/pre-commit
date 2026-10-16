@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+for identity in GIT_AUTHOR_IDENT GIT_COMMITTER_IDENT; do
+  case "$(git var "$identity")" in
+    'RhsR1024 <497334557@qq.com> '*) ;;
+    *) printf '%s\n' 'Commit rejected: use RhsR1024 <497334557@qq.com> for both author and committer.' >&2; exit 1 ;;
+  esac
+done

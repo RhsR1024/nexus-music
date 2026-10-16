@@ -2,9 +2,12 @@ import ExpoModulesCore
 
 public final class NexusNativeModule: Module {
   private let runtimeQueue = DispatchQueue(label: "nexus.lx.registry")
+  private let probeQueue = DispatchQueue(label: "nexus.source.health")
   private var runtimes: [String: (revision: Int, runtime: ScriptRuntime)] = [:]
+  private var diagnosticRuntimes: [String: ScriptRuntime] = [:]
   private var revisions: [String: Int] = [:]
   private var downloads: [String: (client: ScriptHTTP, promise: Promise)] = [:]
+  private var probes: [String: AudioURLProbe] = [:]
   private let coverQueue = CoverCache.queue
   private let covers = CoverCache.shared
   private var coverRequests: [String: (client: ScriptHTTP, promises: [Promise])] = [:]
@@ -15,6 +18,12 @@ public final class NexusNativeModule: Module {
       Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }
     }
     AsyncFunction("decodeImportText") { (base64: String) throws -> String in try ScriptUtilities.perform("importText", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
+    AsyncFunction("probeAudioURL") { (id: String, url: String, promise: Promise) in
+      guard self.probes[id] == nil, self.probes.count < 2 else { promise.reject("PROBE_BUSY", "请等待其他检查完成"); return }
+      let client = AudioURLProbe(queue: self.probeQueue); self.probes[id] = client
+      client.start(url) { [weak self] result in self?.probes.removeValue(forKey: id); promise.resolve(result) }
+    }.runOnQueue(probeQueue)
+    AsyncFunction("cancelAudioProbe") { (id: String) in self.probes[id]?.cancel() }.runOnQueue(probeQueue)
     AsyncFunction("decodeKRC") { (base64: String) throws -> String in try ScriptUtilities.perform("krcDecode", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("decodeQRC") { (hex: String) throws -> String in try ScriptUtilities.perform("qrcDecode", ["input": hex]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("coverStatistics") { self.covers.statistics() }.runOnQueue(coverQueue)
@@ -79,19 +88,38 @@ public final class NexusNativeModule: Module {
         current.runtime.destroy(); self.runtimes.removeValue(forKey: id)
       }
     }.runOnQueue(runtimeQueue)
+    AsyncFunction("initializeHealthSource") { (id: String, name: String, script: String, promise: Promise) in
+      guard self.diagnosticRuntimes[id] == nil, self.diagnosticRuntimes.count < 2, script.utf8.count <= 8 * 1024 * 1024,
+            let bootstrap = self.bootstrapText() else { promise.reject("HEALTH_SOURCE_BUSY", "诊断初始化失败，请稍后重试"); return }
+      let runtime = ScriptRuntime(id: "diagnostic:\(id)", revision: 1); self.diagnosticRuntimes[id] = runtime
+      runtime.initialize(script: script, name: name, bootstrap: bootstrap) { result in self.complete(promise, result) }
+    }.runOnQueue(runtimeQueue)
+    AsyncFunction("requestHealthSource") { (id: String, requestID: String, payload: String, promise: Promise) in
+      guard let runtime = self.diagnosticRuntimes[id] else { promise.reject("HEALTH_SOURCE_ENDED", "诊断会话已结束"); return }
+      runtime.request(id: requestID, payloadJSON: payload) { result in self.complete(promise, result) }
+    }.runOnQueue(runtimeQueue)
+    AsyncFunction("cancelHealthRequest") { (id: String, requestID: String) in self.diagnosticRuntimes[id]?.cancel(id: requestID) }.runOnQueue(runtimeQueue)
+    AsyncFunction("destroyHealthSource") { (id: String) in self.diagnosticRuntimes.removeValue(forKey: id)?.destroy() }.runOnQueue(runtimeQueue)
 
     OnDestroy {
+      self.probeQueue.async { [self] in for probe in Array(probes.values) { probe.cancel() }; probes.removeAll() }
       self.coverQueue.async { [self] in
         for pending in coverRequests.values { pending.client.destroy(); for promise in pending.promises { promise.reject("COVER_CANCELLED", "封面加载已结束") } }
         coverRequests.removeAll()
       }
       self.runtimeQueue.async { [self] in
+        for runtime in diagnosticRuntimes.values { runtime.destroy() }; diagnosticRuntimes.removeAll()
         for entry in runtimes.values { entry.runtime.destroy() }
         runtimes.removeAll(); revisions.removeAll()
         for entry in downloads.values { entry.client.destroy(); entry.promise.reject("SOURCE_DESTROYED", "操作已结束") }
         downloads.removeAll()
       }
     }
+  }
+  private func bootstrapText() -> String? {
+    guard let bundleURL = Bundle(for: NexusNativeModule.self).url(forResource: "NexusNative", withExtension: "bundle"),
+          let bundle = Bundle(url: bundleURL), let path = bundle.url(forResource: "bootstrap", withExtension: "js") else { return nil }
+    return try? String(contentsOf: path, encoding: .utf8)
   }
   private func complete(_ promise: Promise, _ result: Result<String, ScriptRuntimeError>) {
     switch result {

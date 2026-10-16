@@ -212,3 +212,9 @@ WebDAV云端38826891584（258772e）最终成功：checks、native、7项App UI�
 本批c4613a5a15ea868e03de4a709be72111c4998ee5已完成本地设备归档：archive-online-matching.log为ARCHIVE SUCCEEDED，manifest commit=c4613a5/dirty=false/workingTreeChanges=[]/arm64/iphoneos26.2/min15.1/signed=false，正式bundle无测试适配器。IPA SHA256 96f37a92ce7aeb9293e6517f7ad7603c1366e1cf91cc616ca3661f1b30f2ca8b，位于build/distribution/NexusMusic-unsigned.ipa；校验通过。源码保持清洁至归档结束；随后正常push并跟踪本批新云端，不能用上一批258772e成功替代S7结果。后续优先S7源健康/平台音质批测，S2/S3/S4/S8/S9及手机/真实个人服务等其余目标保持active。
 
 S7 c4613a5已正常push，新云端运行[38832172978](https://github.com/RhsR1024/nexus-music/actions/runs/38832172978)已创建，当前queued；新增独立匹配App验收步骤及生产入口归档隔离，须等待实际结果。不要重跑/取消正常排队的运行；可继续下一批独立实现。当前目标active，未把本批或整个任务表标记为全部完成。
+
+## 2026-10-16 云端 iOS27 失败复盘与本批修复
+
+旧 S7 提交 `c4613a5` 的 GitHub Actions `38832172978` 已确认失败：Linux checks 通过，iOS job 失败于第一组 `Verify source management and Navidrome playback in the App`，exit code 1；GitHub 页面显示的失败步骤和页面快照保存在被忽略的 `build/history-identity/previous-ci.*`、`job-116753350795.*`。详细 job 日志因 GitHub 登录状态不可见，不能伪造更细的云端断言。结合本地复现，失败点是旧源管理 UI 测试在 iPhone17 视口滚动后用 `isHittable` 查找深设置页自动匹配按钮，按钮被跳过/不可点击；不是原生编译、签名或归档失败。
+
+当前修复：`PlaybackSettings` 增加 `automatic-online-matching` 稳定 testID；`SourceSettingsTests.testOnlineMatching` 使用短距离滚动，同时断言 accessibility label、真实点击和重启后的开启/关闭状态；CI 第一组新增 `testAppIconOnHomeScreen`。本地 Release UI：`build/SourceUITests-1792120970586.xcresult` 的匹配/健康/评论通过，图标和 Navidrome正式入口随后分别 9.080/99.670 秒通过。正式本地归档 `build/logs/archive-icon.log` 为 ARCHIVE SUCCEEDED，IPA SHA256 `b12c741930cf52468d1144ca80be4a7a9926b5ec223d5c08068ac2bcf5148946`。必须以本批 push 后的新 xcode-27 云端运行结果确认修复有效。

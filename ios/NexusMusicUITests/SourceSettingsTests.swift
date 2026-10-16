@@ -2,6 +2,64 @@ import XCTest
 
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
+  func testAppIconOnHomeScreen() throws {
+    let app=XCUIApplication();app.launch();XCUIDevice.shared.press(.home)
+    let home=XCUIApplication(bundleIdentifier:"com.apple.springboard"),icon=home.icons["音枢"].firstMatch
+    for _ in 0..<4 {if icon.isHittable{break};home.swipeLeft()}
+    XCTAssertTrue(icon.isHittable)
+    let image=XCTAttachment(screenshot:home.screenshot());image.lifetime = .keepAlways;add(image)
+    icon.tap();XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15))
+  }
+  func testPublicComments() throws {
+    let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];for _ in 0..<8 {if query.isHittable{break};app.swipeUp()};XCTAssertTrue(query.isHittable)
+    query.tap();query.typeText("fixture");query.typeText("\n");app.buttons["搜索"].firstMatch.tap()
+    let song=app.buttons["search-track-wy-0"];XCTAssertTrue(song.waitForExistence(timeout:15))
+    let comments=app.buttons["歌曲评论"].firstMatch;for _ in 0..<6 {if comments.isHittable{break};app.swipeUp()};comments.tap()
+    XCTAssertTrue(app.staticTexts["Synthetic hot comment"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["Synthetic comment 1"].exists)
+    let more=app.buttons["加载更多评论"];for _ in 0..<6 {if more.isHittable{break};app.swipeUp()};more.tap()
+    let retry=app.buttons["重试评论"];XCTAssertTrue(retry.waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["Synthetic comment 2"].exists);retry.tap()
+    XCTAssertTrue(app.staticTexts["Synthetic comment 3"].waitForExistence(timeout:10));XCTAssertFalse(app.buttons["加载更多评论"].exists)
+    let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
+    let refresh=app.buttons["刷新评论"];for _ in 0..<5 {if refresh.isHittable{break};app.swipeDown()};refresh.tap();XCTAssertTrue(app.buttons["加载更多评论"].waitForExistence(timeout:10))
+    app.buttons["收起歌曲评论"].tap();XCTAssertFalse(app.buttons["暂停"].exists)
+  }
+  func testSourceHealth() throws {
+    let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let address=app.textFields["音源订阅地址"]
+    for _ in 0..<8 {if address.isHittable{break};app.swipeUp()};XCTAssertTrue(address.isHittable)
+    address.tap();for character in "http://127.0.0.1:18439/health-source.js"{address.typeText(String(character))};address.typeText("\n");app.buttons["从地址导入"].tap()
+    let enable=app.buttons["启用音源：Nexus Health Fixture"]
+    for _ in 0..<5 {if enable.isHittable{break};app.swipeUp()};if enable.waitForExistence(timeout:3){enable.tap()}else{XCTAssertTrue(app.buttons["停用音源：Nexus Health Fixture"].exists)}
+    XCTAssertTrue(app.staticTexts["已启用"].firstMatch.waitForExistence(timeout:20))
+    let selection=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Health Fixture").firstMatch
+    for _ in 0..<3 {if selection.isHittable{break};app.swipeDown()};selection.tap()
+    let health=app.buttons["音源健康批测"];for _ in 0..<5 {if health.isHittable{break};app.swipeDown()};health.tap()
+    let query=app.textFields["音源检查关键词"];XCTAssertTrue(query.waitForExistence(timeout:10));query.tap();query.typeText("slow\n")
+    let cancel=app.buttons["health-cancel"];XCTAssertTrue(cancel.waitForExistence(timeout:5));cancel.tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已取消，已完成项保留")).firstMatch.waitForExistence(timeout:10))
+    query.tap();query.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:4));query.typeText("fixture\n")
+    let completed=app.staticTexts["health-progress"];XCTAssertTrue(completed.waitForExistence(timeout:5))
+    let finished=NSPredicate(format:"label == %@","检查结束 · 6 / 6")
+    expectation(for:finished,evaluatedWith:completed);waitForExpectations(timeout:35)
+    let reportImage=XCTAttachment(screenshot:app.screenshot());reportImage.lifetime = .keepAlways;add(reportImage)
+    let failed=app.descendants(matching:.any).matching(identifier:"health-row-wy-flac").firstMatch
+    for _ in 0..<5 {if failed.isHittable{break};app.swipeUp()};XCTAssertTrue(app.staticTexts["未取得有效地址"].firstMatch.exists)
+    let response=app.descendants(matching:.any).matching(identifier:"health-row-tx-flac").firstMatch
+    for _ in 0..<5 {if response.isHittable{break};app.swipeUp()};XCTAssertTrue(app.staticTexts["媒体头已识别 · WAV · HTTP 206"].firstMatch.exists)
+    let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
+    let export=app.buttons["导出检查报告"];for _ in 0..<6 {if export.isHittable{break};app.swipeDown()};export.tap()
+    let dismiss=app.buttons.matching(NSPredicate(format:"label IN %@",["Close","Cancel","关闭","取消"])).firstMatch
+    if dismiss.waitForExistence(timeout:5){dismiss.tap()}else{
+      let sheet=app.descendants(matching:.any).matching(identifier:"ActivityListView").firstMatch
+      XCTAssertTrue(sheet.waitForExistence(timeout:10));sheet.swipeDown()
+    }
+    app.buttons["收起音源检查"].tap();XCTAssertFalse(app.buttons["暂停"].exists,"Health checks must preserve paused playback intent")
+    let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Health Fixture").firstMatch
+    for _ in 0..<6 {if selected.isHittable{break};app.swipeUp()};XCTAssertTrue(selected.exists);app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.
@@ -37,10 +95,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["保留原曲，可选择其他录音版本"].waitForExistence(timeout:10))
     app.terminate();app.launch();app.buttons["打开播放页"].tap();XCTAssertTrue(app.staticTexts["保留原曲，可选择其他录音版本"].waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["Synthetic match tone"].firstMatch.exists)
     app.buttons["收起播放页"].tap();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
-    let automatic=app.buttons["普通在线歌曲自动匹配：开启"]
-    for _ in 0..<20 {if automatic.isHittable{break};app.swipeUp()};XCTAssertTrue(automatic.isHittable);automatic.tap();app.terminate();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap();let disabled=app.buttons["普通在线歌曲自动匹配：关闭"]
-    for _ in 0..<20 {if disabled.isHittable{break};app.swipeUp()};XCTAssertTrue(disabled.isHittable);disabled.tap()
+    let automatic=app.buttons["automatic-online-matching"]
+    // Short content swipes avoid skipping this button between large settings cards.
+    for _ in 0..<40 {if automatic.isHittable{break};app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.72)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)))}
+    XCTAssertTrue(automatic.isHittable);XCTAssertEqual(automatic.label,"普通在线歌曲自动匹配：开启");automatic.tap();app.terminate();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap();let disabled=app.buttons["automatic-online-matching"]
+    for _ in 0..<40 {if disabled.isHittable{break};app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.72)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)))}
+    XCTAssertTrue(disabled.isHittable);XCTAssertEqual(disabled.label,"普通在线歌曲自动匹配：关闭");disabled.tap()
     let fixture=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Matching Fixture").firstMatch
     for _ in 0..<20 {if fixture.isHittable{break};app.swipeDown()};XCTAssertTrue(fixture.isHittable);fixture.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
