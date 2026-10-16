@@ -1,3 +1,7 @@
+# 2026-10-17 A08 播放历史时间轴回归
+
+`SourceSettingsTests` 现在覆盖真实 Navidrome 合成播放后返回音乐库、打开“最近播放”并断言 `history-item-0` 时间轴首行存在；`npm run check` 302/302、`git diff --check` 通过。测试提交 `47bd458` 对应云端运行 `38954944378`，当前仍为 `pending`，本机没有完整 Xcode，尚未执行本地 XCTest/IPA。
+
 # 2026-10-17 A08 播放历史时间轴
 
 音乐库“最近播放”现使用已有 `playedAt` 显示时间、节点和连接线，接近 Sollin 播放历史截图的时间轴结构；播放、移除、批量管理、清空历史和来源标识保持不变，并为历史行增加稳定 `history-item-*` testID。类型检查、302 项测试和 `git diff --check` 通过；新云端运行 `38954453106` 对应 `770da5e` 当前仍为 `pending`，本机没有完整 Xcode，未声称 UI/IPA 或真机通过。

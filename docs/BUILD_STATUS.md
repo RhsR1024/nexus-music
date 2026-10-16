@@ -1,3 +1,9 @@
+## 2026-10-17 A08 播放历史时间轴 UI 回归批次
+
+- `SourceSettingsTests` 增加真实播放后进入“最近播放”并检查 `history-item-0` 时间轴首行。
+- `npm run check`：302/302；`git diff --check` 通过。
+- 新云端运行 `38954944378`（`47bd458`）当前为 `pending`，本机只有 Command Line Tools，未执行本批 XCTest/IPA。
+
 ## 2026-10-17 A08 播放历史时间轴代码批次
 
 - 最近播放列表按真实 `playedAt` 增加时间轴节点、连接线和时间文本，保留原有播放、移除、批量管理和清空动作。
