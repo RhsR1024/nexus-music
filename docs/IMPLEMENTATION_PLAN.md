@@ -1,3 +1,9 @@
+## 2026-10-17 A09 迷你播放器上下滑手势
+
+`Player.tsx` 在迷你播放器容器记录原生触摸起止位置，垂直方向超过 36pt 且主导水平位移时上滑打开完整播放页；完整页顶部手柄使用同一有界判定下滑收起。按钮点击和内部队列/播放动作继续由既有 Pressable 处理，未引入逐帧 React 状态或新的播放边界。
+
+验证：`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，覆盖上滑、下滑和原有歌词/暂停/定位；清洁本地 unsigned IPA manifest 为 `b92c299`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，SHA256 `f28927fbac67f3ded050e26b59fb34e50aa06ac7feec39bbb52e42addf58d46e`；云端 `38971744514` 当前 `pending`，不计作 iOS 27 通过。
+
 ## 2026-10-17 A09 播放器样式 Sheet 列表化
 
 `Player.tsx` 的 `skinSelector` 现在使用稳定的图标行、选中背景、勾选/箭头和 44pt 以上触控高度；只改变样式选择的视觉层级，继续共享 `playerLayout` 偏好、单一播放器、权威队列和播放意图。该列表作为 Sollin `_PlayerInterfaceStyleSheet` 的行为重实现，不推断或复制其未确认的完整样式枚举。

@@ -4,6 +4,12 @@
 
 文档提交后清洁归档已成功：`build/distribution/build-manifest.json` 为 commit=`5d0a0a3`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；`build/distribution/NexusMusic-unsigned.ipa` SHA256 为 `0db5818fd2a3d774b8c7cf995a61b75cfc585155ff8b687f0d3b4db9c19f69ee`。对应 iOS 27 运行 [38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905) 当前 `pending`，不能记为云端通过；真机、签名、后台/功耗仍待验收。
 
+# 2026-10-17 A09 迷你播放器上下滑手势
+
+`b92c299` 已正常提交并 push。迷你播放器容器现在支持上滑打开完整播放页；完整播放页顶部手柄支持下滑收起，原有点击打开、按钮顺序、队列和暂停意图保持。触摸事件使用起止位置和方向阈值，不把逐帧位置放入 React 列表更新。`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，覆盖上滑、下滑及后续歌词/暂停/定位流程。
+
+清洁本地归档已成功：manifest 为 commit=`b92c299`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 为 `f28927fbac67f3ded050e26b59fb34e50aa06ac7feec39bbb52e42addf58d46e`。对应 iOS 27 运行 [38971744514](https://github.com/RhsR1024/nexus-music/actions/runs/38971744514) 当前 `pending`，不能记为云端通过；真机、手势长时体验、签名和后台/功耗仍待验收。
+
 # 2026-10-17 云端 38903549077 成功与 IPA 核验
 
 `c4422bc` / `38903549077` 于北京时间05:14完整成功：checks、原生检查、两组App测试、设备归档与产物上传全部通过。IPA artifact `12076096155` 已下载到忽略目录 `build/ci-38903549077`，完整ZIP长度/CRC及API SHA256 `9212ab3dca22a2054838581ef064a3304e5005af37332dc0115d19d1bbc0fbc6` 一致；内部IPA摘要与附带sha256一致，为 `fdc0696bdab9b87f75ece602e7abb20a64f162a2c670c6e489b69f9bf0b1430f`。已检查正式JS入口无测试adapter、arm64、Xcode27.0/27A266a、iphoneos27.0、min15.1、signed=false；manifest dirty=true唯一 `ios/Podfile.lock`。该旧基线设备族仍为[1]，不算后续原生iPad验证，也不覆盖近期对齐增量或消除38902977651图片导入失败的根因缺口。F33 `38913246781` 已开始正常运行，后续功能批次保持排队；本次未修改其他上下文的播放器代码或启动冲突构建。

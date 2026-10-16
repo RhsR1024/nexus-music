@@ -1,5 +1,7 @@
 # 功能开发与验收状态
 
+2026-10-17 A09：迷你播放器支持上滑打开完整播放页，完整播放页顶部手柄支持下滑收起；点击入口、按钮顺序、队列和暂停意图保持。`npm run check` 302/302，本地 `testCrossPlatformLyrics` 1/1 通过，清洁本地 unsigned IPA SHA256 `f28927fbac67f3ded050e26b59fb34e50aa06ac7feec39bbb52e42addf58d46e`。iOS 27 运行 `38971744514` 当前 `pending`，不计作云端通过。
+
 2026-10-17 A09：播放器样式 Sheet 改为稳定图标列表行，保留六布局、即时保存、错误恢复、暂停意图和队列状态。`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，137.929 秒；清洁本地 unsigned IPA SHA256 `0db5818fd2a3d774b8c7cf995a61b75cfc585155ff8b687f0d3b4db9c19f69ee`。云端运行 `38969653905` 当前 `pending`，不计作 iOS 27 通过。
 
 2026-10-17 A05：全局封面取色背景复用 `MotionImage` 的动态层，并由播放中、ready、未缓冲和动态偏好门控；切歌、暂停、后台和减少动态效果会停止运动。`npm run check` 302/302，本地 `testGlobalCoverThemeChangesAcrossPages` 1/1 通过，清洁本地 unsigned IPA SHA256 `e9f01a5e0c565223930be0b7af3415e5ef97f1f3eb7473f6c0c89dcd8b3bebc4`。iOS 27 运行 `38968408649` 当前 `pending`，真机、后台/功耗和长时动态效果仍待验证。
