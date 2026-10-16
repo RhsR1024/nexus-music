@@ -692,4 +692,4 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 
 设置→外观→播放界面样式现在使用与播放器内部样式 Sheet 一致的稳定图标列表行：每项包含图标、行为说明、选中态和箭头/勾选；六个当前可运行布局、立即保存、失败保留、队列和暂停意图保持。IPA 只提供样式名称与独立 Sheet 静态线索，未据此增加未实现的 Apple Music 2 入口。
 
-`npm run check` 302/302，`git diff --check` 通过。`build/SourceUITests-1792191433812.xcresult` 的 `testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器专项在既有合成流冷缓存时长断言失败，已保留失败证据且未宣称播放器专项通过。清洁本地 unsigned IPA SHA256 为 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`，manifest 为 Xcode26.3/iOS26.2、arm64、设备族 `[1,2]`、signed=false。现有 `38976733431` 仍对应 `bea1fbd` 且 pending；本批新提交后再创建并跟踪 iOS27 运行，签名、真机、后台/功耗仍待。
+`npm run check` 302/302，`git diff --check` 通过。`build/SourceUITests-1792191433812.xcresult` 的 `testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器专项在既有合成流冷缓存时长断言失败，已保留失败证据且未宣称播放器专项通过。清洁本地 unsigned IPA SHA256 为 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`，manifest 为 Xcode26.3/iOS26.2、arm64、设备族 `[1,2]`、signed=false。iOS27 运行 [38979554313](https://github.com/RhsR1024/nexus-music/actions/runs/38979554313) 已对应 `77d58e0`，当前 pending；签名、真机、后台/功耗仍待。

@@ -424,4 +424,4 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 - [x] `npm run check`：302/302；`git diff --check` 通过。
 - [x] 本地设置分组 UI `build/SourceUITests-1792191433812.xcresult`：`testGroupedSettingsNavigationAndDrafts` 1/1 通过；播放器专项触发了既有合成流时长断言失败，未将其记为本批通过。
 - [x] 清洁本地 unsigned IPA：Xcode 26.3 / iOS 26.2 SDK，arm64、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。
-- [ ] 新提交对应 iOS 27 运行、签名、真机、后台/功耗和播放器冷缓存时长仍待验证；现有 `38976733431` 仅对应 `bea1fbd`，不能算本批结果。
+- [ ] iOS 27 运行 [38979554313](https://github.com/RhsR1024/nexus-music/actions/runs/38979554313) 已对应 `77d58e0` 并处于 `pending`；签名、真机、后台/功耗和播放器冷缓存时长仍待验证。旧 `38976733431` 仅对应 `bea1fbd`。

@@ -698,4 +698,4 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 - `npm run check` 302/302；`git diff --check` 通过。
 - 本地设置分组 UI `build/SourceUITests-1792191433812.xcresult`：`testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器 `testZNavidromePlaybackAndCredentials` 两次运行均在既有合成流 `2:00` 时长断言失败，未将其记为本批播放器通过；失败日志保留在 `build/logs/ui-catalog.log`。
 - 清洁本地归档成功：Xcode 26.3 / iOS 26.2 SDK、arm64、最低 iOS 15.1、设备族 `[1,2]`、unsigned；manifest 在归档前包含本批工作树改动，IPA SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。本地包不代表 iOS27、签名或真机通过。
-- 现有 `38976733431` 仍为 `bea1fbd` 且 `pending`；新提交后需按新 `head_sha` 查找 iOS27 运行，不能沿用旧运行结果。
+- iOS27 运行 [38979554313](https://github.com/RhsR1024/nexus-music/actions/runs/38979554313) 已对应 `77d58e0`，当前 `pending`；旧 `38976733431` 仍为 `bea1fbd`，不沿用其结果。

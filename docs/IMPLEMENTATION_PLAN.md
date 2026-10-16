@@ -327,4 +327,4 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 
 设置中的“播放界面样式”现在复用播放器样式 Sheet 的交互语言：每行提供图标、当前选择、短行为说明和箭头/勾选，行高满足小屏触控；偏好仍通过 `PreferenceStore` 即时串行保存，错误时保留旧值。IPA 只确认了样式名称与独立 Sheet 线索，未确认完整枚举，因此继续保留六个实际实现布局，不凭静态字符串新增 Apple Music 2 等未实现入口。
 
-验证：`npm run check` 302/302；`git diff --check` 通过；设置分组 UI `build/SourceUITests-1792191433812.xcresult` 中 `testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器专项在既有冷缓存/合成流时长断言处失败，未将该专项记为本批通过。清洁本地 unsigned IPA 为 Xcode 26.3 / iOS 26.2 SDK、arm64、设备族 `[1,2]`、signed=false，SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。新提交的 iOS27 云端运行、真机、后台/功耗仍待。
+验证：`npm run check` 302/302；`git diff --check` 通过；设置分组 UI `build/SourceUITests-1792191433812.xcresult` 中 `testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器专项在既有冷缓存/合成流时长断言处失败，未将该专项记为本批通过。清洁本地 unsigned IPA 为 Xcode 26.3 / iOS 26.2 SDK、arm64、设备族 `[1,2]`、signed=false，SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。iOS27 运行 [38979554313](https://github.com/RhsR1024/nexus-music/actions/runs/38979554313) 对应 `77d58e0`，当前 pending；真机、后台/功耗仍待。
