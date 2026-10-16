@@ -159,6 +159,8 @@ final class SourceSettingsTests: XCTestCase {
     let automatic=NSPredicate(format:"label CONTAINS %@","自动优选 · 网易云")
     expectation(for:automatic,evaluatedWith:lyricSource);waitForExpectations(timeout:30)
     XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.exists);XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Changing lyrics must preserve paused audio")
+    let fullLyrics=app.buttons["全部歌词 · 双击行定位，长按打开设置"]
+    reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10));app.buttons["收起全部歌词"].tap();XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.exists)
     reach(sourceButton,up:false);sourceButton.tap();let search=app.buttons["搜索歌词候选"];reach(search);search.tap()
     let live=app.buttons["lyric-candidate-tx-fixture-live"];XCTAssertTrue(live.waitForExistence(timeout:20));reach(live);live.tap()
     let save=app.buttons["保存此歌词"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap()
