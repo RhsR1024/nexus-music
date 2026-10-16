@@ -34,7 +34,6 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {playbackStats.items.length>0&&<View style={styles.empty}><Text style={styles.heading}>实际聆听统计</Text>{playbackStats.items.slice(0,5).map(item=><Text key={JSON.stringify(item.track.origin)} style={styles.caption}>{item.track.title} · 播放 {item.playCount} 次 · 听歌 {Math.floor(item.listenedMs/60000)}分{Math.floor(item.listenedMs/1000)%60}秒</Text>)}{button('清空播放统计',()=>Alert.alert('清空播放统计？','只清除本机记录；服务端播放量和最近播放列表不变。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>services.playbackStats.clear());}}]))}</View>}
     <LocalAudioLibrary services={services}/><DeviceMediaLibrary services={services}/><WebDAVLibrary services={services}/>
     {services.recoveryWarnings.map((warning,index)=><Text key={index} style={styles.caption}>{warning}</Text>)}
-    <View style={styles.row}>{button('搜索歌曲',openSearch)}{button('音乐来源',openSettings)}</View>
     <View style={styles.tabs}>{tabButton('favorites','我的收藏')}{tabButton('history','最近播放')}{tabButton('playlists','我的歌单')}</View>
     {playlist?<View><Text style={styles.heading}>{playlist.title}</Text><TextInput accessibilityLabel="音枢歌单名称" value={name} onChangeText={setName} style={styles.input}/><View style={styles.row}>
       {button('保存名称',()=>{void perform(async()=>{await services.library.renamePlaylist(playlist.id,name);});},busy||!name.trim())}
