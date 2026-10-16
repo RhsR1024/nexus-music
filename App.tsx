@@ -35,7 +35,7 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
   const theme=useAppearance(services?.preferences),p=theme.palette;
   const text={color:p.text},caption={color:p.secondary};
   return <ThemeContext.Provider value={theme}><TypographyProvider store={services?.fonts}><View style={{flex:1,backgroundColor:p.background[0]}}>
-    <AmbientBackground/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
+    <AmbientBackground services={services}/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
     <View style={{flex:1,paddingTop:insets.top+12,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
       {tab==='discover'&&services&&!startupError?<Discovery services={services} embedded/>:<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:14,paddingBottom:32}}>
         <Text style={[caption,{fontSize:11,letterSpacing:3,marginBottom:12}]}>音枢 · NEXUS MUSIC</Text>

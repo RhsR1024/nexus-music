@@ -21,7 +21,8 @@ export class PreferenceStore {
     if(typeof value.autoMatch!=='boolean')throw new Error('自动匹配设置无效');
     if(!['auto','left','center'].includes(value.lyricAlignment))throw new Error('歌词对齐方式无效');
     if(!['classic','am','immersive','photo','vinyl','wave'].includes(value.playerLayout))throw new Error('播放界面无效');
-    if(!['classic','blush','soft'].includes(value.visualTheme)||!['rose','coral','purple','blue','orange'].includes(value.accent)||!['gradient','solid'].includes(value.backgroundStyle)||typeof value.glassNavigation!=='boolean')throw new Error('外观设置无效');
+    if(!['classic','blush','soft'].includes(value.visualTheme)||!['rose','coral','purple','blue','orange'].includes(value.accent)||!['gradient','solid','image'].includes(value.backgroundStyle)||typeof value.glassNavigation!=='boolean')throw new Error('外观设置无效');
+    if(!['artwork','solid','photo'].includes(value.playerBackground)||typeof value.coverColor!=='boolean'||typeof value.dynamicBackground!=='boolean'||!Number.isFinite(value.backgroundOpacity)||value.backgroundOpacity<0||value.backgroundOpacity>1||!Number.isFinite(value.playerBlur)||value.playerBlur<0||value.playerBlur>80||!Number.isFinite(value.playerDarkness)||value.playerDarkness<.35||value.playerDarkness>.9||!Number.isFinite(value.coverRadius)||value.coverRadius<0||value.coverRadius>48)throw new Error('图片外观设置无效');
     if (!Number.isFinite(value.volume)||value.volume<0||value.volume>1||!normalizeQuality(value.quality) || !validGains(value.gains) || !validPreamp(value.preampDB) ||
       !['off', 'all', 'one'].includes(value.repeat) || !Number.isFinite(value.lyricOffsetMs) || Math.abs(value.lyricOffsetMs)>600000 || !Number.isFinite(value.fontScale) || value.fontScale < .7 || value.fontScale > 2 ||
       !['system', 'dark', 'light'].includes(value.theme) || !Number.isFinite(value.cacheLimitMB) || value.cacheLimitMB < 32 || value.cacheLimitMB > 2048) throw new Error('设置数据无效');

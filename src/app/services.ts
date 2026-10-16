@@ -1,3 +1,4 @@
+import {VisualAssetStore,VisualColorCache,type VisualNative} from '../storage/visualAssets.ts';
 import {PublicComments} from '../providers/comments.ts';
 import {bindManualMatches,bindMatchPolicy} from '../playback/matchBinding.ts';
 import {SourceHealth} from '../providers/sourceHealth.ts';
@@ -52,6 +53,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   if(!await restore('deviceMedia.namespace.v1','设备媒体库',()=>deviceMedia.initialize()))await deviceMedia.initialize();
   await deviceMedia.checkAuthorization();
   mediaNative.addListener('changed',()=>{void deviceMedia.checkAuthorization().then(status=>{if(status==='authorized')deviceMedia.invalidate();}).catch(deviceMedia.invalidate);});
+  const visualNative=requireNativeModule<VisualNative>('NexusFiles'),visualAssets=new VisualAssetStore(repository,visualNative),visualColors=new VisualColorCache(visualNative);await restore('visualAssets.v1','外观图片',()=>visualAssets.restore());
   const preferences = new PreferenceStore(repository); await restore('preferences.v1','偏好',()=>preferences.restore());
   const hash=(value:string)=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,value);
   const davTransport=new DAVNativeTransport(requireNativeModule<DAVNativeModule>('NexusWebDAV'),Crypto.randomUUID);
@@ -128,7 +130,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
       await Promise.all([library.restore(),playbackStats.restore(true)]);
     });
   };
-  return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { repository, visualAssets, visualColors, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

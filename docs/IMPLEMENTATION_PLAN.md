@@ -1,6 +1,6 @@
 # 实现顺序与完成检查表
 
-更新：2026-10-16。持续目标为PRODUCT_SCOPE的F01–F37及Sollin iOS J01–J59全部并集；核心播放、来源、曲库与歌词多批已实现，S4字体/样式本批验收中。最新逐项进度见[FEATURE_STATUS.md](FEATURE_STATUS.md)，构建证据见[BUILD_STATUS.md](BUILD_STATUS.md)。下列阶段检查项含真实服务/真机门槛，未勾选不表示其中所有代码尚未实现。
+更新：2026-10-16。持续目标为PRODUCT_SCOPE的F01–F37及Sollin iOS J01–J59全部并集；核心播放、来源、曲库与歌词多批已实现，S4字体/样式双构建已通过，S3图片背景批次验收中。最新逐项进度见[FEATURE_STATUS.md](FEATURE_STATUS.md)，构建证据见[BUILD_STATUS.md](BUILD_STATUS.md)。下列阶段检查项含真实服务/真机门槛，未勾选不表示其中所有代码尚未实现。
 
 ## 已完成的方案工作
 

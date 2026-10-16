@@ -1,6 +1,8 @@
+import {useVisualAssets,useVisualImage,MotionImage} from './VisualBackground.tsx';
+import {darkenCoverColor,playerBackgroundImage} from '../domain/appearance.ts';
 import {Text} from './Typography.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {Alert, Image, Pressable, StyleSheet, View, useWindowDimensions, type GestureResponderEvent} from 'react-native';
+import {Alert, Pressable, StyleSheet, View, useWindowDimensions, type GestureResponderEvent} from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
@@ -11,12 +13,18 @@ import {Cover} from './Cover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 const time=(value:number)=>`${Math.floor(Math.max(0,value)/60)}:${String(Math.floor(Math.max(0,value)%60)).padStart(2,'0')}`;
 export function ArtworkBackdrop({services,track,photo=false}:{services:Services;track:Track;photo?:boolean}){
-  const [file,setFile]=useState<string>();
+  const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
+  const assets=useVisualAssets(services),custom=useVisualImage(services,assets.photo);
+  const [artwork,setArtwork]=useState<{key:string;uri:string}>(),[failedImages,setFailedImages]=useState<readonly string[]>([]),[tint,setTint]=useState('#183647');
   const key=JSON.stringify([track.origin,track.artwork,track.metadata.davVersion,track.metadata.coverArtId]);
-  useEffect(()=>{const abort=new AbortController();setFile(undefined);services.covers.loadTrack(track,abort.signal).then(value=>{if(!abort.signal.aborted)setFile(value);}).catch(()=>{});return()=>abort.abort();},[services,key]);
-  return <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:'#183647'}]}>
-    {file&&<Image source={{uri:file}} blurRadius={photo?0:55} resizeMode="cover" style={StyleSheet.absoluteFill}/>}
-    <LinearGradient colors={['rgba(8,24,34,0.38)','rgba(13,22,35,0.55)','rgba(7,14,24,0.94)']} style={StyleSheet.absoluteFill}/>
+  useEffect(()=>{const abort=new AbortController();setArtwork(undefined);services.covers.loadTrack(track,abort.signal).then(value=>{if(!abort.signal.aborted&&value)setArtwork({key,uri:value});}).catch(()=>{});return()=>abort.abort();},[services,key]);
+  const file=artwork?.key===key?artwork.uri:undefined;
+  const uri=playerBackgroundImage(preferences.playerBackground,photo,custom,file,failedImages);
+  useEffect(()=>{let valid=true;setTint('#183647');if(uri&&preferences.coverColor)void services.visualColors.color(uri).then(color=>{if(valid)setTint(darkenCoverColor(color));}).catch(()=>{});return()=>{valid=false;};},[services,uri,preferences.coverColor]);
+  const blur=preferences.playerBlur;
+  return <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:tint}]}>
+    {uri&&<MotionImage uri={uri} blur={blur} opacity={preferences.coverColor?.45:1} moving={preferences.dynamicBackground&&playback.phase==='ready'&&playback.intent==='playing'&&!playback.buffering} onError={()=>setFailedImages(previous=>previous.includes(uri)?previous:[...previous.slice(-3),uri])}/>}
+    <LinearGradient colors={[`rgba(7,14,24,${preferences.playerDarkness})`,`rgba(7,14,24,${Math.min(.96,preferences.playerDarkness+.15)})`,'rgba(7,14,24,0.94)']} style={StyleSheet.absoluteFill}/>
   </View>;
 }
 export function PlaybackProgress({services}:{services:Services}){
@@ -44,7 +52,7 @@ export function ModernPlayer({services,track,lyricTrack,font,layout,onMore}:{ser
   const favorite=()=>{void services.library.favorite(track).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
   const transport=icon(state.intent==='playing'?'pause':'play',state.intent==='playing'?'暂停':'播放',()=>{if(state.intent==='playing')controller.pause();else void controller.play();},64);
   return <View style={{gap:layout==='am'?20:16}}>
-    {layout==='am'?<View style={{flexDirection:'row',alignItems:'center',gap:14}}><Cover services={services} track={track} size={66}/><View style={{flex:1,gap:7}}><Text numberOfLines={1} style={{fontSize:21,color:'#FFFFFF',fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={styles.small}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>{icon(services.library.isFavorite(track)?'heart':'heart-outline','收藏歌曲',favorite)}{icon('ellipsis-horizontal','更多播放控制',onMore)}</View>:<>{layout==='vinyl'?<Vinyl services={services} track={track} playing={state.intent==='playing'&&!state.buffering} size={Math.min(width-80,height*.27)}/>:layout==='photo'?<View style={{height:height*.24}}/>:<View style={{height:Math.max(160,height*.27),overflow:'hidden',borderRadius:24}}><Cover services={services} track={track} size={Math.min(width-48,430)}/></View>}<View style={{flexDirection:'row',alignItems:'center',gap:12}}><View style={{flex:1,gap:8}}><Text style={{fontSize:27,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text style={styles.small}>{track.artist}</Text></View>{icon(services.library.isFavorite(track)?'heart':'heart-outline','收藏歌曲',favorite)}{icon('ellipsis-horizontal','更多播放控制',onMore)}</View></>}
+    {layout==='am'?<View style={{flexDirection:'row',alignItems:'center',gap:14}}><Cover services={services} track={track} size={66}/><View style={{flex:1,gap:7}}><Text numberOfLines={1} style={{fontSize:21,color:'#FFFFFF',fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={styles.small}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>{icon(services.library.isFavorite(track)?'heart':'heart-outline','收藏歌曲',favorite)}{icon('ellipsis-horizontal','更多播放控制',onMore)}</View>:<>{layout==='vinyl'?<Vinyl services={services} track={track} playing={state.intent==='playing'&&!state.buffering} size={Math.min(width-80,height*.27)}/>:layout==='photo'?<View style={{height:height*.24}}/>:<View style={{height:Math.max(160,height*.27),overflow:'hidden',borderRadius:preferences.coverRadius}}><Cover services={services} track={track} size={Math.min(width-48,430)}/></View>}<View style={{flexDirection:'row',alignItems:'center',gap:12}}><View style={{flex:1,gap:8}}><Text style={{fontSize:27,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text style={styles.small}>{track.artist}</Text></View>{icon(services.library.isFavorite(track)?'heart':'heart-outline','收藏歌曲',favorite)}{icon('ellipsis-horizontal','更多播放控制',onMore)}</View></>}
     <View style={{height:layout==='am'?Math.min(430,Math.max(270,height*.39)):layout==='wave'?110:Math.min(170,Math.max(110,height*.18)),overflow:'hidden',justifyContent:'center'}}><Lyrics services={services} track={lyricTrack} font={font} visibleLines={layout==='wave'?1:undefined} presentation={layout==='am'?'am':layout==='photo'?'photo':'immersive'}/></View>
     {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.small}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
     <PlaybackProgress services={services}/>

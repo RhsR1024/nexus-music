@@ -29,6 +29,6 @@ const defaultSnapshot=()=>defaults;
 export function useAppearance(store?:PreferenceStore){
   const preferences=useSyncExternalStore(store?.subscribe??emptySubscribe,store?.getSnapshot??defaultSnapshot),system=useColorScheme();
   const mode=(preferences.theme==='system'?system==='light':preferences.theme==='light')?'light':'dark';
-  return useMemo(()=>createTheme(mode,preferences),[mode,preferences.visualTheme,preferences.accent,preferences.backgroundStyle,preferences.glassNavigation]);
+  return useMemo(()=>createTheme(mode,preferences),[mode,preferences.visualTheme,preferences.accent,preferences.backgroundStyle,preferences.glassNavigation,preferences.backgroundOpacity,preferences.playerBackground,preferences.playerBlur,preferences.playerDarkness,preferences.coverRadius,preferences.coverColor,preferences.dynamicBackground]);
 }
 export function useThemedStyles<T>(factory:(theme:Theme)=>T):T {const theme=useTheme();return useMemo(()=>factory(theme),[factory,theme]);}

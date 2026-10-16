@@ -36,3 +36,6 @@ node scripts/test-webdav-media.mjs
 
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/AudioURLProbe.swift tests/native/AudioProbeCLI.swift -o build/tests/native-audio-probe
 node scripts/test-audio-probe.mjs
+
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/VisualAssets.swift tests/native/VisualAssetsCLI.swift -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers -o build/tests/native-visual-assets
+build/tests/native-visual-assets

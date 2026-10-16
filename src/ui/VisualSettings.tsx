@@ -1,0 +1,33 @@
+import {useRef,useState,useSyncExternalStore} from 'react';
+import {Alert,Pressable,Switch,View} from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import {File,Paths} from 'expo-file-system';
+import type {Services} from '../app/services.ts';
+import type {VisualSlot} from '../storage/visualAssets.ts';
+import {Text} from './Typography.tsx';
+import {useTheme} from './theme.tsx';
+import {useVisualAssets,useVisualImage,VisualPreview} from './VisualBackground.tsx';
+export function VisualSettings({services}:{services:Services}){
+  const {palette:p}=useTheme(),value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),assets=useVisualAssets(services);
+  const background=useVisualImage(services,assets.background),photo=useVisualImage(services,assets.photo),[busy,setBusy]=useState(false),[message,setMessage]=useState('');const working=useRef(false);
+  async function perform(action:()=>Promise<void>){if(working.current)return;working.current=true;setBusy(true);setMessage('');try{await action();}catch{setMessage('图片或设置未保存，请检查格式与大小后重试；之前的数据保留。');}finally{working.current=false;setBusy(false);}}
+  const update=(patch:Parameters<typeof services.preferences.update>[0])=>{void perform(()=>services.preferences.update(patch));};
+  async function importImage(slot:VisualSlot){await perform(async()=>{const result=await DocumentPicker.getDocumentAsync({type:'image/*',copyToCacheDirectory:true});if(result.canceled)return;const asset=result.assets[0]!;try{await services.visualAssets.import(slot,asset.uri,asset.name);setMessage(slot==='background'?'主题背景图片已保存':'写真图片已保存');}finally{if(asset.uri.startsWith(Paths.cache.uri)){try{const file=new File(asset.uri);if(file.exists)file.delete();}catch{}}}});}
+  const button=(id:string,label:string,action:()=>void,selected?:boolean)=><Pressable key={id} testID={id} accessibilityRole={selected===undefined?'button':'radio'} accessibilityLabel={label} accessibilityState={selected===undefined?undefined:{selected}} disabled={busy} onPress={action} style={{padding:12,borderRadius:14,backgroundColor:selected?p.selected:p.surface,borderWidth:1,borderColor:p.border,opacity:busy?.5:1}}><Text style={{color:p.accent,fontSize:13}}>{label}</Text></Pressable>;
+  const control=(id:string,label:string,on:boolean,action:(value:boolean)=>void)=><View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:16}}><Text style={{color:p.text,flex:1}}>{label}</Text><Switch testID={id} accessibilityLabel={label} value={on} disabled={busy} onValueChange={action}/></View>;
+  const adjust=(field:'backgroundOpacity'|'playerBlur'|'playerDarkness'|'coverRadius',label:string,step:number,min:number,max:number)=><View style={{gap:8}}><Text testID={`visual-value-${field}`} style={{color:p.secondary}}>{label} · {field==='playerBlur'||field==='coverRadius'?value[field]:`${Math.round(value[field]*100)}%`}</Text><View style={{flexDirection:'row',gap:12}}>{button(`visual-${field}-down`,`减少${label}`,()=>update({[field]:Math.max(min,Math.round((value[field]-step)*100)/100)}))}{button(`visual-${field}-up`,`增加${label}`,()=>update({[field]:Math.min(max,Math.round((value[field]+step)*100)/100)}))}</View></View>;
+  const remove=(slot:VisualSlot)=>Alert.alert('移除此图片？','仅删除音枢保存的副本，系统文件中的原图保留。',[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void perform(()=>services.visualAssets.remove(slot));}}]);
+  return <View style={{gap:18,paddingVertical:18}}><Text accessibilityRole="header" style={{color:p.text,fontSize:20,fontWeight:'600'}}>图片与播放背景</Text><Text style={{color:p.secondary,lineHeight:21,fontSize:12}}>图片仅保存在此设备，支持JPEG、PNG、HEIC等可读取格式，最大20MiB。导入后缩放并去除原图元数据；音乐库备份不包含图片。</Text>
+    <VisualPreview uri={background} blur={0} opacity={value.backgroundOpacity}><Text style={{color:'#FFFFFF'}}>主题背景预览</Text><Text testID="visual-background-name" style={{color:'#FFFFFF',marginTop:8}}>{assets.background?.name??'尚未导入主题背景'}</Text></VisualPreview>
+    <View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{button('visual-import-background','导入主题背景图片',()=>{void importImage('background');})}{assets.background&&button('visual-remove-background','移除主题背景图片',()=>remove('background'))}{button('background-image','使用图片背景',()=>update({backgroundStyle:'image'}),value.backgroundStyle==='image')}</View>
+    {adjust('backgroundOpacity','背景不透明度',.1,0,1)}
+    <VisualPreview uri={photo} blur={value.playerBlur} opacity={1-value.playerDarkness}><Text style={{color:'#FFFFFF'}}>播放写真预览</Text><Text testID="visual-photo-name" style={{color:'#FFFFFF',marginTop:8}}>{assets.photo?.name??'尚未导入写真图片'}</Text></VisualPreview>
+    <View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{button('visual-import-photo','导入写真图片',()=>{void importImage('photo');})}{assets.photo&&button('visual-remove-photo','移除写真图片',()=>remove('photo'))}</View>
+    <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{([['artwork','歌曲封面背景'],['photo','自定义写真背景'],['solid','纯色播放背景']]as const).map(([mode,label])=>button(`player-background-${mode}`,label,()=>update({playerBackground:mode}),value.playerBackground===mode))}</View>
+    <Text style={{color:p.secondary,fontSize:12}}>写真皮肤优先使用已导入写真；其他皮肤遵循背景选项。图片缺失时回退封面或纯色，模糊调为0可显示清晰写真。</Text>
+    {adjust('playerBlur','播放背景模糊',10,0,80)}{adjust('playerDarkness','播放背景暗度',.1,.35,.9)}{adjust('coverRadius','封面圆角',8,0,48)}
+    {control('visual-cover-color','封面取色',value.coverColor,coverColor=>update({coverColor}))}{control('visual-motion','动态播放背景',value.dynamicBackground,dynamicBackground=>update({dynamicBackground}))}
+    <Text style={{color:p.secondary,fontSize:12}}>动效在暂停、缓冲、后台或系统减少动态效果时停止。</Text>
+    {!!message&&<Text accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
+  </View>;
+}

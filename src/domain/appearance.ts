@@ -1,7 +1,7 @@
 export type VisualTheme = 'classic' | 'blush' | 'soft';
 export type Accent = 'rose' | 'coral' | 'purple' | 'blue' | 'orange';
-export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgroundStyle:'gradient'|'solid';glassNavigation:boolean}
-export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',glassNavigation:true};
+export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgroundStyle:'gradient'|'solid'|'image';backgroundOpacity:number;playerBackground:'artwork'|'solid'|'photo';playerBlur:number;playerDarkness:number;coverRadius:number;coverColor:boolean;dynamicBackground:boolean;glassNavigation:boolean}
+export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,coverColor:false,dynamicBackground:false,glassNavigation:true};
 export const accentColors:Record<Accent,readonly[string,string]>={rose:['#BE3458','#FF94B0'],coral:['#BA4240','#FF9B94'],purple:['#7650AB','#D4B4FF'],blue:['#2E64A0','#9AC8FF'],orange:['#A65A14','#FFC485']};
 export function appearancePalette(mode:'light'|'dark',options:AppearanceOptions){
   const dark=mode==='dark';
@@ -13,4 +13,17 @@ export function appearancePalette(mode:'light'|'dark',options:AppearanceOptions)
   return {background:backgrounds[options.visualTheme],text:dark?'#F6F0F2':'#242026',secondary:dark?'#C2B6C2':'#756A75',
     accent:accentColors[options.accent][dark?1:0],surface:dark?'#332B38':'#FFF5F5',border:dark?'#514454':'#E4CCD3',
     glass:dark?'rgba(41,33,46,0.75)':'rgba(255,245,249,0.68)',selected:dark?'#503044':'#EDD0DB'};
+}
+
+export function darkenCoverColor(color:string):string {
+  if(!/^#[0-9a-f]{6}$/i.test(color))return '#183647';
+  const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16));
+  // A dark tinted foundation keeps white player controls legible even without artwork.
+  const scale=Math.min(1,72/Math.max(...rgb,1));return '#'+rgb.map(value=>Math.round(value*scale).toString(16).padStart(2,'0')).join('');
+}
+
+export function playerBackgroundImage(mode:AppearanceOptions['playerBackground'],photoSkin:boolean,custom:string|undefined,cover:string|undefined,failed:readonly string[]=[]):string|undefined {
+  if(mode==='solid')return;
+  const preferred=custom&&(photoSkin||mode==='photo')?custom:cover;
+  return preferred&&failed.includes(preferred)?(cover&&failed.includes(cover)?undefined:cover):preferred;
 }

@@ -620,6 +620,43 @@ final class SourceSettingsTests: XCTestCase {
     discover.tap()
     let homeImage=XCTAttachment(screenshot:app.screenshot());homeImage.lifetime = .keepAlways;add(homeImage)
   }
+  func testVisualImagesAndPlayerBackgroundPersistence() throws {
+    let app=XCUIApplication();app.launch()
+    func reveal(_ element:XCUIElement){for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))};XCTAssertTrue(element.isHittable,"Visual control must be visible: \(element.identifier)")}
+    func choose(_ id:String){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;reveal(control);control.tap()}
+    func importFixture(_ id:String){
+      choose(id)
+      let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+      XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+      let file=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus Visual Fixture")).firstMatch
+      let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+      // Files remembers the previous directory. Never tap the navigation title:
+      // it opens a folder context menu instead of selecting a folder cell.
+      for _ in 0..<4 {
+        if file.waitForExistence(timeout:5){break}
+        if folder.exists && folder.isHittable {folder.tap();continue}
+        let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch
+        if phone.waitForExistence(timeout:5) && phone.isHittable {phone.tap()}
+      }
+      XCTAssertTrue(file.waitForExistence(timeout:10));file.tap()
+      let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
+      if open.waitForExistence(timeout:3){open.tap()}
+    }
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let background=app.buttons["visual-import-background"];reveal(background);importFixture("visual-import-background")
+    XCTAssertTrue(app.staticTexts["visual-background-name"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("Nexus Visual Fixture.png"))
+    let photo=app.buttons["visual-import-photo"];reveal(photo);importFixture("visual-import-photo")
+    XCTAssertTrue(app.staticTexts["visual-photo-name"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("Nexus Visual Fixture.png"))
+    let importedImage=XCTAttachment(screenshot:app.screenshot());importedImage.name="Imported background and photo previews";importedImage.lifetime = .keepAlways;add(importedImage)
+    choose("background-image");choose("player-background-photo");choose("visual-backgroundOpacity-up");choose("visual-playerBlur-up");choose("visual-coverRadius-up");for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()}}
+    let savedValues=["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label}
+    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let restoredPhoto=app.staticTexts["visual-photo-name"];reveal(restoredPhoto);XCTAssertTrue(restoredPhoto.label.contains("Nexus Visual Fixture.png"));let motion=app.switches["visual-motion"];reveal(motion);XCTAssertEqual(motion.value as? String,"1");XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"player-background-photo").firstMatch.isSelected);XCTAssertEqual(["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label},savedValues)
+    let removeBackground=app.buttons["visual-remove-background"];reveal(removeBackground);removeBackground.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:10);XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("Nexus Visual Fixture.png"),"Removing a shared background must retain the photo slot")
+    let removePhoto=app.buttons["visual-remove-photo"];reveal(removePhoto);removePhoto.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:10)
+    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap();reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
+    let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Persisted visual image settings and fallback";screenshot.lifetime = .keepAlways;add(screenshot)
+  }
   func testLiveLXPlayback() throws {
     let app=XCUIApplication();app.launch()
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()

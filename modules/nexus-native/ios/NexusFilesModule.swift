@@ -5,6 +5,10 @@ public final class NexusFilesModule: Module {
   private let queue = DispatchQueue(label: "nexus.local-files")
   public func definition() -> ModuleDefinition {
     Name("NexusFiles")
+    AsyncFunction("importVisual") { (uri: String) throws -> [String: Any] in try VisualAssets.shared.importImage(uri) }.runOnQueue(queue)
+    AsyncFunction("resolveVisual") { (id: String) throws -> String in try VisualAssets.shared.resolve(id) }.runOnQueue(queue)
+    AsyncFunction("reconcileVisuals") { (ids: [String]) throws in try VisualAssets.shared.reconcile(ids) }.runOnQueue(queue)
+    AsyncFunction("visualPalette") { (uri: String) throws -> String in try VisualAssets.shared.palette(uri) }.runOnQueue(queue)
     AsyncFunction("importAudio") { (uri: String, name: String, promise: Promise) in
       Task {
         do { promise.resolve(try await self.files.importFile(uri, name: name)) }
