@@ -1,3 +1,9 @@
+# 2026-10-17 iOS27 运行 38902977651 失败取证与本地工具链更正
+
+`698c502` / `38902977651` 于北京时间 2026-10-17 03:48 结束失败；checks、完整 native 与核心 App 中 11/12 项通过，仅 `testVisualImagesAndPlayerBackgroundPersistence` 失败。已按 ZIP 条目 CRC/长度校验提取日志及 1705 个 xcresult 小对象，未下载完整诊断 ZIP，不宣称整体 SHA256 校验通过。`build/ci-38902977651/verified/logs/ui-catalog.log:45347` 为旧测试第716行写真文件名断言；`failure-hierarchy:112` 显示“尚未导入写真图片”，第142行明确显示“图片或设置未保存”错误。因此不只是等待控件内容的问题，系统文件复制、原生图片导入或持久化的具体失败环节仍需定位。当前测试虽已等待文件名实际更新，不能据此宣称该错误修复。后续功能批次须补准确错误证据、定向本地 UI/IPA 后重新上云，保留原断言；本次没有进入 IPA 归档或第二组测试。
+
+本地环境再次实测：先 `source scripts/environment.sh` 后，`xcodebuild -version` 为 Xcode26.3 / 17C529，`xcrun --sdk iphoneos --show-sdk-version` 为26.2。近期“本机无完整 Xcode / 仅 Command Line Tools”描述有误；默认 xcode-select 不代表项目加载工具链后的状态。应补执行这些增量的本地 UI/IPA，不以该误判继续跳过。既有其他上下文仍在推进 UI，本次监控未修改其代码、启动冲突构建、提交或取消/重派云端队列。`38903549077` 正常运行，最新后续功能提交继续排队。
+
 # 2026-10-17 A08 发现详情歌曲动作
 
 发现歌单详情的已加载歌曲行补充“本地收藏/取消本地收藏”和“加入歌单”，复用音乐库身份、失败保留和 `PlaylistPicker`，保留下一首/加入队列与完整导入；不引入账号、推荐或伪音质入口。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；云端运行 `38958299530`（`6fc6123`）当前 `pending`，IPA/真机待验证。
@@ -609,3 +615,6 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 # 2026-10-17 A08 发现详情更多操作菜单
 
 发现歌单详情的歌曲行已按 Sollin 的紧凑层级收口：主体行负责播放，右侧 `ellipsis-horizontal` 打开 `SheetModal`，其中保留下一首、加入队列、本地收藏/取消收藏和加入歌单。既有 `PlaylistPicker`、分页/完整导入、筛选排序、来源身份与失败保留逻辑不变。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；云端运行 `38959060803`（`4ccbb25`）当前 `pending` 且 jobs=0，IPA/真机待终态，不能把 `pending` 当作通过。
+# 2026-10-17 A08 发现详情分页失败重试
+
+`Discovery` 现在区分首次/刷新和加载更多的失败页：追加页失败后“重试”继续请求同一追加页，首次加载或刷新失败仍请求第一页，已加载内容不丢失。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；提交后记录新的 iOS27 云端运行，真实平台弱网和真机仍待验证。

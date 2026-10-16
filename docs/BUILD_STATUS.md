@@ -1,3 +1,11 @@
+## 2026-10-17 iOS27 38902977651 失败诊断（尚未修复验收）
+
+- 运行 `38902977651` / `698c502d7331b70538a46e583f7718f388ac4eaf`，iOS job `117140200643`，北京时间03:48结束 failure。checks与完整 native通过；核心 App 11通过/1失败/0跳过。第二组与IPA归档未执行。
+- 诊断 artifact `12071785252`，255892429字节，API digest `a95b73d8f227bd0223466e0a14ce26364a2fbb88848a9a20ba44ad28a2212b88`。本次仅按条目 CRC/长度提取 `logs/ui-catalog.log`、服务计数及1705个xcresult小对象，不称完整ZIP摘要已验证。忽略目录：`build/ci-38902977651`。
+- `verified/logs/ui-catalog.log:45347`：`testVisualImagesAndPlayerBackgroundPersistence` 旧第716行写真文件名断言失败。已导出 `failure-hierarchy`：第112行写真仍为空，第142行有“图片或设置未保存”错误。需继续定位文件复制/原生导入/持久化实际错误；不能仅凭当前文件名等待修改宣称修复。Navidrome/云备份/DAV计数认证失败均0，Navidrome播放项通过，不将本次归因为音频解码或认证故障。
+- 原生诊断收集600秒超时发生在测试失败之后，属于额外开销。当前其他执行上下文继续UI批次，未启动冲突本地构建，也未重派/取消正常云端队列。
+- 工具链纠正：本轮实际执行 `source scripts/environment.sh` 后，Xcode26.3 / 17C529、iphoneos SDK26.2可用。近期“本机无完整Xcode/仅Command Line Tools”表述无效；对应增量本地UI/IPA仍待补，不能以默认xcode-select结果跳过，也不能把本地SDK26.2计作iOS27。
+
 ## 2026-10-17 A08 发现详情歌曲动作代码批次
 
 - 详情歌曲行增加收藏状态与加入本地歌单，复用现有存储和选择器。
@@ -591,3 +599,8 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 - 更多操作使用 `SheetModal`（iOS `pageSheet`），保留 44pt 点击区域、无障碍标签和失败保留提示。
 - `npm run check`：302/302；`git diff --check`：通过。
 - 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38959060803`（`4ccbb25`）已创建，当前 `pending` 且 jobs=0，不能记为 iOS27 通过。
+## 2026-10-17 A08 发现详情分页失败重试代码批次
+
+- 追加页请求失败时保留已加载歌曲，并让“重试”继续请求失败页；首次加载和刷新失败仍回到第一页。
+- `npm run check`：302/302；`git diff --check`：通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；推送后查询新的 iOS27 运行，不能把 `pending` 记为通过。

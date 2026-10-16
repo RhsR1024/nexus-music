@@ -25,10 +25,11 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
   const [total,setTotal]=useState<number>();
 
   const [open,setOpen]=useState(false),[platform,setPlatform]=useState<OnlinePlatform>('wy'),[view,setView]=useState<PageView>({kind:'playlists'}),[category,setCategory]=useState<string>();
-  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]),[menuTrack,setMenuTrack]=useState<Track|null>(null);
+  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]),[menuTrack,setMenuTrack]=useState<Track|null>(null);
   const page=useRef(0),generation=useRef(0),pending=useRef(new AbortController()),importAbort=useRef(new AbortController());
   async function load(append=false){
     const version=++generation.current;pending.current.abort();pending.current=new AbortController();const signal=pending.current.signal,next=append?page.current+1:1;
+    setRetryAppend(append);
     setLoading(true);setError('');
     try{
       let values:Item[]=[],hasMore=false,detailTotal:number|undefined;
@@ -38,11 +39,11 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
       else{const result=await services.discovery.detail(platform,view.id,next,signal,view.rank);values=result.items.map(track=>({kind:'track',track}));hasMore=result.hasMore;detailTotal=result.total;}
       if(version!==generation.current||signal.aborted)return;
       if(view.kind==='detail')setTotal(detailTotal);
-      setItems(old=>append?[...old,...values]:values);setMore(hasMore);page.current=next;
+      setItems(old=>append?[...old,...values]:values);setMore(hasMore);setRetryAppend(false);page.current=next;
     }catch{if(version===generation.current&&!signal.aborted)setError('此平台暂时无法读取，请重试或选择其他平台；已加载内容保留。');}
     finally{if(version===generation.current)setLoading(false);}
   }
-  useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();};},[open,embedded,platform,view,category]);
+  useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);setRetryAppend(false);page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();};},[open,embedded,platform,view,category]);
   function close(){importAbort.current.abort();setImporting(false);setAdding([]);setMenuTrack(null);setOpen(false);}
   async function importPlaylist(){
     if(view.kind!=='detail')return;importAbort.current.abort();importAbort.current=new AbortController();const signal=importAbort.current.signal;
@@ -94,7 +95,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
         {item.kind==='collection'?<Cover services={services} url={item.value.artwork} size={cardWidth}/>:<View style={{padding:22,borderRadius:22,backgroundColor:theme.palette.surface}}><Text style={{color:theme.palette.accent,fontSize:22}}>♫</Text></View>}
         <Text numberOfLines={2} style={{color:theme.palette.text,fontSize:15,fontWeight:'600',lineHeight:21}}>{item.kind==='category'?item.title:item.value.title}</Text><Text numberOfLines={1} style={{color:theme.palette.secondary,fontSize:12}}>{item.kind==='category'?item.group:item.value.count!==undefined?`${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
-      ListFooterComponent={<View style={{gap:12,paddingVertical:24}}>{loading&&<Text style={{color:theme.palette.secondary}}>正在获取平台数据…</Text>}{!!error&&<Text style={{color:theme.palette.accent}}>{error}</Text>}{!loading&&!error&&!items.length&&<Text style={{color:theme.palette.secondary}}>此平台暂未返回可展示内容</Text>}{button(error?'重试':'刷新',()=>{void load();},loading)}{more&&button('加载更多',()=>{void load(true);},loading)}</View>}/>
+      ListFooterComponent={<View style={{gap:12,paddingVertical:24}}>{loading&&<Text style={{color:theme.palette.secondary}}>正在获取平台数据…</Text>}{!!error&&<Text style={{color:theme.palette.accent}}>{error}</Text>}{!loading&&!error&&!items.length&&<Text style={{color:theme.palette.secondary}}>此平台暂未返回可展示内容</Text>}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading)}{more&&button('加载更多',()=>{void load(true);},loading)}</View>}/>
   </View>;
   const overlays=<><SheetModal visible={!!menuTrack} animationType="slide" onRequestClose={()=>setMenuTrack(null)}><View style={{flex:1,backgroundColor:theme.palette.background[0],padding:24,paddingTop:48,gap:14}}><Pressable accessibilityRole="button" accessibilityLabel="收起歌曲更多操作" onPress={()=>setMenuTrack(null)} style={{minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable><Text accessibilityRole="header" style={{fontSize:24,fontWeight:'700',color:theme.palette.text}}>{menuTrack?.title??'歌曲操作'}</Text><Text style={{color:theme.palette.secondary}}>{menuTrack?.artist}{menuTrack?.album?` · ${menuTrack.album}`:''}</Text>{menuTrack&&<View style={{gap:10}}>{button('下一首',()=>{services.addToQueue(menuTrack,true);setMenuTrack(null);})}{button('加入队列',()=>{services.addToQueue(menuTrack);setMenuTrack(null);})}{button(services.library.isFavorite(menuTrack)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(menuTrack).catch(()=>setMessage('收藏未保存，原数据保留；请重试'));setMenuTrack(null);})}{button('加入歌单',()=>{setAdding([menuTrack]);setMenuTrack(null);})}</View>}</View></SheetModal><PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/></>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
