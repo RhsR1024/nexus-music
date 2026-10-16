@@ -1,3 +1,9 @@
+## 2026-10-17 A05 封面取色全局背景动态门控与清洁归档
+
+`AmbientBackground` 订阅播放控制器只把播放意图、ready/buffering 这些低频状态折叠为 `moving`，随后交给 `MotionImage` 自己处理 App 活跃状态与 Reduce Motion；播放位置不会进入全局背景的 React 更新路径。封面 URI、主体色、匹配录音和失败回退仍由 `CoverThemeStore`/已有封面缓存负责。
+
+验证：`npm run check` 302/302；本地全局封面主题 UI 1/1 通过；`build/distribution/build-manifest.json` 显示 `d47d680`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`；IPA SHA256 `e9f01a5e0c565223930be0b7af3415e5ef97f1f3eb7473f6c0c89dcd8b3bebc4`。iOS 27 运行 `38968408649` 仍为 `pending`，不计作云端通过。
+
 ## 2026-10-17 A09 歌词列表事件驱动刷新与清洁归档
 
 `Lyrics.tsx` 保留歌词行、播放状态、样式和明显 seek 的刷新边界，去掉逐帧播放位置对 `FlatList` 的 `extraData` 依赖；原生 `NexusLyrics` 继续承载逐字动画。这样与项目“歌词/动画不得每帧全量 React 列表重渲染”的约定一致，同时不改变歌词来源、偏移、双击定位和播放意图。

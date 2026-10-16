@@ -1,3 +1,13 @@
+## 2026-10-17 A05 封面取色全局背景动态门控与清洁归档
+
+全局封面取色背景继续由 `CoverThemeStore` 按实际播放/匹配录音身份驱动；新增动态层门控，避免动态效果在暂停、缓冲、后台或减少动态效果时继续运行。
+
+- [x] `AmbientBackground` 复用 `MotionImage`，仅在动态偏好开启且媒体 ready、播放中、未缓冲时运动。
+- [x] `npm run check`：302/302；`git diff --check` 通过。
+- [x] 本地 `build/SourceUITests-1792185052140.xcresult`：`testGlobalCoverThemeChangesAcrossPages` 1/1 通过，覆盖不同封面和跨页面路径。
+- [x] 清洁本地 unsigned IPA：`d47d680`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，SHA256 `e9f01a5e0c565223930be0b7af3415e5ef97f1f3eb7473f6c0c89dcd8b3bebc4`。
+- [ ] iOS 27 运行 [38968408649](https://github.com/RhsR1024/nexus-music/actions/runs/38968408649) 当前 `pending`；真机、签名、后台/功耗和动态效果长时验收仍待验证。
+
 ## 2026-10-17 A09 歌词列表事件驱动刷新与清洁归档
 
 歌词列表不再把逐帧播放位置放入 React `FlatList.extraData`：歌词行切换、暂停/播放、样式变化和明显 seek 仍会刷新，逐字绘制继续由原生 `NexusLyrics` 负责。

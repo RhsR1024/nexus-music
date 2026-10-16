@@ -1,3 +1,11 @@
+# 2026-10-17 A05 封面取色全局背景动态门控与清洁归档
+
+`d47d680` 已正常提交并 push。全局封面背景在已有 `CoverThemeStore` 的封面身份/匹配录音边界上，复用 `MotionImage` 的低频平移层；只有打开“动态播放背景”、媒体已 ready、播放中且未缓冲时运动，原生/React 仍不读取 PCM 或逐帧更新列表，切歌、暂停、后台和减少动态效果会停止动画。`npm run check` 302/302；本地 `build/SourceUITests-1792185052140.xcresult` 的 `testGlobalCoverThemeChangesAcrossPages` 1/1 通过，113.112 秒，覆盖红/蓝封面切换、设置返回和音乐库路径。
+
+`source scripts/environment.sh && npm run ios:archive` 已成功。`build/distribution/build-manifest.json` 为 commit=`d47d680`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；`build/distribution/NexusMusic-unsigned.ipa` SHA256 为 `e9f01a5e0c565223930be0b7af3415e5ef97f1f3eb7473f6c0c89dcd8b3bebc4`。对应 iOS 27 运行 [38968408649](https://github.com/RhsR1024/nexus-music/actions/runs/38968408649) 当前 `pending`，不能记为云端通过；真机、签名、后台/功耗和动态效果长时验收仍待完成。
+
+下一步继续跟进 iOS 27 队列，推进 A09 播放器/歌词/mini 手势与 A08 列表缺口；动态背景仍按 IPA 静态线索和本地可观测行为逐步核验，不宣称已复刻 Sollin 私有 shader 或视频封面。
+
 # 2026-10-17 A09 歌词列表事件驱动刷新与清洁归档
 
 `8b4332a` 已正常提交并 push。`src/ui/Lyrics.tsx` 移除逐帧 `state.position` 对 `FlatList.extraData` 的依赖，仅在歌词行切换、暂停/播放、样式变化或明显 seek 时刷新列表；逐字动画仍由原生 `NexusLyrics` 处理，避免 React 列表每帧重渲染。`npm run check` 302/302；本地 `build/SourceUITests-1792184153003.xcresult` 中 `testCrossPlatformLyrics` 1/1 通过，iOS 26.3.1 模拟器，0 failures。

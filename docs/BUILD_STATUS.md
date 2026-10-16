@@ -1,3 +1,11 @@
+## 2026-10-17 A05 封面背景动态门控与清洁本地归档
+
+- 提交 `d47d680a2b8ac0c67e6eb273bac9674ccc9e15f7` 已 push；`npm run check` 302/302。
+- 本地 UI：`build/SourceUITests-1792185052140.xcresult`，`testGlobalCoverThemeChangesAcrossPages` 1/1 通过，113.112 秒，0 failures。
+- 本地 Release archive：成功；manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，Xcode 26.3 / SDK 26.2。
+- IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `e9f01a5e0c565223930be0b7af3415e5ef97f1f3eb7473f6c0c89dcd8b3bebc4`。
+- 云端 iOS 27：[38968408649](https://github.com/RhsR1024/nexus-music/actions/runs/38968408649)，当前 `pending`，未计作通过；真机、签名、后台/功耗和动态效果长时验收仍待完成。
+
 ## 2026-10-17 A09 歌词列表性能修正与清洁本地归档
 
 - 提交 `8b4332ae43ae1af46b660ec71bf44b5144198d34` 已 push；`npm run check` 302/302。

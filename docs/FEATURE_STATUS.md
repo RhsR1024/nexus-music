@@ -1,5 +1,7 @@
 # 功能开发与验收状态
 
+2026-10-17 A05：全局封面取色背景复用 `MotionImage` 的动态层，并由播放中、ready、未缓冲和动态偏好门控；切歌、暂停、后台和减少动态效果会停止运动。`npm run check` 302/302，本地 `testGlobalCoverThemeChangesAcrossPages` 1/1 通过，清洁本地 unsigned IPA SHA256 `e9f01a5e0c565223930be0b7af3415e5ef97f1f3eb7473f6c0c89dcd8b3bebc4`。iOS 27 运行 `38968408649` 当前 `pending`，真机、后台/功耗和长时动态效果仍待验证。
+
 2026-10-17 A09：歌词列表将逐帧播放位置从 React `FlatList.extraData` 中移除，仅在歌词行切换、暂停/播放、样式变化和明显 seek 时更新列表；原生 `NexusLyrics` 继续负责逐字动画。`npm run check` 302/302，本地 `testCrossPlatformLyrics` 1/1 通过，清洁本地 unsigned IPA 已归档并校验 SHA256 `dedc365e58dc5e6d6bd1c33f4741a06ee6424bd0f9394f6b075007cd8ada769e`。iOS 27 运行 `38966241336` 当前 `pending`，不计作云端通过。
 
 2026-10-17 A08：发现歌单详情的已加载歌曲行补充本地收藏/取消收藏和加入歌单，复用音枢音乐库身份与选择器；分页、完整导入、来源身份和失败保留不变。`npm run check` 302/302；本机完整 Xcode UI/IPA、云端 iOS27、真实平台长列表和真机待验证。运行 `38958299530`（`6fc6123`）当前 `pending`。
