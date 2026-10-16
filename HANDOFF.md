@@ -1,3 +1,7 @@
+# 2026-10-17 A08 音乐库长列表分批加载
+
+音乐库正文不再永久截断前 20 首：收藏、最近播放和歌单在长列表下提供“加载更多歌曲”，每次追加 20 项，切换标签或歌单时重置；完整批量管理弹层、播放队列和失败保留逻辑不变。`npm run check` 302/302、`git diff --check` 通过；`testPlaylistSearchSortAndDuplicateRemoval` 增加长歌单入口断言。本机没有完整 Xcode；本批云端 iOS27/IPA/真机待新提交运行。
+
 # 2026-10-17 A08 播放历史时间轴回归
 
 `SourceSettingsTests` 现在覆盖真实 Navidrome 合成播放后返回音乐库、打开“最近播放”并断言 `history-item-0` 时间轴首行存在；`npm run check` 302/302、`git diff --check` 通过。测试提交 `47bd458` 对应云端运行 `38954944378`，当前仍为 `pending`，本机没有完整 Xcode，尚未执行本地 XCTest/IPA。

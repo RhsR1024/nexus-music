@@ -510,6 +510,7 @@ final class SourceSettingsTests: XCTestCase {
     let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
     let playlist=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch;reach(playlist);playlist.tap()
     let random=app.buttons["随机播放"];reach(random);XCTAssertTrue(random.isHittable,"Local playlist must expose the existing random playback action")
+    let loadMore=app.buttons["加载更多歌曲"];reach(loadMore);XCTAssertTrue(loadMore.isHittable,"Long playlists must expose incremental loading in the library view");loadMore.tap()
     let manage=app.buttons["全部歌曲与批量管理"];reach(manage);manage.tap()
     let search=app.textFields["搜索列表歌曲歌手专辑"];XCTAssertTrue(search.waitForExistence(timeout:10))
     // Cloud recording showed "dplicate" after a single bulk typeText call.
