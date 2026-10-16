@@ -606,3 +606,6 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 ## Sollin移动IPA直接参考（2026-10-16）
 
 用户新增提供本机Sollin-2.0.0 60-unsigned.ipa，要求换思路查看实现并复刻UI/交互/移植功能。已只读静态分析，Flutter设备arm64编译版、cryptid0、约252个应用Dart文件路径候选和可读音频指纹HTML/JS；没有Dart源码/动态运行证据。hash/许可/技术栈/模块线索与下一步见docs/SOLLIN_IPA_ANALYSIS.md，原包与提取证据留ReferenceProject/忽略build，不提交资产。此证据优先于桌面推测，不改变F/J总范围或一个播放器/队列边界；后续对齐应以移动行为规格原创实现，服务端/账号/实际动态效果分别验证。
+# 2026-10-17 A08 发现详情更多操作菜单
+
+发现歌单详情的歌曲行已按 Sollin 的紧凑层级收口：主体行负责播放，右侧 `ellipsis-horizontal` 打开 `SheetModal`，其中保留下一首、加入队列、本地收藏/取消收藏和加入歌单。既有 `PlaylistPicker`、分页/完整导入、筛选排序、来源身份与失败保留逻辑不变。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；代码提交并推送后再记录新的 iOS27 云端运行，不能把 `pending` 当作通过。

@@ -585,3 +585,9 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs/38894434005)已全部成功：checks、完整native、核心App、歌词/匹配/健康、设备归档与上传。产物12053367117实际下载到build/ci-38894434005，9,768,014字节ZIP SHA256 `5c4404c9832fa88911e07e8ab1a4514164aa5e3606f805df0a7e425bd4ad8cf0`与API digest一致；所有ZIP/IPA CRC、自带摘要、正式bundle无测试适配器与xctest检查通过。内部IPA SHA256 `9028c67e56d992fdc01710c0d19d446ad1edd4b0e7b8fb4da499ea107461c020`，arm64/Xcode27.0 27A266a/iphoneos27.0/min15.1/signed=false。dirty=true唯一M ios/Podfile.lock，旧设备族[1]不用于新iPad验收。核验摘要见忽略目录verification.json。
 
 7c12023/38899071423已过checks/native，核心App运行中；其后dc3bb66、26830df及678a5ef等按原队列等待，未取消/重复派发。文档或旧包不能替代新提交的云端结果。
+## 2026-10-17 A08 发现详情更多操作菜单代码批次
+
+- 详情歌曲行将四个文字动作收敛为 `ellipsis-horizontal` 图标，复用既有下一首、加入队列、本地收藏和加入歌单。
+- 更多操作使用 `SheetModal`（iOS `pageSheet`），保留 44pt 点击区域、无障碍标签和失败保留提示。
+- `npm run check`：302/302；`git diff --check`：通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；推送后查询新的 iOS27 云端运行，不能把 `pending` 记为通过。

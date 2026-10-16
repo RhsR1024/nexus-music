@@ -3,7 +3,7 @@ import {useTheme} from './theme.tsx';
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {Alert, FlatList, Pressable, View, useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {Modal} from './AdaptiveModal.tsx';
+import {Modal,SheetModal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {OnlinePlatform,Track} from '../domain/track.ts';
 import type {BrowseItem} from '../providers/discovery.ts';
@@ -25,7 +25,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
   const [total,setTotal]=useState<number>();
 
   const [open,setOpen]=useState(false),[platform,setPlatform]=useState<OnlinePlatform>('wy'),[view,setView]=useState<PageView>({kind:'playlists'}),[category,setCategory]=useState<string>();
-  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]);
+  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]),[menuTrack,setMenuTrack]=useState<Track|null>(null);
   const page=useRef(0),generation=useRef(0),pending=useRef(new AbortController()),importAbort=useRef(new AbortController());
   async function load(append=false){
     const version=++generation.current;pending.current.abort();pending.current=new AbortController();const signal=pending.current.signal,next=append?page.current+1:1;
@@ -43,7 +43,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
     finally{if(version===generation.current)setLoading(false);}
   }
   useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();};},[open,embedded,platform,view,category]);
-  function close(){importAbort.current.abort();setImporting(false);setAdding([]);setOpen(false);}
+  function close(){importAbort.current.abort();setImporting(false);setAdding([]);setMenuTrack(null);setOpen(false);}
   async function importPlaylist(){
     if(view.kind!=='detail')return;importAbort.current.abort();importAbort.current=new AbortController();const signal=importAbort.current.signal;
     setImporting(true);setMessage('');
@@ -89,13 +89,14 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
     <FlatList key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:40}} keyboardShouldPersistTaps="handled"
       renderItem={({item,index})=>item.kind==='track'?<View style={{paddingVertical:14,borderTopWidth:1,borderColor:theme.palette.border}}>
         <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)} style={{flexDirection:'row',alignItems:'center',gap:14}}><Cover services={services} track={item.track} size={50}/><View style={{flex:1,gap:6}}><Text style={{color:theme.palette.text,fontSize:16,fontWeight:'600'}}>{item.track.title}</Text><Text numberOfLines={1} style={{color:theme.palette.secondary}}>{item.track.artist}{item.track.album?` · ${item.track.album}`:''}</Text></View></Pressable>
-        <View style={{flexDirection:'row',gap:10,marginTop:10,flexWrap:'wrap'}}>{button('下一首',()=>services.addToQueue(item.track,true))}{button('加入队列',()=>services.addToQueue(item.track))}{button(services.library.isFavorite(item.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(item.track).catch(()=>setMessage('收藏未保存，原数据保留；请重试'));})}{button('加入歌单',()=>setAdding([item.track]))}</View>
+        <View style={{flexDirection:'row',justifyContent:'flex-end',marginTop:8}}><Pressable accessibilityRole="button" accessibilityLabel={`更多操作：${item.track.title}`} onPress={()=>setMenuTrack(item.track)} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="ellipsis-horizontal" size={24} color={theme.palette.accent}/></Pressable></View>
       </View>:<Pressable testID={`discovery-item-${index}`} accessibilityRole="button" onPress={()=>item.kind==='category'?(setCategory(item.id),setView({kind:'playlists'})):openCollection(item.value,item.rank)} style={{flex:1,marginBottom:24,gap:9,maxWidth:cardWidth}}>
         {item.kind==='collection'?<Cover services={services} url={item.value.artwork} size={cardWidth}/>:<View style={{padding:22,borderRadius:22,backgroundColor:theme.palette.surface}}><Text style={{color:theme.palette.accent,fontSize:22}}>♫</Text></View>}
         <Text numberOfLines={2} style={{color:theme.palette.text,fontSize:15,fontWeight:'600',lineHeight:21}}>{item.kind==='category'?item.title:item.value.title}</Text><Text numberOfLines={1} style={{color:theme.palette.secondary,fontSize:12}}>{item.kind==='category'?item.group:item.value.count!==undefined?`${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
       ListFooterComponent={<View style={{gap:12,paddingVertical:24}}>{loading&&<Text style={{color:theme.palette.secondary}}>正在获取平台数据…</Text>}{!!error&&<Text style={{color:theme.palette.accent}}>{error}</Text>}{!loading&&!error&&!items.length&&<Text style={{color:theme.palette.secondary}}>此平台暂未返回可展示内容</Text>}{button(error?'重试':'刷新',()=>{void load();},loading)}{more&&button('加载更多',()=>{void load(true);},loading)}</View>}/>
   </View>;
-  if(embedded)return <><View style={{flex:1}}>{content}</View><PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/></>;
-  return <><View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View><Modal visible={open} animationType="slide" onRequestClose={close}>{content}<PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/></Modal></>;
+  const overlays=<><SheetModal visible={!!menuTrack} animationType="slide" onRequestClose={()=>setMenuTrack(null)}><View style={{flex:1,backgroundColor:theme.palette.background[0],padding:24,paddingTop:48,gap:14}}><Pressable accessibilityRole="button" accessibilityLabel="收起歌曲更多操作" onPress={()=>setMenuTrack(null)} style={{minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable><Text accessibilityRole="header" style={{fontSize:24,fontWeight:'700',color:theme.palette.text}}>{menuTrack?.title??'歌曲操作'}</Text><Text style={{color:theme.palette.secondary}}>{menuTrack?.artist}{menuTrack?.album?` · ${menuTrack.album}`:''}</Text>{menuTrack&&<View style={{gap:10}}>{button('下一首',()=>{services.addToQueue(menuTrack,true);setMenuTrack(null);})}{button('加入队列',()=>{services.addToQueue(menuTrack);setMenuTrack(null);})}{button(services.library.isFavorite(menuTrack)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(menuTrack).catch(()=>setMessage('收藏未保存，原数据保留；请重试'));setMenuTrack(null);})}{button('加入歌单',()=>{setAdding([menuTrack]);setMenuTrack(null);})}</View>}</View></SheetModal><PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/></>;
+  if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
+  return <><View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View><Modal visible={open} animationType="slide" onRequestClose={close}>{content}</Modal>{overlays}</>;
 }

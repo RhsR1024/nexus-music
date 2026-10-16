@@ -264,3 +264,6 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 本地Release专项 `build/SourceUITests-1792160728178.xcresult` 48.992秒通过：实际iPad idiom、635点系统窄窗口底部导航→通过系统真实Zoom-button扩大→宽屏侧栏/隐藏底栏→搜索内容与实际窗口横屏旋转→同步弹窗转回竖屏并关闭→发现区域在侧栏右侧且不越界。已查看竖屏侧栏、横屏搜索及弹窗附件（build/ipad-rotation-passed）。首次宽屏断言失败保留，系统AX窗口控制和实际交互完成前未将其记为通过。
 
 手机交叉回归 `build/SourceUITests-1792161115531.xcresult` WebDAV83.124秒通过，含真实合成服务解码/PCM/暂停定位/重启/移除连接；PROPFIND15、Range4、认证失败0。未改音频/脚本原生后端，没有新依赖或复制参考资产；完整native沿本轮native-sync-full.log证据。CI新增独立iOS27 iPad专项，尚未由本批提交触发/执行，清洁本地IPA继续。真正分屏切换、大字/无障碍、硬件键盘和真机仍保留，不能称整个F35/J56完成。
+## 2026-10-17 A08 发现详情更多操作菜单
+
+`Discovery` 详情歌曲行只保留播放主体和更多图标，更多操作 `pageSheet` 复用现有队列、本地收藏及歌单选择能力。关闭发现页会取消导入并清理菜单状态；在线分页、筛选排序、完整导入和来源身份不变。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode，云端 iOS27/IPA/真机待本批提交后验证。
