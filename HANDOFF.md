@@ -1,3 +1,9 @@
+# 2026-10-17 A09 歌词展开回归与清洁归档
+
+`dd2a1eb` 已正常提交并 push。`npm run check` 通过（302/302），新增 `testCrossPlatformLyrics` 对完整歌词 page sheet 的展开、`收起全部歌词` 返回及歌词仍可见进行 UI 断言；本地 `build/SourceUITests-1792182510520.xcresult` 中 `testCrossPlatformLyrics` 与 `testDiscoveryAndAppearance` 共 2/2 通过，iOS 26.3.1 iPhone 15 Pro Max 模拟器，0 failures。`source scripts/environment.sh && npm run ios:archive` 成功，归档 manifest 为 dirty=false、arm64、iphoneos26.2、最低 iOS 15.1、设备族 [1,2]、signed=false；`build/distribution/NexusMusic-unsigned.ipa` SHA256 为 `11ce4fda9e4517b3058a89b920cbc9d0f0d985e1b69cbc6b335cd2d0492d2d37`。对应 iOS 27 运行 [38963298132](https://github.com/RhsR1024/nexus-music/actions/runs/38963298132) 当前 pending，不能记为云端通过；签名、真机、后台/功耗仍待验收。
+
+下一步继续 A09 播放器/歌词/mini 对齐和剩余 A08 缺口，保持 IPA 逆向证据优先，保留音枢队列、匹配录音身份、LX/Navidrome/WebDAV、PCM/EQ 与数据安全边界。
+
 # 2026-10-17 iOS27 运行 38902977651 失败取证与本地工具链更正
 
 `698c502` / `38902977651` 于北京时间 2026-10-17 03:48 结束失败；checks、完整 native 与核心 App 中 11/12 项通过，仅 `testVisualImagesAndPlayerBackgroundPersistence` 失败。已按 ZIP 条目 CRC/长度校验提取日志及 1705 个 xcresult 小对象，未下载完整诊断 ZIP，不宣称整体 SHA256 校验通过。`build/ci-38902977651/verified/logs/ui-catalog.log:45347` 为旧测试第716行写真文件名断言；`failure-hierarchy:112` 显示“尚未导入写真图片”，第142行明确显示“图片或设置未保存”错误。因此不只是等待控件内容的问题，系统文件复制、原生图片导入或持久化的具体失败环节仍需定位。当前测试虽已等待文件名实际更新，不能据此宣称该错误修复。后续功能批次须补准确错误证据、定向本地 UI/IPA 后重新上云，保留原断言；本次没有进入 IPA 归档或第二组测试。

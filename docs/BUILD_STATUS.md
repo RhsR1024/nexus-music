@@ -620,3 +620,6 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 - `build/SourceUITests-1792181776488.xcresult`：`testCrossPlatformLyrics`、`testDiscoveryAndAppearance` 2/2 通过，0 failures，iOS 26.3.1 iPhone 15 Pro Max 模拟器。
 - 当前 HEAD `31f1ebc` 的 `npm run ios:archive` 成功；manifest `dirty=false`、`workingTreeChanges=[]`、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`、signed=false。
 - `build/distribution/NexusMusic-unsigned.ipa` SHA256：`b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。该包不代表 iOS 27、签名或真机通过。
+## 2026-10-17 A09 歌词展开回归与清洁归档
+
+`dd2a1eb` 已提交并 push。`npm run check` 302/302；`build/SourceUITests-1792182510520.xcresult` 中 `testCrossPlatformLyrics`、`testDiscoveryAndAppearance` 共 2/2 通过，iOS 26.3.1 模拟器，0 failures。`source scripts/environment.sh && npm run ios:archive` 成功，manifest 为 `dirty=false`、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`、signed=false；IPA SHA256 `11ce4fda9e4517b3058a89b920cbc9d0f0d985e1b69cbc6b335cd2d0492d2d37`。对应云端 [38963298132](https://github.com/RhsR1024/nexus-music/actions/runs/38963298132) 当前 `pending`，不记为 iOS27 通过；签名、真机、后台/功耗仍待验收。

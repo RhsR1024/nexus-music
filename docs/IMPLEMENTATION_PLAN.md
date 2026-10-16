@@ -279,3 +279,6 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 ## 2026-10-17 本地 A08/A09 验证与工具链更正
 
 此前“本机只有 Command Line Tools”的描述已更正：通过 `scripts/environment.sh` 可使用 Xcode 26.3（17C529）和 iOS 26.2 SDK。当前 HEAD `31f1ebc` 的 `build/SourceUITests-1792181776488.xcresult` 中发现详情与歌词专项 2/2 通过；清洁设备归档 manifest 为 `dirty=false`、arm64、`iphoneos26.2`、设备族 `[1,2]`，IPA SHA256 `b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。云端 iOS 27、签名和真机仍单独记录。
+## 2026-10-17 A09 验证与后续边界
+
+歌词完整展开层继续复用共享 `SheetModal`/iOS `pageSheet`，本批只补充展开、收起和返回后的内容可见性回归，不改变 FlatList 有界渲染、歌词来源/偏移、双击定位、原生逐字绘制、队列或播放意图。`dd2a1eb` 已 push；本地 302/302 与 2/2 UI 通过，清洁 arm64 unsigned IPA 已归档。iOS 27 运行 `38963298132` 仍 pending，未将其计为云端通过。下一批继续播放器样式、歌词设置、mini 和剩余发现/音乐库交互对齐。

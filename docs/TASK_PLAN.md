@@ -349,3 +349,9 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 - [x] `build/SourceUITests-1792181776488.xcresult`：发现详情、歌词路径共 2/2 通过。
 - [x] 当前 HEAD `31f1ebc` 清洁设备归档：arm64、`iphoneos26.2`、设备族 `[1,2]`、unsigned；IPA SHA256 `b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`。
 - [ ] iOS 27 云端运行、签名、真机和后台/功耗仍待终态；本地结果不能替代这些验收。
+## 2026-10-17 A09 当前批次验收记录
+
+- [x] 完整歌词 page sheet 的展开/收起回归断言；本地 `build/SourceUITests-1792182510520.xcresult` 2/2 通过。
+- [x] `npm run check` 302/302，`git diff --check` 通过；提交 `dd2a1eb` 已 push。
+- [x] 清洁本地 unsigned IPA：arm64、iphoneos26.2、min iOS 15.1、设备族 `[1,2]`，SHA256 `11ce4fda9e4517b3058a89b920cbc9d0f0d985e1b69cbc6b335cd2d0492d2d37`。
+- [ ] iOS 27 云端运行 `38963298132` 当前 pending；签名、真机和后台/功耗仍待验收。

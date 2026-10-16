@@ -292,3 +292,6 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 2026-10-17 A08：发现详情更多操作 Sheet 改为图标行，保留下一首、加入队列、本地收藏/取消收藏和加入歌单；队列与音乐库数据边界不变。`npm run check` 302/302，`git diff --check` 通过。本机完整 Xcode UI/IPA、真机和长列表大字验收待验证；云端运行 `38960235054`（`6962dc5`）当前 `pending`，不能记为 iOS27 通过。
 2026-10-17 A09：完整歌词展开层改为 iOS `pageSheet`，保留原生逐字歌词、双击定位、歌词来源选择、偏移和有界列表渲染；播放意图和队列不变。`npm run check` 302/302，`git diff --check` 通过。本机完整 Xcode UI/IPA、真机和大字/减少动态效果待验证；云端运行 `38960563962`（`40faff5`）当前 `pending`，不能记为 iOS27 通过。
 2026-10-17 本地验证更正：通过 `source scripts/environment.sh` 使用 Xcode 26.3 / iOS 26.2 SDK，当前 HEAD `31f1ebc` 的发现详情与歌词专项 `build/SourceUITests-1792181776488.xcresult` 2/2 通过；清洁 unsigned IPA 已归档，SHA256 `b22761ef58c4252f0ae4d711f98228c46763be3d775fc3cc077b65eb7da1ed74`，设备族 `[1,2]`。iOS 27 云端、签名、真机和后台功耗仍待验证。
+## 2026-10-17 A09 歌词展开 page sheet 回归
+
+完整歌词展开已补 UI 回归：点击“全部歌词”后必须出现“收起全部歌词”，关闭后原歌词仍可见；与发现详情刷新路径共 2/2 本地 UI 通过。`npm run check` 302/302；云端运行 `38963298132` 对应 `dd2a1eb`，当前 pending，IPA/真机待终态。
