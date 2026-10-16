@@ -20,6 +20,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
   const choice=services.library.lyricChoiceFor(track),signature=lyricSignature(track);
   const [choosing,setChoosing]=useState(false);
   const [expanded,setExpanded]=useState(false),[scope,setScope]=useState<'track'|'global'>('track'),[screenReader,setScreenReader]=useState(false),[settingError,setSettingError]=useState('');
+  const previousPosition=useRef(state.position),[seekRevision,setSeekRevision]=useState(0);
   const lastTap=useRef({index:-1,time:0,key:''});
   useEffect(()=>{void AccessibilityInfo.isScreenReaderEnabled().then(setScreenReader);const listener=AccessibilityInfo.addEventListener('screenReaderChanged',setScreenReader);return()=>listener.remove();},[]);
   const [result,setResult]=useState<SelectedLyrics>(),[error,setError]=useState(''),[retry,setRetry]=useState(0),[variant,setVariant]=useState(-1);
@@ -29,6 +30,13 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
     return()=>abort.abort();
   },[services,key,signature,version,choice,retry]);
   useEffect(()=>{setChoosing(false);setExpanded(false);},[signature]);
+  // NativeLyricLine owns word-level animation. Refresh the virtualized list only
+  // after a meaningful seek jump, rather than once for every playback tick.
+  useEffect(()=>{
+    const delta=Math.abs(state.position-previousPosition.current);
+    previousPosition.current=state.position;
+    if(delta>1.5)setSeekRevision(value=>value+1);
+  },[state.position]);
   const chooser=<LyricChoiceModal services={services} track={choosing?track:null} onClose={()=>setChoosing(false)}/>;
   const offset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,key),center=preferences.lyricAlignment==='center'||preferences.lyricAlignment==='auto'&&presentation==='immersive';
   const seek=(startMs:number,index:number)=>{const now=Date.now();if(screenReader||lastTap.current.key===key&&lastTap.current.index===index&&now-lastTap.current.time<350){services.playback.controller.seek(Math.max(0,(startMs+offset)/1000));lastTap.current={index:-1,time:0,key:''};}else lastTap.current={index,time:now,key};};
@@ -68,7 +76,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
         {settings}
         <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{paddingVertical:12}}><Text style={{color:theme.palette.accent}}>选择歌词来源</Text></Pressable>
         {expanded&&chooser}
-        <FlatList ref={list} data={document?.lines??[]} extraData={[active,font,size,state.position,state.intent,offset]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
+        <FlatList ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
           onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
           renderItem={({item,index})=><Pressable accessibilityRole="button" accessibilityLabel={`定位歌词：${item.text}`} onPress={()=>seek(item.startMs,index)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
             <View><NativeLyricLine line={index===active?item:{...item,words:undefined}} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={index===active?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
