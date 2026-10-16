@@ -1,3 +1,12 @@
+## 2026-10-17 A09 播放器样式 Sheet 列表化
+
+按 Sollin IPA 的独立样式 Sheet 线索，将播放器样式选择从芯片式控件改为稳定的图标列表行，强化当前值、选择反馈和小屏触控区域。
+
+- [x] 六个现有布局保留，`play-skin-*` testID、立即保存、失败保留、暂停意图和队列状态不变。
+- [x] `npm run check`：302/302；`git diff --check` 通过。
+- [x] 本地 `build/SourceUITests-1792185873313.xcresult`：`testCrossPlatformLyrics` 1/1 通过，137.929 秒，覆盖全部样式切换及歌词/播放 Sheet。
+- [ ] 清洁本地 IPA 需在文档提交后重归档；iOS 27 运行 [38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905) 当前 `pending`；真机、签名、后台/功耗仍待验证。
+
 ## 2026-10-17 A05 封面取色全局背景动态门控与清洁归档
 
 全局封面取色背景继续由 `CoverThemeStore` 按实际播放/匹配录音身份驱动；新增动态层门控，避免动态效果在暂停、缓冲、后台或减少动态效果时继续运行。

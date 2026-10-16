@@ -1,3 +1,9 @@
+## 2026-10-17 A09 播放器样式 Sheet 列表化
+
+`Player.tsx` 的 `skinSelector` 现在使用稳定的图标行、选中背景、勾选/箭头和 44pt 以上触控高度；只改变样式选择的视觉层级，继续共享 `playerLayout` 偏好、单一播放器、权威队列和播放意图。该列表作为 Sollin `_PlayerInterfaceStyleSheet` 的行为重实现，不推断或复制其未确认的完整样式枚举。
+
+验证：`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过（137.929 秒），包含六布局切换与独立 Sheet 路径；云端 `38969653905` 当前 `pending`，不计作 iOS 27 通过。
+
 ## 2026-10-17 A05 封面取色全局背景动态门控与清洁归档
 
 `AmbientBackground` 订阅播放控制器只把播放意图、ready/buffering 这些低频状态折叠为 `moving`，随后交给 `MotionImage` 自己处理 App 活跃状态与 Reduce Motion；播放位置不会进入全局背景的 React 更新路径。封面 URI、主体色、匹配录音和失败回退仍由 `CoverThemeStore`/已有封面缓存负责。

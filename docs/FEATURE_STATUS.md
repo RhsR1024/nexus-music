@@ -1,5 +1,7 @@
 # 功能开发与验收状态
 
+2026-10-17 A09：播放器样式 Sheet 改为稳定图标列表行，保留六布局、即时保存、错误恢复、暂停意图和队列状态。`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，137.929 秒。云端运行 `38969653905` 当前 `pending`；清洁 IPA 待文档提交后重归档。
+
 2026-10-17 A05：全局封面取色背景复用 `MotionImage` 的动态层，并由播放中、ready、未缓冲和动态偏好门控；切歌、暂停、后台和减少动态效果会停止运动。`npm run check` 302/302，本地 `testGlobalCoverThemeChangesAcrossPages` 1/1 通过，清洁本地 unsigned IPA SHA256 `e9f01a5e0c565223930be0b7af3415e5ef97f1f3eb7473f6c0c89dcd8b3bebc4`。iOS 27 运行 `38968408649` 当前 `pending`，真机、后台/功耗和长时动态效果仍待验证。
 
 2026-10-17 A09：歌词列表将逐帧播放位置从 React `FlatList.extraData` 中移除，仅在歌词行切换、暂停/播放、样式变化和明显 seek 时更新列表；原生 `NexusLyrics` 继续负责逐字动画。`npm run check` 302/302，本地 `testCrossPlatformLyrics` 1/1 通过，清洁本地 unsigned IPA 已归档并校验 SHA256 `dedc365e58dc5e6d6bd1c33f4741a06ee6424bd0f9394f6b075007cd8ada769e`。iOS 27 运行 `38966241336` 当前 `pending`，不计作云端通过。

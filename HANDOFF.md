@@ -1,3 +1,13 @@
+# 2026-10-17 A09 播放器样式 Sheet 列表化
+
+`27d3200` 已正常提交并 push。现代播放器的六个布局选择从芯片式控件改为带图标、选中态和箭头/勾选的稳定列表行，继续使用独立样式 `pageSheet`、原有 `play-skin-*` testID、即时保存、失败保留、暂停意图和权威队列。`npm run check` 302/302；本地 `build/SourceUITests-1792185873313.xcresult` 的 `testCrossPlatformLyrics` 1/1 通过，137.929 秒，覆盖 AM、沉浸、写真、黑胶、声波核切换、样式/歌词 Sheet、暂停与定位。
+
+本地归档已成功生成，待文档提交后重新归档以获得 `dirty=false` 清洁证据。对应 iOS 27 运行 [38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905) 当前 `pending`，不能记为云端通过；真机、签名、后台/功耗仍待验收。
+
+# 2026-10-17 云端 38903549077 成功与 IPA 核验
+
+`c4422bc` / `38903549077` 于北京时间05:14完整成功：checks、原生检查、两组App测试、设备归档与产物上传全部通过。IPA artifact `12076096155` 已下载到忽略目录 `build/ci-38903549077`，完整ZIP长度/CRC及API SHA256 `9212ab3dca22a2054838581ef064a3304e5005af37332dc0115d19d1bbc0fbc6` 一致；内部IPA摘要与附带sha256一致，为 `fdc0696bdab9b87f75ece602e7abb20a64f162a2c670c6e489b69f9bf0b1430f`。已检查正式JS入口无测试adapter、arm64、Xcode27.0/27A266a、iphoneos27.0、min15.1、signed=false；manifest dirty=true唯一 `ios/Podfile.lock`。该旧基线设备族仍为[1]，不算后续原生iPad验证，也不覆盖近期对齐增量或消除38902977651图片导入失败的根因缺口。F33 `38913246781` 已开始正常运行，后续功能批次保持排队；本次未修改其他上下文的播放器代码或启动冲突构建。
+
 # 2026-10-17 A05 封面取色全局背景动态门控与清洁归档
 
 `d47d680` 已正常提交并 push。全局封面背景在已有 `CoverThemeStore` 的封面身份/匹配录音边界上，复用 `MotionImage` 的低频平移层；只有打开“动态播放背景”、媒体已 ready、播放中且未缓冲时运动，原生/React 仍不读取 PCM 或逐帧更新列表，切歌、暂停、后台和减少动态效果会停止动画。`npm run check` 302/302；本地 `build/SourceUITests-1792185052140.xcresult` 的 `testGlobalCoverThemeChangesAcrossPages` 1/1 通过，113.112 秒，覆盖红/蓝封面切换、设置返回和音乐库路径。

@@ -1,3 +1,10 @@
+## 2026-10-17 A09 播放器样式 Sheet 列表化
+
+- 提交 `27d3200189846bdc70574953568041b22b264951` 已 push；`npm run check` 302/302。
+- 本地 UI：`build/SourceUITests-1792185873313.xcresult`，`testCrossPlatformLyrics` 1/1 通过，137.929 秒，0 failures。
+- 本地归档在共享文档尚有未提交改动时完成，IPA SHA256 `fe5474c32a3ad5812d9fca2310c58e60d088d669e9c0b5392417d713b5a0ff7d`；需文档提交后重归档，不能把本次包记为清洁交付。
+- 云端 iOS 27：[38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905)，当前 `pending`，未计作通过。
+
 ## 2026-10-17 A05 封面背景动态门控与清洁本地归档
 
 - 提交 `d47d680a2b8ac0c67e6eb273bac9674ccc9e15f7` 已 push；`npm run check` 302/302。
@@ -643,3 +650,10 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 ## 2026-10-17 A09 播放器独立样式入口
 
 `7c8075c` 已提交并 push。现代播放器“调整播放界面”直接进入样式 `pageSheet`，“队列与播放选项”仍进入完整菜单；本地 `build/SourceUITests-1792183369784.xcresult` 1/1 通过，`npm run check` 302/302。清洁归档 manifest 为 dirty=false、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`、signed=false；IPA SHA256 `5ec7ec1f64698cb61da74a9e3403da6615f348a6838d92ce4aea297639f3c933`。对应 [38964697049](https://github.com/RhsR1024/nexus-music/actions/runs/38964697049) 当前 pending，签名、真机、后台/功耗待验收。
+## 2026-10-17 云端 38903549077 完整成功 / IPA 已下载核验
+
+运行 `38903549077` / `c4422bc7359f7f20bf594aa5b94f506632147df8` 于北京时间05:14结束success。jobs快照在 `build/ci-38903549077/jobs.json`：checks和iOS job `117164364843`、完整native、两组App、设备IPA归档和上传全部成功。
+
+IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a2054838581ef064a3304e5005af37332dc0115d19d1bbc0fbc6` 与API digest一致，ZIP CRC通过。内部IPA SHA256 `fdc0696bdab9b87f75ece602e7abb20a64f162a2c670c6e489b69f9bf0b1430f` 与随包sha256一致，内部ZIP CRC通过；已检查bundle ID、正式JS无测试adapter、arm64、iphoneos27.0、最低15.1。manifest为Xcode27.0/27A266a、signed=false、dirty=true且仅 `M ios/Podfile.lock`。设备族仍为[1]，不算后续iPad原生窗口或近期UI改动通过。
+
+诊断artifact `12075332518`（353132621字节）仅保存API元信息，未下载，不能声称其摘要已核验。旧38902977651写真导入错误仍保留根因定位项；本次成功不证明间歇性错误已被修复。F33 `38913246781` 正常执行，最新功能提交排队；没有取消/重派或干扰其他上下文的修改。
