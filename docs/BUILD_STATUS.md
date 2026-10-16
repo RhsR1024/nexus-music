@@ -1,10 +1,10 @@
 ## 2026-10-17 A09 迷你播放器上下滑手势
 
-- 提交 `b92c299fb40e7fdd8def3bf3352b9c2024f7a9b2` 已 push；`npm run check` 302/302。
+- 提交 `3e3a7311ac5b76a3187f1cdf35b9c539e52eafb0` 已 push；`npm run check` 302/302。
 - 本地 UI：`testCrossPlatformLyrics` 1/1 通过，覆盖迷你播放器上滑打开、完整播放页手柄下滑收起及后续歌词/暂停/定位。
-- 本地 Release archive：成功；manifest `commit=b92c299`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，Xcode 26.3 / SDK 26.2。
-- IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `f28927fbac67f3ded050e26b59fb34e50aa06ac7feec39bbb52e42addf58d46e`。
-- 云端 iOS 27：[38971744514](https://github.com/RhsR1024/nexus-music/actions/runs/38971744514)，当前 `pending`，未计作通过；真机、签名、手势长时体验和后台/功耗仍待验收。
+- 本地 Release archive：成功；manifest `commit=3e3a731`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，Xcode 26.3 / SDK 26.2。
+- IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `69dee96f8c4e462b960fb42c24f93b393470341219c4ba3afed1d2e6dee7ac4b`。
+- 云端 iOS 27：[38972668259](https://github.com/RhsR1024/nexus-music/actions/runs/38972668259)，当前 `pending`，未计作通过；真机、签名、手势长时体验和后台/功耗仍待验收。
 
 ## 2026-10-17 A09 播放器样式 Sheet 列表化
 

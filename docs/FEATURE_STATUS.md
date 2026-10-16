@@ -1,6 +1,6 @@
 # 功能开发与验收状态
 
-2026-10-17 A09：迷你播放器支持上滑打开完整播放页，完整播放页顶部手柄支持下滑收起；点击入口、按钮顺序、队列和暂停意图保持。`npm run check` 302/302，本地 `testCrossPlatformLyrics` 1/1 通过，清洁本地 unsigned IPA SHA256 `f28927fbac67f3ded050e26b59fb34e50aa06ac7feec39bbb52e42addf58d46e`。iOS 27 运行 `38971744514` 当前 `pending`，不计作云端通过。
+2026-10-17 A09：迷你播放器支持上滑打开完整播放页，完整播放页顶部手柄支持下滑收起；点击入口、按钮顺序、队列和暂停意图保持。`npm run check` 302/302，本地 `testCrossPlatformLyrics` 1/1 通过，清洁本地 unsigned IPA SHA256 `69dee96f8c4e462b960fb42c24f93b393470341219c4ba3afed1d2e6dee7ac4b`。iOS 27 运行 `38972668259` 当前 `pending`，不计作云端通过。
 
 2026-10-17 A09：播放器样式 Sheet 改为稳定图标列表行，保留六布局、即时保存、错误恢复、暂停意图和队列状态。`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，137.929 秒；清洁本地 unsigned IPA SHA256 `0db5818fd2a3d774b8c7cf995a61b75cfc585155ff8b687f0d3b4db9c19f69ee`。云端运行 `38969653905` 当前 `pending`，不计作 iOS 27 通过。
 

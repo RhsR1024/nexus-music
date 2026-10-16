@@ -5,8 +5,8 @@
 - [x] 迷你播放器上滑打开完整播放页，原有点击入口保持。
 - [x] 完整播放页顶部手柄下滑收起，按钮点击关闭保持。
 - [x] `npm run check`：302/302；本地 `testCrossPlatformLyrics` 1/1 通过，覆盖上下滑与后续播放器流程。
-- [x] 清洁本地 unsigned IPA：`b92c299`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，SHA256 `f28927fbac67f3ded050e26b59fb34e50aa06ac7feec39bbb52e42addf58d46e`。
-- [ ] iOS 27 运行 [38971744514](https://github.com/RhsR1024/nexus-music/actions/runs/38971744514) 当前 `pending`；真机、手势长时体验、签名和后台/功耗仍待验证。
+- [x] 清洁本地 unsigned IPA：`3e3a731`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，SHA256 `69dee96f8c4e462b960fb42c24f93b393470341219c4ba3afed1d2e6dee7ac4b`。
+- [ ] iOS 27 运行 [38972668259](https://github.com/RhsR1024/nexus-music/actions/runs/38972668259) 当前 `pending`；真机、手势长时体验、签名和后台/功耗仍待验证。
 
 ## 2026-10-17 A09 播放器样式 Sheet 列表化
 

@@ -6,9 +6,9 @@
 
 # 2026-10-17 A09 迷你播放器上下滑手势
 
-`b92c299` 已正常提交并 push。迷你播放器容器现在支持上滑打开完整播放页；完整播放页顶部手柄支持下滑收起，原有点击打开、按钮顺序、队列和暂停意图保持。触摸事件使用起止位置和方向阈值，不把逐帧位置放入 React 列表更新。`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，覆盖上滑、下滑及后续歌词/暂停/定位流程。
+`3e3a731` 已正常提交并 push。迷你播放器容器现在支持上滑打开完整播放页；完整播放页顶部手柄支持下滑收起，原有点击打开、按钮顺序、队列和暂停意图保持。触摸事件使用起止位置和方向阈值，不把逐帧位置放入 React 列表更新。`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，覆盖上滑、下滑及后续歌词/暂停/定位流程。
 
-清洁本地归档已成功：manifest 为 commit=`b92c299`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 为 `f28927fbac67f3ded050e26b59fb34e50aa06ac7feec39bbb52e42addf58d46e`。对应 iOS 27 运行 [38971744514](https://github.com/RhsR1024/nexus-music/actions/runs/38971744514) 当前 `pending`，不能记为云端通过；真机、手势长时体验、签名和后台/功耗仍待验收。
+清洁本地归档已成功：manifest 为 commit=`3e3a731`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 为 `69dee96f8c4e462b960fb42c24f93b393470341219c4ba3afed1d2e6dee7ac4b`。对应 iOS 27 运行 [38972668259](https://github.com/RhsR1024/nexus-music/actions/runs/38972668259) 当前 `pending`，不能记为云端通过；真机、手势长时体验、签名和后台/功耗仍待验收。
 
 # 2026-10-17 云端 38903549077 成功与 IPA 核验
 
