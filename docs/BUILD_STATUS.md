@@ -21,6 +21,11 @@
 - 本机当前只有 Command Line Tools，没有完整 Xcode，因此本轮未能重新执行本地 iOS UI 专项或 unsigned IPA 归档；不能把上一批 IPA 当作本轮交付包。提交后以新的 iOS 27 云端运行验证。
 - 本批提交 `7684701` 已推送；新的 iOS 27 云端运行 [38939941769](https://github.com/RhsR1024/nexus-music/actions/runs/38939941769) 当前 `pending`。旧运行 `38937690077` 继续排队，不作为本批结果。
 
+## 2026-10-17 播放器匹配录音视觉身份修正
+
+- 修正现代播放器将原始队列曲目传给封面/标题组件的问题；存在跨平台匹配时，现代播放器现在与背景、歌词和系统媒体使用同一个实际匹配录音。原始曲目仍是队列、收藏、评论和匹配记录的权威身份。
+- `npm run check`：302/302 通过；`git diff --check` 通过。本机仍无完整 Xcode，未能重跑 iOS UI/IPA；本次提交后以新的 iOS 27 云端运行验证。
+
 # 首批实现验收记录
 
 2026-10-16 iPad证据更正：主App Debug/Release的TARGETED_DEVICE_FAMILY仍为1，当前Release模拟器App的UIDeviceFamily实读仅1。此前iPad截图不能解释为Stage Manager/分屏验证，也不能据此验收原生平板布局；详见[0031更正](decisions/0031-adaptive-ipad-layout.md)。本批已修正为1,2且实际窗口/旋转专项通过，证据见文末；保留旧构建成功但收回旧平板窗口解释。
