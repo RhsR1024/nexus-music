@@ -2,7 +2,7 @@
 
 - 音乐库正文增加每次 20 项的“加载更多歌曲”，长歌单 UI 回归覆盖入口；完整批量管理弹层与既有筛选/排序不变。
 - `npm run check`：302/302；`git diff --check`：通过。
-- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；旧云端运行 `38954944378` 仍为 `pending` 且无 jobs，不能替代本批验证。新提交后的 iOS27 运行待跟踪。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；旧云端运行 `38954944378` 仍为 `pending` 且无 jobs，不能替代本批验证。新运行 `38955950405`（`21bb000`）已创建，当前 `pending`，不能记为 iOS27 通过。
 
 ## 2026-10-17 A08 播放历史时间轴 UI 回归批次
 

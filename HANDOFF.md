@@ -1,6 +1,6 @@
 # 2026-10-17 A08 音乐库长列表分批加载
 
-音乐库正文不再永久截断前 20 首：收藏、最近播放和歌单在长列表下提供“加载更多歌曲”，每次追加 20 项，切换标签或歌单时重置；完整批量管理弹层、播放队列和失败保留逻辑不变。`npm run check` 302/302、`git diff --check` 通过；`testPlaylistSearchSortAndDuplicateRemoval` 增加长歌单入口断言。本机没有完整 Xcode；本批云端 iOS27/IPA/真机待新提交运行。
+音乐库正文不再永久截断前 20 首：收藏、最近播放和歌单在长列表下提供“加载更多歌曲”，每次追加 20 项，切换标签或歌单时重置；完整批量管理弹层、播放队列和失败保留逻辑不变。`npm run check` 302/302、`git diff --check` 通过；`testPlaylistSearchSortAndDuplicateRemoval` 增加长歌单入口断言。本机没有完整 Xcode；本批云端运行 `38955950405`（`21bb000`）已创建，当前 `pending`，IPA/真机待终态。
 
 # 2026-10-17 A08 播放历史时间轴回归
 
