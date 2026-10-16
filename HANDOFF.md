@@ -10,6 +10,10 @@
 
 前级滑杆补充 `-12 / +12` 边界标记，并保留独立无障碍名称；业务与类型检查继续为 302/302。
 
+## 2026-10-17 A08 歌单详情刷新入口
+
+发现歌单详情头部新增 `刷新歌单` 按钮，加载时禁用，复用既有分页取消与失败保留逻辑；不引入登录、推荐或统计伪入口。`npm run check` 302/302、`git diff --check` 通过。本机仍无完整 Xcode，提交后继续跟踪云端 iOS27 终态。
+
 ## 2026-10-17 优先补充完成的执行清单
 
 最新权威清单为[SOLLIN_ALIGNMENT_PLAN.md](docs/SOLLIN_ALIGNMENT_PLAN.md)，逐页映射见[SOLLIN_UI_ALIGNMENT.md](docs/SOLLIN_UI_ALIGNMENT.md)。用户要求先补齐文档，再开始对齐；后续执行严格按以下优先级：

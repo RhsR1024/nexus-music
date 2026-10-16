@@ -19,6 +19,14 @@
 - [x] `npm run check` 302/302、`git diff --check` 通过。
 - [ ] 本机完整 Xcode UI/IPA、本批云端 iOS 27 和真机听感仍待验证。
 
+## 2026-10-17 A08 歌单详情刷新入口
+
+在发现歌单详情头部补充可达的刷新按钮，复用现有分页取消、已加载计数和失败保留逻辑；完整导入、搜索排序、重复条目和来源身份不变。
+
+- [x] 详情头部提供 `刷新歌单` 控件，加载中禁用并保留已有内容。
+- [x] `npm run check` 302/302、`git diff --check` 通过。
+- [ ] 本机完整 Xcode UI/IPA、云端 iOS27 和真实平台/真机仍待验证。
+
 后续增量：独立图形 EQ 页已推送；现代播放器改用实际匹配录音的视觉身份；外观总览移除无实现图标入口；主题背景统一提供渐变/纯色/图片选择，未导入图片时禁用图片项；音质保存失败提示已恢复。业务检查保持 302/302。图片背景禁用断言和本批云端 iOS27 UI/IPA 仍待实际执行，不能把排队状态记为通过。
 
 本阶段完成了基于固定 Sollin IPA 静态证据的设置分层/Sheet 线索补充、全局封面主体色背景重实现，以及设置首页与外观入口的交互收拢。IPA 证据继续按“字符串/保留对象是线索，不能当作动态调用图”处理；已核对 `_SettingsCategoryPage`、`_OrganizedSettingsTab`、`_pushSecondaryPage`、`_showThemedModalBottomSheet`、播放器样式/主题/字体/歌词/mini Sheet 名称，以及 `resolve/load/applyCoverTheme`、`ThemedPageScaffold`、`AppThemeBackground`、动态背景 provider 和异步封面取消线索，详见 [SOLLIN_IPA_ANALYSIS.md](SOLLIN_IPA_ANALYSIS.md)。

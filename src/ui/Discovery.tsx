@@ -2,6 +2,7 @@ import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {Alert, FlatList, Pressable, View, useWindowDimensions} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {OnlinePlatform,Track} from '../domain/track.ts';
@@ -63,7 +64,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
   const header=<View style={{gap:20,paddingBottom:24}}>
     <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{!embedded&&button('收起发现',close)}{view.kind==='detail'&&button('返回歌单广场',()=>setView({kind:'playlists'}))}</View>
     {view.kind==='detail'?<>
-      <View style={{flexDirection:'row',alignItems:'center',gap:20}}><Cover services={services} url={view.artwork} size={116}/><View style={{flex:1,gap:8}}><Text accessibilityRole="header" style={{fontSize:25,fontWeight:'700',color:theme.palette.text}}>{view.title}</Text><Text style={{color:theme.palette.secondary}}>{platforms.find(([id])=>id===platform)?.[1]} · 已加载 {loadedTracks.length}{total!==undefined?` / ${total}`:''} 首</Text></View></View>
+      <View style={{flexDirection:'row',alignItems:'center',gap:20}}><Cover services={services} url={view.artwork} size={116}/><View style={{flex:1,gap:8}}><Text accessibilityRole="header" style={{fontSize:25,fontWeight:'700',color:theme.palette.text}}>{view.title}</Text><Text style={{color:theme.palette.secondary}}>{platforms.find(([id])=>id===platform)?.[1]} · 已加载 {loadedTracks.length}{total!==undefined?` / ${total}`:''} 首</Text></View><Pressable accessibilityRole="button" accessibilityLabel="刷新歌单" accessibilityHint="重新读取当前分页，失败时保留已加载内容" onPress={()=>{void load();}} disabled={loading} style={{width:48,height:48,borderRadius:24,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.surface,opacity:loading?.45:1}}><Ionicons name="refresh" size={22} color={theme.palette.accent}/></Pressable></View>
       <TrackListTools query={query} onQuery={setQuery} sort={sort} onSort={setSort} label="搜索已加载歌曲歌手专辑"/><Text style={{color:theme.palette.secondary,fontSize:12}}>筛选显示 {tracks.length} 首；搜索和排序仅作用于已加载歌曲，完整导入保留平台原始顺序。</Text>
       {!!view.description&&<Pressable accessibilityRole="button" accessibilityLabel={descriptionOpen?'收起歌单简介':'展开歌单简介'} onPress={()=>setDescriptionOpen(value=>!value)}><Text numberOfLines={descriptionOpen?undefined:2} style={{color:theme.palette.secondary,lineHeight:23}}>{view.description}</Text><Text style={{color:theme.palette.accent,marginTop:6}}>{descriptionOpen?'收起':'展开'}</Text></Pressable>}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{tracks.length>0&&button('播放已加载歌曲',()=>services.playTracks(tracks,0))}{tracks.length>0&&button('随机播放已加载',()=>{void services.preferences.update({shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));})}</View>
