@@ -37,3 +37,6 @@ resource/
 
 # Local Xcode Node location
 .xcode.env.local
+
+# Local user-provided Sollin reference screenshots (not product assets)
+/resources/sollin-reference/

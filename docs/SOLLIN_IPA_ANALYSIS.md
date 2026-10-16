@@ -1,3 +1,15 @@
+## 2026-10-17 逆向补充：设置 Sheet、样式枚举与全局背景线索
+
+以下仍是固定 IPA 的静态证据，不能单独证明运行时调用关系、选项顺序或动态效果。
+
+- 设置结构线索：`_SettingsCategoryPage`、`_OrganizedSettingsTab`、`_SettingsCategory`、`_SettingsTab` 与分类后缀 `_appearance`、`_playback`、`_sourceDownload`、`_data`、`_services` 共存；`_pushSecondaryPage` 与 `_showThemedModalBottomSheet` 以及播放器样式、主题明暗、主题、字体、歌词、mini 操作 Sheet 名称均已提取。
+- 样式文案线索包括“原始、经典、写真歌词、封面沉浸、声波核、Apple Music 播放器、Apple Music 2 播放器”；不能据此把早期五皮肤或 `classic_vinyl_turntable` 当作已确认的完整枚举。
+- 全局背景线索包括“使用封面主体色，应用到全局及原始、经典播放器”“背景随封面变化”“从封面取色，保持静止”，以及 `resolveCoverTheme`、`loadResilientCoverTheme`、`applyCoverTheme`、`effectiveAppTheme`、`ThemedPageScaffold`、`AppThemeBackground`、`backgroundKind/Opacity/Blur`、渐变起止/中间色字段。另见 `sollin_dynamic_cover_background_v1`、`sollin_dynamic_flow_background_v1`、`sollin_song_dynamic_cover_v1` 三个独立 provider 线索，不能合并为一个开关。
+- 异步/缓存线索包括 `_StaleCoverRequest`、`_fetchWithFallbacks`、`_coverFetchGroup`、`cancelPendingCoverRequests` 和 “Cover request superseded by a source change” 错误文本；这支持在音枢中采用身份/代次守卫，但不证明原包具体实现。`extractPalette`、`rawRgba`、`ColorScheme.fromSeed`、`TonalPalette` 只证明候选符号存在，算法参数仍未知。
+- 音乐核心线索包括歌词模型/布局/绘制/控制器、`MusicLibraryService`、`musicPlayerProvider`、`PlaybackSessionService`、`equalizer_controller`、`musicGatewayControllerProvider`、AM2/经典/沉浸播放器路径；这些名称用于后续逐页核对，不替代动态观察。
+
+本阶段据此采用原创、可解释的主体色渐变与低透明模糊图层，保留音枢自己的队列、播放意图、LX/Navidrome/WebDAV、凭据和 PCM/EQ 边界。
+
 # Sollin iOS 2.0.0（60）IPA 静态核验
 
 日期：2026-10-16。用户提供本机 `/Users/ningli/WorkSpace/ReferenceProject/Sollin-2.0.0 60-unsigned.ipa`，要求核验实现并以其 UI、交互和功能作为音枢的直接参考。范围按[决策0033](decisions/0033-sollin-mobile-scope.md)处理：完整参考移动端行为和四组设置，排除 Sollin 自有账号、商业、支持和遥测体系，保留音乐平台 provider 账号。此文件是移动二进制证据，优先于用桌面实现推测移动端；既有 F01–F37/J01–J59 总范围和 LX 优先、下载/漫途后置的顺序保留。

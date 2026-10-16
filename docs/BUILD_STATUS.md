@@ -1,3 +1,12 @@
+## 2026-10-17 设置与全局封面主题阶段
+
+- `npm run check`：类型检查通过，自动测试 **302/302** 通过。
+- `git diff --check`：通过。
+- 本地 UI：`build/SourceUITests-1792169130948.xcresult` 分组设置导航/草稿/滚动恢复与发现/外观专项通过；`build/SourceUITests-1792168820230.xcresult` 的实际全局封面专项通过，最终结果以对应 result bundle 记录。专项覆盖红/蓝封面跨音乐库、发现、外观页切换，关闭恢复及重启恢复。
+- 本地归档：`build/logs/archive-cover-settings.log` 为 `ARCHIVE SUCCEEDED`；`build/distribution/build-manifest.json` 记录 Xcode 26.3、iOS 26.2、arm64、unsigned、min iOS 15.1。IPA SHA256 为 `fb5cc2c3e3b1558e3669f870b54317b3b45f1521d90bbcd8d0ffa80f59fb5e06`。该归档在提交前生成，manifest 的 dirty 状态只反映待提交工作区，不能当作清洁交付包。
+- 云端 iOS 27：待本阶段提交后由 GitHub Actions 运行；未将排队或本地 SDK 26.2 结果记作云端通过。
+- 仍待：真机、减少动态效果/后台、低电量与功耗、真实私人封面，以及 Sollin 动态流动/视频背景的行为观察。
+
 # 首批实现验收记录
 
 2026-10-16 iPad证据更正：主App Debug/Release的TARGETED_DEVICE_FAMILY仍为1，当前Release模拟器App的UIDeviceFamily实读仅1。此前iPad截图不能解释为Stage Manager/分屏验证，也不能据此验收原生平板布局；详见[0031更正](decisions/0031-adaptive-ipad-layout.md)。本批已修正为1,2且实际窗口/旋转专项通过，证据见文末；保留旧构建成功但收回旧平板窗口解释。

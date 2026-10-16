@@ -34,13 +34,13 @@ export class VisualColorCache {
   private cache=new Map<string,string>();private pending=new Map<string,Promise<string>>();private epoch=0;
   private native:Pick<VisualNative,'visualPalette'>;
   constructor(native:Pick<VisualNative,'visualPalette'>){this.native=native;}
-  clear(){this.epoch++;this.cache.clear();}
+  clear(){this.epoch++;this.cache.clear();this.pending.clear();}
   async color(uri:string):Promise<string>{
     const cached=this.cache.get(uri);if(cached){this.cache.delete(uri);this.cache.set(uri,cached);return cached;}
     const current=this.pending.get(uri);if(current)return current;
     if(this.pending.size>=32)throw new Error('图片取色繁忙');
     const epoch=this.epoch;
-    const pending=this.native.visualPalette(uri).then(color=>{if(!/^#[0-9a-f]{6}$/i.test(color))throw new Error('取色结果无效');if(epoch!==this.epoch)throw new Error('图片取色缓存已更新，请重试');this.cache.set(uri,color);if(this.cache.size>50)this.cache.delete(this.cache.keys().next().value!);return color;}).finally(()=>this.pending.delete(uri));
+    const pending=this.native.visualPalette(uri).then(color=>{if(!/^#[0-9a-f]{6}$/i.test(color))throw new Error('取色结果无效');if(epoch!==this.epoch)throw new Error('图片取色缓存已更新，请重试');this.cache.set(uri,color);if(this.cache.size>50)this.cache.delete(this.cache.keys().next().value!);return color;}).finally(()=>{if(this.pending.get(uri)===pending)this.pending.delete(uri);});
     this.pending.set(uri,pending);return pending;
   }
 }

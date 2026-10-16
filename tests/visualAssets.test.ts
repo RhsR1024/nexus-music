@@ -40,6 +40,11 @@ test('clearing color cache prevents a late palette result from repopulating it',
   const first=deferred<string>(),calls:string[]=[];const cache=new VisualColorCache({visualPalette:async uri=>{calls.push(uri);return first.promise;}});
   const pending=cache.color('stale');cache.clear();first.resolve('#00FF00');await assert.rejects(pending);assert.equal(calls.length,1);
 });
+test('cleared in-flight palettes cannot block or remove a replacement request for the same URI',async()=>{
+  const old=deferred<string>(),next=deferred<string>();let calls=0;const cache=new VisualColorCache({visualPalette:async()=>++calls===1?old.promise:next.promise});
+  const stale=cache.color('file:///cover');cache.clear();const fresh=cache.color('file:///cover');old.resolve('#FF0000');await assert.rejects(stale);
+  const shared=cache.color('file:///cover');assert.equal(calls,2);next.resolve('#0000FF');assert.equal(await fresh,'#0000FF');assert.equal(await shared,'#0000FF');
+});
 test('visual preferences migrate old settings and reject out of range updates atomically',async()=>{
   let value:unknown={quality:'128k'};const repository={get:async<T>()=>value as T,put:async(_:string,next:unknown)=>{value=structuredClone(next);}} as unknown as Repository;
   const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().coverRadius,defaults.coverRadius);assert.equal(preferences.getSnapshot().dynamicBackground,false);

@@ -5,7 +5,7 @@ import {Text} from './Typography.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
 import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
-import {GlassSurface} from './Materials.tsx';
+import {AmbientBackground,GlassSurface} from './Materials.tsx';
 import {ArtworkBackdrop,ModernPlayer} from './ModernPlayer.tsx';
 import {Cover} from './Cover.tsx';
 import {MatchModal} from './MatchModal.tsx';
@@ -96,7 +96,7 @@ export function Player({ services }: { services: Services }) {
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
       {open&&<StatusBar style={preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
       <View style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:'#183647'}}>
-      {open&&preferences.playerLayout!=='classic'&&<ArtworkBackdrop services={services} track={entry.track} photo={preferences.playerLayout==='photo'}/>}
+      {open&&(preferences.playerLayout==='classic'?<AmbientBackground services={services}/>:<ArtworkBackdrop services={services} track={actualMatch??entry.track} photo={preferences.playerLayout==='photo'}/>)}
       <ScrollView style={{flex:1}} contentContainerStyle={styles.content}>
         {preferences.playerLayout==='classic'?button('收起播放页',()=>setOpen(false)):<Pressable accessibilityRole="button" accessibilityLabel="收起播放页" onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:30,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
         {preferences.playerLayout==='classic'&&skinSelector}

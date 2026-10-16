@@ -1,4 +1,5 @@
 import {VisualAssetStore,VisualColorCache,type VisualNative} from '../storage/visualAssets.ts';
+import {CoverThemeStore} from '../appearance/coverTheme.ts';
 import {PublicComments} from '../providers/comments.ts';
 import {bindManualMatches,bindMatchPolicy} from '../playback/matchBinding.ts';
 import {SourceHealth} from '../providers/sourceHealth.ts';
@@ -94,6 +95,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     const saved=await repository.get<SavedQueue>('queue.v1');
     if(saved){playback.controller.setQueue(decodeQueue(saved));const cursor=await repository.get<SavedCursor>('queue.cursor.v1');if(cursor)playback.controller.restoreCursor(cursor.entryId,cursor.seconds);}
   }catch{recoveryWarnings.push('上次播放队列无法恢复，已从暂停状态开始；音乐库仍保留。');}
+  const coverTheme=new CoverThemeStore(playback.controller,preferences,covers,visualColors);
+  accounts.subscribe(coverTheme.invalidate);davAccounts.subscribe(coverTheme.invalidate);registry.subscribe(coverTheme.invalidate);deviceMedia.subscribe(coverTheme.invalidate);localAudio.subscribe(coverTheme.invalidate);
   deviceMedia.subscribe(()=>{const current=playback.controller.getSnapshot(),entry=current.queue.entries.find(entry=>entry.id===current.queue.currentId);if(entry?.track.origin.kind==='device'&&deviceMedia.getSnapshot().authorization!=='authorized')playback.controller.setQueue({...current.queue,currentId:null,priorityIds:[]});});
   AppState.addEventListener('change',state=>{if(state==='active')void deviceMedia.checkAuthorization().catch(()=>{});});
   let previous=playback.controller.getSnapshot(),lastCursorWrite=Date.now();
@@ -138,7 +141,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.backup.v1','云备份目录',()=>davBackups.restore());
   const davSync=new WebDAVSync({repository,accounts:davAccounts,transport:davTransport,library,mutations:libraryMutations,uuid:Crypto.randomUUID});
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
-  return { davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

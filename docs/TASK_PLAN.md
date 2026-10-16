@@ -1,3 +1,17 @@
+## 2026-10-17 A04–A06 阶段本地验收记录
+
+本阶段完成了基于固定 Sollin IPA 静态证据的设置分层/Sheet 线索补充、全局封面主体色背景重实现，以及设置首页与外观入口的交互收拢。IPA 证据继续按“字符串/保留对象是线索，不能当作动态调用图”处理；已核对 `_SettingsCategoryPage`、`_OrganizedSettingsTab`、`_pushSecondaryPage`、`_showThemedModalBottomSheet`、播放器样式/主题/字体/歌词/mini Sheet 名称，以及 `resolve/load/applyCoverTheme`、`ThemedPageScaffold`、`AppThemeBackground`、动态背景 provider 和异步封面取消线索，详见 [SOLLIN_IPA_ANALYSIS.md](SOLLIN_IPA_ANALYSIS.md)。
+
+- [x] 设置首页按“播放与歌词 / 外观与界面 / 数据与存储 / 音乐来源”分组；来源入口保留 LX 与 Navidrome 特有配置。
+- [x] 设置二级页返回、隐藏页无障碍隔离、草稿与滚动位置恢复；字体页作为共用叶页。
+- [x] 全局封面主题使用实际播放录音的封面主体色，覆盖发现/音乐库/设置及适用播放器背景；无图、失败、迟到结果和切歌版本变化有回退/代次保护。
+- [x] 本地业务检查 302/302、类型检查、git diff 空白检查通过。
+- [x] 本地 iOS UI 专项：分组设置导航/草稿/滚动恢复与发现/外观回归通过；全局红蓝封面切换、关闭恢复、重启恢复专项通过。
+- [x] 本地 unsigned device IPA 归档通过：arm64 / iphoneos26.2 / min iOS 15.1，SHA256 `fb5cc2c3e3b1558e3669f870b54317b3b45f1521d90bbcd8d0ffa80f59fb5e06`。
+- [ ] 云端 iOS 27 必须由本阶段提交触发并完成；真机、减少动态效果、低电量/功耗、真实私人封面仍未验收。
+
+本阶段实现边界仍是“静态主体色渐变 + 低不透明度模糊封面层”的原创重实现，不宣称恢复 Sollin 未公开的取色参数、shader、流动背景或动态视频封面算法。A05/A06 的完整等价验收仍需云端、真机和剩余播放器/歌词/EQ专项。
+
 # 实施任务与验收清单
 
 ## 2026-10-17 优先补充完成的执行清单

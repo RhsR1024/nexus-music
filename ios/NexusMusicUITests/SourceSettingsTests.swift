@@ -3,6 +3,20 @@ import Vision
 
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
+  private func openSettings(_ app:XCUIApplication,page:String){
+    let tab=app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
+    XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
+    for _ in 0..<3 {let back=app.buttons["settings-back"];if !back.exists{break};back.tap()}
+    func enter(_ target:String){
+      let row=app.buttons["settings-open-"+target]
+      XCTAssertTrue(row.waitForExistence(timeout:10))
+      for _ in 0..<6 {if row.isHittable{break};app.swipeUp()}
+      XCTAssertTrue(row.isHittable);row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5))
+    }
+    let appearancePages=["theme","background","skins","accent","navigation","mini"]
+    enter(page=="typography" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
+    if page=="typography"{enter("typography")}else if appearancePages.contains(page){enter(page)}
+  }
   private func replaceText(_ field:XCUIElement,with value:String,in app:XCUIApplication){
     field.tap();field.press(forDuration:1.1)
     let selectAll=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
@@ -26,6 +40,22 @@ final class SourceSettingsTests: XCTestCase {
       return control.isHittable
     },object:control)
     XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed,"WebDAV control must be reachable after dismissing the system password sheet")
+  }
+  private func selectLocalFixture(_ prefix:String,in app:XCUIApplication){
+    // Query the complete tree: iOS 27 Files is a remote accessibility subtree.
+    let file=app.descendants(matching:.any).matching(NSPredicate(format:"elementType == %d AND label BEGINSWITH %@",XCUIElement.ElementType.cell.rawValue,prefix)).firstMatch
+    let folder=app.descendants(matching:.any).matching(NSPredicate(format:"elementType == %d AND label BEGINSWITH %@",XCUIElement.ElementType.cell.rawValue,"Nexus UITest Fixtures")).firstMatch
+    for _ in 0..<6 {
+      if file.waitForExistence(timeout:3) && file.isHittable{break}
+      if folder.exists && folder.isHittable{folder.tap();continue}
+      let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch
+      if phone.exists && phone.isHittable{phone.tap();continue}
+      let browse=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+      if browse.exists && browse.isHittable{browse.tap()}
+    }
+    XCTAssertTrue(file.waitForExistence(timeout:10));XCTAssertTrue(file.isHittable,"The actual Files cell must be visible before selection");file.tap()
+    let open=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
+    if open.waitForExistence(timeout:3) && open.isHittable{open.tap()}
   }
   func testAppIconOnHomeScreen() throws {
     let app=XCUIApplication();app.launch();XCUIDevice.shared.press(.home)
@@ -79,10 +109,36 @@ final class SourceSettingsTests: XCTestCase {
     let discovery=element("discovery-content");XCTAssertGreaterThan(discovery.frame.minX,libraryTab.frame.maxX)
     XCTAssertLessThanOrEqual(discovery.frame.maxX,app.frame.maxX+1);evidence("iPad discovery constrained to content column")
   }
+  func testGroupedSettingsNavigationAndDrafts() throws {
+    let app=XCUIApplication();app.launch()
+    openSettings(app,page:"sources")
+    func reveal(_ element:XCUIElement){for _ in 0..<24 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))};XCTAssertTrue(element.isHittable)}
+    func evidence(_ name:String){let item=XCTAttachment(screenshot:app.screenshot());item.name=name;item.lifetime = .keepAlways;add(item)}
+    let source=app.textFields["音源订阅地址"];reveal(source);source.tap();for character in "https://example.invalid/draft.js"{source.typeText(String(character))};source.typeText("\n")
+    XCTAssertEqual(source.value as? String,"https://example.invalid/draft.js");let previousY=source.frame.midY
+    XCTAssertTrue(app.buttons["settings-back"].isHittable,"Back must stay above the scroll content")
+    app.buttons["settings-back"].tap();XCTAssertFalse(source.exists,"Hidden settings must leave the accessibility tree")
+    XCTAssertTrue(app.staticTexts["settings-title-home"].exists);evidence("Grouped mobile settings home")
+    let sources=app.buttons["settings-open-sources"];reveal(sources);sources.tap()
+    XCTAssertTrue(source.isHittable);XCTAssertEqual(source.value as? String,"https://example.invalid/draft.js");XCTAssertEqual(source.frame.midY,previousY,accuracy:2,"Back must restore the original scroll position")
+    openSettings(app,page:"playback")
+    let name=app.textFields["eq-preset-name"];reveal(name);name.tap();for character in "Retained draft"{name.typeText(String(character))};name.typeText("\n")
+    openSettings(app,page:"appearance");XCTAssertFalse(name.exists)
+    let fontEntry=app.buttons["settings-open-typography"];reveal(fontEntry);fontEntry.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-typography"].exists);XCTAssertTrue(app.buttons["font-import"].isHittable)
+    app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
+    openSettings(app,page:"playback");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
+    openSettings(app,page:"storage");XCTAssertFalse(name.exists)
+    let backup=app.buttons["cloud-backup-open"];reveal(backup);backup.tap();XCTAssertTrue(app.buttons["收起云备份"].waitForExistence(timeout:5));app.buttons["收起云备份"].tap()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let sourceLink=app.buttons["音乐来源"];reveal(sourceLink);sourceLink.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-sources"].waitForExistence(timeout:5));XCTAssertEqual(app.buttons["settings-back"].label,"返回音乐库")
+    app.buttons["settings-back"].tap();XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.isSelected)
+  }
   func testCrossPlatformLyrics() throws {
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<12 {if element.isHittable{break};if up{app.swipeUp()}else{app.swipeDown()}};XCTAssertTrue(element.isHittable)}
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"sources")
     let source=app.textFields["音源订阅地址"];reach(source);source.tap();for character in "http://127.0.0.1:18439/matching-source.js"{source.typeText(String(character))};source.typeText("\n");app.buttons["从地址导入"].tap()
     let enable=app.buttons["启用音源：Nexus Matching Fixture"],enabled=app.buttons["停用音源：Nexus Matching Fixture"]
     for _ in 0..<5{if enable.isHittable||enabled.isHittable{break};app.swipeUp()};if enable.exists{enable.tap()}else{XCTAssertTrue(enabled.isHittable)}
@@ -115,7 +171,7 @@ final class SourceSettingsTests: XCTestCase {
     reach(pause);pause.tap()
     reach(sourceButton,up:false);sourceButton.tap();app.buttons["使用原歌词"].tap()
     XCTAssertTrue(app.staticTexts["歌词来源：原歌词"].waitForExistence(timeout:15));XCTAssertTrue(app.buttons["Synthetic original lyric"].firstMatch.exists);XCTAssertTrue(app.buttons["播放"].firstMatch.exists)
-    let close=app.buttons["收起播放页"];reach(close,up:false);close.tap();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    let close=app.buttons["收起播放页"];reach(close,up:false);close.tap();openSettings(app,page:"sources")
     let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Matching Fixture").firstMatch;reach(selected);selected.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
   func testPublicComments() throws {
@@ -135,7 +191,7 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testSourceHealth() throws {
     let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"sources")
     let address=app.textFields["音源订阅地址"]
     for _ in 0..<8 {if address.isHittable{break};app.swipeUp()};XCTAssertTrue(address.isHittable)
     address.tap();for character in "http://127.0.0.1:18439/health-source.js"{address.typeText(String(character))};address.typeText("\n");app.buttons["从地址导入"].tap()
@@ -190,7 +246,7 @@ final class SourceSettingsTests: XCTestCase {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.
     let app=XCUIApplication();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"sources")
     let source=app.textFields["音源订阅地址"]
     for _ in 0..<8 {if source.isHittable{break};app.swipeUp()}
     XCTAssertTrue(source.isHittable);source.tap();for character in "http://127.0.0.1:18439/matching-source.js"{source.typeText(String(character))};source.typeText("\n");app.buttons["从地址导入"].tap()
@@ -220,14 +276,15 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<4 {if app.buttons["匹配歌曲"].isHittable{break};app.swipeDown()};app.buttons["匹配歌曲"].tap();app.buttons["取消指定版本，恢复自动"].tap()
     XCTAssertTrue(app.staticTexts["保留原曲，可选择其他录音版本"].waitForExistence(timeout:10))
     app.terminate();app.launch();app.buttons["打开播放页"].tap();XCTAssertTrue(app.staticTexts["保留原曲，可选择其他录音版本"].waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["Synthetic match tone"].firstMatch.exists)
-    app.buttons["收起播放页"].tap();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    app.buttons["收起播放页"].tap();openSettings(app,page:"playback")
     let automatic=app.buttons["automatic-online-matching"]
     // Short content swipes avoid skipping this button between large settings cards.
     for _ in 0..<40 {if automatic.isHittable{break};app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.72)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)))}
     XCTAssertTrue(automatic.isHittable);XCTAssertEqual(automatic.label,"普通在线歌曲自动匹配：开启");automatic.tap();app.terminate();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap();let disabled=app.buttons["automatic-online-matching"]
+    openSettings(app,page:"playback");let disabled=app.buttons["automatic-online-matching"]
     for _ in 0..<40 {if disabled.isHittable{break};app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.72)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)))}
     XCTAssertTrue(disabled.isHittable);XCTAssertEqual(disabled.label,"普通在线歌曲自动匹配：关闭");disabled.tap()
+    openSettings(app,page:"sources")
     let fixture=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Matching Fixture").firstMatch
     for _ in 0..<20 {if fixture.isHittable{break};app.swipeDown()};XCTAssertTrue(fixture.isHittable);fixture.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
@@ -332,13 +389,15 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(tagged.waitForExistence(timeout:20));XCTAssertTrue(tagged.label.contains("Synthetic tagged tone"))
     let song=app.buttons["webdav-track-album/Remote%20Fixture.mp3"];XCTAssertTrue(song.isEnabled);waitForWebDAVControl(song,in:app);song.tap()
     app.buttons["收起WebDAV"].tap()
-    // The failed cloud run had a remote Save Password? sheet above this button.
-    // Wait for the actual presentation boundary, then dismiss that specific prompt.
-    let closed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["收起WebDAV"])
-    XCTAssertEqual(XCTWaiter.wait(for:[closed],timeout:10),.completed)
+    // The cloud recording shows mini restored while AX still reports the old
+    // DAV tree. Give dismissal and the fresh mini query separate wait budgets.
     _=dismissPasswordSuggestion(in:app)
     let player=app.buttons["打开播放页"]
-    waitForWebDAVControl(player,in:app)
+    let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      _=self.dismissPasswordSuggestion(in:app)
+      return player.isHittable
+    },object:player)
+    XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:20),.completed,"Mini must become reachable after system password dismissal")
     player.tap();XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:10))
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:10));XCTAssertTrue(app.buttons["Synthetic embedded lyric"].waitForExistence(timeout:10))
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
@@ -358,7 +417,7 @@ final class SourceSettingsTests: XCTestCase {
     }
     let app = XCUIApplication()
     app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"sources")
     let importButton = app.buttons["导入本地 JS（可多选）"]
     XCTAssertTrue(importButton.waitForExistence(timeout: 15), "Native module/database must load before imports")
     for _ in 0..<5 { if importButton.isHittable { break }; app.swipeUp() }
@@ -430,10 +489,14 @@ final class SourceSettingsTests: XCTestCase {
     let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
     let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
     XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
-    let folder=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
-    if !folder.waitForExistence(timeout:3){let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch;XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()}
-    XCTAssertTrue(folder.waitForExistence(timeout:10));folder.tap()
-    let file=app.descendants(matching:.any).matching(NSPredicate(format:"label CONTAINS %@","Nexus Playlist Fixture")).firstMatch
+    let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+    let file=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus Playlist Fixture")).firstMatch
+    // Files remembers the previous font/image folder. A navigation title is not
+    // a directory cell; tapping it opens a menu rather than entering the folder.
+    if !file.waitForExistence(timeout:2){
+      if !folder.waitForExistence(timeout:2){let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch;XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()}
+      XCTAssertTrue(folder.waitForExistence(timeout:10));folder.tap()
+    }
     XCTAssertTrue(file.waitForExistence(timeout:10));file.tap()
     let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch;if open.waitForExistence(timeout:3){open.tap()}
     XCTAssertTrue(app.alerts["导入LX歌单"].waitForExistence(timeout:15));app.alerts.buttons["追加导入"].tap()
@@ -502,14 +565,9 @@ final class SourceSettingsTests: XCTestCase {
   func testFontImportAndLyricStyle() throws {
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;let start=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)),end=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35));start.press(forDuration:0.05,thenDragTo:end)};XCTAssertTrue(element.isHittable,"Control must scroll into view: \(element.identifier)")}
-    func settings(){app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()}
+    func settings(){openSettings(app,page:"typography")}
     settings();let resetInitial=app.buttons["lyric-style-reset"];reach(resetInitial);resetInitial.tap();let importer=app.buttons["font-import"];reach(importer);importer.tap()
-    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
-    let fixture=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
-    if !fixture.waitForExistence(timeout:3){let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch;XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()}
-    XCTAssertTrue(fixture.waitForExistence(timeout:10));fixture.tap()
-    let file=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus Fixture.ttf")).firstMatch;XCTAssertTrue(file.waitForExistence(timeout:10));file.tap()
-    let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch;if open.waitForExistence(timeout:3){open.tap()}
+    selectLocalFixture("Nexus Fixture.ttf",in:app)
     let global=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-global-nexusfont_")).firstMatch
     XCTAssertTrue(global.waitForExistence(timeout:15));reach(global);global.tap()
     let inherit=app.buttons["font-lyrics-inherit"];reach(inherit,up:false);inherit.tap()
@@ -532,12 +590,13 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testZNavidromePlaybackAndCredentials() throws {
     let app=XCUIApplication();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"skins")
     func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
     // Establish the initial layout through the actual setting, including when a
     // previous interrupted test left a different persisted skin selected.
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
     reveal(classic);classic.tap()
+    openSettings(app,page:"sources")
     let address=app.textFields["Navidrome服务器地址"]
     XCTAssertTrue(address.waitForExistence(timeout:15))
     reveal(address)
@@ -627,7 +686,7 @@ final class SourceSettingsTests: XCTestCase {
     let statsImage=XCTAttachment(screenshot:app.screenshot());statsImage.name="Persisted listening statistics";statsImage.lifetime = .keepAlways;add(statsImage)
     app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     XCTAssertTrue(statistic.waitForExistence(timeout:10));XCTAssertEqual(count(),previousCount+1,"Actual listening statistics must survive restart")
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"mini")
     func miniReach(_ element:XCUIElement){for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))};XCTAssertTrue(element.isHittable)}
     func miniChoose(_ id:String){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;miniReach(control);control.tap()}
     miniChoose("mini-reset")
@@ -646,15 +705,58 @@ final class SourceSettingsTests: XCTestCase {
     miniFavorite.tap();expectation(for:NSPredicate(format:"value == %@",favoriteBefore ?? ""),evaluatedWith:miniFavorite);waitForExpectations(timeout:10)
     miniQueue.tap();XCTAssertTrue(app.buttons["收起队列"].waitForExistence(timeout:10));app.buttons["收起队列"].tap();XCTAssertEqual(miniToggle.label,"播放")
     let miniImage=XCTAttachment(screenshot:app.screenshot());miniImage.name="Four persisted mini controls and actual recording lyric";miniImage.lifetime = .keepAlways;add(miniImage)
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap();miniChoose("mini-reset");expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
+    openSettings(app,page:"mini");miniChoose("mini-reset");expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
+    openSettings(app,page:"sources")
     for _ in 0..<45 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
     app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
   }
+  func testGlobalCoverThemeChangesAcrossPages() throws {
+    let app=XCUIApplication();app.launch()
+    func reveal(_ element:XCUIElement){for _ in 0..<24 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65:0.35)))};XCTAssertTrue(element.isHittable)}
+    openSettings(app,page:"background");app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch.tap()
+    openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
+    openSettings(app,page:"appearance");let follow=app.switches["appearance-cover-color"];reveal(follow);if follow.value as? String != "1"{follow.tap()}
+    openSettings(app,page:"sources")
+    for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名","fixture-theme"),("Navidrome密码","fixture-password")] {
+      let field=label=="Navidrome密码" ? app.secureTextFields[label] : app.textFields[label];reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
+    }
+    app.buttons["验证并保存连接"].tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:20))
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let album=app.buttons["navidrome-item-album-fixture-album"];XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();XCTAssertTrue(app.buttons["播放全部"].waitForExistence(timeout:10));app.buttons["播放全部"].tap()
+    func redMinusBlue()->Int {
+      // Sample the actual visible app margin, outside cards/text/mini. Convert
+      // to a known RGBA context instead of assuming the screenshot byte order.
+      let image=app.screenshot().image
+      let renderer=UIGraphicsImageRenderer(size:CGSize(width:1,height:1))
+      let pixel=renderer.image{_ in image.draw(at:CGPoint(x:-6,y:-180))}
+      guard let cg=pixel.cgImage else{return 0};var rgba=[UInt8](repeating:0,count:4)
+      rgba.withUnsafeMutableBytes{buffer in let ctx=CGContext(data:buffer.baseAddress,width:1,height:1,bitsPerComponent:8,bytesPerRow:4,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue)!;ctx.draw(cg,in:CGRect(x:0,y:0,width:1,height:1))}
+      return Int(rgba[0])-Int(rgba[2])
+    }
+    func expectTint(_ red:Bool,_ title:String){
+      let expectation=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in let delta=redMinusBlue();return red ? delta>12 : delta < -12},object:app)
+      XCTAssertEqual(XCTWaiter.wait(for:[expectation],timeout:20),.completed,"Visible global tint must follow the decoded \(red ? "red" : "blue") cover on \(title)")
+      let shot=XCTAttachment(screenshot:app.screenshot());shot.name=title;shot.lifetime = .keepAlways;add(shot)
+    }
+    expectTint(true,"Red cover private library")
+    app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap();expectTint(true,"Red cover discovery")
+    openSettings(app,page:"appearance");expectTint(true,"Red cover appearance settings")
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    XCTAssertTrue(album.waitForExistence(timeout:15));reveal(album);album.tap()
+    let blue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","blue cover tone")).firstMatch;reveal(blue);blue.tap();expectTint(false,"Blue cover private library")
+    openSettings(app,page:"appearance");expectTint(false,"Blue cover appearance settings")
+    let restoredFollow=app.switches["appearance-cover-color"];reveal(restoredFollow);restoredFollow.tap()
+    let fallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[fallback],timeout:10),.completed)
+    restoredFollow.tap();expectTint(false,"Blue cover enabled again")
+    app.terminate();app.launch();openSettings(app,page:"appearance");expectTint(false,"Blue cover restored paused after restart")
+    openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+    XCTAssertFalse(app.buttons["打开播放页"].exists)
+  }
   func testDiscoveryAndAppearance() throws {
     let app=XCUIApplication();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"theme")
     let dark=app.descendants(matching:.any).matching(identifier:"theme-dark").firstMatch
     for _ in 0..<14 {if dark.isHittable{break};app.swipeUp()}
     XCTAssertTrue(dark.exists);dark.tap()
@@ -698,11 +800,12 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testGraphicalEQPresetPersistence() throws {
     let app=XCUIApplication();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"playback")
     func reveal(_ element:XCUIElement) {
       for _ in 0..<36 {
-        if element.exists && element.isHittable && element.frame.minY >= 110 && element.frame.maxY <= app.frame.height-180 { return }
-        let above=element.exists && element.frame.minY < 110
+        let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-playback").firstMatch.frame
+        if element.exists && element.isHittable && element.frame.minY >= viewport.minY+8 && element.frame.maxY <= viewport.maxY-8 { return }
+        let above=element.exists && element.frame.minY < viewport.minY+8
         app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.60 : 0.40)))
       }
       XCTFail("Control not fully visible: \(element)")
@@ -720,7 +823,7 @@ final class SourceSettingsTests: XCTestCase {
     let save=app.buttons["eq-save-preset"];reveal(save);save.tap()
     XCTAssertTrue(app.buttons["Nexus EQ Test"].waitForExistence(timeout:5))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
-    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    app.terminate();app.launch();openSettings(app,page:"playback")
     let preset=app.buttons["Nexus EQ Test"];reveal(preset);preset.tap()
     app.buttons["删除预设Nexus EQ Test"].tap();XCTAssertFalse(preset.exists)
     reveal(slider);XCTAssertEqual(value.label,savedValue)
@@ -735,20 +838,23 @@ final class SourceSettingsTests: XCTestCase {
     let discover=app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch
     XCTAssertTrue(discover.waitForExistence(timeout:15));discover.tap()
     XCTAssertTrue(app.staticTexts["发现"].firstMatch.exists)
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"accent")
     let blue=app.descendants(matching:.any).matching(identifier:"accent-blue").firstMatch
     for _ in 0..<14 {if blue.isHittable{break};app.swipeUp()}
     XCTAssertTrue(blue.isHittable);blue.tap()
+    openSettings(app,page:"background")
     let classic=app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch
     for _ in 0..<3 {if classic.isHittable{break};app.swipeDown()};classic.tap()
+    openSettings(app,page:"theme")
     let light=app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch
     for _ in 0..<3 {if light.isHittable{break};app.swipeDown()};light.tap()
     let settingsImage=XCTAttachment(screenshot:app.screenshot());settingsImage.lifetime = .keepAlways;add(settingsImage)
     app.terminate();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"accent")
     let restored=app.descendants(matching:.any).matching(identifier:"accent-blue").firstMatch
     for _ in 0..<14 {if restored.isHittable{break};app.swipeUp()}
     XCTAssertTrue(restored.isSelected)
+    openSettings(app,page:"background")
     let pink=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
     for _ in 0..<3 {if pink.isHittable{break};app.swipeDown()};pink.tap()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
@@ -763,40 +869,26 @@ final class SourceSettingsTests: XCTestCase {
     func choose(_ id:String){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;reveal(control);control.tap()}
     func importFixture(_ id:String){
       choose(id)
-      let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
-      XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
-      let file=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus Visual Fixture")).firstMatch
-      let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
-      // Files remembers the previous directory. Never tap the navigation title:
-      // it opens a folder context menu instead of selecting a folder cell.
-      for _ in 0..<4 {
-        if file.waitForExistence(timeout:5){break}
-        if folder.exists && folder.isHittable {folder.tap();continue}
-        let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch
-        if phone.waitForExistence(timeout:5) && phone.isHittable {phone.tap()}
-      }
-      XCTAssertTrue(file.waitForExistence(timeout:10));file.tap()
-      let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
-      if open.waitForExistence(timeout:3){open.tap()}
+      selectLocalFixture("Nexus Visual Fixture",in:app)
     }
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"background")
     let background=app.buttons["visual-import-background"];reveal(background);importFixture("visual-import-background")
-    XCTAssertTrue(app.staticTexts["visual-background-name"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("Nexus Visual Fixture.png"))
+    expectation(for:NSPredicate(format:"label CONTAINS %@","Nexus Visual Fixture.png"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:20)
     let photo=app.buttons["visual-import-photo"];reveal(photo);importFixture("visual-import-photo")
-    XCTAssertTrue(app.staticTexts["visual-photo-name"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("Nexus Visual Fixture.png"))
+    expectation(for:NSPredicate(format:"label CONTAINS %@","Nexus Visual Fixture.png"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:20)
     let importedImage=XCTAttachment(screenshot:app.screenshot());importedImage.name="Imported background and photo previews";importedImage.lifetime = .keepAlways;add(importedImage)
     choose("background-image");choose("player-background-photo");choose("visual-backgroundOpacity-up");choose("visual-playerBlur-up");choose("visual-coverRadius-up");for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()}}
     let savedValues=["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label}
-    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    app.terminate();app.launch();openSettings(app,page:"background")
     let restoredPhoto=app.staticTexts["visual-photo-name"];reveal(restoredPhoto);XCTAssertTrue(restoredPhoto.label.contains("Nexus Visual Fixture.png"));let motion=app.switches["visual-motion"];reveal(motion);XCTAssertEqual(motion.value as? String,"1");XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"player-background-photo").firstMatch.isSelected);XCTAssertEqual(["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label},savedValues)
     let removeBackground=app.buttons["visual-remove-background"];reveal(removeBackground);removeBackground.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:10);XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("Nexus Visual Fixture.png"),"Removing a shared background must retain the photo slot")
     let removePhoto=app.buttons["visual-remove-photo"];reveal(removePhoto);removePhoto.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:10)
-    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap();reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
+    app.terminate();app.launch();openSettings(app,page:"background");reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Persisted visual image settings and fallback";screenshot.lifetime = .keepAlways;add(screenshot)
   }
   func testLiveLXPlayback() throws {
     let app=XCUIApplication();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"sources")
     let field=app.textFields["音源订阅地址"]
     for _ in 0..<8 {if field.isHittable{break};app.swipeUp()}
     for _ in 0..<3 {
@@ -814,6 +906,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["已启用"].waitForExistence(timeout:25))
     // This live-service smoke test verifies a known basic route. Exhaustive
     // quality-first fallback is covered by contracts and the isolated App flow.
+    openSettings(app,page:"playback")
     let basic=app.descendants(matching:.any).matching(identifier:"128k").firstMatch
     for _ in 0..<14 {if basic.isHittable{break};app.swipeUp()};XCTAssertTrue(basic.isHittable);basic.tap()
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
@@ -827,11 +920,12 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<3 {if app.buttons["暂停"].firstMatch.isHittable{break};app.swipeUp()}
     app.buttons["暂停"].firstMatch.tap()
     for _ in 0..<5 {if app.buttons["收起播放页"].isHittable{break};app.swipeDown()};app.buttons["收起播放页"].tap()
-    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    openSettings(app,page:"sources")
     let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Live Validation Source").firstMatch
     for _ in 0..<8 {if selected.isHittable{break};app.swipeUp()}
     selected.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
+    openSettings(app,page:"playback")
     let preferred=app.descendants(matching:.any).matching(identifier:"flac").firstMatch
     for _ in 0..<14 {if preferred.isHittable{break};app.swipeUp()};XCTAssertTrue(preferred.isHittable);preferred.tap()
   }
