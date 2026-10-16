@@ -1,3 +1,12 @@
+## 2026-10-17 A08 音乐库歌曲行更多操作 Sheet 代码与本地归档
+
+- 提交 `b0139bbf79bce900fb0b46dd5bd13531c4a8ec8a` 已 push；歌曲行改为省略号入口和图标行 Sheet，保留全部音枢歌曲动作；分段控件按钮角色修复既有 UI 查询。
+- `npm run check`：302/302；`git diff --check`：通过。
+- 本地 UI：`build/SourceUITests-1792188928262.xcresult`，`testPlaylistSearchSortAndDuplicateRemoval` 1/1 通过，121.062 秒，0 failures。
+- 本地 Release archive：成功；manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，Xcode 26.3 / SDK 26.2。
+- IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `1adf6d5587bf81135ef2cbf7e86a039fb5dcc7e176e590e1e0f71e1f7ed87532`。
+- 云端 iOS 27：[38975058418](https://github.com/RhsR1024/nexus-music/actions/runs/38975058418)，当前 `pending`，未计作通过；签名与真机仍待验收。
+
 ## 2026-10-17 A09 迷你播放器上下滑手势
 
 - 提交 `3e3a7311ac5b76a3187f1cdf35b9c539e52eafb0` 已 push；`npm run check` 302/302。

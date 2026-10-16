@@ -1,3 +1,9 @@
+## 2026-10-17 A08 音乐库歌曲行更多操作 Sheet
+
+音乐库歌曲行按 Sollin 的紧凑更多操作交互收口：行内仅保留省略号入口，Sheet 以稳定图标行承载下一首、加入队列、收藏、加入歌单、匹配、歌单维护和历史删除；原有音枢能力和服务边界全部保留。分段控件改为按钮角色并保持选中态，以兼容现有 iOS UI 查询。
+
+验证：`npm run check` 302/302、`git diff --check` 通过；`build/SourceUITests-1792188928262.xcresult` 的 `testPlaylistSearchSortAndDuplicateRemoval` 1/1 通过（121.062 秒）。清洁 IPA manifest 对应 `b0139bbf79bce900fb0b46dd5bd13531c4a8ec8a`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，SHA256 `1adf6d5587bf81135ef2cbf7e86a039fb5dcc7e176e590e1e0f71e1f7ed87532`。iOS 27 运行 `38975058418` 当前 `pending`，不计作通过。
+
 ## 2026-10-17 A09 迷你播放器上下滑手势
 
 `Player.tsx` 在迷你播放器容器记录原生触摸起止位置，垂直方向超过 36pt 且主导水平位移时上滑打开完整播放页；完整页顶部手柄使用同一有界判定下滑收起。按钮点击和内部队列/播放动作继续由既有 Pressable 处理，未引入逐帧 React 状态或新的播放边界。

@@ -1,3 +1,10 @@
+## 2026-10-17 A08 音乐库歌曲行更多操作 Sheet
+
+- [x] 行内更多操作改为紧凑省略号入口，Sheet 保留下一首、加入队列、收藏、加入歌单、匹配、歌单维护和历史删除。
+- [x] 分段控件以按钮角色暴露并保持选中态，兼容现有 iOS UI 查询。
+- [x] `npm run check` 302/302；本地 UI `testPlaylistSearchSortAndDuplicateRemoval` 1/1 通过；清洁 IPA 已归档。
+- [ ] iOS 27 运行 [38975058418](https://github.com/RhsR1024/nexus-music/actions/runs/38975058418) 当前 `pending`；签名、真机、后台/功耗和大字手势仍待验证。
+
 ## 2026-10-17 A09 迷你播放器上下滑手势
 
 按 Sollin 的播放器层级线索补齐迷你播放器与完整播放页之间的直接手势，同时保留音枢的按钮配置、队列和播放意图。

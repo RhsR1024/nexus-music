@@ -1,5 +1,7 @@
 # 功能开发与验收状态
 
+2026-10-17 A08：音乐库收藏、最近播放和本地歌单歌曲行改为紧凑省略号入口，Sheet 以图标行提供下一首、加入队列、收藏、加入歌单、匹配、歌单上移/移除和历史删除；保留音枢权威队列、来源身份和失败保留。分段控件改为按钮角色并保留选中态，修复既有 iOS UI 查询。`npm run check` 302/302；本地 `testPlaylistSearchSortAndDuplicateRemoval` 1/1 通过，121.062 秒；清洁 IPA SHA256 `1adf6d5587bf81135ef2cbf7e86a039fb5dcc7e176e590e1e0f71e1f7ed87532`。iOS 27 运行 `38975058418` 当前 `pending`，不计作云端通过。
+
 2026-10-17 A09：迷你播放器支持上滑打开完整播放页，完整播放页顶部手柄支持下滑收起；点击入口、按钮顺序、队列和暂停意图保持。`npm run check` 302/302，本地 `testCrossPlatformLyrics` 1/1 通过，清洁本地 unsigned IPA SHA256 `69dee96f8c4e462b960fb42c24f93b393470341219c4ba3afed1d2e6dee7ac4b`。iOS 27 运行 `38972668259` 当前 `pending`，不计作云端通过。
 
 2026-10-17 A09：播放器样式 Sheet 改为稳定图标列表行，保留六布局、即时保存、错误恢复、暂停意图和队列状态。`npm run check` 302/302；本地 `testCrossPlatformLyrics` 1/1 通过，137.929 秒；清洁本地 unsigned IPA SHA256 `0db5818fd2a3d774b8c7cf995a61b75cfc585155ff8b687f0d3b4db9c19f69ee`。云端运行 `38969653905` 当前 `pending`，不计作 iOS 27 通过。

@@ -1,3 +1,13 @@
+# 2026-10-17 A08 音乐库歌曲行更多操作 Sheet
+
+`b0139bb` 已正常提交并 push。收藏、最近播放和本地歌单歌曲行现在使用紧凑的 `ellipsis-horizontal` 更多操作入口，操作层复用 iOS `pageSheet`，以图标行提供下一首、加入队列、本地收藏/取消收藏、加入歌单、汽水/在线歌曲匹配、歌单上移/移除和历史删除；音枢原有队列、音乐库身份、匹配和失败保留边界不变。音乐库分段控件改为可查询的按钮角色并保留选中态，修复既有 UI 回归无法定位“我的歌单”的问题。
+
+`npm run check`：302/302；`git diff --check`：通过。定向本地 UI：`build/SourceUITests-1792188928262.xcresult`，`testPlaylistSearchSortAndDuplicateRemoval` 1/1 通过，121.062 秒，覆盖歌单创建、1000 首长列表分批加载、批量搜索/排序、重复项移除和滑动删除。
+
+清洁本地归档已成功：manifest 为 commit=`b0139bbf79bce900fb0b46dd5bd13531c4a8ec8a`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 为 `1adf6d5587bf81135ef2cbf7e86a039fb5dcc7e176e590e1e0f71e1f7ed87532`。对应 iOS 27 运行 [38975058418](https://github.com/RhsR1024/nexus-music/actions/runs/38975058418) 当前 `pending`，不能记为云端通过；签名、真机、后台/功耗和大字手势仍待验收。
+
+下一步继续跟进 `38975058418` 终态，推进剩余 A08/A09 页面交互与真实服务/真机验收；保持 IPA 逆向证据优先，保留 LX、Navidrome、WebDAV、汽水匹配、PCM/EQ、权威队列和数据安全边界。
+
 # 2026-10-17 A09 播放器样式 Sheet 列表化
 
 `27d3200` 已正常提交并 push。现代播放器的六个布局选择从芯片式控件改为带图标、选中态和箭头/勾选的稳定列表行，继续使用独立样式 `pageSheet`、原有 `play-skin-*` testID、即时保存、失败保留、暂停意图和权威队列。`npm run check` 302/302；本地 `build/SourceUITests-1792185873313.xcresult` 的 `testCrossPlatformLyrics` 1/1 通过，137.929 秒，覆盖 AM、沉浸、写真、黑胶、声波核切换、样式/歌词 Sheet、暂停与定位。
