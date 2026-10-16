@@ -94,3 +94,5 @@ S7普通在线匹配按[0019](decisions/0019-online-fallback-matching.md)比较Q
 S7音源平台/音质批测按[0020](decisions/0020-source-health.md)比较：Cy固定128k/非空URL、Sollin显式sourceId逐档、Q/wtf单宿主生命周期、悦音自动重试、Wayferar更新检查隔离，原创实现精确源/档位和原生有界响应检查。不复制打印地址/错误的路径，不把响应头当解码成功；TS调度/报告可共享Android，URLSession探测需对应平台实现。188项业务与完整原生/HTTP已通过，App集成验证中，无新依赖。
 
 S7网易公开评论按[0021](decisions/0021-public-comments.md)比较六参考后原创实现，精确原曲身份/普通行数游标、热门与普通分区、失败留旧内容及取消隔离；其他平台不因参考存在代码就算已接入，无新依赖。2026-10-16用户另明确授权暂用漫途图标，固定素材路径、尺寸/无透明通道适配及许可边界见[0022](decisions/0022-temporary-app-icon.md)，不重新生成或改造其标志造型。
+
+F34本地实际播放统计按[0023](decisions/0023-playback-statistics.md)原创实现，保留原生单调时钟与单一队列归属；参考中的歌单热度不当作个人聆听次数。TS仓储可共享，Android需替换原生计时采样；无新依赖或复制源码。

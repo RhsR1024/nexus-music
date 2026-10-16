@@ -1,0 +1,20 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {ListeningSessions} from '../src/playback/listening.ts';
+import {PlaybackController} from '../src/playback/controller.ts';
+import {track} from './fixtures.ts';
+import {emptyQueue} from '../src/domain/queue.ts';
+test('listening session retains original track across pause generations and late stop after switching queue',async()=>{
+  const controller=new PlaybackController({resolve:async()=>({url:'https://example.com/audio'})},{stop(){},load(){},play(){},pause(){}},emptyQueue);
+  const queue={...emptyQueue,entries:[{id:'a',track}],currentId:'a'};
+  await controller.play(queue);const sessions=new ListeningSessions(),generation=controller.getSnapshot().token!.generation;
+  const event={entryId:'a',generation,kind:'status',listeningSession:'native-a',listenedMs:0};
+  assert.equal(sessions.sample(event,controller.getSnapshot()),undefined);
+  controller.pause();
+  assert.equal(sessions.sample({...event,generation:generation+1,kind:'paused',listenedMs:400},controller.getSnapshot())?.listenedMs,400);
+  const next={...track,title:'Other',origin:{kind:'online' as const,platform:'wy' as const,id:'other'}};
+  await controller.play({...queue,entries:[{id:'b',track:next}],currentId:'b'});
+  assert.equal(sessions.sample({...event,kind:'stopped',listenedMs:450},controller.getSnapshot())?.track,track);
+  assert.equal(sessions.sample({...event,entryId:'b',kind:'listening',listenedMs:500},controller.getSnapshot()),undefined);
+  assert.equal(sessions.sample({...event,listeningSession:'unbound-old',kind:'stopped',listenedMs:500},controller.getSnapshot()),undefined);
+});

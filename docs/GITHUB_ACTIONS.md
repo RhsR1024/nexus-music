@@ -52,3 +52,13 @@ WebDAV云端38826891584（258772e）最终成功：checks、native、7项App UI�
 ## 2026-10-16 08:54 运行失败
 
 38832172978的完整诊断产物12019301035定位为WebDAV测试关闭页面后，iOS系统Save Password?远程sheet遮挡mini播放器；旧Swift第73行频谱等待失败，点击hit point为{-1,-1}。不是匹配组、原生编译或IPA归档失败；详细日志/AX证据与定向修复见BUILD_STATUS最新记录。测试必须识别对应系统标题并选择Not Now，再验证播放页打开和PCM/歌词，不降低断言。用户要求每次本地打包后继续实际云端测试，待新修复commit对应运行确认。
+
+## 2026-10-16 最新云端失败复核与统计增量
+
+最新已结束运行 38846783693（2ff7557）中 Linux、完整原生检查及八项核心 App UI（含 WebDAV）均通过，失败发生在第二组 `testSourceHealth`。诊断产物12025830936已下载至忽略目录 `build/ci-38846783693`；`diagnostics/logs/ui-catalog.log` 和附件 `3FEB8190-2597-41AC-815A-140539B5FCA7.txt:98–110` 显示 iOS27 分享为 Popover，并存在 `PopoverDismissRegion`，ActivityListView 的远程子层不可执行下滑。失败为测试第57行的滑动定位，匹配和评论通过；未执行本次 IPA 归档，不归因为原生编译/音频/密码窗口。修正为核对JSON预览后点击实际弹出面板上方的关闭区域并断言返回原报告。d67fe40 的后续运行38848961113仍在核心App验证，不包含此分享修正，不提前标通过。
+
+工作区继承的F34/J55播放统计已继续完善：原生playing区间的单调时钟累计、会话ID、原曲归属、暂停/切歌末段、清空与备份恢复；共享串行写队列防止恢复和聆听/历史写入互相覆盖。205项TS/类型检查通过（`build/logs/check-statistics.log`）；新增实际AVPlayer暂停/定位/会话测试与本地App复验仍在执行。统计与识曲分开，识曲、其余S2/S3/S4/S7/S8/S9及真机/个人服务仍未完成。完整目标保持active，本机仍为Xcode26.3/SDK26.2，云端为Xcode27/iOS27；不称本机有iOS27工具链。
+
+模拟器UI测试显式ONLY_ACTIVE_ARCH=YES：本地Intel测试x86_64，云端Apple Silicon测试arm64，避免在一次本地Release测试中编译未运行的架构；设备IPA仍按原脚本单独归档arm64，构建清单分别记录。
+
+源健康最终修正版 `build/SourceUITests-1792127036156.xcresult` 82.956秒通过，包含取消/六项逐档结果/JSON分享与返回报告/删除测试源；本地旧SDK使用可命中的常规sheet关闭分支。iOS27 Popover分支仍必须由新提交对应云端实测，不以本地结果代替。完整native、205项TS、正式入口WebDAV/ND与统计重启已全部通过；本批开始归档/提交push。

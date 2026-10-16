@@ -5,6 +5,8 @@ import { currentEntry, emptyQueue, advance, select } from '../domain/queue.ts';
 import { PlaybackController, type MediaResolver, type PlaybackToken } from './controller.ts';
 import type { PreferenceStore } from '../app/preferences.ts';
 import type { Track } from '../domain/track.ts';
+import type {ListeningSample} from '../storage/playbackStats.ts';
+import {ListeningSessions} from './listening.ts';
 
 interface NativePlayback {
   load(json: string, id: string, generation: number): Promise<void>;
@@ -35,6 +37,8 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   native.addListener('sleep',sleepStore.update);
   void native.sleepSnapshot().then(sleepStore.update).catch(()=>{});
   const playedListeners=new Set<(track:Track)=>void>();let lastPlayedGeneration=-1;
+  const listeningListeners=new Set<(sample:ListeningSample)=>void>();
+  const listeningSessions=new ListeningSessions();
   const safe = (work: Promise<unknown>, token?: PlaybackToken) => { void work.catch(() => { if (token) void controller.onError(token); }); };
   const controller = new PlaybackController(resolver, {
     stop: generation => safe(native.stop(generation)), pause: generation => safe(native.pause(generation)),
@@ -68,6 +72,9 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   };
   native.addListener('playback', event => {
     const token = { entryId: String(event.entryId), generation: Number(event.generation) };
+    const before=controller.getSnapshot();
+    const sample=listeningSessions.sample(event,before);
+    if(sample)for(const listener of listeningListeners)listener(sample);
     controller.onProgress(token, Number(event.position), Number(event.duration), event.buffering === true);
     const current=controller.getSnapshot();
     if(event.playing===true&&Number(event.position)>0&&current.intent==='playing'&&token.generation===current.token?.generation&&token.entryId===current.queue.currentId&&lastPlayedGeneration!==token.generation){
@@ -91,5 +98,5 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   });
   const configure = () => { const value = preferences.getSnapshot(); safe(native.configureVolume(value.volume)); safe(native.configureEQ(value.eqEnabled, value.gains, value.preampDB));safe(native.configureCache(value.cacheLimitMB)); };
   preferences.subscribe(configure); configure();
-  return { controller, spectrum, next, sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};} };
+  return { controller, spectrum, next, sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onListening:(listener:(sample:ListeningSample)=>void)=>{listeningListeners.add(listener);return()=>{listeningListeners.delete(listener);};}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};} };
 }

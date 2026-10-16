@@ -19,6 +19,7 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 export function LibraryHome({services,openSearch,openSettings}:{services:Services;openSearch:()=>void;openSettings:()=>void}) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  const playbackStats=useSyncExternalStore(services.playbackStats.subscribe,services.playbackStats.getSnapshot);
   const [tab,setTab]=useState<'favorites'|'history'|'playlists'>('favorites'),[selected,setSelected]=useState<string|null>(null);
   const [name,setName]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]);
   const [listOpen,setListOpen]=useState(false);
@@ -28,14 +29,14 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('保存未完成，已有音乐库保留；请重试');}finally{setBusy(false);}}
   const button=(label:string,action:()=>void,disabled=busy)=><Pressable accessibilityRole="button" onPress={action} disabled={disabled} style={[styles.button,disabled&&{opacity:.4}]}><Text style={styles.action}>{label}</Text></Pressable>;
   const tracks=playlist?playlist.entries.map(item=>item.track):tab==='favorites'?library.favorites:tab==='history'?library.history.map(item=>item.track):[];
-  async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(encodeBackup(library));await Share.share({url:file.uri,title:'音枢音乐库备份'});}finally{if(file.exists)file.delete();}}
+  async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(encodeBackup(library,new Date(),playbackStats));await Share.share({url:file.uri,title:'音枢音乐库备份'});}finally{if(file.exists)file.delete();}}
   async function importBackup(){
     const result=await DocumentPicker.getDocumentAsync({type:'*/*',copyToCacheDirectory:true});if(result.canceled)return;
     const file=new File(result.assets[0]!.uri);
     try{
       if(file.size>32*1024*1024)throw new Error('too large');const backup=decodeBackup(await file.text());
-      Alert.alert('恢复音枢备份',`包含 ${backup.library.playlists.length} 个歌单、${backup.library.favorites.length} 首收藏和 ${backup.library.history.length} 条历史。确认后替换当前音乐库，播放队列不变。`,[
-        {text:'取消',style:'cancel'},{text:'替换音乐库',style:'destructive',onPress:()=>{void perform(async()=>{await services.library.replace(backup.library);setMessage('音乐库已恢复');});}},
+      Alert.alert('恢复音枢备份',`包含 ${backup.library.playlists.length} 个歌单、${backup.library.favorites.length} 首收藏和 ${backup.library.history.length} 条历史。确认后替换当前音乐库和本机播放统计，播放队列不变。`,[
+        {text:'取消',style:'cancel'},{text:'替换音乐库',style:'destructive',onPress:()=>{void perform(async()=>{await services.restoreBackup(backup.library,backup.statistics!);setMessage('音乐库与播放统计已恢复');});}},
       ]);
     }finally{if(file.exists)file.delete();}
   }
@@ -59,7 +60,8 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     }finally{if(file.exists)file.delete();}
   }
   return <View>
-    <Text style={styles.title}>我的音乐库</Text><Text style={styles.caption}>收藏 {library.favorites.length} · 歌单 {library.playlists.length} · 最近播放 {library.history.length}</Text>
+    <Text style={styles.title}>我的音乐库</Text><Text style={styles.caption}>收藏 {library.favorites.length} · 歌单 {library.playlists.length} · 最近播放 {library.history.length} · 播放统计 {playbackStats.items.length}</Text>
+    {playbackStats.items.length>0&&<View style={styles.empty}><Text style={styles.heading}>实际聆听统计</Text>{playbackStats.items.slice(0,5).map(item=><Text key={JSON.stringify(item.track.origin)} style={styles.caption}>{item.track.title} · 播放 {item.playCount} 次 · 听歌 {Math.floor(item.listenedMs/60000)}分{Math.floor(item.listenedMs/1000)%60}秒</Text>)}{button('清空播放统计',()=>Alert.alert('清空播放统计？','只清除本机记录；服务端播放量和最近播放列表不变。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>services.playbackStats.clear());}}]))}</View>}
     <LocalAudioLibrary services={services}/><DeviceMediaLibrary services={services}/><WebDAVLibrary services={services}/>
     {services.recoveryWarnings.map((warning,index)=><Text key={index} style={styles.caption}>{warning}</Text>)}
     <View style={styles.row}>{button('搜索歌曲',openSearch)}{button('音乐来源',openSettings)}</View>
@@ -90,7 +92,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
     {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
     <QishuiImport services={services}/>
-    <Text style={styles.caption}>备份包含音乐库，不包含密码、JS音源或音频文件。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
+    <Text style={styles.caption}>备份包含音乐库和本机实际播放统计，不包含密码、JS音源或音频文件。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
     <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} visible={listOpen} onClose={()=>setListOpen(false)}/>
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>

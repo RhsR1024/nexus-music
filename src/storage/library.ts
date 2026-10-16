@@ -3,6 +3,7 @@ import { trackKey, validateTrack, type Track } from '../domain/track.ts';
 import type { Repository } from './repository.ts';
 import {originalSignature} from '../domain/matching.ts';
 import {cleanTrack} from './cleanTrack.ts';
+import {MutationQueue} from './mutations.ts';
 export interface LocalEntry {id:string;track:Track}
 export interface LocalPlaylist {id:string;title:string;entries:readonly LocalEntry[];createdAt:number;updatedAt:number}
 export interface TrackMatch {original:Track;target:Track;method:'automatic'|'manual';updatedAt:number}
@@ -32,12 +33,14 @@ export function validateLibrary(value:unknown):LibraryState {
 export class LibraryStore {
   private repository:Pick<Repository,'get'|'put'>;private uuid:()=>string;private now:()=>number;
   private value:LibraryState=emptyLibrary;private listeners=new Set<()=>void>();private tail:Promise<unknown>=Promise.resolve();
-  constructor(repository:Pick<Repository,'get'|'put'>,uuid:()=>string,now:()=>number=Date.now){this.repository=repository;this.uuid=uuid;this.now=now;}
+  private mutations:MutationQueue;
+  constructor(repository:Pick<Repository,'get'|'put'>,uuid:()=>string,now:()=>number=Date.now,mutations=new MutationQueue()){this.repository=repository;this.uuid=uuid;this.now=now;this.mutations=mutations;}
   getSnapshot=()=>this.value;
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
-  async restore(){const value=await this.repository.get<unknown>('library.v1');if(value){try{this.value=validateLibrary(value);}catch{throw new InvalidRecordError();}}}
+  async restore(){const value=await this.repository.get<unknown>('library.v1');if(value){try{this.value=validateLibrary(value);}catch{throw new InvalidRecordError();}}for(const listener of this.listeners)listener();}
+  settled(){return this.tail;}
   private change(run:(current:LibraryState)=>LibraryState) {
-    const next=this.tail.then(async()=>{const value=validateLibrary(run(this.value));await this.repository.put('library.v1',value);this.value=value;for(const listener of this.listeners)listener();});
+    const next=this.mutations.run(async()=>{const value=validateLibrary(run(this.value));await this.repository.put('library.v1',value);this.value=value;for(const listener of this.listeners)listener();});
     this.tail=next.catch(()=>{});return next;
   }
   isFavorite(track:Track){const key=trackKey(track.origin);return this.value.favorites.some(item=>trackKey(item.origin)===key);}

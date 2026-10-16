@@ -36,7 +36,9 @@ import type {HTTPClient} from '../providers/http.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
 import { NavidromeClient } from '../providers/navidrome.ts';
 import { nativeSecrets } from '../storage/nativeSecrets.ts';
-import { LibraryStore } from '../storage/library.ts';
+import {LibraryStore,validateLibrary} from '../storage/library.ts';
+import {cleanPlaybackStats,PlaybackStatsStore,type PlaybackStatsState} from '../storage/playbackStats.ts';
+import {MutationQueue} from '../storage/mutations.ts';
 import { decodeQueue, type SavedCursor, type SavedQueue } from '../storage/queuePersistence.ts';
 
 export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
@@ -57,7 +59,9 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const accounts=new NavidromeAccounts(repository,nativeSecrets,hash,(account,credentials)=>new NavidromeClient(account,credentials,{md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),salt:Crypto.randomUUID}));
   await restore('navidrome.accounts.v1','连接',()=>accounts.restore());
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
-  const library=new LibraryStore(repository,Crypto.randomUUID);await restore('library.v1','音乐库',()=>library.restore());
+  const libraryMutations=new MutationQueue();
+  const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations);await restore('library.v1','音乐库',()=>library.restore());
+  const playbackStats=new PlaybackStatsStore(repository,Date.now,libraryMutations);await restore('playbackStats.v1','播放统计',()=>playbackStats.restore());
   const nativeLX = loadNativeLX();
   const registry = new SourceRegistry(nativeLX);
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
@@ -94,6 +98,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     previous=state;
   });
   playback.onPlayed(track=>{void library.played(track).catch(()=>{});});
+  playback.onListening(sample=>{void playbackStats.record(sample).catch(()=>{});});
   accounts.subscribe(()=>{
     const state=playback.controller.getSnapshot(),origin=state.queue.entries.find(item=>item.id===state.queue.currentId)?.track.origin;
     if(origin?.kind==='navidrome'&&!accounts.getSnapshot().some(item=>item.id===origin.accountId)) playback.controller.setQueue({...state.queue,currentId:null,priorityIds:[]});
@@ -113,7 +118,14 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
-  return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
+  const restoreBackup=async(savedLibrary:import('../storage/library.ts').LibraryState,stats:PlaybackStatsState)=>{
+    validateLibrary(savedLibrary);const safeStats=cleanPlaybackStats(stats);
+    await libraryMutations.run(async()=>{
+      await repository.putMany([['library.v1',savedLibrary],['playbackStats.v1',safeStats]]);
+      await Promise.all([library.restore(),playbackStats.restore(true)]);
+    });
+  };
+  return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

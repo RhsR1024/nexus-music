@@ -70,9 +70,27 @@ final class SourceSettingsTests: XCTestCase {
     let export=app.buttons["导出检查报告"];for _ in 0..<6 {if export.isHittable{break};app.swipeDown()};export.tap()
     let dismiss=app.buttons.matching(NSPredicate(format:"label IN %@",["Close","Cancel","关闭","取消"])).firstMatch
     if dismiss.waitForExistence(timeout:5){dismiss.tap()}else{
-      let sheet=app.descendants(matching:.any).matching(identifier:"ActivityListView").firstMatch
-      XCTAssertTrue(sheet.waitForExistence(timeout:10));sheet.swipeDown()
+      // iOS 27 presents a popover with an explicit outside-dismiss region.
+      // Its remote ActivityListView has an empty hittable frame; swiping that
+      // descendant fails even though the report preview is visible.
+      let outside=app.descendants(matching:.any).matching(identifier:"PopoverDismissRegion").firstMatch
+      let popover=app.popovers.firstMatch
+      if outside.waitForExistence(timeout:2),popover.exists {
+        let preview=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","nexus-source-health-")).firstMatch
+        XCTAssertTrue(preview.exists,"The exported JSON must reach the system share preview")
+        let evidence=XCTAttachment(screenshot:app.screenshot());evidence.name="Source report share preview";evidence.lifetime = .keepAlways;add(evidence)
+        let top=popover.frame.minY-app.frame.minY
+        XCTAssertGreaterThan(top,20,"Dismiss only in the observed region above the popover")
+        app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:app.frame.width/2,dy:top/2)).tap()
+      }else{
+        // Older SDKs present a regular sheet with a real hittable frame.
+        let sheet=app.descendants(matching:.any).matching(identifier:"ActivityListView").firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout:10));XCTAssertTrue(sheet.isHittable)
+        sheet.swipeDown()
+      }
     }
+    let returned=XCTNSPredicateExpectation(predicate:NSPredicate(format:"hittable == true"),object:app.buttons["收起音源检查"])
+    XCTAssertEqual(XCTWaiter.wait(for:[returned],timeout:5),.completed,"Dismissal must return to the existing health report")
     app.buttons["收起音源检查"].tap();XCTAssertFalse(app.buttons["暂停"].exists,"Health checks must preserve paused playback intent")
     let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Health Fixture").firstMatch
     for _ in 0..<6 {if selected.isHittable{break};app.swipeUp()};XCTAssertTrue(selected.exists);app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
@@ -286,6 +304,10 @@ final class SourceSettingsTests: XCTestCase {
       XCTFail("Connection did not finish; inspect the retained screenshot and local fixture counters");return
     }
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"library-local").firstMatch.tap()
+    let statistic=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","Synthetic tone · 播放 ")).firstMatch
+    func count() -> Int {guard statistic.exists else{return 0};return Int(statistic.label.components(separatedBy:" · 播放 ").last?.components(separatedBy:" 次").first ?? "") ?? 0}
+    let previousCount=count()
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
     XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
@@ -332,6 +354,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Lyric seeking must preserve paused intent")
     for _ in 0..<4 {if app.buttons["收起播放页"].isHittable{break};app.swipeDown()}
     app.buttons["收起播放页"].tap()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"library-local").firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["实际聆听统计"].waitForExistence(timeout:10))
+    XCTAssertEqual(count(),previousCount+1,"Paused seeking and skin changes must count one native media session")
+    let statsImage=XCTAttachment(screenshot:app.screenshot());statsImage.name="Persisted listening statistics";statsImage.lifetime = .keepAlways;add(statsImage)
+    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    XCTAssertTrue(statistic.waitForExistence(timeout:10));XCTAssertEqual(count(),previousCount+1,"Actual listening statistics must survive restart")
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     for _ in 0..<5 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
     app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()

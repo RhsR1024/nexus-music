@@ -32,7 +32,9 @@ async function play(url,start=0,key,sleepMode) {
   let stdout = '', stderr = ''; child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
   const code = await new Promise(resolve => child.on('exit', resolve));
   assert.equal(code, 0, `Native playback failed: ${stdout}; ${stderr.slice(-1000)}`);
-  const result = JSON.parse(stdout); assert.equal(result.pcmSupported, true); assert.equal(result.ended, !sleepMode);if(sleepMode)assert.equal(result.sleepPaused,true);
+  const result = JSON.parse(stdout); assert.equal(result.pcmSupported, true); assert.equal(result.ended, !sleepMode||sleepMode==='statistics');if(sleepMode&&sleepMode!=='statistics')assert.equal(result.sleepPaused,true);
+  assert.ok(result.listenedMs>0,'Real playback must accumulate native listening time');assert.equal(result.sessionCount,1);
+  if(sleepMode==='statistics'){assert.equal(result.pauseStarted,true);assert.equal(result.pauseStable,true);assert.ok(result.listenedMs>400&&result.listenedMs<result.elapsedMs-250,`Pause must be excluded and seek cannot add more than active wall time: ${JSON.stringify(result)}`);}
 }
 try {
   await play(pathToFileURL(resolve('build/tests/tone.wav')).href);
@@ -43,6 +45,7 @@ try {
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,0,cacheKey);
   await play('http://127.0.0.1:1/unreachable.wav',0,cacheKey);
   for(const mode of ['duration','track'])await play(pathToFileURL(resolve('build/tests/tone.wav')).href,0,undefined,mode);
+  await play(pathToFileURL(resolve('build/tests/tone.wav')).href,0,undefined,'statistics');
   const rejected=spawn('build/tests/native-playback',['ipod-library://item/untrusted']);let rejectedOutput='';rejected.stdout.on('data',data=>{rejectedOutput+=data;});const rejectedCode=await new Promise(resolve=>rejected.on('exit',resolve));assert.equal(rejectedCode,1);assert.equal(JSON.parse(rejectedOutput).failed,true);
   console.log('Native AVPlayer checks passed: WAV/AAC/MP3/16-bit FLAC/24-bit FLAC, initial seek, HTTP ranges, cached playback without network, real PCM tap/FFT, natural end, native timed/track-end pause');
 } finally { server.closeAllConnections(); server.close(); }

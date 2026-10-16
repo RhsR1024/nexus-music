@@ -21,14 +21,19 @@ final class NativePlaybackEngine {
   private var playerObservation: NSKeyValueObservation?
   private var endObserver: NSObjectProtocol?, interruption: NSObjectProtocol?, routeObserver: NSObjectProtocol?
   private var progress: Any?, spectrumTimer: Timer?
+  private var listeningTimer:Timer?
   private var remoteTargets: [(MPRemoteCommand, Any)] = []
   private var metadata: [String: Any] = [:]
   private var initialPosition: Double = 0
   private var initialSeekPending = false
+  private var listeningSession = UUID().uuidString
+  private var listenedSeconds = 0.0, listeningClock = ProcessInfo.processInfo.systemUptime
+  private var wasActuallyPlaying = false
   init(muted: Bool = false, emit: @escaping (String, [String: Any]) -> Void) {
     self.emit = emit
     player.isMuted = muted
     progress = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] _ in self?.report("progress") }
+    listeningTimer=Timer.scheduledTimer(withTimeInterval:5,repeats:true){[weak self]_ in guard let self,self.player.rate>0 else{return};self.report("listening")}
     playerObservation = player.observe(\.timeControlStatus, options: [.new]) { [weak self] _, _ in DispatchQueue.main.async { self?.report("status") } }
     spectrumTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
       guard let self, self.player.rate > 0, let dsp = self.dsp else { return }
@@ -65,6 +70,8 @@ final class NativePlaybackEngine {
     guard newGeneration >= generation else { return }
     sleepTimer.trackChanged(to: id)
     stop(newGeneration, preservingSleep: true); entryID = id
+    listeningSession = UUID().uuidString; listenedSeconds = 0
+    listeningClock = ProcessInfo.processInfo.systemUptime; wasActuallyPlaying = false
     guard let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
           let rawURL = object["url"] as? String, let url = URL(string: rawURL), ["http", "https", "file", "ipod-library"].contains(url.scheme ?? ""), url.scheme != "ipod-library" || object["deviceMedia"] as? Bool == true else { report("error"); return }
     if LocalAudioFiles.shared.retain(url) { retainedLocalURL = url }
@@ -153,6 +160,7 @@ final class NativePlaybackEngine {
   }
   func stop(_ newGeneration: Int, preservingSleep: Bool = false) {
     guard newGeneration >= generation else { return }
+    report("stopped")
     if !preservingSleep { sleepTimer.trackChanged(to: "") }
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
     observation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
@@ -190,10 +198,15 @@ final class NativePlaybackEngine {
     dsp?.configure(enabled: enabled, gains: gains.map(NSNumber.init(value:)), preampDB: preampDB)
   }
   private func report(_ kind: String) {
+    let clock = ProcessInfo.processInfo.systemUptime
+    if wasActuallyPlaying { listenedSeconds += max(0, clock - listeningClock) }
+    listeningClock = clock
+    wasActuallyPlaying = player.timeControlStatus == .playing && wantsPlay && kind != "ended" && kind != "stopped" && kind != "error"
     let seconds = player.currentTime().seconds, duration = player.currentItem?.duration.seconds ?? 0
     emit("playback", ["kind": kind, "entryId": entryID, "generation": generation,
       "position": seconds.isFinite ? seconds : 0, "duration": duration.isFinite ? duration : 0,
-      "playing": player.rate > 0, "buffering": player.timeControlStatus == .waitingToPlayAtSpecifiedRate])
+      "playing": player.rate > 0, "buffering": player.timeControlStatus == .waitingToPlayAtSpecifiedRate,
+      "listeningSession": listeningSession, "listenedMs": listenedSeconds * 1000])
     updateNowPlaying()
   }
   private func updateNowPlaying() {
@@ -206,7 +219,7 @@ final class NativePlaybackEngine {
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
   }
   func dispose() {
-    sleepTimer.dispose(); stop(generation + 1); spectrumTimer?.invalidate(); spectrumTimer = nil
+    sleepTimer.dispose(); stop(generation + 1); spectrumTimer?.invalidate(); spectrumTimer = nil;listeningTimer?.invalidate();listeningTimer=nil
     if let progress { player.removeTimeObserver(progress) }; progress = nil
     playerObservation = nil
     for observer in [interruption, routeObserver].compactMap({ $0 }) { NotificationCenter.default.removeObserver(observer) }
