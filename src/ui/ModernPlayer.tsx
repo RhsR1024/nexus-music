@@ -17,7 +17,7 @@ export function ArtworkBackdrop({services,track,photo=false}:{services:Services;
   const assets=useVisualAssets(services),custom=useVisualImage(services,assets.photo);
   const [artwork,setArtwork]=useState<{key:string;uri:string}>(),[failedImages,setFailedImages]=useState<readonly string[]>([]),[tint,setTint]=useState('#183647');
   const key=JSON.stringify([track.origin,track.artwork,track.metadata.davVersion,track.metadata.coverArtId]);
-  useEffect(()=>{const abort=new AbortController();setArtwork(undefined);services.covers.loadTrack(track,abort.signal).then(value=>{if(!abort.signal.aborted&&value)setArtwork({key,uri:value});}).catch(()=>{});return()=>abort.abort();},[services,key]);
+  useEffect(()=>{const abort=new AbortController();setArtwork(undefined);setFailedImages([]);services.covers.loadTrack(track,abort.signal).then(value=>{if(!abort.signal.aborted&&value)setArtwork({key,uri:value});}).catch(()=>{});return()=>abort.abort();},[services,key]);
   const file=artwork?.key===key?artwork.uri:undefined;
   const uri=playerBackgroundImage(preferences.playerBackground,photo,custom,file,failedImages);
   useEffect(()=>{let valid=true;setTint('#183647');if(uri&&preferences.coverColor)void services.visualColors.color(uri).then(color=>{if(valid)setTint(darkenCoverColor(color));}).catch(()=>{});return()=>{valid=false;};},[services,uri,preferences.coverColor]);

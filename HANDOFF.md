@@ -1,3 +1,7 @@
+# 2026-10-17 A05 切歌后封面失败缓存隔离
+
+`ArtworkBackdrop` 在歌曲身份变化时清空上一首的失败 URI 列表，避免一次临时图片错误污染后续同 URI 重试；既有 AbortController、实际匹配录音身份、取色/模糊/动态和无图回退不变。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；云端和真机仍待验证。
+
 # 2026-10-17 A09 播放器内部面板改为 iOS page sheet
 
 现代播放器的“播放选项”“播放界面样式”“歌词显示设置”三个独立面板改用共享 `SheetModal`（iOS `presentationStyle=pageSheet`），对应 Sollin IPA `_showThemedModalBottomSheet`/样式 Sheet 静态线索；音乐库、播放页和其他全屏业务 Modal 保持原行为。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；云端运行 `38957174551`（`8ba901a`）当前 `pending`，IPA、真机和手势仍待验证。
