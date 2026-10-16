@@ -341,3 +341,19 @@ J40/J49 本地正式入口 `build/SourceUITests-1792146391692.xcresult` 284.278�
 J40/J49/源健康输入修正阶段 `13dc4505d7b85a8839c226173d6455d6e3e7ce37` 已正常 push，远端 main 一致。`archive-mini-clean.log` 为 ARCHIVE SUCCEEDED；manifest dirty=false / workingTreeChanges=[] / arm64 / iphoneos26.2 / min15.1 / signed=false，正式入口隔离与 SHA256 再核对通过。最新本地 IPA 为 `build/distribution/NexusMusic-unsigned.ipa`，SHA256 `7e1d996701f4c6c3ea5bee9ecc59dd0ed21634ca31180d461e5ed536509f68df`。
 
 新云端 [38889054633](https://github.com/RhsR1024/nexus-music/actions/runs/38889054633) 对应 13dc450，pending；图片 38886233605 仍 pending，S2 38878989928 已过 native、核心 App 执行中。没有重复派发/取消或将旧失败说成已修复上云通过。接续 S8/F32 WebDAV 云备份（上传后校验、目录配置、预览恢复），F33 冲突同步另行实现；完整 S2/S3/S4/S7/S8/S9/M10 和手机/真实个人服务目标仍 active。
+
+
+## 2026-10-16 S8/F32 云备份本地验证中
+
+按[决策0030](decisions/0030-webdav-backups.md)亲读五参考后原创实现WebDAV独立版本上传、If-None-Match防覆盖、GET回读SHA256/格式验证、目录配置/逐级核验、列表/预览/确认事务恢复；账号凭据沿Keychain，JSON不含连接/音源/音频/外观资产。关闭/取消/凭据变化使旧网络结果失效；本机提交后不提供假取消，刷新异常明确提示检查数据。F33多设备冲突同步单独实施。
+
+`build/logs/check-cloud-backup.log`为269/269业务与类型通过，13项云备份测试覆盖目录/Unicode、失败持久化、条件版本/回读不符、旧命名/坏格式/超限、预览不写入、明确恢复、取消/凭据变化/迟到回调和未知字段剥离。`native-cloud-backup-full.log`完整native通过，新增真实URLSession MKCOL/PUT/GET/Basic/条件请求/32MiB UTF8和分块上限/写重定向拒绝/读取根范围/取消；DAV多格式实音/PCM/定位回归也通过。
+
+首次正式入口`build/SourceUITests-1792148588101.xcresult`云备份165.110秒通过：实际连接→创建合成歌单→上传/回读→重启保留目录与凭据→新增本机歌单→预览/取消保留新数据→确认恢复→坏JSON拒绝→重启保留恢复结果；仅localhost合成服务，无个人备份上传。服务计数propfind8/mkcol1/put1/get4/authFailures0；附件16C64E6D-CBE3-4FE5-B78A-1FABB04884BD.png已亲看，提示/列表可读。最终生产代码与WebDAV播放联合回归、本批清洁IPA和新云端尚在进行，不能提前标记双构建或个人服务/手机验收完成。
+
+
+## 2026-10-16 S8/F32 最终本地阶段验收
+
+最终正式入口 `build/SourceUITests-1792149512343.xcresult` 两项通过：云备份211.860秒、WebDAV音乐75.501秒；覆盖真实localhost连接/条件上传/回读、重启保留目录、预览取消不改数据、确认恢复、坏JSON拒绝与再次重启，以及DAV标签/解码/PCM/定位/删除连接。服务计数backup=PROPFIND8/MKCOL1/PUT1/GET4、DAV=PROPFIND15/Range6，认证失败均0。已亲看最终备份预览截图；269项业务/类型复验 `check-cloud-backup-delivery.log` 全通过，完整native沿 `native-cloud-backup-full.log`。
+
+已核对origin为RhsR1024/nexus-music、远端main=a16590f；diff/私人资源排除检查通过，准备本批提交与清洁本地IPA。本批云端尚未触发，不把旧运行成功作为F32通过。S2云端38878989928已失败：完整native通过，核心App十项两失败，分别为字体测试暂停控件与千首列表筛选计数；CRC/长度已核验的单项日志位于build/ci-38878989928/verified，完整ZIP尚未下载结束，不宣称完整摘要通过。S3运行、mini排队继续跟进；F33同步、永久下载和全部其余范围仍保留。

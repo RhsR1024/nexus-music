@@ -4,10 +4,10 @@ public final class NexusDAVModule: Module {
   private let queue = DispatchQueue(label: "nexus.webdav.requests")
   private var requests: [String: DAVHTTP] = [:]
   private var inspections: [String: Task<Void, Never>] = [:]
-  private func propfind(_ token: String, _ root: String, _ path: String, _ username: String, _ password: String, _ depth: Int, _ promise: Promise) {
+  private func perform(_ token: String, _ promise: Promise, build: () throws -> DAVHTTP) {
     guard UUID(uuidString: token) != nil, requests[token] == nil, requests.count < 6 else { promise.reject("DAV_LIMIT", "WebDAV request limit"); return }
     do {
-      let request = try DAVHTTP(root: root, path: path, username: username, password: password, depth: depth)
+      let request = try build()
       requests[token] = request
       request.start { result in
         self.queue.async {
@@ -34,7 +34,8 @@ public final class NexusDAVModule: Module {
   }
   public func definition() -> ModuleDefinition {
     Name("NexusWebDAV")
-    AsyncFunction("propfind") { (token: String, root: String, path: String, username: String, password: String, depth: Int, promise: Promise) in self.propfind(token, root, path, username, password, depth, promise) }.runOnQueue(queue)
+    AsyncFunction("propfind") { (token: String, root: String, path: String, username: String, password: String, depth: Int, promise: Promise) in self.perform(token, promise) { try DAVHTTP(root: root, path: path, username: username, password: password, depth: depth) } }.runOnQueue(queue)
+    AsyncFunction("backup") { (token: String, root: String, path: String, username: String, password: String, operation: String, body: String, etag: String, promise: Promise) in self.perform(token, promise) { try DAVHTTP(root: root, path: path, username: username, password: password, operation: operation, body: body, etag: etag) } }.runOnQueue(queue)
     AsyncFunction("prepare") { (root: String, path: String, username: String, password: String) throws -> [String: Any] in try DAVHTTP.media(root: root, path: path, username: username, password: password) }.runOnQueue(queue)
     AsyncFunction("inspect") { (token: String, root: String, path: String, username: String, password: String, key: String, etag: String, promise: Promise) in self.inspect(token, root, path, username, password, key, etag, promise) }.runOnQueue(queue)
     AsyncFunction("cancel") { (token: String) in self.requests[token]?.cancel(); self.inspections[token]?.cancel() }.runOnQueue(queue)

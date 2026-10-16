@@ -2,6 +2,7 @@ import {WebDAVError,type WebDAVCredentials,type DAVTransport} from './webdav.ts'
 export interface DAVPreparedMedia {url:string;redirectRoot:string;headers:Record<string,string>}
 export interface DAVMetadata {title?:string;artist?:string;album?:string;durationMs:number;lyric?:string;artwork?:string}
 export interface DAVNativeModule {
+  backup?(token:string,root:string,path:string,username:string,password:string,operation:'GET'|'PUT'|'MKCOL',body:string,etag:string):Promise<{status:number;body:string;etag:string;bytes:number}>;
   propfind(token:string,root:string,path:string,username:string,password:string,depth:number):Promise<{status:number;body:string}>;
   prepare(root:string,path:string,username:string,password:string):Promise<DAVPreparedMedia>;
   inspect(token:string,root:string,path:string,username:string,password:string,key:string,etag:string):Promise<DAVMetadata>;
@@ -20,6 +21,7 @@ export class DAVNativeTransport implements DAVTransport {
     finally{signal.removeEventListener('abort',abort);}
   }
   request(root:string,path:string,credentials:WebDAVCredentials,depth:0|1,signal:AbortSignal){return this.run(signal,token=>this.native.propfind(token,root,path,credentials.username,credentials.password,depth));}
+  backup(root:string,path:string,credentials:WebDAVCredentials,operation:'GET'|'PUT'|'MKCOL',body:string,etag:string,signal:AbortSignal){return this.run(signal,token=>{if(!this.native.backup)throw new WebDAVError('protocol');return this.native.backup(token,root,path,credentials.username,credentials.password,operation,body,etag);});}
   async prepare(root:string,path:string,credentials:WebDAVCredentials,signal:AbortSignal){this.check(signal);const media=await this.native.prepare(root,path,credentials.username,credentials.password);this.check(signal);return media;}
   private async acquire(signal:AbortSignal){
     this.check(signal);if(this.active<2){this.active++;return;}

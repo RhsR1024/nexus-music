@@ -31,6 +31,9 @@ node scripts/test-local-files.mjs
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/DAVHTTP.swift tests/native/DAVHTTPCLI.swift -o build/tests/native-webdav-http
 node scripts/test-webdav-http.mjs
 
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/DAVHTTP.swift tests/native/DAVBackupCLI.swift -o build/tests/native-webdav-backup
+node scripts/test-webdav-backup.mjs
+
 xcrun swiftc -swift-version 5 -import-objc-header modules/nexus-native/ios/NexusAudioDSP.h modules/nexus-native/ios/AudioCache.swift modules/nexus-native/ios/LocalAudioFiles.swift modules/nexus-native/ios/PlaybackSleepTimer.swift modules/nexus-native/ios/DAVHTTP.swift modules/nexus-native/ios/AudioResourceLoader.swift modules/nexus-native/ios/CoverCache.swift modules/nexus-native/ios/RemoteAudioMetadata.swift modules/nexus-native/ios/NativePlaybackEngine.swift tests/native/DAVMediaCLI.swift build/tests/audio-dsp.o -framework AVFoundation -framework MediaToolbox -framework MediaPlayer -framework ImageIO -framework UniformTypeIdentifiers -lc++ -o build/tests/native-webdav-media
 node scripts/test-webdav-media.mjs
 

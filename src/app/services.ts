@@ -41,6 +41,8 @@ import { nativeSecrets } from '../storage/nativeSecrets.ts';
 import {LibraryStore,validateLibrary} from '../storage/library.ts';
 import {cleanPlaybackStats,PlaybackStatsStore,type PlaybackStatsState} from '../storage/playbackStats.ts';
 import {MutationQueue} from '../storage/mutations.ts';
+import {encodeBackup} from '../storage/backup.ts';
+import {WebDAVBackups} from '../storage/webdavBackups.ts';
 import { decodeQueue, type SavedCursor, type SavedQueue } from '../storage/queuePersistence.ts';
 
 export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
@@ -130,7 +132,10 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
       await Promise.all([library.restore(),playbackStats.restore(true)]);
     });
   };
-  return { repository, visualAssets, visualColors, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
+  const davBackups=new WebDAVBackups({repository,accounts:davAccounts,transport:davTransport,hash,uuid:Crypto.randomUUID,
+    snapshot:date=>encodeBackup(library.getSnapshot(),date,playbackStats.getSnapshot()),restore:backup=>restoreBackup(backup.library,backup.statistics!)});
+  await restore('webdav.backup.v1','云备份目录',()=>davBackups.restore());
+  return { repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

@@ -47,12 +47,16 @@ struct DAVScope {
 final class DAVHTTP: NSObject, URLSessionDataDelegate {
   static func failure(_ code: Int) -> NSError { NSError(domain: "NexusWebDAV", code: code, userInfo: [NSLocalizedDescriptionKey: "WebDAV request failed (\(code))"]) }
   private let scope: DAVScope
-  private let request: URLRequest
+  private var request: URLRequest
+  private var bodyLimit = 2 * 1024 * 1024
+  private var allowsRedirects = true
+  private var resourceTimeout: TimeInterval = 45
   private let operations = OperationQueue()
   private var session: URLSession?
   private var completion: ((Result<[String: Any], Error>) -> Void)?
   private var data = Data()
   private var status = 0
+  private var responseETag = ""
   private var redirects = 0
   private static let properties = "<?xml version=\"1.0\" encoding=\"utf-8\"?><d:propfind xmlns:d=\"DAV:\"><d:prop><d:displayname/><d:resourcetype/><d:getcontentlength/><d:getlastmodified/><d:getetag/><d:getcontenttype/></d:prop></d:propfind>"
   static func media(root: String, path: String, username: String, password: String) throws -> [String: Any] {
@@ -73,11 +77,26 @@ final class DAVHTTP: NSObject, URLSessionDataDelegate {
     outgoing.httpBody = Data(DAVHTTP.properties.utf8); request = outgoing
     super.init(); operations.maxConcurrentOperationCount = 1
   }
+  convenience init(root: String, path: String, username: String, password: String, operation: String, body: String, etag: String) throws {
+    guard ["GET", "PUT", "MKCOL"].contains(operation), body.utf8.count <= 32 * 1024 * 1024,
+          operation == "PUT" ? !body.isEmpty : body.isEmpty,
+          operation == "GET" || etag.isEmpty,
+          etag.isEmpty || (etag.utf8.count <= 8192 && etag.first == "\"" && etag.last == "\"" && etag.count >= 2 && etag.dropFirst().dropLast().unicodeScalars.allSatisfy({ $0.value == 33 || (35...126).contains($0.value) || (128...255).contains($0.value) })) else { throw DAVHTTP.failure(1) }
+    try self.init(root: root, path: path, username: username, password: password, depth: 0)
+    request.httpMethod = operation; request.httpBody = operation == "PUT" ? Data(body.utf8) : nil
+    request.setValue(nil, forHTTPHeaderField: "Depth")
+    request.setValue(operation == "PUT" ? "application/json; charset=utf-8" : nil, forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json, application/octet-stream, */*", forHTTPHeaderField: "Accept")
+    if operation == "PUT" { request.setValue("*", forHTTPHeaderField: "If-None-Match") }
+    if !etag.isEmpty { request.setValue(etag, forHTTPHeaderField: "If-Match") }
+    bodyLimit = operation == "GET" ? 32 * 1024 * 1024 : 2 * 1024 * 1024
+    allowsRedirects = operation == "GET"; resourceTimeout = 180
+  }
   func start(_ completion: @escaping (Result<[String: Any], Error>) -> Void) {
     self.completion = completion
     let configuration = URLSessionConfiguration.ephemeral
     configuration.urlCache = nil; configuration.httpCookieStorage = nil
-    configuration.timeoutIntervalForRequest = 20; configuration.timeoutIntervalForResource = 45
+    configuration.timeoutIntervalForRequest = 20; configuration.timeoutIntervalForResource = resourceTimeout
     let session = URLSession(configuration: configuration, delegate: self, delegateQueue: operations)
     self.session = session; session.dataTask(with: request).resume()
   }
@@ -89,22 +108,24 @@ final class DAVHTTP: NSObject, URLSessionDataDelegate {
   func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                   newRequest: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
     redirects += 1
-    guard redirects <= 5, let target = newRequest.url, scope.contains(target) else { completionHandler(nil); finish(.failure(DAVHTTP.failure(2))); return }
+    guard allowsRedirects, redirects <= 5, let target = newRequest.url, scope.contains(target) else { completionHandler(nil); finish(.failure(DAVHTTP.failure(2))); return }
     var next = request; next.url = target
     // Preserve PROPFIND and body; URLSession may otherwise turn a 303 into GET.
     completionHandler(next)
   }
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
                   completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
-    guard let http = response as? HTTPURLResponse, response.expectedContentLength <= 2097152 else { completionHandler(.cancel); finish(.failure(DAVHTTP.failure(4))); return }
+    guard let http = response as? HTTPURLResponse, response.expectedContentLength <= bodyLimit else { completionHandler(.cancel); finish(.failure(DAVHTTP.failure(4))); return }
+    responseETag = http.value(forHTTPHeaderField: "ETag") ?? ""
+    guard responseETag.utf8.count <= 8192 else { completionHandler(.cancel); finish(.failure(DAVHTTP.failure(4))); return }
     status = http.statusCode; completionHandler(.allow)
   }
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive chunk: Data) {
-    guard data.count <= 2097152 - chunk.count else { finish(.failure(DAVHTTP.failure(4))); return }; data.append(chunk)
+    guard data.count <= bodyLimit - chunk.count else { finish(.failure(DAVHTTP.failure(4))); return }; data.append(chunk)
   }
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
     if error != nil { finish(.failure(DAVHTTP.failure(3))); return }
     guard let body = String(data: data, encoding: .utf8) else { finish(.failure(DAVHTTP.failure(4))); return }
-    finish(.success(["status": status, "body": body]))
+    finish(.success(["status": status, "body": body, "etag": responseETag, "bytes": data.count]))
   }
 }
