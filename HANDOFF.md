@@ -1,6 +1,6 @@
 # 2026-10-17 A05 切歌后封面失败缓存隔离
 
-`ArtworkBackdrop` 在歌曲身份变化时清空上一首的失败 URI 列表，避免一次临时图片错误污染后续同 URI 重试；既有 AbortController、实际匹配录音身份、取色/模糊/动态和无图回退不变。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；云端和真机仍待验证。
+`ArtworkBackdrop` 在歌曲身份变化时清空上一首的失败 URI 列表，避免一次临时图片错误污染后续同 URI 重试；既有 AbortController、实际匹配录音身份、取色/模糊/动态和无图回退不变。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；云端运行 `38957768659`（`06a75bf`）当前 `pending`，真机仍待验证。
 
 # 2026-10-17 A09 播放器内部面板改为 iOS page sheet
 

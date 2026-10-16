@@ -1,6 +1,6 @@
 ## 2026-10-17 A05 切歌后封面失败缓存隔离
 
-`ArtworkBackdrop` 的封面加载 effect 在新的 track key 上同时清空 artwork 与失败 URI 集合；不会改变取色缓存或播放状态。`npm run check` 302/302、`git diff --check` 通过；本机无完整 Xcode，云端/真机待验证。
+`ArtworkBackdrop` 的封面加载 effect 在新的 track key 上同时清空 artwork 与失败 URI 集合；不会改变取色缓存或播放状态。`npm run check` 302/302、`git diff --check` 通过；本机无完整 Xcode；运行 `38957768659`（`06a75bf`）当前 `pending`，云端/真机待验证。
 
 ## 2026-10-17 A09 播放器内部面板 page sheet
 

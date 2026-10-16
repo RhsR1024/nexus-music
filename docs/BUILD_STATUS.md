@@ -2,7 +2,7 @@
 
 - 切换歌曲时清空 `ArtworkBackdrop` 的失败 URI 列表，防止旧错误影响后续同封面重试。
 - `npm run check`：302/302；`git diff --check`：通过。
-- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端 iOS27、背景专项和真机待新提交运行。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38957768659`（`06a75bf`）当前 `pending`，背景专项和真机待终态。
 
 ## 2026-10-17 A09 播放器内部面板 page sheet 代码批次
 
