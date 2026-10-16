@@ -1,13 +1,14 @@
 import {InvalidRecordError} from './recovery.ts';
 import { trackKey, validateTrack, type Track } from '../domain/track.ts';
 import type { Repository } from './repository.ts';
-import {originalSignature} from '../domain/matching.ts';
+import {originalSignature,lyricSignature} from '../domain/matching.ts';
 import {cleanTrack} from './cleanTrack.ts';
 import {MutationQueue} from './mutations.ts';
 export interface LocalEntry {id:string;track:Track}
 export interface LocalPlaylist {id:string;title:string;entries:readonly LocalEntry[];createdAt:number;updatedAt:number}
 export interface TrackMatch {original:Track;target:Track;method:'automatic'|'manual';updatedAt:number}
-export interface LibraryState {version:1;favorites:readonly Track[];history:readonly {track:Track;playedAt:number}[];playlists:readonly LocalPlaylist[];matches?:readonly TrackMatch[]}
+export interface LyricChoice {original:Track;mode:'original'|'automatic'|'manual';target?:Track;updatedAt:number}
+export interface LibraryState {version:1;favorites:readonly Track[];history:readonly {track:Track;playedAt:number}[];playlists:readonly LocalPlaylist[];matches?:readonly TrackMatch[];lyricChoices?:readonly LyricChoice[]}
 export const emptyLibrary:LibraryState={version:1,favorites:[],history:[],playlists:[]};
 export function validateLibrary(value:unknown):LibraryState {
   if(!value||typeof value!=='object')throw new Error('音乐库格式无效');
@@ -28,6 +29,16 @@ export function validateLibrary(value:unknown):LibraryState {
       if(!['imported','online'].includes(match.original.origin.kind)||match.target.origin.kind!=='online'||key===trackKey(match.target.origin)||keys.has(key)||!['automatic','manual'].includes(match.method)||!Number.isFinite(match.updatedAt)||match.updatedAt<0)throw new Error('匹配记录无效');keys.add(key);
     }
   }
+  if(library.lyricChoices!==undefined){
+    if(!Array.isArray(library.lyricChoices)||library.lyricChoices.length>1000)throw new Error('歌词选择格式无效');const keys=new Set<string>();
+    for(const choice of library.lyricChoices){
+      validateTrack(choice.original);const key=trackKey(choice.original.origin);
+      if(keys.has(key)||!['original','automatic','manual'].includes(choice.mode)||!Number.isFinite(choice.updatedAt)||choice.updatedAt<0)throw new Error('歌词选择无效');keys.add(key);
+      if(choice.mode==='manual'){validateTrack(choice.target!);if(choice.target!.origin.kind!=='online')throw new Error('歌词候选必须是公开平台曲目');}
+      else if(choice.target!==undefined)throw new Error('非人工歌词不能绑定目标');
+      if(choice.mode==='automatic'&&!['online','imported'].includes(choice.original.origin.kind))throw new Error('私人曲目不能自动搜索歌词');
+    }
+  }
   return library;
 }
 export class LibraryStore {
@@ -45,6 +56,11 @@ export class LibraryStore {
   }
   isFavorite(track:Track){const key=trackKey(track.origin);return this.value.favorites.some(item=>trackKey(item.origin)===key);}
   matchFor(track:Track){const signature=originalSignature(track);return this.value.matches?.find(value=>originalSignature(value.original)===signature);}
+  lyricChoiceFor(track:Track){const signature=lyricSignature(track);return this.value.lyricChoices?.find(value=>lyricSignature(value.original)===signature);}
+  setLyricChoice(original:Track,mode:LyricChoice['mode'],target?:Track,signal?:AbortSignal){
+    validateTrack(original);if(target)validateTrack(target);
+    return this.change(current=>{if(signal?.aborted)throw new Error('操作已取消');return{...current,lyricChoices:[{original:cleanTrack(original),mode,...(target?{target:cleanTrack(target)}:{}),updatedAt:this.now()},...(current.lyricChoices??[]).filter(item=>trackKey(item.original.origin)!==trackKey(original.origin))].slice(0,1000)};});
+  }
   setMatch(original:Track,target:Track,method:'automatic'|'manual',guard?:{signal:AbortSignal;previous:TrackMatch|undefined}){
     return this.change(current=>{if(guard){if(guard.signal.aborted)throw guard.signal.reason;const previous=current.matches?.find(item=>originalSignature(item.original)===originalSignature(original));if(previous!==guard.previous)throw new Error('匹配设置已更改');}return({...current,matches:[...(current.matches??[]).filter(value=>trackKey(value.original.origin)!==trackKey(original.origin)),{original:cleanTrack(original),target:cleanTrack(target),method,updatedAt:this.now()}]});});
   }

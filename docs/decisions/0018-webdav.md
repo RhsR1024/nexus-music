@@ -15,3 +15,5 @@
 当前为实施决策，尚不代表WebDAV功能或云备份完成。
 
 实施接入已推进：NexusDAVModule/DAVNativeTransport、WebDAVMedia与WebDAVLibrary连接到唯一播放器；RemoteAudioMetadata设置15秒/16MiB预算，分配两并发/64等待上限，标签缓存8MiB/100项，封面沿用现有32MiB缓存。强ETag配合If-Match与响应校验，cacheOnly缺缓存拒绝；原生和合成App验证见BUILD_STATUS。resolvedTrack仅允许同源身份的元数据补全，按版本刷新歌词/封面，保持队列权威。当前支持Basic，不声称所有WebDAV认证/个人服务均已验证；云备份与冲突同步继续后续实现。
+
+2026-10-16歌词选择增量：无版本远程标签的transient标识增加实例命名空间，跨进程不复用；歌词缓存/人工绑定同时按davVersion隔离。音频依然不为未知版本创建持久缓存键，不改变原认证和Range边界；见0024与WebDAV/歌词回归。

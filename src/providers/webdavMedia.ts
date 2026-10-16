@@ -11,6 +11,10 @@ export class WebDAVMedia {
   private accounts:WebDAVAccounts;private native:DAVNativeTransport;private hash:(text:string)=>Promise<string>;
   private epoch=0;private cache=new Map<string,{value:DAVMetadata;bytes:number}>();private cacheBytes=0;private known=new Map<string,DAVEntry>();
   private unversionedRevision=0;
+  // A counter alone repeats after process restart and could revive a lyric
+  // binding for a different unversioned remote file at the same path.
+  private unversionedNamespace=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  private transientVersion(){return `transient:${this.unversionedNamespace}:${++this.unversionedRevision}`;}
   clearMetadata(){this.epoch++;this.cache.clear();this.cacheBytes=0;}
   constructor(accounts:WebDAVAccounts,native:DAVNativeTransport,hash:(text:string)=>Promise<string>){
     this.accounts=accounts;this.native=native;this.hash=hash;let previous=accounts.getSnapshot();
@@ -37,14 +41,14 @@ export class WebDAVMedia {
       if(!Number.isFinite(metadata.durationMs)||metadata.durationMs<=0)throw new WebDAVError('protocol');
       if(identity&&epoch===this.epoch){const bytes=JSON.stringify(metadata).length*2;this.cacheBytes-=this.cache.get(key)?.bytes??0;this.cache.delete(key);this.cache.set(key,{value:metadata,bytes});this.cacheBytes+=bytes;while(this.cache.size>100||this.cacheBytes>8*1024*1024){const first=this.cache.keys().next().value!;this.cacheBytes-=this.cache.get(first)!.bytes;this.cache.delete(first);}}
     }
-    return{track:{...track,title:metadata.title||track.title,artist:metadata.artist||track.artist,album:metadata.album??'',durationMs:metadata.durationMs,metadata:{davName:entry.name,davMetadata:'read',davTitleFromFile:!metadata.title,davVersion:identity??`transient:${++this.unversionedRevision}`}},metadata};
+    return{track:{...track,title:metadata.title||track.title,artist:metadata.artist||track.artist,album:metadata.album??'',durationMs:metadata.durationMs,metadata:{davName:entry.name,davMetadata:'read',davTitleFromFile:!metadata.title,davVersion:identity??this.transientVersion()}},metadata};
   }
   async resolve(track:Track,signal:AbortSignal){
     try{
       const account=this.account(track),epoch=this.epoch;let entry:DAVEntry,cacheOnly=false;
       try{entry=(await this.stat(track,signal)).entry;}catch(error){const old=this.known.get(trackKey(track.origin));if(!(error instanceof WebDAVError)||error.kind!=='network'||!old||!version(old))throw error;entry=old;cacheOnly=true;}
       let resolvedTrack=track;
-      if(!cacheOnly){try{resolvedTrack=(await this.inspectEntry(track,account,entry,epoch,signal)).track;}catch{this.current(account,signal,epoch);resolvedTrack={...track,metadata:{...track.metadata,davVersion:version(entry)??`transient:${++this.unversionedRevision}`,davMetadata:'failed'}};}}
+      if(!cacheOnly){try{resolvedTrack=(await this.inspectEntry(track,account,entry,epoch,signal)).track;}catch{this.current(account,signal,epoch);resolvedTrack={...track,metadata:{...track.metadata,davVersion:version(entry)??this.transientVersion(),davMetadata:'failed'}};}}
       const credentials=await this.accounts.credentials(account.id);this.current(account,signal,epoch);
       const media=await this.native.prepare(account.url,entry.path,credentials,signal);this.current(account,signal,epoch);
       const identity=version(entry),cacheKey=identity?await this.hash(JSON.stringify(['webdav',account.id,entry.path,identity])):undefined;this.current(account,signal,epoch);

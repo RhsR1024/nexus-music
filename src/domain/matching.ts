@@ -1,5 +1,9 @@
 import {trackKey,type Track} from './track.ts';
 export function originalSignature(track:Track){return JSON.stringify([trackKey(track.origin),track.title,track.artist,track.durationMs??null]);}
+export function lyricSignature(track:Track){
+  const version=track.origin.kind==='webdav'?track.metadata.davVersion:track.origin.kind==='device'?track.metadata.deviceSignature:undefined;
+  return JSON.stringify([originalSignature(track),typeof version==='string'?version:null]);
+}
 const normalize=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 const artists=(value:string)=>value.split(/\s*(?:\/|、|&|,|，|;|；|\bfeat\.?\b)\s*/i).map(normalize).filter(Boolean).sort().join('|');
 const edition=(value:string)=>[...value.toLowerCase().matchAll(/live|remix|cover|伴奏|翻唱|纯音乐|现场|dj|instrumental|sped\s*up|slowed/g)].map(v=>v[0].replace(/\s/g,'')).sort().join('|');

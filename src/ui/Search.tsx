@@ -31,7 +31,7 @@ export function Search({ services }: { services: Services }) {
     <Text style={styles.caption}>五个平台分别搜索、分别展示。导入并启用LX音源后可解析播放。</Text>
     <TextInput accessibilityLabel="搜索歌曲或歌手" placeholder="歌曲、歌手" placeholderTextColor="#768191" autoCorrect={false} value={query} onChangeText={setQuery} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
     <View style={styles.row}>{(['all',...platforms] as const).map(item => <Pressable key={item} accessibilityRole="radio" accessibilityState={{selected:platform===item}} onPress={() => setPlatform(item)} style={[styles.chip,platform===item&&styles.selected]}><Text style={styles.text}>{item==='all'?'聚合':platformNames[item]}</Text></Pressable>)}</View>
-    <Pressable accessibilityRole="button" onPress={run} style={styles.button}><Text style={styles.text}>搜索</Text></Pressable>
+    <Pressable testID="run-online-search" accessibilityRole="button" onPress={run} style={styles.button}><Text style={styles.text}>搜索</Text></Pressable>
     {state.groups.map(group => <View key={group.platform} style={styles.group}>
       <Text style={styles.heading}>{platformNames[group.platform]}　<Text style={styles.caption}>{group.items.length} 首已载入{group.total!==undefined?` / ${group.total}`:''}</Text></Text>
       {group.items.slice((pages[group.platform]??0)*50,((pages[group.platform]??0)+1)*50).map((track,relativeIndex) => {const index=(pages[group.platform]??0)*50+relativeIndex;return <View key={`${index}-${trackKey(track.origin)}`} style={styles.trackRow}>

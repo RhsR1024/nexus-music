@@ -6,7 +6,8 @@ export interface LibraryBackup {format:'nexus-music';version:1;exportedAt:string
 function cleanLibrary(library:LibraryState):LibraryState {
   return{version:1,favorites:library.favorites.map(cleanTrack),history:library.history.map(item=>({track:cleanTrack(item.track),playedAt:item.playedAt})),
     playlists:library.playlists.map(playlist=>({id:playlist.id,title:playlist.title,createdAt:playlist.createdAt,updatedAt:playlist.updatedAt,entries:playlist.entries.map(entry=>({id:entry.id,track:cleanTrack(entry.track)}))})),
-    ...(library.matches?{matches:library.matches.map(match=>({...match,original:cleanTrack(match.original),target:cleanTrack(match.target)}))}:{})};
+    ...(library.matches?{matches:library.matches.map(match=>({...match,original:cleanTrack(match.original),target:cleanTrack(match.target)}))}:{}),
+    ...(library.lyricChoices?{lyricChoices:library.lyricChoices.map(choice=>({original:cleanTrack(choice.original),mode:choice.mode,...(choice.target?{target:cleanTrack(choice.target)}:{}),updatedAt:choice.updatedAt}))}:{})};
 }
 export function encodeBackup(library:LibraryState,now=new Date(),statistics:PlaybackStatsState=emptyPlaybackStats):string {
   validateLibrary(library);

@@ -64,3 +64,8 @@ test('WebDAV lyric metadata cache evicts by memory budget and clear does not cac
   const pending=f.media.inspectTrack(first,signal());while(!finish)await new Promise(resolve=>setImmediate(resolve));f.media.clearMetadata();finish({durationMs:1000});await pending;
   f.native.inspect=async()=>{calls++;return{durationMs:1000};};await f.media.inspectTrack(first,signal());assert.equal(calls,5);
 });
+test('unversioned remote metadata uses distinct transient versions across media instances and never revives old lyric identity',async()=>{
+ const f=fixture();f.setETag('W/"weak"');const {account,entries}=await f.accounts.connect('https://fixture.example/dav','user','password'),track=f.media.track(account.id,entries[0]!);
+ const before=await f.media.inspectTrack(track,signal()),reopened=new WebDAVMedia(f.accounts,f.transport,hash),after=await reopened.inspectTrack(track,signal());
+ assert.equal(before.track.title,after.track.title);assert.equal(before.track.durationMs,after.track.durationMs);assert.notEqual(before.track.metadata.davVersion,after.track.metadata.davVersion);assert.equal(f.inspected(),2);
+});

@@ -59,3 +59,17 @@ test('QRC failure falls back to line lyrics and cancellation cannot publish stal
   const cancelled=new LyricService(registry,{request:async()=>''},async()=>'',async()=>({code:0,req:{code:0,data:{lyric:'valid'}}}),undefined,async()=>{started();await new Promise(resolve=>setTimeout(resolve,10));return '[00:01]Stale';});
   const pending=cancelled.load(tx,controller.signal);await decoding;controller.abort();await assert.rejects(pending);
 });
+test('clearing raw lyrics prevents an in-flight private response from repopulating cache',async()=>{
+ const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});let finish!:(value:unknown)=>void,calls=0;
+ const service=new LyricService(registry,{request:async()=>''},async()=>{calls++;if(calls===1)return new Promise(resolve=>{finish=resolve;});return '[00:01]Fresh';});
+ const privateTrack:Track={...track,origin:{kind:'navidrome',accountId:'fixture',id:'same'}};
+ const pending=service.load(privateTrack,new AbortController().signal);service.clear();finish('[00:01]Old');await assert.rejects(pending);
+ assert.equal((await service.load(privateTrack,new AbortController().signal)).document.lines[0]!.text,'Fresh');assert.equal(calls,2);
+});
+test('raw private lyric cache includes device recording signature as well as account identity',async()=>{
+ const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});let calls=0;
+ const service=new LyricService(registry,{request:async()=>''},async()=>`[00:01]Revision ${++calls}`);
+ const song:Track={...track,origin:{kind:'device',libraryId:'fixture',id:'1'},metadata:{deviceSignature:'a'.repeat(64)}};
+ assert.equal((await service.load(song,new AbortController().signal)).document.lines[0]!.text,'Revision 1');
+ assert.equal((await service.load({...song,metadata:{deviceSignature:'b'.repeat(64)}},new AbortController().signal)).document.lines[0]!.text,'Revision 2');assert.equal(calls,2);
+});

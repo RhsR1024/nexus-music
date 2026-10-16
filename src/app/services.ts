@@ -18,6 +18,7 @@ import {throwIfAborted} from '../providers/async.ts';
 import { restoreRecord } from '../storage/recovery.ts';
 import { FontStore } from '../storage/fonts.ts';
 import { LyricService } from '../lyrics/service.ts';
+import {LyricSelection} from '../lyrics/selection.ts';
 import * as Crypto from 'expo-crypto';
 import { openRepository } from '../storage/nativeDatabase.ts';
 import {CoverService} from '../providers/covers.ts';
@@ -105,7 +106,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   });
   const discovery=new DiscoveryProvider(value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value));
   const search = new SearchCoordinator(online);
-  const lyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},undefined,decodeKRC,decodeQRC);
+  const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},options.onlineHTTP,decodeKRC,decodeQRC);
+  const lyrics=new LyricSelection(rawLyrics,matching,library);
   accounts.subscribe(()=>lyrics.clear());
   let previousDAVAccounts=davAccounts.getSnapshot();
   davAccounts.subscribe(()=>{const old=previousDAVAccounts;previousDAVAccounts=davAccounts.getSnapshot();lyrics.clear();const state=playback.controller.getSnapshot(),origin=state.queue.entries.find(item=>item.id===state.queue.currentId)?.track.origin;if(origin?.kind==='webdav'&&old.find(item=>item.id===origin.accountId)!==previousDAVAccounts.find(item=>item.id===origin.accountId))playback.controller.setQueue({...state.queue,currentId:null,priorityIds:[]});});
