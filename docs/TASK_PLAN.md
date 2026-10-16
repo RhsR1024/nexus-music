@@ -1,3 +1,7 @@
+## 2026-10-17 云端队列最新约定
+
+用户授权覆盖历史“不取消排队”规则：同工作流/分支保留正在运行任务，仅最新提交排队。采用 `queue: single`、`cancel-in-progress: false`；旧pending取消不记为通过，最新完整回归验证累计代码，失败继续定位和修复。策略及88分钟真实执行耗时分解见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。实施前运行1/排队40；push后验证实际收敛。
+
 ## 2026-10-17 F33 云端阶段验收补录
 
 - [x] `26830df` / iOS27 `38913246781`：checks、原生、两组 App 测试和 unsigned IPA 归档上传全部成功；完整产物 ZIP 与内部 IPA 摘要/CRC 已核验，详见 `BUILD_STATUS.md`。

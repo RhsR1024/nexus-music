@@ -1,5 +1,13 @@
 # 本地与GitHub Actions双构建
 
+## 2026-10-17 当前排队策略：运行中保留，仅最新提交排队
+
+用户明确要求压缩积压，覆盖本文历史上的 `queue: max` 约定。工作流保留原 concurrency group，改用 `queue: single` 与 `cancel-in-progress: false`：同一工作流/分支运行中的任务继续，后来的提交替换旧 pending，只保留最新一个。正常线性 main 提交包含此前代码及仍保留的测试，可由最新整套回归验证累计状态；旧提交被取消不记为成功，也不补称每个中间版本都有独立 IPA。不同分支/PR 不互相覆盖，失败诊断及历史成功产物保留。
+
+依据为 [GitHub concurrency 官方文档](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)。2026-10-17 盘点为运行1/排队40；`38934924631` 创建于北京时间00:49:22，iOS job实际07:39:52才开始，不能把约7小时等待算成编译耗时。新策略 push 后须核实旧 pending 实际取消及运行中任务未被打断。
+
+最近完整成功的 `38913246781` iOS job实际88分06秒：核心 App 编译/UI组59分03秒，匹配/歌词/健康组20分01秒，原生契约1分49秒，模拟器准备2分07秒，设备归档3分21秒。核心组包含编译和测试，不能全算编译；两组 App 验证合计约90%的job时间。失败的 `38924137682` 另在测试结束后等待600秒诊断收集；这属于失败额外开销。后续优化应先量测慢测试/重复构建与空闲等待，保持播放/持久化/竞态断言，不通过删除验收换取短耗时。
+
 2026-10-16同步批次：冲突/重启/删除专项加入核心App组。根据13dc450的iOS任务实际耗时约84分钟及新增专项，iOS job预算从90增至120分钟；失败仍按原断言和诊断处理。push仅含docs/**或Markdown时不再启动完整iOS归档，代码/原生/工作流变更仍完整运行，pull_request与workflow_dispatch保留。配置以新提交实际结果验证，原有队列不取消/重复派发；文档变更本地执行链接与一致性校验。
 
 本地Intel MBP继续用于开发、类型/契约检查、Xcode26.3模拟器和设备IPA构建；GitHub Actions另外执行Apple Silicon/iOS27构建。两条路径共享维护中的ios工程和archive脚本，不运行覆盖性prebuild。

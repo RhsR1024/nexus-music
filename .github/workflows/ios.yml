@@ -12,7 +12,8 @@ permissions:
 concurrency:
   group: ios-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
-  queue: max
+  # Keep the running validation; replace obsolete pending commits with the latest.
+  queue: single
 jobs:
   checks:
     runs-on: ubuntu-24.04

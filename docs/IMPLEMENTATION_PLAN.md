@@ -1,3 +1,7 @@
+## 2026-10-17 云端队列最新约定
+
+用户已授权保留运行中构建、让最新提交替换旧排队提交。工作流 concurrency 改为 `queue: single`、`cancel-in-progress: false`，覆盖下文所有旧“不取消排队/queue:max”历史记录。每个实现阶段仍本地验证、更新文档/交接、分批提交push；最新完整云端回归验证累计状态，取消的旧运行不计作通过。新功能如Sollin有对应能力则先参考其IPA实现线索/UI/交互，否则沿项目风格原创实现。耗时证据与验收见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。
+
 ## 2026-10-17 F33 云端阶段验收补录
 
 三方同步提交 `26830df` 对应 iOS27 运行 `38913246781` 完整成功，已下载核验 unsigned IPA；API ZIP 摘要、完整 CRC、内部 IPA 附带摘要与 arm64/正式 JS 入口校验通过。manifest 为 Xcode27.0/iphoneos27.0/min15.1/signed=false，dirty=true 唯一 `ios/Podfile.lock`，实际设备族仍 `[1]`。自动触发、真实双设备/私人服务及真机签名缺口继续，不以此覆盖后续 iPad/UI 增量或清除图片导入间歇错误。详细摘要见 `BUILD_STATUS.md`。
