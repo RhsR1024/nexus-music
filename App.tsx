@@ -20,7 +20,7 @@ import {LibraryHome} from './src/ui/LibraryHome';
 import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaProvider,useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Linking, Pressable, ScrollView, View} from 'react-native';
+import {Linking, Pressable, ScrollView, View, useWindowDimensions} from 'react-native';
 type Tab='discover'|'library'|'search'|'settings';
 export default function App(){return <MusicApplication initialize={getServices}/>;}
 export function MusicApplication({initialize}:{initialize:()=>Promise<Services>}){return <SafeAreaProvider><MusicApp initialize={initialize}/></SafeAreaProvider>;}
@@ -28,7 +28,10 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
   const [tab,setTab]=useState<Tab>('discover'),[privateLibrary,setPrivateLibrary]=useState(false);
   const [chromeHeight,setChromeHeight]=useState(80);
   const [services,setServices]=useState<Services>(),[startupError,setStartupError]=useState<string>();
-  const insets=useSafeAreaInsets();
+  const insets=useSafeAreaInsets(),{width,height,fontScale}=useWindowDimensions();
+  const expanded=width>=768&&height>=500&&width/Math.max(1,fontScale)>=620;
+  const railWidth=expanded?196:0;
+  const navigation=[['discover','grid-outline','发现'],['library','albums-outline','音乐库'],['settings','settings-outline','设置'],['search','search-outline','搜索']] as const;
   const startup=()=>{setStartupError(undefined);void initialize().then(setServices,error=>setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。'));};
   useEffect(()=>{let active=true;void initialize().then(value=>{if(active)setServices(value);},error=>{if(active)setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。');});return()=>{active=false;};},[initialize]);
   useEffect(()=>{const open=(url:string|null)=>{if(url?.startsWith('com.nexusmusic.app://settings'))setTab('settings');};void Linking.getInitialURL().then(open);const subscription=Linking.addEventListener('url',event=>open(event.url));return()=>subscription.remove();},[]);
@@ -36,7 +39,12 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
   const text={color:p.text},caption={color:p.secondary};
   return <ThemeContext.Provider value={theme}><TypographyProvider store={services?.fonts}><View style={{flex:1,backgroundColor:p.background[0]}}>
     <AmbientBackground services={services}/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
-    <View style={{flex:1,paddingTop:insets.top+12,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
+    <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+12,paddingLeft:insets.left,paddingRight:insets.right,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
+      <View style={{width:railWidth,display:expanded?'flex':'none',paddingHorizontal:16}}>
+        <Text accessibilityRole="header" style={[text,{fontSize:24,fontWeight:'700',padding:12,marginBottom:20}]}>音枢</Text>
+        <View style={{gap:12}}>{navigation.map(([key,icon,title])=><Pressable key={key} testID={`rail-tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected:tab===key}} onPress={()=>setTab(key)} style={{minHeight:52,padding:12,borderRadius:16,backgroundColor:tab===key?p.selected:p.surface,flexDirection:'row',alignItems:'center',gap:12}}><Ionicons name={icon} size={24} color={tab===key?p.accent:p.secondary}/><Text style={{color:tab===key?p.accent:p.text,fontSize:16,flexShrink:1}}>{title}</Text></Pressable>)}</View>
+      </View>
+      <View style={{flex:1,minWidth:0,maxWidth:1120,alignSelf:'stretch',marginHorizontal:expanded?'auto':0}}>
       {tab==='discover'&&services&&!startupError?<Discovery services={services} embedded/>:<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:14,paddingBottom:32}}>
         <Text style={[caption,{fontSize:11,letterSpacing:3,marginBottom:12}]}>音枢 · NEXUS MUSIC</Text>
         {startupError?<View><Text style={caption}>{startupError}</Text><Pressable accessibilityRole="button" onPress={startup} style={{padding:16}}><Text style={{color:p.accent}}>重试打开</Text></Pressable></View>:!services?<Text style={caption}>正在打开音乐数据…</Text>:tab==='library'?<>
@@ -48,10 +56,11 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
           <NavidromeSettings services={services}/><SourceSettings catalog={services.catalog} health={services.sourceHealth}/><AppearanceSettings services={services}/><AudioSettings services={services}/><PlaybackSettings services={services}/><FontSettings services={services}/><CacheSettings services={services}/>
         </>}
       </ScrollView>}
+      </View>
     </View>
-    <View pointerEvents="box-none" onLayout={event=>{const height=event.nativeEvent.layout.height;setChromeHeight(previous=>Math.abs(previous-height)<.5?previous:height);}} style={{position:'absolute',bottom:Math.max(insets.bottom,12),left:16,right:16,gap:10}}>
+    <View pointerEvents="box-none" onLayout={event=>{const height=event.nativeEvent.layout.height;setChromeHeight(previous=>Math.abs(previous-height)<.5?previous:height);}} style={{position:'absolute',bottom:Math.max(insets.bottom,12),left:expanded?insets.left+railWidth+16:16,right:insets.right+16,gap:10}}>
       {services&&<Player services={services}/>}
-      <View style={{flexDirection:'row',gap:10,alignItems:'center'}}>
+      <View style={{flexDirection:'row',gap:10,alignItems:'center',display:expanded?'none':'flex'}}>
         <GlassSurface style={{flex:1}}><View style={{flexDirection:'row',paddingVertical:9}}>{([
           ['discover','grid-outline','发现'],['library','albums-outline','音乐库'],['settings','settings-outline','设置'],
         ]as const).map(([key,icon,title])=><Pressable key={key} testID={`tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected:tab===key}} onPress={()=>setTab(key)} style={{flex:1,alignItems:'center',gap:4,minHeight:48,justifyContent:'center'}}>

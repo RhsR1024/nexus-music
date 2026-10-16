@@ -392,3 +392,11 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 定向修复已提交并push `7c120231ce8cc4ba105b3088f3e170b5427cacf9`，远端main一致：列表搜索改逐字输入并断言实际值，Navidrome UI夹具改为真实120秒音频/元数据/歌词，补充冷缓存2:00解码断言。269项业务/类型通过；字体专项692.479秒、列表专项85.840秒、冷缓存ND专项313.986秒均通过，零失败/跳过。清洁本地归档`build/logs/archive-ui-fixture-fix.log`成功，manifest dirty=false、arm64、iphoneos26.2、min15.1、signed=false，IPA SHA256为`ed985f8c362d2ea71a2c6d3740f9c2ff613b375c7ed4d52d6747a692445ddf17`。
 
 新云端[38899071423](https://github.com/RhsR1024/nexus-music/actions/runs/38899071423)对应7c12023，当前pending；13dc450/38889054633正在执行，未取消或重复派发。云端运行成功前不把本批修复记为iOS27通过。
+
+## 2026-10-16 S8/J56 横屏与平板自适应本地验证
+
+当前工作区在 3d4a0e9 上补齐基础响应式壳：`app.json` 开放横屏并支持平板，iOS `Info.plist` 增加横屏方向；主壳在宽屏使用安全区域侧栏、最大内容列和播放器区域，窄屏保留底部导航；发现页按窗口宽度和 `fontScale` 计算 1–4 列。代码没有新增音频、队列或原生依赖，设计见 `docs/decisions/0031-adaptive-ipad-layout.md`。
+
+本地证据：`npm run typecheck` 通过；`npm test` 269/269 通过；`npm run ios:build` 使用 Xcode 26.3 / SDK 26.2 的 Release 模拟器构建成功；`npm run ios:archive` 成功，`build/distribution/NexusMusic-unsigned.ipa` 为 arm64、iphoneos26.2、min15.1、signed=false，SHA256 `0bc8ef6f7ec88d84ad5a2ebf9df34a9a57e708d09867d3a95f84d0f714502d56`。本机当前 `xcrun simctl` 不在可用开发者工具路径，未执行 iPad 模拟器专项；旋转、分屏、键盘、大字、无障碍和真机仍是验收缺口。
+
+本批未提交前已存在的云端运行保持原队列：`38889054633`（13dc450，in_progress）、`38894434005`（a0ee5bb，pending）、`38899071423`（7c12023，pending）；HEAD `3d4a0e9` 对应 `38899634815`（pending）。不把排队或本地结果记作 iOS27 通过；提交本批后再跟踪新运行。

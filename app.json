@@ -4,12 +4,12 @@
     "slug": "nexus-music",
     "version": "0.1.0",
     "icon": "./assets/app-icon.png",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.nexusmusic.app",
-      "supportsTablet": false,
+      "supportsTablet": true,
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
