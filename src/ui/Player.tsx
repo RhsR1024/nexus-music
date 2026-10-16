@@ -14,6 +14,7 @@ import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
+import { FontSettings } from './FontSettings.tsx';
 import { useState, useSyncExternalStore } from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, View} from 'react-native';
 import {Modal} from './AdaptiveModal.tsx';
@@ -40,13 +41,13 @@ export function Player({ services }: { services: Services }) {
   const [commenting,setCommenting]=useState<Track|null>(null);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
-  const [details,setDetails]=useState(false),[styleSheet,setStyleSheet]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'>('menu');
+  const [details,setDetails]=useState(false),[styleSheet,setStyleSheet]=useState(false),[lyricSheet,setLyricSheet]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'>('menu');
   const entry = currentEntry(state.queue);
   if (!entry) return null;
   const match=entry.track.origin.kind==='imported'||entry.track.origin.kind==='online'?services.library.matchFor(entry.track):undefined;
   const actualMatch=state.media?.matchedTrack,lyricTrack=actualMatch??(entry.track.origin.kind==='imported'?match?.target:match?.method==='manual'&&!state.media?match.target:undefined)??entry.track;
   const toggle = () => { if (state.intent === 'playing') controller.pause(); else void controller.play(); };
-  const closeDetails=()=>{setStyleSheet(false);setDetails(false);};
+  const closeDetails=()=>{setStyleSheet(false);setLyricSheet(false);setDetails(false);};
   const button = (label: string, action: () => void) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.button}><Text style={styles.buttonText}>{label}</Text></Pressable>;
   const selectSkin=(id:PlayerLayout)=>{void services.preferences.update({playerLayout:id}).then(()=>{setStyleSheet(false);setDetails(false);}).catch(()=>Alert.alert('界面未保存','之前的播放界面保持不变，请重试。'));};
   const skinSelector=(<View style={{gap:10}}><Text style={styles.caption}>选择后立即应用，播放进度和播放意图保持不变。</Text><View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{([['classic','经典'],['am','AM 风格'],['immersive','封面沉浸'],['photo','写真歌词'],['vinyl','黑胶唱机'],['wave','声波核']]as const).map(([id,title])=><Pressable key={id} testID={`play-skin-${id}`} accessibilityRole="radio" accessibilityState={{selected:preferences.playerLayout===id}} onPress={()=>selectSkin(id)} style={{padding:10,borderRadius:16,backgroundColor:preferences.playerLayout===id?theme.palette.selected:theme.palette.surface}}><Text style={{color:theme.palette.accent}}>{title}</Text></Pressable>)}</View></View>);
@@ -113,6 +114,7 @@ export function Player({ services }: { services: Services }) {
           {detailPanel==='menu'?<>
             <Text style={styles.title}>播放选项</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="播放界面样式" onPress={()=>setStyleSheet(true)} style={styles.optionRow}><View style={{flex:1}}><Text style={styles.optionTitle}>播放界面样式</Text><Text style={styles.caption}>{(['classic','am','immersive','photo','vinyl','wave'] as const).includes(preferences.playerLayout)?({classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核'} as const)[preferences.playerLayout]:'经典'}</Text></View><Ionicons name="chevron-forward" size={20} color={theme.palette.secondary}/></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="歌词显示设置" onPress={()=>setLyricSheet(true)} style={styles.optionRow}><View style={{flex:1}}><Text style={styles.optionTitle}>歌词显示设置</Text><Text style={styles.caption}>字体、颜色、对齐、行距与逐字效果</Text></View><Ionicons name="chevron-forward" size={20} color={theme.palette.secondary}/></Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="队列与播放选项" onPress={()=>setDetailPanel('content')} style={styles.optionRow}><View style={{flex:1}}><Text style={styles.optionTitle}>队列与播放选项</Text><Text style={styles.caption}>歌词、匹配、收藏、队列和播放控制</Text></View><Ionicons name="chevron-forward" size={20} color={theme.palette.secondary}/></Pressable>
           </>:<>
             {button('返回播放选项',()=>setDetailPanel('menu'))}
@@ -126,6 +128,14 @@ export function Player({ services }: { services: Services }) {
           {button('收起播放界面样式',()=>setStyleSheet(false))}
           <Text style={styles.title}>播放界面样式</Text>
           {skinSelector}
+        </ScrollView>
+      </Modal>
+      <Modal visible={lyricSheet&&details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={()=>setLyricSheet(false)}>
+        {lyricSheet&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
+        <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+          {button('收起歌词显示设置',()=>setLyricSheet(false))}
+          <Text style={styles.title}>歌词显示设置</Text>
+          <FontSettings services={services}/>
         </ScrollView>
       </Modal>
       <CommentsModal services={services} track={commenting} onClose={()=>setCommenting(null)}/>

@@ -1,3 +1,9 @@
+## 2026-10-17 A09 歌词显示设置 Sheet 代码批次
+
+- 现代播放器“播放选项”增加独立“歌词显示设置”Sheet，对应 Sollin IPA `_showLyricDisplaySettingsSheet` 静态线索；复用现有 `FontSettings`，保留歌词来源/偏移/原生逐字和播放意图。
+- `npm run check`：302/302；`git diff --check` 通过。
+- 本机 `xcode-select` 仍为 Command Line Tools，未执行本批本地 XCTest/IPA；上一批云端运行 `38951198950`（`51b4933`）仍为 `pending`，本批提交后以新运行实际终态为准。
+
 ## 2026-10-17 设置与全局封面主题阶段
 
 ## 2026-10-17 A09 播放器样式 Sheet 代码批次
