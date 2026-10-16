@@ -1,5 +1,6 @@
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator,Alert,FlatList,Modal,Pressable,View} from 'react-native';
+import {ActivityIndicator,Alert,FlatList,Pressable,View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import type {Services} from '../app/services.ts';

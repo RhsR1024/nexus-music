@@ -1,6 +1,7 @@
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,FlatList,Modal,Pressable,Text as LyricText,View} from 'react-native';
+import {AccessibilityInfo,FlatList,Pressable,Text as LyricText,View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import {Text} from './Typography.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';

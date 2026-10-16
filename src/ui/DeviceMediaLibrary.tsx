@@ -1,6 +1,7 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator, FlatList, Linking, Modal, Pressable, View, useWindowDimensions} from 'react-native';
+import {ActivityIndicator, FlatList, Linking, Pressable, View, useWindowDimensions} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';

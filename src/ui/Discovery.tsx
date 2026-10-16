@@ -1,7 +1,8 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {Alert, FlatList, Modal, Pressable, View, useWindowDimensions} from 'react-native';
+import {Alert, FlatList, Pressable, View, useWindowDimensions} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {OnlinePlatform,Track} from '../domain/track.ts';
 import type {BrowseItem} from '../providers/discovery.ts';
@@ -15,6 +16,7 @@ type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'category';id:
 const platforms=[['wy','网易'],['tx','QQ'],['kw','酷我'],['kg','酷狗'],['mg','咪咕']]as const;
 export function Discovery({services,embedded=false}:{services:Services;embedded?:boolean}){
   const theme=useTheme(),{width,fontScale}=useWindowDimensions();
+  const [contentWidth,setContentWidth]=useState<number>();
   const [tools,setTools]=useState(false),[descriptionOpen,setDescriptionOpen]=useState(false);
   const [query,setQuery]=useState(''),[sort,setSort]=useState<TrackSort>('original');
   const [total,setTotal]=useState<number>();
@@ -54,8 +56,9 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
   const tracks=useMemo(()=>shownRows.map(row=>row.track),[shownRows]);
   const displayed:readonly Item[]=view.kind==='detail'?shownRows.map(row=>({kind:'track',track:row.track,key:row.key})):items;
   const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} onPress={action} style={{backgroundColor:theme.color('#303A32'),padding:12,borderRadius:10,opacity:disabled ? .4 : 1}}><Text style={{color:theme.color('#D9F49B')}}>{label}</Text></Pressable>;
-  const gridColumns=Math.max(1,Math.min(4,Math.floor((width-48+14)/(160*Math.max(1,fontScale)+14))));
-  const columns=view.kind==='detail'?1:gridColumns,cardWidth=Math.max(1,Math.min(240,(width-48-14*(columns-1))/columns));
+  const usableWidth=contentWidth??Math.max(1,width-48);
+  const gridColumns=Math.max(1,Math.min(4,Math.floor((usableWidth+14)/(160*Math.max(1,fontScale)+14))));
+  const columns=view.kind==='detail'?1:gridColumns,cardWidth=Math.max(1,Math.min(240,(usableWidth-14*(columns-1))/columns));
   const openCollection=(item:BrowseItem,rank:boolean)=>{setDescriptionOpen(false);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank,artwork:item.artwork,description:item.description});};
   const header=<View style={{gap:20,paddingBottom:24}}>
     <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{!embedded&&button('收起发现',close)}{view.kind==='detail'&&button('返回歌单广场',()=>setView({kind:'playlists'}))}</View>
@@ -79,7 +82,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
     </>}
     {!!message&&<Text accessibilityLiveRegion="polite" style={{color:theme.palette.accent,lineHeight:22}}>{message}</Text>}
   </View>;
-  const content=<View style={{flex:1,backgroundColor:embedded?'transparent':theme.palette.background[0],paddingHorizontal:24,paddingTop:embedded?0:60}}>
+  const content=<View testID="discovery-content" onLayout={event=>{const next=Math.max(1,event.nativeEvent.layout.width-48);setContentWidth(previous=>previous!==undefined&&Math.abs(previous-next)<.5?previous:next);}} style={{flex:1,backgroundColor:embedded?'transparent':theme.palette.background[0],paddingHorizontal:24,paddingTop:embedded?0:60}}>
     <FlatList key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:40}} keyboardShouldPersistTaps="handled"
       renderItem={({item,index})=>item.kind==='track'?<View style={{paddingVertical:14,borderTopWidth:1,borderColor:theme.palette.border}}>
         <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)} style={{flexDirection:'row',alignItems:'center',gap:14}}><Cover services={services} track={item.track} size={50}/><View style={{flex:1,gap:6}}><Text style={{color:theme.palette.text,fontSize:16,fontWeight:'600'}}>{item.track.title}</Text><Text numberOfLines={1} style={{color:theme.palette.secondary}}>{item.track.artist}{item.track.album?` · ${item.track.album}`:''}</Text></View></Pressable>

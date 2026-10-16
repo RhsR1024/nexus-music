@@ -47,6 +47,38 @@ final class SourceSettingsTests: XCTestCase {
     if let label {home.coordinate(withNormalizedOffset:CGVector(dx:label.x,dy:label.y)).tap()}else{icon.tap()}
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15))
   }
+  func testIPadWindowNavigationAndRotation() throws {
+    XCTAssertEqual(UIDevice.current.userInterfaceIdiom,.pad,"Run this dedicated test on an actual iPad simulator target")
+    let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait;app.launch()
+    defer{XCUIDevice.shared.orientation = .portrait}
+    func element(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func wait(_ condition:@escaping()->Bool,_ message:String){let expectation=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in condition()},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[expectation],timeout:15),.completed,message)}
+    func evidence(_ name:String){let item=XCTAttachment(screenshot:app.screenshot());item.name=name;item.lifetime = .keepAlways;add(item)}
+    let expanded=element("app-layout-expanded"),searchTab=element("rail-tab-search"),libraryTab=element("rail-tab-library")
+    if !expanded.waitForExistence(timeout:3){
+      XCTAssertTrue(element("app-layout-compact").exists);XCTAssertTrue(element("tab-search").isHittable);evidence("iPad narrow native window uses bottom navigation")
+      let system=XCUIApplication(bundleIdentifier:"com.apple.springboard"),zoom=XCUIApplication(bundleIdentifier:"com.apple.springboard").buttons["Zoom-button"]
+      if !zoom.isHittable{let controls=system.buttons["window-controls:com.nexusmusic.app"];XCTAssertTrue(controls.waitForExistence(timeout:5));controls.tap()}
+      let item=XCTAttachment(string:system.debugDescription);item.name="iPad system window controls";item.lifetime = .keepAlways;add(item)
+      XCTAssertTrue(zoom.waitForExistence(timeout:5));zoom.tap()
+    }
+    XCTAssertTrue(expanded.waitForExistence(timeout:20));XCTAssertGreaterThanOrEqual(expanded.frame.width,768,"iPhone compatibility windows must not satisfy iPad layout validation")
+    XCTAssertTrue(searchTab.isHittable);XCTAssertTrue(libraryTab.isHittable);XCTAssertFalse(element("tab-search").isHittable)
+    evidence("iPad portrait native window and rail")
+    searchTab.tap();let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:5));query.tap();for character in "Fixture iPad"{query.typeText(String(character))};query.typeText("\n");XCTAssertEqual(query.value as? String,"Fixture iPad")
+    XCUIDevice.shared.orientation = .landscapeLeft
+    wait({app.frame.width>app.frame.height && searchTab.isHittable},"The actual iPad window must rotate while retaining navigation")
+    XCTAssertEqual(query.value as? String,"Fixture iPad");XCTAssertTrue(expanded.exists);evidence("iPad landscape search draft retained")
+    libraryTab.tap();let sync=app.buttons["cloud-sync-open"]
+    for _ in 0..<18{if sync.isHittable{break};app.swipeUp()};XCTAssertTrue(sync.isHittable);sync.tap()
+    let close=app.buttons["收起多设备同步"];XCTAssertTrue(close.waitForExistence(timeout:5));XCTAssertTrue(close.isHittable)
+    XCUIDevice.shared.orientation = .portrait
+    wait({app.frame.height>app.frame.width && close.isHittable},"A presented modal must rotate with the iPad window")
+    evidence("iPad modal portrait after rotation");close.tap();XCTAssertTrue(libraryTab.isHittable)
+    element("rail-tab-discover").tap();XCTAssertTrue(element("discovery-content").waitForExistence(timeout:10))
+    let discovery=element("discovery-content");XCTAssertGreaterThan(discovery.frame.minX,libraryTab.frame.maxX)
+    XCTAssertLessThanOrEqual(discovery.frame.maxX,app.frame.maxX+1);evidence("iPad discovery constrained to content column")
+  }
   func testCrossPlatformLyrics() throws {
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<12 {if element.isHittable{break};if up{app.swipeUp()}else{app.swipeDown()}};XCTAssertTrue(element.isHittable)}

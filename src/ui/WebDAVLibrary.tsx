@@ -1,6 +1,7 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator, Alert, FlatList, Image, Modal, Pressable, ScrollView, View} from 'react-native';
+import {ActivityIndicator, Alert, FlatList, Image, Pressable, ScrollView, View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {WebDAVError,type DAVEntry} from '../providers/webdav.ts';

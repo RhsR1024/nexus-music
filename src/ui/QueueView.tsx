@@ -1,7 +1,8 @@
 import {Ionicons} from '@expo/vector-icons';
 import {Text} from './Typography.tsx';
 import {useRef,useState,useSyncExternalStore} from 'react';
-import {Alert, Animated, FlatList, Modal, PanResponder, Pressable, View} from 'react-native';
+import {Alert, Animated, FlatList, PanResponder, Pressable, View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import {emptyQueue,move,remove,type QueueEntry} from '../domain/queue.ts';
 import {useTheme} from './theme.tsx';

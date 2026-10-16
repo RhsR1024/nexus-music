@@ -2,6 +2,16 @@
 
 更新日期：2026-10-16，Asia/Shanghai。此文件是后续开发的基础上下文，接手者应完整阅读。
 
+## 2026-10-16 Sollin IPA 参考范围变更（当前最新边界）
+
+用户提供并固定参考包 `/Users/ningli/WorkSpace/ReferenceProject/Sollin-2.0.0 60-unsigned.ipa`（SHA256 `c2ee2deba236ef1b9e097e1d8cdc0b816137aa57cf85d4c8e2811dae9924bc07`）。移动端 UI、交互、页面层级、弹窗、手势、错误反馈和设置组织按该包复核；固定证据见[IPA静态分析](docs/SOLLIN_IPA_ANALYSIS.md)，范围决策见[0033](docs/decisions/0033-sollin-mobile-scope.md)。参考包是行为规格，不是可复制的 Flutter AOT、私有服务、品牌资源或第三方资产来源。
+
+四组设置现在是完整对齐重点：**播放与歌词、外观与界面、下载管理、数据与存储**。它们必须分别记录代码、自动测试、模拟器、真实平台和真机证据，并与音枢已有 LX 多源择源、Navidrome/Subsonic、WebDAV、汽水公开歌单匹配、漫途一次迁移、来源诊断、PCM/EQ、系统 Now Playing/灵动岛和数据安全边界合并。
+
+明确不移植 Sollin 自有注册/登录、用户中心、设备管理、账号资料、后台会话及其 API；赞助、付费解锁、订阅门槛和商业权益；免责声明、服务与支持、QQ群/GitHub入口和自推广帮助；遥测、行为分析、诊断上传及未授权回传。这些排除项不计入开发进度分母，也不得复制到音枢下载、同步或备份流程。
+
+网易云、QQ 音乐、酷狗等音乐平台自身账号登录仍保留为 provider 能力，用于平台实际支持的个人歌单、收藏、推荐、FM、云盘或受限播放。平台登录和音枢自身数据完全分离，凭据只进 Keychain，不进入备份、同步、日志或诊断；“登录成功”不等于“歌单同步完成”。后续接手者不得新增音枢自有账号体系。
+
 ## 当前任务与成果
 
 当前持续目标为F01–F37/J01–J59全部功能及本地/云端双构建，goal active。已提交基线c4422bc；F32云备份a0ee5bb本地通过、云端38894434005已过native/核心App运行中。字体78e4827/38871835008、图片8cb083c/38886233605、mini与健康修复13dc450/38889054633云端全部成功且IPA已下载校验；后者IPA摘要adbcea0af31564f29b84734dc34b339f6c661b424f79ca0f588e32f7b3a03b09。S2两项旧UI失败已在7c12023本地定向通过，新云端38899071423正常排队；iPad基础dc3bb66及后续亦排队。本批F33三方基线同步已编码，296项业务/类型与完整native通过，首次App冲突/取消/重启/删除210.933秒通过，最终同步222.425秒/备份204.159秒/DAV70.122秒全部通过，阶段提交与清洁IPA继续，未提前记本批双构建完成。
@@ -472,3 +482,17 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 三方同步已正常提交/push `26830dfde3e8243ae8eb845a98f54f792dbc6756`，远端main复核一致。`archive-sync-clean.log`为ARCHIVE SUCCEEDED；manifest commit=26830df、dirty=false、workingTreeChanges=[]、arm64/iphoneos26.2/min15.1/signed=false，正式JS入口隔离通过。IPA SHA256 `b14c0f058a7904405a68795d972a602d0a465bb34f0e5c67e7d04a3f9d173f7e`已再次校验，另保留于忽略目录build/local-sync-26830df。新云端[38913246781](https://github.com/RhsR1024/nexus-music/actions/runs/38913246781)为pending；F32/38894434005运行中，既有串行队列不取消/重复派发。
 
 下一批修正主App iPad设备族（目前仍仅1）与RN弹窗横屏支持，验证真实宽屏/旋转。代码约75%、整体交付约57%，不将新排队或unsigned包计作真机/签名验收；F33自动触发及真实双设备/私人服务、全部其他余项仍保留，目标active。
+
+
+## 2026-10-16 原生iPad窗口与旋转阶段验收
+
+主App Debug/Release设备族已改为1,2，共享Modal允许四方向，发现网格改按实际容器宽度；归档校验新增读取UIDeviceFamily防回归。296项业务/类型检查通过（check-ipad-delivery.log），脚本语法和diff空白检查通过。
+
+本地Release专项 `build/SourceUITests-1792160728178.xcresult` 48.992秒通过：实际iPad idiom、635点系统窄窗口底部导航→通过系统真实Zoom-button扩大→宽屏侧栏/隐藏底栏→搜索内容与实际窗口横屏旋转→同步弹窗转回竖屏并关闭→发现区域在侧栏右侧且不越界。已查看竖屏侧栏、横屏搜索及弹窗附件（build/ipad-rotation-passed）。首次宽屏断言失败保留，系统AX窗口控制和实际交互完成前未将其记为通过。
+
+手机交叉回归 `build/SourceUITests-1792161115531.xcresult` WebDAV83.124秒通过，含真实合成服务解码/PCM/暂停定位/重启/移除连接；PROPFIND15、Range4、认证失败0。未改音频/脚本原生后端，没有新依赖或复制参考资产；完整native沿本轮native-sync-full.log证据。CI新增独立iOS27 iPad专项，尚未由本批提交触发/执行，清洁本地IPA继续。真正分屏切换、大字/无障碍、硬件键盘和真机仍保留，不能称整个F35/J56完成。
+
+
+## Sollin移动IPA直接参考（2026-10-16）
+
+用户新增提供本机Sollin-2.0.0 60-unsigned.ipa，要求换思路查看实现并复刻UI/交互/移植功能。已只读静态分析，Flutter设备arm64编译版、cryptid0、约252个应用Dart文件路径候选和可读音频指纹HTML/JS；没有Dart源码/动态运行证据。hash/许可/技术栈/模块线索与下一步见docs/SOLLIN_IPA_ANALYSIS.md，原包与提取证据留ReferenceProject/忽略build，不提交资产。此证据优先于桌面推测，不改变F/J总范围或一个播放器/队列边界；后续对齐应以移动行为规格原创实现，服务端/账号/实际动态效果分别验证。

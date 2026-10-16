@@ -15,7 +15,8 @@ import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
 import { useState, useSyncExternalStore } from 'react';
-import {Alert, Modal, Pressable, ScrollView, StyleSheet, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type { Services } from '../app/services.ts';
 import { currentEntry, remove, move } from '../domain/queue.ts';
 function time(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2, '0')}`; }

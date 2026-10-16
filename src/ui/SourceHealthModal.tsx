@@ -1,6 +1,7 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {FlatList, Keyboard, Modal, Pressable, Share, View} from 'react-native';
+import {FlatList, Keyboard, Pressable, Share, View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import {File,Paths} from 'expo-file-system';
 import type {SourceHealth,HealthStatus} from '../providers/sourceHealth.ts';
 import type {Quality} from '../domain/quality.ts';

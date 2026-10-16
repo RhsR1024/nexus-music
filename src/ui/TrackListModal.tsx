@@ -1,6 +1,7 @@
 import {Text} from './Typography.tsx';
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {Alert,FlatList,Modal,Pressable,View} from 'react-native';
+import {Alert,FlatList,Pressable,View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {trackRows,viewTrackRows,selectedTrackRows,type TrackRow,type TrackSort} from '../domain/trackList.ts';

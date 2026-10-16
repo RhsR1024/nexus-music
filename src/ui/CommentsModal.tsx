@@ -1,6 +1,7 @@
 import {Text} from './Typography.tsx';
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
-import {FlatList, Modal, Pressable, View} from 'react-native';
+import {FlatList, Pressable, View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import {CommentSession,type SongComment} from '../providers/comments.ts';
 import type {Track} from '../domain/track.ts';
 import type {Services} from '../app/services.ts';

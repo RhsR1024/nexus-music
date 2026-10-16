@@ -1,6 +1,7 @@
 import {Text} from './Typography.tsx';
 import {useMemo,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator, Alert, FlatList, Modal, Pressable, View, useWindowDimensions} from 'react-native';
+import {ActivityIndicator, Alert, FlatList, Pressable, View, useWindowDimensions} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';

@@ -1,6 +1,7 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useRef,useState} from 'react';
-import {Alert, FlatList, Keyboard, Modal, Pressable, View} from 'react-native';
+import {Alert, FlatList, Keyboard, Pressable, View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import {trackKey,type Track} from '../domain/track.ts';
 import type {MatchCandidate} from '../providers/crossPlatformMatcher.ts';

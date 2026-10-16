@@ -1,6 +1,7 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {Alert, FlatList, Modal, Pressable, View} from 'react-native';
+import {Alert, FlatList, Pressable, View} from 'react-native';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import {trackKey,type Track} from '../domain/track.ts';
 import {currentEntry} from '../domain/queue.ts';
