@@ -45,7 +45,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
       {button('创建歌单',()=>{void perform(async()=>{const id=await services.library.createPlaylist(name);setSelected(id);});},busy||!name.trim())}
       {library.playlists.map(item=><Pressable accessibilityRole="button" accessibilityLabel={`${item.title} · ${item.entries.length}首`} key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><View style={{flexDirection:"row",gap:14,alignItems:"center"}}><Cover services={services} track={item.entries[0]?.track} size={58}/><View style={{flex:1}}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首</Text></View></View></Pressable>)}
     </View>:null}
-    {!!tracks.length&&button('播放全部',()=>services.playTracks(tracks,0))}
+    {!!tracks.length&&<View style={styles.row}>{button('播放全部',()=>services.playTracks(tracks,0))}{button('随机播放',()=>{void services.preferences.update({shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));})}</View>}
     {tracks.length>0&&button('全部歌曲与批量管理',()=>setListOpen(true))}
     {tracks.slice(0,20).map((track,index)=><View key={playlist?.entries[index]?.id??`${index}-${track.origin.id}`} style={styles.trackRow}>
       <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='local'?'本地音频':track.origin.kind==='device'?'设备媒体库':track.origin.kind==='webdav'?'WebDAV':'私人曲库'}</Text></Pressable>
