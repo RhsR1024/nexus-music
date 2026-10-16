@@ -46,7 +46,11 @@ lx.on('request',async({source,action,info})=>{
 });
 lx.send('inited',{sources:{wy:{name:'Fixture WY',actions:['musicUrl'],qualitys:['flac','320k','128k']},tx:{name:'Fixture TX',actions:['musicUrl'],qualitys:['flac','320k','128k']}}});`;
 const healthScript=matchingScript.replace('Nexus Matching Fixture','Nexus Health Fixture').replace("return 'http://127.0.0.1:18439/matching-audio/'","if(info.musicInfo.meta.songmid==='fixture-slow')await new Promise(resolve=>setTimeout(resolve,5000)); return 'http://127.0.0.1:18439/matching-audio/'");
-const song=()=>({id:'fixture-song',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:12,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+// UI transport/skin/font checks need a track that stays active while XCTest
+// scrolls and queries accessibility on slower runners. Natural EOF is covered
+// by the native playback tests; serve truthful 120-second metadata and bytes.
+const navidromeAudio=matchingAudio,navidromeDuration=120;
+const song=()=>({id:'fixture-song',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
   if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
   if(req.url==='/health-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(healthScript);return;}
@@ -127,6 +131,7 @@ const server = createServer(async (req, res) => {
   const method=url.pathname.split('/').at(-1).replace('.view','');
   counts.requests[method]=(counts.requests[method]??0)+1;
   if(method==='stream'){
+    const audio=navidromeAudio;
     res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/bytes=(\d+)-(\d*)/);
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),audio.length-1):audio.length-1;if(start>=audio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${audio.length}`);res.end(audio.subarray(start,end+1));}else res.end(audio);return;
   }
@@ -136,7 +141,7 @@ const server = createServer(async (req, res) => {
   else if(method==='getAlbumList2')respond({albumList2:{album:[{id:'fixture-album',name:'Synthetic album',artist:'Fixture artist',coverArt:'fixture-cover',songCount:1}]}});
   else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:[song()]}});
   else if(method==='search3')respond({searchResult3:{song:[song()]}});
-  else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:12000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:12000,value:'two'}]}]}]}});
+  else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:navidromeDuration*1000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:navidromeDuration*1000,value:'two'}]}]}]}});
   else if(method==='star'||method==='unstar'){starred=method==='star';respond({});}
   else if(method==='getArtists')respond({artists:{index:[]}});
   else if(method==='getPlaylists')respond({playlists:{playlist:[]}});

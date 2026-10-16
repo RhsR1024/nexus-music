@@ -371,7 +371,11 @@ final class SourceSettingsTests: XCTestCase {
     let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
     let playlist=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch;reach(playlist);playlist.tap()
     let manage=app.buttons["全部歌曲与批量管理"];reach(manage);manage.tap()
-    let search=app.textFields["搜索列表歌曲歌手专辑"];XCTAssertTrue(search.waitForExistence(timeout:10));search.tap();search.typeText("duplicate\n")
+    let search=app.textFields["搜索列表歌曲歌手专辑"];XCTAssertTrue(search.waitForExistence(timeout:10))
+    // Cloud recording showed "dplicate" after a single bulk typeText call.
+    // Verify actual input before attributing a count failure to filtering.
+    func filterDuplicates(){search.tap();for character in "duplicate"{search.typeText(String(character))};XCTAssertEqual(search.value as? String,"duplicate");search.typeText("\n")}
+    filterDuplicates()
     let count=app.staticTexts["track-list-count"]
     func expectCount(_ label:String){expectation(for:NSPredicate(format:"label == %@",label),evaluatedWith:count);waitForExpectations(timeout:10)}
     expectCount("显示 2 / 1000 首 · 已选 0 条")
@@ -384,7 +388,7 @@ final class SourceSettingsTests: XCTestCase {
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     app.buttons["收起歌曲列表"].tap();app.terminate();app.launch();library()
     reach(playlists);playlists.tap();reach(playlist);playlist.tap();reach(manage);manage.tap()
-    search.tap();search.typeText("duplicate\n");expectCount("显示 1 / 999 首 · 已选 0 条")
+    filterDuplicates();expectCount("显示 1 / 999 首 · 已选 0 条")
     let row=app.descendants(matching:.any).matching(identifier:"track-row-0").firstMatch;reach(row);row.swipeLeft()
     let swipe=app.buttons["确认移除：Duplicate fixture"];XCTAssertTrue(swipe.waitForExistence(timeout:5));swipe.tap();app.alerts.buttons["移除"].tap()
     expectCount("显示 0 / 998 首 · 已选 0 条")
@@ -500,11 +504,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"AM lyric selection must remain reachable above clipped lyric lines")
     XCTAssertTrue(app.staticTexts["Synthetic tone"].firstMatch.exists)
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    XCTAssertTrue((progress.value as? String)?.hasSuffix(" / 2:00")==true,"Fixture duration must come from the decoded 120-second stream")
     let beforeSeek=progress.value as? String
-    // Setup duration varies with font registration and simulator load. Choose a
-    // different whole-second target while keeping the second lyric active.
-    let currentSeconds=beforeSeek?.components(separatedBy:" / ").first?.components(separatedBy:":").last.flatMap(Int.init) ?? 0
-    let target:CGFloat=currentSeconds>=7 && currentSeconds<=9 ? 0.9 : 0.7
+    // Seek far from the current position in the 120-second fixture while the
+    // second lyric remains active, and retain the paused playback intent.
+    let clock=beforeSeek?.components(separatedBy:" / ").first?.components(separatedBy:":").compactMap(Int.init) ?? []
+    let currentSeconds=clock.count==2 ? clock[0]*60+clock[1] : 0
+    let target:CGFloat=currentSeconds>=70 && currentSeconds<=95 ? 0.9 : 0.7
     progress.coordinate(withNormalizedOffset:CGVector(dx:0.25,dy:0.5)).press(forDuration:0.1,thenDragTo:progress.coordinate(withNormalizedOffset:CGVector(dx:target,dy:0.5)))
     XCTAssertTrue(app.buttons["播放"].exists, "Seeking must preserve paused intent")
     expectation(for:NSPredicate(format:"value != %@",beforeSeek ?? ""),evaluatedWith:progress);waitForExpectations(timeout:5)
