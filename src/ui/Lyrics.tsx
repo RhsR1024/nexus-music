@@ -1,7 +1,7 @@
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {AccessibilityInfo,FlatList,Pressable,Text as LyricText,View} from 'react-native';
-import {Modal} from './AdaptiveModal.tsx';
+import {SheetModal} from './AdaptiveModal.tsx';
 import {Text} from './Typography.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
@@ -62,7 +62,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
     })}
     {!document?.synced&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
     </View>
-    <Modal visible={expanded} onRequestClose={()=>setExpanded(false)} animationType="slide">
+    <SheetModal visible={expanded} onRequestClose={()=>setExpanded(false)} animationType="slide">
       <View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:64}}>
         <Pressable accessibilityRole="button" onPress={()=>setExpanded(false)}><Text style={{color:theme.color('#D9F49B'),padding:16}}>收起全部歌词</Text></Pressable>
         {settings}
@@ -74,6 +74,6 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
             <View><NativeLyricLine line={index===active?item:{...item,words:undefined}} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={index===active?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
           </Pressable>}/>
       </View>
-    </Modal>
+    </SheetModal>
   </View>;
 }

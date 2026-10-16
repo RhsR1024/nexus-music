@@ -273,3 +273,6 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 ## 2026-10-17 A08 发现详情更多操作图标行
 
 `Discovery` 的歌曲更多操作 Sheet 将四个文字按钮改为图标行，使用统一的标题、箭头和 56pt 行高；队列、收藏、歌单选择、关闭清理和失败提示不变。`npm run check` 302/302、`git diff --check` 通过；本机无完整 Xcode；云端运行 `38960235054`（`6962dc5`）当前 `pending`，IPA/真机待终态。
+## 2026-10-17 A09 全部歌词 page sheet
+
+`Lyrics` 的完整歌词展开层改用 `SheetModal`（`presentationStyle="pageSheet"`），复用现有 `FlatList` 虚拟化、双击定位、歌词来源选择、偏移设置和原生逐字绘制。播放会话、队列与歌词请求取消边界不变。`npm run check` 302/302、`git diff --check` 通过；本机无完整 Xcode，云端 iOS27/IPA/真机待提交后验证。

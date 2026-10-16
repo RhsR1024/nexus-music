@@ -609,3 +609,8 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 - 更多操作 Sheet 使用 `play-skip-forward`、`list`、`heart`、`albums-outline` 图标行和右箭头，保持 56pt 行高与无障碍标题。
 - `npm run check`：302/302；`git diff --check`：通过。
 - 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38960235054`（`6962dc5`）已创建，当前 `pending`，不能记为 iOS27 通过。
+## 2026-10-17 A09 全部歌词 page sheet 代码批次
+
+- 完整歌词展开层统一使用共享 `SheetModal`，保留歌词来源、偏移、双击定位、逐字绘制和 `FlatList` 有界渲染。
+- `npm run check`：302/302；`git diff --check`：通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；推送后查询新的 iOS27 运行，不能把 `pending` 记为通过。
