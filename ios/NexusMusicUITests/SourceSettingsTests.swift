@@ -699,6 +699,11 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     app.descendants(matching:.any).matching(identifier:"library-local").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["实际聆听统计"].waitForExistence(timeout:10))
+    let recent=app.buttons["最近播放"]
+    for _ in 0..<8 {if recent.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(recent.isHittable,"Playback history tab must remain reachable after returning from the player")
+    recent.tap()
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"history-item-0").firstMatch.waitForExistence(timeout:10),"Real playback must appear in the timeline history")
     XCTAssertEqual(count(),previousCount+1,"Paused seeking and skin changes must count one native media session")
     let statsImage=XCTAttachment(screenshot:app.screenshot());statsImage.name="Persisted listening statistics";statsImage.lifetime = .keepAlways;add(statsImage)
     app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
