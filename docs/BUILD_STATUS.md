@@ -604,3 +604,8 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 - 追加页请求失败时保留已加载歌曲，并让“重试”继续请求失败页；首次加载和刷新失败仍回到第一页。
 - `npm run check`：302/302；`git diff --check`：通过。
 - 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38959674512`（`b11328d`）已创建，当前 `pending`，不能记为 iOS27 通过。
+## 2026-10-17 A08 发现详情更多操作图标行代码批次
+
+- 更多操作 Sheet 使用 `play-skip-forward`、`list`、`heart`、`albums-outline` 图标行和右箭头，保持 56pt 行高与无障碍标题。
+- `npm run check`：302/302；`git diff --check`：通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；推送后查询新的 iOS27 运行，不能把 `pending` 记为通过。
