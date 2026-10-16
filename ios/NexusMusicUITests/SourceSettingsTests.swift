@@ -666,6 +666,9 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"play-skin-immersive").firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
     XCTAssertTrue(app.buttons["播放"].isHittable, "Immersive transport controls must fit on screen")
+    app.buttons["调整播放界面"].tap()
+    XCTAssertTrue(app.staticTexts["播放界面样式"].waitForExistence(timeout:5), "The dedicated style control must open the style sheet")
+    app.buttons["收起播放界面样式"].tap()
     let immersiveImage=XCTAttachment(screenshot:app.screenshot());immersiveImage.lifetime = .keepAlways;add(immersiveImage)
     for layout in ["photo","vinyl","wave"] {
       app.buttons["更多播放控制"].tap()

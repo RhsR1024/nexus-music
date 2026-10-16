@@ -43,7 +43,7 @@ export function PlaybackProgress({services}:{services:Services}){
     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}><Text style={styles.small}>{time(position)}</Text><Text style={[styles.small,{borderWidth:1,borderColor:'rgba(255,255,255,0.28)',borderRadius:10,paddingHorizontal:9,paddingVertical:3}]}>{state.media?.quality?`${state.media.quality.toUpperCase()} 档`:'等待音源'}</Text><Text style={styles.small}>−{time(state.duration-position)}</Text></View>
   </View>;
 }
-export function ModernPlayer({services,track,lyricTrack,font,layout,onMore}:{services:Services;track:Track;lyricTrack:Track;font?:string;layout:Exclude<PlayerLayout,'classic'>;onMore:()=>void}){
+export function ModernPlayer({services,track,lyricTrack,font,layout,onMore,onStyle}:{services:Services;track:Track;lyricTrack:Track;font?:string;layout:Exclude<PlayerLayout,'classic'>;onMore:()=>void;onStyle:()=>void}){
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
@@ -57,7 +57,7 @@ export function ModernPlayer({services,track,lyricTrack,font,layout,onMore}:{ser
     {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.small}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
     <PlaybackProgress services={services}/>
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingVertical:12}}>{icon('play-back','上一首',()=>services.playback.next(-1),42)}{layout==='wave'?<FrequencyHalo services={services} playing={state.intent==='playing'&&!state.buffering}>{transport}</FrequencyHalo>:transport}{icon('play-forward','下一首',()=>services.playback.next(),42)}</View>
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around'}}>{icon('repeat',`循环：${preferences.repeat}`,()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));})}{icon('shuffle',`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle}).catch(()=>Alert.alert('设置未保存'));})}{icon('list','队列与播放选项',onMore)}{icon('options-outline','调整播放界面',onMore)}</View>
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around'}}>{icon('repeat',`循环：${preferences.repeat}`,()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));})}{icon('shuffle',`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle}).catch(()=>Alert.alert('设置未保存'));})}{icon('list','队列与播放选项',onMore)}{icon('options-outline','调整播放界面',onStyle)}</View>
   </View>;
 }
 const styles=StyleSheet.create({small:{color:'rgba(255,255,255,0.64)',fontSize:13,lineHeight:20}});
