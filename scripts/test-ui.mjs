@@ -28,8 +28,41 @@ audio.write('RIFF');audio.writeUInt32LE(audio.length-8,4);audio.write('WAVEfmt '
 for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.sin(2*Math.PI*1000*i/48000)),44+i*2);
 let starred=false;
 const counts={requests:{},authFailures:0,authSuccesses:0};
+const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testOnlineMatching'));
+const matchingAudio=Buffer.alloc(44+48000*2*120);audio.copy(matchingAudio,0,0,44);matchingAudio.writeUInt32LE(matchingAudio.length-8,4);matchingAudio.writeUInt32LE(matchingAudio.length-44,40);
+for(let offset=44;offset<matchingAudio.length;offset+=audio.length-44)audio.copy(matchingAudio,offset,44,Math.min(audio.length,44+matchingAudio.length-offset));
+const matchingScript=`/**\n * @name Nexus Matching Fixture\n * @version 1.0-test\n */
+lx.on('request',async({source,action,info})=>{
+  if(action!=='musicUrl')throw new Error('unsupported fixture action');
+  if(source==='wy')throw new Error('synthetic original unavailable');
+  return 'http://127.0.0.1:18439/matching-audio/'+info.musicInfo.meta.songmid+'.wav';
+});
+lx.send('inited',{sources:{wy:{name:'Fixture WY',actions:['musicUrl'],qualitys:['flac','320k','128k']},tx:{name:'Fixture TX',actions:['musicUrl'],qualitys:['flac','320k','128k']}}});`;
 const song=()=>({id:'fixture-song',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:12,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
+  if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
+  if(req.url.startsWith('/matching-audio/')){
+    if(!matchingUI){res.writeHead(404);res.end();return;}
+    counts.matchAudio??={};counts.matchAudio[req.url]=(counts.matchAudio[req.url]??0)+1;
+    res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+    if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),matchingAudio.length-1):matchingAudio.length-1;if(start>=matchingAudio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${matchingAudio.length}`);res.end(matchingAudio.subarray(start,end+1));}else res.end(matchingAudio);return;
+  }
+  if(req.url==='/nexus-ui-test-online-adapter'){
+    if(!matchingUI){res.writeHead(404);res.end();return;}
+    const chunks=[];for await(const chunk of req)chunks.push(chunk);const {url,request}=JSON.parse(Buffer.concat(chunks).toString());const parsed=new URL(url);
+    counts.online??={};counts.online[parsed.hostname]=(counts.online[parsed.hostname]??0)+1;
+    res.setHeader('Content-Type','application/json');
+    if(parsed.hostname==='music.163.com'){res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;}
+    if(parsed.hostname==='u.y.qq.com'){
+      const body=JSON.parse(request.body),page=body['music.search.SearchCgiService']?.param.page_num??1;
+      const song=(mid,live=false)=>({mid,title:'Synthetic match tone'+(live?' (Live)':''),singer:[{name:'Fixture artist'}],album:{name:live?'Manual fixture':'Matched fixture'},interval:120,file:{media_mid:mid,size_flac:1000}});
+      res.end(JSON.stringify({code:0,'music.search.SearchCgiService':{code:0,data:{body:{song:{sum:2,list:page===1?[song('fixture-match'),song('fixture-live',true)]:[]}}}}}));return;
+    }
+    if(parsed.hostname==='search.kuwo.cn'){res.end(JSON.stringify({abslist:[],TOTAL:0}));return;}
+    if(parsed.hostname==='songsearch.kugou.com'){res.end(JSON.stringify({error_code:0,data:{lists:[],total:0}}));return;}
+    if(parsed.hostname==='jadeite.migu.cn'){res.end(JSON.stringify({code:'000000',songResultData:{resultList:[],totalCount:0}}));return;}
+    res.writeHead(400);res.end();return;
+  }
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
   if(req.url.startsWith('/dav/')){
     counts.dav??={propfind:0,ranges:0,authFailures:0};
@@ -81,6 +114,8 @@ try {
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', `build/SourceUITests-${Date.now()}.xcresult`, 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
+  if(matchingUI)args.push(`ENTRY_FILE=${resolve('tests/e2e/entry.tsx')}`);
+  else args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching');
   const child = spawn('xcodebuild', args, { stdio: ['ignore', log, log] });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;

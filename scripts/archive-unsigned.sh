@@ -2,12 +2,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/environment.sh
+if test -n "${ENTRY_FILE:-}"; then echo 'Device archive requires the production entry; unset ENTRY_FILE.' >&2; exit 1; fi
 mkdir -p build/distribution build/logs
 node scripts/build-manifest.mjs
 xcodebuild -workspace ios/app.xcworkspace -scheme app -configuration Release \
   -sdk iphoneos -destination 'generic/platform=iOS' \
   -derivedDataPath build/DeviceDerivedData -archivePath build/distribution/NexusMusic.xcarchive \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' archive
+  ENTRY_FILE="$PWD/index.ts" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' archive
 app_bundle="$PWD/build/distribution/NexusMusic.xcarchive/Products/Applications/app.app"
 test -d "$app_bundle"
 node scripts/verify-archive.mjs

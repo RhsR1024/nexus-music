@@ -169,3 +169,19 @@ test('per-track lyric offset persists independently from global offset and rejec
   const before=restored.getSnapshot();for(const offset of [NaN,Infinity,600001,-600001])await assert.rejects(restored.setLyricOffset(key,offset));assert.equal(restored.getSnapshot(),before);
   await restored.setLyricOffset(key,0);assert.equal(Object.keys(restored.getSnapshot().lyricOffsets).length,0);assert.equal(restored.getSnapshot().lyricAlignment,'center');db.close();
 });
+
+test('automatic matching preference migrates legacy records, persists and rejects invalid or failed writes',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {autoMatch,...legacy}=defaults;await repository.put('preferences.v1',legacy);const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().autoMatch,true);
+  await preferences.update({autoMatch:false});const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().autoMatch,false);const before=preferences.getSnapshot();
+  await assert.rejects(preferences.update({autoMatch:'true' as never}));assert.equal(preferences.getSnapshot(),before);repository.put=async()=>{throw Error('disk full');};await assert.rejects(preferences.update({autoMatch:true}));assert.equal(preferences.getSnapshot(),before);db.close();
+});
+test('automatic policy change clears matched or resolving media, preserving original and explicit manual playback',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts'),{LibraryStore}=await import('../src/storage/library.ts'),{bindMatchPolicy}=await import('../src/playback/matchBinding.ts'),{PlaybackController}=await import('../src/playback/controller.ts'),{makeQueue}=await import('../src/domain/queue.ts'),{track,deferred}=await import('./fixtures.ts');
+  const preferences=new PreferenceStore(repository),library=new LibraryStore(repository,()=> 'uuid'),target={...track,origin:{kind:'online' as const,platform:'tx' as const,id:'target'}};let matched=true,stops=0;
+  const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio',...(matched?{matchedTrack:target}:{})})},{stop(){stops++;},pause(){},play(){},load(){}},makeQueue([{id:'a',track}]));
+  const unbind=bindMatchPolicy(library,preferences,controller);await controller.play();controller.onReady(controller.getSnapshot().token!);await preferences.update({autoMatch:false});assert.equal(controller.getSnapshot().media,null);assert.equal(controller.getSnapshot().intent,'paused');
+  matched=false;await controller.play();const before=stops;await preferences.update({autoMatch:true});assert.equal(stops,before);assert.equal(controller.getSnapshot().intent,'playing');
+  await library.setMatch(track,target,'manual');matched=true;await controller.play();const manualStops=stops;await preferences.update({autoMatch:false});assert.equal(stops,manualStops);unbind();
+  const pending=deferred<{url:string}>();const resolving=new PlaybackController({resolve:async()=>pending.promise},{stop(){},pause(){},play(){},load(){assert.fail('cancelled policy cannot load');}},makeQueue([{id:'a',track:{...track,origin:{kind:'online',platform:'wy',id:'other'}}}]));const unbindPending=bindMatchPolicy(library,preferences,resolving),play=resolving.play();await preferences.update({autoMatch:true});pending.resolve({url:'https://example.test/stale'});await play;assert.equal(resolving.getSnapshot().intent,'paused');unbindPending();db.close();
+});

@@ -78,7 +78,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
     {tracks.slice(0,20).map((track,index)=><View key={playlist?.entries[index]?.id??`${index}-${track.origin.id}`} style={styles.trackRow}>
       <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='local'?'本地音频':track.origin.kind==='device'?'设备媒体库':track.origin.kind==='webdav'?'WebDAV':'私人曲库'}</Text></Pressable>
       <View style={styles.row}>{button(services.library.isFavorite(track)?'取消本地收藏':'本地收藏',()=>{void perform(async()=>{await services.library.favorite(track);});})}{button('下一首',()=>services.addToQueue(track,true))}{button('加入歌单',()=>setAdding([track]))}
-        {track.origin.kind==='imported'&&button('匹配歌曲',()=>setMatchingTrack(track))}
+        {(track.origin.kind==='imported'||track.origin.kind==='online')&&button('匹配歌曲',()=>setMatchingTrack(track))}
         {playlist&&index>0&&button('上移',()=>{void perform(async()=>{await services.library.moveEntry(playlist.id,playlist.entries[index]!.id,index-1);});})}
         {playlist&&button('从歌单移除',()=>{void perform(async()=>{await services.library.removeEntry(playlist.id,playlist.entries[index]!.id);});})}
         {!playlist&&tab==='history'&&button(`移除此条历史：${track.title}`,()=>{void perform(async()=>{await services.library.removeHistory(track);});})}

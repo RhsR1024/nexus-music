@@ -142,3 +142,31 @@ test('a pause triggered by metadata publication still prevents the resolved medi
   const pending=f.controller.play();f.requests[0]!.resolve({url:'https://example.test/audio',resolvedTrack:{...f.queue.entries[0]!.track,title:'Enriched'}});await pending;
   assert.equal(f.calls.some(call=>call.startsWith('load:')),false);assert.equal(f.controller.getSnapshot().intent,'paused');
 });
+
+test('manual match edits invalidate loaded media without losing original queue or resume position',async()=>{
+  const {LibraryStore}=await import('../src/storage/library.ts'),{bindManualMatches}=await import('../src/playback/matchBinding.ts');
+  const f=rig(),store=new LibraryStore({get:async()=>undefined,put:async()=>{}},()=> 'uuid'),song=f.queue.entries[0]!.track,target={...song,origin:{kind:'online' as const,platform:'tx' as const,id:'matched'}};
+  const unbind=bindManualMatches(store,f.controller),pending=f.controller.play();f.requests[0]!.resolve({url:'https://example.test/old'});await pending;
+  const old=f.controller.getSnapshot().token!;f.controller.onReady(old);f.controller.onProgress(old,32,100,false);const queue=f.controller.getSnapshot().queue;
+  await store.setMatch(song,target,'manual');assert.equal(f.controller.getSnapshot().media,null);assert.equal(f.controller.getSnapshot().intent,'paused');assert.equal(f.controller.getSnapshot().queue,queue);assert.equal(f.controller.getSnapshot().position,32);
+  const replay=f.controller.play();assert.equal(f.requests.length,2);f.requests[1]!.resolve({url:'https://example.test/new',matchedTrack:target});await replay;assert.equal(f.controller.getSnapshot().media?.startPosition,32);
+  f.controller.onReady(f.controller.getSnapshot().token!);await store.removeMatch(song);assert.equal(f.controller.getSnapshot().media,null);assert.equal(f.controller.getSnapshot().intent,'paused');await f.controller.onEnded(old);assert.equal(f.requests.length,2);unbind();
+});
+test('automatic match publication does not cancel its own resolve; another track manual edit does not stop current',async()=>{
+  const {LibraryStore}=await import('../src/storage/library.ts'),{bindManualMatches}=await import('../src/playback/matchBinding.ts');
+  const f=rig(),store=new LibraryStore({get:async()=>undefined,put:async()=>{}},()=> 'uuid'),song=f.queue.entries[0]!.track,target={...song,origin:{kind:'online' as const,platform:'tx' as const,id:'matched'}};
+  const unbind=bindManualMatches(store,f.controller),pending=f.controller.play();await store.setMatch(song,target,'automatic');assert.equal(f.requests[0]!.signal.aborted,false);
+  await store.setMatch({...song,origin:{kind:'online',platform:'wy',id:'another'}},target,'manual');assert.equal(f.requests[0]!.signal.aborted,false);
+  f.requests[0]!.resolve({url:'https://example.test/audio',matchedTrack:target});await pending;assert.equal(f.controller.getSnapshot().phase,'ready');unbind();
+});
+test('manual match edit aborts pending resolution and stale completion cannot load',async()=>{
+  const {LibraryStore}=await import('../src/storage/library.ts'),{bindManualMatches}=await import('../src/playback/matchBinding.ts');
+  const f=rig(),store=new LibraryStore({get:async()=>undefined,put:async()=>{}},()=> 'uuid'),song=f.queue.entries[0]!.track;
+  const unbind=bindManualMatches(store,f.controller),pending=f.controller.play();await store.setMatch(song,{...song,origin:{kind:'online',platform:'tx',id:'matched'}},'manual');assert.equal(f.requests[0]!.signal.aborted,true);
+  f.requests[0]!.resolve({url:'https://example.test/stale'});await pending;assert.equal(f.calls.some(call=>call.startsWith('load:')),false);unbind();
+});
+test('clearing a saved automatic match invalidates already loaded media instead of resuming the removed binding',async()=>{
+  const {LibraryStore}=await import('../src/storage/library.ts'),{bindManualMatches}=await import('../src/playback/matchBinding.ts');const f=rig(),store=new LibraryStore({get:async()=>undefined,put:async()=>{}},()=> 'uuid'),song=f.queue.entries[0]!.track,target={...song,origin:{kind:'online' as const,platform:'tx' as const,id:'matched'}};
+  await store.setMatch(song,target,'automatic');const unbind=bindManualMatches(store,f.controller),play=f.controller.play();f.requests[0]!.resolve({url:'https://example.test/old',matchedTrack:target});await play;const token=f.controller.getSnapshot().token!;f.controller.onReady(token);f.controller.onProgress(token,20,100,false);
+  await store.removeMatch(song);assert.equal(f.controller.getSnapshot().media,null);assert.equal(f.controller.getSnapshot().intent,'paused');const next=f.controller.play();assert.equal(f.requests.length,2);f.requests[1]!.resolve({url:'https://example.test/new'});await next;assert.equal(f.controller.getSnapshot().media?.startPosition,20);unbind();
+});

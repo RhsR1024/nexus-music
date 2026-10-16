@@ -12,6 +12,8 @@ export function PlaybackSettings({services}:{services:Services}) {
   const button=(title:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} accessibilityState={{disabled}} onPress={action} style={{backgroundColor:p.selected,padding:12,borderRadius:16,opacity:disabled?.4:1}}><Text style={{color:p.accent}}>{title}</Text></Pressable>;
   return <View style={{padding:18,borderRadius:24,backgroundColor:p.surface,gap:14,marginTop:24}}>
     <Text style={{color:p.text,fontSize:20,fontWeight:'700'}}>播放控制</Text>
+    {button(`普通在线歌曲自动匹配：${settings.autoMatch?'开启':'关闭'}`,()=>{void services.preferences.update({autoMatch:!settings.autoMatch}).catch(()=>setError('自动匹配设置未保存'));})}
+    <Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>原曲当前音质不可用时，先尝试其他平台的可靠同版本，再降音质。手动指定的版本优先，原始收藏和歌单保留。</Text>
     <GainSlider testID="app-volume" label="App 音量" format={value=>`${Math.round((value+12)/24*100)}%`} value={settings.volume*24-12} onChange={value=>{void services.preferences.update({volume:(value+12)/24}).catch(()=>setError('音量未保存'));}}/>
     <Text style={{color:p.secondary,fontSize:12}}>App 内相对音量；设备音量使用 iPhone 音量键调整。</Text>
     <Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>睡眠定时</Text>

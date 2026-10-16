@@ -1,3 +1,4 @@
+import {bindManualMatches,bindMatchPolicy} from '../playback/matchBinding.ts';
 import {DAVNativeTransport,type DAVNativeModule} from '../providers/davNativeTransport.ts';
 import {WebDAVAccounts} from '../providers/webdavAccounts.ts';
 import {WebDAVMedia} from '../providers/webdavMedia.ts';
@@ -27,13 +28,14 @@ import { SearchCoordinator } from '../providers/searchCoordinator.ts';
 import { makeQueue, append, enqueueNext } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
 import type { Track } from '../domain/track.ts';
+import type {HTTPClient} from '../providers/http.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
 import { NavidromeClient } from '../providers/navidrome.ts';
 import { nativeSecrets } from '../storage/nativeSecrets.ts';
 import { LibraryStore } from '../storage/library.ts';
 import { decodeQueue, type SavedCursor, type SavedQueue } from '../storage/queuePersistence.ts';
 
-async function initialize() {
+export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const repository = await openRepository();
   const recoveryWarnings:string[]=[];
   const restore=async(key:string,label:string,run:()=>Promise<void>)=>{const ok=await restoreRecord(repository,key,run,Crypto.randomUUID);if(!ok)recoveryWarnings.push(`${label}数据无法读取，原始记录已隔离保留，其他功能继续可用。`);return ok;};
@@ -58,25 +60,20 @@ async function initialize() {
   await restore('sources.v1','音源',()=>catalog.restore());
   void catalog.restoreEnabled();
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size:512},signal),(track,signal)=>track.origin.kind==='webdav'?davMedia.cover(track,signal):track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track));
-  const online = new OnlineProvider({ md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
+  const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
   const matching=new CrossPlatformMatcher(online);
   const qishui=new QishuiProvider();
-  const matchedResolver=new MatchedResolver({matcher:matching,library,router:resolver,quality:()=>preferences.getSnapshot().quality,hash,
+  const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
   const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
     if(track.origin.kind==='webdav')return davMedia.resolve(track,signal);
     if(track.origin.kind==='device')return deviceMedia.resolve(track);
     if(track.origin.kind==='local')return localAudio.resolve(track);
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
-    if(track.origin.kind==='imported')return matchedResolver.resolve(track,signal,excluded);
-    // Wayfarer v1 QQ tracks only contain MID. Exact-ID enrichment helps scripts
-    // that require numeric song ID/media_mid; a network failure still permits
-    // scripts whose declared contract can resolve directly from MID.
-    let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}
-    const media=await resolver.resolve(playable,signal,excluded);
-    return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),media.sourceFingerprint,media.quality]))};
+    return matchedResolver.resolve(track,signal,excluded);
   }}, preferences);
+  bindManualMatches(library,playback.controller);bindMatchPolicy(library,preferences,playback.controller);
   try{
     const saved=await repository.get<SavedQueue>('queue.v1');
     if(saved){playback.controller.setQueue(decodeQueue(saved));const cursor=await repository.get<SavedCursor>('queue.cursor.v1');if(cursor)playback.controller.restoreCursor(cursor.entryId,cursor.seconds);}
@@ -112,9 +109,9 @@ async function initialize() {
   };
   return { repository, davAccounts, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, covers, online, matching, qishui, search, discovery, playTracks, addToQueue, accounts, library, lyrics, fonts, recoveryWarnings };
 }
-export type Services = Awaited<ReturnType<typeof initialize>>;
+export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;
 export function getServices() {
-  if (!pending) pending = initialize().catch(error => { pending = undefined; throw error; });
+  if (!pending) pending = createServices().catch(error => { pending = undefined; throw error; });
   return pending;
 }

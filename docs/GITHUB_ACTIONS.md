@@ -46,3 +46,5 @@ S1 2cb91a6 对应运行38728228483仍在验证iOS App。五皮肤功能提交b7d
 2cb91a6：Linux/原生检查/Release编译通过；外观持久化测试通过、Navidrome真实合成流/PCM/歌词/暂停/删凭据通过，只有SourceManager失败。诊断产物11971211239已下载到忽略的build/s1-ios27-diagnostics（未提交）。ui-catalog.log:68351 为源启用按钮不存在；68260附近显示“从地址导入”点击点{-1,-1}，最终AX树F39BFE1E显示意外进入tab-library，源未导入。iPhone17视口402×874，按钮y771附近被悬浮底栏覆盖。日志之后的600秒诊断收集超时是额外耗时，不是唯一测试失败原因，不应归因为普遍模拟器坏掉。
 
 修复：根内容区按底部chrome的实际onLayout高度+安全区收缩可滚动视口，保留浮动视觉；移除原来仅靠内容尾部大padding的方案。UI测试新增导入后仍在设置tab的断言，并在本地iPhone17紧凑视口复验源管理和五皮肤/播放回归。4db78c4运行38732185670在定位时已启动，仍包含旧布局；修复将正常提交push并排队，不将旧运行结果冒充修复验收。
+
+WebDAV云端38826891584（258772e）最终成功：checks、native、7项App UI步骤、arm64/iOS27归档与上传全部通过。下载产物12016923864已校验IPA SHA256 3d19c67ffdc5f1cd3b1078aa82318e2e377a46a93a5d949dfb6eda79d1fad99b，manifest为arm64/macOS27.0.1/Xcode27.0 27A266a/iphoneos27.0/min15.1/signed=false。dirty=true如实保留；日志确认已知Intel/ARM Yoga podspec checksum差异且Pod锁版本比较通过，不称清洁云端工作树。本批构建清单新增workingTreeChanges，后续可直接定位变化文件，不隐藏dirty。S7匹配代码仍待新运行。

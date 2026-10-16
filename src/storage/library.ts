@@ -24,7 +24,7 @@ export function validateLibrary(value:unknown):LibraryState {
   if(library.matches!==undefined){
     if(!Array.isArray(library.matches))throw new Error('匹配记录格式无效');const keys=new Set<string>();
     for(const match of library.matches){validateTrack(match.original);validateTrack(match.target);const key=trackKey(match.original.origin);
-      if(match.original.origin.kind!=='imported'||match.target.origin.kind!=='online'||keys.has(key)||!['automatic','manual'].includes(match.method)||!Number.isFinite(match.updatedAt)||match.updatedAt<0)throw new Error('匹配记录无效');keys.add(key);
+      if(!['imported','online'].includes(match.original.origin.kind)||match.target.origin.kind!=='online'||key===trackKey(match.target.origin)||keys.has(key)||!['automatic','manual'].includes(match.method)||!Number.isFinite(match.updatedAt)||match.updatedAt<0)throw new Error('匹配记录无效');keys.add(key);
     }
   }
   return library;
@@ -42,8 +42,8 @@ export class LibraryStore {
   }
   isFavorite(track:Track){const key=trackKey(track.origin);return this.value.favorites.some(item=>trackKey(item.origin)===key);}
   matchFor(track:Track){const signature=originalSignature(track);return this.value.matches?.find(value=>originalSignature(value.original)===signature);}
-  setMatch(original:Track,target:Track,method:'automatic'|'manual'){
-    return this.change(current=>({...current,matches:[...(current.matches??[]).filter(value=>trackKey(value.original.origin)!==trackKey(original.origin)),{original:cleanTrack(original),target:cleanTrack(target),method,updatedAt:this.now()}]}));
+  setMatch(original:Track,target:Track,method:'automatic'|'manual',guard?:{signal:AbortSignal;previous:TrackMatch|undefined}){
+    return this.change(current=>{if(guard){if(guard.signal.aborted)throw guard.signal.reason;const previous=current.matches?.find(item=>originalSignature(item.original)===originalSignature(original));if(previous!==guard.previous)throw new Error('匹配设置已更改');}return({...current,matches:[...(current.matches??[]).filter(value=>trackKey(value.original.origin)!==trackKey(original.origin)),{original:cleanTrack(original),target:cleanTrack(target),method,updatedAt:this.now()}]});});
   }
   removeMatch(original:Track){return this.change(current=>({...current,matches:(current.matches??[]).filter(value=>trackKey(value.original.origin)!==trackKey(original.origin))}));}
   favorite(track:Track){validateTrack(track);return this.change(current=>{const key=trackKey(track.origin),exists=current.favorites.some(item=>trackKey(item.origin)===key);return{...current,favorites:exists?current.favorites.filter(item=>trackKey(item.origin)!==key):[track,...current.favorites]};});}

@@ -4,6 +4,7 @@ import { currentEntry, advance, type QueueState } from '../domain/queue.ts';
 import type { Track } from '../domain/track.ts';
 
 export interface ResolvedMedia {
+  matchedTrack?:Track;
   resolvedTrack?:Track;
   redirectRoot?:string;cacheOnly?:boolean;
   deviceMedia?:boolean;
@@ -130,6 +131,11 @@ export class PlaybackController {
     const generation = this.invalidate(minimumGeneration);
     this.backend.pause(generation);
     this.update({ intent: 'paused', phase: this.playable ? 'ready' : 'idle', token: this.playable && this.state.queue.currentId ? { entryId: this.state.queue.currentId, generation } : null, buffering: false });
+  }
+  invalidateMediaFor(track:Track):void {
+    const entry=currentEntry(this.state.queue);if(this.disposed||!entry||trackKey(entry.track.origin)!==trackKey(track.origin))return;
+    this.cursor={entryId:entry.id,seconds:this.state.position};this.playable=false;this.loadedTrack=undefined;
+    this.backend.stop(this.invalidate());this.update({intent:'paused',phase:'idle',media:null,token:null,error:null,buffering:false});
   }
 
   setQueue(queue: QueueState): void {

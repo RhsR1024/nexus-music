@@ -38,8 +38,9 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   const safe = (work: Promise<unknown>, token?: PlaybackToken) => { void work.catch(() => { if (token) void controller.onError(token); }); };
   const controller = new PlaybackController(resolver, {
     stop: generation => safe(native.stop(generation)), pause: generation => safe(native.pause(generation)),
-    load: (media, token) => {
-      const track = currentEntry(controller.getSnapshot().queue)?.track;
+    load: (resolved, token) => {
+      const {matchedTrack,...media}=resolved;
+      const track = matchedTrack??currentEntry(controller.getSnapshot().queue)?.track;
       safe(native.load(JSON.stringify({ ...media, metadata: track ? { title: track.title, artist: track.artist, album: track.album } : {} }), token.entryId, token.generation), token);
     },
     play: token => safe(native.play(token.entryId, token.generation), token),

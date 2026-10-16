@@ -20,14 +20,15 @@ import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaProvider,useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Linking,Pressable,ScrollView,Text,View} from 'react-native';
 type Tab='discover'|'library'|'search'|'settings';
-export default function App(){return <SafeAreaProvider><MusicApp/></SafeAreaProvider>;}
-function MusicApp(){
+export default function App(){return <MusicApplication initialize={getServices}/>;}
+export function MusicApplication({initialize}:{initialize:()=>Promise<Services>}){return <SafeAreaProvider><MusicApp initialize={initialize}/></SafeAreaProvider>;}
+function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
   const [tab,setTab]=useState<Tab>('discover'),[privateLibrary,setPrivateLibrary]=useState(false);
   const [chromeHeight,setChromeHeight]=useState(80);
   const [services,setServices]=useState<Services>(),[startupError,setStartupError]=useState<string>();
   const insets=useSafeAreaInsets();
-  const startup=()=>{setStartupError(undefined);void getServices().then(setServices,error=>setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。'));};
-  useEffect(()=>{let active=true;void getServices().then(value=>{if(active)setServices(value);},error=>{if(active)setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。');});return()=>{active=false;};},[]);
+  const startup=()=>{setStartupError(undefined);void initialize().then(setServices,error=>setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。'));};
+  useEffect(()=>{let active=true;void initialize().then(value=>{if(active)setServices(value);},error=>{if(active)setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。');});return()=>{active=false;};},[initialize]);
   useEffect(()=>{const open=(url:string|null)=>{if(url?.startsWith('com.nexusmusic.app://settings'))setTab('settings');};void Linking.getInitialURL().then(open);const subscription=Linking.addEventListener('url',event=>open(event.url));return()=>subscription.remove();},[]);
   const theme=useAppearance(services?.preferences),p=theme.palette;
   const text={color:p.text},caption={color:p.secondary};
