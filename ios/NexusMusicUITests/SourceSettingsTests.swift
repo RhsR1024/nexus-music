@@ -777,6 +777,8 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(discover.waitForExistence(timeout:10));discover.tap()
     let first=app.descendants(matching:.any).matching(identifier:"discovery-item-0").firstMatch
     XCTAssertTrue(first.waitForExistence(timeout:20));first.tap()
+    let refresh=app.buttons["刷新歌单"]
+    XCTAssertTrue(refresh.waitForExistence(timeout:10));XCTAssertTrue(refresh.isHittable);refresh.tap()
     let importButton=app.buttons["导入完整歌单到音乐库"]
     XCTAssertTrue(importButton.waitForExistence(timeout:15));importButton.tap()
     XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:40));app.alerts.buttons["取消"].tap()
