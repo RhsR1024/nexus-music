@@ -20,6 +20,11 @@
 - 发现歌单详情头部增加 `刷新歌单` 控件，复用已有分页/取消/失败保留逻辑；加载期间禁用。
 - `npm run check`：302/302；`git diff --check` 通过。完整 Xcode UI/IPA 与云端 iOS27 仍待本批提交验证。
 
+## 2026-10-17 A06 外观选择行视觉代码批次
+
+- 主题、背景和播放界面样式的选择控件改为纵向列表行，选中状态使用图标表达；保留图片未导入时禁用、即时保存和错误恢复。
+- `npm run check`：302/302；`git diff --check` 通过。本机完整 Xcode UI/IPA 和云端 iOS27 仍待验证。
+
 - `npm run check`：类型检查通过，自动测试 **302/302** 通过。
 - `git diff --check`：通过。
 - 本地 UI：`build/SourceUITests-1792169130948.xcresult` 分组设置导航/草稿/滚动恢复与发现/外观专项通过；`build/SourceUITests-1792168820230.xcresult` 的实际全局封面专项通过，最终结果以对应 result bundle 记录。专项覆盖红/蓝封面跨音乐库、发现、外观页切换，关闭恢复及重启恢复。

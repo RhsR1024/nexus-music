@@ -14,6 +14,10 @@
 
 发现歌单详情头部新增 `刷新歌单` 按钮，加载时禁用，复用既有分页取消与失败保留逻辑；不引入登录、推荐或统计伪入口。`npm run check` 302/302、`git diff --check` 通过。本机仍无完整 Xcode，提交后继续跟踪云端 iOS27 终态。
 
+## 2026-10-17 A06 外观选择行视觉收口
+
+主题、背景和播放界面样式选择改为纵向设置行与选中图标，更接近 Sollin 外观页；既有选项、图片导入禁用门槛、即时保存、错误恢复和 testID 均保留。`npm run check` 302/302、`git diff --check` 通过。本机仍无完整 Xcode，云端 iOS27 运行继续排队。
+
 ## 2026-10-17 优先补充完成的执行清单
 
 最新权威清单为[SOLLIN_ALIGNMENT_PLAN.md](docs/SOLLIN_ALIGNMENT_PLAN.md)，逐页映射见[SOLLIN_UI_ALIGNMENT.md](docs/SOLLIN_UI_ALIGNMENT.md)。用户要求先补齐文档，再开始对齐；后续执行严格按以下优先级：

@@ -27,6 +27,14 @@
 - [x] `npm run check` 302/302、`git diff --check` 通过。
 - [ ] 本机完整 Xcode UI/IPA、云端 iOS27 和真实平台/真机仍待验证。
 
+## 2026-10-17 A06 外观选择行视觉收口
+
+外观与界面的主题、背景和播放界面样式选择改为 Sollin 设置页风格的纵向选择行，显示当前选中状态和禁用状态；即时保存、错误恢复、导入图片门槛及既有 testID 保持。
+
+- [x] 主题/背景/皮肤选择使用列表行与选中图标，不改变可用选项。
+- [x] `npm run check` 302/302、`git diff --check` 通过。
+- [ ] 本机完整 Xcode UI/IPA、云端 iOS27 和真机仍待验证。
+
 后续增量：独立图形 EQ 页已推送；现代播放器改用实际匹配录音的视觉身份；外观总览移除无实现图标入口；主题背景统一提供渐变/纯色/图片选择，未导入图片时禁用图片项；音质保存失败提示已恢复。业务检查保持 302/302。图片背景禁用断言和本批云端 iOS27 UI/IPA 仍待实际执行，不能把排队状态记为通过。
 
 本阶段完成了基于固定 Sollin IPA 静态证据的设置分层/Sheet 线索补充、全局封面主体色背景重实现，以及设置首页与外观入口的交互收拢。IPA 证据继续按“字符串/保留对象是线索，不能当作动态调用图”处理；已核对 `_SettingsCategoryPage`、`_OrganizedSettingsTab`、`_pushSecondaryPage`、`_showThemedModalBottomSheet`、播放器样式/主题/字体/歌词/mini Sheet 名称，以及 `resolve/load/applyCoverTheme`、`ThemedPageScaffold`、`AppThemeBackground`、动态背景 provider 和异步封面取消线索，详见 [SOLLIN_IPA_ANALYSIS.md](SOLLIN_IPA_ANALYSIS.md)。
