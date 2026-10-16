@@ -608,4 +608,4 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 
 - 更多操作 Sheet 使用 `play-skip-forward`、`list`、`heart`、`albums-outline` 图标行和右箭头，保持 56pt 行高与无障碍标题。
 - `npm run check`：302/302；`git diff --check`：通过。
-- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；推送后查询新的 iOS27 运行，不能把 `pending` 记为通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38960235054`（`6962dc5`）已创建，当前 `pending`，不能记为 iOS27 通过。
