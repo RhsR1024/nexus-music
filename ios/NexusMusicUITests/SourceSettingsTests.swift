@@ -649,12 +649,16 @@ final class SourceSettingsTests: XCTestCase {
     expectation(for:NSPredicate(format:"value != %@",beforeSeek ?? ""),evaluatedWith:progress);waitForExpectations(timeout:5)
     let amImage=XCTAttachment(screenshot:app.screenshot());amImage.lifetime = .keepAlways;add(amImage)
     app.buttons["更多播放控制"].tap()
+    XCTAssertTrue(app.buttons["播放界面样式"].waitForExistence(timeout:5))
+    XCTAssertTrue(app.buttons["队列与播放选项"].exists)
+    app.buttons["播放界面样式"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-immersive").firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
     XCTAssertTrue(app.buttons["播放"].isHittable, "Immersive transport controls must fit on screen")
     let immersiveImage=XCTAttachment(screenshot:app.screenshot());immersiveImage.lifetime = .keepAlways;add(immersiveImage)
     for layout in ["photo","vinyl","wave"] {
       app.buttons["更多播放控制"].tap()
+      app.buttons["播放界面样式"].tap()
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
@@ -664,6 +668,7 @@ final class SourceSettingsTests: XCTestCase {
       let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     }
     app.buttons["更多播放控制"].tap()
+    app.buttons["播放界面样式"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch.tap()
     let lyricChoice=app.buttons["选择歌词来源"].firstMatch
     for _ in 0..<8 {if lyricChoice.isHittable{break};app.swipeUp()};XCTAssertTrue(lyricChoice.isHittable);lyricChoice.tap()

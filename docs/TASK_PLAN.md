@@ -1,5 +1,15 @@
 ## 2026-10-17 A04–A06 阶段本地验收记录
 
+## 2026-10-17 A09 播放器选项与样式 Sheet 收口
+
+按固定 Sollin IPA 中 `_showPlayerInterfaceStyleSheet`、`_PlayerInterfaceStyleSheet` 与主题化 Sheet 的静态线索，将现代播放器的“更多播放控制”拆为独立的播放选项入口：先选择“播放界面样式”，再进入独立样式 Sheet；队列、歌词、匹配、收藏等原有动作通过“队列与播放选项”进入。保留 `play-skin-*` testID、立即持久化、播放进度和播放意图；经典布局继续保留直接可达的样式选择，音枢特有队列/匹配/来源诊断边界不变。
+
+- [x] 现代播放器样式选择不再与长篇队列/歌词/匹配内容混排。
+- [x] 样式选择 Sheet 保留六个现有选项、选中状态、失败提示与暂停/播放意图。
+- [x] iOS UI 测试改为验证“播放选项→播放界面样式”路径，并确认队列选项入口仍存在。
+- [x] `npm run check` 302/302、`git diff --check` 通过。
+- [ ] 本机完整 Xcode UI/IPA、本批云端 iOS 27、真机和减少动态效果仍待验证；排队不记为通过。
+
 后续增量：独立图形 EQ 页已推送；现代播放器改用实际匹配录音的视觉身份；外观总览移除无实现图标入口；主题背景统一提供渐变/纯色/图片选择，未导入图片时禁用图片项；音质保存失败提示已恢复。业务检查保持 302/302。图片背景禁用断言和本批云端 iOS27 UI/IPA 仍待实际执行，不能把排队状态记为通过。
 
 本阶段完成了基于固定 Sollin IPA 静态证据的设置分层/Sheet 线索补充、全局封面主体色背景重实现，以及设置首页与外观入口的交互收拢。IPA 证据继续按“字符串/保留对象是线索，不能当作动态调用图”处理；已核对 `_SettingsCategoryPage`、`_OrganizedSettingsTab`、`_pushSecondaryPage`、`_showThemedModalBottomSheet`、播放器样式/主题/字体/歌词/mini Sheet 名称，以及 `resolve/load/applyCoverTheme`、`ThemedPageScaffold`、`AppThemeBackground`、动态背景 provider 和异步封面取消线索，详见 [SOLLIN_IPA_ANALYSIS.md](SOLLIN_IPA_ANALYSIS.md)。

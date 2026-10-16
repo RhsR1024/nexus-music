@@ -1,5 +1,9 @@
 # 音枢 NexusMusic 交接备忘录
 
+## 2026-10-17 A09 播放器选项与样式 Sheet
+
+现代播放器“更多播放控制”已按 Sollin IPA 的 `_showPlayerInterfaceStyleSheet` / `_PlayerInterfaceStyleSheet` 静态线索拆分：先进入播放选项菜单，再进入独立“播放界面样式”Sheet；队列、歌词、匹配、收藏和队列操作从“队列与播放选项”进入。经典布局仍保留直接样式选择，`play-skin-*` testID、立即持久化、实际匹配录音视觉身份、原曲队列身份和播放意图均保留。`npm run check` 302/302，`git diff --check` 通过。测试更新见 `ios/NexusMusicUITests/SourceSettingsTests.swift`。本机没有完整 Xcode，未重跑本批 UI/IPA；提交后跟踪新的 iOS27 云端运行，不把 pending 记为通过。
+
 ## 2026-10-17 优先补充完成的执行清单
 
 最新权威清单为[SOLLIN_ALIGNMENT_PLAN.md](docs/SOLLIN_ALIGNMENT_PLAN.md)，逐页映射见[SOLLIN_UI_ALIGNMENT.md](docs/SOLLIN_UI_ALIGNMENT.md)。用户要求先补齐文档，再开始对齐；后续执行严格按以下优先级：
