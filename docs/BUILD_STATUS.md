@@ -1,3 +1,11 @@
+## 2026-10-17 F33 云端 38913246781 完整成功 / IPA 已核验
+
+- 提交 `26830dfde3e8243ae8eb845a98f54f792dbc6756`；北京时间 2026-10-17 06:43:30 结束 success。checks job `117199175174`、iOS job `117199401360` 均成功；原生检查、两组 App 测试、归档及上传步骤全部成功。
+- IPA artifact `12079596559` 已保存于忽略目录 `build/ci-38913246781/ipa-artifact.zip`，9787533 字节。完整 ZIP SHA256 `d774e909fd4885430d1de85791a2de0863c850e9dd6d244c952463c3443e8622` 与 API digest 一致，ZIP CRC 通过；内部 IPA CRC/附带摘要通过，SHA256 `999b4748335faabcbaafc12c907799aae5d22c495083a9f85ca69a9da608530d`。
+- manifest：Xcode27.0 / 27A266a、iphoneos27.0、arm64、min15.1、signed=false；dirty=true 且唯一 `M ios/Podfile.lock`。实际包 bundle ID `com.nexusmusic.app`、设备族 `[1]`、lipo arm64，正式 JS 无 `nexus-ui-test-online-adapter`。
+- 诊断 artifact `12079531804`，333337303 字节，API digest `10e24815183619d2aba0d6a17eed28068fde130be8ea483adf2e59d6fb5b260b`；仅查 API 元信息，未下载/校验整个诊断包。
+- 本次闭环仅覆盖 F33 对应提交的云端构建与测试；自动触发、真实双设备/私人服务、签名、真机仍待验收，不覆盖后续 iPad/UI 增量，也不消除 `38902977651` 图片导入间歇失败根因缺口。`38924137682` 已进入运行，最新功能批次仍正常排队，未取消或重派。
+
 ## 2026-10-17 A08 音乐库歌曲行更多操作 Sheet 代码与本地归档
 
 - 提交 `b0139bbf79bce900fb0b46dd5bd13531c4a8ec8a` 已 push；歌曲行改为省略号入口和图标行 Sheet，保留全部音枢歌曲动作；分段控件按钮角色修复既有 UI 查询。
@@ -684,3 +692,10 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 - 本地 Release archive：成功；`build/distribution/build-manifest.json` 为 commit=`bea1fbdd2e05468977ae98c8ecb987aae78c8dcb`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`。
 - IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `9da2021825fad953b5cf37b8400d02456d67edf520d63209f2613bf492c90642`。
 - 云端 iOS 27：[38976733431](https://github.com/RhsR1024/nexus-music/actions/runs/38976733431) 对应 `bea1fbd`，截至 2026-10-17 仍为 `pending`，不计作通过；签名、真机、后台/功耗和大字手势仍待验收。
+## 2026-10-17 A09 外观样式子页图标行
+
+- 设置→外观→播放界面样式改为图标列表行，增加每个布局的行为说明、选中态、箭头/勾选；继续保留六个实际布局，不把 IPA 静态文案推断成完整新枚举。
+- `npm run check` 302/302；`git diff --check` 通过。
+- 本地设置分组 UI `build/SourceUITests-1792191433812.xcresult`：`testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器 `testZNavidromePlaybackAndCredentials` 两次运行均在既有合成流 `2:00` 时长断言失败，未将其记为本批播放器通过；失败日志保留在 `build/logs/ui-catalog.log`。
+- 清洁本地归档成功：Xcode 26.3 / iOS 26.2 SDK、arm64、最低 iOS 15.1、设备族 `[1,2]`、unsigned；manifest 在归档前包含本批工作树改动，IPA SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。本地包不代表 iOS27、签名或真机通过。
+- 现有 `38976733431` 仍为 `bea1fbd` 且 `pending`；新提交后需按新 `head_sha` 查找 iOS27 运行，不能沿用旧运行结果。

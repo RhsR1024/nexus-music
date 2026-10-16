@@ -615,6 +615,7 @@ final class SourceSettingsTests: XCTestCase {
     // Establish the initial layout through the actual setting, including when a
     // previous interrupted test left a different persisted skin selected.
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
+    XCTAssertTrue((app.descendants(matching:.any).matching(identifier:"player-layout-wave").firstMatch.value as? String)?.contains("实时音频频谱环") == true,"Style choices should expose a concise behavior description")
     reveal(classic);classic.tap()
     openSettings(app,page:"sources")
     let address=app.textFields["Navidrome服务器地址"]

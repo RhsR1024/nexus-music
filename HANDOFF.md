@@ -1,3 +1,9 @@
+# 2026-10-17 F33 云端 iOS27 成功与产物核验
+
+`26830df` / `38913246781` 于北京时间 2026-10-17 06:43:30 完整成功：checks、原生检查、两组 App 测试、设备归档及上传全部通过。IPA artifact `12079596559` 已下载到忽略目录 `build/ci-38913246781`；完整 ZIP 长度 9787533 字节、CRC 和 API SHA256 `d774e909fd4885430d1de85791a2de0863c850e9dd6d244c952463c3443e8622` 一致；内部 IPA SHA256 `999b4748335faabcbaafc12c907799aae5d22c495083a9f85ca69a9da608530d` 与附带摘要一致。已核验 arm64、正式 JS 入口无测试 adapter、Xcode27.0/27A266a、iphoneos27.0、min15.1、signed=false；manifest dirty=true 唯一改动为 `M ios/Podfile.lock`。
+
+该包设备族仍为 `[1]`，不覆盖后续原生 iPad 或近期 UI 增量。F33 自动触发、真实双设备/私人服务、签名及真机验收仍保留；旧 `38902977651` 图片导入失败根因未闭环，本次成功不等于该间歇问题已修复。iPad 批次 `38924137682` 已正常运行，后续批次继续排队；本轮未干扰其他上下文的代码和本地构建。详细证据见 `docs/BUILD_STATUS.md`。
+
 # 2026-10-17 A08 音乐库歌曲行更多操作 Sheet
 
 `b0139bb` 已正常提交并 push。收藏、最近播放和本地歌单歌曲行现在使用紧凑的 `ellipsis-horizontal` 更多操作入口，操作层复用 iOS `pageSheet`，以图标行提供下一首、加入队列、本地收藏/取消收藏、加入歌单、汽水/在线歌曲匹配、歌单上移/移除和历史删除；音枢原有队列、音乐库身份、匹配和失败保留边界不变。音乐库分段控件改为可查询的按钮角色并保留选中态，修复既有 UI 回归无法定位“我的歌单”的问题。
@@ -682,3 +688,8 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 # 2026-10-17 A08 音乐库动作 Sheet 最终证据
 
 `bea1fbd` 已正常提交并 push。音乐库歌曲行更多操作 Sheet 的最终本地 UI 回归为 `build/SourceUITests-1792189902252.xcresult`，1/1 通过、123.773 秒，覆盖歌单创建、1000 首长列表分批加载、搜索排序、重复项移除、滑动删除及加入队列/本地收藏入口；`npm run check` 为 302/302，`git diff --check` 通过。清洁本地归档 manifest 为 commit=`bea1fbdd2e05468977ae98c8ecb987aae78c8dcb`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 为 `9da2021825fad953b5cf37b8400d02456d67edf520d63209f2613bf492c90642`。对应 iOS 27 运行 [38976733431](https://github.com/RhsR1024/nexus-music/actions/runs/38976733431) 截至 2026-10-17 仍为 `pending`，不计作通过；签名、真机、后台/功耗和大字手势仍待验收。
+## 2026-10-17 A09 外观样式子页图标行
+
+设置→外观→播放界面样式现在使用与播放器内部样式 Sheet 一致的稳定图标列表行：每项包含图标、行为说明、选中态和箭头/勾选；六个当前可运行布局、立即保存、失败保留、队列和暂停意图保持。IPA 只提供样式名称与独立 Sheet 静态线索，未据此增加未实现的 Apple Music 2 入口。
+
+`npm run check` 302/302，`git diff --check` 通过。`build/SourceUITests-1792191433812.xcresult` 的 `testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器专项在既有合成流冷缓存时长断言失败，已保留失败证据且未宣称播放器专项通过。清洁本地 unsigned IPA SHA256 为 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`，manifest 为 Xcode26.3/iOS26.2、arm64、设备族 `[1,2]`、signed=false。现有 `38976733431` 仍对应 `bea1fbd` 且 pending；本批新提交后再创建并跟踪 iOS27 运行，签名、真机、后台/功耗仍待。

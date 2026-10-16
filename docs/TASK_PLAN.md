@@ -1,3 +1,8 @@
+## 2026-10-17 F33 云端阶段验收补录
+
+- [x] `26830df` / iOS27 `38913246781`：checks、原生、两组 App 测试和 unsigned IPA 归档上传全部成功；完整产物 ZIP 与内部 IPA 摘要/CRC 已核验，详见 `BUILD_STATUS.md`。
+- [ ] 自动同步触发、真实双设备/私人服务、签名与真机仍待完成；本包设备族 `[1]`，不覆盖后续 iPad/UI 增量，图片导入间歇失败根因项继续保留。
+
 ## 2026-10-17 A08 音乐库歌曲行更多操作 Sheet
 
 - [x] 行内更多操作改为紧凑省略号入口，Sheet 保留下一首、加入队列、收藏、加入歌单、匹配、歌单维护和历史删除。
@@ -412,3 +417,11 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 ## 2026-10-17 当前批次证据
 
 `bea1fbd` 已 push。音乐库歌曲行更多操作 Sheet 的最终本地 UI 回归为 `build/SourceUITests-1792189902252.xcresult`（音乐库专项 1/1，123.773 秒），本地清洁 unsigned IPA manifest 为 `dirty=false`、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`，SHA256 `9da2021825fad953b5cf37b8400d02456d67edf520d63209f2613bf492c90642`。对应 iOS 27 运行 [38976733431](https://github.com/RhsR1024/nexus-music/actions/runs/38976733431) 截至 2026-10-17 仍为 `pending`，不能记为云端通过。
+## 2026-10-17 A09 外观样式子页图标行
+
+- [x] 设置→外观→播放界面样式改为与播放器样式 Sheet 一致的图标列表行，包含行为说明、选中态、箭头/勾选和足够触控高度。
+- [x] 六个当前可运行布局保留，立即保存、失败保留、播放队列与暂停意图不变；未根据 IPA 静态文案擅自增加未经确认的 Apple Music 2 选项。
+- [x] `npm run check`：302/302；`git diff --check` 通过。
+- [x] 本地设置分组 UI `build/SourceUITests-1792191433812.xcresult`：`testGroupedSettingsNavigationAndDrafts` 1/1 通过；播放器专项触发了既有合成流时长断言失败，未将其记为本批通过。
+- [x] 清洁本地 unsigned IPA：Xcode 26.3 / iOS 26.2 SDK，arm64、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。
+- [ ] 新提交对应 iOS 27 运行、签名、真机、后台/功耗和播放器冷缓存时长仍待验证；现有 `38976733431` 仅对应 `bea1fbd`，不能算本批结果。

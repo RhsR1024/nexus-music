@@ -310,3 +310,4 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 
 现代播放器底部“调整播放界面”改为直接打开样式 Sheet，队列按钮保留完整播放选项菜单；`testCrossPlatformLyrics` 本地 1/1 通过，提交 `7c8075c` 已 push。云端运行 `38964697049` 当前 pending；本地 IPA 已归档，不能替代 iOS27/真机验收。
 2026-10-17 A08：音乐库歌曲行更多操作 Sheet 的本地 UI 回归扩充到加入队列与本地收藏入口；最终音乐库专项 `build/SourceUITests-1792189902252.xcresult` 1/1 通过（123.773 秒），`npm run check` 302/302。清洁本地 unsigned IPA 对应 `bea1fbd`，SHA256 `9da2021825fad953b5cf37b8400d02456d67edf520d63209f2613bf492c90642`；iOS 27 运行 `38976733431` 当前 `pending`，不计作云端通过。
+2026-10-17 A09：设置→外观→播放界面样式统一为图标列表行，展示布局说明与当前选择，保留六个实际布局、偏好串行保存、失败保留、队列和播放意图。`npm run check` 302/302；设置分组 UI `build/SourceUITests-1792191433812.xcresult` 1/1 通过。播放器专项因既有合成流时长断言失败未计为通过；清洁本地 unsigned IPA SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。新 iOS27 云端、签名、真机、后台/功耗仍待。
