@@ -7,6 +7,13 @@
 - 云端 iOS 27：待本阶段提交后由 GitHub Actions 运行；未将排队或本地 SDK 26.2 结果记作云端通过。
 - 仍待：真机、减少动态效果/后台、低电量与功耗、真实私人封面，以及 Sollin 动态流动/视频背景的行为观察。
 
+## 2026-10-17 设置Tab根页回归修复
+
+- 发现：在设置二级页再次点击当前设置Tab时，页面未回到设置首页；同时需要保留未提交的设置草稿。
+- 修复：主壳增加设置根页请求代次；`SettingsScreen` 只重置导航 history，保留 visited 页面、草稿和滚动快照。UI 测试新增断言，覆盖从外观/字体页返回设置首页。
+- 本地 `testGroupedSettingsNavigationAndDrafts`：通过，iOS 26.3.1 模拟器，`build/SourceUITests-1792169818700.xcresult`，1/1，约 178.9 秒。
+- 当前 `build/distribution/build-manifest.json` 仍是提交前 dirty 归档，不能作为本修复的交付包；修复提交后重新归档。
+
 # 首批实现验收记录
 
 2026-10-16 iPad证据更正：主App Debug/Release的TARGETED_DEVICE_FAMILY仍为1，当前Release模拟器App的UIDeviceFamily实读仅1。此前iPad截图不能解释为Stage Manager/分屏验证，也不能据此验收原生平板布局；详见[0031更正](decisions/0031-adaptive-ipad-layout.md)。本批已修正为1,2且实际窗口/旋转专项通过，证据见文末；保留旧构建成功但收回旧平板窗口解释。

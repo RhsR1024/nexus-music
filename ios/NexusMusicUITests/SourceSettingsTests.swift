@@ -128,12 +128,16 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["settings-title-typography"].exists);XCTAssertTrue(app.buttons["font-import"].isHittable)
     app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
     openSettings(app,page:"playback");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
+    openSettings(app,page:"appearance");app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the active settings tab must return to the settings root")
     openSettings(app,page:"storage");XCTAssertFalse(name.exists)
     let backup=app.buttons["cloud-backup-open"];reveal(backup);backup.tap();XCTAssertTrue(app.buttons["收起云备份"].waitForExistence(timeout:5));app.buttons["收起云备份"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     let sourceLink=app.buttons["音乐来源"];reveal(sourceLink);sourceLink.tap()
     XCTAssertTrue(app.staticTexts["settings-title-sources"].waitForExistence(timeout:5));XCTAssertEqual(app.buttons["settings-back"].label,"返回音乐库")
     app.buttons["settings-back"].tap();XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.isSelected)
+    app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the settings tab must return to the settings root")
   }
   func testCrossPlatformLyrics() throws {
     let app=XCUIApplication();app.launch()

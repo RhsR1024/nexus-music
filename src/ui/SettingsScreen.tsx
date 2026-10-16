@@ -17,7 +17,7 @@ import {SourceSettings} from './SourceSettings.tsx';
 export type SettingsPage='home'|'playback'|'appearance'|'typography'|'storage'|'sources'|AppearanceSection;
 const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
-export function SettingsScreen({services,initialPage='home',onExit}:{services:Services;initialPage?:SettingsPage;onExit:()=>void}){
+export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
   const {palette:p}=useTheme();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const [history,setHistory]=useState<SettingsPage[]>([initialPage]);
@@ -25,6 +25,14 @@ export function SettingsScreen({services,initialPage='home',onExit}:{services:Se
   const heading=useRef<NativeText>(null),page=history[history.length-1]!;
   const scrolls=useRef<Partial<Record<SettingsPage,ScrollView|null>>>({}),offsets=useRef<Partial<Record<SettingsPage,number>>>({});
   const restoring=useRef<SettingsPage|null>(null);
+  const previousHomeRequest=useRef(homeRequest);
+  useLayoutEffect(()=>{
+    if(previousHomeRequest.current===homeRequest)return;
+    previousHomeRequest.current=homeRequest;
+    Keyboard.dismiss();
+    setVisited(value=>value.includes('home')?value:[...value,'home']);
+    setHistory(['home']);
+  },[homeRequest]);
   useLayoutEffect(()=>{
     restoring.current=page;let settle:number|undefined;
     const frame=requestAnimationFrame(()=>{scrolls.current[page]?.scrollTo({y:offsets.current[page]??0,animated:false});settle=requestAnimationFrame(()=>{restoring.current=null;});});
