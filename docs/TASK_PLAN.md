@@ -5,7 +5,8 @@
 - [x] 六个现有布局保留，`play-skin-*` testID、立即保存、失败保留、暂停意图和队列状态不变。
 - [x] `npm run check`：302/302；`git diff --check` 通过。
 - [x] 本地 `build/SourceUITests-1792185873313.xcresult`：`testCrossPlatformLyrics` 1/1 通过，137.929 秒，覆盖全部样式切换及歌词/播放 Sheet。
-- [ ] 清洁本地 IPA 需在文档提交后重归档；iOS 27 运行 [38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905) 当前 `pending`；真机、签名、后台/功耗仍待验证。
+- [x] 清洁本地 unsigned IPA：`5d0a0a3`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，SHA256 `0db5818fd2a3d774b8c7cf995a61b75cfc585155ff8b687f0d3b4db9c19f69ee`。
+- [ ] iOS 27 运行 [38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905) 当前 `pending`；真机、签名、后台/功耗仍待验证。
 
 ## 2026-10-17 A05 封面取色全局背景动态门控与清洁归档
 

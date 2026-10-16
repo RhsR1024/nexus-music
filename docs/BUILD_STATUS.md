@@ -2,7 +2,8 @@
 
 - 提交 `27d3200189846bdc70574953568041b22b264951` 已 push；`npm run check` 302/302。
 - 本地 UI：`build/SourceUITests-1792185873313.xcresult`，`testCrossPlatformLyrics` 1/1 通过，137.929 秒，0 failures。
-- 本地归档在共享文档尚有未提交改动时完成，IPA SHA256 `fe5474c32a3ad5812d9fca2310c58e60d088d669e9c0b5392417d713b5a0ff7d`；需文档提交后重归档，不能把本次包记为清洁交付。
+- 文档提交后清洁本地 Release archive 成功；manifest `commit=5d0a0a3`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`。
+- IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `0db5818fd2a3d774b8c7cf995a61b75cfc585155ff8b687f0d3b4db9c19f69ee`。
 - 云端 iOS 27：[38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905)，当前 `pending`，未计作通过。
 
 ## 2026-10-17 A05 封面背景动态门控与清洁本地归档

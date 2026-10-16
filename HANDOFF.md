@@ -2,7 +2,7 @@
 
 `27d3200` 已正常提交并 push。现代播放器的六个布局选择从芯片式控件改为带图标、选中态和箭头/勾选的稳定列表行，继续使用独立样式 `pageSheet`、原有 `play-skin-*` testID、即时保存、失败保留、暂停意图和权威队列。`npm run check` 302/302；本地 `build/SourceUITests-1792185873313.xcresult` 的 `testCrossPlatformLyrics` 1/1 通过，137.929 秒，覆盖 AM、沉浸、写真、黑胶、声波核切换、样式/歌词 Sheet、暂停与定位。
 
-本地归档已成功生成，待文档提交后重新归档以获得 `dirty=false` 清洁证据。对应 iOS 27 运行 [38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905) 当前 `pending`，不能记为云端通过；真机、签名、后台/功耗仍待验收。
+文档提交后清洁归档已成功：`build/distribution/build-manifest.json` 为 commit=`5d0a0a3`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；`build/distribution/NexusMusic-unsigned.ipa` SHA256 为 `0db5818fd2a3d774b8c7cf995a61b75cfc585155ff8b687f0d3b4db9c19f69ee`。对应 iOS 27 运行 [38969653905](https://github.com/RhsR1024/nexus-music/actions/runs/38969653905) 当前 `pending`，不能记为云端通过；真机、签名、后台/功耗仍待验收。
 
 # 2026-10-17 云端 38903549077 成功与 IPA 核验
 
