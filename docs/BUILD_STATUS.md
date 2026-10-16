@@ -613,4 +613,4 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 
 - 完整歌词展开层统一使用共享 `SheetModal`，保留歌词来源、偏移、双击定位、逐字绘制和 `FlatList` 有界渲染。
 - `npm run check`：302/302；`git diff --check`：通过。
-- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；推送后查询新的 iOS27 运行，不能把 `pending` 记为通过。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38960563962`（`40faff5`）已创建，当前 `pending`，不能记为 iOS27 通过。

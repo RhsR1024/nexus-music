@@ -623,4 +623,4 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 详情歌曲行的更多操作 Sheet 已改为图标、标题和箭头组成的统一动作行，保留下一首、加入队列、本地收藏/取消收藏、加入歌单和 56pt 触控高度。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；云端运行 `38960235054`（`6962dc5`）当前 `pending`，真机和大字长列表仍待验证。
 # 2026-10-17 A09 全部歌词 page sheet
 
-播放器中的“全部歌词”展开层已改用共享 `SheetModal`，与其他播放器子设置保持 page sheet 层级；歌词来源、偏移、双击定位、原生逐字绘制、FlatList 有界渲染和播放队列不变。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；新提交后的云端 iOS27、真机和大字/减少动态效果仍待验证。
+播放器中的“全部歌词”展开层已改用共享 `SheetModal`，与其他播放器子设置保持 page sheet 层级；歌词来源、偏移、双击定位、原生逐字绘制、FlatList 有界渲染和播放队列不变。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；云端运行 `38960563962`（`40faff5`）当前 `pending`，真机和大字/减少动态效果仍待验证。
