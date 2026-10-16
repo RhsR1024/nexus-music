@@ -623,3 +623,7 @@ F32 `a0ee5bb`/[38894434005](https://github.com/RhsR1024/nexus-music/actions/runs
 ## 2026-10-17 A09 歌词展开回归与清洁归档
 
 `dd2a1eb` 已提交并 push。`npm run check` 302/302；`build/SourceUITests-1792182510520.xcresult` 中 `testCrossPlatformLyrics`、`testDiscoveryAndAppearance` 共 2/2 通过，iOS 26.3.1 模拟器，0 failures。`source scripts/environment.sh && npm run ios:archive` 成功，manifest 为 `dirty=false`、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`、signed=false；IPA SHA256 `11ce4fda9e4517b3058a89b920cbc9d0f0d985e1b69cbc6b335cd2d0492d2d37`。对应云端 [38963298132](https://github.com/RhsR1024/nexus-music/actions/runs/38963298132) 当前 `pending`，不记为 iOS27 通过；签名、真机、后台/功耗仍待验收。
+
+## 2026-10-17 A09 播放器独立样式入口
+
+`7c8075c` 已提交并 push。现代播放器“调整播放界面”直接进入样式 `pageSheet`，“队列与播放选项”仍进入完整菜单；本地 `build/SourceUITests-1792183369784.xcresult` 1/1 通过，`npm run check` 302/302。清洁归档 manifest 为 dirty=false、arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`、signed=false；IPA SHA256 `5ec7ec1f64698cb61da74a9e3403da6615f348a6838d92ce4aea297639f3c933`。对应 [38964697049](https://github.com/RhsR1024/nexus-music/actions/runs/38964697049) 当前 pending，签名、真机、后台/功耗待验收。

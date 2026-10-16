@@ -4,6 +4,10 @@
 
 下一步继续 A09 播放器/歌词/mini 对齐和剩余 A08 缺口，保持 IPA 逆向证据优先，保留音枢队列、匹配录音身份、LX/Navidrome/WebDAV、PCM/EQ 与数据安全边界。
 
+# 2026-10-17 A09 播放器独立样式入口
+
+现代播放器底部的“调整播放界面”现在直接打开已有“播放界面样式”`pageSheet`；“队列与播放选项”继续进入完整播放选项菜单，避免两个图标共享同一动作。`testCrossPlatformLyrics` 的本地 UI 专项 `build/SourceUITests-1792183369784.xcresult` 1/1 通过，`npm run check` 302/302。提交 `7c8075c` 已正常 push；清洁 unsigned IPA 归档成功，arm64、`iphoneos26.2`、min iOS 15.1、设备族 `[1,2]`，SHA256 `5ec7ec1f64698cb61da74a9e3403da6615f348a6838d92ce4aea297639f3c933`。对应 iOS 27 运行 [38964697049](https://github.com/RhsR1024/nexus-music/actions/runs/38964697049) 当前 pending，不能计为云端通过。
+
 # 2026-10-17 iOS27 运行 38902977651 失败取证与本地工具链更正
 
 `698c502` / `38902977651` 于北京时间 2026-10-17 03:48 结束失败；checks、完整 native 与核心 App 中 11/12 项通过，仅 `testVisualImagesAndPlayerBackgroundPersistence` 失败。已按 ZIP 条目 CRC/长度校验提取日志及 1705 个 xcresult 小对象，未下载完整诊断 ZIP，不宣称整体 SHA256 校验通过。`build/ci-38902977651/verified/logs/ui-catalog.log:45347` 为旧测试第716行写真文件名断言；`failure-hierarchy:112` 显示“尚未导入写真图片”，第142行明确显示“图片或设置未保存”错误。因此不只是等待控件内容的问题，系统文件复制、原生图片导入或持久化的具体失败环节仍需定位。当前测试虽已等待文件名实际更新，不能据此宣称该错误修复。后续功能批次须补准确错误证据、定向本地 UI/IPA 后重新上云，保留原断言；本次没有进入 IPA 归档或第二组测试。
