@@ -1,3 +1,7 @@
+# 2026-10-17 A08 音乐库随机播放入口
+
+音乐库本地歌单、收藏和最近播放在已有“播放全部”旁新增“随机播放”，复用既有 `shuffle` 偏好和权威队列；来源身份、重复条目、收藏/匹配动作不变。`testPlaylistSearchSortAndDuplicateRemoval` 增加入口可达断言。`npm run check` 302/302、`git diff --check` 通过；新云端运行 `38952740517` 对应 `618ff68` 当前仍为 `pending`，本机无完整 Xcode，不能记为 iOS27 或真机通过。
+
 # 2026-10-17 A09 歌词显示设置 Sheet
 
 现代播放器“更多播放控制”菜单新增独立“歌词显示设置”入口，依据 Sollin IPA 的 `_showLyricDisplaySettingsSheet` 静态线索实现为单独 Sheet；复用现有 `FontSettings`，覆盖字体、字号、颜色、对齐、行距、模糊和逐字效果，所有写入仍走既有偏好存储与失败保留逻辑。新增 UI 回归覆盖入口、Sheet 标题和返回；歌词来源、偏移、双击定位、原生逐字绘制和播放意图不变。 `npm run check` 302/302，`git diff --check` 通过。本机仍只有 Command Line Tools，未声称本地 iOS UI/IPA 或真机通过；新云端运行 `38952134532` 对应 `d2b698f` 当前仍为 `pending`，不能记为 iOS27 通过。

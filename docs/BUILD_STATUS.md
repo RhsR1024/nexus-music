@@ -1,3 +1,9 @@
+## 2026-10-17 A08 音乐库随机播放代码批次
+
+- 音乐库收藏、历史和本地歌单新增“随机播放”，复用 `shuffle` 偏好和权威队列；业务来源、匹配和重复条目逻辑保持。
+- `npm run check`：302/302；`git diff --check` 通过。
+- 新云端运行 `38952740517`（`618ff68`）当前为 `pending`，本机只有 Command Line Tools，未执行本批 XCTest/IPA。
+
 ## 2026-10-17 A09 歌词显示设置 Sheet 代码批次
 
 - 现代播放器“播放选项”增加独立“歌词显示设置”Sheet，对应 Sollin IPA `_showLyricDisplaySettingsSheet` 静态线索；复用现有 `FontSettings`，保留歌词来源/偏移/原生逐字和播放意图。
