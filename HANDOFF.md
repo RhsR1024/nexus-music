@@ -617,4 +617,4 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 发现歌单详情的歌曲行已按 Sollin 的紧凑层级收口：主体行负责播放，右侧 `ellipsis-horizontal` 打开 `SheetModal`，其中保留下一首、加入队列、本地收藏/取消收藏和加入歌单。既有 `PlaylistPicker`、分页/完整导入、筛选排序、来源身份与失败保留逻辑不变。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；云端运行 `38959060803`（`4ccbb25`）当前 `pending` 且 jobs=0，IPA/真机待终态，不能把 `pending` 当作通过。
 # 2026-10-17 A08 发现详情分页失败重试
 
-`Discovery` 现在区分首次/刷新和加载更多的失败页：追加页失败后“重试”继续请求同一追加页，首次加载或刷新失败仍请求第一页，已加载内容不丢失。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；提交后记录新的 iOS27 云端运行，真实平台弱网和真机仍待验证。
+`Discovery` 现在区分首次/刷新和加载更多的失败页：追加页失败后“重试”继续请求同一追加页，首次加载或刷新失败仍请求第一页，已加载内容不丢失。`npm run check` 302/302，`git diff --check` 通过。本机没有完整 Xcode，未执行本批 XCTest/IPA；云端运行 `38959674512`（`b11328d`）当前 `pending`，IPA、真实平台弱网和真机仍待验证。
