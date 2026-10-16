@@ -19,6 +19,7 @@
 - 按 Sollin 设置分组把 EQ 从“播放与歌词”拆为独立 `图形均衡器` 二级页；播放页保留音质、音量、睡眠与歌词入口。原生 PCM/EQ、前级、10 段曲线、内置预设和自定义预设继续共用原偏好存储与播放后端。
 - `npm run check`：类型检查与 302 项业务测试通过；`git diff --check` 通过。`testGraphicalEQPresetPersistence` 已改为通过 `settings-open-equalizer` 进入，并继续覆盖拖动、重启、删除预设和睡眠定时。
 - 本机当前只有 Command Line Tools，没有完整 Xcode，因此本轮未能重新执行本地 iOS UI 专项或 unsigned IPA 归档；不能把上一批 IPA 当作本轮交付包。提交后以新的 iOS 27 云端运行验证。
+- 本批提交 `7684701` 已推送；新的 iOS 27 云端运行 [38939941769](https://github.com/RhsR1024/nexus-music/actions/runs/38939941769) 当前 `pending`。旧运行 `38937690077` 继续排队，不作为本批结果。
 
 # 首批实现验收记录
 
