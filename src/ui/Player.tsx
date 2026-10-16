@@ -42,8 +42,8 @@ export function Player({ services }: { services: Services }) {
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
   const [details,setDetails]=useState(false),[styleSheet,setStyleSheet]=useState(false),[lyricSheet,setLyricSheet]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'>('menu');
-  const miniTouchStart=useRef<{x:number;y:number}|undefined>();
-  const dismissTouchStart=useRef<{x:number;y:number}|undefined>();
+  const miniTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
+  const dismissTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
   const startTouch=(ref:MutableRefObject<{x:number;y:number}|undefined>)=>(event:GestureResponderEvent)=>{ref.current={x:event.nativeEvent.pageX,y:event.nativeEvent.pageY};};
   const finishTouch=(ref:MutableRefObject<{x:number;y:number}|undefined>,direction:'up'|'down',action:()=>void)=>(event:GestureResponderEvent)=>{
     const start=ref.current;ref.current=undefined;if(!start)return;
