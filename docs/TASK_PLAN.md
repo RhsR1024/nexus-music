@@ -10,6 +10,15 @@
 - [x] `npm run check` 302/302、`git diff --check` 通过。
 - [ ] 本机完整 Xcode UI/IPA、本批云端 iOS 27、真机和减少动态效果仍待验证；排队不记为通过。
 
+## 2026-10-17 A07 EQ 页面视觉层级收口
+
+按补充截图中的 EQ 页面层级重排独立均衡器：顶部开关与状态、整体增益/前级卡、频率曲线与重置卡、声音预设和自定义预设分区。真实 PCM/DSP、拖动精调、前级归零、曲线重置、预设保存/删除和失败保留逻辑不变。
+
+- [x] 前级和频率曲线以独立面板呈现，保留 `eq-preamp-slider`、`eq-curve`、`eq-band-slider` 和预设测试标识。
+- [x] 新增曲线整体重置入口；关闭均衡器仍旁路前级与频段，不改变队列和播放意图。
+- [x] `npm run check` 302/302、`git diff --check` 通过。
+- [ ] 本机完整 Xcode UI/IPA、本批云端 iOS 27 和真机听感仍待验证。
+
 后续增量：独立图形 EQ 页已推送；现代播放器改用实际匹配录音的视觉身份；外观总览移除无实现图标入口；主题背景统一提供渐变/纯色/图片选择，未导入图片时禁用图片项；音质保存失败提示已恢复。业务检查保持 302/302。图片背景禁用断言和本批云端 iOS27 UI/IPA 仍待实际执行，不能把排队状态记为通过。
 
 本阶段完成了基于固定 Sollin IPA 静态证据的设置分层/Sheet 线索补充、全局封面主体色背景重实现，以及设置首页与外观入口的交互收拢。IPA 证据继续按“字符串/保留对象是线索，不能当作动态调用图”处理；已核对 `_SettingsCategoryPage`、`_OrganizedSettingsTab`、`_pushSecondaryPage`、`_showThemedModalBottomSheet`、播放器样式/主题/字体/歌词/mini Sheet 名称，以及 `resolve/load/applyCoverTheme`、`ThemedPageScaffold`、`AppThemeBackground`、动态背景 provider 和异步封面取消线索，详见 [SOLLIN_IPA_ANALYSIS.md](SOLLIN_IPA_ANALYSIS.md)。

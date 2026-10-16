@@ -7,6 +7,12 @@
 - 本机只有 Command Line Tools，未能重新执行本地 iOS UI 专项或 unsigned IPA 归档；此前 IPA/模拟器结果不代表本批。
 - 本批提交后必须触发新的 iOS 27 云端运行并读取最终检查、IPA artifact、manifest 和 SHA256；pending 不记为通过。真机、后台和减少动态效果仍待验收。
 
+## 2026-10-17 A07 EQ 页面视觉层级代码批次
+
+- 独立 EQ 页按参考画面重排为开关状态、前级卡、频率曲线卡、声音预设和自定义预设区；新增曲线整体重置，真实 PCM/DSP 与现有拖动和预设存储保持不变。
+- `npm run check`：类型检查通过，自动测试 302/302 通过；`git diff --check` 通过。
+- 本机仍只有 Command Line Tools，未重新执行本地 iOS UI/IPA；本批提交后以新云端 iOS27 运行验证。
+
 - `npm run check`：类型检查通过，自动测试 **302/302** 通过。
 - `git diff --check`：通过。
 - 本地 UI：`build/SourceUITests-1792169130948.xcresult` 分组设置导航/草稿/滚动恢复与发现/外观专项通过；`build/SourceUITests-1792168820230.xcresult` 的实际全局封面专项通过，最终结果以对应 result bundle 记录。专项覆盖红/蓝封面跨音乐库、发现、外观页切换，关闭恢复及重启恢复。
