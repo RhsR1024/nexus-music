@@ -4,7 +4,7 @@
 
 ## 当前任务与成果
 
-当前持续目标仍是完整功能并集与本地/云端打包。最新进展在文末S7普通在线匹配：179项业务检查及合成App自动匹配/人工版本/取消/重启通过；正式入口播放回归、本批IPA与新云端仍独立验收。S2/S3/S4收尾、S7/S8/S9、设备实曲/签名后台与真实个人服务未全部完成。下文早期基线是历史上下文，最新更新优先。
+当前持续目标仍是完整功能并集与本地/云端打包。最新进展在文末S7普通在线匹配：179项检查、合成App自动/人工/取消/重启、隔离真实LX基础播放及ND回归通过；c4613a5本地IPA通过并push，新云端继续跟踪。上一批258772e云端iOS27已成功。S2/S3/S4收尾、S7/S8/S9、设备实曲/签名后台与真实个人服务未全部完成。下文早期基线是历史上下文，最新更新优先。
 
 用户希望先确定功能清单、技术框架和实现边界，之后在自己的 MBP 上开发。初期形成交接文档；用户于2026-10-14明确要求列出详细任务计划并开始实施，现推进工程基线与领域模块。
 
@@ -268,3 +268,7 @@ WebDAV本批已正常push 258772e08c616a241c510aafa4583a3e4bf4a0bf；archive-web
 隔离后的正式入口实曲最终通过：build/SourceUITests-1792111577110.xcresult，gdstudio/公开Shape of You/显式128k，95.548秒完成真实在线搜索→LX→原生PCM频谱→暂停→删临时源并恢复flac偏好。正式HBC无测试适配器，服务端计数无matching-audio请求；原HelloWorld失败记录保留。ND正式入口99.020秒回归已通过。本批为179项业务与合成/实曲App验收，不代替手机后台和所有真实平台。
 
 WebDAV云端38826891584（258772e）最终成功：checks、native、7项App UI步骤、arm64/iOS27归档与上传全部通过。下载产物12016923864已校验IPA SHA256 3d19c67ffdc5f1cd3b1078aa82318e2e377a46a93a5d949dfb6eda79d1fad99b，manifest为arm64/macOS27.0.1/Xcode27.0 27A266a/iphoneos27.0/min15.1/signed=false。dirty=true如实保留；日志确认已知Intel/ARM Yoga podspec checksum差异且Pod锁版本比较通过，不称清洁云端工作树。本批构建清单新增workingTreeChanges，后续可直接定位变化文件，不隐藏dirty。S7匹配代码仍待新运行。
+
+本批c4613a5a15ea868e03de4a709be72111c4998ee5已完成本地设备归档：archive-online-matching.log为ARCHIVE SUCCEEDED，manifest commit=c4613a5/dirty=false/workingTreeChanges=[]/arm64/iphoneos26.2/min15.1/signed=false，正式bundle无测试适配器。IPA SHA256 96f37a92ce7aeb9293e6517f7ad7603c1366e1cf91cc616ca3661f1b30f2ca8b，位于build/distribution/NexusMusic-unsigned.ipa；校验通过。源码保持清洁至归档结束；随后正常push并跟踪本批新云端，不能用上一批258772e成功替代S7结果。后续优先S7源健康/平台音质批测，S2/S3/S4/S8/S9及手机/真实个人服务等其余目标保持active。
+
+S7 c4613a5已正常push，新云端运行[38832172978](https://github.com/RhsR1024/nexus-music/actions/runs/38832172978)已创建，当前queued；新增独立匹配App验收步骤及生产入口归档隔离，须等待实际结果。不要重跑/取消正常排队的运行；可继续下一批独立实现。当前目标active，未把本批或整个任务表标记为全部完成。
