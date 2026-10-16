@@ -1,6 +1,6 @@
 # 2026-10-17 A09 播放器内部面板改为 iOS page sheet
 
-现代播放器的“播放选项”“播放界面样式”“歌词显示设置”三个独立面板改用共享 `SheetModal`（iOS `presentationStyle=pageSheet`），对应 Sollin IPA `_showThemedModalBottomSheet`/样式 Sheet 静态线索；音乐库、播放页和其他全屏业务 Modal 保持原行为。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；新提交后的云端 iOS27、IPA、真机和手势仍待验证。
+现代播放器的“播放选项”“播放界面样式”“歌词显示设置”三个独立面板改用共享 `SheetModal`（iOS `presentationStyle=pageSheet`），对应 Sollin IPA `_showThemedModalBottomSheet`/样式 Sheet 静态线索；音乐库、播放页和其他全屏业务 Modal 保持原行为。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；云端运行 `38957174551`（`8ba901a`）当前 `pending`，IPA、真机和手势仍待验证。
 
 # 2026-10-17 A08 音乐库长列表分批加载
 

@@ -2,7 +2,7 @@
 
 - 现代播放器三个内部面板使用 iOS `pageSheet`，其他业务 Modal 不变。
 - `npm run check`：302/302；`git diff --check`：通过。
-- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端 iOS27、page sheet 手势/旋转、IPA 和真机待新提交运行。
+- 本机仅 Command Line Tools，未执行本批 XCTest/IPA；云端运行 `38957174551`（`8ba901a`）当前 `pending`，page sheet 手势/旋转、IPA 和真机待终态。
 
 ## 2026-10-17 A08 音乐库长列表分批加载代码批次
 

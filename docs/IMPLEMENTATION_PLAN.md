@@ -1,6 +1,6 @@
 ## 2026-10-17 A09 播放器内部面板 page sheet
 
-`AdaptiveModal.tsx` 增加 `SheetModal`，只替换现代播放器的三个内部设置面板；状态、关闭回调、样式选择和字体设置组件不变。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode，云端 iOS27/IPA/真机待新提交。
+`AdaptiveModal.tsx` 增加 `SheetModal`，只替换现代播放器的三个内部设置面板；状态、关闭回调、样式选择和字体设置组件不变。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；运行 `38957174551`（`8ba901a`）当前 `pending`，IPA/真机待终态。
 
 ## 2026-10-17 A08 音乐库长列表分批加载
 

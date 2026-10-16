@@ -5,7 +5,7 @@
 - [x] 新增共享 `SheetModal`，统一四方向支持与 `presentationStyle="pageSheet"`。
 - [x] 主播放页、音乐库和来源管理等全屏业务继续使用原 `Modal`。
 - [x] `npm run check`：302/302；`git diff --check` 通过。
-- [ ] 本机完整 Xcode UI/IPA、云端 iOS27、真机和下拉/旋转手势仍待验证。
+- [ ] 本机完整 Xcode UI/IPA、云端 iOS27、真机和下拉/旋转手势仍待验证；运行 `38957174551`（`8ba901a`）当前 `pending`。
 
 ## 2026-10-17 A08 音乐库长列表分批加载
 
