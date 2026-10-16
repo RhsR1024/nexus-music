@@ -20,7 +20,6 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
     {id:'background',title:'主题与背景',icon:'brush-outline',detail:`${themes[value.visualTheme]} · ${styles[value.backgroundStyle]} · 背景 ${Math.round(value.backgroundOpacity*100)}%`,page:'background'},
     {id:'cover-color',title:'背景随封面变化',icon:'color-filter-outline',subtitle:'使用封面主体色，应用到全局及播放器；关闭后恢复自选背景',toggle:{value:value.coverColor,change:coverColor=>update({coverColor})}},
     {id:'motion',title:'动态背景',icon:'pulse-outline',subtitle:'播放页封面缓慢移动；暂停、后台或减少动态效果时停止',toggle:{value:value.dynamicBackground,change:dynamicBackground=>update({dynamicBackground})}},
-    {id:'icon',title:'软件图标',icon:'apps-outline',detail:'音枢黑金'},
     {id:'typography',title:'全局字体',icon:'text-outline',detail:fontName(fonts.global),page:'typography'},
     {id:'lyric-font',title:'歌词字体',icon:'reader-outline',detail:fonts.lyricMode==='inherit'?`跟随全局 · ${fontName(effectiveLyricFont(fonts))}`:fontName(effectiveLyricFont(fonts)),page:'typography'},
     {id:'skins',title:'播放界面样式',icon:'albums-outline',detail:layouts[value.playerLayout],page:'skins'},
