@@ -15,8 +15,8 @@ import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
 import { FontSettings } from './FontSettings.tsx';
-import { useState, useSyncExternalStore } from 'react';
-import {Alert, Pressable, ScrollView, StyleSheet, View} from 'react-native';
+import { useRef, useState, useSyncExternalStore, type MutableRefObject } from 'react';
+import {Alert, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent} from 'react-native';
 import {Modal,SheetModal} from './AdaptiveModal.tsx';
 import type { Services } from '../app/services.ts';
 import type { PlayerLayout } from '../app/preferences.ts';
@@ -42,6 +42,14 @@ export function Player({ services }: { services: Services }) {
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
   const [details,setDetails]=useState(false),[styleSheet,setStyleSheet]=useState(false),[lyricSheet,setLyricSheet]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'>('menu');
+  const miniTouchStart=useRef<{x:number;y:number}|undefined>();
+  const dismissTouchStart=useRef<{x:number;y:number}|undefined>();
+  const startTouch=(ref:MutableRefObject<{x:number;y:number}|undefined>)=>(event:GestureResponderEvent)=>{ref.current={x:event.nativeEvent.pageX,y:event.nativeEvent.pageY};};
+  const finishTouch=(ref:MutableRefObject<{x:number;y:number}|undefined>,direction:'up'|'down',action:()=>void)=>(event:GestureResponderEvent)=>{
+    const start=ref.current;ref.current=undefined;if(!start)return;
+    const dx=event.nativeEvent.pageX-start.x,dy=event.nativeEvent.pageY-start.y;
+    if(Math.abs(dy)>36&&Math.abs(dy)>Math.abs(dx)*1.2&&((direction==='up'&&dy<0)||(direction==='down'&&dy>0)))action();
+  };
   const entry = currentEntry(state.queue);
   if (!entry) return null;
   const match=entry.track.origin.kind==='imported'||entry.track.origin.kind==='online'?services.library.matchFor(entry.track):undefined;
@@ -84,7 +92,7 @@ export function Player({ services }: { services: Services }) {
         </View>)}
   </>);
   return <>
-    <GlassSurface><View style={styles.mini}>
+    <View testID="mini-player" onTouchStart={startTouch(miniTouchStart)} onTouchEnd={finishTouch(miniTouchStart,'up',()=>setOpen(true))}><GlassSurface><View style={styles.mini}>
       <Cover services={services} track={entry.track} size={44}/>
       <View style={{flex:1,minWidth:80}}><Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={()=>setOpen(true)} style={{minHeight:44,justifyContent:'center'}}>
         <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text>{(!preferences.miniLyrics||open)&&<Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase==='resolving'?'正在选择音源…':state.error??(state.buffering?'缓冲中…':time(state.position))}</Text>}
@@ -96,13 +104,15 @@ export function Player({ services }: { services: Services }) {
           if(action==='toggle')toggle();else if(action==='previous')services.playback.next(-1);else if(action==='next')services.playback.next();else void services.library.favorite(entry.track).catch(()=>Alert.alert('收藏未保存','原有数据保留，请重试。'));
         }} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={24} color={theme.palette.text}/></Pressable>;
       })}</View>
-    </View></GlassSurface>
+    </View></GlassSurface></View>
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
       {open&&<StatusBar style={preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
       <View style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:'#183647'}}>
       {open&&(preferences.playerLayout==='classic'?<AmbientBackground services={services}/>:<ArtworkBackdrop services={services} track={actualMatch??entry.track} photo={preferences.playerLayout==='photo'}/>)}
       <ScrollView style={{flex:1}} contentContainerStyle={styles.content}>
-        {preferences.playerLayout==='classic'?button('收起播放页',()=>setOpen(false)):<Pressable accessibilityRole="button" accessibilityLabel="收起播放页" onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:30,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
+        <View onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} style={{minHeight:44,justifyContent:'center',alignSelf:'stretch'}} testID="player-drag-handle">
+          {preferences.playerLayout==='classic'?button('收起播放页',()=>setOpen(false)):<Pressable accessibilityRole="button" accessibilityLabel="收起播放页" onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:30,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
+        </View>
         {preferences.playerLayout==='classic'&&skinSelector}
         {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setStyleSheet(false);setDetailPanel('menu');setDetails(true);}} onStyle={()=>{setDetailPanel('menu');setDetails(true);setStyleSheet(true);}}/>}
         {preferences.playerLayout==='classic'&&detailContent}

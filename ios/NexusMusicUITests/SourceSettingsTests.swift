@@ -150,7 +150,14 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
     let query=app.textFields["搜索歌曲或歌手"];reach(query);app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap();query.tap();query.typeText("Synthetic match tone\n")
     let searchSongs=app.buttons["run-online-search"];reach(searchSongs);searchSongs.tap()
-    let first=app.buttons["search-track-wy-0"];for _ in 0..<8{if first.waitForExistence(timeout:2){break};app.swipeUp()};XCTAssertTrue(first.exists);reach(first);first.tap();app.buttons["打开播放页"].tap()
+    let first=app.buttons["search-track-wy-0"];for _ in 0..<8{if first.waitForExistence(timeout:2){break};app.swipeUp()};XCTAssertTrue(first.exists);reach(first);first.tap()
+    let mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
+    XCTAssertTrue(mini.waitForExistence(timeout:10));mini.swipeUp()
+    let closeAfterSwipe=app.buttons["收起播放页"];XCTAssertTrue(closeAfterSwipe.waitForExistence(timeout:10),"Swiping up on the mini player must open the player")
+    let handle=app.descendants(matching:.any).matching(identifier:"player-drag-handle").firstMatch
+    XCTAssertTrue(handle.waitForExistence(timeout:5));handle.swipeDown()
+    XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:10),"Swiping down from the player handle must dismiss the player")
+    app.buttons["打开播放页"].tap()
     XCTAssertTrue(app.staticTexts["正在通过 tx · Synthetic match tone 播放"].waitForExistence(timeout:30));XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
     let pause=app.buttons["暂停"].firstMatch;reach(pause);pause.tap()
     let sourceButton=app.buttons["选择歌词来源"].firstMatch;reach(sourceButton,up:false);sourceButton.tap()
