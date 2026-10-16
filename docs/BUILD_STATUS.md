@@ -1,3 +1,11 @@
+## 2026-10-17 A09 歌词列表性能修正与清洁本地归档
+
+- 提交 `8b4332ae43ae1af46b660ec71bf44b5144198d34` 已 push；`npm run check` 302/302。
+- 本地 UI：`build/SourceUITests-1792184153003.xcresult`，`testCrossPlatformLyrics` 1/1 通过，iOS 26.3.1 模拟器，0 failures。
+- 本地 Release archive：成功；manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，Xcode 26.3 / SDK 26.2。
+- IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA256 `dedc365e58dc5e6d6bd1c33f4741a06ee6424bd0f9394f6b075007cd8ada769e`。
+- 云端 iOS 27：[38966241336](https://github.com/RhsR1024/nexus-music/actions/runs/38966241336)，当前 `pending`，未计作通过；真机、签名、后台/功耗仍待验收。
+
 ## 2026-10-17 iOS27 38902977651 失败诊断（尚未修复验收）
 
 - 运行 `38902977651` / `698c502d7331b70538a46e583f7718f388ac4eaf`，iOS job `117140200643`，北京时间03:48结束 failure。checks与完整 native通过；核心 App 11通过/1失败/0跳过。第二组与IPA归档未执行。

@@ -1,3 +1,9 @@
+## 2026-10-17 A09 歌词列表事件驱动刷新与清洁归档
+
+`Lyrics.tsx` 保留歌词行、播放状态、样式和明显 seek 的刷新边界，去掉逐帧播放位置对 `FlatList` 的 `extraData` 依赖；原生 `NexusLyrics` 继续承载逐字动画。这样与项目“歌词/动画不得每帧全量 React 列表重渲染”的约定一致，同时不改变歌词来源、偏移、双击定位和播放意图。
+
+验证：`npm run check` 302/302；本地 `build/SourceUITests-1792184153003.xcresult` 的 `testCrossPlatformLyrics` 1/1 通过；`build/distribution/build-manifest.json` 显示 `8b4332a`、`dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`；IPA SHA256 `dedc365e58dc5e6d6bd1c33f4741a06ee6424bd0f9394f6b075007cd8ada769e`。iOS 27 运行 `38966241336` 仍为 `pending`，不计作云端通过。
+
 ## 2026-10-17 A08 发现详情歌曲动作
 
 `Discovery` 订阅本地音乐库状态，仅用于显示当前收藏；收藏写入仍走 `LibraryStore`，加入歌单复用 `PlaylistPicker`，不改变在线详情分页和完整导入。`npm run check` 302/302、`git diff --check` 通过。本机无完整 Xcode；运行 `38958299530`（`6fc6123`）当前 `pending`，云端/真机待验证。

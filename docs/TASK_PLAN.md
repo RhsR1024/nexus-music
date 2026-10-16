@@ -1,3 +1,13 @@
+## 2026-10-17 A09 歌词列表事件驱动刷新与清洁归档
+
+歌词列表不再把逐帧播放位置放入 React `FlatList.extraData`：歌词行切换、暂停/播放、样式变化和明显 seek 仍会刷新，逐字绘制继续由原生 `NexusLyrics` 负责。
+
+- [x] `src/ui/Lyrics.tsx` 增加 seek 代次，移除逐帧 position 驱动的列表刷新。
+- [x] `npm run check`：302/302；`git diff --check` 通过。
+- [x] 本地 `build/SourceUITests-1792184153003.xcresult`：`testCrossPlatformLyrics` 1/1 通过，iOS 26.3.1 模拟器。
+- [x] 清洁本地 unsigned IPA：`8b4332a`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，SHA256 `dedc365e58dc5e6d6bd1c33f4741a06ee6424bd0f9394f6b075007cd8ada769e`。
+- [ ] iOS 27 运行 [38966241336](https://github.com/RhsR1024/nexus-music/actions/runs/38966241336) 当前 `pending`；签名、真机、后台/功耗仍待验证。
+
 ## 2026-10-17 A08 发现详情歌曲动作
 
 发现歌单详情的紧凑歌曲行复用音乐库已有动作，补充收藏状态和加入本地歌单入口；完整导入、分页、搜索排序和来源身份保持。
