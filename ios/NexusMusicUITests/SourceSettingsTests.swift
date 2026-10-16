@@ -487,7 +487,9 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
     }
     func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()}
-    library();let initialPlaylists=app.buttons["我的歌单"];reach(initialPlaylists);initialPlaylists.tap()
+    library();let quickCreate=app.buttons["library-create-playlist"];XCTAssertTrue(quickCreate.waitForExistence(timeout:10));quickCreate.tap()
+    let quickInput=app.textFields["创建音枢歌单名称"];XCTAssertTrue(quickInput.waitForExistence(timeout:10))
+    let initialPlaylists=app.buttons["我的歌单"];reach(initialPlaylists);initialPlaylists.tap()
     let prior=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch
     while prior.exists {reach(prior);prior.tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()}
     let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
