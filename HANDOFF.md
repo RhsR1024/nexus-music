@@ -6,7 +6,7 @@
 
 当前持续目标为 F01–F37/J01–J59 全部功能与本地/云端双构建，goal active。已提交至 `8cb083c`（S3 图片/写真/取色/动态背景，包含此前 S2 列表批次），本地清洁 SDK26.2 IPA 通过。字体/样式和图标修复 `78e4827` 的云端 `38871835008` 已全部成功，IPA 已下载校验；系统媒体封面/收藏 `256e935` 的 `38874981017` 因源健康测试输入漏字失败（见末尾证据），S2 `38878989928` 运行中。S3 图片/写真/取色/动态背景批次：250 项业务与完整原生检查通过，实际 Files/UI 导入/重启/共享移除回退已通过，已提交并完成清洁本地归档，云端 38886233605 排队。其余 S2/S3/S4 真实 TTML/S7 登录推荐评论识曲/S8 同步及 iPad/S9 最后下载，以及个人服务/签名/真机后台和灵动岛仍未完成。当前本机仅 Xcode26.3/SDK26.2，不能写本机 iOS27 SDK 通过。
 
-当前工作区为 J40/J49 mini 按钮与歌词批次，256项业务/类型、正式入口 ND/五皮肤/mini 284.278秒及源健康输入修正98.538秒均通过，待阶段提交/本地清洁IPA和新云端。
+最新已正常 push `13dc450`（J40/J49 mini 按钮/单行歌词 + 源健康输入修正）：256项业务/类型、正式入口 ND/五皮肤/mini 284.278秒与健康专项98.538秒通过，清洁本地 SDK26.2 IPA通过；新云端38889054633 pending。当前接续S8云备份，未将备份等同多设备同步。
 
 用户希望先确定功能清单、技术框架和实现边界，之后在自己的 MBP 上开发。初期形成交接文档；用户于2026-10-14明确要求列出详细任务计划并开始实施，现推进工程基线与领域模块。
 
@@ -405,3 +405,7 @@ J40/J49 本地正式入口 `build/SourceUITests-1792146391692.xcresult` 284.278�
 源健康漏字修复单独在 matching 测试入口运行中，不能把 mini 正式入口成功当作健康专项或新云端通过。本批 IPA/阶段提交仍待后续，256项业务/类型检查复验继续。
 
 源健康修正版 `build/SourceUITests-1792146828117.xcresult` 98.538秒通过；`ui-catalog.log` 明确先断言 `value == slow`→点击 `health-start`→找到并点击 `health-cancel`，再逐字输入/断言 `fixture`→开始→六项完成/报告分享返回/删除测试源。云端 iOS27 仍需新提交实际结果，未把本地旧 SDK 当作云端成功。本批最终 `check-mini-final.log` 256/256、类型/改动文档链接/diff 空白检查通过。无新增原生模块或依赖；完整 native 沿本轮此前 `native-visual-delivery.log` 通过证据，未修改音频/脚本后端。准备阶段提交、生产入口清洁 IPA 与新云端。
+
+J40/J49/源健康输入修正阶段 `13dc4505d7b85a8839c226173d6455d6e3e7ce37` 已正常 push，远端 main 一致。`archive-mini-clean.log` 为 ARCHIVE SUCCEEDED；manifest dirty=false / workingTreeChanges=[] / arm64 / iphoneos26.2 / min15.1 / signed=false，正式入口隔离与 SHA256 再核对通过。最新本地 IPA 为 `build/distribution/NexusMusic-unsigned.ipa`，SHA256 `7e1d996701f4c6c3ea5bee9ecc59dd0ed21634ca31180d461e5ed536509f68df`。
+
+新云端 [38889054633](https://github.com/RhsR1024/nexus-music/actions/runs/38889054633) 对应 13dc450，pending；图片 38886233605 仍 pending，S2 38878989928 已过 native、核心 App 执行中。没有重复派发/取消或将旧失败说成已修复上云通过。接续 S8/F32 WebDAV 云备份（上传后校验、目录配置、预览恢复），F33 冲突同步另行实现；完整 S2/S3/S4/S7/S8/S9/M10 和手机/真实个人服务目标仍 active。
