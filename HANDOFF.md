@@ -1,3 +1,9 @@
+# 2026-10-17 reverse-skill 阶段推送回执与后续验证
+
+安装/硬门禁已正常push `c64c43bc06d516c1ce59fd159c4a1980a1e4dd04`，远端main一致；云端 `39003956417` 已运行、0pending，未完成，不算通过，也不覆盖仍未提交的播放器代码。APK PRIMARY流程新增E-003：Android3.12.2快照同hash但compressed-pointers，与IPA既有no-compressed-pointers不同，平台对象布局不能直接套用；严格review通过，原始证据/脚本留work，脱敏结论见SOLLIN_IPA_ANALYSIS。
+
+关联UI当前运行的全局背景项96.954秒失败在返回音乐库后找blue cover tone（旧编译测试）；亲读NavidromeLibrary确认页面重挂载默认首账号，代码中现给返回路径和ND播放专项显式选择夹具账号，未降低取色/实音断言。当前其余专项继续运行，最终修正版需另复验；未把本次失败记为整组通过。根用户补充的reverse-skill硬门已落实；本批后续代码提交必须先完成测试/清洁IPA，并按新门禁给功能证据。
+
 # 2026-10-17 本轮接续状态
 
 已先落实用户新增 reverse-skill 硬门禁，安装和检查结果见下节与 docs/REVERSE_SKILL_WORKFLOW.md。后续 Sollin 对齐必须通过它，当前A03/A04对象/调用关系仍未完成。

@@ -1,3 +1,9 @@
+## 2026-10-17 reverse-skill 安装与门禁阶段
+
+`c64c43b` 已正常push并核对远端main；用户新增强制要求已经落实到AGENTS、任务/交接/范围与Sollin参考文档。项目安装入口、固定提交、工具缺口、两个离线案例与严格review、门禁拒绝路径详见[REVERSE_SKILL_WORKFLOW](REVERSE_SKILL_WORKFLOW.md)。云端 `39003956417` 对应安装阶段，已运行，当前1运行/0pending，尚不算成功；既有播放器未提交代码不由该运行覆盖。旧38984903551/38988046090均自然失败，未生成IPA，不继续把历史pending写为当前状态。
+
+本轮原播放器批次已通过303项业务/类型、完整native、跨平台歌词/现代收藏124.460秒专项（1792212072221）；其余受影响流程和本批IPA仍在验证，未计全部功能完成。新的APK snapshot E-003只确认平台/压缩指针差异，不声称对象/调用关系已恢复。未改变真实服务/签名/真机待验边界。
+
 ## 2026-10-17 云端队列收敛已实际验证
 
 策略提交 `d9317f2` 已正常push。策略提交时GitHub API核对：原40个旧pending均自动取消，运行中`38934924631`未取消，最新`38983886757`对应d9317f2为pending。同工作流/分支使用 `queue: single`、`cancel-in-progress: false`，以后push必须核对运行≤1/排队≤1。取消旧运行不计作通过，旧成功产物/失败诊断保留；本条覆盖下文历史“不取消排队/queue:max”执行约定。说明及真实88分钟job耗时分解见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。
@@ -5,6 +11,13 @@
 ## 2026-10-17 A10 云端外观测试导航修复
 
 旧云端38934924631核心14/15通过，唯一失败在openSettings寻找settings-open-background的可点击断言；完整诊断ZIP摘要/CRC及录屏末帧已核验。设置页按页恢复滚动位置是既有产品行为，测试只向上滑无法到达上方目标。现按目标frame双向滚动，保留可点击/目标页断言，并在失败时保存截图与AX层级。本地正式入口1792197616945两项通过：外观持久化/主导航60.141秒、分组设置/草稿恢复74.290秒，零失败/跳过；日志ui-settings-direction-final.log。仅XCTest与文档修改，不增加功能完成度；提交07870a4ca49bc530b6ba90c1a8a676cb56f74f0b已正常push并核对远端main；archive-settings-direction-clean.log为ARCHIVE SUCCEEDED，manifest dirty=false/workingTreeChanges=[]、arm64、SDK26.2、min15.1、设备族[1,2]、unsigned，正式入口隔离、IPA摘要/ZIP CRC/二进制一致性均通过。SHA256 a0a52f5902523e18858839a4877de75ece16ab25059467fdeb6c2a222b47e6c2，副本build/local-settings-direction-07870a4。08:48 API核对：38984903551继续运行，最新38988046090为唯一pending，旧pending38987122647已自动取消；再次实证single策略，取消旧运行不算通过。新云端/签名/真机仍待。
+
+## 2026-10-17 A09 播放器收藏身份与声波核门控代码批次
+
+- `ModernPlayer` 接收独立 `favoriteTrack`：匹配录音继续负责播放器视觉/歌词，收藏读取和写入回到队列原曲。
+- `FrequencyHalo` 仅在播放中、DSP 支持且收到至少32个频带时绘制频谱条；暂停/无PCM保持中心控制，声波核歌词区域改为最多三行。
+- `SourceSettingsTests.testCrossPlatformLyrics` 增加现代播放器收藏状态和暂停后 `wave-spectrum-bars` 不存在断言。
+- 本批尚未把代码检查、本地归档或云端终态写成通过；旧云端运行仍按队列规则单独记录。
 
 ## 2026-10-17 A08 发现页面板归属与紧凑歌曲行
 
