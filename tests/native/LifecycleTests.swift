@@ -5,8 +5,13 @@ import Foundation
     let bootstrap = try String(contentsOfFile: "modules/nexus-native/ios/bootstrap.js", encoding: .utf8)
     let script = """
     let counter = 0;
+    let delayed;
     lx.on('request', async payload => {
-      if (payload.delay) await new Promise(resolve => setTimeout(resolve, 100));
+      if (payload.barrier) { await delayed; return counter; }
+      if (payload.delay) {
+        delayed = new Promise(resolve => setTimeout(resolve, 100));
+        await delayed;
+      }
       return ++counter;
     });
     lx.send('inited', {sources:{}});
@@ -28,11 +33,20 @@ import Foundation
     precondition(value(wait { a.request(id: "1", payloadJSON: "{}", completion: $0) }) == "1")
     precondition(value(wait { a.request(id: "2", payloadJSON: "{}", completion: $0) }) == "2")
     precondition(value(wait { b.request(id: "1", payloadJSON: "{}", completion: $0) }) == "1")
+    let callbackLock = NSLock()
+    var cancelledCallbacks = 0
     failure(wait { completion in
-      a.request(id: "cancel", payloadJSON: "{\"delay\":true}", completion: completion)
+      a.request(id: "cancel", payloadJSON: "{\"delay\":true}") { result in
+        callbackLock.lock(); cancelledCallbacks += 1; callbackLock.unlock()
+        completion(result)
+      }
       a.cancel(id: "cancel")
     }, .cancelled)
-    Thread.sleep(forTimeInterval: 0.15)
+    // Observe the script's delayed work settling instead of assuming a 150ms
+    // sleep is enough on a loaded runner. The barrier does not increment state.
+    precondition(value(wait { a.request(id: "settled", payloadJSON: "{\"barrier\":true}", completion: $0) }) == "3")
+    callbackLock.lock(); let callbackCount = cancelledCallbacks; callbackLock.unlock()
+    precondition(callbackCount == 1, "Cancelled completion must not be delivered twice")
     // The cancelled Promise may finish, but its result cannot reach the next
     // request; the source remains usable without resetting its script state.
     precondition(value(wait { a.request(id: "after-cancel", payloadJSON: "{}", completion: $0) }) == "4")

@@ -200,9 +200,10 @@ await new Promise((resolve, reject) => { server.once('error', reject); server.li
 const log = openSync('build/logs/ui-catalog.log', 'w+');
 const logWatcher=watch('build/logs/ui-catalog.log',()=>{if(localFixtureDirectory)return;const size=statSync('build/logs/ui-catalog.log').size,tail=Buffer.alloc(Math.min(4096,size));readSync(log,tail,0,tail.length,Math.max(0,size-tail.length));if(tail.toString().includes('Test Case')||tail.toString().includes('Running tests'))seedLocalAudio();});
 try {
+  const resultPath = `build/SourceUITests-${Date.now()}.xcresult`;
   const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', 'Release',
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
-    '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', `build/SourceUITests-${Date.now()}.xcresult`, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
+    '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(fixtureOnlineUI)args.push(`ENTRY_FILE=${resolve('tests/e2e/entry.tsx')}`);
   else args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
@@ -210,4 +211,13 @@ try {
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;
   console.log(`iOS source UI test exit: ${code}; log: build/logs/ui-catalog.log`);
+  // Keep individual failure messages visible even when the failed test is far
+  // above the workflow's final 100 log lines. Never change the xcodebuild status.
+  try {
+    const summaryJSON=execFileSync('xcrun',['xcresulttool','get','test-results','summary','--path',resultPath],{encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024});
+    writeFileSync('build/logs/ui-summary.json',summaryJSON);
+    const summary=JSON.parse(summaryJSON);
+    console.log(`UI results: ${summary.passedTests} passed, ${summary.failedTests} failed, ${summary.skippedTests} skipped; ${resultPath}`);
+    for(const failure of summary.testFailures??[])console.error(`${failure.testIdentifierString}: ${failure.failureText}`);
+  } catch { console.error(`UI summary unavailable; inspect ${resultPath} and build/logs/ui-catalog.log`); }
 } finally { logWatcher.close();writeFileSync('build/logs/ui-server-counts.json',JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }
