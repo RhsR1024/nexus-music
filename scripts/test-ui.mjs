@@ -44,6 +44,8 @@ let blockOfflineStream=false;
 const offlineCounts={full:0,resumed:0,blocked:0};
 let holdDiscoveryDetail=false;
 let truncateDiscoveryPlaylist=true;
+let pagerDiscovery=false,pagerReplacement=false,pagerFailNext=false;
+const pagerPages=[];
 const heldDiscoveryResponses=[];
 // Original, solid 32x32 RGB fixtures: no third-party covers or user data.
 const themeCovers={red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
@@ -69,6 +71,9 @@ const server = createServer(async (req, res) => {
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('holdNext'))holdDiscoveryDetail=true;
     if(control.searchParams.has('completePlaylist'))truncateDiscoveryPlaylist=false;
+    if(control.searchParams.has('pager'))pagerDiscovery=true;
+    if(control.searchParams.has('replace'))pagerReplacement=true;
+    if(control.searchParams.has('failNext'))pagerFailNext=true;
     if(control.searchParams.has('release'))for(const send of heldDiscoveryResponses.splice(0))send();
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length}));return;
   }
@@ -95,6 +100,12 @@ const server = createServer(async (req, res) => {
     }
     if(discoveryUI&&parsed.hostname==='nplserver.kuwo.cn'&&parsed.pathname==='/pl.svc'){
       counts.discovery??={lists:0,details:0};counts.discovery.completeness=(counts.discovery.completeness??0)+1;
+      if(pagerDiscovery){
+        const page=Number(parsed.searchParams.get('pn'));pagerPages.push(page);counts.discovery.pagerPages=pagerPages;
+        if(pagerFailNext){pagerFailNext=false;counts.discovery.pagerFailures=(counts.discovery.pagerFailures??0)+1;res.end(JSON.stringify({error:'Original synthetic pager failure'}));return;}
+        const offset=page*100;
+        res.end(JSON.stringify({title:'Synthetic pager playlist',total:101,musiclist:Array.from({length:page===0?100:page===1?1:0},(_,index)=>({id:String((pagerReplacement?9400:9300)+offset+index),name:index===0?`Recovery marker ${pagerReplacement?'replacement ':''}${page===0?'one':'two'}`:`Synthetic filler ${offset+index}`,artist:'Fixture artist',album:'Fixture pager album',duration:120}))}));return;
+      }
       res.end(JSON.stringify({title:'Synthetic completeness playlist',total:truncateDiscoveryPlaylist?3:2,musiclist:['one','two'].map((word,index)=>({id:String(9201+index),name:`Synthetic completeness ${word}`,artist:'Fixture artist',album:'Fixture album',duration:120}))}));return;
     }
     if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/playlist/list'){

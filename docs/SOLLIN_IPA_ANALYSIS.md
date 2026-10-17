@@ -1,3 +1,7 @@
+## 2026-10-18 歌单分页与刷新静态边界
+
+reverse-skill R2/mobile-reverse 新路由和现有离线 scope 门禁通过；E023→F022→P022 采纳前 strict review23E/22F/22P、8WI/42事件、零错误/警告。610原始ARM64指令、10BL、3池加载与循环回边经独立重放；first/refresh/append/full-read 调用边界与 forceRefresh/limit、limit/offset 描述符已核对。精确模型字段、cache key/时效、失败界面与参考动态请求仍未知；不据静态 reset 清空音枢已加载数据。报告和复现元数据见[本批报告](2026-10-18_reverse-sollin-pager-refresh-report.md)，五参考及原创恢复验收见[0051](decisions/0051-discovery-pager-recovery-validation.md)。原始样本/指令/对象池留忽略目录，无目标运行或私有服务请求。
+
 ## 2026-10-17 AM2 页面与内容切换证据阶段
 
 reverse-skill新路由mobile-reverse，E-016→F-015→P-015严格review通过16E/15F/15P、7工作项/25事件、零错误/警告。原始BL/分配头确认独立AM2页面、横竖构建分支、歌词/封面节点及歌词/评论/队列共享切换；定位通过互逆字段和已存闭包接唯一控制器，另一个double回调确认为音量。随后E-017→F-016→P-016补证控件指针同字段排除分支、距离18门槛、声明音量关闭/自动歌词开启5秒及延迟句柄重查；最终严格review为17E/16F/16P、7工作项/26事件、零错误/警告。完整几何、SDK helper、多指/持久化有效状态和运行效果仍待，不据方法名新增第八选项。详见[专项报告](2026-10-17_reverse-sollin-am2-report.md)。五参考固定HEAD及职责/维护/Android/许可已逐一复核，无复制源码/依赖。本批只新增静态证据与文档，音枢七布局和全部A/F/J保持；舞台ad784b5本地验收/清洁归档/push已完成，对应iOS27待终态，真实服务/签名/手机另验。

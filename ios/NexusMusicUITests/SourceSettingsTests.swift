@@ -1188,6 +1188,27 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(incomplete.waitForExistence(timeout:10));XCTAssertFalse(app.alerts["导入公开歌单"].exists);XCTAssertTrue(importButton.isEnabled);XCTAssertTrue(more.exists == false)
     evidence("Truncated provider playlist stays visible and cannot present an import confirmation")
     _=try control("completePlaylist=1");importButton.tap();XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:10));XCTAssertTrue(app.alerts.staticTexts.containing(NSPredicate(format:"label CONTAINS %@","2 首")).firstMatch.exists);app.alerts.buttons["取消"].tap()
+    // Original fixture uses the provider's real 100-item page boundary. Filter
+    // the loaded rows so both pagination controls remain reachable on phones.
+    _=try control("pager=1");let refresh=app.buttons["刷新歌单"];reach(refresh);refresh.tap()
+    func count(_ value:String){XCTAssertTrue(app.staticTexts["酷我 · 已加载 "+value+" 首"].waitForExistence(timeout:10))}
+    count("100 / 101")
+    let filter=app.textFields["搜索已加载歌曲歌手专辑"];reach(filter);filter.tap();filter.typeText("Recovery marker\n")
+    let markerOne=app.buttons.containing(NSPredicate(format:"label CONTAINS %@","Recovery marker one")).firstMatch
+    let markerTwo=app.buttons.containing(NSPredicate(format:"label CONTAINS %@","Recovery marker two")).firstMatch
+    let failure=app.staticTexts["此平台暂时无法读取，请重试或选择其他平台；已加载内容保留。"]
+    let next=app.buttons["加载更多"],retry=app.buttons["重试"]
+    _=try control("failNext=1");reach(next);next.tap();XCTAssertTrue(failure.waitForExistence(timeout:10));count("100 / 101");XCTAssertTrue(markerOne.exists);XCTAssertFalse(markerTwo.exists)
+    evidence("Append failure preserves loaded count and filtered songs")
+    reach(retry);retry.tap();count("101 / 101");XCTAssertTrue(markerTwo.waitForExistence(timeout:10));XCTAssertFalse(next.exists)
+    XCTAssertEqual(filter.value as? String,"Recovery marker");evidence("Append retries the same page without duplicate rows")
+    _=try control("failNext=1");reach(refresh);refresh.tap();XCTAssertTrue(failure.waitForExistence(timeout:10));count("101 / 101");XCTAssertTrue(markerOne.exists);XCTAssertTrue(markerTwo.exists);XCTAssertEqual(filter.value as? String,"Recovery marker")
+    evidence("Refresh failure retains both loaded pages and the active filter")
+    _=try control("replace=1");reach(retry);retry.tap();count("100 / 101");XCTAssertFalse(markerOne.exists);XCTAssertFalse(markerTwo.exists)
+    let replacement=app.buttons.containing(NSPredicate(format:"label CONTAINS %@","Recovery marker replacement one")).firstMatch
+    XCTAssertTrue(replacement.waitForExistence(timeout:10));XCTAssertEqual(filter.value as? String,"Recovery marker")
+    reach(next);next.tap();count("101 / 101");XCTAssertTrue(app.buttons.containing(NSPredicate(format:"label CONTAINS %@","Recovery marker replacement two")).firstMatch.waitForExistence(timeout:10))
+    evidence("Successful refresh replaces rows and resets the next page")
     reach(back);back.tap();let netease=app.descendants(matching:.any).matching(identifier:"网易").firstMatch;reach(netease);netease.tap();detail()
     reach(more);evidence("Discovery compact song rows");actions()
     XCTAssertTrue(action("本地收藏").exists);evidence("Embedded discovery song actions")

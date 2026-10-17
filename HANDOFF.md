@@ -1,3 +1,9 @@
+## 2026-10-18 发现分页与刷新恢复（本地验收通过）
+
+reverse-skill新R2/mobile-reverse路由、既有离线scope和E023→F022→P022采纳前严格review通过23E/22F/22P、8WI/42事件；610原始指令/10BL/3池加载与回边独立核验。五参考固定HEAD及维护/Android/许可取舍见[0051](docs/decisions/0051-discovery-pager-recovery-validation.md)。仅支持静态入口边界，不推断参考失败界面/缓存时效/运行协议。
+
+359业务/类型、完整发现App1792271857949的145.119秒零失败/跳过：追加失败保留100/101、同页重试到101/101，刷新失败保留两页/数量/筛选，成功重试替换身份并复位下一页；独立服务器页序列[0,1,1,0,0,1]、两次失败。原取消/完整读取截断/收藏/重复项/两种Sheet/清理均通过；已亲看失败保留与替换截图。22次本机合成请求、无音频，不计真实provider；未修改产品/后端/依赖。清洁归档/push/对应iOS27继续，全部A/F/J、完整参考运行、真实服务/签名/手机保持active。
+
 ## 2026-10-18 完整读取校验清洁归档与push回执
 
 `07a6de313e8b4483471491c7a171ba34f95f7cb1`已正常push，远端main一致。359业务/类型、完整发现App125.372秒零失败/跳过和截断2/3保留截图通过；验收后strict review22E/21F/21P、8WI/41事件、零错误/警告。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `3ecc1d8da2592225ac36b40d0f4fa2e215f82f8b33eba4ebc1e45e21b89eaa20`，留存`build/local-discovery-completeness-07a6de3`。此条覆盖本批归档/push待办，不扩展真实服务/签名/手机验收。

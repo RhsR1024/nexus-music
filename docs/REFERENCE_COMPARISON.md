@@ -1,3 +1,7 @@
+## 2026-10-18 分页与刷新恢复比较
+
+[0051](decisions/0051-discovery-pager-recovery-validation.md)重新核对五参考固定HEAD与刷新/缓存/失败路径：两LX分支刷新page1/缓存绕过及失败clear、CyMusic固定榜单后本地slice、悦音本地reducer、自有Wayferar的Android文档边界分开。保留音枢成功后替换/失败保留/同页重试，不复制参考全局缓存或依赖；实现、维护、Android、许可和验收分别记录。Sollin E023仅支持静态调用边界，不把合成App回归当作参考运行。
+
 ## 2026-10-18 完整公开歌单读取保护
 
 按[0050](decisions/0050-complete-playlist-count-validation.md)仅修音枢原创数量/取消边界，保留重复项和原始顺序；reverse-skill E022静态边界与参考协议未恢复限制保持。359业务/类型、App完整发现125.372秒零失败/跳过及截图通过；5项失败基线留存。清洁归档/云端/真实服务/签名/手机另验，完整A/F/J范围保持。
