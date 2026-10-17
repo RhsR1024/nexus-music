@@ -1026,10 +1026,18 @@ final class SourceSettingsTests: XCTestCase {
       }
       XCTFail("Control not fully visible: \(element)")
     }
-    let flat=app.buttons["平直"];reveal(flat);flat.tap()
+    let flat=app.buttons["eq-builtin-0"],bass=app.buttons["eq-builtin-1"];reveal(flat);flat.tap()
+    XCTAssertTrue(flat.isSelected)
+    XCTAssertEqual(flat.frame.minY,bass.frame.minY,accuracy:1,"Normal phone type size shows two preset cards per row")
+    XCTAssertGreaterThanOrEqual(flat.frame.height,44)
+    bass.tap();XCTAssertTrue(bass.isSelected);XCTAssertFalse(flat.isSelected)
+    let cardsImage=XCTAttachment(screenshot:app.screenshot());cardsImage.name="EQ preset cards and selected bass";cardsImage.lifetime = .keepAlways;add(cardsImage)
+    flat.tap();XCTAssertTrue(flat.isSelected);XCTAssertFalse(bass.isSelected)
+    let empty=app.staticTexts["eq-custom-empty"];reveal(empty);XCTAssertTrue(empty.exists)
     let slider=app.descendants(matching:.any).matching(identifier:"eq-preamp-slider").firstMatch;reveal(slider)
     slider.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.1,thenDragTo:slider.coordinate(withNormalizedOffset:CGVector(dx:0.75,dy:0.5)))
     let value=app.staticTexts["eq-preamp-slider-value"];XCTAssertTrue(value.label.contains("+"));let savedValue=value.label
+    reveal(flat);XCTAssertFalse(flat.isSelected,"Changing only preamp also clears preset selection")
     let curve=app.descendants(matching:.any).matching(identifier:"eq-curve").firstMatch;reveal(curve)
     curve.coordinate(withNormalizedOffset:CGVector(dx:0.45,dy:0.5)).press(forDuration:0.1,thenDragTo:curve.coordinate(withNormalizedOffset:CGVector(dx:0.45,dy:0.25)))
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.isSelected)
@@ -1038,10 +1046,13 @@ final class SourceSettingsTests: XCTestCase {
     name.tap();for character in "Nexus EQ Test" {name.typeText(String(character))};name.typeText("\n")
     let save=app.buttons["eq-save-preset"];reveal(save);save.tap()
     XCTAssertTrue(app.buttons["Nexus EQ Test"].waitForExistence(timeout:5))
+    XCTAssertTrue(app.buttons["Nexus EQ Test"].isSelected);XCTAssertFalse(empty.exists)
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
     app.terminate();app.launch();openSettings(app,page:"equalizer")
     let preset=app.buttons["Nexus EQ Test"];reveal(preset);preset.tap()
+    XCTAssertTrue(preset.isSelected)
     app.buttons["删除预设Nexus EQ Test"].tap();XCTAssertFalse(preset.exists)
+    XCTAssertTrue(empty.exists)
     reveal(slider);XCTAssertEqual(value.label,savedValue)
     reveal(curve);XCTAssertEqual(curve.value as? String,savedCurve,"Every persisted EQ band must match after restart and preset restore")
     reveal(flat);flat.tap();reveal(value);XCTAssertEqual(value.label,"0.0 dB")
@@ -1050,6 +1061,23 @@ final class SourceSettingsTests: XCTestCase {
     let timer=app.buttons["15分钟"];reveal(timer);timer.tap()
     XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
     let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")
+  }
+  func testEQPresetCardsWithLargeText() throws {
+    let app=XCUIApplication()
+    app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch();openSettings(app,page:"equalizer")
+    let flat=app.buttons["eq-builtin-0"],bass=app.buttons["eq-builtin-1"]
+    for _ in 0..<60 {
+      let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-equalizer").firstMatch.frame
+      if flat.exists && flat.isHittable && flat.frame.minY>=viewport.minY+8 && flat.frame.maxY<=viewport.maxY-8 {break}
+      let above=flat.exists && flat.frame.minY<viewport.minY+8
+      app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.60 : 0.40)))
+    }
+    XCTAssertTrue(flat.isHittable)
+    XCTAssertEqual(flat.frame.minX,bass.frame.minX,accuracy:1,"Accessibility type sizes must stack preset cards")
+    XCTAssertGreaterThan(bass.frame.minY,flat.frame.maxY)
+    flat.tap();XCTAssertTrue(flat.isSelected)
+    let image=XCTAttachment(screenshot:app.screenshot());image.name="EQ single column at accessibility XXXL";image.lifetime = .keepAlways;add(image)
   }
   func testAppearancePersistenceAndPrimaryNavigation() throws {
     let app=XCUIApplication();app.launch()

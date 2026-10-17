@@ -36,7 +36,7 @@
 - `NeteaseMusic/NeteaseMusic/Views/PersonalFMView.swift`：FM 批量获取、预加载、播放下一首和丢弃当前歌曲。
 - `NeteaseMusic/NeteaseMusic/Services/LyricActivityManager.swift`：ActivityKit 歌词 Live Activity 的职责边界。
 - `NeteaseMusic/NeteaseMusic/AudioDownloadService.swift`、`SongDownloadService.swift`：缓存、文件类型/有效性检查、并发下载和失败状态；未证明完整后台 URLSession、可恢复 Range 续传、摘要校验和重启调度。
-- `NeteaseMusic/NeteaseMusic/APIConfig.swift`：使用公开的外部网易 API 服务地址 `https://youmimusicapi.preview.aliyun-zeabur.cn`，该地址不能进入音枢配置。
+- `NeteaseMusic/NeteaseMusic/Services/APIConfig.swift`：使用公开的外部网易 API 服务地址 `https://youmimusicapi.preview.aliyun-zeabur.cn`，该地址不能进入音枢配置。
 
 因此 Youmi 能证明“平台登录后优先使用平台推荐/日推/FM”是合理产品路径，也能提供 FM 状态机的交互参考；它不能证明 Sollin 私有服务可以照搬，也不能替代音枢当前更严格的离线下载设计。音枢已实现的本地推荐/FM 仅作为无账号、离线或平台失败时的 fallback。
 
@@ -99,3 +99,23 @@
 2. 将 Youmi 的网易登录、推荐/FM、缓存和下载状态与音枢 provider/离线下载设计逐项对照；如需要移动端包证据，先执行 `reverse-skill` 的 IPA PRIMARY 和严格 review。
 3. 对 `QQMusicApi`、`KuGouMusicApi`、`api-enhanced` 和 `meting` 只提取字段/协议夹具，逐项完成许可证核验后再决定是否保留测试数据。
 4. 不因发现公开仓库或新增参考代码提高完成度；进度仍按 `docs/PROGRESS_ESTIMATE.md` 的工作包权重计算。
+
+## 平台会话、日推与 FM 的源码追踪（2026-10-17）
+
+本轮继续只读固定HEAD源码，没有安装参考工程或访问平台/代理API。三仓库本机位于 `/tmp/ryderwe-review/` 的无checkout部分克隆；file:line来自固定Git blob，不写成ReferenceProject已有完整工作树。定点复现用 `GIT_NO_LAZY_FETCH=1 git -C <仓库目录> show HEAD:<路径>`，避免缺失blob引起隐式网络读取。Youmi无许可，仅行为研究；LX Apache-2.0、api-enhanced MIT/Binaryify均核到根LICENSE，依赖与资产仍独立审查。
+
+| 来源/固定HEAD沿上表 | 代码证据 | 对音枢的含义 |
+| --- | --- | --- |
+| Youmi | `Services/AuthService.swift:93/103/123/143` 的getQRKey/createQRCode/checkQRStatus/getLoginStatus（路径均在`NeteaseMusic/NeteaseMusic/`下） | 扫码状态800/801/802/803与登录后账号确认分开；Cookie非空不等于已验证 |
+| api-enhanced | `module/login_qr_key.js:7`、`login_qr_check.js:9`、`login_qr_create.js:10`、`login_status.js:5` | 二维码与账号确认是独立协议步骤；Youmi代理路由不可直接当作平台原生端点 |
+| api-enhanced | `module/login_refresh.js:6/15`、`logout.js:5`、`util/request.js:185–201/319` | 刷新会更新Cookie；传输须受控处理响应头、CSRF与隔离Cookie，不把外部代理当依赖 |
+| LX 网易 | `src/utils/musicSdk/wy/user.js:9/35–43`、`dailyRec.js:8/46` | 核验实际account后再读dailySongs/推荐歌单；网络失败与会话失效分开 |
+| Youmi | `Services/MusicService.swift:588`、`Views/PersonalFMView.swift:284/309/347/363` | 首批/下一首/低水位补充可参考；全部重复时原样追加的fallback不采纳 |
+
+拒绝沿用：Youmi `Services/NetworkService.swift:42–59/77/90–105/126–127` 的明文Cookie、敏感日志和URL参数；`AuthService.swift:148–155` 远端退出失败后留本机凭据及Cookie存在即登录；`ViewModels/AuthViewModel.swift:198/222` Timer每2秒创建Task可能重叠。LX `WebLoginModal.tsx:60–68` 的document.cookie桥与消息日志、`wy/utils/crypto.js:40–58` 的Math.random及对象日志均不移植。LX `wy/utils/crypto.js:3–9`依赖CryptoModule，其Android脚本不证明iOS可直接运行。
+
+后续最小单元仍是原创“网易单账号会话核心→日推读取→平台FM”。会话须有generation/abort、非重叠轮询、验证成功且Keychain持久化后才authenticated；退出先撤销本机访问，远端失败不能保留登录态。HTTP响应头/受控Cookie、固定HTTPS origin及跨域重定向隔离先于真实登录。凭据只入独立provider namespace，不给LX脚本、SQLite、Track或备份。
+
+音枢当前 `src/providers/contracts.ts` 只有元数据契约，`http.ts` JSON接口不提供Set-Cookie；`online.ts` 公开provider继续独立。复用 `nativeSecrets.ts` Keychain和 `navidromeAccounts.ts` 验证/失败回滚职责；日推与FM通过 `services.ts` 现有playTracks/addTracksToQueue进入权威队列。本地推荐/FM继续清楚标记fallback来源，平台缓存按账号与会话代次隔离。首批应验证写密钥失败、退出迟到返回、二维码取消过期、轮询不重叠、失效/离线差别、账号切换清缓存、Cookie刷新与备份无会话。
+
+此段完成源码到设计缺口的追踪，未实现或验证真实平台登录/日推/FM；已有UI对齐优先级、五参考比较及真实账号/服务/设备验收继续保留。

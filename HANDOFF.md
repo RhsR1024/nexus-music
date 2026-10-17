@@ -1,3 +1,25 @@
+## 2026-10-17 A07 EQ 预设卡片本地验收
+
+reverse-skill mobile-reverse 的本批 IPA E-007→F-006→P-006 采纳前严格review通过（7E/6F/6P，零错误/警告），只确认EQ模块词汇，亲看截图02/07补充视觉；没有恢复对象调用关系或参考运行参数。原创双列曲线卡片、按实际曲线与前级计算选中、自定义计数/空态和大字单列，保留音枢七预设、24自定义和唯一DSP/队列。浅色主题旧深色面板与输入对比度问题已修正，卡片/重置/归零/保存/删除操作至少44点。
+
+328项业务/类型通过，最终配色补修后类型再次通过。正式App1792237003989预设切换/只改前级取消选中/曲线拖动/保存/重启/删除/睡眠92.800秒、1792237149089最大辅助字号单列30.615秒分别通过，均零失败/跳过；亲看最终附件，大字专项加入原云端回归组。清洁设备归档与本批云端终态待做，真实音效/签名/手机仍独立验收。报告见 [EQ专项](docs/2026-10-17_reverse-sollin-eq-report.md)。
+
+Ryderwe固定源码已继续追踪到平台扫码状态/账号核验、Cookie刷新、日推与FM，补齐音枢HTTP响应头和隔离会话缺口/测试清单；无许可Youmi只行为参考，不采纳敏感日志/明文Cookie/外部代理。详见 [Ryderwe追踪](docs/RYDERWE_REPOSITORY_REVIEW.md)。仍先完成A06–A09，再推进真实平台能力；F01–F37/J01–J59范围保留。
+
+## 2026-10-17 下载批次清洁本地归档回执
+
+`ab98682c2262e633f2789a9a38ce0aad87a605c8` 已正常push；本机归档 `archive-download-ui-clean.log` 为ARCHIVE SUCCEEDED。manifest对应ab98682、dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。正式入口隔离、ZIP CRC、包内可执行文件/JS与归档字节一致、私人参考/签名资源排除及SHA256核验通过；IPA摘要 `9c37b2b030d5840af8521d2b234f933e9fc77614142d80f9a44f0bbb9587505e`，留存 `build/local-download-ui-ab98682`。本条覆盖下方“本批清洁归档/push待做”的历史状态，iOS27/真实服务/手机后台/签名仍独立验收。
+
+主执行上下文又核对c999049云端成功与artifact12099502248的页面摘要；浏览器下载跳转被Chrome以ERR_BLOCKED_BY_CLIENT阻断，未绕过，未取得ZIP，故仍不宣称该产物已核验。ab98682云端39027501515继续运行、0排队，未取消或重派。
+
+## 2026-10-17 19:26 心跳：推荐批次 iOS27 完整成功
+
+`c999049` / [39022411440](https://github.com/RhsR1024/nexus-music/actions/runs/39022411440) 于19:25:26完成：checks、native、两组App测试、iPad窗口/旋转、unsigned IPA归档及上传全部成功。它包含1cc9e39本地推荐/FM fallback，但不包含后续c1a4605/c098eeb恢复调度或ab98682下载任务页；成功仅覆盖实际提交，真实平台推荐/FM、签名、手机/后台/灵动岛仍待验收。
+
+API返回IPA artifact `12099502248`（10309262字节），ZIP摘要 `03239aa0b887be4d214914d44d1a4c2c635152bd35de8a6bffaa622c24820c74`；诊断artifact `12099059107`。状态摘录留存忽略目录 `build/ci-39022411440/STATUS.txt`，再次获取原始JSON时API限流，未保存原始JSON；尚未下载本批ZIP或核验包内manifest/CRC/IPA摘要，不能写成产物已核验。前批920d193的完整产物核验沿18:06既有记录，不重复下载。
+
+19:26 API实核最新 `39027501515` / `ab98682` 已运行，0排队；旧pending `39024707349` / c098eeb已由single队列自动取消，不计通过。未取消运行或重派旧版。本心跳只更新状态，不介入另一执行上下文的功能/工具工作或独立提交push。
+
 ## 2026-10-17 下载设置与任务页本地专项通过
 
 用户已明确批准独立Blutter构建与离线提取；已执行审阅脚本，首次session 20028已因GitHub连接重置/early EOF以128退出，保留日志`build/logs/blutter-isolated-build-approved.log`，授权/脚本摘要留`work/tooling/blutter-approval.json`。两平台前置门禁通过、固定Python依赖已安装，当前只重试同一ICU固定提交checkout（session 49192，build/logs/blutter-icu-fixed-checkout-retry.log），未改全局Git配置或源码版本，尚未产生对象恢复结论。0037第四次正式App下载/分组导航复测session 22499已exit0；仅网络重试并行，工具编译与App编译错开，后续恢复原构建脚本前先核实本机构建退出。不能重复请求已获批准。固定来源/限制见REVERSE_SKILL_WORKFLOW。

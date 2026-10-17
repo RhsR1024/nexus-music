@@ -74,3 +74,11 @@ flowchart LR
 构建成功、CLI帮助、目标解析和语义核验是不同验收；现阶段仅已启动构建，不能据此新增对象关系或函数结论。助手要求固定Dart提交及原始schema文件生成的snapshot格式摘要匹配，检查输出非空并额外拒绝上游吞异常后返回0的情况。后续仍须建立功能Evidence→Finding→Path、更新workitems/timeline并严格review后，才可采纳A03/A04结论。
 
 首次构建在ICU固定checkout的懒加载下载阶段遭遇GitHub连接重置、early EOF，脚本exit128，未进入工具编译或样本解析。原日志保留；已仅对同一固定提交用单次`git -c http.version=HTTP/1.1`重试checkout，不修改全局配置、不切换来源/版本。App复测期间只允许该下载重试并行，工具编译仍与Xcode错开。
+
+### 2026-10-17 固定源码下载恢复与 EQ 批次
+
+ICU固定Git checkout在单次重试和批量对象下载中仍遇到连接重置/不完整对象，日志分别为 `build/logs/blutter-icu-fixed-checkout-retry.log` 和 `blutter-icu-batched-git-fetch.log`。现从GitHub官方codeload下载**同一提交**归档至Tools/Reverse/downloads；完成后必须检查tar完整性/路径并按固定Git树逐文件核对blob，不能把下载中字节视为完整源码。原批准构建脚本尚未恢复编译，App测试/归档与工具编译继续错开；其他三个固定依赖仅预取源码，不运行其代码。没有改变工具版本、全局配置或目标scope，仍无对象恢复结论。
+
+本批mobile-reverse的IPA E-007→F-006→P-006用于A07既有EQ卡片，采纳前严格review通过7E/6F/6P（零错误/警告），记录见 [EQ专项报告](2026-10-17_reverse-sollin-eq-report.md)。只确认静态模块词汇，截图02/07补视觉；对象/调用关系仍待恢复。依赖独立工具的A03/A04结论继续门禁，不受本批UI实现影响。
+
+预取补充：首个Capstone固定Git clone因Operation timed out退出，`build/logs/blutter-other-fixed-sources.log`保留；pkgconf/Blutter尚未进入该脚本后续步骤。没有把超时或不完整checkout登记为工具可用。

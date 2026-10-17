@@ -152,3 +152,7 @@ Youmi 是 `7DaysMax/Youmi-Music-IOS` 的 fork 且未声明许可证；其网易�
 ## A06 既有下载UI归组（2026-10-17）
 
 按[0037](decisions/0037-download-settings-and-tasks.md)亲读五参考的设置分类、缓存/下载入口与Sollin desktop任务页，固定提交/许可沿上表；采用声明式入口和职责分离，在既有音枢store上原创实现偏好/虚拟任务页及批量动作，无参考源码/资源复制。wtf仅iOS下载分组与Cy前台下载都不作为Android或系统后台能力证明。IPA E-006分类/模块线索优先、截图11/34/36补层级；不把截图或共存字符串写成调用图、默认值或算法证据。
+
+## A07 既有 EQ 预设卡片（2026-10-17）
+
+五参考HEAD按固定表重新核对。Q `SoundEffectControl.tsx:38–45` 保留增益/有界预设和声明式UI职责；悦音/wtf/Cy当前src、Wayferar当前docs限定检索无EQ/preamp匹配，沿0014边界，不外推全仓无能力。IPA E-007→F-006→P-006 严格review通过，截图02/07只补视觉。原创卡片用音枢实际十频段值绘制、按曲线和前级计算选中态；保留七预设/24个自定义与唯一DSP，不复制Q参数、参考图片或商业配额。共享TS与未来Android原生音效边界见 [本批报告](2026-10-17_reverse-sollin-eq-report.md)。
