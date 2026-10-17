@@ -1,3 +1,9 @@
+## 2026-10-17 设置分类批次清洁归档与推送回执
+
+`35e6f2fefcb5812d8d6cfdcbdc763b576b02ad07` 已正常push，远端main核对一致。清洁本机设备归档成功：manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；正式入口隔离、ZIP CRC、包内可执行文件/JS对归档字节一致和私人参考/签名资源排除均通过。IPA SHA256 `c9b172e63e0da697649c60f1013826f27b68864e3451e08ad6a38dc10b0ae664`，留存 `build/local-settings-objects-35e6f2f`。最大辅助字号32.744秒截图已亲看，卡片单列/选中可达。
+
+push后网页实核最新[39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819) /35e6f2f为唯一pending；[39027501515](https://github.com/RhsR1024/nexus-music/actions/runs/39027501515) /ab98682继续运行，核心App、歌词/匹配/发现和离线下载/断服务播放步骤均exit0，正执行iPad。旧pending39030063384/88850c1由single自动取消，不计通过；1运行/1排队，未取消运行或重派。新批云端终态、真实服务、签名与手机仍待。此回执覆盖本批“清洁归档待做”，不提前勾选全功能完成。
+
 ## 2026-10-17 设置对象关系与分类入口阶段
 
 reverse-skill mobile-reverse IPA E-008→F-007→P-007严格review通过（8E/7F/7P、7工作项、12事件、零错误/警告）。固定Blutter/Dart双端隔离构建与断网解析已完成；IPA独立容器检查24,298入口、1,455骨架重放及限定原始BL支持设置分类分派、二级页创建和播放→EQ。NO_CODE_ANALYSIS骨架不等于完整反编译/运行图；A03仍有Sheet/默认值待查。A04纠正：resolve/load/applyCoverTheme属于ArtworkSummaryState，尚未证明全局主题取色链，三个动态provider仍分开。
