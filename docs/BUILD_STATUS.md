@@ -759,6 +759,14 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 
 ## 2026-10-17 M10 摘要校验批次（本地检查）
 
+## 2026-10-17 M10 传输完整性与下载竞态修正
+
+本批在上一批摘要校验/在播保护基础上，新增 `src/storage/offlineTransfer.ts` 的纯校验层，并让真实文件适配器使用 Expo `fetch` 流式响应。断点续传必须收到匹配的 `206 Content-Range` 起点；`Content-Length`、总长度和实体校验器（`ETag` 或 `Last-Modified`）不一致时不会把内容标记为完成，并通过 `If-Range` 保护跨请求实体。任务记录的保存和发布变更串行化；删除尚未启动的排队任务会先阻止其运行，删除活动任务会等待其终止后再清理文件。
+
+本地 `npm run check`：317/317；类型检查通过。新增真实 HTTP/磁盘流、传输响应长度/范围/实体校验测试，以及删除排队任务的竞态测试。此前 `26d3675` 的清洁 unsigned archive 仍是上一批产物，不能覆盖本批代码；本批需提交后重新生成清洁归档并跟踪 iOS27。
+
+push 前后的 GitHub API 事实状态（2026-10-17 15:46 Asia/Shanghai）：`39010767320`（`3e56d4d`）仍为 `in_progress`，`39014868431`（`7cc176c`）为最新 `pending`；`39012949974`（`52a0aaf`）已自动取消。队列为 1 个运行、1 个最新排队，未取消运行中任务，也未重派旧版本；pending/取消不计为通过。
+
 本轮新增本地离线文件摘要、恢复校验、当前播放文件删除保护和 `.part` 大小读取；`npm run check` 311/311，`npm run test:native` 通过，`git diff --check` 通过。摘要只证明本地文件在完成与恢复时的一致性，不能证明远端传输完整或真实服务长期可用。当前没有 iOS27、签名或真机结果，待提交后按 `queue: single` 核对云端运行/排队。
 
 本轮 `26d3675` 本地 unsigned device archive 已成功：Xcode 26.3 / iOS 26.2 SDK、arm64、最低 iOS 15.1、设备族 `[1,2]`，manifest `dirty=false`，IPA SHA256 `393fb8c8008b41dd1e450e61951721645078e12a3f33aaf0a932faa637ce3dcb`。该包不替代 iOS27、签名、真机或真实服务验收。

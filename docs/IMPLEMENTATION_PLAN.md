@@ -411,6 +411,6 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 
 # 2026-10-17 M10 摘要校验与在播保护增量
 
-`OfflineDownloadStore` 现为完成文件保存摘要并在恢复时重算校验；摘要缺失或变更会清理不可用文件并保留失败记录，离线解析器不会播放失败文件。通过播放控制器的权威队列和播放意图识别当前曲目，删除与批量清理均保留在播文件。`npm run check` 为 311/311，`npm run test:native` 通过。后台任务、重启调度、漫途完整导入、跨服务稳定性和真实服务/签名/真机验收仍待。
+`OfflineDownloadStore` 现为完成文件保存摘要并在恢复时重算校验；摘要缺失或变更会将记录降级为失败并保留文件，离线解析器不会播放失败文件。Expo 适配器使用流式 `expo/fetch`，断点请求校验 Content-Range 起点、Content-Length 和 ETag/Last-Modified If-Range；短流不会标记完成。下载记录的保存和发布变更串行化，删除排队任务会阻止其后续网络工作。通过播放控制器的权威队列和播放意图识别当前曲目，删除与批量清理均保留在播文件。`npm run check` 为 317/317，`npm run test:native` 通过。后台任务、重启调度、漫途完整导入、跨服务稳定性和真实服务/签名/真机验收仍待。
 
 `26d3675` 本地清洁 unsigned device archive 已成功：manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，IPA SHA256 `393fb8c8008b41dd1e450e61951721645078e12a3f33aaf0a932faa637ce3dcb`。本地 archive 不替代 iOS27、签名、真机或真实服务。

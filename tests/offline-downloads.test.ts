@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {OfflineDownloadInUse,OfflineDownloadInterrupted,OfflineDownloadStore,type OfflineDownloadFiles} from '../src/storage/offlineDownloads.ts';
 import type {Repository} from '../src/storage/repository.ts';
 import type {Track} from '../src/domain/track.ts';
+import {assertDownloadedLength,inspectDownloadResponse} from '../src/storage/offlineTransfer.ts';
 
 const track=(id='song'):Track=>({origin:{kind:'online',platform:'wy',id},title:'Song',artist:'Artist',metadata:{},qualities:[]});
 function rig(saved:unknown=undefined){
@@ -73,4 +74,21 @@ test('restore rejects a changed completed file by digest before playback',async(
   const files:OfflineDownloadFiles={async download(){return 8;},async remove(){},exists:()=>true,size:()=>8,partialSize:()=>0,digest:()=>'b'.repeat(32),uri:name=>`file:///offline/${name}`};
   const store=new OfflineDownloadStore({get:async()=>saved as never,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/digest.mp3'}),files,uuid:()=>`00000000-0000-4000-8000-000000000040`,now:()=>1});
   await store.restore();assert.equal(store.getSnapshot()[0]!.status,'failed');assert.match(store.getSnapshot()[0]!.error??'',/完整性/);assert.equal(await store.resolve(track('digest')),undefined);
+});
+
+test('wire transfer validation requires matching range and declared length',()=>{
+  const headers=(values:Record<string,string>)=>({get:(name:string)=>values[name.toLowerCase()]??null});
+  const inspection=inspectDownloadResponse(206,headers({'content-range':'bytes 4-11/12','content-length':'8','etag':'"v1"'}),4);
+  assert.equal(inspection.append,true);assert.equal(inspection.validator,'"v1"');assert.doesNotThrow(()=>assertDownloadedLength(inspection,12,4));
+  assert.throws(()=>inspectDownloadResponse(206,headers({'content-range':'bytes 0-7/12','content-length':'8'}),4),/断点续传/);
+  assert.throws(()=>{const value=inspectDownloadResponse(200,headers({'content-length':'8'}),0);assertDownloadedLength(value,7,0);},/长度/);
+});
+
+test('removing a queued run prevents its network work and deletes its record',async()=>{
+  let calls=0,sequence=0;const files:OfflineDownloadFiles={
+    async download(){calls+=1;return 8;},async remove(){},exists:()=>true,size:()=>8,partialSize:()=>0,digest:()=>'d'.repeat(32),uri:name=>`file:///offline/${name}`,
+  };
+  const store=new OfflineDownloadStore({get:async()=>undefined,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/queued.mp3'}),files,uuid:()=>`00000000-0000-4000-8000-${String(++sequence).padStart(12,'0')}`,now:()=>1});
+  const first=await store.enqueue(track('first'));const second=await store.enqueue(track('second'));const running=store.start(first.id);const removing=store.start(second.id);await store.remove(second.id);await Promise.all([running,removing]);
+  assert.equal(calls,1);assert.equal(store.find(track('second')),undefined);
 });
