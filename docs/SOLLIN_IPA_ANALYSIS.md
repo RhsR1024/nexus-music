@@ -1,3 +1,7 @@
+## 2026-10-17 舞台字符与分配算式证据
+
+本批reverse-skill mobile-reverse E-015→F-014→P-014采纳前严格review通过15E/14F/14P、零错误/警告；StringCharacters计数、四字符比较、均分算式和CJK范围已限定核实。完整flush/未知偏移字段/特效和动态效果保留；音枢原创方案采用既有偏移和真实词时序，见[专项报告](2026-10-17_reverse-sollin-stage-rules-report.md)及[0042](decisions/0042-bounded-lyric-stage.md)，不把实现测试反推为参考算法/视觉等价。
+
 ## 2026-10-17 歌词舞台时间轴证据阶段
 
 reverse-skill新路由mobile-reverse；E-014→F-013→P-013严格review通过14E/13F/13P、7WI/22事件、零错误/警告。原始字节核实初始化/文档变化分段、外层半开区间、组起点扫描/身份守卫及独立Karaoke绘制，完整分段阈值/时间偏移来源/视觉效果继续待核。本批仅收敛后续实现前提，音枢六布局保留，不计新舞台/AM2完成；详见[专项报告](2026-10-17_reverse-sollin-stage-timeline-report.md)。环形定位fcffd28已清洁归档/push，云端新39042804499待验；全部A/F/J与真实服务/签名/手机范围继续。

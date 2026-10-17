@@ -1,3 +1,25 @@
+## 2026-10-17 舞台设置最终复测通过
+
+`SourceUITests-1792251015965.xcresult` 2/2通过、零失败/跳过：分组导航与草稿109.951秒；最大辅助字号样式146.224秒，覆盖wave原断言和新增stage重启持久化。亲看`build/stage-settings-final-attachments/0CBA56CF-4E80-45D1-8B03-20CF96826B1F.png`，大字标题换行、关闭与列表选择可达。日志/summary/附件留存；首轮失败未抹去。最后将首个真实词起点晚于行起点的间隔保留为等待，并添加独立边界测试；`check-stage-onset-final.log`342/342及类型通过。既有App合成词起点与行一致，前述App结果分别记录，不虚称延迟首词已在App实跑。本批清洁归档/push与对应iOS27继续。
+
+## 2026-10-17 舞台正式入口播放与大字失败修正
+
+`SourceUITests-1792250677865.xcresult` 为1通过/1失败，不能写整组通过。正式入口`testZNavidromePlaybackAndCredentials`206.720秒通过：真实合成流/PCM、七布局、暂停/播放环形定位、共享进度、歌词、统计、mini/重启与凭据清理；舞台在60秒选中`two`，亲看`build/stage-production-first-attachments/88075121-D1C8-4EE9-8877-31E82FB83B94.png`的部分原生扫色与暂停控制。无音频/歌词原生后端实现变化。
+
+大字样式项17.153秒失败于`openSettings`旧Swift16：整屏0.7→0.35拖动后设置分类从AX消失，剩下经典播放页。日志/层级和亲看的录屏15秒帧`build/stage-style-first-failure.png`确认打开了播放器；根据整屏手势坐标和页面变化，判断与大字mini上滑入口被命中一致；未将其写为生产设置导航故障。测试改在`settings-viewport-*`实际区域按行frame双向拖动，样式页类别滚动也限定在外观viewport；未改产品手势或移除恢复/可点击断言。新增舞台选择并重启恢复断言，分组导航和大字专项最终复测继续，不能预记修正通过。此前206.720秒播放结果先于测试辅助函数变更，产品实现相同，仍单独列明。
+
+## 2026-10-17 有界舞台第一轮与歌词最终专项
+
+`check-stage-reviewed.log` 341/341业务与类型检查通过。首次 `SourceUITests-1792250181854.xcresult` 在85.608秒失败于新增查询：`NativeLyricLine` 的绘制子视图明确 `accessible=false`，不可通过AX查询`native-word-lyrics`；当前舞台组已出现。保留首次日志/计数/summary/录屏，不将其记为通过。测试改查真实组文本及用户可理解的“逐字歌词”能力值，维持原生绘制，未暴露隐藏子视图或新增测试后门。另为长组添加独立滚动并将舞台高度约束与AM一致，控制条保留可达空间。
+
+最终 `SourceUITests-1792250453318.xcresult` 的增强`testCrossPlatformLyrics`141.407秒、1/1通过，零失败/跳过；舞台真实词组、暂停意图、完整歌词/本曲偏移及原有自动/人工选择、录音/收藏身份、重启/清理均通过。亲看`build/stage-rich-final-attachments/2A0DE831-A254-429A-ABE0-26BDBC319485.png`：独立当前组、歌词来源、偏移入口、真实暂停进度及控制在屏内。它是合成逐字数据与已结束填色截图，不是参考画面/实际逐帧性能验证。首轮附加simctl工具路径诊断与主失败分别保留。
+
+正式入口Navidrome/七布局和最大辅助字号样式专项正在执行；本批尚未清洁归档、提交push或对应iOS27验收。无新增原生模块/音频后端/依赖，未重复宣称完整native新跑；真实服务/签名/手机与完整舞台特效另验。见[0042](decisions/0042-bounded-lyric-stage.md)。
+
+## 2026-10-17 设置分类批次 iOS27 成功与产物核验
+
+`35e6f2fefcb5812d8d6cfdcbdc763b576b02ad07` / [39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819) 的checks、native、核心App、歌词/匹配/发现、离线断服务播放、iPad、设备归档及上传全部成功，API已实核。IPA artifact12103974275，ZIP10324662字节，API SHA256 `d04a521e5925bdaa78f0d25491c5c40e9c249c6cd1739ada2ca92284859f12b0`；实际下载/完整ZIP CRC、包内IPA附带摘要/CRC、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `9a8c85851ae80ed32f2dc69a35d0743bbb72a9495900cdda3fbb025227c29ebd`，留存`build/ci-39034909819`。manifest为Xcode27.0/27A266a、iphoneos27.0、arm64、min15.1、设备族[1,2]、unsigned；dirty=true唯一`ios/Podfile.lock`。该成功只覆盖设置分类批次及祖先，不覆盖后续主题/背景/样式/环形定位或当前舞台。环形定位39042804499已过native、正在核心App；不取消或重派。真实服务/签名/手机另验。
+
 ## 2026-10-17 环形定位清洁归档与push回执
 
 `fcffd286ebe61baee3b4f389fab995f8a254996d`已正常push并核对远端main一致。`archive-ring-seek-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `3648b46f776288557f620f0f625ecd45d44896cd36fef3e0dda38c1973d37930`，留存`build/local-ring-seek-fcffd28`。本条覆盖下方本批归档/push待办，真实服务/签名/手机独立验收。

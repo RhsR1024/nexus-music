@@ -64,7 +64,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
         <View testID="settings-category-group" style={{borderRadius:22,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,overflow:'hidden'}}>
           {row('playback','音质、睡眠、歌词与均衡器','musical-notes-outline',preferences.quality.toUpperCase(),true)}
           <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
-          {row('appearance','主题、字体、播放界面与迷你播放器','color-palette-outline',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核'}as const)[preferences.playerLayout],true)}
+          {row('appearance','主题、字体、播放界面与迷你播放器','color-palette-outline',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台'}as const)[preferences.playerLayout],true)}
           <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
           {row('downloads','下载偏好、任务与已保存文件','cloud-download-outline','下载设置',true)}
           <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>

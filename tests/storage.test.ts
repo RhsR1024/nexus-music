@@ -203,3 +203,13 @@ test('queued lyric style changes merge fields and repeated adjustments against t
   await Promise.all([preferences.updateLyricStyle({activeColor:'#FFFFFF'}),preferences.updateLyricStyle({emphasis:false}),preferences.adjustLyricStyle('spacing',2),preferences.adjustLyricStyle('spacing',2)]);
   const style=preferences.getSnapshot().lyricStyle;assert.equal(style.activeColor,'#FFFFFF');assert.equal(style.emphasis,false);assert.equal(style.spacing,12);db.close();
 });
+
+
+test('stage layout persists and failed layout writes preserve the current style',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');
+  const preferences=new PreferenceStore(repository);await preferences.update({playerLayout:'stage'});
+  const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().playerLayout,'stage');
+  const write=repository.put.bind(repository);repository.put=async()=>{throw new Error('disk full');};
+  await assert.rejects(restored.update({playerLayout:'wave'}));assert.equal(restored.getSnapshot().playerLayout,'stage');
+  repository.put=write;db.close();
+});

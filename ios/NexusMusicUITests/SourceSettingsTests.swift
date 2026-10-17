@@ -8,18 +8,24 @@ final class SourceSettingsTests: XCTestCase {
     let tab=app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
     XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
     for _ in 0..<3 {let back=app.buttons["settings-back"];if !back.exists{break};back.tap()}
+    var settingsPage="home"
     func enter(_ target:String){
+      let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-"+settingsPage).firstMatch
+      XCTAssertTrue(viewport.waitForExistence(timeout:5))
       let row=app.buttons["settings-open-"+target]
       XCTAssertTrue(row.waitForExistence(timeout:10))
       // Settings preserves each page's scroll position. On returning from a
       // lower row, the next target can be above the visible viewport.
-      for _ in 0..<12 {if row.isHittable{break};let above=row.frame.midY<app.frame.midY
-        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      for _ in 0..<12 {
+        if row.isHittable{break};if !row.exists{break}
+        let above=row.frame.midY<viewport.frame.midY
+        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25 : 0.75)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75 : 0.25)))
+      }
       if !row.isHittable {
         let image=XCTAttachment(screenshot:app.screenshot());image.name="Settings row unreachable: "+target;image.lifetime = .keepAlways;add(image)
         let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Settings navigation failure hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
       }
-      XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5))
+      XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5));settingsPage=target
     }
     let appearancePages=["theme","background","skins","accent","navigation","mini"]
     enter(page=="typography" || page=="equalizer" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
@@ -281,6 +287,20 @@ final class SourceSettingsTests: XCTestCase {
     let automatic=NSPredicate(format:"label CONTAINS %@","自动优选 · 网易云")
     expectation(for:automatic,evaluatedWith:lyricSource);waitForExpectations(timeout:30)
     XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.exists);XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Changing lyrics must preserve paused audio")
+    let stageSkin=app.descendants(matching:.any).matching(identifier:"play-skin-stage").firstMatch
+    reach(stageSkin,up:false);stageSkin.tap()
+    let stageGroup=app.descendants(matching:.any).matching(identifier:"lyric-stage-group").firstMatch
+    XCTAssertTrue(stageGroup.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Entering stage must keep paused intent")
+    XCTAssertEqual(stageGroup.value as? String,"逐字歌词","Stage must preserve the loaded word-timing capability")
+    XCTAssertTrue(["Synthetic ","rich lyric","Second rich line"].contains(stageGroup.label),"Stage must display a real word group from the selected lyric")
+    let stageImage=XCTAttachment(screenshot:app.screenshot());stageImage.name="Stage real timed group";stageImage.lifetime = .keepAlways;add(stageImage)
+    let stageSettings=app.buttons["打开全部歌词与偏移设置"];reach(stageSettings);stageSettings.tap()
+    XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:5));app.buttons["+100ms"].tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","本曲 100ms")).firstMatch.waitForExistence(timeout:5))
+    app.buttons["重置"].tap();app.buttons["收起全部歌词"].tap()
+    app.buttons["更多播放控制"].tap();app.buttons["播放界面样式"].tap()
+    let classicSkin=app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch;reach(classicSkin,up:false);classicSkin.tap()
+    XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.waitForExistence(timeout:10))
     let fullLyrics=app.buttons["全部歌词 · 双击行定位，长按打开设置"]
     reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10));app.buttons["收起全部歌词"].tap();XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.exists)
     reach(sourceButton,up:false);sourceButton.tap();let search=app.buttons["搜索歌词候选"];reach(search);search.tap()
@@ -828,13 +848,18 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["播放界面样式"].waitForExistence(timeout:5), "The dedicated style control must open the style sheet")
     app.buttons["收起播放界面样式"].tap()
     let immersiveImage=XCTAttachment(screenshot:app.screenshot());immersiveImage.lifetime = .keepAlways;add(immersiveImage)
-    for layout in ["photo","vinyl","wave"] {
+    for layout in ["photo","vinyl","wave","stage"] {
       app.buttons["更多播放控制"].tap()
       app.buttons["播放界面样式"].tap()
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
       XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"Lyric selection must fit in \(layout)")
+      if layout=="stage" {
+        let group=app.descendants(matching:.any).matching(identifier:"lyric-stage-group").firstMatch
+        XCTAssertTrue(group.waitForExistence(timeout:10));XCTAssertEqual(group.label,"two","Stage must select the last real timed group at the shared 60-second position")
+        let stageImage=XCTAttachment(screenshot:app.screenshot());stageImage.name="Stage real group with paused transport";stageImage.lifetime = .keepAlways;add(stageImage)
+      }
       if layout=="wave" {
         XCTAssertTrue(app.buttons["Synthetic lyric two"].firstMatch.isHittable,"Wave layout must show its active lyric completely below the selector")
         XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch.exists,"Paused wave playback must not fabricate a spectrum ring")
@@ -1122,7 +1147,7 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"skins");let initialClassic=item("classic");reveal(initialClassic);initialClassic.tap()
     openSettings(app,page:"appearance")
     let entry=app.buttons["settings-open-skins"]
-    for _ in 0..<20 {if entry.isHittable{break};app.swipeUp()}
+    for _ in 0..<20 {if entry.isHittable{break};app.descendants(matching:.any).matching(identifier:"settings-viewport-appearance").firstMatch.swipeUp()}
     XCTAssertTrue(entry.isHittable);let entryY=entry.frame.midY;entry.tap()
     let close=app.buttons["skins-sheet-close"]
     XCTAssertTrue(close.waitForExistence(timeout:5));XCTAssertFalse(app.buttons["settings-open-background"].exists)
@@ -1139,6 +1164,9 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(entry.frame.midY,entryY,accuracy:2);entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected)
     close.tap();entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected,"Closing without a choice must preserve the style");close.tap()
     app.terminate();app.launch();openSettings(app,page:"skins");reveal(wave);XCTAssertTrue(wave.isSelected,"Restart must restore the saved layout")
+    let stage=item("stage");reveal(stage);stage.tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    app.terminate();app.launch();openSettings(app,page:"skins");reveal(stage);XCTAssertTrue(stage.isSelected,"Restart must restore the new stage layout too")
     let classic=item("classic");reveal(classic);classic.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
   }

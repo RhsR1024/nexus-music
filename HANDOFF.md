@@ -1,3 +1,11 @@
+## 2026-10-17 设置分类批次 iOS27 成功与产物核验
+
+`35e6f2fefcb5812d8d6cfdcbdc763b576b02ad07` / [39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819) 的checks、native、核心App、歌词/匹配/发现、离线断服务播放、iPad、设备归档及上传全部成功，API已实核。IPA artifact12103974275，ZIP10324662字节，API SHA256 `d04a521e5925bdaa78f0d25491c5c40e9c249c6cd1739ada2ca92284859f12b0`；实际下载/完整ZIP CRC、包内IPA附带摘要/CRC、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `9a8c85851ae80ed32f2dc69a35d0743bbb72a9495900cdda3fbb025227c29ebd`，留存`build/ci-39034909819`。manifest为Xcode27.0/27A266a、iphoneos27.0、arm64、min15.1、设备族[1,2]、unsigned；dirty=true唯一`ios/Podfile.lock`。该成功只覆盖设置分类批次及祖先，不覆盖后续主题/背景/样式/环形定位或当前舞台。环形定位39042804499已过native、正在核心App；不取消或重派。真实服务/签名/手机另验。
+
+## 2026-10-17 A09 有界歌词舞台本地专项通过
+
+reverse-skill mobile-reverse E-015→F-014→P-014采纳前严格review通过15E/14F/14P、7WI/23事件、零错误/警告；只确认字符计数/四字符比较与均分时间算式，完整分段/偏移字段/视觉特效未恢复。依据[0042](docs/decisions/0042-bounded-lyric-stage.md)和[专项报告](docs/2026-10-17_reverse-sollin-stage-rules-report.md)原创接入第七种歌词舞台：真实词分组/原生扫色、普通LRC整行、半开空隙、原偏移与唯一控制器，保留六布局/黑胶及音枢功能。342项业务/类型通过；增强歌词141.407秒、正式入口Navidrome七布局206.720秒分别通过，修正测试滚动范围后分组导航109.951秒/最大辅助字号样式及舞台重启持久化146.224秒均通过，零失败/跳过。首词延迟起点另有单元覆盖。清洁归档/提交push/对应iOS27尚待，完整舞台等价未验。AM2、舞台背景人声专用绘制/特效/手机性能及全部其他A/F/J与真实服务/签名/手机继续。
+
 ## 2026-10-17 歌词舞台时间轴证据阶段
 
 reverse-skill新路由mobile-reverse；E-014→F-013→P-013严格review通过14E/13F/13P、7WI/22事件、零错误/警告。原始字节核实初始化/文档变化分段、外层半开区间、组起点扫描/身份守卫及独立Karaoke绘制，完整分段阈值/时间偏移来源/视觉效果继续待核。本批仅收敛后续实现前提，音枢六布局保留，不计新舞台/AM2完成；详见[专项报告](docs/2026-10-17_reverse-sollin-stage-timeline-report.md)。环形定位fcffd28已清洁归档/push，云端新39042804499待验；全部A/F/J与真实服务/签名/手机范围继续。

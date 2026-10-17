@@ -1,3 +1,7 @@
+## 2026-10-17 歌词舞台比较
+
+五个固定HEAD再次核对；本批亲读悦音LyricsView、Q/wtf Vertical/Lyric、Cy lyric/index与自有Wayferar StageLyricLayout。逐项实现、维护/Android/许可及原创取舍见[0042](decisions/0042-bounded-lyric-stage.md)。采纳职责分离与Unicode边界，复用音枢现有TextKit/歌词仓储/唯一播放控制器，无参考源码/资源/依赖移植；Sollin采用E-014/E-015受限证据，不宣称完整算法/特效/运行等价。
+
 ## 2026-10-17 声波核环形定位比较
 
 本批亲读悦音CircleSlider（实际线性Slider）、Q/wtf ProgressBar、Cy PlayerProgressbar及自有Wayferar QishuiPlayer.smali seek/generation；固定提交和许可沿原表。预览/提交职责可参考，不复制依赖、未处理terminate、全局事件、RNTP或汽水专用后端。音枢原创圆环几何和token/duration事务，未来Android共享TS语义，触摸/无障碍各自验；逐项实现/维护/许可与证据见[0041](decisions/0041-wave-ring-seek.md)。
