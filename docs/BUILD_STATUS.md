@@ -1,3 +1,9 @@
+## 2026-10-17 有界歌词舞台清洁归档与push回执
+
+`ad784b539869b9380eee2cc1ee504428236acd6d`已正常push并核对远端main一致。`archive-lyric-stage-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除均通过；IPA SHA256 `33f49a94a5cf038ef038c667c8192502de77e6af493174ee47e35c527026cc09`，留存`build/local-lyric-stage-ad784b5`。342项业务/类型及分项App结果见下；采纳前review23事件，实施验收后review24事件、15E/14F/14P、7工作项、零错误/警告。此条覆盖本批清洁归档/push待办，不能代表完整参考特效、真实服务、签名或手机验收。
+
+push后当前GitHub Actions HTML嵌入状态实核：[39046035422](https://github.com/RhsR1024/nexus-music/actions/runs/39046035422)/ad784b5为唯一pending，[39042804499](https://github.com/RhsR1024/nexus-music/actions/runs/39042804499)/fcffd28继续运行，1运行/1排队。未取消运行中任务或重派旧版；本批对应iOS27终态继续跟进。下一AM2离线分析已重新路由mobile-reverse并通过前置门禁，仅有本机限定字节探查，尚未建立新功能收据/review或实施；不能计作第八布局或完成。全部A/F/J余项持续。
+
 ## 2026-10-17 舞台设置最终复测通过
 
 `SourceUITests-1792251015965.xcresult` 2/2通过、零失败/跳过：分组导航与草稿109.951秒；最大辅助字号样式146.224秒，覆盖wave原断言和新增stage重启持久化。亲看`build/stage-settings-final-attachments/0CBA56CF-4E80-45D1-8B03-20CF96826B1F.png`，大字标题换行、关闭与列表选择可达。日志/summary/附件留存；首轮失败未抹去。最后将首个真实词起点晚于行起点的间隔保留为等待，并添加独立边界测试；`check-stage-onset-final.log`342/342及类型通过。既有App合成词起点与行一致，前述App结果分别记录，不虚称延迟首词已在App实跑。本批清洁归档/push与对应iOS27继续。

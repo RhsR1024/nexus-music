@@ -1,3 +1,9 @@
+## 2026-10-17 有界歌词舞台清洁归档与push回执
+
+`ad784b539869b9380eee2cc1ee504428236acd6d`已正常push并核对远端main一致。`archive-lyric-stage-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除均通过；IPA SHA256 `33f49a94a5cf038ef038c667c8192502de77e6af493174ee47e35c527026cc09`，留存`build/local-lyric-stage-ad784b5`。342项业务/类型及分项App结果见下；采纳前review23事件，实施验收后review24事件、15E/14F/14P、7工作项、零错误/警告。此条覆盖本批清洁归档/push待办，不能代表完整参考特效、真实服务、签名或手机验收。
+
+push后当前GitHub Actions HTML嵌入状态实核：[39046035422](https://github.com/RhsR1024/nexus-music/actions/runs/39046035422)/ad784b5为唯一pending，[39042804499](https://github.com/RhsR1024/nexus-music/actions/runs/39042804499)/fcffd28继续运行，1运行/1排队。未取消运行中任务或重派旧版；本批对应iOS27终态继续跟进。下一AM2离线分析已重新路由mobile-reverse并通过前置门禁，仅有本机限定字节探查，尚未建立新功能收据/review或实施；不能计作第八布局或完成。全部A/F/J余项持续。
+
 ## 2026-10-17 设置分类批次 iOS27 成功与产物核验
 
 `35e6f2fefcb5812d8d6cfdcbdc763b576b02ad07` / [39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819) 的checks、native、核心App、歌词/匹配/发现、离线断服务播放、iPad、设备归档及上传全部成功，API已实核。IPA artifact12103974275，ZIP10324662字节，API SHA256 `d04a521e5925bdaa78f0d25491c5c40e9c249c6cd1739ada2ca92284859f12b0`；实际下载/完整ZIP CRC、包内IPA附带摘要/CRC、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `9a8c85851ae80ed32f2dc69a35d0743bbb72a9495900cdda3fbb025227c29ebd`，留存`build/ci-39034909819`。manifest为Xcode27.0/27A266a、iphoneos27.0、arm64、min15.1、设备族[1,2]、unsigned；dirty=true唯一`ios/Podfile.lock`。该成功只覆盖设置分类批次及祖先，不覆盖后续主题/背景/样式/环形定位或当前舞台。环形定位39042804499已过native、正在核心App；不取消或重派。真实服务/签名/手机另验。
