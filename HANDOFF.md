@@ -1,3 +1,7 @@
+## 2026-10-17 AM2 页面与内容切换证据阶段
+
+reverse-skill新路由mobile-reverse，E-016→F-015→P-015严格review通过16E/15F/15P、7工作项/25事件、零错误/警告。原始BL/分配头确认独立AM2页面、横竖构建分支、歌词/封面节点及歌词/评论/队列共享切换；定位通过互逆字段和已存闭包接唯一控制器，另一个double回调确认为音量。随后E-017→F-016→P-016补证控件指针同字段排除分支、距离18门槛、声明音量关闭/自动歌词开启5秒及延迟句柄重查；最终严格review为17E/16F/16P、7工作项/26事件、零错误/警告。完整几何、SDK helper、多指/持久化有效状态和运行效果仍待，不据方法名新增第八选项。详见[专项报告](docs/2026-10-17_reverse-sollin-am2-report.md)。五参考固定HEAD及职责/维护/Android/许可已逐一复核，无复制源码/依赖。本批只新增静态证据与文档，音枢七布局和全部A/F/J保持；舞台ad784b5本地验收/清洁归档/push已完成，对应iOS27待终态，真实服务/签名/手机另验。
+
 ## 2026-10-17 有界歌词舞台清洁归档与push回执
 
 `ad784b539869b9380eee2cc1ee504428236acd6d`已正常push并核对远端main一致。`archive-lyric-stage-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除均通过；IPA SHA256 `33f49a94a5cf038ef038c667c8192502de77e6af493174ee47e35c527026cc09`，留存`build/local-lyric-stage-ad784b5`。342项业务/类型及分项App结果见下；采纳前review23事件，实施验收后review24事件、15E/14F/14P、7工作项、零错误/警告。此条覆盖本批清洁归档/push待办，不能代表完整参考特效、真实服务、签名或手机验收。

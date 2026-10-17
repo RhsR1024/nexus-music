@@ -1,3 +1,7 @@
+## 2026-10-17 AM2职责复核
+
+本批五参考固定HEAD未变，亲读横竖布局/首次可见挂载、iOS pager高度、歌词容器/当前行与宽度边界；具体file:line、维护/Android/许可及不采纳项见[AM2专项报告](2026-10-17_reverse-sollin-am2-report.md)。仅准备独立AM2实施，不复制来源代码/依赖，也不将Android组件当作iOS实现或完整参考证据。
+
 ## 2026-10-17 歌词舞台比较
 
 五个固定HEAD再次核对；本批亲读悦音LyricsView、Q/wtf Vertical/Lyric、Cy lyric/index与自有Wayferar StageLyricLayout。逐项实现、维护/Android/许可及原创取舍见[0042](decisions/0042-bounded-lyric-stage.md)。采纳职责分离与Unicode边界，复用音枢现有TextKit/歌词仓储/唯一播放控制器，无参考源码/资源/依赖移植；Sollin采用E-014/E-015受限证据，不宣称完整算法/特效/运行等价。

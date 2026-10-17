@@ -1,3 +1,7 @@
+## 2026-10-17 AM2静态证据阶段检查
+
+本批只有逆向证据和文档，没有产品/原生/依赖变更；未重复宣称新的App、native或IPA通过。E016/E017均以固定样本原字节验证，最终reverse-skill严格review17E/16F/16P、7WI/26事件、零错误/警告；见[AM2报告](2026-10-17_reverse-sollin-am2-report.md)。文档链接/一致性及diff检查按本批风险执行。音枢七布局保持，AM2实施与完整横竖/内容/自动计时/控件排除验收继续；舞台ad784b5本地实测沿下方记录，对应iOS27仍待终态。
+
 ## 2026-10-17 有界歌词舞台清洁归档与push回执
 
 `ad784b539869b9380eee2cc1ee504428236acd6d`已正常push并核对远端main一致。`archive-lyric-stage-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除均通过；IPA SHA256 `33f49a94a5cf038ef038c667c8192502de77e6af493174ee47e35c527026cc09`，留存`build/local-lyric-stage-ad784b5`。342项业务/类型及分项App结果见下；采纳前review23事件，实施验收后review24事件、15E/14F/14P、7工作项、零错误/警告。此条覆盖本批清洁归档/push待办，不能代表完整参考特效、真实服务、签名或手机验收。
