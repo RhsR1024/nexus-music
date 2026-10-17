@@ -99,6 +99,18 @@ export class OfflineDownloadStore {
       }catch{throw new Error('离线下载数据无法读取');}
     });
   }
+  /** Resume work that was queued before the process stopped or was backgrounded.
+   *  The store serializes transfers through `tail`, so a restart cannot create
+   * duplicate network work for the same persisted record. Native background
+   * URLSession handoff remains a separate adapter boundary.
+   */
+  async resumeQueued(): Promise<void> {
+    const queued = this.items.filter(item => item.status === 'queued').map(item => item.id);
+    for (const id of queued) {
+      if (!this.items.some(item => item.id === id && item.status === 'queued')) continue;
+      try { await this.start(id); } catch { /* Keep later records schedulable if persistence fails. */ }
+    }
+  }
   find(track:Track){const key=trackKey(track.origin);return this.items.find(item=>trackKey(item.track.origin)===key);}
   async enqueue(track:Track){
     validateTrack(track);return this.mutate(async()=>{const existing=this.find(track);if(existing)return existing;

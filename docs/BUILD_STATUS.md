@@ -1,3 +1,19 @@
+## 2026-10-17 M10 恢复批次App回归通过
+
+本批 `build/SourceUITests-1792231667947.xcresult` 正式入口App回归2/2、零失败/跳过：源管理/实际Files选择取消/启停删58.310秒，Navidrome合成实音/PCM/歌词/五皮肤/定位/统计/mini/重启204.425秒。日志与计数保存为 `build/logs/ui-offline-recovery-passed*`，xcresult summary已读取。测试结束的附加诊断收集报simctl路径警告（exit72），不影响测试exit0，但不宣称附加诊断收集成功。324项业务/类型及完整native均通过；App测试不等同于下载在挂起进程或真实服务中的验收。
+
+## 2026-10-17 M10 恢复批次本地检查
+
+`check-offline-recovery-final.log` 324/324、类型检查通过；`native-offline-recovery.log` 完整检查 exit0（既有 Swift Sendable 警告保留）。本批未修改原生实现；正式 App 源管理与 Navidrome/五皮肤/PCM/歌词/mini/重启专项运行中，结果未预记。E-005严格review为5 evidence/4 findings/4 paths、0 error/warning。下载调度业务测试不代替 App 内下载、系统后台、签名或手机验收。
+
+18:11 通过实时 Actions HTML嵌入状态及 job API核对：最新 `39022411440`（c999049，包含1cc9e39本地推荐）为唯一运行中、0 pending；checks/native已通过、核心App执行中。`fetch_commit_workflow_runs`连接器只过滤PR触发运行，返回空数组不能当作push没有运行；公共API速率受限及网页缓存旧状态均未作为当前队列证据。实时HTML与去标识队列记录在 `build/logs/actions-current*`。不取消运行或重派旧版本。
+
+## 2026-10-17 18:06 云端 920d193 完整成功与产物核验
+
+`920d193` / [39016561400](https://github.com/RhsR1024/nexus-music/actions/runs/39016561400) 已完整成功：checks、native、核心App、匹配/歌词/发现/健康、iPad窗口与旋转、设备归档和上传均成功。IPA artifact `12097510843` 已实际下载，ZIP 10304736字节、API SHA256 `089011035aa457b94d55c33442ff4460a7985d37b392956b9514121a39de226e` 与CRC通过；内部 IPA 附带摘要一致，SHA256 `9077562313697430f745665cbef08ac876770964dd353063fd965dc95b38667d`。核验正式入口无 `nexus-ui-test-online-adapter`、arm64、Xcode27.0/27A266a、iphoneos27.0、min15.1、设备族[1,2]、unsigned；manifest dirty=true 唯一 `ios/Podfile.lock`。本机产物与核验记录在忽略目录 `build/ci-39016561400`。
+
+本次覆盖920d193及其祖先，包含95c2e03匹配测试源清理修正；不覆盖后续1cc9e39本地推荐或尚未提交恢复调度。早先失败/取消仍保留历史；iOS27成功不替代个人服务、签名、真机后台/灵动岛验收。
+
 ## 2026-10-17 A09 播放器身份/频谱及关联回归阶段回执
 
 实现提交 `3898592c7d9ec76e59ba21513e9f0930b62d33dc` 已正常push并核对origin/main一致。现代播放器收藏读写原队列身份，视觉/歌词沿实际匹配录音；声波核仅在播放、DSP支持且频带完整时显示真实环形频谱，暂停隐藏；歌词窗口补为三行，收起手柄可达。稳定查询补充账号、EQ曲线、歌单提交与备份独立滚动区；没有新增队列/播放器或修改原生DSP。

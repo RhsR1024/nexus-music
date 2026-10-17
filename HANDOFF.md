@@ -1,3 +1,15 @@
+## 2026-10-17 M10 启动/前台恢复当前批次
+
+`resumeQueued()` 原创恢复自身 queued/中断下载，保留用户 paused/failed；启动和 AppState active 可重入去重，按持久化顺序继续后续队列。源初始化异步，恢复下载等待 LX 就绪，界面不等待慢源。324/324 业务/类型检查通过，见[决策0036](docs/decisions/0036-offline-recovery.md)。Sollin E-005严格review只确认模块边界，未证明恢复/后台算法，不宣称完整对齐。原生后台、系统重启策略、长期服务、漫途完整导入、签名与真机待办保持。
+
+本批正式App回归1792231667947两项通过、零失败/跳过：源管理58.310秒、Navidrome/PCM/多皮肤/歌词/mini/重启204.425秒；324项业务/类型和完整native通过。附加诊断收集simctl路径警告保留。清洁归档、提交push及新云端终态继续记录；已成功920d193不覆盖本批。
+
+## 2026-10-17 18:06 云端 920d193 完整成功与产物核验
+
+`920d193` / [39016561400](https://github.com/RhsR1024/nexus-music/actions/runs/39016561400) 已完整成功：checks、native、核心App、匹配/歌词/发现/健康、iPad窗口与旋转、设备归档和上传均成功。IPA artifact `12097510843` 已实际下载，ZIP 10304736字节、API SHA256 `089011035aa457b94d55c33442ff4460a7985d37b392956b9514121a39de226e` 与CRC通过；内部 IPA 附带摘要一致，SHA256 `9077562313697430f745665cbef08ac876770964dd353063fd965dc95b38667d`。核验正式入口无 `nexus-ui-test-online-adapter`、arm64、Xcode27.0/27A266a、iphoneos27.0、min15.1、设备族[1,2]、unsigned；manifest dirty=true 唯一 `ios/Podfile.lock`。本机产物与核验记录在忽略目录 `build/ci-39016561400`。
+
+本次覆盖920d193及其祖先，包含95c2e03匹配测试源清理修正；不覆盖后续1cc9e39本地推荐或尚未提交恢复调度。早先失败/取消仍保留历史；iOS27成功不替代个人服务、签名、真机后台/灵动岛验收。
+
 # 2026-10-17 最新交接：3898592已验证推送，iOS27排队
 
 本批3898592已正常push并核对origin/main一致；本地归档会话76346已exit0。清洁IPA、摘要与manifest留存build/local-player-identity-3898592，SHA256 9f15c56275ce76c03f5975497333e04df16f5d0d7ed2a1f49bf05a0ffbe95056；SDK26.2、arm64、设备族[1,2]、unsigned、dirty=false，正式入口隔离/CRC/二进制一致性通过。完整证据见BUILD_STATUS最新条目。303业务/类型、native与七个分段专项通过；前轮失败保留，不冒充同次全套通过。

@@ -35,6 +35,17 @@ test('restore downgrades missing completed files and interrupted work to queued'
   ]};const r=rig(saved);await r.store.restore();assert.deepEqual(r.store.getSnapshot().map(item=>item.status),['failed','queued']);
 });
 
+test('resumeQueued restarts interrupted work after process recovery and leaves paused or failed work alone',async()=>{
+  const saved={version:1,items:[
+    {id:'interrupted',track:track('interrupted'),fileName:'00000000.audio',status:'downloading',bytes:0,updatedAt:1},
+    {id:'paused',track:track('paused'),fileName:'00000001.audio',status:'paused',bytes:0,updatedAt:1},
+    {id:'failed',track:track('failed'),fileName:'00000002.audio',status:'failed',bytes:0,error:'网络',updatedAt:1},
+  ]};
+  const r=rig(saved);await r.store.restore();await r.store.resumeQueued();
+  assert.deepEqual(r.store.getSnapshot().map(item=>item.status),['completed','paused','failed']);
+  assert.equal(r.store.getSnapshot()[0]!.bytes,12);
+});
+
 test('offline quota rejects a completed file without deleting existing files',async()=>{
   const r=rig();const first=await r.store.enqueue(track('one'));await r.store.start(first.id);
   const limited=new OfflineDownloadStore({get:async()=>r.saved() as never,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/two.mp3'}),files:r.files,uuid:()=>`00000000-0000-4000-8000-000000000099`,now:()=>2000,maxTotalBytes:()=>12});
@@ -91,4 +102,41 @@ test('removing a queued run prevents its network work and deletes its record',as
   const store=new OfflineDownloadStore({get:async()=>undefined,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/queued.mp3'}),files,uuid:()=>`00000000-0000-4000-8000-${String(++sequence).padStart(12,'0')}`,now:()=>1});
   const first=await store.enqueue(track('first'));const second=await store.enqueue(track('second'));const running=store.start(first.id);const removing=store.start(second.id);await store.remove(second.id);await Promise.all([running,removing]);
   assert.equal(calls,1);assert.equal(store.find(track('second')),undefined);
+});
+
+// A foreground event can arrive while startup recovery is still transferring.
+// The failed record must not be silently retried by the overlapping scheduler.
+test('overlapping recovery keeps persisted order and performs each transfer once',async()=>{
+  const seed=rig();await seed.store.enqueue(track('first'));await seed.store.enqueue(track('second'));await seed.store.enqueue(track('third'));
+  let unblock!:()=>void,started!:()=>void;
+  const blocked=new Promise<void>(resolve=>{unblock=resolve;}),entered=new Promise<void>(resolve=>{started=resolve;});
+  const calls:string[]=[];
+  const store=new OfflineDownloadStore({get:async()=>seed.saved() as never,put:async()=>{}},{
+    resolve:async(item)=>{calls.push(item.origin.id);if(item.origin.id==='first'){started();await blocked;}if(item.origin.id==='second')throw new Error('network');return{url:'https://audio.example/recovery'};},
+    files:seed.files,uuid:()=>'',now:()=>1,
+  });
+  await store.restore();const startup=store.resumeQueued();await entered;
+  const foreground=store.resumeQueued();unblock();await Promise.all([startup,foreground]);
+  assert.deepEqual(calls,['first','second','third']);
+  assert.deepEqual(store.getSnapshot().map(item=>item.status),['completed','failed','completed']);
+});
+
+test('pausing a waiting record during recovery prevents its network request',async()=>{
+  const seed=rig();await seed.store.enqueue(track('first'));const waiting=await seed.store.enqueue(track('waiting'));
+  let unblock!:()=>void,started!:()=>void;const blocked=new Promise<void>(resolve=>{unblock=resolve;}),entered=new Promise<void>(resolve=>{started=resolve;});
+  const calls:string[]=[];
+  const store=new OfflineDownloadStore({get:async()=>seed.saved() as never,put:async()=>{}},{
+    resolve:async(item)=>{calls.push(item.origin.id);started();await blocked;return{url:'https://audio.example/recovery'};},files:seed.files,uuid:()=>'',now:()=>1,
+  });
+  await store.restore();const recovery=store.resumeQueued();await entered;await store.pause(waiting.id);unblock();await recovery;
+  assert.deepEqual(calls,['first']);assert.equal(store.find(track('waiting'))!.status,'paused');
+});
+
+test('process recovery retains the saved offset and validator for the transfer adapter',async()=>{
+  const saved={version:1,items:[{id:'interrupted',track:track(),fileName:'00000000.audio',status:'downloading',bytes:0,partialBytes:4,validator:'"v1"',updatedAt:1}]};
+  const seed=rig();let calls=0;
+  const store=new OfflineDownloadStore({get:async()=>saved as never,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/fresh-url'}),files:{...seed.files,
+    download:async(url,name,headers,options)=>{calls++;assert.equal(options?.offset,4);assert.equal(options?.validator,'"v1"');return seed.files.download(url,name,headers,options);},
+  },uuid:()=>'',now:()=>1});
+  await store.restore();await store.resumeQueued();await store.resumeQueued();assert.equal(calls,1);assert.equal(store.getSnapshot()[0]!.status,'completed');
 });

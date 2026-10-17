@@ -133,3 +133,9 @@ App原FAT文件raw偏移0xe4bed0（arm64切片VA 0xe47ed0）存在文案“使�
 本批按 `reverse-skill` 的 `mobile-reverse` PRIMARY 完成固定 IPA 的 provider/auth、推荐/FM/taste profile 和 `audio-match` 静态边界核查。`node scripts/sollin-reverse-gate.mjs ipa --review` 已通过：4 条 Evidence、3 条 Finding、3 条 Path，0 error/0 warning；E-004 的 case-local 哈希清单位于忽略目录 `work/sollin-ipa/evidence/E-004-source-manifest.txt`，原始 IPA、业务字符串和解包内容不进入仓库。该结果只证明静态路径和本地 PCM 准备约束，不证明远端 URL、鉴权交换、配额、识曲结果协议或运行时调用图。
 
 实施边界：平台账号/鉴权、推荐/FM 和识曲优先使用音枢现有 provider、Keychain、曲库/历史/本地特征与 provider-neutral 接口；识曲仍需合法服务、算法许可、麦克风权限和结果协议后才能完成。任何依赖 Sollin 私有云端、专用链接或不可授权接口的能力不照搬，先登记待决并推进其他本地工作，开发收尾和真实设备验证前再向用户确认落地方式。该批证据不提高完成度。
+
+## 2026-10-17 E-005 下载恢复边界核查
+
+本批通过 mobile-reverse PRIMARY、现有离线 scope 和严格 review（5 Evidence / 4 Finding / 4 Path，0 error / 0 warning）。固定 IPA App.framework 中定位到 online download service、FLAC 元数据、下载歌词格式化及设置模块的 raw file offset；本机可复现脚本和精确偏移保留在 `work/sollin-ipa/notes/download-boundary.py` 与 `evidence/download-boundary.json`，不将原始字符串输出提交仓库。
+
+E-005→F-004→P-004 只界定静态模块职责，不能证明 Sollin 的暂停、启动恢复、并发、默认值或系统后台调度。音枢的 `resumeQueued()` 是针对自身持久化队列的原创实现，按[决策0036](decisions/0036-offline-recovery.md)独立验收，不宣称参考算法等价；系统 URLSession 后台仍待实现。

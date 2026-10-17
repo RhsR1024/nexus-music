@@ -142,3 +142,9 @@ J40/J49 按[0029](decisions/0029-mini-player-controls-and-lyrics.md)亲读五参
 已遍历 Ryderwe GitHub 主页显示的 46 个公开仓库（含 profile README 仓库），固定默认分支 HEAD、fork 上游、许可证结论和采纳边界见 [RYDERWE_REPOSITORY_REVIEW](RYDERWE_REPOSITORY_REVIEW.md)。重点新增参考为 Sollin-Music-Desktop、Youmi-Music-IOS、LX/网易 provider、网易 API、酷狗/QQ字段和 Meting；发布仓库只提供截图或包来源线索，其他网站/工具仓库不进入音枢实现。
 
 Youmi 是 `7DaysMax/Youmi-Music-IOS` 的 fork 且未声明许可证；其网易登录、公开推荐/日推、私人 FM、缓存和下载状态可作为行为线索，但公开 API 服务、Cookie 协议、账号数据和品牌资源不能复制。下载实现没有足够证据替代音枢现有的暂停/续传/完整性/在播保护设计。所有 Sollin IPA/APK 对齐仍须先通过 `reverse-skill` PRIMARY、离线 scope 和严格 review。
+
+## M10 启动/前台下载恢复（2026-10-17）
+
+本批亲读固定参考的下载实现：wtf `src/core/download/scheduler.ts:25–35` 的恢复对齐锁、初始化/前台区分与 `reconcile.ts` 文件对账；Cy `src/helpers/fileDownload.ts:17–23` 明确为 FOREGROUND；Q `src/core/music/download.ts` 负责 URL/歌词解析，不作为持久任务恢复引擎；悦音 `src/core/music/audioCache.ts` 是临时音频缓存职责；自有 Wayferar 固定稀疏检出中未取得下载恢复模块，只有 `docs/WAYFARER_MUSIC.md:12` 数据迁移边界，不宣称已核验其任务恢复。Sollin desktop `src/stores/downloadStore.ts:159–180` 持久化任务/设置，不能证明 iOS 后台实现。固定提交与许可沿上表，没有复制参考代码或依赖。
+
+采纳：音枢自行复用 `OfflineDownloadStore` 的串行队列与任务去重，只恢复 queued/中断任务，尊重 paused/failed；LX 就绪后才取下载 URL，首屏不等待所有源。TS 调度可为将来 Android 共享，原生后台、进程被系统挂起/终止的行为仍需单独适配。完整验收见[决策0036](decisions/0036-offline-recovery.md)。

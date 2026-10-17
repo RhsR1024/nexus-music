@@ -79,7 +79,9 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const registry = new SourceRegistry(nativeLX);
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
   await restore('sources.v1','音源',()=>catalog.restore());
-  void catalog.restoreEnabled();
+  // Source initialization can require network/timeouts. Keep the UI available,
+  // but wait for restored sources before resolving recovered downloads.
+  const sourcesReady = catalog.restoreEnabled();
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size:512},signal),(track,signal)=>track.origin.kind==='webdav'?davMedia.cover(track,signal):track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track));
   const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
@@ -118,7 +120,12 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const coverTheme=new CoverThemeStore(playback.controller,preferences,covers,visualColors);
   accounts.subscribe(coverTheme.invalidate);davAccounts.subscribe(coverTheme.invalidate);registry.subscribe(coverTheme.invalidate);deviceMedia.subscribe(coverTheme.invalidate);localAudio.subscribe(coverTheme.invalidate);
   deviceMedia.subscribe(()=>{const current=playback.controller.getSnapshot(),entry=current.queue.entries.find(entry=>entry.id===current.queue.currentId);if(entry?.track.origin.kind==='device'&&deviceMedia.getSnapshot().authorization!=='authorized')playback.controller.setQueue({...current.queue,currentId:null,priorityIds:[]});});
-  AppState.addEventListener('change',state=>{if(state==='active')void deviceMedia.checkAuthorization().catch(()=>{});});
+  AppState.addEventListener('change',state=>{
+    if(state!=='active')return;
+    void deviceMedia.checkAuthorization().catch(()=>{});
+    void sourcesReady.then(()=>offlineDownloads.resumeQueued()).catch(()=>{});
+  });
+  void sourcesReady.then(()=>offlineDownloads.resumeQueued()).catch(()=>{});
   let previous=playback.controller.getSnapshot(),lastCursorWrite=Date.now();
   playback.controller.subscribe(()=>{
     const state=playback.controller.getSnapshot(),cursor={entryId:state.queue.currentId,seconds:state.position};
