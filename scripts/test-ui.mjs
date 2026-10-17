@@ -36,6 +36,8 @@ let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments'));
+const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
+const fixtureOnlineUI=matchingUI||discoveryUI;
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
 // Original, solid 32x32 RGB fixtures: no third-party covers or user data.
 const themeCovers={red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
@@ -66,10 +68,19 @@ const server = createServer(async (req, res) => {
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),matchingAudio.length-1):matchingAudio.length-1;if(start>=matchingAudio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${matchingAudio.length}`);res.end(matchingAudio.subarray(start,end+1));}else res.end(matchingAudio);return;
   }
   if(req.url==='/nexus-ui-test-online-adapter'){
-    if(!matchingUI){res.writeHead(404);res.end();return;}
+    if(!fixtureOnlineUI){res.writeHead(404);res.end();return;}
     const chunks=[];for await(const chunk of req)chunks.push(chunk);const {url,request}=JSON.parse(Buffer.concat(chunks).toString());const parsed=new URL(url);
     counts.online??={};counts.online[parsed.hostname]=(counts.online[parsed.hostname]??0)+1;
     res.setHeader('Content-Type','application/json');
+    if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/playlist/list'){
+      counts.discovery??={lists:0,details:0};counts.discovery.lists++;
+      res.end(JSON.stringify({code:200,more:false,playlists:[{id:'101',name:'Synthetic discovery playlist',description:'Original UI fixture',trackCount:2,coverImgUrl:'http://127.0.0.1:18439/discovery-cover.png'}]}));return;
+    }
+    if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/v6/playlist/detail'){
+      counts.discovery??={lists:0,details:0};counts.discovery.details++;
+      const tracks=['one','two'].map((word,index)=>({id:String(9101+index),name:`Synthetic discovery ${word}`,ar:[{name:'Fixture artist'}],al:{name:'Synthetic discovery album',picUrl:'http://127.0.0.1:18439/discovery-cover.png'},dt:120000}));
+      res.end(JSON.stringify({code:200,playlist:{name:'Synthetic discovery playlist',trackIds:tracks.map(({id})=>({id})),tracks}}));return;
+    }
     if(parsed.hostname==='music.163.com'&&parsed.pathname.includes('/api/v1/resource/comments/')){
       const offset=Number(parsed.searchParams.get('offset')??0);counts.comments??={first:0,next:0};
       const comment=id=>({commentId:id,content:`Synthetic comment ${id}`,user:{nickname:'Fixture reader'},time:1000,likedCount:3});
@@ -89,6 +100,7 @@ const server = createServer(async (req, res) => {
     if(parsed.hostname==='jadeite.migu.cn'){res.end(JSON.stringify({code:'000000',songResultData:{resultList:[],totalCount:0}}));return;}
     res.writeHead(400);res.end();return;
   }
+  if(req.url==='/discovery-cover.png'&&discoveryUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
   if(req.url==='/sync-fixture/remote-edit'){
     counts.syncEdits=(counts.syncEdits??0)+1;
@@ -172,8 +184,8 @@ try {
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', `build/SourceUITests-${Date.now()}.xcresult`, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
-  if(matchingUI)args.push(`ENTRY_FILE=${resolve('tests/e2e/entry.tsx')}`);
-  else args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments');
+  if(fixtureOnlineUI)args.push(`ENTRY_FILE=${resolve('tests/e2e/entry.tsx')}`);
+  else args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
   const child = spawn('xcodebuild', args, { stdio: ['ignore', log, log] });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;

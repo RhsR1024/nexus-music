@@ -793,6 +793,40 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
     XCTAssertFalse(app.buttons["打开播放页"].exists)
   }
+  func testDiscoverySongActions() throws {
+    let app=XCUIApplication();app.launch()
+    func tab(_ name:String){let item=app.descendants(matching:.any).matching(identifier:"tab-"+name).firstMatch;XCTAssertTrue(item.waitForExistence(timeout:15));item.tap()}
+    func reach(_ element:XCUIElement){
+      for _ in 0..<16 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func evidence(_ name:String){let attachment=XCTAttachment(screenshot:app.screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)}
+    func detail(){let first=app.buttons["discovery-item-0"];XCTAssertTrue(first.waitForExistence(timeout:15));reach(first);first.tap();XCTAssertTrue(app.buttons["刷新歌单"].waitForExistence(timeout:10))}
+    let more=app.buttons["更多操作：Synthetic discovery one"]
+    let panel=app.otherElements["discovery-actions"].firstMatch
+    func action(_ name:String)->XCUIElement{app.buttons["discovery-action-"+name]}
+    func actions(){reach(more);more.tap();XCTAssertTrue(panel.waitForExistence(timeout:10));for name in ["下一首","加入队列","加入歌单"]{XCTAssertTrue(action(name).waitForExistence(timeout:10));XCTAssertTrue(action(name).isHittable)}}
+    let name="Nexus discovery actions "+String(UUID().uuidString.prefix(8))
+    tab("discover");detail();reach(more);evidence("Discovery compact song rows");actions()
+    XCTAssertTrue(action("本地收藏").exists);evidence("Embedded discovery song actions")
+    action("本地收藏").tap();actions();XCTAssertTrue(action("取消本地收藏").waitForExistence(timeout:5));action("取消本地收藏").tap()
+    actions();action("加入歌单").tap()
+    let input=app.textFields["新建音枢歌单名称"];XCTAssertTrue(input.waitForExistence(timeout:10));XCTAssertTrue(input.isHittable)
+    input.tap();for character in name{input.typeText(String(character))};input.typeText("\n");XCTAssertEqual(input.value as? String,name)
+    evidence("Discovery action sheet creates a local playlist");app.buttons["新建并添加"].tap()
+    XCTAssertTrue(more.waitForExistence(timeout:10));XCTAssertTrue(more.isHittable)
+    func library(){tab("library");let local=app.descendants(matching:.any).matching(identifier:"library-local").firstMatch;reach(local);local.tap();let lists=app.buttons["我的歌单"];reach(lists);lists.tap()}
+    library();let single=app.buttons[name+" · 1首"];XCTAssertTrue(single.waitForExistence(timeout:10));reach(single)
+    tab("search");let discover=app.buttons["发现 · 分类 · 排行榜 · 歌单导入"];XCTAssertTrue(discover.waitForExistence(timeout:10));discover.tap();detail();actions();evidence("Full discovery modal owns its song action sheet")
+    action("加入歌单").tap();XCTAssertTrue(app.buttons["取消添加"].waitForExistence(timeout:10));app.buttons["取消添加"].tap()
+    XCTAssertTrue(more.waitForExistence(timeout:10));actions();action("加入歌单").tap()
+    let existing=app.buttons[name+" · 1 首"];XCTAssertTrue(existing.waitForExistence(timeout:10));reach(existing);existing.tap()
+    XCTAssertTrue(more.waitForExistence(timeout:10));let close=app.buttons["收起发现"];reach(close);close.tap()
+    library();let duplicate=app.buttons[name+" · 2首"];XCTAssertTrue(duplicate.waitForExistence(timeout:10));reach(duplicate);evidence("Both discovery presentations preserve duplicate playlist entries");duplicate.tap()
+    let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertFalse(app.buttons[name+" · 2首"].exists)
+  }
   func testDiscoveryAndAppearance() throws {
     let app=XCUIApplication();app.launch()
     openSettings(app,page:"theme")

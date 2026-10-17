@@ -10,7 +10,9 @@
 
 `38924137682` 已完整下载并校验的日志提供更细分证据：核心组50分07秒，其中13项XCTest合计32.20分钟，失败后诊断收集约10分钟，其余约8分钟为编译/安装/启动等差额（不能全部命名为编译）。最长为字体导入/多皮肤/重启9.52分钟、Navidrome综合回归4.44、同步冲突/重启3.44、EQ持久化3.19、备份恢复3.08。测试数量与流程从早期两项纵向冒烟扩展至多组文件选择、实音、重启和iPad，串行真交互/系统选择器/空闲等待使单轮执行变长；队列积压再把等待叠加成数小时。后续应按测量拆分编译与测试耗时、减少重复准备和冗余等待；耗时下降必须同时保留有效断言与诊断能力。
 
-2026-10-16同步批次：冲突/重启/删除专项加入核心App组。根据13dc450的iOS任务实际耗时约84分钟及新增专项，iOS job预算从90增至120分钟；失败仍按原断言和诊断处理。push仅含docs/**或Markdown时不再启动完整iOS归档，代码/原生/工作流变更仍完整运行，pull_request与workflow_dispatch保留。配置以新提交实际结果验证，原有队列不取消/重复派发；文档变更本地执行链接与一致性校验。
+2026-10-16同步批次：冲突/重启/删除专项加入核心App组。根据13dc450的iOS任务实际耗时约84分钟及新增专项，iOS job预算从90增至120分钟；失败仍按原断言和诊断处理。push仅含docs/**或Markdown时不再启动完整iOS归档，代码/原生/工作流变更仍完整运行，pull_request与workflow_dispatch保留。文档变更本地执行链接与一致性校验；队列执行本文顶部2026-10-17规则。
+
+后续维护步骤：每次功能阶段先完成本地检查、更新任务/交接并正常push，再检查同一concurrency group是否最多运行1、pending1；新pending应指向最新触发构建的代码提交。仅文档push不触发新构建，不应为追平文档SHA手动重派。最新代码构建成功后，将其实际覆盖的累计代码/测试更新为已验证，保留取消记录和原失败证据。回退、分叉或删除测试时必须重新核对覆盖关系，不能仅凭提交时间断言包含此前验证内容。
 
 本地Intel MBP继续用于开发、类型/契约检查、Xcode26.3模拟器和设备IPA构建；GitHub Actions另外执行Apple Silicon/iOS27构建。两条路径共享维护中的ios工程和archive脚本，不运行覆盖性prebuild。
 
@@ -23,7 +25,7 @@ main推送、PR及手动Run workflow都会触发 `.github/workflows/ios.yml`：
 1. Linux锁定Node24.14.0、npm ci、类型与合成契约检查。
 2. Apple Silicon选择Xcode27/iOS27，Ruby3.3、Bundler2.4.22及Gemfile.lock中的CocoaPods1.16.2；npm ci、Pods deployment检查。
 3. 原生宿主/HTTP/加密/DSP/缓存检查，以及iOS27模拟器的合成源管理、合成Navidrome登录/播放/PCM/歌词测试。不会向云端上传resource、真实音源/备份或局域网账号。
-4. 同一脚本生成设备arm64 unsigned IPA，上传IPA和build-manifest作为14天Artifacts；构建日志保存7天。Actions使用固定提交SHA、只读contents权限；同分支按下文设置保留阶段运行并排队。
+4. 同一脚本生成设备arm64 unsigned IPA，上传IPA和build-manifest作为14天Artifacts；构建日志保存7天。Actions使用固定提交SHA、只读contents权限；同分支保留运行中任务，仅保留最新pending。
 
 首次云端运行结果仍须实际检查。不能以YAML存在宣称云端验收成功。Public Preview可用性和账户Actions限制也以实际运行结果为准。
 
