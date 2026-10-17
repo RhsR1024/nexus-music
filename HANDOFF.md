@@ -792,6 +792,8 @@ M10 仍未完成暂停/断点续传、后台调度、容量配额/清理、完�
 心跳已仅修改SourceSettingsTests该清理循环为按sources视口与fixture实际frame双向滚动，保留删除确认和完成断言，增加失败截图/层级；本地testOnlineMatching正在会话28220运行，汇总build/logs/ui-matching-cleanup-fix.log，实际ui-catalog.log，结束前勿重开UI/覆盖日志。旧本地整组未完成日志另存build/ci-39006353281/local-core-1792214990725-partial.log，含先前Files列表失败，不能称全套通过。离线下载在改文件保持原样，本修正待专项结果后随当前功能批次验证/清洁IPA/提交push。最新39010767320正在运行，不取消/重派，尚未通过。
 # 2026-10-17 当前接续：Sollin 通用后端范围与 M10 暂停续传增量
 
+`52a0aaf` 已正常 push 到 `RhsR1024/nexus-music`。push 后 GitHub API 核对：`39010767320`（`3e56d4d`）仍为唯一运行中，`39012949974`（`52a0aaf`）为唯一最新 pending；满足最多 1 个运行/1 个排队，未取消运行中任务。pending/运行终态不计作本地功能或真机完成证据。
+
 用户补充的范围规则已同步到 `docs/PRODUCT_SCOPE.md`、`docs/REFERENCE_COMPARISON.md`、`docs/SOLLIN_IPA_ANALYSIS.md`、`docs/TASK_PLAN.md`、`docs/IMPLEMENTATION_PLAN.md`、`docs/FEATURE_STATUS.md` 和 `docs/PROGRESS_ESTIMATE.md`：Sollin 中属于通用产品能力的后端逻辑也必须对齐，包括 provider 登录/鉴权、推荐/FM、识曲，以及离线暂停/继续、断点续传、后台任务、完整性校验、重启恢复、容量与在播保护。仅 Sollin 自有账号体系、用户中心、服务与支持、激活/赞助/商业权益、遥测和诊断回传排除。
 
 Sollin 私有云端服务、专用链接或不可授权接口不复制；优先本地实现或复用音枢 provider。无法满足的能力记录为待决项，先完成其他开发，开发收尾和需要真机验证前再请用户选择合法落地方式。
