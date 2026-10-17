@@ -1,3 +1,11 @@
+## 2026-10-17 18:23 恢复调度修正版已push与清洁归档回执
+
+`c1a4605` 恢复调度和 `c098eeb252e3ca7c916c66d2d3e6d773c6340121` 暂停竞态修正已正常push到RhsR1024/nexus-music，远端main核对一致。最终清洁归档日志 `build/logs/archive-offline-recovery-pause-final.log` 成功，manifest对应c098eeb、dirty=false/workingTreeChanges=[]、Xcode26.3/iphoneos26.2、arm64、min15.1、设备族[1,2]、unsigned。IPA SHA256 `a14baac7e11ae8a117c7d593d24b183f318fab1e7cb38348665b1bcd03a353a4`，附带摘要/ZIP CRC、包内可执行与JS对归档一致、正式入口隔离和私人资产排除通过，留存 `build/local-offline-recovery-c098eeb`。c1a4605初版另存，不误称含后续暂停修正。
+
+本批326/326业务/类型通过；完整native和正式App两项（58.310/204.425秒、零失败/跳过）在c1a4605已通过，后续仅TS暂停补修以两项新增竞态测试及清洁归档验证，未将此前App测试写成修正版下载/后台实测。Sollin E-005严格review通过，仍只支持模块边界；原生后台、App内下载/杀进程、跨服务长期、真实私人服务、签名和手机验收待办保留。
+
+push后实时队列核对：最新[39024707349](https://github.com/RhsR1024/nexus-music/actions/runs/39024707349)（c098eeb）唯一pending，[39022411440](https://github.com/RhsR1024/nexus-music/actions/runs/39022411440)（c999049）唯一运行中，1运行/1排队；未取消运行中、未重派旧提交。最新终态继续跟进，pending不计通过。全部F01–F37/J01–J59目标active；下一阶段回到A03/A04对象关系与已有UI/交互收口，平台登录/真实推荐/FM/识曲、原生后台下载等仍依赖各自证据与验收。Ryderwe参考盘点沿既有RYDERWE_REPOSITORY_REVIEW，不复制未核验许可或私有服务。
+
 ## 2026-10-17 M10 启动/前台恢复当前批次
 
 `resumeQueued()` 原创恢复自身 queued/中断下载，保留用户 paused/failed；启动和 AppState active 可重入去重，按持久化顺序继续后续队列。源初始化异步，恢复下载等待 LX 就绪，界面不等待慢源。326/326 业务/类型检查通过，见[决策0036](decisions/0036-offline-recovery.md)。Sollin E-005严格review只确认模块边界，未证明恢复/后台算法，不宣称完整对齐。原生后台、系统重启策略、长期服务、漫途完整导入、签名与真机待办保持。
