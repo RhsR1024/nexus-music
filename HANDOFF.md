@@ -851,3 +851,11 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 诊断 artifact `12094896784` 的 ZIP 目录已解析，单独日志条目解压长度2898100字节及CRC32校验通过；未下载/核验完整ZIP摘要，详见忽略目录 `build/ci-39010767320/FINDINGS.txt`。修正提交 `95c2e03` 不在失败的旧 `3e56d4d` 中，已由 Git 祖先及文件核对确认包含于最新 `920d193`；本地专项1792220258492此前100.832秒通过，不重复修改/重派旧版。
 
 最新 `39016561400` / `920d193` 当前运行中，checks/native已通过，首组核心App步骤执行中；实际队列为1运行/0排队，未取消运行。新iOS27终态、iPad/云端归档及真实服务/签名/真机仍待。心跳仅追加状态证据，未提交或覆盖另一执行上下文正在编写的E-004文档及后续功能工作。
+
+# 2026-10-17 Ryderwe 作者仓库盘点
+
+已遍历 Ryderwe GitHub 主页显示的 46 个公开仓库（包含 `Ryderwe` profile README 仓库），新增 [docs/RYDERWE_REPOSITORY_REVIEW.md](docs/RYDERWE_REPOSITORY_REVIEW.md)，并在 [docs/REFERENCE_COMPARISON.md](docs/REFERENCE_COMPARISON.md) 建立入口。重点仓库固定默认分支 HEAD、fork 上游、许可证和采纳边界已记录；完整清单不等于已复制或已验收。
+
+当前最有用的源码参考是 `Sollin-Music-Desktop`（原始桌面源码，根 MIT）和 `Youmi-Music-IOS`（`7DaysMax/Youmi-Music-IOS` fork、未声明许可证）。Youmi 的网易登录、公开推荐/日推、私人 FM、缓存和 FM 预加载可用于 provider 行为对照；其 `APIConfig.swift` 指向外部网易服务，不能写入音枢，下载实现也不足以替代音枢已有的暂停/Range/摘要/在播保护设计。`lx-netease-music-mobile`、`api-enhanced`、`KuGouMusicApi`、`qqmusic_flac`、`meting` 可分别用于 provider 字段/协议研究；`QQMusicApi` 为 GPL-3.0，只做协议研究，不复制实现。
+
+发布仓库 `Sollin-mobile-release` 只有包发布说明，`PrismMusic-Release` 主要是截图；如需从包补充行为证据，继续遵守 `reverse-skill` IPA/APK PRIMARY、离线 scope、Evidence→Finding→Path 与严格 review，不把仓库 README 或截图当功能证据。Sollin 私有云端、账号体系、用户中心、服务支持、激活/赞助、遥测和专用链接仍排除；无法本地替代的能力登记待决，开发收尾和真实设备阶段再由用户决定。
