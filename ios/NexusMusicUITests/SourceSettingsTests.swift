@@ -334,7 +334,21 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(disabled.isHittable);XCTAssertEqual(disabled.label,"普通在线歌曲自动匹配：关闭");disabled.tap()
     openSettings(app,page:"sources")
     let fixture=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Matching Fixture").firstMatch
-    for _ in 0..<20 {if fixture.isHittable{break};app.swipeDown()};XCTAssertTrue(fixture.isHittable);fixture.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+    // Source settings restores its scroll offset. The fixture can be below
+    // the viewport after returning from playback settings, so use its actual
+    // frame instead of repeatedly scrolling toward the top of the page.
+    let sourceViewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch
+    XCTAssertTrue(sourceViewport.exists);XCTAssertTrue(fixture.waitForExistence(timeout:10))
+    for _ in 0..<20 {
+      if fixture.isHittable{break}
+      let above=fixture.frame.midY < sourceViewport.frame.midY
+      sourceViewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:sourceViewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25)))
+    }
+    if !fixture.isHittable {
+      let image=XCTAttachment(screenshot:app.screenshot());image.name="Matching fixture cleanup unreachable";image.lifetime = .keepAlways;add(image)
+      let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Matching fixture cleanup hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+    }
+    XCTAssertTrue(fixture.isHittable);fixture.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
   func testUCloudSyncPreviewConflictRestartAndDeletion() throws {

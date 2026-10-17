@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OfflineDownloadStore,type OfflineDownloadFiles} from '../src/storage/offlineDownloads.ts';
+import {OfflineDownloadInterrupted,OfflineDownloadStore,type OfflineDownloadFiles} from '../src/storage/offlineDownloads.ts';
 import type {Repository} from '../src/storage/repository.ts';
 import type {Track} from '../src/domain/track.ts';
 
@@ -38,4 +38,24 @@ test('offline quota rejects a completed file without deleting existing files',as
   const r=rig();const first=await r.store.enqueue(track('one'));await r.store.start(first.id);
   const limited=new OfflineDownloadStore({get:async()=>r.saved() as never,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/two.mp3'}),files:r.files,uuid:()=>`00000000-0000-4000-8000-000000000099`,now:()=>2000,maxTotalBytes:()=>12});
   await limited.restore();const second=await limited.enqueue(track('two'));await limited.start(second.id);assert.equal(limited.getSnapshot()[1]!.status,'failed');assert.match(limited.getSnapshot()[1]!.error??'',/容量/);assert.equal(limited.getStatistics().files,1);
+});
+
+test('pause preserves partial bytes and resume requests the saved offset',async()=>{
+  let mode:'pause'|'resume'='pause';let partial=0;let startedResolve:()=>void=()=>{};const started=new Promise<void>(resolve=>{startedResolve=resolve});const files:OfflineDownloadFiles={
+    async download(_url,name,_headers,options){if(mode==='pause'){startedResolve();return new Promise((_,reject)=>options?.signal?.addEventListener('abort',()=>{partial=4;reject(new OfflineDownloadInterrupted(4));},{once:true}));}assert.equal(options?.offset,4);partial=12;return 12;},
+    async remove(){partial=0;},exists:()=>partial>0,size:()=>partial,uri:name=>`file:///offline/${name}`,
+  };
+  const repository:Pick<Repository,'get'|'put'>={get:async()=>undefined,put:async()=>{}};
+  const store=new OfflineDownloadStore(repository,{resolve:async()=>({url:'https://audio.example/song.mp3'}),files,uuid:()=>`00000000-0000-4000-8000-000000000010`,now:()=>1});
+  const item=await store.enqueue(track('pause'));const running=store.start(item.id);await started;await store.pause(item.id);await running;assert.equal(store.getSnapshot()[0]!.status,'paused');assert.equal(store.getSnapshot()[0]!.partialBytes,4);
+  mode='resume';await store.resume(item.id);assert.equal(store.getSnapshot()[0]!.status,'completed');assert.equal(store.getSnapshot()[0]!.bytes,12);
+});
+
+test('queued pause can resume without starting a second task',async()=>{
+  let calls=0;const files:OfflineDownloadFiles={
+    async download(){calls+=1;return 8;},async remove(){},exists:()=>true,size:()=>8,uri:name=>`file:///offline/${name}`,
+  };
+  const store=new OfflineDownloadStore({get:async()=>undefined,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/queued.mp3'}),files,uuid:()=>`00000000-0000-4000-8000-000000000020`,now:()=>1});
+  const item=await store.enqueue(track('queued'));await store.pause(item.id);assert.equal(store.getSnapshot()[0]!.status,'paused');
+  await store.resume(item.id);assert.equal(calls,1);assert.equal(store.getSnapshot()[0]!.status,'completed');
 });

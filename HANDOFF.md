@@ -784,3 +784,20 @@ M10 仍未完成暂停/断点续传、后台调度、容量配额/清理、完�
 上面的第一段记录是容量管理前的 306/306 起始状态；以本增量记录和 `docs/PROGRESS_ESTIMATE.md` 的 307/307、约15% M10 代码估计为当前状态。
 
 容量批次 `3e56d4d` 已正常 push，远端 `main` 一致；iOS27 运行 `39010767320` 当前 pending，上一提交的 `39009861484` 已由 single 队列自动取消，`39006353281` 仍 in_progress。取消旧 pending 不计通过，继续等待最新运行终态。
+
+# 2026-10-17 14:59 心跳云端诊断与匹配清理专项
+
+39006353281/3898592已结束失败：checks、native和首组核心App步骤通过；第二组4通过/1失败，唯一testOnlineMatching在Swift337清理测试音源时isHittable断言失败。完整第二组日志已按ZIP目录长度/CRC提取，build/ci-39006353281/logs/ui-catalog.log:25141；跨平台歌词120.183秒、发现87.187秒、评论18.275秒、健康70.851秒通过。匹配用例此前自动/人工版本/PCM/取消重启/开关持久化均已走过；末尾连续20次swipeDown无法触达音源。iPad/云端IPA被跳过，不能标完整成功。完整ZIP尚未下载/hash核验，只有提取日志条目校验。
+
+心跳已仅修改SourceSettingsTests该清理循环为按sources视口与fixture实际frame双向滚动，保留删除确认和完成断言，增加失败截图/层级；本地testOnlineMatching正在会话28220运行，汇总build/logs/ui-matching-cleanup-fix.log，实际ui-catalog.log，结束前勿重开UI/覆盖日志。旧本地整组未完成日志另存build/ci-39006353281/local-core-1792214990725-partial.log，含先前Files列表失败，不能称全套通过。离线下载在改文件保持原样，本修正待专项结果后随当前功能批次验证/清洁IPA/提交push。最新39010767320正在运行，不取消/重派，尚未通过。
+# 2026-10-17 当前接续：Sollin 通用后端范围与 M10 暂停续传增量
+
+用户补充的范围规则已同步到 `docs/PRODUCT_SCOPE.md`、`docs/REFERENCE_COMPARISON.md`、`docs/SOLLIN_IPA_ANALYSIS.md`、`docs/TASK_PLAN.md`、`docs/IMPLEMENTATION_PLAN.md`、`docs/FEATURE_STATUS.md` 和 `docs/PROGRESS_ESTIMATE.md`：Sollin 中属于通用产品能力的后端逻辑也必须对齐，包括 provider 登录/鉴权、推荐/FM、识曲，以及离线暂停/继续、断点续传、后台任务、完整性校验、重启恢复、容量与在播保护。仅 Sollin 自有账号体系、用户中心、服务与支持、激活/赞助/商业权益、遥测和诊断回传排除。
+
+Sollin 私有云端服务、专用链接或不可授权接口不复制；优先本地实现或复用音枢 provider。无法满足的能力记录为待决项，先完成其他开发，开发收尾和需要真机验证前再请用户选择合法落地方式。
+
+上述能力的逆向分析与采纳统一经过 `reverse-skill` 路由、PRIMARY、离线 `case-init`/`case-guard`、工具索引、当前功能 Evidence→Finding→Path 和严格 review；静态字符串、安装检查或一次接口成功不能代替后端逻辑证据。
+
+本批 M10 已补齐排队暂停/恢复、活跃下载 Abort 中断保留 `.part`、Range 偏移续传、Range 不可用/偏移不一致时安全全量回退、正式/临时文件删除；`npm run check` 为 309/309。后台任务、重启调度、完整性哈希、在播保护、漫途完整导入及真实服务/签名/真机仍待。
+
+按工作量加权、排除真机反馈调试后的当前开发实现估计为 **78.15%（对外约78%，剩余约22%）**；包含真实服务、签名、真机和交付验收的完整交付口径仍为 **57.93%（对外约58%）**。主要剩余开发量在平台登录/推荐/FM/识曲、M10 后台/完整性/在播保护、Sollin 深层 UI/交互与对象关系、漫途完整导入、iPad/系统媒体收口和 WebDAV 自动同步逻辑。具体权重见 `docs/PROGRESS_ESTIMATE.md`。
