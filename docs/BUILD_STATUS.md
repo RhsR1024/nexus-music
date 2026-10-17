@@ -1,3 +1,13 @@
+## 2026-10-17 21:11 下载批次 iOS27 完整成功
+
+`ab98682c2262e633f2789a9a38ce0aad87a605c8` / [39027501515](https://github.com/RhsR1024/nexus-music/actions/runs/39027501515) 已成功：checks24秒、iOS任务1小时45分1秒；native、核心App50分2秒、匹配/歌词/发现18分14秒、离线断服务播放16分25秒、iPad窗口/旋转9分钟、设备归档3分21秒及两项上传均成功。包含恢复调度和下载任务页，不包含后续EQ卡片、设置分组或本批主题Sheet。
+
+IPA artifact12101498126，10321245字节，网页/API ZIP摘要 `ec483c30905ea550da626e2d5a960bd923de46c94186b6d938b5e7f5d458dd1b`；诊断12101624381。浏览器实际下载完成，完整ZIP摘要/长度/CRC、内部IPA附带摘要/CRC和正式入口隔离、私人资源排除通过。IPA SHA256 `1af6201ce87ad3003f472b636774b83273ad3d5a77b3b45d3af8e0877e54c63b`，留存`build/ci-39027501515`；manifest为Xcode27.0/27A266a、iphoneos27.0、arm64、min15.1、设备族[1,2]、unsigned，dirty=true唯一`ios/Podfile.lock`。真实服务、原生后台下载、签名与手机仍独立验收。21:19 API核对设置批次39034909819/35e6f2f为唯一运行、0排队，继续跟进，不重派旧运行。
+
+## 2026-10-17 软件主题Sheet本地验收
+
+reverse-skill IPA E-009→F-008→P-008采纳前严格review通过，原始BL确认两个主题包装→共用包装→Flutter showModalBottomSheet。音枢软件主题改为原生pageSheet，复用三态/原子持久化，显式关闭/系统dismiss保留外观分类和滚动，底层AX/触摸隔离；328项业务/类型通过；正式App1792242348845两项通过（外观持久化71.145秒、分组导航95.341秒，零失败/跳过），1792242792269最大辅助字号/下滑关闭/重新打开保持选择37.400秒通过。首轮新增测试因XCTest拖拽参数类型编译失败已修正并保留日志；最终文案收口后1792242979329同专项38.790秒再次通过并亲看截图，类型复验通过；清洁归档与本批云端继续记录。背景编辑器及其他叶页暂按既有实现，A04全局封面链未证明；全部F/J和真实服务/签名/真机边界保留。详见[决策0038](decisions/0038-theme-mode-sheet.md)。
+
 ## 2026-10-17 设置分类批次清洁归档与推送回执
 
 `35e6f2fefcb5812d8d6cfdcbdc763b576b02ad07` 已正常push，远端main核对一致。清洁本机设备归档成功：manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；正式入口隔离、ZIP CRC、包内可执行文件/JS对归档字节一致和私人参考/签名资源排除均通过。IPA SHA256 `c9b172e63e0da697649c60f1013826f27b68864e3451e08ad6a38dc10b0ae664`，留存 `build/local-settings-objects-35e6f2f`。最大辅助字号32.744秒截图已亲看，卡片单列/选中可达。

@@ -4,6 +4,7 @@ import Vision
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
   private func openSettings(_ app:XCUIApplication,page:String){
+    let sheetClose=app.buttons["theme-sheet-close"];if sheetClose.exists{sheetClose.tap()}
     let tab=app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
     XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
     for _ in 0..<3 {let back=app.buttons["settings-back"];if !back.exists{break};back.tap()}
@@ -142,6 +143,12 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"equalizer");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
     XCTAssertEqual(app.buttons["settings-back"].label,"返回播放与歌词")
     app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-playback"].exists)
+    openSettings(app,page:"theme")
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"theme-mode-sheet").firstMatch.exists)
+    XCTAssertFalse(app.buttons["settings-open-background"].exists,"The underlying category must leave the accessibility tree while its sheet is open")
+    evidence("Theme mode native sheet")
+    app.buttons["theme-sheet-close"].tap()
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists,"Closing the picker must preserve its category")
     openSettings(app,page:"appearance");app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the active settings tab must return to the settings root")
     openSettings(app,page:"downloads");XCTAssertFalse(name.exists)
@@ -983,6 +990,7 @@ final class SourceSettingsTests: XCTestCase {
     let darkImage=XCTAttachment(screenshot:app.screenshot());darkImage.lifetime = .keepAlways;add(darkImage)
     app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
     let lightImage=XCTAttachment(screenshot:app.screenshot());lightImage.lifetime = .keepAlways;add(lightImage)
+    app.buttons["theme-sheet-close"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
     let discover=app.buttons["发现 · 分类 · 排行榜 · 歌单导入"]
     XCTAssertTrue(discover.waitForExistence(timeout:10));discover.tap()
@@ -1069,6 +1077,26 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
     let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")
   }
+  func testThemeSheetWithLargeTextAndSwipeDismissal() throws {
+    let app=XCUIApplication()
+    app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch();openSettings(app,page:"theme")
+    let dark=app.descendants(matching:.any).matching(identifier:"theme-dark").firstMatch
+    for _ in 0..<12 {if dark.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(dark.isHittable);dark.tap();XCTAssertTrue(dark.isSelected)
+    let image=XCTAttachment(screenshot:app.screenshot());image.name="Theme sheet at accessibility XXXL";image.lifetime = .keepAlways;add(image)
+    let title=app.staticTexts["settings-title-theme"]
+    title.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5))
+      .press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
+    let close=app.buttons["theme-sheet-close"]
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
+    openSettings(app,page:"theme");XCTAssertTrue(dark.isSelected,"Swipe dismissal must retain the selected mode")
+    close.tap()
+    openSettings(app,page:"theme");XCTAssertTrue(dark.isSelected,"Closing without another choice must preserve mode")
+    let light=app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch
+    for _ in 0..<12 {if light.isHittable{break};app.swipeDown()};light.tap();close.tap()
+  }
   func testEQPresetCardsWithLargeText() throws {
     let app=XCUIApplication()
     app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
@@ -1101,8 +1129,12 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"theme")
     let light=app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch
     for _ in 0..<3 {if light.isHittable{break};app.swipeDown()};light.tap()
+    app.buttons["theme-sheet-close"].tap()
     let settingsImage=XCTAttachment(screenshot:app.screenshot());settingsImage.lifetime = .keepAlways;add(settingsImage)
     app.terminate();app.launch()
+    openSettings(app,page:"theme")
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.isSelected,"Theme choice must persist after sheet close and relaunch")
+    app.buttons["theme-sheet-close"].tap()
     openSettings(app,page:"accent")
     let restored=app.descendants(matching:.any).matching(identifier:"accent-blue").firstMatch
     for _ in 0..<14 {if restored.isHittable{break};app.swipeUp()}

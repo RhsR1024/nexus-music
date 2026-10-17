@@ -1,3 +1,7 @@
+## 2026-10-17 主题呈现复核
+
+五参考均沿固定HEAD/许可证：悦音Library908–947为三主题选项行，Cy settingModal615–645为原生MenuView；Q/wtf Theme/IsAutoTheme13–34通过平台支持开关复用主题store；Wayferar SourceSettings8–18不提供本次iOS模态方案。音枢采用已有原生pageSheet及原子PreferenceStore，无新依赖/源码移植；Android复用契约且独立验收。Sollin采纳限E-009直接包装调用，见[0038](decisions/0038-theme-mode-sheet.md)。
+
 ## 2026-10-17 设置分组参考复核
 
 本批五参考固定HEAD/许可沿下表，亲读悦音Library806–824、Q设置Main14–25、wtf设置Main16–36、Cy settingModal403–435和Wayferar SourceSettings8–18；仅采纳分组职责与平台过滤原则，无源码/资源/依赖移植。Sollin分类/EQ采用E-008对象归属和原始BL证据，截图34补顺序，详见[本批报告](2026-10-17_reverse-sollin-settings-objects-report.md)。TS组织可共享Android，原生音频/返回/权限/服务仍分别验收。
