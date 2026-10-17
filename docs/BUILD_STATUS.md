@@ -1,3 +1,13 @@
+## 2026-10-18 云端6c8be2f超时及后续
+
+官方[运行Annotations](https://github.com/RhsR1024/nexus-music/actions/runs/39066065139)明确超过2h最大执行时间；核心23/23、在线5/5、离线1/1实际通过，iPad取消、归档/IPA跳过，整次不算通过。日志和API已核对，诊断产物12116637366/7f272f36已登记，尚未下载核验整个ZIP，不能称全包CRC/摘要已验。最新8f865af/39072820731已运行；本批将iOS预算从120改180分钟，保留全部断言/工具链/归档与single队列，不取消运行、不重派旧版。完整成功且IPA核验仍为76c9cd0。
+
+## 2026-10-18 A04三色取样（本地验收通过）
+
+reverse-skill R2/mobile-reverse、离线scope/case-guard与E025→F024→P024采纳前strict review通过；2307原始指令/9BL/11池加载独立重放通过。按[0053](decisions/0053-three-color-flow-palette.md)五参考比较后原创接入24×24 HSV三色、灰阶亮度分位、40°分离/补齐、有界缓存和三色背景，保留单色语义主题及唯一播放意图。366业务/类型与完整native通过；正式入口SourceUITests-1792277163729背景全流程329.540秒通过，1通过/零失败/跳过：两页实际红绿蓝像素、原红蓝切歌/跨页/开关/重启、经典页PCM、系统Home→激活、收起/暂停/开关恢复和凭据清理。截图已亲看；12次本机合成鉴权成功/0失败，本轮无新stream，复用已有临时音频缓存，不计真实私人服务或冷下载。
+
+首轮编译及两轮导航/像素排序失败保留；第四轮1792276291425在清理阶段中断、xcresult缺Info.plist，无最终状态，不计通过。JPEG重编码影响等宽条排名，真实JPEG原生专项和排序无关三色集合断言均通过，未放松三色必须同时存在。验收日志/counts/摘要与截图留build/logs/ui-flow-palette-passed*、build/flow-palette-passed。清洁归档/push/对应iOS27继续；8f865af/39072820731当前唯一运行、0排队，最新完整成功且IPA核验仍为76c9cd0。完整参考场景/动态/功耗、真实服务/签名/手机以及全部A/F/J保持active。
+
 ## 2026-10-18 背景可见性清洁归档与push回执
 
 `8f865af0569a9fa5b53a65cdd70a2126580a25e7`正常push；archive-background-visible-clean.log成功。manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离/私人及签名资源排除通过。IPA SHA256 `28af9fffc93b082c8333b0849aa3d7022f8a0d70c73f26cbd6325cdb340d5807`，留存build/local-background-visible-8f865af。359业务/类型、正式背景308.007秒及截图见下；验收后strict review24E/23F/23P、8WI/47事件零错误/警告，手写验收时间提前一分钟已追加更正，结果未改。

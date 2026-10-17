@@ -1,3 +1,7 @@
+## 2026-10-18 三色背景比较
+
+[0053](decisions/0053-three-color-flow-palette.md)重核五参考固定HEAD与主题/图片分层/URI活动隔离/有界缓存：悦音主题缓存、Q/wtf图片层、Cy原生主色与50项LRU、自有Wayferar home-only恢复均不等于本次HSV三色算法；维护、Android和许可逐项记录。算法来自门禁后的Sollin离线E025有限证据，音枢原生/TS原创实现，无参考代码/依赖/资源移植。366业务/类型、完整native及正式背景App329.540秒/两页真实三色像素与PCM/重启/前后台/清理通过，截图已亲看；清洁归档/云端另验。
+
 ## 2026-10-18 背景可见性比较
 
 [0052](decisions/0052-background-visible-owner.md)逐一重核五个固定HEAD，亲读悦音MiniPlayer显隐/异步清理、Q/wtf图片分层、Cy URI/active/有界缓存及自有Wayferar home-only图层恢复；分别记录维护、Android和许可。音枢仅原创增加全屏呈现状态及隐藏图层移除，无参考源码/依赖/资源/原生补丁移植。Sollin E024有限静态边界与完整运行未知保持。

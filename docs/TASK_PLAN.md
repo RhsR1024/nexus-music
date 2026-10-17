@@ -1,3 +1,9 @@
+## 2026-10-18 A04三色取样（本地验收通过）
+
+reverse-skill R2/mobile-reverse、离线scope/case-guard与E025→F024→P024采纳前strict review通过；2307原始指令/9BL/11池加载独立重放通过。按[0053](decisions/0053-three-color-flow-palette.md)五参考比较后原创接入24×24 HSV三色、灰阶亮度分位、40°分离/补齐、有界缓存和三色背景，保留单色语义主题及唯一播放意图。366业务/类型与完整native通过；正式入口SourceUITests-1792277163729背景全流程329.540秒通过，1通过/零失败/跳过：两页实际红绿蓝像素、原红蓝切歌/跨页/开关/重启、经典页PCM、系统Home→激活、收起/暂停/开关恢复和凭据清理。截图已亲看；12次本机合成鉴权成功/0失败，本轮无新stream，复用已有临时音频缓存，不计真实私人服务或冷下载。
+
+首轮编译及两轮导航/像素排序失败保留；第四轮1792276291425在清理阶段中断、xcresult缺Info.plist，无最终状态，不计通过。JPEG重编码影响等宽条排名，真实JPEG原生专项和排序无关三色集合断言均通过，未放松三色必须同时存在。验收日志/counts/摘要与截图留build/logs/ui-flow-palette-passed*、build/flow-palette-passed。清洁归档/push/对应iOS27继续；8f865af/39072820731当前唯一运行、0排队，最新完整成功且IPA核验仍为76c9cd0。完整参考场景/动态/功耗、真实服务/签名/手机以及全部A/F/J保持active。
+
 ## 2026-10-18 背景可见性清洁归档与push
 
 8f865af正常push，清洁arm64/SDK26.2 unsigned归档及CRC/摘要/生产入口/私人资源核验通过，IPA SHA256 `28af9fff`，完整收据见[BUILD_STATUS](BUILD_STATUS.md)。359业务/类型、正式背景308.007秒通过；39072820731/8f865af唯一pending，39066065139/6c8be2f仍运行。旧2db0872 pending自动取消不计通过；对应云端/完整参考运行/真实服务/签名/手机及全部A/F/J继续。

@@ -1,9 +1,10 @@
+import {isFlowPalette,type FlowPalette} from '../domain/appearance.ts';
 import {InvalidRecordError} from './recovery.ts';
 import type {Repository} from './repository.ts';
 export type VisualSlot='background'|'photo';
 export interface VisualAsset {id:string;name:string;width:number;height:number}
 export interface VisualState {version:1;background:VisualAsset|null;photo:VisualAsset|null}
-export interface VisualNative {importVisual(uri:string):Promise<{id:string;width:number;height:number}>;resolveVisual(id:string):Promise<string>;reconcileVisuals(ids:readonly string[]):Promise<void>;visualPalette(uri:string):Promise<string>}
+export interface VisualNative {importVisual(uri:string):Promise<{id:string;width:number;height:number}>;resolveVisual(id:string):Promise<string>;reconcileVisuals(ids:readonly string[]):Promise<void>;visualPalette(uri:string):Promise<string>;visualFlowPalette?(uri:string):Promise<readonly string[]>}
 // Only stable stages cross the UI boundary; native errors may contain private paths.
 export class VisualImportError extends Error {
   readonly stage:'read'|'validate'|'save';
@@ -42,16 +43,27 @@ export class VisualAssetStore {
   async resolve(image:VisualAsset|null){if(!image)return;try{return await this.native.resolveVisual(image.id);}catch{return;}}
 }
 export class VisualColorCache {
-  private cache=new Map<string,string>();private pending=new Map<string,Promise<string>>();private epoch=0;
-  private native:Pick<VisualNative,'visualPalette'>;
-  constructor(native:Pick<VisualNative,'visualPalette'>){this.native=native;}
+  private cache=new Map<string,string|FlowPalette>();private pending=new Map<string,Promise<string|FlowPalette>>();private epoch=0;
+  private native:Pick<VisualNative,'visualPalette'|'visualFlowPalette'>;
+  constructor(native:Pick<VisualNative,'visualPalette'|'visualFlowPalette'>){this.native=native;}
   clear(){this.epoch++;this.cache.clear();this.pending.clear();}
   async color(uri:string):Promise<string>{
-    const cached=this.cache.get(uri);if(cached){this.cache.delete(uri);this.cache.set(uri,cached);return cached;}
-    const current=this.pending.get(uri);if(current)return current;
-    if(this.pending.size>=32)throw new Error('图片取色繁忙');
+    return this.request('color:'+uri,()=>this.native.visualPalette(uri),value=>{
+      if(typeof value!=='string'||!/^#[0-9a-f]{6}$/i.test(value))throw new Error('Invalid visual color');return value;
+    });
+  }
+  async flowPalette(uri:string):Promise<FlowPalette>{
+    if(!this.native.visualFlowPalette){const color=await this.color(uri);return Object.freeze([color,color,color]);}
+    return this.request('flow:'+uri,()=>this.native.visualFlowPalette!(uri),value=>{
+      if(!isFlowPalette(value))throw new Error('Invalid visual flow palette');return Object.freeze([value[0],value[1],value[2]]);
+    });
+  }
+  private request<T extends string|FlowPalette>(key:string,load:()=>Promise<unknown>,validate:(value:unknown)=>T):Promise<T>{
+    const cached=this.cache.get(key);if(cached){this.cache.delete(key);this.cache.set(key,cached);return Promise.resolve(cached as T);}
+    const current=this.pending.get(key);if(current)return current as Promise<T>;
+    if(this.pending.size>=32)return Promise.reject(new Error('Visual palette queue is full'));
     const epoch=this.epoch;
-    const pending=this.native.visualPalette(uri).then(color=>{if(!/^#[0-9a-f]{6}$/i.test(color))throw new Error('取色结果无效');if(epoch!==this.epoch)throw new Error('图片取色缓存已更新，请重试');this.cache.set(uri,color);if(this.cache.size>50)this.cache.delete(this.cache.keys().next().value!);return color;}).finally(()=>{if(this.pending.get(uri)===pending)this.pending.delete(uri);});
-    this.pending.set(uri,pending);return pending;
+    const pending=load().then(value=>{const result=validate(value);if(epoch!==this.epoch)throw new Error('Visual palette cache changed');this.cache.set(key,result);if(this.cache.size>50)this.cache.delete(this.cache.keys().next().value!);return result;}).finally(()=>{if(this.pending.get(key)===pending)this.pending.delete(key);});
+    this.pending.set(key,pending);return pending;
   }
 }

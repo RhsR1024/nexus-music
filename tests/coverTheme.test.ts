@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {CoverThemeStore} from '../src/appearance/coverTheme.ts';
 import {PlaybackController} from '../src/playback/controller.ts';
 import {makeQueue} from '../src/domain/queue.ts';
-import {appearanceDefaults,appearancePalette,coverThemeGradient} from '../src/domain/appearance.ts';
+import {appearanceDefaults,appearancePalette,coverThemeGradient,flowThemeGradient} from '../src/domain/appearance.ts';
 import {track,deferred} from './fixtures.ts';
 import type {Track} from '../src/domain/track.ts';
 
@@ -79,6 +79,43 @@ test('flow-only cover layer keeps text readable with the independent theme palet
       const opacity=mode==='light'?.045:.08,pixel=mode==='light'?0:255;
       const composite='#'+[1,3,5].map(i=>Math.round(parseInt(background.slice(i,i+2),16)*(1-opacity)+pixel*opacity).toString(16).padStart(2,'0')).join('');
       for(const text of [palette.text,palette.secondary])assert.ok(contrast(composite,text)>=4.5,`${mode}/${visualTheme}/${color}: ${composite}/${text}`);
+    }
+  }
+});
+
+test('three-color results cannot cross tracks or resurrect a rejected cover',async()=>{
+  const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio'})},{load(){},stop(){},play(){},pause(){}},makeQueue([],null));
+  const gates=new Map<string,ReturnType<typeof deferred<readonly string[]>>>();
+  const store=new CoverThemeStore(controller,{getSnapshot:()=>({coverColor:false,globalBackgroundMotion:true}),subscribe:()=>()=>{}},
+    {loadTrack:async t=>'file:///'+t.title},{color:async()=> '#112233',flowPalette:async uri=>{const gate=deferred<readonly string[]>();gates.set(uri,gate);return gate.promise;}});
+  const select=(id:string)=>controller.setQueue(makeQueue([{id,track:{...track,title:id}}],id));
+  select('A');await tick();select('B');await tick();gates.get('file:///A')!.resolve(['#FF0000','#00FF00','#0000FF']);await tick();assert.equal(store.getSnapshot().uri,'file:///B');assert.equal(store.getSnapshot().flowPalette,undefined);
+  store.rejectImage('file:///B');gates.get('file:///B')!.resolve(['#0000FF','#00FF00','#FF0000']);await tick();assert.deepEqual(store.getSnapshot(),{color:'#112233'});
+  select('C');await tick();gates.get('file:///C')!.resolve(['#0000FF','#00FF00','#FF0000']);await tick();const snapshot=store.getSnapshot();assert.deepEqual(snapshot.flowPalette,['#0000FF','#00FF00','#FF0000']);assert.ok(Object.isFrozen(snapshot.flowPalette));
+  await controller.play();for(let i=0;i<100;i++)controller.onProgress(controller.getSnapshot().token!,i,120,false);assert.equal(store.getSnapshot(),snapshot);store.dispose();
+});
+test('failed RGB sampling can retain independently valid three-color flow',async()=>{
+  const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio'})},{load(){},stop(){},play(){},pause(){}},makeQueue([{id:'a',track}], 'a'));
+  const store=new CoverThemeStore(controller,{getSnapshot:()=>({coverColor:false,globalBackgroundMotion:true}),subscribe:()=>()=>{}},
+    {loadTrack:async()=> 'file:///cover'},{color:async()=>{throw new Error('private/path');},flowPalette:async()=> ['#0000FF','#00FF00','#FF0000']});
+  await tick();await tick();assert.deepEqual(store.getSnapshot(),{uri:'file:///cover',color:'#0000FF',flowPalette:['#0000FF','#00FF00','#FF0000']});store.dispose();
+});
+test('malformed three-color results never enter the theme snapshot',async()=>{
+  for(const invalid of [new Array<string>(3),['#FF0000'],['#FF0000','#00FF00','private/path'],['#000000','#FFFFFF','#000000','#FFFFFF']]){
+    const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio'})},{load(){},stop(){},play(){},pause(){}},makeQueue([{id:'a',track}],'a'));
+    const store=new CoverThemeStore(controller,{getSnapshot:()=>({coverColor:false,globalBackgroundMotion:true}),subscribe:()=>()=>{}},
+      {loadTrack:async()=> 'file:///cover'},{color:async()=> '#112233',flowPalette:async()=>invalid});
+    await tick();assert.deepEqual(store.getSnapshot(),{uri:'file:///cover',color:'#112233'});store.dispose();
+  }
+});
+test('all extreme three-color combinations preserve readable light and dark semantic text',()=>{
+  const colors=['#FF0000','#0000FF','#000000','#FFFFFF','#00FF00','#FF00FF'];
+  for(const mode of ['light','dark'] as const)for(const a of colors)for(const b of colors)for(const c of colors){
+    const palette=appearancePalette(mode,{...appearanceDefaults,globalBackgroundMotion:true},a);
+    for(const background of flowThemeGradient([a,b,c],mode)){
+      const opacity=mode==='light'?.045:.08,pixel=mode==='light'?0:255;
+      const composite='#'+[1,3,5].map(i=>Math.round(parseInt(background.slice(i,i+2),16)*(1-opacity)+pixel*opacity).toString(16).padStart(2,'0')).join('');
+      for(const text of [palette.text,palette.secondary])assert.ok(contrast(composite,text)>=4.5,`${mode} ${a}/${b}/${c}: ${composite}/${text}`);
     }
   }
 });

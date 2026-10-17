@@ -91,3 +91,31 @@ test('old effective global motion migrates once and separate global/player choic
     record={...saved,globalBackgroundMotion:null};await assert.rejects(new PreferenceStore(repository).restore());
   }
 });
+
+test('flow palettes coalesce independently, validate three colors and protect cached arrays',async()=>{
+  const gate=deferred<readonly string[]>();let calls=0;const samples=['#FF0000','#00FF00','#0000FF'];
+  const cache=new VisualColorCache({visualPalette:async()=> '#112233',visualFlowPalette:async()=>{calls++;return gate.promise;}});
+  const first=cache.flowPalette('same'),second=cache.flowPalette('same');gate.resolve(samples);
+  const palette=await first;assert.deepEqual(palette,await second);assert.equal(calls,1);assert.ok(Object.isFrozen(palette));samples[0]='#FFFFFF';assert.equal(palette[0],'#FF0000');
+  assert.equal(await cache.color('same'),'#112233');assert.equal((await cache.flowPalette('same'))[0],'#FF0000');assert.equal(calls,1);
+  const oldPlatform=new VisualColorCache({visualPalette:async()=> '#123456'});assert.deepEqual(await oldPlatform.flowPalette('same'),['#123456','#123456','#123456']);
+  let invalidCalls=0;const invalid=new VisualColorCache({visualPalette:async()=> '#112233',visualFlowPalette:async()=>{invalidCalls++;return ['#FFFFFF','private/file.png'];}});
+  await assert.rejects(invalid.flowPalette('same'),/Invalid visual flow palette/);await assert.rejects(invalid.flowPalette('same'));assert.equal(invalidCalls,2);assert.equal(await invalid.color('same'),'#112233');
+});
+test('flow and single-color requests share the 32 pending and 50 cached item budgets',async()=>{
+  let colors=0,flows=0;
+  const cached=new VisualColorCache({visualPalette:async()=>{colors++;return '#123456';},visualFlowPalette:async()=>{flows++;return ['#FF0000','#00FF00','#0000FF'];}});
+  for(let i=0;i<20;i++)await cached.color(String(i));for(let i=0;i<30;i++)await cached.flowPalette(String(i));
+  await cached.color('0');await cached.flowPalette('30');await cached.color('0');assert.equal(colors,20);await cached.color('1');assert.equal(colors,21);assert.equal(flows,31);
+  const gates=Array.from({length:32},()=>deferred<string>());let requests=0,nativeFlow=0;
+  const bounded=new VisualColorCache({visualPalette:async()=>gates[requests++]!.promise,visualFlowPalette:async()=>{nativeFlow++;return ['#000000','#000000','#000000'];}});
+  const pending=Array.from({length:32},(_,i)=>bounded.color(String(i)));await assert.rejects(bounded.flowPalette('over'),/queue is full/);assert.equal(nativeFlow,0);
+  gates[0]!.resolve('#000000');await pending[0];assert.deepEqual(await bounded.flowPalette('over'),['#000000','#000000','#000000']);assert.equal(nativeFlow,1);
+  for(const gate of gates)gate.resolve('#000000');await Promise.all(pending);
+});
+test('clearing flow palettes rejects old results without removing a replacement request',async()=>{
+  const old=deferred<readonly string[]>(),next=deferred<readonly string[]>();let calls=0;
+  const cache=new VisualColorCache({visualPalette:async()=> '#000000',visualFlowPalette:async()=>++calls===1?old.promise:next.promise});
+  const first=cache.flowPalette('same');cache.clear();const second=cache.flowPalette('same');old.resolve(['#FF0000','#FF0000','#FF0000']);await assert.rejects(first,/cache changed/);
+  const third=cache.flowPalette('same');assert.equal(calls,2);next.resolve(['#0000FF','#00FF00','#FF0000']);assert.deepEqual(await second,await third);assert.equal((await cache.flowPalette('same'))[0],'#0000FF');
+});

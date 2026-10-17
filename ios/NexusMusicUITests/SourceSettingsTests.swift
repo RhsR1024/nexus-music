@@ -1097,16 +1097,16 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     let themeAccount=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-theme").firstMatch;XCTAssertTrue(themeAccount.waitForExistence(timeout:10));if (themeAccount.value as? String) != "1" {themeAccount.tap()}
     let album=app.buttons["navidrome-item-album-fixture-album"];XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();let redSong=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","red cover tone")).firstMatch;XCTAssertTrue(redSong.waitForExistence(timeout:10));reveal(redSong);redSong.tap()
-    func redMinusBlue()->Int {
+    func rgbPixel(_ image:UIImage,_ point:CGPoint)->[UInt8] {
       // Sample the actual visible app margin, outside cards/text/mini. Convert
       // to a known RGBA context instead of assuming the screenshot byte order.
-      let image=app.screenshot().image
       let renderer=UIGraphicsImageRenderer(size:CGSize(width:1,height:1))
-      let pixel=renderer.image{_ in image.draw(at:CGPoint(x:-6,y:-180))}
-      guard let cg=pixel.cgImage else{return 0};var rgba=[UInt8](repeating:0,count:4)
+      let pixel=renderer.image{_ in image.draw(at:CGPoint(x:-point.x,y:-point.y))}
+      guard let cg=pixel.cgImage else{return []};var rgba=[UInt8](repeating:0,count:4)
       rgba.withUnsafeMutableBytes{buffer in let ctx=CGContext(data:buffer.baseAddress,width:1,height:1,bitsPerComponent:8,bytesPerRow:4,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue)!;ctx.draw(cg,in:CGRect(x:0,y:0,width:1,height:1))}
-      return Int(rgba[0])-Int(rgba[2])
+      return rgba
     }
+    func redMinusBlue()->Int {let rgba=rgbPixel(app.screenshot().image,CGPoint(x:6,y:180));return rgba.count==4 ? Int(rgba[0])-Int(rgba[2]) : 0}
     func expectTint(_ red:Bool,_ title:String){
       let expectation=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in let delta=redMinusBlue();return red ? delta>12 : delta < -12},object:app)
       XCTAssertEqual(XCTWaiter.wait(for:[expectation],timeout:20),.completed,"Visible global tint must follow the decoded \(red ? "red" : "blue") cover on \(title)")
@@ -1159,6 +1159,33 @@ final class SourceSettingsTests: XCTestCase {
     let closePlayer=app.buttons["收起播放页"];reveal(closePlayer);closePlayer.tap();motion(true)
     app.buttons["mini-action-toggle"].tap();motion(false)
     expectTint(false,"Visible global background restored after player and pause")
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    XCTAssertTrue(themeAccount.waitForExistence(timeout:10));reveal(themeAccount);themeAccount.tap()
+    XCTAssertTrue(album.waitForExistence(timeout:15));reveal(album);album.tap()
+    let multi=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","multi cover tone")).firstMatch
+    XCTAssertTrue(multi.waitForExistence(timeout:15));reveal(multi);multi.tap()
+    func expectThreeColors(_ name:String){
+      XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"ambient-three-color").firstMatch.waitForExistence(timeout:10))
+      // CoverCache re-encodes JPEG, so equal source stripes need not retain
+      // equal scores/order. Require all three actual screen hues in any order.
+      let different=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+        let image=app.screenshot().image
+        let points=[CGPoint(x:6,y:180),CGPoint(x:6,y:image.size.height*0.52),CGPoint(x:image.size.width-6,y:image.size.height-190)]
+        let hues=points.map{point->Int in
+          let rgba=rgbPixel(image,point);guard rgba.count==4 else{return -1}
+          let ranked=[0,1,2].sorted{rgba[$0]>rgba[$1]}
+          return Int(rgba[ranked[0]])-Int(rgba[ranked[1]])>=2 && Int(rgba[ranked[0]])-Int(rgba[ranked[2]])>=6 ? ranked[0] : -1
+        }
+        return Set(hues)==Set([0,1,2])
+      },object:app)
+      let result=XCTWaiter.wait(for:[different],timeout:20)
+      let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)
+      XCTAssertEqual(result,.completed,"Three-color flow must render distinct red, green and blue actual margins")
+    }
+    expectThreeColors("Three-color flow actual private library pixels")
+    app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap()
+    expectThreeColors("Three-color flow actual discovery pixels")
     openSettings(app,page:"background");reveal(persistedPlayer);persistedPlayer.tap()
     reveal(persistedGlobal);persistedGlobal.tap()
     app.buttons["background-sheet-close"].tap()

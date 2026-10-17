@@ -1,5 +1,7 @@
 export type VisualTheme = 'classic' | 'blush' | 'soft';
 export type Accent = 'rose' | 'coral' | 'purple' | 'blue' | 'orange';
+export type FlowPalette=readonly[string,string,string];
+export function isFlowPalette(value:unknown):value is FlowPalette {return Array.isArray(value)&&value.length===3&&[0,1,2].every(index=>typeof value[index]==='string'&&/^#[0-9a-f]{6}$/i.test(value[index]));}
 export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgroundStyle:'gradient'|'solid'|'image';backgroundOpacity:number;playerBackground:'artwork'|'solid'|'photo';playerBlur:number;playerDarkness:number;coverRadius:number;coverColor:boolean;globalBackgroundMotion:boolean;dynamicBackground:boolean;glassNavigation:boolean}
 export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,coverColor:false,globalBackgroundMotion:false,dynamicBackground:false,glassNavigation:true};
 export const accentColors:Record<Accent,readonly[string,string]>={rose:['#BE3458','#FF94B0'],coral:['#BA4240','#FF9B94'],purple:['#7650AB','#D4B4FF'],blue:['#2E64A0','#9AC8FF'],orange:['#A65A14','#FFC485']};
@@ -30,6 +32,12 @@ export function darkenCoverColor(color:string):string {
   const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16));
   // A dark tinted foundation keeps white player controls legible even without artwork.
   const scale=Math.min(1,72/Math.max(...rgb,1));return '#'+rgb.map(value=>Math.round(value*scale).toString(16).padStart(2,'0')).join('');
+}
+
+// Preserve the existing semantic luminance bounds while letting distinct
+// recovered palette hues affect different stops of the flow background.
+export function flowThemeGradient(palette:FlowPalette,mode:'light'|'dark'):FlowPalette {
+  return [coverThemeGradient(palette[0],mode)[0],coverThemeGradient(palette[1],mode)[1],coverThemeGradient(palette[2],mode)[2]];
 }
 
 export function playerBackgroundImage(mode:AppearanceOptions['playerBackground'],photoSkin:boolean,custom:string|undefined,cover:string|undefined,failed:readonly string[]=[]):string|undefined {
