@@ -1,3 +1,9 @@
+## 2026-10-18 分页恢复清洁归档与push回执
+
+`2db0872a18a41b692ef620a7fedc894fc5a3f577`已正常push并核对远端main一致。359业务/类型、完整发现App145.119秒及两次失败/页序列核验、截图亲看通过；验收后strict review23E/22F/22P、8WI/43事件零错误/警告。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；CRC/附带摘要、归档可执行及JS字节一致、正式入口隔离/私人及签名资源排除通过。IPA SHA256 `d326ac91c04a8c6834ca8d74031a20944bcbdef564a92575329b4a3054272682`，留存`build/local-discovery-pager-2db0872`。此条覆盖本批归档/push待办，不扩展真实服务/签名/手机结论。
+
+push后API实核39070885003/2db0872唯一pending、39066065139/6c8be2f仍运行核心App，1运行/1排队；07a6de3旧pending39069432881由single自动取消，不算通过，代码包含于最新。未取消运行或重派旧版。最新完整成功且IPA核验仍为76c9cd0/39050349015，只覆盖实际代码。下一A04背景算法/生命周期已新路由并过前置门禁，尚未新Evidence/产品采纳；全部A/F/J、完整参考运行、真实服务/签名/手机目标active。
+
 ## 2026-10-18 发现分页与刷新恢复（本地验收通过）
 
 reverse-skill新R2/mobile-reverse路由、既有离线scope和E023→F022→P022采纳前严格review通过23E/22F/22P、8WI/42事件；610原始指令/10BL/3池加载与回边独立核验。五参考固定HEAD及维护/Android/许可取舍见[0051](docs/decisions/0051-discovery-pager-recovery-validation.md)。仅支持静态入口边界，不推断参考失败界面/缓存时效/运行协议。
