@@ -8,6 +8,8 @@
 
 最终正式ND专项`build/SourceUITests-1792195122896.xcresult`193.454秒、1/1通过，零失败/跳过：合成ND连接/PCM、2:00、暂停定位、AM/沉浸/写真/黑胶/声波核、歌词显示面板返回/独立样式入口、全部歌词偏移/重置/定位、统计与mini配置/重启/收藏/队列/恢复默认/凭据移除。此次复用正常临时音频缓存，不冒充新增真实平台请求；前次冷读取4次stream另有计数证据。`ui-sheet-final.log`/`ui-catalog.log`及`ui-server-counts.json`保存本轮结果。与图片专项、303项业务及完整native共同构成本批本地验收；清洁IPA及对应新云端继续，真机仍未验。
 
+提交`dba06699fb6700876887591bed7bce1ff0506250`已正常push并核对远端；清洁`archive-sheet-routing-clean.log`为ARCHIVE SUCCEEDED，正式入口隔离验证通过，manifest dirty=false/workingTreeChanges=[]、Xcode26.3/iphoneos26.2、arm64、min15.1、设备族[1,2]、signed=false。IPA SHA256 `b575d2f218762979d985f953aa5efdb0f72bc408a783e2f2efb6bfac7d6c2171`与附带摘要重新核验一致。最新iOS27[38984903551](https://github.com/RhsR1024/nexus-music/actions/runs/38984903551)为pending；前一pending38983886757自动取消，38934924631仍运行，队列保持运行1/最新排队1。取消旧运行不计作通过；新云端/签名/真机仍待终态。
+
 `check-sheet-final.log`为303/303及类型通过；`native-sheet-duration-full.log`完整原生套件通过，新增ready/后续时长断言覆盖实际WAV/AAC/MP3/16/24bit FLAC、HTTP/缓存、暂停/定位/自然结束。原生按asset解码时长作有限回退，并监听当前item时长变化；不使用歌曲元数据冒充实际时长。原测试设备有旧12秒缓存，旧失败没有stream请求；120秒合成录音改用版本化身份后首次正式读取4个stream请求、解码2:00断言通过。该证据不把原生回退说成旧时长失败的唯一根因。
 
 iPad云端`38924137682`完整诊断artifact12082140356已下载，245463140字节，API SHA256 `4ed13057d9f34db1700eba57f87eaa4890edf3af2e7c839036b7e554d3e24b84`及ZIP全条目CRC/长度通过；13项核心UI中12通过，仅写真导入失败，未进入iPad专项/IPA。`build/ci-38924137682/verified/logs/ui-catalog.log:49200`为旧Swift786行文件名断言；附件`CACDE2ED-EAB4-45D1-81B1-7BFD643359F1.txt:112`仍未导入，142行保存错误。图片流程现以固定V01系统选择/复制、V02原生读取/处理、V03结果校验、V04落库区分错误，不回显路径/原始异常；业务测试验证失败保持旧槽位、清理/重试和脱敏。错误分段是新增取证能力，尚不能宣布间歇故障根因修复。

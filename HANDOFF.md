@@ -10,7 +10,9 @@ Sollin IPA优先、截图补充、保留独有能力/全部范围不变；新增
 
 Player的菜单/样式/歌词/完整选项改在同一pageSheet宿主内分别呈现，修复同级Modal争用后歌词设置不出现；样式支持从菜单返回菜单、播放器直达后返回播放器。全部歌词展开时移除底层重复偏移控件，避免AX命中两处。原生按实际asset时长有限回退并观察当前item变化；合成ND录音身份版本化，隔离旧12秒夹具缓存。图片错误采用不含原始路径的V01–V04阶段码，失败保留和安全重试有业务覆盖，仍不宣布间歇故障根因闭环。
 
-本地：`check-sheet-final.log`303/303，`native-sheet-duration-full.log`完整通过；图片专项1792194453156为120.306秒通过，最终正式ND/五皮肤/面板/暂停定位/偏移/统计/mini重启/收藏队列专项`build/SourceUITests-1792195122896.xcresult`193.454秒1/1通过。已亲看完整歌词和四按钮mini截图。首次ND Sheet失败、首次联合重复偏移失败保留，不写成全组一次通过。iPad云端38924137682诊断完整ZIP/API摘要/CRC已验，仅图片项失败（12/13通过），未执行iPad专项/IPA；详细证据见docs/BUILD_STATUS.md。本批功能提交/清洁本地SDK26.2 IPA/最新云端继续，签名和真机仍待；下一步继续A03–A09现有UI/交互对齐及图片V码定位，再恢复新增功能。
+本地：`check-sheet-final.log`303/303，`native-sheet-duration-full.log`完整通过；图片专项1792194453156为120.306秒通过，最终正式ND/五皮肤/面板/暂停定位/偏移/统计/mini重启/收藏队列专项`build/SourceUITests-1792195122896.xcresult`193.454秒1/1通过。已亲看完整歌词和四按钮mini截图。首次ND Sheet失败、首次联合重复偏移失败保留，不写成全组一次通过。iPad云端38924137682诊断完整ZIP/API摘要/CRC已验，仅图片项失败（12/13通过），未执行iPad专项/IPA；详细证据见docs/BUILD_STATUS.md。
+
+本批已正常提交/push `dba06699fb6700876887591bed7bce1ff0506250`，远端main核对一致；`archive-sheet-routing-clean.log`成功，manifest dirty=false/workingTreeChanges=[]、arm64、SDK26.2、min15.1、设备族[1,2]、unsigned，IPA SHA256 `b575d2f218762979d985f953aa5efdb0f72bc408a783e2f2efb6bfac7d6c2171`已校验。新iOS27 `38984903551`为pending，旧策略提交`38983886757`自动取消，原`38934924631`继续运行；第二次确认single策略实际生效。云端/签名/真机仍待。下一步跟进最新运行及图片V码、继续A03–A09现有UI/交互对齐，再恢复新增功能，完整目标active。
 
 # 2026-10-17 F33 云端 iOS27 成功与产物核验
 
