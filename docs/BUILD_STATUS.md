@@ -1,3 +1,9 @@
+## 2026-10-17 环形定位清洁归档与push回执
+
+`fcffd286ebe61baee3b4f389fab995f8a254996d`已正常push并核对远端main一致。`archive-ring-seek-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `3648b46f776288557f620f0f625ecd45d44896cd36fef3e0dda38c1973d37930`，留存`build/local-ring-seek-fcffd28`。本条覆盖下方本批归档/push待办，真实服务/签名/手机独立验收。
+
+push后API实核[39042804499](https://github.com/RhsR1024/nexus-music/actions/runs/39042804499)/fcffd28唯一pending，[39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819)/35e6f2f继续运行，已过checks/native/核心App/歌词发现/离线断服务播放，正在iPad；旧pending39040601042/261cd66由single自动取消，不计通过。1运行/1排队，未取消运行/重派；本批对应iOS27终态继续。
+
 ## 2026-10-17 A09 声波核环形定位本地专项通过
 
 335项业务检查与类型检查通过，日志`build/logs/check-ring-seek-final.log`。正式App `build/SourceUITests-1792248125950.xcresult` 的 `testZNavidromePlaybackAndCredentials` 198.360秒、1/1通过，零失败/跳过；暂停拖环到60秒且线性进度一致，播放拖环保留意图，中心按钮/真实PCM、六布局/歌词/mini/重启与凭据清理通过。亲看`build/ring-seek-attachments/6F7B53E7-5D8A-41D5-AAC2-9C465A283BCE.png`。本机Xcode26.3/SDK26.2、x86_64模拟器26.3.1；无本批新增原生模块或音频后端改动，未重复宣称native套件新跑。

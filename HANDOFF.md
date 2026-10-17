@@ -1,3 +1,13 @@
+## 2026-10-17 歌词舞台时间轴证据阶段
+
+reverse-skill新路由mobile-reverse；E-014→F-013→P-013严格review通过14E/13F/13P、7WI/22事件、零错误/警告。原始字节核实初始化/文档变化分段、外层半开区间、组起点扫描/身份守卫及独立Karaoke绘制，完整分段阈值/时间偏移来源/视觉效果继续待核。本批仅收敛后续实现前提，音枢六布局保留，不计新舞台/AM2完成；详见[专项报告](docs/2026-10-17_reverse-sollin-stage-timeline-report.md)。环形定位fcffd28已清洁归档/push，云端新39042804499待验；全部A/F/J与真实服务/签名/手机范围继续。
+
+## 2026-10-17 环形定位清洁归档与push回执
+
+`fcffd286ebe61baee3b4f389fab995f8a254996d`已正常push并核对远端main一致。`archive-ring-seek-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `3648b46f776288557f620f0f625ecd45d44896cd36fef3e0dda38c1973d37930`，留存`build/local-ring-seek-fcffd28`。本条覆盖下方本批归档/push待办，真实服务/签名/手机独立验收。
+
+push后API实核[39042804499](https://github.com/RhsR1024/nexus-music/actions/runs/39042804499)/fcffd28唯一pending，[39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819)/35e6f2f继续运行，已过checks/native/核心App/歌词发现/离线断服务播放，正在iPad；旧pending39040601042/261cd66由single自动取消，不计通过。1运行/1排队，未取消运行/重派；本批对应iOS27终态继续。
+
 ## 2026-10-17 A09 声波核环形定位（本地专项通过）
 
 reverse-skill mobile-reverse E-013→F-012→P-012采纳前严格review通过13E/12F/12P、7WI/20事件、零错误/警告；原始指令核实沉浸四渲染分支和ring预览/提交/取消，舞台创建独立LyricStagePage。音枢已有声波核补齐环带拖动预览/松手单次定位、切歌/时长/取消守卫与10秒无障碍动作；真实PCM、中心播放按钮、唯一队列及六布局保留，AM2/舞台完整绘制仍待。335项业务/类型通过；正式App1792248125950综合回归198.360秒、1/1通过且零失败/跳过，暂停/播放中拖环、进度同源、中心按钮/真实PCM、多皮肤/歌词/mini/重启和凭据清理通过，亲看最终截图。清洁归档/push/对应云端结果继续记录；详见[0041](docs/decisions/0041-wave-ring-seek.md)、[报告](docs/2026-10-17_reverse-sollin-renderer-ring-report.md)。全部A/F/J余项与真实服务/签名/手机范围保留。
