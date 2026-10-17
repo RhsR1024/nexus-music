@@ -379,3 +379,5 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 已接入 `OfflineDownloadStore` 与播放器/设置页：当前歌曲可排队保存，状态按 queued/downloading/failed/completed 持久化；临时文件成功后才进入可播放文件名，失败不会污染播放解析。业务检查 306/306。该批只完成永久下载的第一段，断点续传、暂停/继续、后台调度、配额、在播保护和完整性校验仍保留在 M10。
 
 本批 `ea81654` 已通过原生专项及本地清洁 device archive；manifest `dirty=false`、arm64、iphoneos26.2、最低 iOS 15.1、设备族 `[1,2]`、signed=false，正式入口隔离和 `verify-archive.mjs` 通过，IPA SHA256 `fe133e9a5d77da3033aa6946b99ae8c29cea3eee6e8684705bb9d8b992ed997b`。不将本机 unsigned 归档写成 iOS27、签名、真机或真实服务完成。
+
+提交 `4169643` 已正常 push；iOS27 运行 `39009861484` 进入最新排队，旧运行 `39006353281` 保持运行，等待终态后再记录云端证据。
