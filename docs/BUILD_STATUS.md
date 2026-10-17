@@ -1,3 +1,9 @@
+## 2026-10-18 播放历史本机日期分隔（本地通过）
+
+reverse-skill E022→F021→P021采纳前strict review22E/21F/21P、8WI/38事件零错误/警告，2033原始指令/15BL/5分配头及池偏移已独立核对。五参考固定HEAD/维护/Android/许可与原创取舍见[决策0048](decisions/0048-history-calendar-sections.md)。仅现有最近播放增加本机日历日期标题，不排序或改变歌曲索引/身份/前20项加载更多及唯一播放入口；无效日期回退，epoch0有效，不把未知参考时区/文案当作已还原。
+
+352业务/类型检查通过，含UTC/上海/纽约午夜/跨年/闰日及夏令时跳时与重复时刻。正式入口SourceUITests-1792267559956的实际Navidrome合成播放/PCM/八布局/歌词/统计/mini/凭据清理260.169秒通过，零失败/跳过；新增日期标题可达与重启保持断言通过，日期/时间轴/歌曲截图已亲看。鉴权8次成功、0失败，无新stream请求，使用既有临时音频缓存，不能称本次冷下载或真实个人服务。验收后strict review22E/21F/21P、8WI/39事件零错误/警告。无新原生后端/依赖，清洁归档/push/对应iOS27待；发现完整分页/参考运行、全部A/F/J与真实服务/签名/手机继续。
+
 ## 2026-10-18 EQ清洁归档与push回执
 
 `be16e10b52919a0a5a97f56ecb487ba9fcb94535`已正常push，远端main一致。清洁归档manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `815aaa35f2e71efbed227ad13b237490d3b7f04f1c6a4113b1d99854fcae57e3`，留存`build/local-eq-state-be16e10`。350业务/类型、完整native和App184.998秒及两项失败基线见下；验收后strict review22E/21F/21P、8WI/38事件、零错误/警告。此条覆盖本批归档/push待办。

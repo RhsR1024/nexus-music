@@ -1040,10 +1040,15 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(recent.isHittable,"Playback history tab must remain reachable after returning from the player")
     recent.tap()
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"history-item-0").firstMatch.waitForExistence(timeout:10),"Real playback must appear in the timeline history")
+    let day=app.staticTexts["history-day-0"].firstMatch;XCTAssertTrue(day.waitForExistence(timeout:5));XCTAssertNotNil(day.label.range(of:"^[0-9]{4}-[0-9]{2}-[0-9]{2}$",options:.regularExpression));let playedDay=day.label
+    for _ in 0..<12{if day.isHittable{break};let above=day.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.7:0.3)))}
+    XCTAssertTrue(day.isHittable,"Calendar header must remain reachable with the actual history row")
     XCTAssertEqual(count(),previousCount+1,"Paused seeking and skin changes must count one native media session")
     let statsImage=XCTAttachment(screenshot:app.screenshot());statsImage.name="Persisted listening statistics";statsImage.lifetime = .keepAlways;add(statsImage)
     app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     XCTAssertTrue(statistic.waitForExistence(timeout:10));XCTAssertEqual(count(),previousCount+1,"Actual listening statistics must survive restart")
+    for _ in 0..<12 {if recent.isHittable{break};let above=recent.exists && recent.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.7:0.3)))}
+    XCTAssertTrue(recent.isHittable);recent.tap();XCTAssertEqual(day.label,playedDay,"Actual playback date must survive restart")
     openSettings(app,page:"mini")
     func miniReach(_ element:XCUIElement){for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))};XCTAssertTrue(element.isHittable)}
     func miniChoose(_ id:String){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;miniReach(control);control.tap()}
