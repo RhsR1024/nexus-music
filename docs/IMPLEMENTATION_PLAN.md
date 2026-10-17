@@ -1,3 +1,19 @@
+## 2026-10-17 用户新增硬门禁：reverse-skill
+
+后续 Sollin IPA/APK 逆向分析及功能、UI、交互对齐**必须使用 reverse-skill**，先路由/PRIMARY、检查工具、校验离线 scope，再产生该批 Evidence→Finding→Path 并严格 review 后采纳；禁止绕过或以“已读”代替执行。包已克隆到 `/Users/ningli/WorkSpace/reverse-skill`，固定 `cab634bd855fc287f6e420c1f36fd1a6b9245960`，项目入口 `.agents/skills/reverse-skill-router`。开工运行 `node scripts/sollin-reverse-gate.mjs ipa|apk`，采纳前加 `--review`；功能证据须覆盖当前工作项，安装检查不能代替。安装/路由/两案例严格review已通过，高级反编译/动态工具缺口如实保留；当前不声称对象调用图或完整UI对齐完成。完整安装、命令、拒绝路径及工具结果见[强制工作流](REVERSE_SKILL_WORKFLOW.md)，根 AGENTS.md 同步作为接手硬约束。IPA首要、APK互补、截图辅助、音枢特有能力、许可与隐私边界不变。
+
+## Sollin 双端参考策略（2026-10-17）
+
+Sollin iOS 2.0.0 build 60 IPA 继续作为 iOS UI/交互对齐的首要证据；用户补充的 `/Users/ningli/WorkSpace/ReferenceProject/Sollin-60-v8a.Apk`（SHA256 `668f590753e5c9d79d6b8835f68ba702be6ce90f484d0af2bd721afd50fe4c7f`）用于互补逆向和未来 Android 支持规划。对同一功能先比较两端的页面层级、状态与协议，再决定音枢共享 TS/契约、原创重实现或平台专属适配。
+
+本阶段交付边界仍为 iOS；APK 静态证据不能替代 iOS 27 云端、本地 XCTest、真实服务、签名或真机验收，也不授权复制 Flutter AOT、反编译代码、私有服务、品牌资源或未核验依赖。Android 仅在形成明确证据和平台验收后计入后续范围。
+
+## 2026-10-17 A09 播放器身份与声波核真实性修复
+
+现代皮肤的视觉和歌词继续使用实际匹配录音，收藏状态与写入目标改为显式使用原曲；声波核将“真实 PCM 频谱”作为显示前提，暂停、无 DSP 或不完整频带时保持中心播放控件而不渲染静态频谱条。该批只收紧已有边界，不建立第二播放器或第二队列。
+
+验证门槛：业务/类型检查、原生 DSP 套件、跨平台 UI 中现代收藏状态、暂停声波核无频谱，以及后续本地 Release IPA 和对应最新 iOS27 运行。
+
 ## 2026-10-17 云端队列最新约定
 
 用户已授权保留运行中构建、让最新提交替换旧排队提交。工作流 concurrency 已改为 `queue: single`、`cancel-in-progress: false`，覆盖下文所有旧“不取消排队/queue:max”历史记录。`d9317f2` push后已核对40旧pending取消、运行中未打断；以后每次push核对运行≤1/排队≤1。每个实现阶段仍本地验证、更新文档/交接、分批提交push；最新完整云端回归验证累计状态，取消的旧运行不计作通过。新功能如Sollin有对应能力则先参考其IPA实现线索/UI/交互，否则沿项目风格原创实现。耗时证据与验收见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)，工作量进度见[PROGRESS_ESTIMATE.md](PROGRESS_ESTIMATE.md)。

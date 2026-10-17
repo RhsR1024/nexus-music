@@ -40,3 +40,6 @@ resource/
 
 # Local user-provided Sollin reference screenshots (not product assets)
 /resources/sollin-reference/
+
+# Local reverse-skill case evidence (third-party binaries/strings never ship)
+/work/

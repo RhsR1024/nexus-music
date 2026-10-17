@@ -1,6 +1,25 @@
+## 2026-10-17 用户新增硬门禁：reverse-skill
+
+后续 Sollin IPA/APK 逆向分析及功能、UI、交互对齐**必须使用 reverse-skill**，先路由/PRIMARY、检查工具、校验离线 scope，再产生该批 Evidence→Finding→Path 并严格 review 后采纳；禁止绕过或以“已读”代替执行。包已克隆到 `/Users/ningli/WorkSpace/reverse-skill`，固定 `cab634bd855fc287f6e420c1f36fd1a6b9245960`，项目入口 `.agents/skills/reverse-skill-router`。开工运行 `node scripts/sollin-reverse-gate.mjs ipa|apk`，采纳前加 `--review`；功能证据须覆盖当前工作项，安装检查不能代替。安装/路由/两案例严格review已通过，高级反编译/动态工具缺口如实保留；当前不声称对象调用图或完整UI对齐完成。完整安装、命令、拒绝路径及工具结果见[强制工作流](REVERSE_SKILL_WORKFLOW.md)，根 AGENTS.md 同步作为接手硬约束。IPA首要、APK互补、截图辅助、音枢特有能力、许可与隐私边界不变。
+
+## 2026-10-17 Sollin 双端证据补充
+
+- [x] 固定 Sollin Android arm64 APK `/Users/ningli/WorkSpace/ReferenceProject/Sollin-60-v8a.Apk`，SHA256 `668f590753e5c9d79d6b8835f68ba702be6ce90f484d0af2bd721afd50fe4c7f`，与 iOS IPA 建立互补逆向输入记录。
+- [ ] 以 iOS IPA 为首要证据、Android APK 为交叉补充、截图为再次补充，逐项核对 UI、交互、设置、播放器/歌词/背景和数据流程；记录文件/符号/资源与证据等级，不把静态包当运行验收。
+- [ ] 当前阶段只验证 iOS；未来 Android 支持先复用已确认的 TS/协议/状态契约，再分别验证 Android 原生媒体、权限、后台、签名、真机和服务，不提前宣告双端完成。
+
 ## 2026-10-17 云端队列最新约定
 
 用户授权覆盖历史“不取消排队”规则：同工作流/分支保留正在运行任务，仅最新提交排队。采用 `queue: single`、`cancel-in-progress: false`；旧pending取消不记为通过，最新完整回归验证累计代码，失败继续定位和修复。策略及88分钟真实执行耗时分解见[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)。`d9317f2` push后已核实40旧pending取消、运行中保留/最新pending为1；以后每次push核对运行≤1/排队≤1。最新工作量加权约77%代码/58%整体交付（52%–64%），见[PROGRESS_ESTIMATE.md](PROGRESS_ESTIMATE.md)。
+
+## 2026-10-17 A09 播放器身份与声波核真实性修复
+
+现代播放器继续展示实际匹配录音，但收藏按钮现在明确写入队列原曲；这是音枢的原曲身份契约，不随跨平台匹配改变。声波核只在播放中、原生 DSP 支持且收到完整 32 频带时绘制环形频谱，暂停或无 PCM 时不显示伪造频谱；歌词区域保留三行可达空间。
+
+- [x] `ModernPlayer` 分离 `track` 与 `favoriteTrack`，避免匹配录音污染本地收藏。
+- [x] `FrequencyHalo` 以 `playing + supported + 32 bands` 为显示门槛；原生 PCM/FFT 通道和唯一队列不变。
+- [x] `testCrossPlatformLyrics` 增加现代皮肤收藏状态和暂停声波核无频谱断言。
+- [ ] 本批本地 UI/IPA、iOS27 云端终态、签名、真机及真实匹配服务仍待验证；不得把本地业务检查当作平台验收。
 
 ## 2026-10-17 A10 云端外观测试导航修复
 

@@ -1,3 +1,21 @@
+# 2026-10-17 本轮接续状态
+
+已先落实用户新增 reverse-skill 硬门禁，安装和检查结果见下节与 docs/REVERSE_SKILL_WORKFLOW.md。后续 Sollin 对齐必须通过它，当前A03/A04对象/调用关系仍未完成。
+
+接续前已有未提交播放器/列表/测试修改仍保留。本轮 `check-player-identity.log` 303/303及完整 `native-player-identity.log` 通过；`SourceUITests-1792212072221.xcresult` 的跨平台歌词/现代收藏/Sheet/手势专项124.460秒通过（零失败/跳过）。字体测试中被移除的真实播放器调用已恢复；该字体完整测试、其余受影响UI和最终本地IPA尚待本轮复验，不能因单项通过提交为全批验收。
+
+API最新核对：dba0669/38984903551与07870a4/38988046090均已自然失败，checks/native通过，核心App失败，后续匹配/iPad/IPA跳过；当前没有运行或排队。后者核心15测试/7失败，前者15/8失败（失败断言数，未据尾部日志推导失败测试数）。job日志尾部可确认现代皮肤标题StaticText定位断言；完整诊断artifact 12086765354（542050200字节）超过连接器536870912字节下载上限，未下载成功，不能宣称完整摘要/CRC或全部根因已确认。新版本需继续收集诊断、定向修复后正常push；不得重派旧版本或冒称云端通过。
+
+## 2026-10-17 用户新增硬门禁：reverse-skill
+
+后续 Sollin IPA/APK 逆向分析及功能、UI、交互对齐**必须使用 reverse-skill**，先路由/PRIMARY、检查工具、校验离线 scope，再产生该批 Evidence→Finding→Path 并严格 review 后采纳；禁止绕过或以“已读”代替执行。包已克隆到 `/Users/ningli/WorkSpace/reverse-skill`，固定 `cab634bd855fc287f6e420c1f36fd1a6b9245960`，项目入口 `.agents/skills/reverse-skill-router`。开工运行 `node scripts/sollin-reverse-gate.mjs ipa|apk`，采纳前加 `--review`；功能证据须覆盖当前工作项，安装检查不能代替。安装/路由/两案例严格review已通过，高级反编译/动态工具缺口如实保留；当前不声称对象调用图或完整UI对齐完成。完整安装、命令、拒绝路径及工具结果见[强制工作流](docs/REVERSE_SKILL_WORKFLOW.md)，根 AGENTS.md 同步作为接手硬约束。IPA首要、APK互补、截图辅助、音枢特有能力、许可与隐私边界不变。
+
+# 2026-10-17 A09 播放器身份与声波核真实性修复（当前工作批次）
+
+用户补充 Sollin Android 参考：`/Users/ningli/WorkSpace/ReferenceProject/Sollin-60-v8a.Apk`，SHA256 `668f590753e5c9d79d6b8835f68ba702be6ce90f484d0af2bd721afd50fe4c7f`。已记录到 `docs/REFERENCE_COMPARISON.md`、`docs/SOLLIN_IPA_ANALYSIS.md`、`docs/PRODUCT_SCOPE.md`、`docs/TASK_PLAN.md` 和 `docs/IMPLEMENTATION_PLAN.md`：iOS IPA 仍是当前 iOS 对齐首要证据，Android APK 作为 UI/交互/功能及未来 Android 支持的互补静态证据，截图再次补充；本阶段只做 iOS，不以 APK 静态内容替代运行、签名、真机或真实服务验收，不复制 AOT/反编译代码/私有服务/品牌资源。
+
+当前工作树在 `ba8bccd` 基础上有未提交代码：现代播放器把实际匹配录音与原曲收藏目标拆开；声波核频谱条要求播放中、原生 DSP 支持和完整32频带，暂停/无PCM不渲染静态环；声波核歌词区域为最多三行。UI 回归已增加现代收藏状态与暂停无频谱断言。下一步执行 `npm run check`、`npm run test:native`、定向 iOS UI/Release IPA，检查隐私和 diff 后提交并 push，再核对最新 iOS27 队列（保留运行中，仅最新 pending）。这些代码尚未代表云端、签名、真机或真实匹配服务验收。
+
 # 2026-10-17 最新指令：云端只保留最新排队提交
 
 当前队列回执（2026-10-17 08:48）：dba0669/38984903551运行，07870a4/38988046090为唯一pending；69f57a4/38987122647已被最新提交自动取消。07870a4本地两项设置回归与清洁SDK26.2 IPA通过，新云端仍待，取消旧运行不算通过。

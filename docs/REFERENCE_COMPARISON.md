@@ -1,8 +1,20 @@
+## 2026-10-17 用户新增硬门禁：reverse-skill
+
+后续 Sollin IPA/APK 逆向分析及功能、UI、交互对齐**必须使用 reverse-skill**，先路由/PRIMARY、检查工具、校验离线 scope，再产生该批 Evidence→Finding→Path 并严格 review 后采纳；禁止绕过或以“已读”代替执行。包已克隆到 `/Users/ningli/WorkSpace/reverse-skill`，固定 `cab634bd855fc287f6e420c1f36fd1a6b9245960`，项目入口 `.agents/skills/reverse-skill-router`。开工运行 `node scripts/sollin-reverse-gate.mjs ipa|apk`，采纳前加 `--review`；功能证据须覆盖当前工作项，安装检查不能代替。安装/路由/两案例严格review已通过，高级反编译/动态工具缺口如实保留；当前不声称对象调用图或完整UI对齐完成。完整安装、命令、拒绝路径及工具结果见[强制工作流](REVERSE_SKILL_WORKFLOW.md)，根 AGENTS.md 同步作为接手硬约束。IPA首要、APK互补、截图辅助、音枢特有能力、许可与隐私边界不变。
+
 # 功能参考与移植决策规则
 
 用户要求将以下项目保存在 `/Users/ningli/WorkSpace/ReferenceProject`，后续每项功能比较后再采纳。它们都是参考仓库，不作为音枢整体替换底座；没有安装这些仓库的依赖，也没有把其功能算作本项目完成。
 
 ## 固定源码基线
+
+### Sollin Android 互补逆向样本（2026-10-17）
+
+用户补充了本机 `/Users/ningli/WorkSpace/ReferenceProject/Sollin-60-v8a.Apk`，SHA256 为 `668f590753e5c9d79d6b8835f68ba702be6ce90f484d0af2bd721afd50fe4c7f`。该 APK 是 Flutter Android arm64 发布包，当前仅作与 Sollin iOS 2.0.0 build 60 IPA 的互补静态证据源；APK、解包产物、反编译代码和其中资源不进入仓库。
+
+Android 证据用于交叉核对页面层级、设置分组、播放器皮肤、歌词/背景、音源与数据流程，帮助后续 Android 支持时复用可共享的 TS/协议/状态模型，并识别 iOS 与 Android 原生适配差异。当前交付边界仍为 iOS：Android 静态资产不能证明 Android 运行、后台播放、签名、真机或服务验收，也不能替代 IPA 作为 iOS 行为的首要证据；两端静态证据都不能替代音枢本地/云端 XCTest、真实服务和真机验收。
+
+APK 的 Flutter/Dart、第三方库、品牌资源和服务调用按各自许可单独核对，不整体复制或据包内依赖宣告许可。涉及具体功能时，记录 APK/IPA 的文件、符号、资源和证据等级，再决定原创重实现、共享契约或平台专属适配。
 
 2026-10-16新增用户提供的直接移动参考：Sollin iOS 2.0.0（60）unsigned IPA，SHA256 `c2ee2deba236ef1b9e097e1d8cdc0b816137aa57cf85d4c8e2811dae9924bc07`。已确认Flutter编译包、设备arm64、未标记FairPlay加密，以及皮肤/歌词/识曲/同步等模块字符串和可读识曲桥接；不能据此称取得源码或运行通过。移动端事实优先于桌面推测，原包/解包资产不提交，来源、许可与后续采纳规则见[IPA分析](SOLLIN_IPA_ANALYSIS.md)和[决策0033](decisions/0033-sollin-mobile-scope.md)。
 

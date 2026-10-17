@@ -1,4 +1,14 @@
+## 2026-10-17 用户新增硬门禁：reverse-skill
+
+后续 Sollin IPA/APK 逆向分析及功能、UI、交互对齐**必须使用 reverse-skill**，先路由/PRIMARY、检查工具、校验离线 scope，再产生该批 Evidence→Finding→Path 并严格 review 后采纳；禁止绕过或以“已读”代替执行。包已克隆到 `/Users/ningli/WorkSpace/reverse-skill`，固定 `cab634bd855fc287f6e420c1f36fd1a6b9245960`，项目入口 `.agents/skills/reverse-skill-router`。开工运行 `node scripts/sollin-reverse-gate.mjs ipa|apk`，采纳前加 `--review`；功能证据须覆盖当前工作项，安装检查不能代替。安装/路由/两案例严格review已通过，高级反编译/动态工具缺口如实保留；当前不声称对象调用图或完整UI对齐完成。完整安装、命令、拒绝路径及工具结果见[强制工作流](REVERSE_SKILL_WORKFLOW.md)，根 AGENTS.md 同步作为接手硬约束。IPA首要、APK互补、截图辅助、音枢特有能力、许可与隐私边界不变。
+
 # 产品功能清单与验收范围
+
+## Sollin 双端参考边界（2026-10-17）
+
+除固定的 Sollin iOS 2.0.0 build 60 IPA 外，新增本机 `/Users/ningli/WorkSpace/ReferenceProject/Sollin-60-v8a.Apk` 作为 Android 互补逆向输入（SHA256 `668f590753e5c9d79d6b8835f68ba702be6ce90f484d0af2bd721afd50fe4c7f`）。iOS IPA 仍是当前 iOS 对齐的首要证据，Android APK 用于交叉核对 UI/交互/功能边界，并为未来 Android 支持识别可共享业务与平台专属实现；截图仅补充静态包不能确认的视觉线索。
+
+当前工程只做 iOS 交付。Android 参考不计作 Android 构建、签名、后台、真机或真实服务完成，不改变 LX、Navidrome、WebDAV、汽水匹配、PCM/EQ、权威队列和数据安全边界；APK/IPA 的 AOT、私有服务、品牌资源和第三方代码均不直接复制。
 
 2026-10-17本轮持续目标确认：先收敛已有功能的 Sollin UI/交互对齐，再推进全部剩余计划；新增功能如在 Sollin 中存在，仍先核对其 IPA 实现线索/UI/交互，缺少对应能力时沿音枢风格原创实现。每阶段更新任务/交接、执行本地与云端构建、跟进失败并分批正常提交 push。该确认不缩减 F01–F37/J01–J59，也不将本机 SDK26.2 写成 iOS27。
 

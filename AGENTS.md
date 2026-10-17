@@ -1,5 +1,14 @@
 # 音枢项目协作约定
 
+## Sollin 逆向与对齐硬门禁（2026-10-17 用户明确要求）
+
+- 后续所有 Sollin IPA/APK 逆向分析，以及基于其功能、UI、交互的对齐，必须使用 `reverse-skill`；先路由、后分析、再依据证据实施，禁止绕过或仅写“已读”。
+- 包根为相邻 `../reverse-skill`（本机 `/Users/ningli/WorkSpace/reverse-skill`），项目安装入口 `.agents/skills/reverse-skill-router`；固定提交、工具缺口和复现见 `docs/REVERSE_SKILL_WORKFLOW.md`。
+- 开工先亲读包根 `README_AI.md`、`RULES.md`、`docs/platforms/macos.md` 和 `skills/SKILL.md`/`MASTER-ROUTING.md`；运行平台原生 `master-route`，读取 PRIMARY，检查本机 `skills/tool-index.md/json`，用 `case-init`/`case-guard` 校验当前离线样本 scope。
+- 执行 `source scripts/environment.sh` 后，`node scripts/sollin-reverse-gate.mjs ipa` 或 `apk` 必须通过；采纳该批结论前执行同命令加 `--review`，并确认该批功能的 Evidence→Finding→Path、workitems/timeline 已更新，不能用安装案例代替功能证据。
+- skill 缺失、版本漂移、样本摘要不符、scope/工具或证据未就绪时，不得继续依赖该项证据的对齐；先修复门禁，独立构建/业务工作可继续。不伪造反编译、调用图、动态运行或真机结果。
+- `work/`、工具索引、样本、解包、原始字符串/反编译输出只留本机忽略目录；仓库只留脱敏结论、固定来源和必要门禁。IPA优先、APK互补、截图辅助及音枢特有能力/许可/隐私边界不变。不得将包内模板扩展为私人服务探测、全局客户端配置或参考商业逻辑移植授权。
+
 - 开始工作前完整阅读根目录 HANDOFF.md 以及与任务相关的 docs 文档。架构、范围和交接等基础文档由主代理亲读。
 - 用户已授权进入实施，按 docs/TASK_PLAN.md 和 docs/IMPLEMENTATION_PLAN.md 推进；LX优先，漫途导入后置。不能把参考能力、离线初始化或模拟器编译写成真实播放已完成。
 - 用户最新明确指令优先于文档；范围变化时同步更新 HANDOFF.md、PRODUCT_SCOPE.md 和受影响的决策文档。
