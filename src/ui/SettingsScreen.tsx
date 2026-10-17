@@ -24,10 +24,11 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
   const {palette:p}=useTheme();
   const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  const firstPage=initialPage==='theme'?'appearance':initialPage;
+  const firstPage=initialPage==='theme'||initialPage==='skins'?'appearance':initialPage;
   const [history,setHistory]=useState<SettingsPage[]>([firstPage]);
   const [visited,setVisited]=useState<SettingsPage[]>([firstPage]);
-  const [themeSheet,setThemeSheet]=useState(initialPage==='theme');
+  const [appearanceSheet,setAppearanceSheet]=useState<{section:'theme'|'skins';visible:boolean;session:number}>({section:initialPage==='skins'?'skins':'theme',visible:initialPage==='theme'||initialPage==='skins',session:0});
+  const closeSheet=()=>setAppearanceSheet(value=>({...value,visible:false,session:value.session+1}));
   const heading=useRef<NativeText>(null),page=history[history.length-1]!;
   const scrolls=useRef<Partial<Record<SettingsPage,ScrollView|null>>>({}),offsets=useRef<Partial<Record<SettingsPage,number>>>({});
   const restoring=useRef<SettingsPage|null>(null);
@@ -36,7 +37,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
     if(previousHomeRequest.current===homeRequest)return;
     previousHomeRequest.current=homeRequest;
     Keyboard.dismiss();
-    setThemeSheet(false);
+    closeSheet();
     setVisited(value=>value.includes('home')?value:[...value,'home']);
     setHistory(['home']);
   },[homeRequest]);
@@ -46,7 +47,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
     return()=>{cancelAnimationFrame(frame);if(settle!==undefined)cancelAnimationFrame(settle);};
   },[page]);
   const back=()=>{Keyboard.dismiss();if(history.length>1)setHistory(value=>value.slice(0,-1));else if(page!=='home')onExit();};
-  const open=(next:SettingsPage)=>{Keyboard.dismiss();if(next==='theme'){setThemeSheet(true);return;}setVisited(value=>value.includes(next)?value:[...value,next]);setHistory(value=>[...value,next]);};
+  const open=(next:SettingsPage)=>{Keyboard.dismiss();if(next==='theme'||next==='skins'){setAppearanceSheet(value=>({section:next,visible:true,session:value.session+1}));return;}setVisited(value=>value.includes(next)?value:[...value,next]);setHistory(value=>[...value,next]);};
   useEffect(()=>{let active=true;void AccessibilityInfo.isScreenReaderEnabled().then(enabled=>{if(active&&enabled){const node=findNodeHandle(heading.current);if(node)AccessibilityInfo.setAccessibilityFocus(node);}});return()=>{active=false;};},[page]);
   useEffect(()=>{const listener=BackHandler.addEventListener('hardwareBackPress',()=>{if(page==='home')return false;back();return true;});return()=>listener.remove();},[page,history.length]);
   const row=(next:SettingsPage,subtitle:string,icon:React.ComponentProps<typeof Ionicons>['name'],value?:string,grouped=false)=><Pressable testID={`settings-open-${next}`} accessibilityRole="button" accessibilityLabel={titles[next]} accessibilityHint={subtitle} accessibilityValue={value?{text:value}:undefined} onPress={()=>open(next)} style={{padding:18,minHeight:82,flexDirection:'row',alignItems:'center',gap:14,borderRadius:grouped?0:22,backgroundColor:grouped?'transparent':p.surface,borderWidth:grouped?0:1,borderColor:p.border}}>
@@ -88,16 +89,20 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       {page!=='home'&&<Pressable testID="settings-back" accessibilityRole="button" accessibilityLabel={history.length>1?`返回${titles[history[history.length-2]!]}`:'返回音乐库'} onPress={back} style={{position:'absolute',left:12,top:8,bottom:8,width:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-back" size={27} color={p.text}/></Pressable>}
       <Text ref={heading} testID={`settings-title-${page}`} accessibilityRole="header" style={{fontSize:page==='home'?36:20,fontWeight:'700',color:p.text,flex:1,textAlign:page==='home'?'left':'center',marginHorizontal:page==='home'?0:36}}>{titles[page]}</Text>
     </View>
-    {visited.map(key=><View key={key} testID={`settings-viewport-${key}`} style={{flex:1,display:key===page?'flex':'none'}} accessibilityElementsHidden={key!==page||themeSheet} importantForAccessibility={key===page&&!themeSheet?'auto':'no-hide-descendants'} pointerEvents={key===page&&!themeSheet?'auto':'none'}>
+    {visited.map(key=><View key={key} testID={`settings-viewport-${key}`} style={{flex:1,display:key===page?'flex':'none'}} accessibilityElementsHidden={key!==page||appearanceSheet.visible} importantForAccessibility={key===page&&!appearanceSheet.visible?'auto':'no-hide-descendants'} pointerEvents={key===page&&!appearanceSheet.visible?'auto':'none'}>
       {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:32}}>{content(key)}</ScrollView>}
     </View>)}
-    <SheetModal visible={themeSheet} animationType="slide" allowSwipeDismissal onRequestClose={()=>setThemeSheet(false)}>
-      <View testID="theme-mode-sheet" accessibilityViewIsModal onAccessibilityEscape={()=>setThemeSheet(false)} style={{flex:1,backgroundColor:p.background[0],paddingHorizontal:22,paddingTop:18}}>
+    <SheetModal visible={appearanceSheet.visible} animationType="slide" allowSwipeDismissal onRequestClose={closeSheet}>
+      <View testID={appearanceSheet.section==='theme'?'theme-mode-sheet':'player-style-sheet'} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:p.background[0],paddingHorizontal:22,paddingTop:18}}>
         <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
-          <Text testID="settings-title-theme" accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>软件主题</Text>
-          <Pressable testID="theme-sheet-close" accessibilityRole="button" accessibilityLabel="关闭软件主题" onPress={()=>setThemeSheet(false)} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>
+          <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>{titles[appearanceSheet.section]}</Text>
+          <Pressable testID={appearanceSheet.section==='theme'?'theme-sheet-close':'skins-sheet-close'} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>
         </View>
-        <ScrollView contentContainerStyle={{paddingBottom:32}}><AppearanceSettings services={services} section="theme"/></ScrollView>
+        <ScrollView contentContainerStyle={{paddingBottom:32}}><AppearanceSettings key={appearanceSheet.section} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
+          // A completed write from an earlier presentation must not close a newly opened sheet.
+          const session=appearanceSheet.session;
+          setAppearanceSheet(value=>value.session===session?{...value,visible:false,session:value.session+1}:value);
+        }}/></ScrollView>
       </View>
     </SheetModal>
   </View>;

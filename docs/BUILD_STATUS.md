@@ -1,3 +1,11 @@
+## 2026-10-17 播放样式选择 Sheet 本地专项通过
+
+reverse-skill E-011→F-010→P-010采纳前严格review通过；E-012→F-011→P-011只补充host分派，未新增参考布局。`check-player-style-sheet-final.log`为331/331业务及类型通过，最终`typecheck-player-style-delivery.log`亦通过。正式App `SourceUITests-1792246136327.xcresult`最终3/3、零失败/跳过：分组/草稿96.095秒，样式最大辅助字号/保存后关闭/分类滚动/重开选中/显式关闭/下滑/重启91.027秒，主题37.948秒；亲看最终样式选中截图。保存失败只沿既有原子仓储测试，不宣称App磁盘失败注入、VoiceOver或手机已验。
+
+首轮 `SourceUITests-1792245697380.xcresult`为3通过/1失败：大字下样式摘要宽度变化造成分类行midY从644.500到674.833，超出原有±2断言。已将大字摘要移到标题下方，保持断言后上述最终复验通过。原失败log/counts/summary与附件保留；首轮Navidrome/合成流/PCM/多皮肤/暂停重启/mini185.508秒通过，发生在摘要修正之前，不冒充最终三项或真实服务结果。首轮附加simctl诊断路径错误与主测试失败分别保留。
+
+本批无原生音频/依赖变更，未重复宣称完整native已新跑。原生pageSheet、六种真实布局、权威队列、会话隔离及许可/Android/实现边界见[0040](decisions/0040-player-style-sheet.md)与[专项报告](2026-10-17_reverse-sollin-player-style-report.md)。清洁unsigned归档/正常push与本批云端iOS27继续；AM2/歌词舞台等renderer、全部其余F/J及真实服务/签名/手机待办保留。
+
 ## 2026-10-17 全局背景批次清洁归档与push回执
 
 `b32ac94b30315ca12bf9ba679f87d70f1c186d4f`已正常push并核对远端main。`archive-global-background-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；ZIP CRC/附带SHA、可执行及JS对归档字节一致、正式入口隔离/私人资源排除通过。IPA SHA256 `3bd13c1d90ae3b7c13162cda113ac76ce913a030e3999cdd7041e11cb20ad504`，留存`build/local-global-background-b32ac94`。本条覆盖下方本批清洁归档/push待办；手机功耗、实际动画帧率、系统后台/减少动态效果、真实服务/签名仍单独验收。

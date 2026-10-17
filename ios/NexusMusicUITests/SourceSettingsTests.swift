@@ -4,7 +4,7 @@ import Vision
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
   private func openSettings(_ app:XCUIApplication,page:String){
-    let sheetClose=app.buttons["theme-sheet-close"];if sheetClose.exists{sheetClose.tap()}
+    for id in ["theme-sheet-close","skins-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
     let tab=app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
     XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
     for _ in 0..<3 {let back=app.buttons["settings-back"];if !back.exists{break};back.tap()}
@@ -234,8 +234,9 @@ final class SourceSettingsTests: XCTestCase {
     // data from an earlier run.
     openSettings(app,page:"skins")
     let waveSkin=app.descendants(matching:.any).matching(identifier:"player-layout-wave").firstMatch
-    reach(waveSkin);waveSkin.tap()
+    reach(waveSkin)
     XCTAssertTrue((waveSkin.value as? String)?.contains("实时音频频谱环") == true)
+    waveSkin.tap()
     openSettings(app,page:"sources")
     let source=app.textFields["音源订阅地址"];reach(source);source.tap();for character in "http://127.0.0.1:18439/matching-source.js"{source.typeText(String(character))};source.typeText("\n");app.buttons["从地址导入"].tap()
     let enable=app.buttons["启用音源：Nexus Matching Fixture"],enabled=app.buttons["停用音源：Nexus Matching Fixture"]
@@ -1094,6 +1095,38 @@ final class SourceSettingsTests: XCTestCase {
     let timer=app.buttons["15分钟"];reveal(timer);timer.tap()
     XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
     let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")
+  }
+  func testPlayerStyleSheetWithLargeTextAndPersistence() throws {
+    let app=XCUIApplication()
+    app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    func item(_ style:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:"player-layout-"+style).firstMatch}
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<24 {if element.isHittable{break};if element.exists && element.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}}
+      XCTAssertTrue(element.isHittable)
+    }
+    openSettings(app,page:"skins");let initialClassic=item("classic");reveal(initialClassic);initialClassic.tap()
+    openSettings(app,page:"appearance")
+    let entry=app.buttons["settings-open-skins"]
+    for _ in 0..<20 {if entry.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(entry.isHittable);let entryY=entry.frame.midY;entry.tap()
+    let close=app.buttons["skins-sheet-close"]
+    XCTAssertTrue(close.waitForExistence(timeout:5));XCTAssertFalse(app.buttons["settings-open-background"].exists)
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"player-style-sheet").firstMatch.exists)
+    let wave=item("wave");reveal(wave);XCTAssertTrue((wave.value as? String)?.contains("实时音频频谱环") == true);wave.tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
+    XCTAssertEqual(entry.frame.midY,entryY,accuracy:2,"Saving a style must retain the underlying category scroll")
+    entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected)
+    let image=XCTAttachment(screenshot:app.screenshot());image.name="Player style sheet at accessibility XXXL with persisted choice";image.lifetime = .keepAlways;add(image)
+    let title=app.staticTexts["settings-title-skins"]
+    title.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertEqual(entry.frame.midY,entryY,accuracy:2);entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected)
+    close.tap();entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected,"Closing without a choice must preserve the style");close.tap()
+    app.terminate();app.launch();openSettings(app,page:"skins");reveal(wave);XCTAssertTrue(wave.isSelected,"Restart must restore the saved layout")
+    let classic=item("classic");reveal(classic);classic.tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
   }
   func testThemeSheetWithLargeTextAndSwipeDismissal() throws {
     let app=XCUIApplication()

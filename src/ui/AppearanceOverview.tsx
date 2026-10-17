@@ -1,5 +1,5 @@
 import {useState,useSyncExternalStore} from 'react';
-import {Pressable,Switch,View} from 'react-native';
+import {Pressable,Switch,View,useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {AppearanceSection} from './AppearanceSettings.tsx';
@@ -10,6 +10,7 @@ import {useTheme} from './theme.tsx';
 
 export function AppearanceOverview({services,open}:{services:Services;open:(page:AppearanceSection|'typography')=>void}){
   const {palette:p}=useTheme(),value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
+  const stacked=useWindowDimensions().fontScale>1.4;
   const [error,setError]=useState('');
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{setError('');void services.preferences.update(patch).catch(()=>setError('设置未保存，请重试；之前的设置已保留。'));};
   const fontName=(id:string|null|undefined)=>fonts.fonts.find(font=>font.id===id)?.name??'系统默认';
@@ -27,7 +28,7 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
     {id:'mini',title:'迷你播放器按钮',icon:'options-outline',subtitle:'选择与调整按钮顺序，最多 4 个',detail:value.miniActions.map(action=>miniActionLabels[action]).join('、'),page:'mini'},
   ];
   function row(item:Row){
-    const body=<><Ionicons name={item.icon} size={23} color={p.text}/><View style={{flex:1,minWidth:0,gap:4}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>{item.title}</Text>{item.subtitle&&<Text style={{color:p.secondary,fontSize:13,lineHeight:19}}>{item.subtitle}</Text>}</View>{item.toggle?<Switch testID={`appearance-${item.id}`} accessibilityLabel={item.title} value={item.toggle.value} onValueChange={item.toggle.change} trackColor={{true:p.accent}}/>:<><Text numberOfLines={2} style={{color:p.secondary,fontSize:14,textAlign:'right',maxWidth:'48%',flexShrink:1}}>{item.detail}</Text>{item.page&&<Ionicons name="chevron-forward" size={17} color={p.secondary}/>}</>          }</>;
+    const body=<><Ionicons name={item.icon} size={23} color={p.text}/><View style={{flex:1,minWidth:0,gap:4}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>{item.title}</Text>{item.subtitle&&<Text style={{color:p.secondary,fontSize:13,lineHeight:19}}>{item.subtitle}</Text>}{stacked&&item.detail&&<Text style={{color:p.secondary,fontSize:14}}>{item.detail}</Text>}</View>{item.toggle?<Switch testID={`appearance-${item.id}`} accessibilityLabel={item.title} value={item.toggle.value} onValueChange={item.toggle.change} trackColor={{true:p.accent}}/>:<>{!stacked&&<Text numberOfLines={2} style={{color:p.secondary,fontSize:14,textAlign:'right',maxWidth:'48%',flexShrink:1}}>{item.detail}</Text>}{item.page&&<Ionicons name="chevron-forward" size={17} color={p.secondary}/>}</>          }</>;
     const style={paddingVertical:17,paddingHorizontal:16,flexDirection:'row' as const,alignItems:'center' as const,gap:12,minHeight:62};
     return <View key={item.id} style={{borderBottomWidth:item.id==='mini'?0:1,borderBottomColor:p.border}}>{item.page?<Pressable testID={`settings-open-${item.id}`} accessibilityRole="button" accessibilityLabel={item.title} accessibilityValue={{text:item.detail}} onPress={()=>open(item.page!)} style={style}>{body}</Pressable>:<View style={style}>{body}</View>}</View>;
   }

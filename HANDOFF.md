@@ -1,3 +1,7 @@
+## 2026-10-17 播放样式选择 Sheet（本地专项通过）
+
+reverse-skill mobile-reverse E-011→F-010→P-010严格review通过（11E/10F/10P、7工作项/17事件，零错误/警告），原始BL/池引用确认独立模态、八标签及普通setStyle→pop；只采纳选择交互。音枢设置样式改为原生pageSheet，六种真实布局、原子保存后关闭/失败保留、重开session隔离与原分类滚动保持；不冒称八布局/参考运行完成。五参考比较、维护/Android/许可和边界见[决策0040](docs/decisions/0040-player-style-sheet.md)，脱敏[专项报告](docs/2026-10-17_reverse-sollin-player-style-report.md)。331项业务/类型检查通过；正式App最终三项回归通过、零失败/跳过（分组96.095秒、样式最大辅助字号91.027秒、主题37.948秒），亲看样式截图。首轮大字分类行跳变已修正并保留失败；修正前Navidrome综合185.508秒通过，未混称为最终复测。清洁归档/push及对应iOS27仍待；全部其他F/J与真实服务/签名/手机范围继续。
+
 ## 2026-10-17 全局背景批次清洁归档与push回执
 
 `b32ac94b30315ca12bf9ba679f87d70f1c186d4f`已正常push并核对远端main。`archive-global-background-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；ZIP CRC/附带SHA、可执行及JS对归档字节一致、正式入口隔离/私人资源排除通过。IPA SHA256 `3bd13c1d90ae3b7c13162cda113ac76ce913a030e3999cdd7041e11cb20ad504`，留存`build/local-global-background-b32ac94`。本条覆盖下方本批清洁归档/push待办；手机功耗、实际动画帧率、系统后台/减少动态效果、真实服务/签名仍单独验收。
