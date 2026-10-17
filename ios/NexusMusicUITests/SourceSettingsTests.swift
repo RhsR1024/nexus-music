@@ -4,7 +4,7 @@ import Vision
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
   private func openSettings(_ app:XCUIApplication,page:String){
-    for id in ["theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
+    for id in ["background-sheet-close","theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
     let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-settings").firstMatch
     let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
     XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
@@ -1119,17 +1119,23 @@ final class SourceSettingsTests: XCTestCase {
     // Assert actual pixels, not merely the presence of the background view.
     openSettings(app,page:"background")
     let tint=app.switches["visual-cover-color"];reveal(tint);if tint.value as? String != "0"{tint.tap()}
+    app.buttons["background-sheet-close"].tap()
     let noCover=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[noCover],timeout:10),.completed)
-    let global=app.switches["visual-global-motion"];reveal(global);global.tap();XCTAssertEqual(global.value as? String,"1");expectTint(false,"Global flow without cover tint")
+    openSettings(app,page:"background")
+    let global=app.switches["visual-global-motion"];reveal(global);global.tap();XCTAssertEqual(global.value as? String,"1")
     let playerMotion=app.switches["visual-motion"];reveal(playerMotion);XCTAssertEqual(playerMotion.value as? String,"0")
+    app.buttons["background-sheet-close"].tap();expectTint(false,"Global flow without cover tint")
     app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap();expectTint(false,"Global flow discovery independent of player motion")
     app.terminate();app.launch();openSettings(app,page:"background")
-    let persistedGlobal=app.switches["visual-global-motion"];reveal(persistedGlobal);XCTAssertEqual(persistedGlobal.value as? String,"1");expectTint(false,"Global flow restored paused")
+    let persistedGlobal=app.switches["visual-global-motion"];reveal(persistedGlobal);XCTAssertEqual(persistedGlobal.value as? String,"1")
     let persistedTint=app.switches["visual-cover-color"];reveal(persistedTint);XCTAssertEqual(persistedTint.value as? String,"0")
-    let persistedPlayer=app.switches["visual-motion"];reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"0");persistedPlayer.tap()
+    let persistedPlayer=app.switches["visual-motion"];reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"0")
+    app.buttons["background-sheet-close"].tap();expectTint(false,"Global flow restored paused")
+    openSettings(app,page:"background");reveal(persistedPlayer);persistedPlayer.tap()
     reveal(persistedGlobal);persistedGlobal.tap()
+    app.buttons["background-sheet-close"].tap()
     let restoredBase=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[restoredBase],timeout:10),.completed)
-    reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"1","Global switch must preserve playback animation choice")
+    openSettings(app,page:"background");reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"1","Global switch must preserve playback animation choice")
     persistedPlayer.tap()
     openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
     XCTAssertFalse(app.buttons["打开播放页"].exists)
@@ -1304,6 +1310,41 @@ final class SourceSettingsTests: XCTestCase {
     let classic=item("classic");reveal(classic);classic.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
   }
+  func testBackgroundSheetWithLargeTextAndPersistence() throws {
+    let app=XCUIApplication();app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"];app.launch()
+    func element(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func reveal(_ item:XCUIElement){
+      let scroll=element("background-sheet-scroll")
+      for _ in 0..<35 {
+        if item.exists && item.isHittable && item.frame.minY>=scroll.frame.minY && item.frame.maxY<=scroll.frame.maxY{break}
+        let above=item.exists && item.frame.midY<scroll.frame.midY
+        scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.75:0.25)))
+      };XCTAssertTrue(item.isHittable)
+    }
+    openSettings(app,page:"background")
+    XCTAssertTrue(element("theme-background-sheet").exists);XCTAssertFalse(app.buttons["settings-open-globalFont"].exists)
+    let soft=element("visual-soft");reveal(soft);soft.tap();XCTAssertTrue(soft.isSelected)
+    let preview=element("visual-background-preview"),previewTitle=app.staticTexts["主题背景预览"].firstMatch,previewName=app.staticTexts["visual-background-name"].firstMatch
+    reveal(previewTitle);XCTAssertGreaterThanOrEqual(previewTitle.frame.minY,preview.frame.minY);XCTAssertLessThanOrEqual(previewName.frame.maxY,preview.frame.maxY)
+    let previewShot=XCTAttachment(screenshot:app.screenshot());previewShot.name="Theme background growing preview at accessibility XXXL";previewShot.lifetime = .keepAlways;add(previewShot)
+    let image=app.buttons["visual-import-background"];reveal(image)
+    let decrease=app.buttons["visual-backgroundOpacity-down"],increase=app.buttons["visual-backgroundOpacity-up"]
+    reveal(decrease);let before=app.staticTexts["visual-value-backgroundOpacity"].label;decrease.tap()
+    reveal(increase);XCTAssertLessThanOrEqual(increase.frame.maxX,element("background-sheet-scroll").frame.maxX);XCTAssertEqual(increase.frame.minX,decrease.frame.minX,accuracy:1);XCTAssertGreaterThan(increase.frame.minY,decrease.frame.minY)
+    increase.tap();XCTAssertEqual(app.staticTexts["visual-value-backgroundOpacity"].label,before,"Both large-text controls remain reachable and persist actual edits")
+    let shot=XCTAttachment(screenshot:app.screenshot());shot.name="Theme background sheet image controls at accessibility XXXL";shot.lifetime = .keepAlways;add(shot)
+    let motion=app.switches["visual-motion"];reveal(motion)
+    let bottom=XCTAttachment(screenshot:app.screenshot());bottom.name="Theme background independent motion controls at accessibility XXXL";bottom.lifetime = .keepAlways;add(bottom)
+    app.buttons["background-sheet-close"].tap()
+    let entry=app.buttons["settings-open-background"],entryY=app.buttons["settings-open-background"].frame.midY
+    XCTAssertTrue(entry.isHittable);entry.tap();reveal(soft);XCTAssertTrue(soft.isSelected)
+    let title=app.staticTexts["settings-title-background"]
+    title.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["background-sheet-close"]);waitForExpectations(timeout:10)
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists);XCTAssertEqual(entry.frame.midY,entryY,accuracy:2)
+    app.terminate();app.launch();openSettings(app,page:"background");reveal(soft);XCTAssertTrue(soft.isSelected)
+    let classic=element("visual-classic");reveal(classic);classic.tap();app.buttons["background-sheet-close"].tap()
+  }
   func testFontAndDisplaySheetsWithLargeText() throws {
     let app=XCUIApplication();app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"];app.launch()
     func element(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
@@ -1441,6 +1482,7 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"background")
     let pink=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
     for _ in 0..<3 {if pink.isHittable{break};app.swipeDown()};pink.tap()
+    app.buttons["background-sheet-close"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["私人曲库"].firstMatch.exists)

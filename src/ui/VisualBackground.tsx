@@ -17,7 +17,7 @@ export function MotionImage({uri,blur=0,opacity=1,moving=false,onError}:{uri:str
   },[uri,moving,reduce,active,phase]);
   return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill,{opacity,transform:[{scale:1.12},{translateX:phase.interpolate({inputRange:[0,1],outputRange:[-9,9]})},{translateY:phase.interpolate({inputRange:[0,1],outputRange:[7,-7]})}]}]}><Image source={{uri}} blurRadius={blur} resizeMode="cover" onError={onError} style={StyleSheet.absoluteFill}/></Animated.View>;
 }
-export function VisualPreview({uri,blur,opacity,children}:PropsWithChildren<{uri?:string;blur:number;opacity:number}>){return <View style={{height:144,borderRadius:20,overflow:'hidden',backgroundColor:'#183647',padding:20,justifyContent:'center'}}>{uri&&<MotionImage uri={uri} blur={blur} opacity={opacity}/>}<View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:'rgba(0,0,0,0.65)'}]}/>{children}</View>;}
+export function VisualPreview({uri,blur,opacity,children,testID}:PropsWithChildren<{uri?:string;blur:number;opacity:number;testID?:string}>){return <View testID={testID} style={{minHeight:144,borderRadius:20,overflow:'hidden',backgroundColor:'#183647',padding:20,justifyContent:'center'}}>{uri&&<MotionImage uri={uri} blur={blur} opacity={opacity}/>}<View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:'rgba(0,0,0,0.65)'}]}/>{children}</View>;}
 const emptySubscribe=()=>()=>{};
 const noVisual={version:1 as const,background:null,photo:null};const noVisualSnapshot=()=>noVisual;
 export function useVisualAssets(services?:Services){return useSyncExternalStore(services?.visualAssets.subscribe??emptySubscribe,services?.visualAssets.getSnapshot??noVisualSnapshot);}

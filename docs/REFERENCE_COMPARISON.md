@@ -1,3 +1,7 @@
+## 2026-10-18 主题与背景设置弹层
+
+五参考固定HEAD再次逐一核对，亲读悦音theme.ts:9–33、Q/wtf ImageBackground.tsx:52–96、Cy usePlayerBackground.tsx:20–115及自有Wayferar HomeCardTheme.java:44–87；实现/维护/Android/逐文件许可和取舍见[0046](decisions/0046-theme-background-sheet.md)。原生Sheet只组合现有原创控件，无源码/资源/依赖或原生补丁移植。Sollin采用经严格review的E020/E009有限模态边界，不移植商业或完整调色默认逻辑。
+
 ## 2026-10-18 字体角色与显示呈现比较
 
 五固定HEAD已核对，亲读悦音LyricsView108–130、Q Basic/FontSize14–78、wtf SettingLrcFontSize18–38、Cy settingModal403–435、自有Wayferar LyricFontImport21–59和FontChoiceState8–27。逐项实现、维护/Android/许可与取舍见[0045](decisions/0045-font-display-settings-sheets.md)。复用音枢FontCatalog/PreferenceStore/SheetModal，无参考源码/资源/依赖移植；Sollin E019严格review支持有限角色/呈现采纳，完整选项/runtime未声称。

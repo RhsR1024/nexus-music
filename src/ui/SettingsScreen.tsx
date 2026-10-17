@@ -18,9 +18,9 @@ import {NavidromeSettings} from './NavidromeSettings.tsx';
 import {SourceSettings} from './SourceSettings.tsx';
 
 export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|AppearanceSection;
-type AppearanceSheetSection='theme'|'skins'|'mini'|'navigation'|'typography'|'globalFont'|'lyricFont';
-const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='typography'||page==='globalFont'||page==='lyricFont';
-const sheetIDs:Record<AppearanceSheetSection,string>={theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',typography:'lyric-display-sheet',globalFont:'global-font-sheet',lyricFont:'lyric-font-sheet'};
+type AppearanceSheetSection='background'|'theme'|'skins'|'mini'|'navigation'|'typography'|'globalFont'|'lyricFont';
+const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='background'||page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='typography'||page==='globalFont'||page==='lyricFont';
+const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-background-sheet',theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',typography:'lyric-display-sheet',globalFont:'global-font-sheet',lyricFont:'lyric-font-sheet'};
 const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
