@@ -1,3 +1,9 @@
+## 2026-10-17 样式Sheet清洁归档与push回执
+
+`261cd660d4f730540874133fa89d4bb442e32ec7`已正常push并核对远端main；`archive-player-style-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过。IPA SHA256 `c21ea1a1a3bc071be9c0e840f78f57e1345dc49a2319f6a6af56615da383f212`，留存`build/local-player-style-261cd66`。本条覆盖下方本批清洁归档/push待办，不代表真实服务/签名/手机已验。
+
+push后API实核[39040601042](https://github.com/RhsR1024/nexus-music/actions/runs/39040601042)/261cd66为唯一pending，[39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819)/35e6f2f继续运行；旧pending39038052599/b32ac94由single自动取消，不计通过。1运行/1排队，未取消运行/重派；前批已通过核心App，歌词/发现组执行中，本批对应iOS27终态继续。全部其他A/F/J余项保留。
+
 ## 2026-10-17 播放样式选择 Sheet 本地专项通过
 
 reverse-skill E-011→F-010→P-010采纳前严格review通过；E-012→F-011→P-011只补充host分派，未新增参考布局。`check-player-style-sheet-final.log`为331/331业务及类型通过，最终`typecheck-player-style-delivery.log`亦通过。正式App `SourceUITests-1792246136327.xcresult`最终3/3、零失败/跳过：分组/草稿96.095秒，样式最大辅助字号/保存后关闭/分类滚动/重开选中/显式关闭/下滑/重启91.027秒，主题37.948秒；亲看最终样式选中截图。保存失败只沿既有原子仓储测试，不宣称App磁盘失败注入、VoiceOver或手机已验。

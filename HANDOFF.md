@@ -1,3 +1,13 @@
+## 2026-10-17 用户确认：模拟器优先，真机按需
+
+用户明确要求当前继续用现有Xcode模拟器开发调试；到需要iPhone连接Mac时再告知具体目的。继续以IPA逆向证据优先、截图辅助；现有Sollin真机IPA不能直接在本机Intel模拟器运行，需要专门的模拟器构建。未进行Sollin真机启动/自动点击取证，也未安装音枢到手机。真机后续用于参考动态界面及签名、后台音频、锁屏/蓝牙、性能等验收，模拟器通过不替代这些结果。
+
+## 2026-10-17 样式Sheet清洁归档与push回执
+
+`261cd660d4f730540874133fa89d4bb442e32ec7`已正常push并核对远端main；`archive-player-style-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过。IPA SHA256 `c21ea1a1a3bc071be9c0e840f78f57e1345dc49a2319f6a6af56615da383f212`，留存`build/local-player-style-261cd66`。本条覆盖下方本批清洁归档/push待办，不代表真实服务/签名/手机已验。
+
+push后API实核[39040601042](https://github.com/RhsR1024/nexus-music/actions/runs/39040601042)/261cd66为唯一pending，[39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819)/35e6f2f继续运行；旧pending39038052599/b32ac94由single自动取消，不计通过。1运行/1排队，未取消运行/重派；前批已通过核心App，歌词/发现组执行中，本批对应iOS27终态继续。全部其他A/F/J余项保留。
+
 ## 2026-10-17 播放样式选择 Sheet（本地专项通过）
 
 reverse-skill mobile-reverse E-011→F-010→P-010严格review通过（11E/10F/10P、7工作项/17事件，零错误/警告），原始BL/池引用确认独立模态、八标签及普通setStyle→pop；只采纳选择交互。音枢设置样式改为原生pageSheet，六种真实布局、原子保存后关闭/失败保留、重开session隔离与原分类滚动保持；不冒称八布局/参考运行完成。五参考比较、维护/Android/许可和边界见[决策0040](docs/decisions/0040-player-style-sheet.md)，脱敏[专项报告](docs/2026-10-17_reverse-sollin-player-style-report.md)。331项业务/类型检查通过；正式App最终三项回归通过、零失败/跳过（分组96.095秒、样式最大辅助字号91.027秒、主题37.948秒），亲看样式截图。首轮大字分类行跳变已修正并保留失败；修正前Navidrome综合185.508秒通过，未混称为最终复测。清洁归档/push及对应iOS27仍待；全部其他F/J与真实服务/签名/手机范围继续。
