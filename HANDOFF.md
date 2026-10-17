@@ -834,3 +834,12 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 本批已按 reverse-skill `mobile-reverse` PRIMARY 完成 Sollin IPA provider/auth、推荐/FM/taste profile 与 audio-match 静态边界核查。`source scripts/environment.sh && node scripts/sollin-reverse-gate.mjs ipa --review` 通过，4 Evidence、3 Finding、3 Path，0 error/0 warning；E-004 case-local 哈希清单和报告保留在忽略目录 `work/sollin-ipa/`。结论仅支持音枢的 provider-neutral/本地实现边界：平台登录凭据走既有 provider/Keychain，推荐优先曲库/历史/平台公开数据，识曲只采纳本地 PCM 准备约束；没有远端 URL、鉴权交换、配额、结果协议或运行时调用图证据。
 
 用户新增规则已落实到 `docs/SOLLIN_IPA_ANALYSIS.md`、`docs/IMPLEMENTATION_PLAN.md`、`docs/TASK_PLAN.md`、`docs/PROGRESS_ESTIMATE.md` 和 `docs/PRODUCT_SCOPE.md`：Sollin 私有云端、专用链接、账号体系、用户中心、服务支持、激活/赞助/商业权益、遥测/诊断回传不照搬；能本地替代则先实现，不能替代的登记待决，先完成其他开发，开发收尾并进入真实设备验收前再请用户决定合法落地方式。E-004 不提高当前开发完成度。
+
+
+## 2026-10-17 16:30 心跳：容量旧批次失败已核对，最新批次继续
+
+`39010767320` / `3e56d4d` 已失败：checks、native 与首组核心 App 步骤通过；第二组 4/5 通过，唯一 `testOnlineMatching` 在旧 Swift337 的测试音源清理可点击断言失败（142.689秒）。`build/ci-39010767320/logs/ui-catalog.log:26609` 及前文确认连续向下滑仍未触达夹具，与上一运行同一问题；歌词141.685秒、发现97.446秒、评论25.491秒、健康89.239秒通过。iPad 与云端 IPA 被跳过，失败后的600秒诊断超时不是首因。
+
+诊断 artifact `12094896784` 的 ZIP 目录已解析，单独日志条目解压长度2898100字节及CRC32校验通过；未下载/核验完整ZIP摘要，详见忽略目录 `build/ci-39010767320/FINDINGS.txt`。修正提交 `95c2e03` 不在失败的旧 `3e56d4d` 中，已由 Git 祖先及文件核对确认包含于最新 `920d193`；本地专项1792220258492此前100.832秒通过，不重复修改/重派旧版。
+
+最新 `39016561400` / `920d193` 当前运行中，checks/native已通过，首组核心App步骤执行中；实际队列为1运行/0排队，未取消运行。新iOS27终态、iPad/云端归档及真实服务/签名/真机仍待。心跳仅追加状态证据，未提交或覆盖另一执行上下文正在编写的E-004文档及后续功能工作。
