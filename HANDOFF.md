@@ -1,3 +1,9 @@
+## 2026-10-18 完整读取校验清洁归档与push回执
+
+`07a6de313e8b4483471491c7a171ba34f95f7cb1`已正常push，远端main一致。359业务/类型、完整发现App125.372秒零失败/跳过和截断2/3保留截图通过；验收后strict review22E/21F/21P、8WI/41事件、零错误/警告。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `3ecc1d8da2592225ac36b40d0f4fa2e215f82f8b33eba4ebc1e45e21b89eaa20`，留存`build/local-discovery-completeness-07a6de3`。此条覆盖本批归档/push待办，不扩展真实服务/签名/手机验收。
+
+push后API实核39069432881/07a6de3唯一pending、39066065139/6c8be2f继续运行，1运行/1排队；0b57726旧pending39068540573由single自动取消，不算通过，最新提交包含其修正。未取消运行或重派旧版。最新完整成功且IPA核验仍为76c9cd0/39050349015，只覆盖其实际代码。下一发现刷新/pager缓存关系已新路由并过前置门禁，5函数610原始指令的初步探查只留忽略notes，尚未新增不可变功能Evidence或采纳结论；全部A/F/J与参考完整运行、真实服务/签名/手机保持active。
+
 ## 2026-10-18 完整歌单数量与取消校验（本地通过）
 
 reverse-skill新R2/mobile-reverse路由、既有离线scope/case-guard及E022→F021→P021采纳前40事件严格review通过；五参考固定HEAD/实现/维护/Android/许可及原创取舍见[0050](docs/decisions/0050-complete-playlist-count-validation.md)。E022只证明数量helper和独立loadAll边界，参考完整计数/分页/取消语义未恢复。
