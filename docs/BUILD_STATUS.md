@@ -1,3 +1,9 @@
+## 2026-10-17 A09 声波核环形定位本地专项通过
+
+335项业务检查与类型检查通过，日志`build/logs/check-ring-seek-final.log`。正式App `build/SourceUITests-1792248125950.xcresult` 的 `testZNavidromePlaybackAndCredentials` 198.360秒、1/1通过，零失败/跳过；暂停拖环到60秒且线性进度一致，播放拖环保留意图，中心按钮/真实PCM、六布局/歌词/mini/重启与凭据清理通过。亲看`build/ring-seek-attachments/6F7B53E7-5D8A-41D5-AAC2-9C465A283BCE.png`。本机Xcode26.3/SDK26.2、x86_64模拟器26.3.1；无本批新增原生模块或音频后端改动，未重复宣称native套件新跑。
+
+reverse-skill E-013→F-012→P-012经限定指令/字段/闭包核验与严格review后采纳交互职责，见[报告](2026-10-17_reverse-sollin-renderer-ring-report.md)。App多指/后台/VoiceOver/拖中切歌尚未逐项注入；真实服务、签名、手机及完整参考效果独立验收。清洁归档、正常push及对应iOS27终态继续记录。
+
 ## 2026-10-17 样式Sheet清洁归档与push回执
 
 `261cd660d4f730540874133fa89d4bb442e32ec7`已正常push并核对远端main；`archive-player-style-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过。IPA SHA256 `c21ea1a1a3bc071be9c0e840f78f57e1345dc49a2319f6a6af56615da383f212`，留存`build/local-player-style-261cd66`。本条覆盖下方本批清洁归档/push待办，不代表真实服务/签名/手机已验。

@@ -838,6 +838,20 @@ final class SourceSettingsTests: XCTestCase {
       if layout=="wave" {
         XCTAssertTrue(app.buttons["Synthetic lyric two"].firstMatch.isHittable,"Wave layout must show its active lyric completely below the selector")
         XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch.exists,"Paused wave playback must not fabricate a spectrum ring")
+        let ring=app.descendants(matching:.any).matching(identifier:"wave-seek-ring").firstMatch
+        XCTAssertTrue(ring.isHittable,"The ring must expose a separate adjustable surface around the play button")
+        ring.coordinate(withNormalizedOffset:CGVector(dx:0.93,dy:0.5)).press(forDuration:0.1,thenDragTo:ring.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.93)))
+        expectation(for:NSPredicate(format:"value == %@","1:00 / 2:00"),evaluatedWith:ring);waitForExpectations(timeout:5)
+        XCTAssertTrue(app.buttons["播放"].exists,"Ring seeking must preserve paused intent")
+        XCTAssertEqual(progress.value as? String,"1:00 / 2:00","Linear and ring progress must share the authoritative controller")
+        app.buttons["播放"].tap()
+        XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch.waitForExistence(timeout:10),"Center play control must remain reachable through the ring")
+        ring.coordinate(withNormalizedOffset:CGVector(dx:0.07,dy:0.5)).press(forDuration:0.1,thenDragTo:ring.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.93)))
+        XCTAssertTrue(app.buttons["暂停"].exists,"Ring seeking during playback must retain playing intent")
+        let position=ring.value as? String ?? ""
+        XCTAssertTrue(position.hasPrefix("1:0"),"Playing ring seek must return to about 60 seconds: \(position)")
+        app.buttons["暂停"].tap()
+        XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch.exists)
       }
       let skinTitle=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","Synthetic tone")).firstMatch
       XCTAssertTrue(skinTitle.waitForExistence(timeout:5),"Skin \(layout) must keep the original Navidrome title accessible")

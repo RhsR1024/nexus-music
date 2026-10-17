@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState,useSyncExternalStore,type PropsWithChildren} from 'react';
-import {AccessibilityInfo,Animated,AppState,View} from 'react-native';
+import {AccessibilityInfo,Animated,AppState,View,type GestureResponderEvent} from 'react-native';
+import {RingSeekGesture,ringFraction} from '../domain/ringSeek.ts';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';
@@ -21,8 +22,31 @@ export function Vinyl({services,track,size,playing}:{services:Services;track:Tra
 }
 export function FrequencyHalo({services,playing,children}:PropsWithChildren<{services:Services;playing:boolean}>){
   const spectrum=useSyncExternalStore(services.playback.spectrum.subscribe,services.playback.spectrum.getSnapshot);
+  const controller=services.playback.controller,state=useSyncExternalStore(controller.subscribe,controller.getSnapshot);
+  const gesture=useRef(new RingSeekGesture()).current,[preview,setPreview]=useState<number>();
+  const token=state.phase==='ready'&&state.token?JSON.stringify(state.token):undefined;
+  const current=()=>{const value=controller.getSnapshot();return {token:value.phase==='ready'&&value.token?JSON.stringify(value.token):undefined,duration:value.duration};};
+  useEffect(()=>{setPreview(gesture.preview(token,state.duration));},[gesture,token,state.duration]);
+  useEffect(()=>()=>gesture.cancel(),[gesture]);
+  useEffect(()=>{const listener=AppState.addEventListener('change',value=>{if(value!=='active'){gesture.cancel();setPreview(undefined);}});return()=>listener.remove();},[gesture]);
+  const cancel=()=>{gesture.cancel();setPreview(undefined);};
+  const fraction=(event:GestureResponderEvent)=>ringFraction(event.nativeEvent.locationX,event.nativeEvent.locationY,148,26);
+  const clock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
+  const enabled=!!token&&Number.isFinite(state.duration)&&state.duration>0;
+  const effectivePreview=gesture.preview(token,state.duration)===undefined?undefined:preview;
+  const progress=effectivePreview??(enabled?Math.max(0,Math.min(1,state.position/state.duration)):0);
+  const position=effectivePreview===undefined?state.position:effectivePreview*state.duration;
   const showSpectrum=playing&&spectrum.supported&&spectrum.bands.length>=32;
   return <View style={{width:148,height:148,alignItems:'center',justifyContent:'center'}}>
+    <View testID="wave-seek-ring" accessible accessibilityRole="adjustable" accessibilityLabel="环形播放进度" accessibilityHint="沿外环拖动，松手定位；中心按钮播放或暂停" accessibilityState={{disabled:!enabled}} accessibilityValue={{min:0,max:Math.floor(state.duration),now:Math.floor(position),text:`${clock(position)} / ${clock(state.duration)}`}} accessibilityActions={[{name:'increment'},{name:'decrement'}]}
+      onAccessibilityAction={event=>{if(enabled){cancel();controller.seek(controller.getSnapshot().position+(event.nativeEvent.actionName==='increment'?10:-10));}}}
+      onStartShouldSetResponder={event=>{const {locationX:x,locationY:y,touches}=event.nativeEvent,radius=Math.hypot(x-74,y-74);return enabled&&touches.length===1&&radius>=52&&radius<=74;}}
+      onResponderGrant={event=>{const value=current();setPreview(gesture.begin(value.token,value.duration,fraction(event)));}}
+      onResponderMove={event=>{if(event.nativeEvent.touches.length!==1){cancel();return;}const value=current();setPreview(gesture.move(value.token,value.duration,fraction(event)));}}
+      onResponderRelease={event=>{const value=current();if(fraction(event)===undefined){cancel();return;}gesture.move(value.token,value.duration,fraction(event));const seconds=gesture.finish(value.token,value.duration);setPreview(undefined);if(seconds!==undefined)controller.seek(seconds);}}
+      onResponderTerminationRequest={()=>false} onResponderTerminate={cancel} style={{position:'absolute',width:148,height:148}}>
+      <View pointerEvents="none" accessible={false} style={{width:148,height:148}}>{Array.from({length:60},(_,i)=>{const angle=i/60*Math.PI*2-Math.PI/2;return <View key={i} style={{position:'absolute',left:72+Math.cos(angle)*57,top:72+Math.sin(angle)*57,width:3,height:3,borderRadius:2,backgroundColor:i/60<progress?'#FFFFFF':'rgba(255,255,255,0.22)'}}/>;})}</View>
+    </View>
     {showSpectrum&&<View testID="wave-spectrum-bars" pointerEvents="none" accessible={false} style={{position:'absolute',width:148,height:148}}>{Array.from({length:32},(_,i)=>{const angle=(i/32)*Math.PI*2,length=3+Math.min(1,Math.max(0,spectrum.bands[i]??0))*13;return <View key={i} accessible={false} style={{position:'absolute',width:3,height:length,borderRadius:2,backgroundColor:'rgba(255,255,255,0.66)',left:72+Math.cos(angle)*64,top:72+Math.sin(angle)*64-length/2,transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>}
     <View style={{width:104,height:104,borderRadius:52,borderWidth:3,borderColor:'rgba(255,255,255,0.5)',alignItems:'center',justifyContent:'center'}}>{children}</View>
   </View>;

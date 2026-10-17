@@ -1,3 +1,7 @@
+## 2026-10-17 A09 环形定位本地通过
+
+声波核已有布局新增真实进度环与单次松手定位，E-013经reverse-skill严格review后采纳交互职责；335业务/类型通过；正式App综合回归198.360秒、1/1且零失败/跳过，暂停/播放拖环与中心按钮/PCM/多皮肤/重启/凭据清理通过，亲看截图；清洁归档/云端继续。舞台独立渲染分支已核，未新增伪舞台/AM2或提高全交付完成声明；见[0041](decisions/0041-wave-ring-seek.md)。其他A/F/J和真实服务/签名/手机仍待。
+
 ## 2026-10-17 样式选择交互与宿主分派取证
 
 E-011/E-012经reverse-skill mobile-reverse严格review，分别支持样式Sheet/八项标签/普通选择关闭与限定host分派；完整renderer/运行效果未证明。音枢继续保留六个实际布局，设置样式pageSheet保存成功后关闭、失败留旧值，原始/AM2/歌词舞台不新增伪入口；大字摘要跳变修正及本批验收见[0040](decisions/0040-player-style-sheet.md)、[专项报告](2026-10-17_reverse-sollin-player-style-report.md)和[BUILD_STATUS](BUILD_STATUS.md)。本批未提高全部F26/总交付完成声明；原有登录/真实推荐/FM/识曲、后台下载、完整迁移及真实服务/签名/手机仍待。

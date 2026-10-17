@@ -1,3 +1,7 @@
+## 2026-10-17 A09 声波核环形定位（本地专项通过）
+
+reverse-skill mobile-reverse E-013→F-012→P-012采纳前严格review通过13E/12F/12P、7WI/20事件、零错误/警告；原始指令核实沉浸四渲染分支和ring预览/提交/取消，舞台创建独立LyricStagePage。音枢已有声波核补齐环带拖动预览/松手单次定位、切歌/时长/取消守卫与10秒无障碍动作；真实PCM、中心播放按钮、唯一队列及六布局保留，AM2/舞台完整绘制仍待。335项业务/类型通过；正式App1792248125950综合回归198.360秒、1/1通过且零失败/跳过，暂停/播放中拖环、进度同源、中心按钮/真实PCM、多皮肤/歌词/mini/重启和凭据清理通过，亲看最终截图。清洁归档/push/对应云端结果继续记录；详见[0041](decisions/0041-wave-ring-seek.md)、[报告](2026-10-17_reverse-sollin-renderer-ring-report.md)。全部A/F/J余项与真实服务/签名/手机范围保留。
+
 ## 2026-10-17 样式Sheet清洁归档与push回执
 
 `261cd660d4f730540874133fa89d4bb442e32ec7`已正常push并核对远端main；`archive-player-style-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过。IPA SHA256 `c21ea1a1a3bc071be9c0e840f78f57e1345dc49a2319f6a6af56615da383f212`，留存`build/local-player-style-261cd66`。本条覆盖下方本批清洁归档/push待办，不代表真实服务/签名/手机已验。

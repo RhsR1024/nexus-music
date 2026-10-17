@@ -1,3 +1,7 @@
+## 2026-10-17 声波核环形定位比较
+
+本批亲读悦音CircleSlider（实际线性Slider）、Q/wtf ProgressBar、Cy PlayerProgressbar及自有Wayferar QishuiPlayer.smali seek/generation；固定提交和许可沿原表。预览/提交职责可参考，不复制依赖、未处理terminate、全局事件、RNTP或汽水专用后端。音枢原创圆环几何和token/duration事务，未来Android共享TS语义，触摸/无障碍各自验；逐项实现/维护/许可与证据见[0041](decisions/0041-wave-ring-seek.md)。
+
 ## 2026-10-17 播放样式选择 Sheet（本地专项通过）
 
 reverse-skill mobile-reverse E-011→F-010→P-010严格review通过（11E/10F/10P、7工作项/17事件，零错误/警告），原始BL/池引用确认独立模态、八标签及普通setStyle→pop；只采纳选择交互。音枢设置样式改为原生pageSheet，六种真实布局、原子保存后关闭/失败保留、重开session隔离与原分类滚动保持；不冒称八布局/参考运行完成。五参考比较、维护/Android/许可和边界见[决策0040](decisions/0040-player-style-sheet.md)，脱敏[专项报告](2026-10-17_reverse-sollin-player-style-report.md)。331项业务/类型检查通过；正式App最终三项回归通过、零失败/跳过（分组96.095秒、样式最大辅助字号91.027秒、主题37.948秒），亲看样式截图。首轮大字分类行跳变已修正并保留失败；修正前Navidrome综合185.508秒通过，未混称为最终复测。清洁归档/push及对应iOS27仍待；全部其他F/J与真实服务/签名/手机范围继续。
