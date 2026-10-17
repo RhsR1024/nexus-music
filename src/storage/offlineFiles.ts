@@ -36,6 +36,8 @@ export function createOfflineDownloadFiles():OfflineDownloadFiles{
     async remove(name){if(name){const target=file(name),temporary=file(`${name}.part`);if(target.exists)target.delete();if(temporary.exists)temporary.delete();}},
     exists:name=>Boolean(name)&&file(name).exists,
     size:name=>file(name).size,
+    partialSize:name=>file(`${name}.part`).size,
+    digest:name=>{const value=file(name).md5;return value??undefined;},
     uri:name=>file(name).uri,
   };
 }

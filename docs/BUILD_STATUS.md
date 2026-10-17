@@ -752,3 +752,11 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 - 本地设置分组 UI `build/SourceUITests-1792191433812.xcresult`：`testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器 `testZNavidromePlaybackAndCredentials` 两次运行均在既有合成流 `2:00` 时长断言失败，未将其记为本批播放器通过；失败日志保留在 `build/logs/ui-catalog.log`。
 - 清洁本地归档成功：Xcode 26.3 / iOS 26.2 SDK、arm64、最低 iOS 15.1、设备族 `[1,2]`、unsigned；manifest 在归档前包含本批工作树改动，IPA SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。本地包不代表 iOS27、签名或真机通过。
 - iOS27 运行 [38979554313](https://github.com/RhsR1024/nexus-music/actions/runs/38979554313) 已对应 `77d58e0`，当前 `pending`；旧 `38976733431` 仍为 `bea1fbd`，不沿用其结果。
+
+## 2026-10-17 15:24 匹配清理修正版本地通过
+
+`build/SourceUITests-1792220258492.xcresult` 的 `testOnlineMatching` 已结束：100.832秒、1项零失败，`TEST SUCCEEDED`。日志留存 `build/logs/ui-matching-cleanup-passed-1792220258492.log`，请求计数为同名前缀 `-counts.json`；实际日志确认到达并点击匹配夹具、删除确认后“完成1项”断言通过，自动匹配/人工版本/PCM/重启与开关持久化断言保留。修正已随95c2e03进入提交，52a0aaf对应最新云端39012949974仍pending；运行39010767320对应更早3e56d4d，不包含清理修正，继续执行核心App测试。未取消/重派。此为本地SDK26.2合成服务专项，不能替代云端iOS27、真实服务或真机；旧本地Files列表失败仍保留。当前其他离线开发改动未由心跳提交。
+
+## 2026-10-17 M10 摘要校验批次（本地检查）
+
+本轮新增本地离线文件摘要、恢复校验、当前播放文件删除保护和 `.part` 大小读取；`npm run check` 311/311，`npm run test:native` 通过，`git diff --check` 通过。摘要只证明本地文件在完成与恢复时的一致性，不能证明远端传输完整或真实服务长期可用。当前没有 iOS27、签名或真机结果，待提交后按 `queue: single` 核对云端运行/排队。

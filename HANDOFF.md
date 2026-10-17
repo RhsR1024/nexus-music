@@ -805,3 +805,15 @@ Sollin 私有云端服务、专用链接或不可授权接口不复制；优先�
 `95c2e03` 对应本地清洁 unsigned archive 已成功：`build/distribution/build-manifest.json` 为 `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 `02f6f94368d89247dfe89745d6b4df4fa22ee25e68d1f0a4570956e08c193742`。该证据只证明本地归档，不证明 iOS27、签名、真机或真实服务。
 
 按工作量加权、排除真机反馈调试后的当前开发实现估计为 **78.15%（对外约78%，剩余约22%）**；包含真实服务、签名、真机和交付验收的完整交付口径仍为 **57.93%（对外约58%）**。主要剩余开发量在平台登录/推荐/FM/识曲、M10 后台/完整性/在播保护、Sollin 深层 UI/交互与对象关系、漫途完整导入、iPad/系统媒体收口和 WebDAV 自动同步逻辑。具体权重见 `docs/PROGRESS_ESTIMATE.md`。
+
+## 2026-10-17 15:24 匹配清理修正版本地通过
+
+`build/SourceUITests-1792220258492.xcresult` 的 `testOnlineMatching` 已结束：100.832秒、1项零失败，`TEST SUCCEEDED`。日志留存 `build/logs/ui-matching-cleanup-passed-1792220258492.log`，请求计数为同名前缀 `-counts.json`；实际日志确认到达并点击匹配夹具、删除确认后“完成1项”断言通过，自动匹配/人工版本/PCM/重启与开关持久化断言保留。修正已随95c2e03进入提交，52a0aaf对应最新云端39012949974仍pending；运行39010767320对应更早3e56d4d，不包含清理修正，继续执行核心App测试。未取消/重派。此为本地SDK26.2合成服务专项，不能替代云端iOS27、真实服务或真机；旧本地Files列表失败仍保留。当前其他离线开发改动未由心跳提交。
+
+## 2026-10-17 当前接续：M10 摘要校验、临时偏移与在播保护
+
+本轮在 `OfflineDownloadStore` 增加文件摘要持久化与恢复校验，完整文件摘要缺失或变更时转为失败且不进入离线播放；通过权威播放控制器队列识别当前曲目，删除和批量清理保留在播文件并向 UI 返回受控错误。Abort 失败路径改为读取 `.part` 临时文件大小，避免把正式文件大小误当作续传偏移；保存、恢复、暂停、续传、重试、在播保护均有业务覆盖。
+
+验证：`npm run check` 为 311/311，`npm run test:native` 两套检查通过，`git diff --check` 通过；reverse-skill IPA strict review 仍为 PASS（3 evidence / 2 findings / 2 paths），没有把安装门禁当作 Sollin 后端功能证据。后台任务与重启调度、漫途完整导入、跨服务长期稳定性、真实服务、签名和真机仍待，unsigned 本地归档不替代这些验收。
+
+本轮估算按工作量加权更新为当前开发约 **79%**、剩余约 **21%**；完整交付仍约 **58%**。主要开发余量是平台登录/推荐/FM/识曲、M10 后台任务与重启调度、Sollin 深层 UI/交互收口、漫途完整导入、iPad/系统媒体和 WebDAV 自动同步。详见 `docs/PROGRESS_ESTIMATE.md`。

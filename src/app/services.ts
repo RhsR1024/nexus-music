@@ -92,14 +92,20 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
     return matchedResolver.resolve(track,signal,excluded);
   };
+  let playbackController:ReturnType<typeof createPlaybackSession>['controller']|undefined;
   const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal)=>{
     const media=await resolveTrack(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');return media;
-  },files:createOfflineDownloadFiles(),uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576});
+  },files:createOfflineDownloadFiles(),uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,isInUse:track=>{
+    const state=playbackController?.getSnapshot();if(state?.intent!=='playing')return false;
+    const current=state.queue.entries.find(entry=>entry.id===state.queue.currentId)?.track;
+    return !!current&&trackKey(current.origin)===trackKey(track.origin);
+  }});
   await restore('offlineDownloads.v1','离线下载',()=>offlineDownloads.restore());
   const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
     const saved=await offlineDownloads.resolve(track);if(saved)return saved;
     return resolveTrack(track,signal,excluded);
   }}, preferences,{covers,library});
+  playbackController=playback.controller;
   bindManualMatches(library,playback.controller);bindMatchPolicy(library,preferences,playback.controller);
   try{
     const saved=await repository.get<SavedQueue>('queue.v1');

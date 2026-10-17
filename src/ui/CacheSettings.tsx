@@ -3,6 +3,7 @@ import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {Pressable, View} from 'react-native';
 import type {Services} from '../app/services.ts';
+import {OfflineDownloadInUse} from '../storage/offlineDownloads.ts';
 export function CacheSettings({services}:{services:Services}){
   const theme=useTheme();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -26,7 +27,7 @@ export function CacheSettings({services}:{services:Services}){
     {downloads.length===0?<Text style={{color:theme.color('#959EAC')}}>还没有离线歌曲。</Text>:downloads.map(item=><View key={item.id} testID={`offline-download-${item.id}`} style={{gap:6,paddingVertical:10,borderTopWidth:1,borderTopColor:theme.color('#303541')}}>
       <Text style={{color:theme.color('#ECEBF3')}}>{item.track.title} · {item.track.artist}</Text>
       <Text style={{color:theme.color('#959EAC'),fontSize:11}}>{item.status==='completed'?`${(item.bytes/1048576).toFixed(1)} MB · 已保存`:item.status==='downloading'?'正在下载…':item.status==='paused'?`已暂停 · ${((item.partialBytes??0)/1048576).toFixed(1)} MB`:item.status==='queued'?'等待下载':`下载失败：${item.error??'请重试'}`}</Text>
-      <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{(item.status==='failed'||item.status==='queued')&&button(item.status==='failed'?'重试下载':'开始下载',()=>{void services.offlineDownloads.start(item.id).catch(()=>setMessage('下载未开始，请重试'));})}{item.status==='paused'&&button('继续下载',()=>{void services.offlineDownloads.resume(item.id).catch(()=>setMessage('下载未继续，请重试'));})}{item.status==='downloading'&&button('暂停下载',()=>{void services.offlineDownloads.pause(item.id).catch(()=>setMessage('下载未暂停，请重试'));})}{button('删除离线文件',()=>{void services.offlineDownloads.remove(item.id).catch(()=>setMessage('离线文件删除失败'));})}</View>
+      <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{(item.status==='failed'||item.status==='queued')&&button(item.status==='failed'?'重试下载':'开始下载',()=>{void services.offlineDownloads.start(item.id).catch(()=>setMessage('下载未开始，请重试'));})}{item.status==='paused'&&button('继续下载',()=>{void services.offlineDownloads.resume(item.id).catch(()=>setMessage('下载未继续，请重试'));})}{item.status==='downloading'&&button('暂停下载',()=>{void services.offlineDownloads.pause(item.id).catch(()=>setMessage('下载未暂停，请重试'));})}{button('删除离线文件',()=>{void services.offlineDownloads.remove(item.id).catch(error=>setMessage(error instanceof OfflineDownloadInUse?error.message:'离线文件删除失败'));})}</View>
     </View>)}
     {offlineStats.files>0&&button('清理已保存离线文件',()=>{void services.offlineDownloads.clearCompleted().catch(()=>setMessage('离线文件清理失败，可重试'));})}
     {!!message&&<Text style={{color:theme.color('#D6B69A')}}>{message}</Text>}
