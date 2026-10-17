@@ -10,8 +10,15 @@ final class SourceSettingsTests: XCTestCase {
     func enter(_ target:String){
       let row=app.buttons["settings-open-"+target]
       XCTAssertTrue(row.waitForExistence(timeout:10))
-      for _ in 0..<6 {if row.isHittable{break};app.swipeUp()}
-      XCTAssertTrue(row.isHittable);row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5))
+      // Settings preserves each page's scroll position. On returning from a
+      // lower row, the next target can be above the visible viewport.
+      for _ in 0..<12 {if row.isHittable{break};let above=row.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      if !row.isHittable {
+        let image=XCTAttachment(screenshot:app.screenshot());image.name="Settings row unreachable: "+target;image.lifetime = .keepAlways;add(image)
+        let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Settings navigation failure hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+      }
+      XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5))
     }
     let appearancePages=["theme","background","skins","accent","navigation","mini"]
     enter(page=="typography" ? "playback" : page=="equalizer" ? "equalizer" : appearancePages.contains(page) ? "appearance" : page)
