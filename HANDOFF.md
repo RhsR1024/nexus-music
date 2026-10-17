@@ -2,9 +2,9 @@
 
 本批3898592已正常push并核对origin/main一致；本地归档会话76346已exit0。清洁IPA、摘要与manifest留存build/local-player-identity-3898592，SHA256 9f15c56275ce76c03f5975497333e04df16f5d0d7ed2a1f49bf05a0ffbe95056；SDK26.2、arm64、设备族[1,2]、unsigned、dirty=false，正式入口隔离/CRC/二进制一致性通过。完整证据见BUILD_STATUS最新条目。303业务/类型、native与七个分段专项通过；前轮失败保留，不冒充同次全套通过。
 
-当前无本地UI/归档进程；最新云端39006353281（3898592）唯一pending，39003956417（c64c43b）仍运行。已API核对1运行/1排队，不能取消运行中/重派旧版本。接续优先跟进最新终态与失败；旧运行不覆盖3898592修正。阶段文档将另作docs-only回执提交，不应触发重复构建。
+归档已结束；本地15项云端同序正式入口整组正在执行会话86595，结果包1792214990725，汇总ui-core-player-identity-full.log、实际ui-catalog.log；外观62.175秒、图标12.697秒已通过，未完成，不得重开UI/归档覆盖日志。结束先保存日志/counts。最新云端39006353281（3898592）唯一pending，39003956417（c64c43b）仍运行。已API核对1运行/1排队，不能取消运行中/重派旧版本。接续优先跟进最新终态与失败；旧运行不覆盖3898592修正。阶段文档将另作docs-only回执提交，不应触发重复构建。
 
-reverse-skill已固定安装并强制执行，两案例严格review通过。新增独立工具安装的async确认仍待用户回复（work/tooling/prepare-python-tools.sh未执行）；不重复请求，未授权前不安装。Blutter上游与iOS PR204的审查及Python3.9兼容前提见SOLLIN_IPA_ANALYSIS；尚未构建/恢复对象图。既有合法离线静态分析、应用核验与云端跟进可继续。A03/A04对象关系、A06–A09剩余完整对齐和F01–F37/J01–J59全范围保留；签名/真机/真实私人服务未验收，目标active。
+reverse-skill已固定安装并强制执行，两案例严格review通过。用户已回复批准独立工具安装；work/tooling/prepare-python-tools.sh已原样执行exit0，CMake3.31.6/Ninja wheel1.11.1.3/pyelftools0.32验证通过，日志reverse-python-tools-install.log。外部工具索引登记绝对路径/版本；另确认桌面自带Python3.12.14并设为索引主解释器。Blutter上游与iOS PR204的审查及Python3.9兼容前提见SOLLIN_IPA_ANALYSIS；尚未构建/恢复对象图。既有合法离线静态分析、应用核验与云端跟进可继续。A03/A04对象关系、A06–A09剩余完整对齐和F01–F37/J01–J59全范围保留；签名/真机/真实私人服务未验收，目标active。
 
 # 2026-10-17 本轮进行中检查点（reverse-skill补充已交付）
 
@@ -772,3 +772,8 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 设置→外观→播放界面样式现在使用与播放器内部样式 Sheet 一致的稳定图标列表行：每项包含图标、行为说明、选中态和箭头/勾选；六个当前可运行布局、立即保存、失败保留、队列和暂停意图保持。IPA 只提供样式名称与独立 Sheet 静态线索，未据此增加未实现的 Apple Music 2 入口。
 
 `npm run check` 302/302，`git diff --check` 通过。`build/SourceUITests-1792191433812.xcresult` 的 `testGroupedSettingsNavigationAndDrafts` 1/1 通过。播放器专项在既有合成流冷缓存时长断言失败，已保留失败证据且未宣称播放器专项通过。清洁本地 unsigned IPA SHA256 为 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`，manifest 为 Xcode26.3/iOS26.2、arm64、设备族 `[1,2]`、signed=false。iOS27 运行 [38979554313](https://github.com/RhsR1024/nexus-music/actions/runs/38979554313) 已对应 `77d58e0`，当前 pending；签名、真机、后台/功耗仍待。
+# 2026-10-17 M10 离线保存第一段
+
+本轮新增 `OfflineDownloadStore`、Expo 文件适配、播放器“保存离线”入口和数据与存储页任务列表；来源身份去重、失败保留/重试/删除、临时文件完成后原子发布、缺失文件恢复和完整文件播放回退已实现。`npm run check` 306/306。当前工作树除既有 reverse-skill 文档改动外新增 `src/storage/offlineDownloads.ts`、`src/storage/offlineFiles.ts`、服务接线、Player/CacheSettings 及 `tests/offline-downloads.test.ts`，尚未提交或归档。
+
+M10 仍未完成暂停/断点续传、后台调度、容量配额/清理、完整性校验、在播保护和真实服务/真机验收；本批只把永久下载工作包代码实现估计从0%调整到约10%，完整交付仍0%。按权重当前代码约77%、整体开发交付约58%，不是按功能数计算。`npm run check` 306/306、`npm run test:native` 通过（仅既有 Swift Sendable 警告）；本地清洁归档 `build/logs/archive-offline-download.log` 为 ARCHIVE SUCCEEDED，manifest 为 commit=`ea81654`、dirty=false、arm64、iphoneos26.2、最低 iOS 15.1、设备族 `[1,2]`、signed=false，正式入口校验通过，IPA SHA256 `fe133e9a5d77da3033aa6946b99ae8c29cea3eee6e8684705bb9d8b992ed997b`。阶段提交待补本文档证据后推送，云端 iOS27、签名、真机和真实服务仍不能据此宣称通过。

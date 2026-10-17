@@ -46,6 +46,8 @@ import {encodeBackup} from '../storage/backup.ts';
 import {WebDAVBackups} from '../storage/webdavBackups.ts';
 import {WebDAVSync} from '../storage/webdavSync.ts';
 import { decodeQueue, type SavedCursor, type SavedQueue } from '../storage/queuePersistence.ts';
+import {OfflineDownloadStore} from '../storage/offlineDownloads.ts';
+import {createOfflineDownloadFiles} from '../storage/offlineFiles.ts';
 
 export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const repository = await openRepository();
@@ -83,12 +85,20 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const qishui=new QishuiProvider();
   const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
-  const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
+  const resolveTrack=async(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>)=>{
     if(track.origin.kind==='webdav')return davMedia.resolve(track,signal);
     if(track.origin.kind==='device')return deviceMedia.resolve(track);
     if(track.origin.kind==='local')return localAudio.resolve(track);
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
     return matchedResolver.resolve(track,signal,excluded);
+  };
+  const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal)=>{
+    const media=await resolveTrack(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');return media;
+  },files:createOfflineDownloadFiles(),uuid:Crypto.randomUUID,now:Date.now});
+  await restore('offlineDownloads.v1','离线下载',()=>offlineDownloads.restore());
+  const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
+    const saved=await offlineDownloads.resolve(track);if(saved)return saved;
+    return resolveTrack(track,signal,excluded);
   }}, preferences,{covers,library});
   bindManualMatches(library,playback.controller);bindMatchPolicy(library,preferences,playback.controller);
   try{
@@ -141,7 +151,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.backup.v1','云备份目录',()=>davBackups.restore());
   const davSync=new WebDAVSync({repository,accounts:davAccounts,transport:davTransport,library,mutations:libraryMutations,uuid:Crypto.randomUUID});
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
-  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

@@ -6,7 +6,7 @@
 
 ## 2026-10-17 reverse-skill 对象恢复工具预检
 
-沿 PRIMARY 对公开工具资料作补查：Blutter上游固定 `4a60ac648bf448c5a7596437243bcd0b9376fdf0` 的 [extract_dart_info.py:12–18/27–29](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/extract_dart_info.py#L12) 仍直接使用 ELFFile；[CMake平台/指针开关](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/scripts/CMakeLists.txt#L23) 不证明Mach-O已支持。[iOS实验PR204](https://github.com/worawit/blutter/pull/204) head `0039efb1b29d68ca6e5caece4d412d15e6f49428` 仍为Open，需另审查mapper、非压缩指针与Dart3.12.2并实际构建验证。当前PATH未检出cmake/ninja；本轮只做工具预检，没有执行其下载器/编译/反编译，不冒称恢复对象池。公共资料留work/references，目标样本分析继续离线。已进一步只读审查该PR的入口、extract_dart_info、macho.py以及DartApp/DartFunction补丁：macho.py直接使用未延迟求值的`str | None`等注解，与当前Python3.9存在版本兼容前提（源码判断，未执行补丁）；C++ mapper、运行时重定位和真实快照对象还未完整审查/验证。
+沿 PRIMARY 对公开工具资料作补查：Blutter上游固定 `4a60ac648bf448c5a7596437243bcd0b9376fdf0` 的 [extract_dart_info.py:12–18/27–29](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/extract_dart_info.py#L12) 仍直接使用 ELFFile；[CMake平台/指针开关](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/scripts/CMakeLists.txt#L23) 不证明Mach-O已支持。[iOS实验PR204](https://github.com/worawit/blutter/pull/204) head `0039efb1b29d68ca6e5caece4d412d15e6f49428` 仍为Open，需另审查mapper、非压缩指针与Dart3.12.2并实际构建验证。首次预检PATH未检出cmake/ninja；随后经用户批准已在Tools/Reverse独立venv安装并验证CMake/Ninja/pyelftools，详见REVERSE_SKILL_WORKFLOW。Blutter/DartVM下载器、编译、反编译仍未执行，不冒称恢复对象池。公共资料留work/references，目标样本分析继续离线。已进一步只读审查该PR的入口、extract_dart_info、macho.py以及DartApp/DartFunction补丁：macho.py直接使用未延迟求值的`str | None`等注解，与最初系统Python3.9存在版本兼容前提（源码判断，未执行补丁）；随后已确认桌面自带Python3.12.14可用，无需新装解释器；C++ mapper、运行时重定位和真实快照对象还未完整审查/验证。
 
 ## 2026-10-17 reverse-skill 首次双端 snapshot 复核
 

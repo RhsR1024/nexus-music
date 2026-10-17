@@ -479,3 +479,12 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 - [x] 本地设置分组 UI `build/SourceUITests-1792191433812.xcresult`：`testGroupedSettingsNavigationAndDrafts` 1/1 通过；播放器专项触发了既有合成流时长断言失败，未将其记为本批通过。
 - [x] 清洁本地 unsigned IPA：Xcode 26.3 / iOS 26.2 SDK，arm64、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`，SHA256 `c0c8adf3ed6cac2befa33948688217b42d627ff3e06082c67bffb889db44d588`。
 - [ ] iOS 27 运行 [38979554313](https://github.com/RhsR1024/nexus-music/actions/runs/38979554313) 已对应 `77d58e0` 并处于 `pending`；签名、真机、后台/功耗和播放器冷缓存时长仍待验证。旧 `38976733431` 仅对应 `bea1fbd`。
+# 2026-10-17 M10 离线保存第一段实现
+
+- [x] 播放页提供当前歌曲离线保存入口，数据与存储页展示任务状态。
+- [x] 以来源身份去重，临时文件成功后才发布为完整文件；失败保留并支持重试/删除。
+- [x] 持久化不写入远程签名 URL，重启会校验文件存在性，中断任务回到排队状态。
+- [x] `npm run check`：306/306，新增 `tests/offline-downloads.test.ts`。
+- [ ] 暂停/继续和断点续传、后台任务、配额/容量清理、完整性哈希、在播保护、真实服务与真机验收仍待完成。
+
+本批提交 `ea81654` 已完成 306/306 业务检查、原生专项和本地清洁 unsigned device archive；IPA SHA256 `fe133e9a5d77da3033aa6946b99ae8c29cea3eee6e8684705bb9d8b992ed997b`。云端 iOS27、签名、真机及真实服务不计为本地通过。
