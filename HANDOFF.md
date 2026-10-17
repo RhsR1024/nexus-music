@@ -1,3 +1,9 @@
+## 2026-10-18 AM2 清洁归档与push回执
+
+`332cac51b12ba26fe28f0df69f7c1af16c5eaeb4`已正常push，远端main一致。`archive-am2-clean.log`成功；manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带SHA256、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `aa1c4f1722a0f3c925804d8b0db02d1d635b29587964dd900362acf36bd30727`，留存`build/local-am2-332cac5`。本条覆盖本批清洁归档/push待办；348业务/类型、手机/iPad/共享歌词评论/最终字体EQ分项及严格review28事件见下，不代表参考运行等价或真实服务/签名/真机通过。
+
+push后API核对[39058310652](https://github.com/RhsR1024/nexus-music/actions/runs/39058310652)/332cac5为唯一pending，[39050349015](https://github.com/RhsR1024/nexus-music/actions/runs/39050349015)/76c9cd0继续运行，1运行/1排队；未取消运行中或重派旧版。新云端终态继续跟进。下一mini控件/底栏证据批次重新路由mobile-reverse并通过前置门禁，尚无新功能证据/采纳结论；全部A/F/J和真机范围保留。
+
 ## 2026-10-18 AM2 本地阶段验收通过
 
 reverse-skill mobile-reverse E016/E017采纳门禁保持，本轮严格review17E/16F/16P、7WI/28事件、零错误/警告。原创第八种AM2接入独立封面/歌词/队列/评论、前台可见空闲计时及独立true/5秒/音量隐藏默认值，保留原七布局与音枢唯一队列/意图；348业务及类型检查通过，见[0043](docs/decisions/0043-responsive-am2.md)。
