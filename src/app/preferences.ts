@@ -5,9 +5,9 @@ import type { Repository } from '../storage/repository.ts';
 import { normalizeQuality, type Quality } from '../domain/quality.ts';
 import {appearanceDefaults,type AppearanceOptions} from '../domain/appearance.ts';
 import {miniPlayerDefaults,normalizeMiniActions,toggleMiniAction,moveMiniAction,type MiniPlayerOptions,type MiniAction} from '../domain/miniPlayer.ts';
-export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage';
-export interface Preferences extends AppearanceOptions,MiniPlayerOptions { lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number }
-export const defaults: Preferences = { ...appearanceDefaults,...miniPlayerDefaults,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048 };
+export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage'|'am2';
+export interface Preferences extends AppearanceOptions,MiniPlayerOptions { am2AutoLyrics:boolean;am2DelaySeconds:number;am2ShowVolume:boolean; lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number }
+export const defaults: Preferences = { ...appearanceDefaults,...miniPlayerDefaults,am2AutoLyrics:true,am2DelaySeconds:5,am2ShowVolume:false,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048 };
 export class PreferenceStore {
   private repository: Repository; private value: Preferences = defaults;
   private listeners = new Set<() => void>(); private tail: Promise<unknown> = Promise.resolve();
@@ -24,10 +24,11 @@ export class PreferenceStore {
     }catch{throw new InvalidRecordError();}}
   }
   private validate(value: Preferences): Preferences {
+    if(typeof value.am2AutoLyrics!=='boolean'||typeof value.am2ShowVolume!=='boolean'||!Number.isFinite(value.am2DelaySeconds)||value.am2DelaySeconds<1||value.am2DelaySeconds>60)throw new Error('AM2 设置无效');
     if(typeof value.miniLyrics!=='boolean')throw new Error('迷你歌词设置无效');
     if(typeof value.autoMatch!=='boolean')throw new Error('自动匹配设置无效');
     if(!['auto','left','center'].includes(value.lyricAlignment))throw new Error('歌词对齐方式无效');
-    if(!['classic','am','immersive','photo','vinyl','wave','stage'].includes(value.playerLayout))throw new Error('播放界面无效');
+    if(!['classic','am','immersive','photo','vinyl','wave','stage','am2'].includes(value.playerLayout))throw new Error('播放界面无效');
     if(!['classic','blush','soft'].includes(value.visualTheme)||!['rose','coral','purple','blue','orange'].includes(value.accent)||!['gradient','solid','image'].includes(value.backgroundStyle)||typeof value.glassNavigation!=='boolean')throw new Error('外观设置无效');
     if(!['artwork','solid','photo'].includes(value.playerBackground)||typeof value.coverColor!=='boolean'||typeof value.globalBackgroundMotion!=='boolean'||typeof value.dynamicBackground!=='boolean'||!Number.isFinite(value.backgroundOpacity)||value.backgroundOpacity<0||value.backgroundOpacity>1||!Number.isFinite(value.playerBlur)||value.playerBlur<0||value.playerBlur>80||!Number.isFinite(value.playerDarkness)||value.playerDarkness<.35||value.playerDarkness>.9||!Number.isFinite(value.coverRadius)||value.coverRadius<0||value.coverRadius>48)throw new Error('图片外观设置无效');
     if (!Number.isFinite(value.volume)||value.volume<0||value.volume>1||!normalizeQuality(value.quality) || !validGains(value.gains) || !validPreamp(value.preampDB) ||

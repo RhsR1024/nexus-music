@@ -5,7 +5,8 @@ final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
   private func openSettings(_ app:XCUIApplication,page:String){
     for id in ["theme-sheet-close","skins-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
-    let tab=app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
+    let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-settings").firstMatch
+    let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
     XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
     for _ in 0..<3 {let back=app.buttons["settings-back"];if !back.exists{break};back.tap()}
     var settingsPage="home"
@@ -761,8 +762,16 @@ final class SourceSettingsTests: XCTestCase {
     let system=app.buttons["font-lyrics-system"];system.tap();XCTAssertTrue(lyricStatus.label.contains("系统字体"));XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));inherit.tap()
     let height=app.buttons["行高倍数＋"];reach(height);height.tap();let spacing=app.buttons["行间距＋"];reach(spacing);spacing.tap();let blur=app.buttons["其他行模糊＋"];reach(blur);blur.tap();app.buttons["lyric-emphasis"].tap()
     let golden=app.buttons["lyric-activeColor-2"];reach(golden,up:false);golden.tap()
+    let alignment=app.buttons["lyric-align-center"];reach(alignment)
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:alignment)],timeout:10),.completed)
+    alignment.tap()
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:alignment)],timeout:10),.completed,"Confirm the setting was saved before terminating the App")
     app.terminate();app.launch();settings();reach(importer)
     XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));XCTAssertTrue(lyricStatus.label.contains("跟随全局"));XCTAssertTrue(lyricStatus.label.contains("Nexus Fixture.ttf"))
+    reach(alignment)
+    // RN's restored button can expose its selected checkmark label without
+    // XCTest's selected trait; verify the same visible saved choice.
+    XCTAssertEqual(alignment.label,"居中 ✓","Explicit lyric alignment must survive restart")
     reach(app.staticTexts["lyric-style-blur"]);XCTAssertEqual(app.staticTexts["lyric-style-blur"].label,"其他行模糊：1");XCTAssertTrue(app.buttons["逐字强调：关"].exists)
     // Exercise imported glyphs and persisted styles in the actual player.
     app.terminate();try testZNavidromePlaybackAndCredentials()
@@ -771,6 +780,86 @@ final class SourceSettingsTests: XCTestCase {
     expectation(for:NSPredicate(format:"label CONTAINS %@","系统字体"),evaluatedWith:globalStatus);waitForExpectations(timeout:10);XCTAssertTrue(lyricStatus.label.contains("跟随全局"));
     let reset=app.buttons["lyric-style-reset"];reach(reset);reset.tap();XCTAssertTrue(app.buttons["逐字强调：开"].exists)
     app.terminate();app.launch();settings();reach(importer);XCTAssertFalse(app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-delete-nexusfont_")).firstMatch.exists);XCTAssertTrue(globalStatus.label.contains("系统字体"))
+  }
+  func testAM2PlayerWithLargeText() throws { try verifyAM2Window(largeText:true) }
+  func testAM2PlayerWindowRotation() throws { try verifyAM2Window(largeText:false) }
+  private func verifyAM2Window(largeText:Bool) throws {
+    let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait
+    defer{XCUIDevice.shared.orientation = .portrait}
+    if largeText{app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]}
+    app.launch()
+    func element(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    if UIDevice.current.userInterfaceIdiom == .pad && !element("app-layout-expanded").waitForExistence(timeout:3){
+      let system=XCUIApplication(bundleIdentifier:"com.apple.springboard"),zoom=XCUIApplication(bundleIdentifier:"com.apple.springboard").buttons["Zoom-button"]
+      if !zoom.isHittable{let controls=system.buttons["window-controls:com.nexusmusic.app"];XCTAssertTrue(controls.waitForExistence(timeout:5));controls.tap()}
+      XCTAssertTrue(zoom.waitForExistence(timeout:5));zoom.tap()
+      XCTAssertTrue(element("app-layout-expanded").waitForExistence(timeout:20))
+      XCTAssertGreaterThanOrEqual(element("app-layout-expanded").frame.width,768)
+    }
+    func reveal(_ item:XCUIElement){
+      for _ in 0..<30{
+        if item.exists && item.isHittable{break}
+        let above=item.exists && item.frame.midY<app.frame.midY
+        let viewport=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","settings-viewport-")).firstMatch
+        let surface=viewport.exists ? viewport : app
+        surface.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25 : 0.75)).press(forDuration:0.05,thenDragTo:surface.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75 : 0.25)))
+      }
+      XCTAssertTrue(item.isHittable)
+    }
+    openSettings(app,page:"skins");let am2=element("player-layout-am2");reveal(am2);am2.tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["skins-sheet-close"]);waitForExpectations(timeout:10)
+    openSettings(app,page:"sources")
+    for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名","fixture-user"),("Navidrome密码","fixture-password")]{
+      let field=label=="Navidrome密码" ? app.secureTextFields[label] : app.textFields[label]
+      reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
+    }
+    let save=app.buttons["验证并保存连接"];reveal(save);save.tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
+    let rail=element("rail-tab-library");(rail.exists ? rail : element("tab-library")).tap()
+    element("tab-private").tap();let account=element("navidrome-account-fixture-user");reveal(account);account.tap()
+    let album=element("navidrome-item-album-fixture-album");XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();app.buttons["播放全部"].tap()
+    let open=app.buttons["打开播放页"];XCTAssertTrue(open.waitForExistence(timeout:10));open.tap()
+    XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10));app.buttons["暂停"].tap()
+    let lyrics=app.buttons["am2-content-lyrics"];XCTAssertTrue(lyrics.isHittable);lyrics.tap()
+    XCTAssertTrue(element("am2-lyrics-list").waitForExistence(timeout:10))
+    let progress=element("播放进度"),beforeScroll=progress.value as? String
+    let line=app.buttons["定位歌词：Synthetic lyric two"].firstMatch;XCTAssertTrue(line.waitForExistence(timeout:10))
+    let lyricList=element("am2-lyrics-list")
+    for _ in 0..<5 {if line.isHittable{break};lyricList.swipeUp()}
+    XCTAssertEqual(progress.value as? String,beforeScroll,"Scrolling lyrics must keep the paused playback position")
+    let beforeTap=XCTAttachment(screenshot:app.screenshot());beforeTap.name="AM2 actual lyric before double tap";beforeTap.lifetime = .keepAlways;add(beforeTap)
+    XCTAssertTrue(line.isHittable);line.doubleTap()
+    expectation(for:NSPredicate(format:"value == %@","0:06 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:5)
+    XCTAssertEqual(progress.value as? String,"0:06 / 2:00")
+    let play=app.buttons["播放"];XCTAssertTrue(play.isHittable);XCTAssertLessThanOrEqual(play.frame.maxY,app.frame.maxY)
+    let portrait=XCTAttachment(screenshot:app.screenshot());portrait.name=largeText ? "AM2 accessibility XXXL actual lyrics and transport" : "AM2 portrait actual lyrics and transport";portrait.lifetime = .keepAlways;add(portrait)
+    if !largeText{
+      line.press(forDuration:0.7)
+      let closeLyrics=app.buttons["收起全部歌词"];XCTAssertTrue(closeLyrics.waitForExistence(timeout:5));closeLyrics.tap()
+      XCTAssertEqual(progress.value as? String,"0:06 / 2:00","Long press opens settings without seeking")
+    }
+    if !largeText{
+      XCUIDevice.shared.orientation = .landscapeLeft
+      let rotated=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.frame.width>app.frame.height && element("am2-horizontal").exists},object:nil)
+      XCTAssertEqual(XCTWaiter.wait(for:[rotated],timeout:15),.completed)
+      XCTAssertTrue(play.isHittable,"Landscape transport must fit in its column")
+      XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"Landscape lyric source must fit in its column")
+      var previousPanel=CGRect.zero,stableFrames=0
+      let settled=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+        let panel=element("am2-content-panel").frame
+        stableFrames=panel==previousPanel ? stableFrames+1:0;previousPanel=panel
+        return panel.minX>app.frame.width*0.4 && panel.height>100 && stableFrames>=2
+      },object:nil)
+      XCTAssertEqual(XCTWaiter.wait(for:[settled],timeout:10),.completed,"Capture the final native columns after rotation settles")
+      let landscape=XCTAttachment(screenshot:app.screenshot());landscape.name="AM2 native landscape columns and transport";landscape.lifetime = .keepAlways;add(landscape)
+      let display=XCTAttachment(screenshot:XCUIScreen.main.screenshot());display.name="AM2 landscape full display";display.lifetime = .keepAlways;add(display)
+      XCUIDevice.shared.orientation = .portrait
+      XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.frame.height>app.frame.width},object:nil)],timeout:10),.completed)
+    }
+    app.buttons["收起播放页"].tap();openSettings(app,page:"sources")
+    app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
+    openSettings(app,page:"skins");let classic=element("player-layout-classic");reveal(classic);classic.tap()
   }
   func testZNavidromePlaybackAndCredentials() throws {
     let app=XCUIApplication();app.launch()
@@ -848,12 +937,48 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["播放界面样式"].waitForExistence(timeout:5), "The dedicated style control must open the style sheet")
     app.buttons["收起播放界面样式"].tap()
     let immersiveImage=XCTAttachment(screenshot:app.screenshot());immersiveImage.lifetime = .keepAlways;add(immersiveImage)
-    for layout in ["photo","vinyl","wave","stage"] {
+    for layout in ["photo","vinyl","wave","stage","am2"] {
       app.buttons["更多播放控制"].tap()
       app.buttons["播放界面样式"].tap()
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
+      if layout=="am2" {
+        // An interrupted previous run can leave AM2's persisted controls set.
+        // Establish this scenario through the same settings used by the user.
+        app.buttons["am2-settings"].tap()
+        if app.buttons["自动展开歌词：关"].exists{app.buttons["am2-auto"].tap()}
+        if app.buttons["音量控件：显示"].exists{app.buttons["am2-show-volume"].tap()}
+        for _ in 0..<60 {
+          let delay=app.staticTexts["am2-delay"].label
+          if delay=="等待 5 秒"{break}
+          let seconds=Int(delay.filter(\.isNumber)) ?? 5
+          app.buttons[seconds>5 ? "am2-delay-minus":"am2-delay-plus"].tap()
+        }
+        XCTAssertEqual(app.staticTexts["am2-delay"].label,"等待 5 秒")
+        app.buttons["am2-settings"].tap()
+        let lyrics=app.buttons["am2-content-lyrics"];XCTAssertTrue(lyrics.isHittable);lyrics.tap()
+        XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"am2-lyrics-list").firstMatch.waitForExistence(timeout:10))
+        let restore=app.buttons["还原歌词区域"];XCTAssertTrue(restore.waitForExistence(timeout:12),"Only idle visible lyrics should auto expand")
+        let lyricsImage=XCTAttachment(screenshot:app.screenshot());lyricsImage.name="AM2 expanded real lyrics before seeking";lyricsImage.lifetime = .keepAlways;add(lyricsImage)
+        let line=app.buttons["定位歌词：Synthetic lyric two"].firstMatch;XCTAssertTrue(line.isHittable);line.doubleTap()
+        expectation(for:NSPredicate(format:"value == %@","0:06 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:5)
+        XCTAssertTrue(app.buttons["播放"].exists,"Lyric seek must retain paused intent")
+        app.buttons["am2-content-queue"].tap();XCTAssertTrue(app.staticTexts["播放队列"].waitForExistence(timeout:5))
+        let queuedTrack=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","1. Synthetic tone")).firstMatch
+        XCTAssertTrue(queuedTrack.waitForExistence(timeout:5));XCTAssertTrue(queuedTrack.isHittable)
+        XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"am2-lyrics-list").firstMatch.exists,"Content panels must be exclusive")
+        app.buttons["am2-content-comments"].tap();XCTAssertTrue(app.staticTexts["此来源暂不支持公开评论；当前支持网易云在线歌曲。"].waitForExistence(timeout:5))
+        app.buttons["am2-return-cover"].tap();XCTAssertEqual(progress.value as? String,"0:06 / 2:00")
+        app.buttons["am2-settings"].tap();XCTAssertTrue(app.buttons["自动展开歌词：开"].waitForExistence(timeout:5))
+        app.buttons["am2-delay-minus"].tap();app.buttons["am2-delay-minus"].tap();XCTAssertEqual(app.staticTexts["am2-delay"].label,"等待 3 秒")
+        app.buttons["am2-show-volume"].tap();app.buttons["am2-settings"].tap()
+        let volume=app.descendants(matching:.any).matching(identifier:"am2-volume").firstMatch;XCTAssertTrue(volume.isHittable)
+        volume.coordinate(withNormalizedOffset:CGVector(dx:0.8,dy:0.5)).press(forDuration:0.05,thenDragTo:volume.coordinate(withNormalizedOffset:CGVector(dx:0.3,dy:0.5)))
+        XCTAssertEqual(app.staticTexts["am2-volume-value"].label,"30%");XCTAssertEqual(progress.value as? String,"0:06 / 2:00","Volume drag must not seek or toggle content")
+        let am2Image=XCTAttachment(screenshot:app.screenshot());am2Image.name="AM2 independent cover and volume with paused shared clock";am2Image.lifetime = .keepAlways;add(am2Image)
+        app.buttons["am2-settings"].tap();app.buttons["am2-show-volume"].tap();app.buttons["am2-delay-plus"].tap();app.buttons["am2-delay-plus"].tap();app.buttons["am2-settings"].tap();lyrics.tap()
+      }
       XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"Lyric selection must fit in \(layout)")
       if layout=="stage" {
         let group=app.descendants(matching:.any).matching(identifier:"lyric-stage-group").firstMatch
@@ -1092,12 +1217,14 @@ final class SourceSettingsTests: XCTestCase {
     var viewportID="settings-viewport-equalizer"
     func reveal(_ element:XCUIElement) {
       for _ in 0..<36 {
-        let viewport=app.descendants(matching:.any).matching(identifier:viewportID).firstMatch.frame
+        let surface=app.descendants(matching:.any).matching(identifier:viewportID).firstMatch,viewport=surface.frame
         if element.exists && element.isHittable && element.frame.minY >= viewport.minY+8 && element.frame.maxY <= viewport.maxY-8 { return }
         let above=element.exists && element.frame.minY < viewport.minY+8
-        app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.60 : 0.40)))
+        // Stay in the scroll view's outer padding, outside curve/slider responders.
+        surface.coordinate(withNormalizedOffset:CGVector(dx:0.99,dy:above ? 0.25 : 0.75)).press(forDuration:0.05,thenDragTo:surface.coordinate(withNormalizedOffset:CGVector(dx:0.99,dy:above ? 0.75 : 0.25)))
       }
-      XCTFail("Control not fully visible: \(element)")
+      let failure=XCTAttachment(screenshot:app.screenshot());failure.name="EQ scroll reachability failure";failure.lifetime = .keepAlways;add(failure)
+      XCTFail("Control not fully visible: \(element)\n\(app.debugDescription)")
     }
     let flat=app.buttons["eq-builtin-0"],bass=app.buttons["eq-builtin-1"];reveal(flat);flat.tap()
     XCTAssertTrue(flat.isSelected)
@@ -1167,6 +1294,9 @@ final class SourceSettingsTests: XCTestCase {
     let stage=item("stage");reveal(stage);stage.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
     app.terminate();app.launch();openSettings(app,page:"skins");reveal(stage);XCTAssertTrue(stage.isSelected,"Restart must restore the new stage layout too")
+    let am2=item("am2");reveal(am2);am2.tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    app.terminate();app.launch();openSettings(app,page:"skins");reveal(am2);XCTAssertTrue(am2.isSelected,"Restart must restore AM2 independently from AM")
     let classic=item("classic");reveal(classic);classic.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
   }

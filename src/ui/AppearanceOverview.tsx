@@ -14,7 +14,7 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
   const [error,setError]=useState('');
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{setError('');void services.preferences.update(patch).catch(()=>setError('设置未保存，请重试；之前的设置已保留。'));};
   const fontName=(id:string|null|undefined)=>fonts.fonts.find(font=>font.id===id)?.name??'系统默认';
-  const themes={classic:'经典',blush:'粉雾',soft:'柔和'},styles={gradient:'渐变',solid:'纯色',image:'图片'},layouts={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台'};
+  const themes={classic:'经典',blush:'粉雾',soft:'柔和'},styles={gradient:'渐变',solid:'纯色',image:'图片'},layouts={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'};
   type Row={id:string;title:string;icon:React.ComponentProps<typeof Ionicons>['name'];detail?:string;subtitle?:string;page?:AppearanceSection|'typography';toggle?:{value:boolean;change:(next:boolean)=>void}};
   const rows:Row[]=[
     {id:'theme',title:'软件主题',icon:'contrast-outline',subtitle:'白天、晚上或跟随系统外观',detail:{system:'跟随系统',light:'白天',dark:'晚上'}[value.theme],page:'theme'},

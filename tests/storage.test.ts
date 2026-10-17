@@ -213,3 +213,13 @@ test('stage layout persists and failed layout writes preserve the current style'
   await assert.rejects(restored.update({playerLayout:'wave'}));assert.equal(restored.getSnapshot().playerLayout,'stage');
   repository.put=write;db.close();
 });
+
+test('AM2 preferences migrate, persist independently and reject invalid or failed writes',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');
+  await repository.put('preferences.v1',{playerLayout:'am'});const preferences=new PreferenceStore(repository);await preferences.restore();
+  assert.equal(preferences.getSnapshot().am2AutoLyrics,true);assert.equal(preferences.getSnapshot().am2DelaySeconds,5);assert.equal(preferences.getSnapshot().am2ShowVolume,false);
+  await preferences.update({playerLayout:'am2',am2AutoLyrics:false,am2DelaySeconds:3,am2ShowVolume:true,volume:.4});
+  const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().playerLayout,'am2');assert.equal(restored.getSnapshot().am2DelaySeconds,3);assert.equal(restored.getSnapshot().am2AutoLyrics,false);assert.equal(restored.getSnapshot().am2ShowVolume,true);assert.equal(restored.getSnapshot().volume,.4);
+  await assert.rejects(restored.update({am2DelaySeconds:0}));assert.equal(restored.getSnapshot().am2DelaySeconds,3);
+  repository.put=async()=>{throw new Error('disk full');};await assert.rejects(restored.update({am2AutoLyrics:true,volume:.8}));assert.equal(restored.getSnapshot().am2AutoLyrics,false);assert.equal(restored.getSnapshot().volume,.4);db.close();
+});

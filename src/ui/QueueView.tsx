@@ -28,10 +28,18 @@ function QueueRow({entry,index,services}:{entry:QueueEntry;index:number;services
 export function QueueView({services,compact=false}:{services:Services;compact?:boolean}){
   const theme=useTheme(),state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot),[open,setOpen]=useState(false);
   return <><Pressable testID={compact?"mini-action-queue":undefined} accessibilityRole="button" accessibilityLabel={compact?"播放队列":undefined} onPress={()=>setOpen(true)} style={compact?{minWidth:44,minHeight:44,alignItems:"center",justifyContent:"center"}:{padding:14,backgroundColor:theme.color('#303A32'),borderRadius:12}}>{compact?<Ionicons name="list" size={24} color={theme.palette.text}/>:<Text style={{color:theme.color('#D9F49B')}}>完整队列与拖动排序 · {state.queue.entries.length} 首</Text>}</Pressable>
-    <Modal visible={open} onRequestClose={()=>setOpen(false)} animationType="slide"><View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:65}}>
-      <View style={{flexDirection:'row',justifyContent:'space-between',paddingBottom:24}}><Pressable accessibilityRole="button" onPress={()=>setOpen(false)}><Text style={{color:theme.color('#D9F49B'),fontSize:18}}>收起队列</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>Alert.alert('清空播放队列？','当前播放会停止。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>services.playback.controller.setQueue(emptyQueue)}])}><Text style={{color:theme.color('#D6B69A')}}>清空队列</Text></Pressable></View>
-      <Text style={{color:theme.color('#959EAC'),marginBottom:12}}>拖动右侧手柄调整顺序；下一首插入仍按先后次序。</Text>
-      <FlatList data={state.queue.entries} extraData={state.queue.currentId} keyExtractor={entry=>entry.id} initialNumToRender={10} windowSize={5} getItemLayout={(_,index)=>({length:rowHeight,offset:rowHeight*index,index})} renderItem={({item,index})=><QueueRow entry={item} index={index} services={services}/>}/>
-    </View></Modal>
+    <Modal visible={open} onRequestClose={()=>setOpen(false)} animationType="slide"><QueuePanel services={services} onClose={()=>setOpen(false)}/></Modal>
   </>;
+}
+
+export function QueuePanel({services,onClose}:{services:Services;onClose?:()=>void}){
+  const theme=useTheme(),state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
+  const header=<>
+      <View style={{flexDirection:'row',justifyContent:'space-between',paddingBottom:24}}>{onClose?<Pressable accessibilityRole="button" onPress={onClose}><Text style={{color:theme.color('#D9F49B'),fontSize:18}}>收起队列</Text></Pressable>:<Text style={{color:theme.color('#D9F49B'),fontSize:18}}>播放队列</Text>}<Pressable accessibilityRole="button" onPress={()=>Alert.alert('清空播放队列？','当前播放会停止。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>services.playback.controller.setQueue(emptyQueue)}])}><Text style={{color:theme.color('#D6B69A')}}>清空队列</Text></Pressable></View>
+      <Text style={{color:theme.color('#959EAC'),marginBottom:12}}>拖动右侧手柄调整顺序；下一首插入仍按先后次序。</Text>
+    </>;
+  return <View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:onClose?65:12}}>
+      {onClose&&header}
+      <FlatList data={state.queue.entries} ListHeaderComponent={onClose?null:header} extraData={state.queue.currentId} keyExtractor={entry=>entry.id} initialNumToRender={10} windowSize={5} getItemLayout={onClose?(_,index)=>({length:rowHeight,offset:rowHeight*index,index}):undefined} renderItem={({item,index})=><QueueRow entry={item} index={index} services={services}/>}/>
+    </View>;
 }
