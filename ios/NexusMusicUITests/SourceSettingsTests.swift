@@ -4,7 +4,7 @@ import Vision
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
   private func openSettings(_ app:XCUIApplication,page:String){
-    for id in ["theme-sheet-close","skins-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
+    for id in ["theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
     let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-settings").firstMatch
     let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
     XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
@@ -1059,7 +1059,7 @@ final class SourceSettingsTests: XCTestCase {
     miniFavorite.tap();expectation(for:NSPredicate(format:"value == %@",favoriteBefore ?? ""),evaluatedWith:miniFavorite);waitForExpectations(timeout:10)
     miniQueue.tap();XCTAssertTrue(app.buttons["收起队列"].waitForExistence(timeout:10));app.buttons["收起队列"].tap();XCTAssertEqual(miniToggle.label,"播放")
     let miniImage=XCTAttachment(screenshot:app.screenshot());miniImage.name="Four persisted mini controls and actual recording lyric";miniImage.lifetime = .keepAlways;add(miniImage)
-    openSettings(app,page:"mini");miniChoose("mini-reset");expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
+    openSettings(app,page:"mini");miniChoose("mini-reset");app.buttons["mini-sheet-close"].tap();expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
     openSettings(app,page:"sources")
     for _ in 0..<45 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
     app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
@@ -1299,6 +1299,46 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();openSettings(app,page:"skins");reveal(am2);XCTAssertTrue(am2.isSelected,"Restart must restore AM2 independently from AM")
     let classic=item("classic");reveal(classic);classic.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+  }
+  func testMiniAndNavigationSheetsWithLargeText() throws {
+    let app=XCUIApplication()
+    app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch();openSettings(app,page:"mini")
+    func element(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func reveal(_ item:XCUIElement){
+      let scroll=element("mini-sheet-scroll")
+      for _ in 0..<30 {
+        if item.exists && item.isHittable && item.frame.minY>=scroll.frame.minY && item.frame.maxY<=scroll.frame.maxY{break}
+        let above=item.exists && item.frame.midY<scroll.frame.midY
+        scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.75:0.25)))
+      }
+      XCTAssertTrue(item.isHittable)
+    }
+    let close=app.buttons["mini-sheet-close"]
+    XCTAssertTrue(element("mini-settings-sheet").exists);XCTAssertFalse(app.buttons["settings-open-background"].exists)
+    let reset=app.buttons["mini-reset"];reveal(reset);reset.tap()
+    let previous=element("mini-choice-previous");reveal(previous);previous.tap()
+    XCTAssertEqual(app.staticTexts["mini-actions-count"].label,"已选 3/4")
+    let image=XCTAttachment(screenshot:app.screenshot());image.name="Mini controls sheet at accessibility XXXL";image.lifetime = .keepAlways;add(image)
+    close.tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
+    let entry=app.buttons["settings-open-mini"];XCTAssertTrue(entry.isHittable);let entryY=entry.frame.midY;entry.tap()
+    XCTAssertEqual(app.staticTexts["mini-actions-count"].label,"已选 3/4","Reopening must restore the saved controls")
+    let title=app.staticTexts["settings-title-mini"]
+    title.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertEqual(entry.frame.midY,entryY,accuracy:2,"Swipe dismissal must retain appearance scroll")
+    app.terminate();app.launch();openSettings(app,page:"mini")
+    XCTAssertEqual(app.staticTexts["mini-actions-count"].label,"已选 3/4","Mini controls must survive restart")
+    reveal(reset);reset.tap();close.tap()
+    openSettings(app,page:"navigation")
+    XCTAssertTrue(element("navigation-style-sheet").exists);XCTAssertFalse(app.buttons["settings-open-background"].exists)
+    let glass=app.switches["玻璃底栏"];XCTAssertTrue(glass.isHittable);let initial=glass.value as? String;glass.tap()
+    let changed=initial=="1" ? "0":"1"
+    expectation(for:NSPredicate(format:"value == %@",changed),evaluatedWith:glass);waitForExpectations(timeout:5)
+    let navigationImage=XCTAttachment(screenshot:app.screenshot());navigationImage.name="Navigation style sheet at accessibility XXXL";navigationImage.lifetime = .keepAlways;add(navigationImage)
+    app.buttons["navigation-sheet-close"].tap();openSettings(app,page:"navigation");XCTAssertEqual(glass.value as? String,changed)
+    app.terminate();app.launch();openSettings(app,page:"navigation");XCTAssertEqual(glass.value as? String,changed,"Navigation preference must survive restart")
+    glass.tap();app.buttons["navigation-sheet-close"].tap()
   }
   func testThemeSheetWithLargeTextAndSwipeDismissal() throws {
     let app=XCUIApplication()

@@ -1,3 +1,7 @@
+## 2026-10-18 mini／底栏模态职责复核
+
+五个固定HEAD已核对；亲读悦音MiniPlayer42、Q TimeoutExitEditModal163/169/215、wtf QualityModal51–80、Cy settingModal403/615与自有Wayferar SourceSettings8–18/58–59。实现、维护/Android/许可及原创取舍见[0044](decisions/0044-mini-navigation-settings-sheets.md)。只采纳呈现/保存/清理职责，复用既有SheetModal和原子仓储，无新源码/资产/依赖/原生补丁。Sollin新证据E018经严格review，完整底栏/九动作/runtime未声称。
+
 ## 2026-10-17 AM2职责复核
 
 本批五参考固定HEAD未变，亲读横竖布局/首次可见挂载、iOS pager高度、歌词容器/当前行与宽度边界；具体file:line、维护/Android/许可及不采纳项见[AM2专项报告](2026-10-17_reverse-sollin-am2-report.md)。仅准备独立AM2实施，不复制来源代码/依赖，也不将Android组件当作iOS实现或完整参考证据。

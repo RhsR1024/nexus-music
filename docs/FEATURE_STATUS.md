@@ -1,3 +1,13 @@
+## 2026-10-18 舞台及生命周期修正版 iOS27 成功与产物核验
+
+`76c9cd0ad069455893833face9060ef9e2eb1950` / [39050349015](https://github.com/RhsR1024/nexus-music/actions/runs/39050349015) 已完整成功：checks、完整native、核心App、歌词/匹配/发现、离线断服务播放、iPad窗口/旋转、设备归档与上传均成功。IPA artifact12110443053已实际下载，ZIP10335717字节、API SHA256 `917e258f1da78fa4e684ed217d94a2132345126ad68f85b2b3e56293295fe54b` 与完整CRC通过；内部IPA附带摘要/CRC、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `09aa12fa4c3f62f773f2cddec14bd25051a3c45864801d3e3452489b0eada082`，留存`build/ci-39050349015`。
+
+manifest为Xcode27.0/27A266a、iphoneos27.0、arm64、min15.1、设备族[1,2]、unsigned；dirty=true唯一`ios/Podfile.lock`。成功只覆盖76c9cd0及祖先，包含有界舞台与生命周期测试修正，不包含后续AM2、EQ滚动测试修正或mini设置Sheet。AM2运行39058310652已开始，当前1运行/0排队；本批mini仍未提交。旧失败不改写，签名、真实服务、手机和完整参考运行等价继续独立验收。
+
+## 2026-10-18 mini／底栏设置模态本地验收通过
+
+reverse-skill mobile-reverse E-018→F-017→P-017采纳前严格review18E/17F/17P、7WI/29事件、零错误/警告；实施验收后严格review为30事件、零错误/警告。原始BL/1844条指令的原始字节核验支持两设置调用共用模态包装、mini最多4项和添加/排序/移除汇入同一标准化保存入口；完整参考选项/几何/异步失败/运行仍待。音枢仅将现有mini和底栏设置改为原生pageSheet，保留外观滚动、当前按钮/原子保存/唯一播放意图，未新增伪样式；五参考固定HEAD/维护/Android/许可及验收见[0044](decisions/0044-mini-navigation-settings-sheets.md)。348业务/类型检查通过；正式入口`SourceUITests-1792262213912.xcresult`三项通过、零失败/跳过：mini/底栏最大辅助字号关闭/下滑/重开/滚动/重启159.603秒，主题46.171秒，Navidrome合成实音/PCM/八布局/暂停定位/mini四项上限排序/原曲收藏/实际录音歌词/重启/恢复默认并关闭后验证队列按钮消失/凭据清理242.101秒。已亲看mini与底栏大字Sheet和真实四按钮mini截图；大字长内容仍需滚动。未修改原生播放/脚本后端，无新依赖。清洁归档/push及对应iOS27继续；真实服务、签名、真机和完整参考运行等价仍待。
+
 ## 2026-10-18 AM2 本地阶段验收通过
 
 reverse-skill mobile-reverse E016/E017采纳门禁保持，本轮严格review17E/16F/16P、7WI/28事件、零错误/警告。原创第八种AM2接入独立封面/歌词/队列/评论、前台可见空闲计时及独立true/5秒/音量隐藏默认值，保留原七布局与音枢唯一队列/意图；348业务及类型检查通过，见[0043](decisions/0043-responsive-am2.md)。
