@@ -1,3 +1,9 @@
+## 2026-10-17 19:02 下载设置与离线容器修复App验收
+
+正式入口App `SourceUITests-1792234656950.xcresult` 2/2、零失败/跳过通过：下载/重启/条件Range/断服务后真实PCM/取消与确认删除172.175秒，分组导航/草稿/隐藏AX77.454秒。合成服务full=1、resumed=1、blocked=0；播放前临时音频缓存为空，离线播放前后stream计数不增。亲看暂停、完成、确认删除空态附件；328项业务/类型、完整native及无障碍补修后类型检查通过。附加simctl诊断收集exit72路径警告保留，不影响测试exit0。本批清洁归档、push与对应云端终态仍待，真实服务/签名/手机/原生后台边界不变。
+
+日志/计数为`build/logs/ui-download-settings-final-passed*`，附件`build/download-ui-final-attachments`；前三次失败及诊断沿决策0037保留。当前编译工具的ICU下载已遭连接重置而失败，固定提交重试仍在本机进行，不将工具准备计为对象图恢复。
+
 ## 2026-10-17 18:23 恢复调度修正版已push与清洁归档回执
 
 `c1a4605` 恢复调度和 `c098eeb252e3ca7c916c66d2d3e6d773c6340121` 暂停竞态修正已正常push到RhsR1024/nexus-music，远端main核对一致。最终清洁归档日志 `build/logs/archive-offline-recovery-pause-final.log` 成功，manifest对应c098eeb、dirty=false/workingTreeChanges=[]、Xcode26.3/iphoneos26.2、arm64、min15.1、设备族[1,2]、unsigned。IPA SHA256 `a14baac7e11ae8a117c7d593d24b183f318fab1e7cb38348665b1bcd03a353a4`，附带摘要/ZIP CRC、包内可执行与JS对归档一致、正式入口隔离和私人资产排除通过，留存 `build/local-offline-recovery-c098eeb`。c1a4605初版另存，不误称含后续暂停修正。

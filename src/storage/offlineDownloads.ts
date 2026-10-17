@@ -158,6 +158,9 @@ export class OfflineDownloadStore {
   }
   async resume(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='paused')await this.update(id,{status:'queued',error:undefined});this.pauseRequested.delete(id);return this.start(id);}
   async retry(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='completed')return;await this.update(id,{status:'queued',bytes:0,error:undefined,digest:undefined});this.pauseRequested.delete(id);return this.start(id);}
+  async pauseAll(){await Promise.all(this.items.filter(item=>item.status==='queued'||item.status==='downloading').map(item=>this.pause(item.id)));}
+  async resumeAll(){await Promise.all(this.items.filter(item=>item.status==='queued'||item.status==='paused').map(item=>this.resume(item.id)));}
+  async cancelPending(){await Promise.all(this.items.filter(item=>item.status!=='completed').map(item=>this.remove(item.id)));}
   async remove(id:string){
     const item=this.items.find(value=>value.id===id);if(!item)return;
     if(this.options.isInUse?.(item.track))throw new OfflineDownloadInUse();

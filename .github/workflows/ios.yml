@@ -78,6 +78,15 @@ jobs:
           fi
           cp build/logs/ui-catalog.log build/logs/ui-online-matching.log
           cp build/logs/ui-server-counts.json build/logs/ui-online-matching-counts.json
+      - name: Verify offline download resume and playback with server unavailable
+        shell: bash
+        run: |
+          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testDownloadSettingsAndOfflinePlayback; then
+            tail -n 100 build/logs/ui-catalog.log
+            exit 1
+          fi
+          cp build/logs/ui-catalog.log build/logs/ui-downloads.log
+          cp build/logs/ui-server-counts.json build/logs/ui-downloads-counts.json
       - name: Create native iPad simulator
         shell: bash
         run: |

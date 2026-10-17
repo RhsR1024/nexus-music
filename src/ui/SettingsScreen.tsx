@@ -11,12 +11,13 @@ import {EqualizerSettings} from './EqualizerSettings.tsx';
 import {PlaybackSettings} from './PlaybackSettings.tsx';
 import {FontSettings} from './FontSettings.tsx';
 import {CacheSettings} from './CacheSettings.tsx';
+import {DownloadSettings,DownloadTasks} from './DownloadSettings.tsx';
 import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {NavidromeSettings} from './NavidromeSettings.tsx';
 import {SourceSettings} from './SourceSettings.tsx';
 
-export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'storage'|'sources'|AppearanceSection;
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
+export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'storage'|'downloads'|'downloadTasks'|'sources'|AppearanceSection;
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
   const {palette:p}=useTheme();
@@ -55,6 +56,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
         {row('playback',`${preferences.quality} · 音质、睡眠与歌词`,'musical-notes-outline')}
         {row('equalizer','10 段曲线、前级、预设与实时 PCM 处理','options-outline')}
         {row('appearance','主题、背景、播放界面与迷你播放器','color-palette-outline')}
+        {row('downloads','下载偏好、任务、暂停续传与已保存文件','cloud-download-outline')}
         {row('storage','缓存、备份、同步与歌单迁移','folder-outline')}
         <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13,marginTop:12}}>曲库与播放来源</Text>
         {row('sources','LX 音源与 Navidrome 私人曲库','server-outline')}
@@ -65,6 +67,8 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       case 'appearance':return <AppearanceOverview services={services} open={open}/>;
       case 'theme':case 'background':case 'skins':case 'mini':case 'navigation':case 'accent':return <AppearanceSettings services={services} section={key}/>;
       case 'typography':return <FontSettings services={services}/>;
+      case 'downloads':return <DownloadSettings services={services} openTasks={()=>open('downloadTasks')}/>;
+      case 'downloadTasks':return <DownloadTasks services={services}/>;
       case 'storage':return <><CacheSettings services={services}/><LibraryDataTools services={services}/></>;
     }
   };
@@ -74,7 +78,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       <Text ref={heading} testID={`settings-title-${page}`} accessibilityRole="header" style={{fontSize:page==='home'?36:20,fontWeight:'700',color:p.text,flex:1,textAlign:page==='home'?'left':'center',marginHorizontal:page==='home'?0:36}}>{titles[page]}</Text>
     </View>
     {visited.map(key=><View key={key} testID={`settings-viewport-${key}`} style={{flex:1,display:key===page?'flex':'none'}} accessibilityElementsHidden={key!==page} importantForAccessibility={key===page?'auto':'no-hide-descendants'} pointerEvents={key===page?'auto':'none'}>
-      <ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:32}}>{content(key)}</ScrollView>
+      {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:32}}>{content(key)}</ScrollView>}
     </View>)}
   </View>;
 }

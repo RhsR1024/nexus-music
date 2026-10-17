@@ -39,6 +39,9 @@ const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossP
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const fixtureOnlineUI=matchingUI||discoveryUI;
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
+const offlineUI=process.argv.slice(2).some(target=>target.endsWith('/testDownloadSettingsAndOfflinePlayback'));
+let blockOfflineStream=false;
+const offlineCounts={full:0,resumed:0,blocked:0};
 // Original, solid 32x32 RGB fixtures: no third-party covers or user data.
 const themeCovers={red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
 const matchingAudio=Buffer.alloc(44+48000*2*120);audio.copy(matchingAudio,0,0,44);matchingAudio.writeUInt32LE(matchingAudio.length-8,4);matchingAudio.writeUInt32LE(matchingAudio.length-44,40);
@@ -59,6 +62,11 @@ const navidromeAudio=matchingAudio,navidromeDuration=120;
 // can still contain the original 12-second recording in the normal audio cache.
 const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
+  if(offlineUI&&req.url.startsWith('/offline-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1');
+    if(control.searchParams.has('block'))blockOfflineStream=control.searchParams.get('block')==='1';
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({...offlineCounts,streams:counts.requests.stream??0}));return;
+  }
   if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
   if(req.url==='/health-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(healthScript);return;}
   if(req.url.startsWith('/matching-audio/')){
@@ -160,6 +168,18 @@ const server = createServer(async (req, res) => {
   const method=url.pathname.split('/').at(-1).replace('.view','');
   counts.requests[method]=(counts.requests[method]??0)+1;
   if(method==='stream'){
+    if(offlineUI){
+      counts.offline=offlineCounts;
+      if(blockOfflineStream){offlineCounts.blocked++;res.writeHead(503);res.end();return;}
+      if(!req.headers.range)offlineCounts.full++;
+      if(req.headers['if-range'])offlineCounts.resumed++;
+      const range=/^bytes=(\d+)-(\d*)$/.exec(req.headers.range??''),start=Number(range?.[1]??0),end=range?.[2]?Math.min(Number(range[2]),navidromeAudio.length-1):navidromeAudio.length-1;
+      if(start>=navidromeAudio.length||end<start){res.writeHead(416);res.end();return;}
+      res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');res.setHeader('ETag','"offline-fixture-v1"');res.setHeader('Content-Length',end-start+1);
+      if(range){res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${navidromeAudio.length}`);}
+      let cursor=start;const timer=setInterval(()=>{const next=Math.min(cursor+32768,end+1);res.write(navidromeAudio.subarray(cursor,next));cursor=next;if(cursor>end){clearInterval(timer);res.end();}},100);
+      res.once('close',()=>clearInterval(timer));return;
+    }
     const audio=navidromeAudio;
     res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/bytes=(\d+)-(\d*)/);
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),audio.length-1):audio.length-1;if(start>=audio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${audio.length}`);res.end(audio.subarray(start,end+1));}else res.end(audio);return;

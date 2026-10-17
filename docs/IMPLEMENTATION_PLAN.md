@@ -1,3 +1,9 @@
+## 2026-10-17 下载设置与任务页本地专项通过
+
+基于reverse-skill IPA E-006→F-005→P-005（严格review通过）与亲看补充截图11/34/36，现将既有离线能力从临时缓存组件拆到设置首页“下载管理→下载任务与文件”；下载偏好只提供实际生效的跟随播放音质说明、容量选择及任务入口。任务页使用SectionList区分未完成/已保存、真实单项/批量暂停继续取消和已保存播放/确认删除，复用原权威store与在播保护，不引入参考商业门槛或无实现偏好。
+
+正式入口App `SourceUITests-1792234656950.xcresult` 2/2、零失败/跳过通过：下载/重启/条件Range/断服务后真实PCM/取消与确认删除172.175秒，分组导航/草稿/隐藏AX77.454秒。合成服务full=1、resumed=1、blocked=0；播放前临时音频缓存为空，离线播放前后stream计数不增。亲看暂停、完成、确认删除空态附件；328项业务/类型、完整native及无障碍补修后类型检查通过。附加simctl诊断收集exit72路径警告保留，不影响测试exit0。本批清洁归档、push与对应云端终态仍待，真实服务/签名/手机/原生后台边界不变。 详见决策0037，所有其余F/J范围与真实服务/签名/手机边界保留。
+
 ## 2026-10-17 18:23 恢复调度修正版已push与清洁归档回执
 
 `c1a4605` 恢复调度和 `c098eeb252e3ca7c916c66d2d3e6d773c6340121` 暂停竞态修正已正常push到RhsR1024/nexus-music，远端main核对一致。最终清洁归档日志 `build/logs/archive-offline-recovery-pause-final.log` 成功，manifest对应c098eeb、dirty=false/workingTreeChanges=[]、Xcode26.3/iphoneos26.2、arm64、min15.1、设备族[1,2]、unsigned。IPA SHA256 `a14baac7e11ae8a117c7d593d24b183f318fab1e7cb38348665b1bcd03a353a4`，附带摘要/ZIP CRC、包内可执行与JS对归档一致、正式入口隔离和私人资产排除通过，留存 `build/local-offline-recovery-c098eeb`。c1a4605初版另存，不误称含后续暂停修正。

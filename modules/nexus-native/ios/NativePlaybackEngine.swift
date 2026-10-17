@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import AudioToolbox
 import MediaPlayer
 import ImageIO
 #if os(iOS)
@@ -16,6 +17,7 @@ final class NativePlaybackEngine {
   private var wantsPlay = false
   private var loading: Task<Void, Never>?
   private var retainedLocalURL: URL?
+  private var offlinePlaybackAlias: URL?
   private var loader: AudioResourceLoader?
   private var cacheKey: String?
   private var cachedPlayback = false
@@ -161,6 +163,12 @@ final class NativePlaybackEngine {
     cachedPlayback = cached != nil
     let asset: AVURLAsset
     if let cached { asset = AVURLAsset(url: cached) }
+    else if url.isFileURL && url.pathExtension.lowercased() == "audio" {
+      do {
+        let alias = try OfflinePlaybackFile.makeAlias(for: url)
+        offlinePlaybackAlias = alias; asset = AVURLAsset(url: alias)
+      } catch { report("error"); return }
+    }
     else if url.isFileURL || url.scheme == "ipod-library" || (redirectRoot == nil && url.pathExtension.lowercased() == "m3u8") { asset = AVURLAsset(url: url) }
     else {
       loader = AudioResourceLoader(url: url, headers: object["headers"] as? [String: String] ?? [:], cacheKey: cacheKey, redirectRoot: redirectRoot)
@@ -248,6 +256,7 @@ final class NativePlaybackEngine {
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
     observation = nil; durationObservation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
     player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
+    if let offlinePlaybackAlias { try? FileManager.default.removeItem(at: offlinePlaybackAlias) }; offlinePlaybackAlias = nil
     if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
     if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
     entryID = ""; metadata = [:]; knownDuration = 0; systemItemID = ""; systemFavorite = false; systemArtwork = nil; artworkRevision += 1
@@ -318,5 +327,37 @@ final class NativePlaybackEngine {
     playerObservation = nil
     for observer in [interruption, routeObserver].compactMap({ $0 }) { NotificationCenter.default.removeObserver(observer) }
     for (command, target) in remoteTargets { command.removeTarget(target) }; remoteTargets.removeAll()
+  }
+}
+
+// AVURLAsset can reject a valid local container with an opaque .audio suffix.
+// AudioToolbox identifies the container from its bytes; a short-lived hard link
+// gives AVFoundation the right suffix without renaming the durable download or
+// copying its contents. This also works on the minimum iOS 15.1 target.
+private enum OfflinePlaybackFile {
+  private static let directory: Result<URL, Error> = Result {
+    let fm = FileManager.default
+    let root = try fm.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("NexusPlaybackAliases", isDirectory: true)
+    try fm.createDirectory(at: root, withIntermediateDirectories: true)
+    let values = try root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+    guard values.isDirectory == true, values.isSymbolicLink != true else { throw CocoaError(.fileReadInvalidFileName) }
+    // Only this module's cache names are eligible for crash-orphan cleanup.
+    for file in try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) where file.lastPathComponent.hasPrefix("nexus-playback-") {
+      try? fm.removeItem(at: file)
+    }
+    return root
+  }
+  static func makeAlias(for source: URL) throws -> URL {
+    let values = try source.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+    guard values.isRegularFile == true, values.isSymbolicLink != true else { throw CocoaError(.fileReadInvalidFileName) }
+    var file: AudioFileID?
+    guard AudioFileOpenURL(source as CFURL, .readPermission, 0, &file) == noErr, let file else { throw CocoaError(.fileReadCorruptFile) }
+    defer { AudioFileClose(file) }
+    var format: AudioFileTypeID = 0, size = UInt32(MemoryLayout<AudioFileTypeID>.size)
+    let suffixes: [AudioFileTypeID: String] = [kAudioFileWAVEType:"wav", kAudioFileAIFFType:"aiff", kAudioFileAIFCType:"aifc", kAudioFileMP3Type:"mp3", kAudioFileM4AType:"m4a", kAudioFileMPEG4Type:"m4a", kAudioFileAAC_ADTSType:"aac", kAudioFileFLACType:"flac", kAudioFileCAFType:"caf"]
+    guard AudioFileGetProperty(file, kAudioFilePropertyFileFormat, &size, &format) == noErr, let suffix = suffixes[format] else { throw CocoaError(.fileReadUnknown) }
+    let alias = try directory.get().appendingPathComponent("nexus-playback-" + UUID().uuidString).appendingPathExtension(suffix)
+    try FileManager.default.linkItem(at: source, to: alias)
+    return alias
   }
 }

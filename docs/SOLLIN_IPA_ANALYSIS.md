@@ -139,3 +139,7 @@ App原FAT文件raw偏移0xe4bed0（arm64切片VA 0xe47ed0）存在文案“使�
 本批通过 mobile-reverse PRIMARY、现有离线 scope 和严格 review（5 Evidence / 4 Finding / 4 Path，0 error / 0 warning）。固定 IPA App.framework 中定位到 online download service、FLAC 元数据、下载歌词格式化及设置模块的 raw file offset；本机可复现脚本和精确偏移保留在 `work/sollin-ipa/notes/download-boundary.py` 与 `evidence/download-boundary.json`，不将原始字符串输出提交仓库。
 
 E-005→F-004→P-004 只界定静态模块职责，不能证明 Sollin 的暂停、启动恢复、并发、默认值或系统后台调度。音枢的 `resumeQueued()` 是针对自身持久化队列的原创实现，按[决策0036](decisions/0036-offline-recovery.md)独立验收，不宣称参考算法等价；系统 URLSession 后台仍待实现。
+
+## E-006 下载设置与任务页视觉边界
+
+2026-10-17，经mobile-reverse PRIMARY、固定IPA/工具索引/离线scope和严格review（6 Evidence/5 Findings/5 Paths、零错误/警告），当前E-006定位设置分类、sourceDownload及下载服务/设置模块raw offset，并为补充截图11/34/36建立本机SHA256。截图亲看支持独立下载分类、偏好页到任务/文件入口、未完成与完成区和批量动作的UI目标；这些不证明运行时调用关系、下载默认值或算法。音枢只重组其既有真实能力，不照搬未实现选项/商业权益；完整边界见[0037](decisions/0037-download-settings-and-tasks.md)。初次review遗漏severity/status字段失败，补齐元数据后通过，失败性质未伪装成工具/样本失败。

@@ -65,3 +65,12 @@ flowchart LR
 已只读审阅 Blutter 固定提交及其下载/构建脚本，未执行安装器。当前上游仍按ELF提取，iOS PR204实验性且未合并，详见 [IPA分析](SOLLIN_IPA_ANALYSIS.md)。缺少的CMake/Ninja先准备独立环境脚本 `work/tooling/prepare-python-tools.sh`（忽略、不进入产品）：新建 `/Users/ningli/WorkSpace/Tools/Reverse/python-env`，从PyPI安装 cmake3.31.6、ninja1.11.1.3、pyelftools0.32并检查版本；拒绝覆盖已有目录，不启动服务或改全局配置。用户随后明确批准“批准独立工具安装”，已原样执行该脚本并exit0：cmake CLI3.31.6、ninja CLI1.11.1.git.kitware.jobserver-1（wheel1.11.1.3）、pyelftools0.32均验证通过。实际路径均在该venv/bin，安装日志build/logs/reverse-python-tools-install.log；无服务启动或全局配置变化。已刷新外部索引并补充这三项绝对路径、wheel/CLI版本、来源及验证命令（通用refresh仅检测内置34项，后续刷新需重新验证并登记这些补充项）。此请求不阻塞既有应用回归；DartVM/ICU/Capstone及iOS实验mapper仍需后续审阅与独立验收。
 
 桌面依赖工具已只读确认另带Python3.12.14，路径`/Users/ningli/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3`；无需安装新解释器。当前工具索引主Python选此路径；隔离venv内仍是原已披露Python3.9.6，pyelftools在该venv使用。CMake/Ninja先决工具可用不等于Blutter/DartVM/ICU/Capstone已构建，更不等于对象图恢复。两离线案例严格review仍通过。
+
+
+## 2026-10-17 已批准独立构建与离线提取，进行中
+
+用户明确回复“批准独立构建并离线提取”后，已执行审阅过的`work/tooling/build-blutter-offline.sh`，最多2个编译任务，与App构建错开。脚本SHA256为`0faf45688d54d3bfac40c766d8d3794b43c3975531a2fbebd72c71709ccdc17a`，Python提取助手为`c6a3e4ff3b0c75ccf161d9902c719c3d8b66197ce59c7e7ebe5c976434bf3871`。固定ICU75.1、Capstone5.0.3、pkgconf2.3.0、Blutter实验iOS PR204提交`0039efb1b29d68ca6e5caece4d412d15e6f49428`与Dart3.12.2；工具源码/构建仅留本机Tools/Reverse，原始输出留忽略work目录。依赖下载允许联网；目标snapshot恢复在禁止网络的子进程内执行，不启动目标App、不访问Sollin服务、不上传样本。
+
+构建成功、CLI帮助、目标解析和语义核验是不同验收；现阶段仅已启动构建，不能据此新增对象关系或函数结论。助手要求固定Dart提交及原始schema文件生成的snapshot格式摘要匹配，检查输出非空并额外拒绝上游吞异常后返回0的情况。后续仍须建立功能Evidence→Finding→Path、更新workitems/timeline并严格review后，才可采纳A03/A04结论。
+
+首次构建在ICU固定checkout的懒加载下载阶段遭遇GitHub连接重置、early EOF，脚本exit128，未进入工具编译或样本解析。原日志保留；已仅对同一固定提交用单次`git -c http.version=HTTP/1.1`重试checkout，不修改全局配置、不切换来源/版本。App复测期间只允许该下载重试并行，工具编译仍与Xcode错开。

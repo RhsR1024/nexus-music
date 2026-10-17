@@ -2,7 +2,7 @@ import {silentMP3} from './fixtures/silent-mp3.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import { spawn,execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { writeFileSync } from 'node:fs';
+import { copyFileSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -14,6 +14,8 @@ header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34); header.write('data', 
 writeFileSync('build/tests/tone-tagged.mp3',silentMP3());
 const wav = Buffer.concat([header, body]); writeFileSync('build/tests/tone.wav', wav);
 execFileSync('/usr/bin/afconvert',['-f','m4af','-d','aac','-b','128000','build/tests/tone.wav','build/tests/tone-aac.m4a']);
+execFileSync('/usr/bin/afconvert',['-f','adts','-d','aac','build/tests/tone.wav','build/tests/tone.aac']);
+execFileSync('/usr/bin/afconvert',['-f','AIFF','-d','BEI16','build/tests/tone.wav','build/tests/tone.aiff']);
 execFileSync('/usr/bin/afconvert',['-f','WAVE','-d','LEI24','build/tests/tone.wav','build/tests/tone24.wav']);
 execFileSync('/usr/bin/afconvert',['-f','flac','-d','flac','build/tests/tone.wav','build/tests/tone-16.flac']);
 execFileSync('/usr/bin/afconvert',['-f','flac','-d','flac','build/tests/tone24.wav','build/tests/tone-24.flac']);
@@ -43,11 +45,18 @@ try {
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`);
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,.5);
   for(const format of ['tone-aac.m4a','tone-16.flac','tone-24.flac','tone-tagged.mp3'])await play(pathToFileURL(resolve(`build/tests/${format}`)).href,.25);
+  for(const format of ['tone.wav','tone.aac','tone.aiff','tone-aac.m4a','tone-16.flac','tone-24.flac','tone-tagged.mp3']){
+    const source=resolve(`build/tests/${format}`),opaque=source+'.audio',before=createHash('sha256').update(readFileSync(source)).digest('hex');
+    copyFileSync(source,opaque);await play(pathToFileURL(opaque).href,.25);
+    assert.equal(createHash('sha256').update(readFileSync(opaque)).digest('hex'),before,'Playback aliases must not change the durable download bytes');
+  }
+  const aliasDirectory=resolve(process.env.HOME,'Library/Caches/NexusPlaybackAliases');
+  assert.equal(readdirSync(aliasDirectory).filter(name=>name.startsWith('nexus-playback-')).length,0,'Stopping the engine must release its temporary playback alias');
   const cacheKey=createHash('sha256').update(randomUUID()).digest('hex');
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,0,cacheKey);
   await play('http://127.0.0.1:1/unreachable.wav',0,cacheKey);
   for(const mode of ['duration','track'])await play(pathToFileURL(resolve('build/tests/tone.wav')).href,0,undefined,mode);
   await play(pathToFileURL(resolve('build/tests/tone.wav')).href,0,undefined,'statistics');
   const rejected=spawn('build/tests/native-playback',['ipod-library://item/untrusted']);let rejectedOutput='';rejected.stdout.on('data',data=>{rejectedOutput+=data;});const rejectedCode=await new Promise(resolve=>rejected.on('exit',resolve));assert.equal(rejectedCode,1);assert.equal(JSON.parse(rejectedOutput).failed,true);
-  console.log('Native AVPlayer checks passed: WAV/AAC/MP3/16-bit FLAC/24-bit FLAC, initial seek, HTTP ranges, cached playback without network, real PCM tap/FFT, natural end, native timed/track-end pause');
+  console.log('Native AVPlayer checks passed: WAV/AAC/MP3/16-bit FLAC/24-bit FLAC plus seven opaque offline containers/alias cleanup, initial seek, HTTP ranges, cached playback without network, real PCM tap/FFT, natural end, native timed/track-end pause');
 } finally { server.closeAllConnections(); server.close(); }

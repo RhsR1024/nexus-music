@@ -163,3 +163,24 @@ test('pause during the downloading state write aborts before resolving a URL',as
   assert.equal(calls,0);assert.equal(store.getSnapshot()[0]!.status,'paused');
   await store.resume(item.id);assert.equal(calls,1);assert.equal(store.getSnapshot()[0]!.status,'completed');
 });
+
+test('bulk pause wins over recovery and resume excludes failed records',async()=>{
+  const r=rig(),first=await r.store.enqueue(track('first')),second=await r.store.enqueue(track('second')),failed=await r.store.enqueue(track('failed'));
+  r.setFail(true);await r.store.start(failed.id);r.setFail(false);
+  let calls=0;const download=r.files.download;r.files.download=async(...args)=>{calls++;return download(...args);};
+  const recovery=r.store.resumeQueued();await r.store.pauseAll();await recovery;
+  assert.deepEqual(r.store.getSnapshot().map(item=>item.status),['paused','paused','failed']);assert.equal(calls,0);
+  await r.store.resumeAll();assert.equal(calls,2);
+  assert.equal(r.store.find(first.track)!.status,'completed');assert.equal(r.store.find(second.track)!.status,'completed');assert.equal(r.store.find(failed.track)!.status,'failed');
+  await r.store.cancelPending();assert.deepEqual(r.store.getSnapshot().map(item=>item.id),[first.id,second.id]);
+  assert.ok(await r.store.resolve(first.track));assert.ok(await r.store.resolve(second.track));
+});
+
+test('bulk pause aborts an active transfer before the next queued item starts',async()=>{
+  const r=rig(),first=await r.store.enqueue(track('first'));await r.store.enqueue(track('second'));
+  let entered!:()=>void,calls=0;const started=new Promise<void>(resolve=>{entered=resolve;});
+  r.files.download=async(_url,_name,_headers,options)=>{calls++;entered();return new Promise((_resolve,reject)=>{options?.signal?.addEventListener('abort',()=>reject(new OfflineDownloadInterrupted(0)),{once:true});});};
+  const recovery=r.store.resumeQueued();await started;await r.store.pauseAll();await recovery;
+  assert.equal(calls,1);assert.deepEqual(r.store.getSnapshot().map(item=>item.status),['paused','paused']);
+  assert.equal(await r.store.resolve(first.track),undefined);
+});

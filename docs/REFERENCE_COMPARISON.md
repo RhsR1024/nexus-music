@@ -148,3 +148,7 @@ Youmi 是 `7DaysMax/Youmi-Music-IOS` 的 fork 且未声明许可证；其网易�
 本批亲读固定参考的下载实现：wtf `src/core/download/scheduler.ts:25–35` 的恢复对齐锁、初始化/前台区分与 `reconcile.ts` 文件对账；Cy `src/helpers/fileDownload.ts:17–23` 明确为 FOREGROUND；Q `src/core/music/download.ts` 负责 URL/歌词解析，不作为持久任务恢复引擎；悦音 `src/core/music/audioCache.ts` 是临时音频缓存职责；自有 Wayferar 固定稀疏检出中未取得下载恢复模块，只有 `docs/WAYFARER_MUSIC.md:12` 数据迁移边界，不宣称已核验其任务恢复。Sollin desktop `src/stores/downloadStore.ts:159–180` 持久化任务/设置，不能证明 iOS 后台实现。固定提交与许可沿上表，没有复制参考代码或依赖。
 
 采纳：音枢自行复用 `OfflineDownloadStore` 的串行队列与任务去重，只恢复 queued/中断任务，尊重 paused/failed；LX 就绪后才取下载 URL，首屏不等待所有源。TS 调度可为将来 Android 共享，原生后台、进程被系统挂起/终止的行为仍需单独适配。完整验收见[决策0036](decisions/0036-offline-recovery.md)。
+
+## A06 既有下载UI归组（2026-10-17）
+
+按[0037](decisions/0037-download-settings-and-tasks.md)亲读五参考的设置分类、缓存/下载入口与Sollin desktop任务页，固定提交/许可沿上表；采用声明式入口和职责分离，在既有音枢store上原创实现偏好/虚拟任务页及批量动作，无参考源码/资源复制。wtf仅iOS下载分组与Cy前台下载都不作为Android或系统后台能力证明。IPA E-006分类/模块线索优先、截图11/34/36补层级；不把截图或共存字符串写成调用图、默认值或算法证据。
