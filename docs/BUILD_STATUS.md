@@ -1,3 +1,9 @@
+## 2026-10-17 主题Sheet清洁归档与推送回执
+
+`b82aeba2cb7ffc29e35eba7c7d0dbd5654d70c27` 已正常push，远端main核对一致；`archive-theme-sheet-clean.log`成功，清洁manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带SHA256、包内可执行/JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过；IPA SHA256 `15fbe875bc23a3554654fe2e4da173a3a651c60045e89bc4de18efeffd6eb687`，留存`build/local-theme-sheet-b82aeba`。
+
+push后API实核[39036339256](https://github.com/RhsR1024/nexus-music/actions/runs/39036339256)/b82aeba唯一pending，[39034909819](https://github.com/RhsR1024/nexus-music/actions/runs/39034909819)/35e6f2f唯一运行，1运行/1排队；未取消运行/重派。下载批次ab98682的完整iOS27成功及产物核验见下条，不能代替本批新云端结果。A04全局背景链与其余对齐、F/J全部余项及真实服务/签名/真机继续。
+
 ## 2026-10-17 21:11 下载批次 iOS27 完整成功
 
 `ab98682c2262e633f2789a9a38ce0aad87a605c8` / [39027501515](https://github.com/RhsR1024/nexus-music/actions/runs/39027501515) 已成功：checks24秒、iOS任务1小时45分1秒；native、核心App50分2秒、匹配/歌词/发现18分14秒、离线断服务播放16分25秒、iPad窗口/旋转9分钟、设备归档3分21秒及两项上传均成功。包含恢复调度和下载任务页，不包含后续EQ卡片、设置分组或本批主题Sheet。
