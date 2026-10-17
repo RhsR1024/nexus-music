@@ -1,3 +1,9 @@
+## 2026-10-18 A04共享取色与背景活动边界（静态阶段）
+
+新reverse-skill R2/mobile-reverse路由、固定离线scope/case-guard通过；E024→F023→P023核验2358原始ARM64指令、28BL、9池加载及manifest，独立重放通过。全局createScene调用共享extractPalette后进入自身柔光/场景；24×24/HSV分桶及路由当前态/生命周期/活动id/面积选择/计时器守卫边界已确认。严格review24E/23F/23P、8WI/44事件零错误/警告。完整权重/回退、字段名、遮挡/运行/功耗仍未恢复，无新产品采纳，不增加实现完成度。详见[报告](docs/2026-10-18_reverse-sollin-cover-flow-report.md)。初次手写总数2458误记触发断言，修正13范围合计2358后才创建不可变Evidence，原字节未改。
+
+下一步比较五参考生命周期，核验音枢根层及经典播放器的背景可见性/恢复；继续已有对齐后再扩展功能。当前2db0872本地清洁归档/完整发现145.119秒已验且push；云端39066065139/6c8be2f仍运行核心App、39070885003/2db0872唯一pending，最新完整成功且IPA核验仍为76c9cd0/39050349015。全部A/F/J、完整参考运行、真实服务/签名/手机保持active。
+
 ## 2026-10-18 分页恢复清洁归档与push回执
 
 `2db0872a18a41b692ef620a7fedc894fc5a3f577`已正常push并核对远端main一致。359业务/类型、完整发现App145.119秒及两次失败/页序列核验、截图亲看通过；验收后strict review23E/22F/22P、8WI/43事件零错误/警告。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；CRC/附带摘要、归档可执行及JS字节一致、正式入口隔离/私人及签名资源排除通过。IPA SHA256 `d326ac91c04a8c6834ca8d74031a20944bcbdef564a92575329b4a3054272682`，留存`build/local-discovery-pager-2db0872`。此条覆盖本批归档/push待办，不扩展真实服务/签名/手机结论。

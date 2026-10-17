@@ -1,3 +1,9 @@
+## 2026-10-18 A04共享取色与背景活动边界（静态阶段）
+
+新reverse-skill R2/mobile-reverse路由、固定离线scope/case-guard通过；E024→F023→P023核验2358原始ARM64指令、28BL、9池加载及manifest，独立重放通过。全局createScene调用共享extractPalette后进入自身柔光/场景；24×24/HSV分桶及路由当前态/生命周期/活动id/面积选择/计时器守卫边界已确认。严格review24E/23F/23P、8WI/44事件零错误/警告。完整权重/回退、字段名、遮挡/运行/功耗仍未恢复，无新产品采纳，不增加实现完成度。详见[报告](2026-10-18_reverse-sollin-cover-flow-report.md)。初次手写总数2458误记触发断言，修正13范围合计2358后才创建不可变Evidence，原字节未改。
+
+下一步比较五参考生命周期，核验音枢根层及经典播放器的背景可见性/恢复；继续已有对齐后再扩展功能。当前2db0872本地清洁归档/完整发现145.119秒已验且push；云端39066065139/6c8be2f仍运行核心App、39070885003/2db0872唯一pending，最新完整成功且IPA核验仍为76c9cd0/39050349015。全部A/F/J、完整参考运行、真实服务/签名/手机保持active。
+
 ## 2026-10-18 歌单分页与刷新静态边界
 
 reverse-skill R2/mobile-reverse 新路由和现有离线 scope 门禁通过；E023→F022→P022 采纳前 strict review23E/22F/22P、8WI/42事件、零错误/警告。610原始ARM64指令、10BL、3池加载与循环回边经独立重放；first/refresh/append/full-read 调用边界与 forceRefresh/limit、limit/offset 描述符已核对。精确模型字段、cache key/时效、失败界面与参考动态请求仍未知；不据静态 reset 清空音枢已加载数据。报告和复现元数据见[本批报告](2026-10-18_reverse-sollin-pager-refresh-report.md)，五参考及原创恢复验收见[0051](decisions/0051-discovery-pager-recovery-validation.md)。原始样本/指令/对象池留忽略目录，无目标运行或私有服务请求。
