@@ -1,3 +1,13 @@
+## 2026-10-17 A09 播放器身份/频谱及关联回归阶段回执
+
+实现提交 `3898592c7d9ec76e59ba21513e9f0930b62d33dc` 已正常push并核对origin/main一致。现代播放器收藏读写原队列身份，视觉/歌词沿实际匹配录音；声波核仅在播放、DSP支持且频带完整时显示真实环形频谱，暂停隐藏；歌词窗口补为三行，收起手柄可达。稳定查询补充账号、EQ曲线、歌单提交与备份独立滚动区；没有新增队列/播放器或修改原生DSP。
+
+本地业务/类型303/303、完整native通过。分段UI：现代PCM/原曲收藏1792213327138（126.691秒），同步1792212451041（238.399秒），字体/正式ND286.201秒、主题111.350秒、EQ79.053秒、DAV76.248秒在1792213572669通过；该组备份149.421秒失败于AX类型查询，改用实际Other元素后1792214374827备份单项226.595秒通过（取消/恢复/坏JSON/重启/清理）。失败保留，不宣称同次全套或真实服务通过；日志ui-player-identity-final-passed、ui-player-related-final-first、ui-cloud-backup-final-passed与counts均在build/logs。
+
+`archive-player-identity.log`为ARCHIVE SUCCEEDED。清洁manifest对应3898592、dirty=false/workingTreeChanges=[]，Xcode26.3/iphoneos26.2、arm64、min15.1、设备族[1,2]、signed=false。正式index无测试adapter、ZIP CRC、包内可执行文件/JS与归档一致、私人参考/签名资源排除及SHA256核验通过；IPA SHA256 `9f15c56275ce76c03f5975497333e04df16f5d0d7ed2a1f49bf05a0ffbe95056`，留存`build/local-player-identity-3898592`。不等于iOS27/签名/真机验收。
+
+push后API核对：最新iOS27 `39006353281`（3898592）为唯一pending，`39003956417`（c64c43b）继续in_progress；1运行/1排队，没有取消运行中或重派旧版本。继续跟进实际终态/失败。reverse-skill两案例严格review、IPA播放器E-003和APK布局E-003关联完整；只提供静态标记，不宣称A03/A04对象/调用图或完整对齐。A06–A09剩余UI与F/J全范围、真实服务/签名/真机仍保留。
+
 ## 2026-10-17 用户新增硬门禁：reverse-skill
 
 后续 Sollin IPA/APK 逆向分析及功能、UI、交互对齐**必须使用 reverse-skill**，先路由/PRIMARY、检查工具、校验离线 scope，再产生该批 Evidence→Finding→Path 并严格 review 后采纳；禁止绕过或以“已读”代替执行。包已克隆到 `/Users/ningli/WorkSpace/reverse-skill`，固定 `cab634bd855fc287f6e420c1f36fd1a6b9245960`，项目入口 `.agents/skills/reverse-skill-router`。开工运行 `node scripts/sollin-reverse-gate.mjs ipa|apk`，采纳前加 `--review`；功能证据须覆盖当前工作项，安装检查不能代替。安装/路由/两案例严格review已通过，高级反编译/动态工具缺口如实保留；当前不声称对象调用图或完整UI对齐完成。完整安装、命令、拒绝路径及工具结果见[强制工作流](REVERSE_SKILL_WORKFLOW.md)，根 AGENTS.md 同步作为接手硬约束。IPA首要、APK互补、截图辅助、音枢特有能力、许可与隐私边界不变。

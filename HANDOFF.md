@@ -1,3 +1,11 @@
+# 2026-10-17 最新交接：3898592已验证推送，iOS27排队
+
+本批3898592已正常push并核对origin/main一致；本地归档会话76346已exit0。清洁IPA、摘要与manifest留存build/local-player-identity-3898592，SHA256 9f15c56275ce76c03f5975497333e04df16f5d0d7ed2a1f49bf05a0ffbe95056；SDK26.2、arm64、设备族[1,2]、unsigned、dirty=false，正式入口隔离/CRC/二进制一致性通过。完整证据见BUILD_STATUS最新条目。303业务/类型、native与七个分段专项通过；前轮失败保留，不冒充同次全套通过。
+
+当前无本地UI/归档进程；最新云端39006353281（3898592）唯一pending，39003956417（c64c43b）仍运行。已API核对1运行/1排队，不能取消运行中/重派旧版本。接续优先跟进最新终态与失败；旧运行不覆盖3898592修正。阶段文档将另作docs-only回执提交，不应触发重复构建。
+
+reverse-skill已固定安装并强制执行，两案例严格review通过。新增独立工具安装的async确认仍待用户回复（work/tooling/prepare-python-tools.sh未执行）；不重复请求，未授权前不安装。Blutter上游与iOS PR204的审查及Python3.9兼容前提见SOLLIN_IPA_ANALYSIS；尚未构建/恢复对象图。既有合法离线静态分析、应用核验与云端跟进可继续。A03/A04对象关系、A06–A09剩余完整对齐和F01–F37/J01–J59全范围保留；签名/真机/真实私人服务未验收，目标active。
+
 # 2026-10-17 本轮进行中检查点（reverse-skill补充已交付）
 
 用户补充已落实并正常push：`c64c43b` 安装/硬门禁，`d997737` 双端snapshot/验证状态；远端main=d997737。2026-10-17本轮API核实云端39003956417为唯一运行、0pending；docs-only d997737没有重复触发构建。目标仍active，不得因安装阶段结束标全功能完成。
