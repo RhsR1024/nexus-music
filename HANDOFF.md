@@ -1,3 +1,9 @@
+## 2026-10-18 背景可见性清洁归档与push回执
+
+`8f865af0569a9fa5b53a65cdd70a2126580a25e7`已正常push；359业务/类型、正式背景App308.007秒及截图通过见下。清洁设备归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离/私人及签名资源排除通过。IPA SHA256 `28af9fffc93b082c8333b0849aa3d7022f8a0d70c73f26cbd6325cdb340d5807`，留存build/local-background-visible-8f865af。
+
+push后API实核39072820731/8f865af唯一pending，39066065139/6c8be2f仍运行，1运行/1排队；2db0872旧pending39070885003由single自动取消，不算通过。未取消运行或重派旧版。采纳后strict review24E/23F/23P、8WI/47事件零错误/警告；手写验收时间提前一分钟已追加更正，结果未改。最新完整成功且IPA核验仍为76c9cd0/39050349015。下一A04 palette权重/回退已新路由与前置门禁，只读现有原字节，未形成新Evidence或产品采纳；全部A/F/J、完整参考运行、真实服务/签名/手机保持active。
+
 ## 2026-10-18 A04背景可见性（本地验收通过）
 
 新reverse-skill R2/mobile-reverse路由、既有离线scope/case-guard与E024独立重放通过；采纳前strict review24E/23F/23P、8WI/44事件零错误/警告。按[0052](docs/decisions/0052-background-visible-owner.md)亲读五参考并原创增加全屏播放页呈现状态：隐藏根背景移除MotionImage，保留静态渐变，关闭/清空条目后恢复；经典/现代背景偏好与原生音频不变。359业务/类型通过，正式入口SourceUITests-1792273286451背景专项308.007秒、1通过/零失败/跳过；红蓝像素/跨页/独立开关/重启、经典页实际PCM、系统Home→激活、收起恢复/暂停和凭据清理通过。截图已亲看；20鉴权成功/0失败、8次本机合成stream，不计真实个人服务。

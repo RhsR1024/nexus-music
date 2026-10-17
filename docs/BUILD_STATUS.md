@@ -1,3 +1,9 @@
+## 2026-10-18 背景可见性清洁归档与push回执
+
+`8f865af0569a9fa5b53a65cdd70a2126580a25e7`正常push；archive-background-visible-clean.log成功。manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离/私人及签名资源排除通过。IPA SHA256 `28af9fffc93b082c8333b0849aa3d7022f8a0d70c73f26cbd6325cdb340d5807`，留存build/local-background-visible-8f865af。359业务/类型、正式背景308.007秒及截图见下；验收后strict review24E/23F/23P、8WI/47事件零错误/警告，手写验收时间提前一分钟已追加更正，结果未改。
+
+push后API核对[39072820731](https://github.com/RhsR1024/nexus-music/actions/runs/39072820731)/8f865af唯一pending，[39066065139](https://github.com/RhsR1024/nexus-music/actions/runs/39066065139)/6c8be2f仍运行，1运行/1排队；2db0872旧pending39070885003自动取消，不计通过。未取消运行或重派旧版。最新完整成功且IPA核验仍为76c9cd0/39050349015；本批对应云端、完整参考运行/功耗、真实服务/签名/手机继续。
+
 ## 2026-10-18 背景可见性本地阶段验收
 
 reverse-skill新R2/mobile-reverse、固定离线scope/case-guard、E024独立2358原始指令/28BL/9池加载重放及采纳前严格review24E/23F/23P、8WI/44事件通过。五参考固定HEAD/实现/维护/Android/许可及原创可见门控见[0052](decisions/0052-background-visible-owner.md)。全屏播放页打开时移除隐藏根背景MotionImage，保留静态渐变与经典/现代背景独立职责；无原生播放后端/依赖改动。
