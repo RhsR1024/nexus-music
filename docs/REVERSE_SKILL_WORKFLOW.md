@@ -82,3 +82,5 @@ ICU固定Git checkout在单次重试和批量对象下载中仍遇到连接重�
 本批mobile-reverse的IPA E-007→F-006→P-006用于A07既有EQ卡片，采纳前严格review通过7E/6F/6P（零错误/警告），记录见 [EQ专项报告](2026-10-17_reverse-sollin-eq-report.md)。只确认静态模块词汇，截图02/07补视觉；对象/调用关系仍待恢复。依赖独立工具的A03/A04结论继续门禁，不受本批UI实现影响。
 
 预取补充：首个Capstone固定Git clone因Operation timed out退出，`build/logs/blutter-other-fixed-sources.log`保留；pkgconf/Blutter尚未进入该脚本后续步骤。没有把超时或不完整checkout登记为工具可用。
+
+ICU恢复进展：官方同提交归档中所需的icu4c及根文件共6,972项已逐一匹配固定Git树blob SHA1（5,995个独立blob），由Git写入对象库并以原生Git2.50.1恢复为固定HEAD/干净稀疏工作树。复核脚本 `work/tooling/restore-icu-fixed-blobs.py`、收据 `icu-verified-source.json` 和日志 `blutter-icu-source-verify.log` 保留本机。归档其余ICU4J字节仍可下载，未称整包完整；本次使用范围只限逐文件完整核验的ICU4c。手动恢复初次命中了旧CommandLineTools Git（不支持restore），失败日志已单独保留；已改用environment.sh及索引Python3.12，无全局配置变化。设备归档结束后开始原批准参数的ICU隔离编译（make -j2），不与Xcode重叠；尚未宣称工具或对象恢复成功。其余固定源码转用同一GitHub仓库SSH、原生Git预取，提交/许可不变。

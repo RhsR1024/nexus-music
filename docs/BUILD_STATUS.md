@@ -1,3 +1,7 @@
+## 2026-10-17 EQ 卡片清洁设备归档回执
+
+实现提交 `26bc65eb6189ed6137200dc309c83484e94d3276` 的 `archive-eq-cards-clean.log` 为ARCHIVE SUCCEEDED。manifest为dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；正式入口/测试adapter排除、ZIP CRC、可执行文件和JS对归档字节一致、私人参考/签名资源排除均通过。IPA SHA256 `cfad16789e918f6e735c92e81d1226b7e33eac8d24cd06d39288a54a14dcaff0`，留存 `build/local-eq-cards-26bc65e`。本回执覆盖下方本批“清洁归档待做”，push/对应云端结果继续记录；不等于iOS27/签名/真机通过。
+
 ## 2026-10-17 A07 EQ 预设卡片本地验收
 
 reverse-skill mobile-reverse 的本批 IPA E-007→F-006→P-006 采纳前严格review通过（7E/6F/6P，零错误/警告），只确认EQ模块词汇，亲看截图02/07补充视觉；没有恢复对象调用关系或参考运行参数。原创双列曲线卡片、按实际曲线与前级计算选中、自定义计数/空态和大字单列，保留音枢七预设、24自定义和唯一DSP/队列。浅色主题旧深色面板与输入对比度问题已修正，卡片/重置/归零/保存/删除操作至少44点。
