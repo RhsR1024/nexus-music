@@ -14,6 +14,12 @@ Sollin 固定 IPA 经 reverse-skill mobile-reverse PRIMARY、离线 scope、E-00
 
 ## 验证
 
-324 项业务与类型检查通过（`build/logs/check-offline-recovery-final.log`）：包含进程恢复、显式暂停/失败隔离、重复启动与前台事件不重复请求、顺序、单项失败不阻断、等待中暂停、恢复偏移和实体 validator。真实本地 HTTP/磁盘传输测试继续在现有套件运行，覆盖 Range、实体变更、短流与全量回退。
+326 项业务与类型检查通过（`build/logs/check-offline-recovery-final.log`）：包含进程恢复、显式暂停/失败隔离、重复启动与前台事件不重复请求、顺序、单项失败不阻断、等待中暂停、恢复偏移和实体 validator。真实本地 HTTP/磁盘传输测试继续在现有套件运行，覆盖 Range、实体变更、短流与全量回退。
 
 本批正式 App 源管理与 Navidrome/PCM/多皮肤/歌词/mini/重启回归2/2、零失败/跳过，完整 native 也已通过；证据见 BUILD_STATUS。本地清洁 IPA 和对应 iOS27 终态继续分别记录，未完成项不提前勾选。系统 URLSession 后台、OS 重启/强制结束策略、长期跨服务、私人服务、签名和真机仍待。无新依赖或参考代码复制，原生后台 Android 实现另行验收。
+
+## 暂停边界复核
+
+最小复现发现恢复调度后立即暂停仍可能请求网络并完成：任务已进入串行执行，但 downloading 状态尚未发布，pause 将它按 queued 处理，随后被下载状态覆盖。现对 queued/downloading 都同步登记暂停意图并中断已创建控制器，start 在队首和状态写入后分别检查；活跃 pause 等待任务落定，显式 resume/retry 清除意图。两项新增回归覆盖立即暂停和人为延迟的状态写入窗口；326/326通过，后续明确恢复仍只下载一次。
+
+正式App两项回归与完整native在c1a4605通过；暂停修正只改TS状态机，未重复跑这些无直接暂停断言的App测试。最终修正版清洁归档另记，App内下载/杀进程/系统后台仍待专项验收。

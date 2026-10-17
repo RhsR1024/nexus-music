@@ -122,12 +122,13 @@ export class OfflineDownloadStore {
   async start(id:string){
     const existing=this.runs.get(id);if(existing)return existing;
     const run=this.tail.then(async()=>{
-      const item=this.items.find(value=>value.id===id);if(this.removed.has(id)||!item||item.status==='completed'||item.status==='paused')return;
+      const item=this.items.find(value=>value.id===id);if(this.removed.has(id)||this.pauseRequested.has(id)||!item||item.status==='completed'||item.status==='paused')return;
       const abort=new AbortController();this.active.set(id,abort);
       let invalidFile=false,capacityExceeded=false,integrityFailed=false,validator:string|undefined;
       try{
         await this.update(id,{status:'downloading',error:undefined});
         const current=this.items.find(value=>value.id===id);if(!current)throw new Error('下载任务不存在');
+        if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
         const media=await this.options.resolve(current.track,abort.signal);if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
         const offset=current.partialBytes??0;validator=current.validator;
         let bytes=await this.options.files.download(media.url,current.fileName,media.headers,{signal:abort.signal,offset,validator,onValidator:value=>{validator=value;}});if(!Number.isSafeInteger(bytes)||bytes<=0)bytes=this.options.files.size(current.fileName);
@@ -147,9 +148,16 @@ export class OfflineDownloadStore {
     });
     this.runs.set(id,run);this.tail=run.catch(()=>{});try{await run;}finally{if(this.runs.get(id)===run)this.runs.delete(id);}
   }
-  async pause(id:string){const item=this.items.find(value=>value.id===id);if(!item)return;if(item.status==='queued'){await this.update(id,{status:'paused',error:undefined});return;}if(item.status==='downloading'){this.pauseRequested.add(id);this.active.get(id)?.abort();}}
-  async resume(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='paused')await this.update(id,{status:'queued',error:undefined});return this.start(id);}
-  async retry(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='completed')return;await this.update(id,{status:'queued',bytes:0,error:undefined,digest:undefined});return this.start(id);}
+  async pause(id:string){
+    const item=this.items.find(value=>value.id===id);if(!item||!['queued','downloading'].includes(item.status))return;
+    // A run can already be active while its downloading state is being saved.
+    // Publish the pause intent synchronously so that window cannot start I/O.
+    this.pauseRequested.add(id);const active=this.active.get(id);active?.abort();
+    if(item.status==='queued')await this.update(id,{status:'paused',error:undefined});
+    if(active)await this.runs.get(id);
+  }
+  async resume(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='paused')await this.update(id,{status:'queued',error:undefined});this.pauseRequested.delete(id);return this.start(id);}
+  async retry(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='completed')return;await this.update(id,{status:'queued',bytes:0,error:undefined,digest:undefined});this.pauseRequested.delete(id);return this.start(id);}
   async remove(id:string){
     const item=this.items.find(value=>value.id===id);if(!item)return;
     if(this.options.isInUse?.(item.track))throw new OfflineDownloadInUse();

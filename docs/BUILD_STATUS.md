@@ -1,3 +1,9 @@
+## 2026-10-17 M10 恢复暂停竞态补修
+
+`check-offline-recovery-pause-final.log` 326/326、类型检查通过；新增立即暂停与状态写入期间暂停两项回归，均验证网络请求0次且显式resume后1次。此前最小复现为请求1次/错误completed，补修没有降低断言。正式App两项回归及完整native为c1a4605阶段证据；该后续仅TS状态机补修未重复执行没有下载暂停断言的App测试，App下载/系统后台验收仍待。
+
+c1a4605初版清洁归档成功，IPA SHA256 `baba217ce1d4ad5318409075990cc53db30cebb185596ef801cbc2c953a099e5`，留存 `build/local-offline-recovery-c1a4605`；它不含暂停补修，不作为最终交付包。补修后另行清洁归档再push。
+
 ## 2026-10-17 M10 恢复批次App回归通过
 
 本批 `build/SourceUITests-1792231667947.xcresult` 正式入口App回归2/2、零失败/跳过：源管理/实际Files选择取消/启停删58.310秒，Navidrome合成实音/PCM/歌词/五皮肤/定位/统计/mini/重启204.425秒。日志与计数保存为 `build/logs/ui-offline-recovery-passed*`，xcresult summary已读取。测试结束的附加诊断收集报simctl路径警告（exit72），不影响测试exit0，但不宣称附加诊断收集成功。324项业务/类型及完整native均通过；App测试不等同于下载在挂起进程或真实服务中的验收。

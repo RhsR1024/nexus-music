@@ -140,3 +140,26 @@ test('process recovery retains the saved offset and validator for the transfer a
   },uuid:()=>'',now:()=>1});
   await store.restore();await store.resumeQueued();await store.resumeQueued();assert.equal(calls,1);assert.equal(store.getSnapshot()[0]!.status,'completed');
 });
+
+test('pause immediately after scheduling recovery wins before network work starts',async()=>{
+  const r=rig(),item=await r.store.enqueue(track('instant'));let calls=0;
+  const original=r.files.download;r.files.download=async(...args)=>{calls++;return original(...args);};
+  const recovery=r.store.resumeQueued();await r.store.pause(item.id);await recovery;
+  assert.equal(calls,0);assert.equal(r.store.getSnapshot()[0]!.status,'paused');
+  await r.store.resume(item.id);assert.equal(calls,1);assert.equal(r.store.getSnapshot()[0]!.status,'completed');
+});
+
+test('pause during the downloading state write aborts before resolving a URL',async()=>{
+  let saved:unknown,release!:()=>void,entered!:()=>void,calls=0;
+  const writing=new Promise<void>(resolve=>{entered=resolve;}),blocked=new Promise<void>(resolve=>{release=resolve;});
+  const r=rig();
+  const repository:Pick<Repository,'get'|'put'>={get:async()=>saved as never,put:async(_,next)=>{
+    if((next as {items:Array<{status:string}>}).items[0]?.status==='downloading'){entered();await blocked;}
+    saved=structuredClone(next);
+  }};
+  const store=new OfflineDownloadStore(repository,{resolve:async()=>{calls++;return{url:'https://audio.example/blocked'};},files:r.files,uuid:()=> '00000000-0000-4000-8000-000000000001',now:()=>1});
+  const item=await store.enqueue(track('writing'));const recovery=store.resumeQueued();await writing;
+  const pausing=store.pause(item.id);release();await Promise.all([recovery,pausing]);
+  assert.equal(calls,0);assert.equal(store.getSnapshot()[0]!.status,'paused');
+  await store.resume(item.id);assert.equal(calls,1);assert.equal(store.getSnapshot()[0]!.status,'completed');
+});
