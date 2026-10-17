@@ -760,3 +760,5 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 ## 2026-10-17 M10 摘要校验批次（本地检查）
 
 本轮新增本地离线文件摘要、恢复校验、当前播放文件删除保护和 `.part` 大小读取；`npm run check` 311/311，`npm run test:native` 通过，`git diff --check` 通过。摘要只证明本地文件在完成与恢复时的一致性，不能证明远端传输完整或真实服务长期可用。当前没有 iOS27、签名或真机结果，待提交后按 `queue: single` 核对云端运行/排队。
+
+本轮 `c814638` 本地 unsigned device archive 已成功：Xcode 26.3 / iOS 26.2 SDK、arm64、最低 iOS 15.1、设备族 `[1,2]`，manifest `dirty=false`，IPA SHA256 `296fc7c43f8bce1a0f7d4183d5493700ed39fb00bdac51b7b86b180d8424ea55`。该包不替代 iOS27、签名、真机或真实服务验收。
