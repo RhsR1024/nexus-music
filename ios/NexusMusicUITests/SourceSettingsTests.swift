@@ -1142,6 +1142,23 @@ final class SourceSettingsTests: XCTestCase {
     let persistedTint=app.switches["visual-cover-color"];reveal(persistedTint);XCTAssertEqual(persistedTint.value as? String,"0")
     let persistedPlayer=app.switches["visual-motion"];reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"0")
     app.buttons["background-sheet-close"].tap();expectTint(false,"Global flow restored paused")
+    // Exercise the real Animated gate through playback, native presentation,
+    // foreground restoration and pause; pixel checks above remain independent.
+    func motion(_ active:Bool){
+      let id="ambient-motion-"+(active ? "active":"still")
+      XCTAssertTrue(app.descendants(matching:.any).matching(identifier:id).firstMatch.waitForExistence(timeout:10))
+    }
+    motion(false)
+    openSettings(app,page:"skins")
+    let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch;reveal(classic);classic.tap()
+    app.buttons["mini-action-toggle"].tap();motion(true)
+    app.buttons["打开播放页"].tap();motion(true)
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:20),"Background presentation must preserve native PCM playback")
+    let activeBackground=XCTAttachment(screenshot:app.screenshot());activeBackground.name="Classic foreground background with native PCM";activeBackground.lifetime = .keepAlways;add(activeBackground)
+    XCUIDevice.shared.press(.home);app.activate();motion(true)
+    let closePlayer=app.buttons["收起播放页"];reveal(closePlayer);closePlayer.tap();motion(true)
+    app.buttons["mini-action-toggle"].tap();motion(false)
+    expectTint(false,"Visible global background restored after player and pause")
     openSettings(app,page:"background");reveal(persistedPlayer);persistedPlayer.tap()
     reveal(persistedGlobal);persistedGlobal.tap()
     app.buttons["background-sheet-close"].tap()

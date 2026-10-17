@@ -29,3 +29,22 @@ didChangeAppLifecycleState存储枚举后调用eligibility。dependencies读取T
 `src/ui/Materials.tsx`已有独立全局动效偏好和实际播放意图门控；`VisualBackground.tsx`用原生Animated、AppState与减少动态效果控制动画，封面身份/迟到隔离沿既有store。原生VisualAssets.palette采用32×32 RGB分桶主体色，属于原创简化算法，不是本批HSV算法。根层及经典播放器都可挂载AmbientBackground，原始路由/活动实例边界值得继续核验；尚未把代码共存推断为已发生重复渲染或功耗故障。
 
 下一步先比较五参考的可见性和动画生命周期，再对音枢进行确定性遮挡/恢复与实际PCM回归；完整调色/场景恢复独立推进。此次不提高功能实现比例，不替代iOS27、真实封面/服务、签名、真机或功耗验收。ATT&CK/IOC不适用于本次功能边界审查。
+
+## 2026-10-18 可见背景实施跟进
+
+新路由仍为R2/mobile-reverse，既有scope/case-guard通过，未重新初始化案例。索引工具独立重放E024原字节/manifest通过，严格review24E/23F/23P、8WI/44事件零错误/警告后，按[0052](decisions/0052-background-visible-owner.md)亲读五参考并原创增加全屏播放页呈现状态。根页面不可见时移除其MotionImage，保留静态渐变；经典播放页自己的背景与现代布局的独立偏好保持，关闭/清空条目后恢复。复用E024→F023→P023已确认的可见活动职责，不扩大参考调色、场景或动态结论。
+
+359项业务/类型通过；正式入口背景专项加入播放、实际PCM、回到前台、关闭与暂停断言，结果随后依BUILD_STATUS追加。首轮调用遗漏UITest目标前缀，以70退出且0测试执行，已保留日志并改用完整目标；不计作产品失败或测试通过。timeline第45事件记录本次实施。普通逆向flavor=null，未执行参考App/Hook/私有网络；本批不涉及加密/签名恢复，完整参考运行、功耗/帧率、真实服务/签名/手机仍待。
+
+复现门禁与本地专项：
+
+```bash
+source scripts/environment.sh
+python3 build/verify-cover-flow-evidence.py
+node scripts/sollin-reverse-gate.mjs ipa --review
+node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testGlobalCoverThemeChangesAcrossPages
+```
+
+原字节、scope、timeline、工作项与现场日志留本机忽略目录；公开文档只保留脱敏结论及复现引用。
+
+实施验收追加：正式入口SourceUITests-1792273286451的完整背景专项308.007秒、1通过/零失败/跳过，红蓝像素/跨页/独立偏好/重启、经典实际PCM、Home→激活、收起恢复/暂停和凭据清理通过。两张最终截图已亲看；20鉴权成功/0失败、8次本机合成stream，不计真实个人服务。359业务/类型通过；不将Animated门控标识当作隐藏层实测功耗、帧率或参考运行。清洁归档/对应云端另记。

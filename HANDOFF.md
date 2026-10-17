@@ -1,3 +1,9 @@
+## 2026-10-18 A04背景可见性（本地验收通过）
+
+新reverse-skill R2/mobile-reverse路由、既有离线scope/case-guard与E024独立重放通过；采纳前strict review24E/23F/23P、8WI/44事件零错误/警告。按[0052](docs/decisions/0052-background-visible-owner.md)亲读五参考并原创增加全屏播放页呈现状态：隐藏根背景移除MotionImage，保留静态渐变，关闭/清空条目后恢复；经典/现代背景偏好与原生音频不变。359业务/类型通过，正式入口SourceUITests-1792273286451背景专项308.007秒、1通过/零失败/跳过；红蓝像素/跨页/独立开关/重启、经典页实际PCM、系统Home→激活、收起恢复/暂停和凭据清理通过。截图已亲看；20鉴权成功/0失败、8次本机合成stream，不计真实个人服务。
+
+首轮遗漏UITest目标前缀以70退出、0测试，日志单独保留。日志/counts为build/logs/ui-background-visible-passed.log及ui-background-visible-counts.json；截图build/background-visible-passed。本批清洁归档/push/对应iOS27继续，不把测试标识当作帧率/遮挡功耗或参考运行证据。云端API实核6c8be2f/39066065139核心App成功、歌词匹配健康发现运行，2db0872/39070885003唯一pending，仍1运行/1排队。完整A/F/J与真实服务/签名/手机保持active。
+
 ## 2026-10-18 A04共享取色与背景活动边界（静态阶段）
 
 新reverse-skill R2/mobile-reverse路由、固定离线scope/case-guard通过；E024→F023→P023核验2358原始ARM64指令、28BL、9池加载及manifest，独立重放通过。全局createScene调用共享extractPalette后进入自身柔光/场景；24×24/HSV分桶及路由当前态/生命周期/活动id/面积选择/计时器守卫边界已确认。严格review24E/23F/23P、8WI/44事件零错误/警告。完整权重/回退、字段名、遮挡/运行/功耗仍未恢复，无新产品采纳，不增加实现完成度。详见[报告](docs/2026-10-18_reverse-sollin-cover-flow-report.md)。初次手写总数2458误记触发断言，修正13范围合计2358后才创建不可变Evidence，原字节未改。

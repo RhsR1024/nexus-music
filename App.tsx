@@ -21,6 +21,7 @@ export function MusicApplication({initialize}:{initialize:()=>Promise<Services>}
 function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
   const [tab,setTab]=useState<Tab>('discover'),[privateLibrary,setPrivateLibrary]=useState(false);
   const [chromeHeight,setChromeHeight]=useState(80);
+  const [playerVisible,setPlayerVisible]=useState(false);
   const [settingsEntry,setSettingsEntry]=useState<SettingsPage>('home'),[settingsRevision,setSettingsRevision]=useState(0);
   const navigateTab=(next:Tab)=>{if(next==='settings'){setSettingsEntry('home');setSettingsRevision(value=>value+1);}setTab(next);};
   const openSources=()=>{setSettingsEntry('sources');setTab('settings');};
@@ -35,7 +36,7 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
   const theme=useAppearance(services?.preferences,services?.coverTheme),p=theme.palette;
   const text={color:p.text},caption={color:p.secondary};
   return <ThemeContext.Provider value={theme}><TypographyProvider store={services?.fonts}><View style={{flex:1,backgroundColor:p.background[0]}}>
-    <AmbientBackground services={services}/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
+    <AmbientBackground services={services} visible={!playerVisible}/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
     <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+12,paddingLeft:insets.left,paddingRight:insets.right,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
       <View style={{width:railWidth,display:expanded?'flex':'none',paddingHorizontal:16}}>
         <Text accessibilityRole="header" style={[text,{fontSize:24,fontWeight:'700',padding:12,marginBottom:20}]}>音枢</Text>
@@ -52,7 +53,7 @@ function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
       </View>
     </View>
     <View pointerEvents="box-none" onLayout={event=>{const height=event.nativeEvent.layout.height;setChromeHeight(previous=>Math.abs(previous-height)<.5?previous:height);}} style={{position:'absolute',bottom:Math.max(insets.bottom,12),left:expanded?insets.left+railWidth+16:16,right:insets.right+16,gap:10}}>
-      {services&&<Player services={services}/>}
+      {services&&<Player services={services} onVisibilityChange={setPlayerVisible}/>}
       <View style={{flexDirection:'row',gap:10,alignItems:'center',display:expanded?'none':'flex'}}>
         <GlassSurface style={{flex:1}}><View style={{flexDirection:'row',paddingVertical:9}}>{([
           ['discover','grid-outline','发现'],['library','albums-outline','音乐库'],['settings','settings-outline','设置'],

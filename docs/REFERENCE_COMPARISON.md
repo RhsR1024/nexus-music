@@ -1,3 +1,7 @@
+## 2026-10-18 背景可见性比较
+
+[0052](decisions/0052-background-visible-owner.md)逐一重核五个固定HEAD，亲读悦音MiniPlayer显隐/异步清理、Q/wtf图片分层、Cy URI/active/有界缓存及自有Wayferar home-only图层恢复；分别记录维护、Android和许可。音枢仅原创增加全屏呈现状态及隐藏图层移除，无参考源码/依赖/资源/原生补丁移植。Sollin E024有限静态边界与完整运行未知保持。
+
 ## 2026-10-18 分页与刷新恢复比较
 
 [0051](decisions/0051-discovery-pager-recovery-validation.md)重新核对五参考固定HEAD与刷新/缓存/失败路径：两LX分支刷新page1/缓存绕过及失败clear、CyMusic固定榜单后本地slice、悦音本地reducer、自有Wayferar的Android文档边界分开。保留音枢成功后替换/失败保留/同页重试，不复制参考全局缓存或依赖；实现、维护、Android、许可和验收分别记录。Sollin E023仅支持静态调用边界，不把合成App回归当作参考运行。

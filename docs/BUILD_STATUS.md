@@ -1,3 +1,11 @@
+## 2026-10-18 背景可见性本地阶段验收
+
+reverse-skill新R2/mobile-reverse、固定离线scope/case-guard、E024独立2358原始指令/28BL/9池加载重放及采纳前严格review24E/23F/23P、8WI/44事件通过。五参考固定HEAD/实现/维护/Android/许可及原创可见门控见[0052](decisions/0052-background-visible-owner.md)。全屏播放页打开时移除隐藏根背景MotionImage，保留静态渐变与经典/现代背景独立职责；无原生播放后端/依赖改动。
+
+`check-background-visibility.log`为359业务/类型通过；正式入口`SourceUITests-1792273286451.xcresult`的完整背景专项308.007秒、1通过/零失败/跳过，iOS26.3.1/23D8133模拟器、Xcode26.3/SDK26.2。红蓝封面实际像素/跨页/独立开关/重启、经典页实际PCM、系统Home→激活、收起恢复/暂停、夹具凭据清理通过。已亲看经典蓝背景与返回外观页截图，留存build/background-visible-passed。日志/counts为build/logs/ui-background-visible-passed.log和ui-background-visible-counts.json；20成功鉴权/0失败、8次本机合成stream，不计真实个人服务。首轮遗漏UITest目标前缀返回70且0测试执行，单独保留，不计产品失败或通过。
+
+测试标识仅观察Animated实际采用的门控，不证明不可见层的实测耗电、帧率或完整参考场景等价。清洁设备归档/push/对应iOS27继续；参考完整palette/场景/运行、真实服务/签名/手机与全部A/F/J继续。云端前批6c8be2f/39066065139核心App已成功，歌词匹配健康发现运行，2db0872/39070885003唯一pending。
+
 ## 2026-10-18 分页恢复清洁归档与push回执
 
 `2db0872a18a41b692ef620a7fedc894fc5a3f577`已正常push并核对远端main一致。359业务/类型、完整发现App145.119秒及两次失败/页序列核验、截图亲看通过；验收后strict review23E/22F/22P、8WI/43事件零错误/警告。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；CRC/附带摘要、归档可执行及JS字节一致、正式入口隔离/私人及签名资源排除通过。IPA SHA256 `d326ac91c04a8c6834ca8d74031a20944bcbdef564a92575329b4a3054272682`，留存`build/local-discovery-pager-2db0872`。此条覆盖本批归档/push待办，不扩展真实服务/签名/手机结论。

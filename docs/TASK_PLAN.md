@@ -1,3 +1,7 @@
+## 2026-10-18 A04背景可见性本地通过
+
+采纳前E024独立重放及reverse-skill严格review通过，五参考比较和原创可见状态门控见[0052](decisions/0052-background-visible-owner.md)。359业务/类型通过；正式App1792273286451背景专项308.007秒零失败/跳过，红蓝/独立开关/重启、经典PCM、Home→激活/收起/暂停及凭据清理通过，截图已亲看。本批清洁归档/push/对应iOS27待。完整参考palette/场景/功耗和真实服务/签名/手机、全部A/F/J范围保留。
+
 ## 2026-10-18 A04共享取色与背景活动边界（静态阶段）
 
 新reverse-skill R2/mobile-reverse路由、固定离线scope/case-guard通过；E024→F023→P023核验2358原始ARM64指令、28BL、9池加载及manifest，独立重放通过。全局createScene调用共享extractPalette后进入自身柔光/场景；24×24/HSV分桶及路由当前态/生命周期/活动id/面积选择/计时器守卫边界已确认。严格review24E/23F/23P、8WI/44事件零错误/警告。完整权重/回退、字段名、遮挡/运行/功耗仍未恢复，无新产品采纳，不增加实现完成度。详见[报告](2026-10-18_reverse-sollin-cover-flow-report.md)。初次手写总数2458误记触发断言，修正13范围合计2358后才创建不可变Evidence，原字节未改。

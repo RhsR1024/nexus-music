@@ -8,7 +8,7 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {useTheme} from './theme.tsx';
 const NativeMaterial=requireNativeView<ViewProps&{dark:boolean}>('NexusNative');
 const noSubscribe=()=>()=>{},noCover={color:undefined,uri:undefined},noCoverSnapshot=()=>noCover;
-export function AmbientBackground({services}:{services?:Services}){
+export function AmbientBackground({services,visible=true}:{services?:Services;visible?:boolean}){
   const theme=useTheme(),assets=useVisualAssets(services),uri=useVisualImage(services,assets.background);
   const cover=useSyncExternalStore(services?.coverTheme.subscribe??noSubscribe,services?.coverTheme.getSnapshot??noCoverSnapshot);
   const [moving,setMoving]=useState(false);
@@ -16,15 +16,15 @@ export function AmbientBackground({services}:{services?:Services}){
     if(!services)return;
     const update=()=>{
       const state=services.playback.controller.getSnapshot();
-      const next=theme.appearance.globalBackgroundMotion&&state.phase==='ready'&&state.intent==='playing'&&!state.buffering;
+      const next=visible&&theme.appearance.globalBackgroundMotion&&state.phase==='ready'&&state.intent==='playing'&&!state.buffering;
       setMoving(previous=>previous===next?previous:next);
     };
     update();
     return services.playback.controller.subscribe(update);
-  },[services,theme.appearance.globalBackgroundMotion]);
+  },[services,visible,theme.appearance.globalBackgroundMotion]);
   if((theme.appearance.globalBackgroundMotion&&cover.uri)||(theme.appearance.coverColor&&cover.color))return <View testID="ambient-cover-background" pointerEvents="none" style={StyleSheet.absoluteFill}>
     <LinearGradient colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
-    {cover.uri&&<MotionImage uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
+    {visible&&cover.uri&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
   </View>;
   if(theme.appearance.backgroundStyle==='image'&&uri)return <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}><Image source={{uri}} resizeMode="cover" style={[StyleSheet.absoluteFill,{opacity:theme.appearance.backgroundOpacity}]}/><View style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0],opacity:.78}]}/></View>;
   return theme.appearance.backgroundStyle==='gradient'?<LinearGradient pointerEvents="none" colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>:<View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}/>;

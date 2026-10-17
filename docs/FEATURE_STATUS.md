@@ -1,3 +1,7 @@
+## 2026-10-18 背景可见性本地通过
+
+E024独立重放和采纳前reverse-skill严格review通过后，按[0052](decisions/0052-background-visible-owner.md)原创增加全屏播放页可见状态与隐藏根图层移除。359业务/类型、正式背景/实际PCM/前后台/关闭/暂停专项308.007秒通过、零失败/跳过，截图已亲看；本地清洁归档/对应iOS27继续。保留完整参考算法/场景/功耗与真实服务/签名/手机待验，不增加整体完成度或缩减全部A/F/J范围。
+
 ## 2026-10-18 发现分页与刷新恢复（本地验收通过）
 
 reverse-skill新R2/mobile-reverse路由、既有离线scope和E023→F022→P022采纳前严格review通过23E/22F/22P、8WI/42事件；610原始指令/10BL/3池加载与回边独立核验。五参考固定HEAD及维护/Android/许可取舍见[0051](decisions/0051-discovery-pager-recovery-validation.md)。仅支持静态入口边界，不推断参考失败界面/缓存时效/运行协议。
