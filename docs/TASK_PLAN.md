@@ -525,4 +525,4 @@ J53已接入版本上传/回读摘要、目录配置、列表/预览/明确恢�
 
 永久离线任务新增摘要持久化、恢复时完整性校验和当前播放文件保护。摘要不一致或缺失时记录失败且不进入播放解析；当前曲目拒绝删除，批量清理跳过它并继续处理其他完成项。`npm run check` 311/311，`npm run test:native` 通过。M10 后台任务与重启调度、漫途完整导入、跨服务稳定性及真实服务/签名/真机验收仍未完成。
 
-`c814638` 本地清洁 unsigned device archive 已成功：manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，IPA SHA256 `296fc7c43f8bce1a0f7d4183d5493700ed39fb00bdac51b7b86b180d8424ea55`。不把本地 archive 写成 iOS27、签名或真机通过。
+`26d3675` 本地清洁 unsigned device archive 已成功：manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，IPA SHA256 `393fb8c8008b41dd1e450e61951721645078e12a3f33aaf0a932faa637ce3dcb`。不把本地 archive 写成 iOS27、签名或真机通过。

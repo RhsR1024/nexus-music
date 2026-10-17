@@ -364,4 +364,4 @@ S3云端`38886233605`已完整成功：checks、核心App、歌词/匹配/源健
 
 本轮把永久离线工作包代码实现估计从约25%调整为约45%；后台任务、重启调度、跨服务长期稳定性、真实服务/签名/真机仍未完成。完整交付口径仍不因本地测试或 unsigned 归档增加。
 
-`c814638` 已完成本地清洁 unsigned device archive：manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`；IPA SHA256 `296fc7c43f8bce1a0f7d4183d5493700ed39fb00bdac51b7b86b180d8424ea55`。不计作 iOS27、签名或真机完成。
+`26d3675` 已完成本地清洁 unsigned device archive：manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`；IPA SHA256 `393fb8c8008b41dd1e450e61951721645078e12a3f33aaf0a932faa637ce3dcb`。不计作 iOS27、签名或真机完成。

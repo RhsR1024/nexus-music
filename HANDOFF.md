@@ -818,4 +818,4 @@ Sollin 私有云端服务、专用链接或不可授权接口不复制；优先�
 
 本轮估算按工作量加权更新为当前开发约 **79%**、剩余约 **21%**；完整交付仍约 **58%**。主要开发余量是平台登录/推荐/FM/识曲、M10 后台任务与重启调度、Sollin 深层 UI/交互收口、漫途完整导入、iPad/系统媒体和 WebDAV 自动同步。详见 `docs/PROGRESS_ESTIMATE.md`。
 
-`c814638` 的本地清洁 unsigned archive 已成功：`build/distribution/build-manifest.json` 为 `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 `296fc7c43f8bce1a0f7d4183d5493700ed39fb00bdac51b7b86b180d8424ea55`。这只证明本机归档，不证明 iOS27、签名、真机或真实服务。
+`26d3675` 的本地清洁 unsigned archive 已成功：`build/distribution/build-manifest.json` 为 `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`；IPA SHA256 `393fb8c8008b41dd1e450e61951721645078e12a3f33aaf0a932faa637ce3dcb`。这只证明本机归档，不证明 iOS27、签名、真机或真实服务。
