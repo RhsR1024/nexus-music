@@ -128,3 +128,8 @@ App原FAT文件raw偏移0xe4bed0（arm64切片VA 0xe47ed0）存在文案“使�
 音枢现状已亲核：`AmbientBackground`只有固定主题/用户图片；`ModernPlayer`的`ArtworkBackdrop`已有按封面取色、模糊与运动，但只作用于完整播放页。A05因此仍未完成。后续以既有原生有界取色服务原创补齐全局主题、权威实际播放身份、迟到请求隔离、缓存和无图降级，逐项标注行为重实现与待运行观察的部分，不把它写成直接复制Sollin源码。
 
 详细原始偏移与分命名空间证据仅在忽略目录`build/sollin-ipa-review/cover-global-background-review.md`、`cover-global-background-symbols.json`；原IPA、私有二进制和业务字符串全集不提交。
+## 2026-10-17 E-004 provider/识曲边界复核（严格 review）
+
+本批按 `reverse-skill` 的 `mobile-reverse` PRIMARY 完成固定 IPA 的 provider/auth、推荐/FM/taste profile 和 `audio-match` 静态边界核查。`node scripts/sollin-reverse-gate.mjs ipa --review` 已通过：4 条 Evidence、3 条 Finding、3 条 Path，0 error/0 warning；E-004 的 case-local 哈希清单位于忽略目录 `work/sollin-ipa/evidence/E-004-source-manifest.txt`，原始 IPA、业务字符串和解包内容不进入仓库。该结果只证明静态路径和本地 PCM 准备约束，不证明远端 URL、鉴权交换、配额、识曲结果协议或运行时调用图。
+
+实施边界：平台账号/鉴权、推荐/FM 和识曲优先使用音枢现有 provider、Keychain、曲库/历史/本地特征与 provider-neutral 接口；识曲仍需合法服务、算法许可、麦克风权限和结果协议后才能完成。任何依赖 Sollin 私有云端、专用链接或不可授权接口的能力不照搬，先登记待决并推进其他本地工作，开发收尾和真实设备验证前再向用户确认落地方式。该批证据不提高完成度。

@@ -829,3 +829,8 @@ Sollin 私有云端服务、专用链接或不可授权接口不复制；优先�
 `920d193` 已正常 push 到 `RhsR1024/nexus-music`。提交后的本地清洁归档 `build/logs/archive-offline-transfer-920d193.log` 为 `ARCHIVE SUCCEEDED`，manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、unsigned；IPA SHA256 `451c98c59cfb0fde012cb2c887f608550ca5733522ed366f0b3b5973f51d7ebc`，正式入口与 ZIP CRC 通过。该包不替代 iOS27、签名、真机或真实服务。
 
 push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d193`）最新排队，`39010767320`（`3e56d4d`）运行中；旧 `39014868431`（`7cc176c`）和 `39012949974`（`52a0aaf`）自动取消。保持 1 运行/1 排队，不取消运行中、不重派旧版本，pending/取消不计通过。
+# 2026-10-17 E-004 provider/识曲边界严格复核回执
+
+本批已按 reverse-skill `mobile-reverse` PRIMARY 完成 Sollin IPA provider/auth、推荐/FM/taste profile 与 audio-match 静态边界核查。`source scripts/environment.sh && node scripts/sollin-reverse-gate.mjs ipa --review` 通过，4 Evidence、3 Finding、3 Path，0 error/0 warning；E-004 case-local 哈希清单和报告保留在忽略目录 `work/sollin-ipa/`。结论仅支持音枢的 provider-neutral/本地实现边界：平台登录凭据走既有 provider/Keychain，推荐优先曲库/历史/平台公开数据，识曲只采纳本地 PCM 准备约束；没有远端 URL、鉴权交换、配额、结果协议或运行时调用图证据。
+
+用户新增规则已落实到 `docs/SOLLIN_IPA_ANALYSIS.md`、`docs/IMPLEMENTATION_PLAN.md`、`docs/TASK_PLAN.md`、`docs/PROGRESS_ESTIMATE.md` 和 `docs/PRODUCT_SCOPE.md`：Sollin 私有云端、专用链接、账号体系、用户中心、服务支持、激活/赞助/商业权益、遥测/诊断回传不照搬；能本地替代则先实现，不能替代的登记待决，先完成其他开发，开发收尾并进入真实设备验收前再请用户决定合法落地方式。E-004 不提高当前开发完成度。

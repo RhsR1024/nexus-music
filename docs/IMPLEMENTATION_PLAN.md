@@ -6,6 +6,8 @@ Sollin 对齐范围包含通用后端逻辑和状态机，不限于 UI/交互：
 
 若能力依赖 Sollin 私有云端服务或专用链接，不照搬其服务/协议/调用；先实现本地替代或复用音枢已有 provider。无法替代的项登记为待决，先继续其他开发，开发收尾和真机验证前再请用户决定合法落地方式。
 
+E-004 provider/识曲边界已按 `mobile-reverse` PRIMARY 严格复核通过（0 error/0 warning）。当前只采纳静态路径与本地 Float32 PCM 准备约束，未采纳任何 Sollin 私有服务、鉴权协议、配额或识曲结果协议；具体证据链见 `work/sollin-ipa/report/provider-boundary.md`（仅本机忽略目录）。
+
 实现提交 `3898592c7d9ec76e59ba21513e9f0930b62d33dc` 已正常push并核对origin/main一致。现代播放器收藏读写原队列身份，视觉/歌词沿实际匹配录音；声波核仅在播放、DSP支持且频带完整时显示真实环形频谱，暂停隐藏；歌词窗口补为三行，收起手柄可达。稳定查询补充账号、EQ曲线、歌单提交与备份独立滚动区；没有新增队列/播放器或修改原生DSP。
 
 本地业务/类型303/303、完整native通过。分段UI：现代PCM/原曲收藏1792213327138（126.691秒），同步1792212451041（238.399秒），字体/正式ND286.201秒、主题111.350秒、EQ79.053秒、DAV76.248秒在1792213572669通过；该组备份149.421秒失败于AX类型查询，改用实际Other元素后1792214374827备份单项226.595秒通过（取消/恢复/坏JSON/重启/清理）。失败保留，不宣称同次全套或真实服务通过；日志ui-player-identity-final-passed、ui-player-related-final-first、ui-cloud-backup-final-passed与counts均在build/logs。

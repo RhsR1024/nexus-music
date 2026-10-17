@@ -6,6 +6,7 @@
 - [x] 逆向前置条件固定为 `reverse-skill` 路由、PRIMARY、离线 `case-init`/`case-guard`、工具索引、当前功能 Evidence→Finding→Path 与严格 review；没有当前功能证据不得采纳 Sollin 后端结论。
 - [x] Sollin 自有账号体系、用户中心、服务与支持、激活/赞助/付费权益、遥测和诊断回传继续排除，不进入音枢实现或进度分母。
 - [x] Sollin 私有云端/专用链接不复制；优先本地实现，无法替代的记录为待决项，先完成其他开发，收尾进入真机前再向用户确认。
+- [x] E-004 provider/推荐/FM/识曲静态边界已通过 `node scripts/sollin-reverse-gate.mjs ipa --review` 严格复核；仅支持 provider-neutral/本地实现设计，不把远端协议或识曲结果当作已知。
 
 - [x] reverse-skill安装/路由/工具检查与两离线案例严格review；c64c43b/d997737正常push，详见REVERSE_SKILL_WORKFLOW。
 - [x] 303项业务/类型、完整native；首轮跨平台歌词专项124.460秒、同步专项238.399秒通过。
