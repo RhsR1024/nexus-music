@@ -1,3 +1,9 @@
+## 2026-10-18 mini／底栏 Sheet 清洁归档与push回执
+
+`23bc73c4570e91eba7c3ae539b3512c759cfd3e8`已正常push，远端main一致。`archive-mini-navigation-sheets-clean.log`成功；manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `e23b0ac10ea77ca79e283f6b5b829e1c9e1fce540b2b656583de82fe438d3483`，留存`build/local-mini-navigation-23bc73c`。本条覆盖本批清洁归档/push待办；348业务/类型、正式App3/3和严格review18E/17F/17P、30事件、零错误/警告见下，不能代替参考运行、真实服务、签名与手机验收。
+
+push后API核对：[39059968173](https://github.com/RhsR1024/nexus-music/actions/runs/39059968173)/23bc73c唯一pending，[39058310652](https://github.com/RhsR1024/nexus-music/actions/runs/39058310652)/332cac5继续运行，1运行/1排队；未取消运行中或重派旧版。76c9cd0/39050349015完整iOS27成功并核验IPA见下，不能覆盖AM2/mini。下一字体/歌词显示设置离线批次已重新路由mobile-reverse并通过前置门禁，仅有本机限定原始调用探查，尚无新不可变功能证据或采纳review；全部A/F/J目标保持active。
+
 ## 2026-10-18 舞台及生命周期修正版 iOS27 成功与产物核验
 
 `76c9cd0ad069455893833face9060ef9e2eb1950` / [39050349015](https://github.com/RhsR1024/nexus-music/actions/runs/39050349015) 已完整成功：checks、完整native、核心App、歌词/匹配/发现、离线断服务播放、iPad窗口/旋转、设备归档与上传均成功。IPA artifact12110443053已实际下载，ZIP10335717字节、API SHA256 `917e258f1da78fa4e684ed217d94a2132345126ad68f85b2b3e56293295fe54b` 与完整CRC通过；内部IPA附带摘要/CRC、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `09aa12fa4c3f62f773f2cddec14bd25051a3c45864801d3e3452489b0eada082`，留存`build/ci-39050349015`。
