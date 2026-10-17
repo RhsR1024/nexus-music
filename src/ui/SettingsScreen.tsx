@@ -17,17 +17,17 @@ import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {NavidromeSettings} from './NavidromeSettings.tsx';
 import {SourceSettings} from './SourceSettings.tsx';
 
-export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'storage'|'downloads'|'downloadTasks'|'sources'|AppearanceSection;
-type AppearanceSheetSection='theme'|'skins'|'mini'|'navigation';
-const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='theme'||page==='skins'||page==='mini'||page==='navigation';
-const sheetIDs:Record<AppearanceSheetSection,string>={theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet'};
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'字体与歌词样式',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
+export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|AppearanceSection;
+type AppearanceSheetSection='theme'|'skins'|'mini'|'navigation'|'typography'|'globalFont'|'lyricFont';
+const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='typography'||page==='globalFont'||page==='lyricFont';
+const sheetIDs:Record<AppearanceSheetSection,string>={theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',typography:'lyric-display-sheet',globalFont:'global-font-sheet',lyricFont:'lyric-font-sheet'};
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
   const {palette:p}=useTheme();
   const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  const firstPage=isAppearanceSheet(initialPage)?'appearance':initialPage;
+  const firstPage=isAppearanceSheet(initialPage)?initialPage==='typography'?'playback':'appearance':initialPage;
   const [history,setHistory]=useState<SettingsPage[]>([firstPage]);
   const [visited,setVisited]=useState<SettingsPage[]>([firstPage]);
   const [appearanceSheet,setAppearanceSheet]=useState<{section:AppearanceSheetSection;visible:boolean;session:number}>({section:isAppearanceSheet(initialPage)?initialPage:'theme',visible:isAppearanceSheet(initialPage),session:0});
@@ -81,7 +81,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       case 'equalizer':return <EqualizerSettings services={services}/>;
       case 'appearance':return <AppearanceOverview services={services} open={open}/>;
       case 'theme':case 'background':case 'skins':case 'mini':case 'navigation':case 'accent':return <AppearanceSettings services={services} section={key}/>;
-      case 'typography':return <FontSettings services={services}/>;
+      case 'typography':case 'globalFont':case 'lyricFont':return <FontSettings services={services} section={key==='typography'?'display':key==='globalFont'?'global':'lyric'} onOpen={section=>open(section==='display'?'typography':section==='global'?'globalFont':'lyricFont')}/>;
       case 'downloads':return <DownloadSettings services={services} openTasks={()=>open('downloadTasks')}/>;
       case 'downloadTasks':return <DownloadTasks services={services}/>;
       case 'storage':return <><CacheSettings services={services}/><LibraryDataTools services={services}/></>;
@@ -101,11 +101,11 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
           <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>{titles[appearanceSheet.section]}</Text>
           <Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>
         </View>
-        <ScrollView testID={`${appearanceSheet.section}-sheet-scroll`} contentContainerStyle={{paddingBottom:32}}><AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
+        <ScrollView key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
           // A completed write from an earlier presentation must not close a newly opened sheet.
           const session=appearanceSheet.session;
           setAppearanceSheet(value=>value.session===session?{...value,visible:false,session:value.session+1}:value);
-        }}/></ScrollView>
+        }}/>}</ScrollView>
       </View>
     </SheetModal>
   </View>;

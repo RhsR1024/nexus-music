@@ -1,3 +1,7 @@
+## 2026-10-18 字体角色与歌词显示 Sheet（本地通过）
+
+reverse-skill mobile-reverse E019→F018→P018已在采纳前严格review：19E/18F/18P、7WI/31事件，零错误/警告；2057条原始指令字节、BL、池偏移与模式字段支持独立歌词显示/参数化字体模态和全局/歌词setter分支。按[0045](docs/decisions/0045-font-display-settings-sheets.md)原创拆分现有全局字体、歌词字体、显示设置入口；同一原生Sheet切换，保留分类滚动与现有原子导入/继承/删除回退、全部显示控件及八布局唯一播放意图。348业务/类型检查通过；正式入口`SourceUITests-1792263616441.xcresult`三项通过、零失败/跳过：最大辅助字号/三角色/关闭下滑/分类滚动73.984秒，字体真实Files导入/全局与歌词继承系统选择/居中模糊重启/八布局实音PCM/播放器内角色入口/删除回退344.580秒，分组导航与草稿/滚动保留109.934秒。已亲看三种大字Sheet与导入原创三角字体截图；大字长内容仍需滚动，关闭与操作可达。本轮鉴权8次成功、0失败，无新stream请求，允许既有临时音频缓存，不能称本次冷下载。未修改原生音频/脚本后端，无新依赖；清洁归档/push/对应iOS27继续，真实服务/签名/手机及完整参考运行等价仍待。完整参考选项/默认值/动态运行、清洁归档/push/对应iOS27及真实服务/签名/手机继续；全部A/F/J目标保持active。详见[报告](docs/2026-10-18_reverse-sollin-font-settings-report.md)。
+
 ## 2026-10-18 mini／底栏 Sheet 清洁归档与push回执
 
 `23bc73c4570e91eba7c3ae539b3512c759cfd3e8`已正常push，远端main一致。`archive-mini-navigation-sheets-clean.log`成功；manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `e23b0ac10ea77ca79e283f6b5b829e1c9e1fce540b2b656583de82fe438d3483`，留存`build/local-mini-navigation-23bc73c`。本条覆盖本批清洁归档/push待办；348业务/类型、正式App3/3和严格review18E/17F/17P、30事件、零错误/警告见下，不能代替参考运行、真实服务、签名与手机验收。

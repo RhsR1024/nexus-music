@@ -1,3 +1,7 @@
+## 2026-10-18 字体角色与显示呈现比较
+
+五固定HEAD已核对，亲读悦音LyricsView108–130、Q Basic/FontSize14–78、wtf SettingLrcFontSize18–38、Cy settingModal403–435、自有Wayferar LyricFontImport21–59和FontChoiceState8–27。逐项实现、维护/Android/许可与取舍见[0045](decisions/0045-font-display-settings-sheets.md)。复用音枢FontCatalog/PreferenceStore/SheetModal，无参考源码/资源/依赖移植；Sollin E019严格review支持有限角色/呈现采纳，完整选项/runtime未声称。
+
 ## 2026-10-18 mini／底栏模态职责复核
 
 五个固定HEAD已核对；亲读悦音MiniPlayer42、Q TimeoutExitEditModal163/169/215、wtf QualityModal51–80、Cy settingModal403/615与自有Wayferar SourceSettings8–18/58–59。实现、维护/Android/许可及原创取舍见[0044](decisions/0044-mini-navigation-settings-sheets.md)。只采纳呈现/保存/清理职责，复用既有SheetModal和原子仓储，无新源码/资产/依赖/原生补丁。Sollin新证据E018经严格review，完整底栏/九动作/runtime未声称。

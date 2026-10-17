@@ -42,7 +42,7 @@ export function Player({ services }: { services: Services }) {
   const [commenting,setCommenting]=useState<Track|null>(null);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
-  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'>('menu');
+  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'globalFont'|'lyricFont'>('menu');
   const styleReturnsToMenu=useRef(true);
   const miniTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
   const dismissTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
@@ -125,9 +125,9 @@ export function Player({ services }: { services: Services }) {
           {detailPanel==='style'?<>
             {button('收起播放界面样式',()=>{if(styleReturnsToMenu.current)setDetailPanel('menu');else closeDetails();})}
             <Text style={styles.title}>播放界面样式</Text>{skinSelector}
-          </>:detailPanel==='lyrics'?<>
-            {button('收起歌词显示设置',()=>setDetailPanel('menu'))}
-            <Text style={styles.title}>歌词显示设置</Text><FontSettings services={services}/>
+          </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
+            {button(detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置',()=>setDetailPanel(detailPanel==='lyrics'?'menu':'lyrics'))}
+            <Text style={styles.title}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text><FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
           </>:detailPanel==='menu'?<>
             {button('收起播放选项',closeDetails)}
             <Text style={styles.title}>播放选项</Text>

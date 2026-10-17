@@ -4,7 +4,7 @@ import Vision
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
   private func openSettings(_ app:XCUIApplication,page:String){
-    for id in ["theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
+    for id in ["theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
     let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-settings").firstMatch
     let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
     XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
@@ -28,7 +28,7 @@ final class SourceSettingsTests: XCTestCase {
       }
       XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5));settingsPage=target
     }
-    let appearancePages=["theme","background","skins","accent","navigation","mini"]
+    let appearancePages=["theme","background","skins","accent","navigation","mini","globalFont","lyricFont"]
     enter(page=="typography" || page=="equalizer" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
     if page=="typography" || page=="equalizer"{enter(page)}else if appearancePages.contains(page){enter(page)}
   }
@@ -144,9 +144,9 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"equalizer")
     let name=app.textFields["eq-preset-name"];reveal(name);name.tap();for character in "Retained draft"{name.typeText(String(character))};name.typeText("\n")
     openSettings(app,page:"appearance");XCTAssertFalse(name.exists)
-    let fontEntry=app.buttons["settings-open-typography"];reveal(fontEntry);fontEntry.tap()
-    XCTAssertTrue(app.staticTexts["settings-title-typography"].exists);XCTAssertTrue(app.buttons["font-import"].isHittable)
-    app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
+    let fontEntry=app.buttons["settings-open-globalFont"];reveal(fontEntry);fontEntry.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-globalFont"].exists);XCTAssertTrue(app.buttons["font-import"].isHittable)
+    app.buttons["globalFont-sheet-close"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
     openSettings(app,page:"equalizer");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
     XCTAssertEqual(app.buttons["settings-back"].label,"返回播放与歌词")
     app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-playback"].exists)
@@ -751,22 +751,22 @@ final class SourceSettingsTests: XCTestCase {
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;let start=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)),end=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35));start.press(forDuration:0.05,thenDragTo:end)};XCTAssertTrue(element.isHittable,"Control must scroll into view: \(element.identifier)")}
     func settings(){openSettings(app,page:"typography")}
-    settings();let resetInitial=app.buttons["lyric-style-reset"];reach(resetInitial);resetInitial.tap();let importer=app.buttons["font-import"];reach(importer);importer.tap()
+    settings();let resetInitial=app.buttons["lyric-style-reset"];reach(resetInitial);resetInitial.tap();reach(app.buttons["font-open-global"]);app.buttons["font-open-global"].tap();let importer=app.buttons["font-import"];reach(importer);importer.tap()
     selectLocalFixture("Nexus Fixture.ttf",in:app)
     let global=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-global-nexusfont_")).firstMatch
-    XCTAssertTrue(global.waitForExistence(timeout:15));reach(global);global.tap()
+    XCTAssertTrue(global.waitForExistence(timeout:15));reach(global);global.tap();reach(app.buttons["font-open-lyric"]);app.buttons["font-open-lyric"].tap()
     let inherit=app.buttons["font-lyrics-inherit"];reach(inherit,up:false);inherit.tap()
     let globalStatus=app.staticTexts["font-global-status"],lyricStatus=app.staticTexts["font-lyric-status"]
     XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));XCTAssertTrue(lyricStatus.label.contains("跟随全局"));XCTAssertTrue(lyricStatus.label.contains("Nexus Fixture.ttf"))
     let preview=XCTAttachment(screenshot:app.screenshot());preview.name="Imported original triangle font with system glyph fallback";preview.lifetime = .keepAlways;add(preview)
-    let system=app.buttons["font-lyrics-system"];system.tap();XCTAssertTrue(lyricStatus.label.contains("系统字体"));XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));inherit.tap()
+    let system=app.buttons["font-lyrics-system"];system.tap();XCTAssertTrue(lyricStatus.label.contains("系统字体"));XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));inherit.tap();reach(app.buttons["font-open-display"]);app.buttons["font-open-display"].tap()
     let height=app.buttons["行高倍数＋"];reach(height);height.tap();let spacing=app.buttons["行间距＋"];reach(spacing);spacing.tap();let blur=app.buttons["其他行模糊＋"];reach(blur);blur.tap();app.buttons["lyric-emphasis"].tap()
     let golden=app.buttons["lyric-activeColor-2"];reach(golden,up:false);golden.tap()
     let alignment=app.buttons["lyric-align-center"];reach(alignment)
     XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:alignment)],timeout:10),.completed)
     alignment.tap()
     XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:alignment)],timeout:10),.completed,"Confirm the setting was saved before terminating the App")
-    app.terminate();app.launch();settings();reach(importer)
+    app.terminate();app.launch();settings()
     XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));XCTAssertTrue(lyricStatus.label.contains("跟随全局"));XCTAssertTrue(lyricStatus.label.contains("Nexus Fixture.ttf"))
     reach(alignment)
     // RN's restored button can expose its selected checkmark label without
@@ -775,11 +775,12 @@ final class SourceSettingsTests: XCTestCase {
     reach(app.staticTexts["lyric-style-blur"]);XCTAssertEqual(app.staticTexts["lyric-style-blur"].label,"其他行模糊：1");XCTAssertTrue(app.buttons["逐字强调：关"].exists)
     // Exercise imported glyphs and persisted styles in the actual player.
     app.terminate();try testZNavidromePlaybackAndCredentials()
-    settings();
+    settings();app.buttons["font-open-lyric"].tap()
     let remove=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-delete-nexusfont_")).firstMatch;reach(remove);remove.tap();app.alerts.buttons["删除"].tap();
     expectation(for:NSPredicate(format:"label CONTAINS %@","系统字体"),evaluatedWith:globalStatus);waitForExpectations(timeout:10);XCTAssertTrue(lyricStatus.label.contains("跟随全局"));
+    reach(app.buttons["font-open-display"]);app.buttons["font-open-display"].tap()
     let reset=app.buttons["lyric-style-reset"];reach(reset);reset.tap();XCTAssertTrue(app.buttons["逐字强调：开"].exists)
-    app.terminate();app.launch();settings();reach(importer);XCTAssertFalse(app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-delete-nexusfont_")).firstMatch.exists);XCTAssertTrue(globalStatus.label.contains("系统字体"))
+    app.terminate();app.launch();settings();app.buttons["font-open-global"].tap();reach(importer);XCTAssertFalse(app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-delete-nexusfont_")).firstMatch.exists);XCTAssertTrue(globalStatus.label.contains("系统字体"))
   }
   func testAM2PlayerWithLargeText() throws { try verifyAM2Window(largeText:true) }
   func testAM2PlayerWindowRotation() throws { try verifyAM2Window(largeText:false) }
@@ -927,7 +928,10 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["队列与播放选项"].exists)
     app.buttons["歌词显示设置"].tap()
     XCTAssertTrue(app.staticTexts["歌词显示设置"].waitForExistence(timeout:5))
-    XCTAssertTrue(app.staticTexts["字体与歌词样式"].exists)
+    XCTAssertTrue(app.staticTexts["歌词样式"].exists);XCTAssertTrue(app.buttons["font-open-lyric"].exists)
+    app.buttons["font-open-lyric"].tap()
+    XCTAssertTrue(app.buttons["font-import"].waitForExistence(timeout:5));XCTAssertTrue(app.buttons["font-lyrics-inherit"].exists);XCTAssertFalse(app.buttons["font-global-system"].exists)
+    app.buttons["返回歌词设置"].tap()
     app.buttons["收起歌词显示设置"].tap()
     app.buttons["播放界面样式"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-immersive").firstMatch.tap()
@@ -1299,6 +1303,38 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();openSettings(app,page:"skins");reveal(am2);XCTAssertTrue(am2.isSelected,"Restart must restore AM2 independently from AM")
     let classic=item("classic");reveal(classic);classic.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+  }
+  func testFontAndDisplaySheetsWithLargeText() throws {
+    let app=XCUIApplication();app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"];app.launch()
+    func element(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func reveal(_ item:XCUIElement,_ section:String){
+      let scroll=element(section+"-sheet-scroll")
+      for _ in 0..<30 {
+        if item.exists && item.isHittable && item.frame.minY>=scroll.frame.minY && item.frame.maxY<=scroll.frame.maxY{break}
+        let above=item.exists && item.frame.midY<scroll.frame.midY
+        scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.75:0.25)))
+      };XCTAssertTrue(item.isHittable)
+    }
+    func evidence(_ name:String){let image=XCTAttachment(screenshot:app.screenshot());image.name=name;image.lifetime = .keepAlways;add(image)}
+    openSettings(app,page:"globalFont")
+    XCTAssertTrue(element("global-font-sheet").exists);XCTAssertFalse(app.buttons["settings-open-background"].exists)
+    reveal(app.buttons["font-global-system"],"globalFont");XCTAssertFalse(app.buttons["font-lyrics-inherit"].exists);XCTAssertFalse(app.buttons["lyric-style-reset"].exists)
+    evidence("Global font sheet at accessibility XXXL")
+    app.buttons["globalFont-sheet-close"].tap()
+    let entry=app.buttons["settings-open-globalFont"],entryY=app.buttons["settings-open-globalFont"].frame.midY
+    XCTAssertTrue(entry.isHittable);entry.tap()
+    let lyric=app.buttons["font-open-lyric"];reveal(lyric,"globalFont");lyric.tap()
+    XCTAssertTrue(element("lyric-font-sheet").exists);XCTAssertFalse(app.buttons["font-global-system"].exists)
+    reveal(app.buttons["font-lyrics-inherit"],"lyricFont");evidence("Lyric font role at accessibility XXXL")
+    let display=app.buttons["font-open-display"];reveal(display,"lyricFont");display.tap()
+    XCTAssertTrue(element("lyric-display-sheet").exists);XCTAssertFalse(app.buttons["font-import"].exists)
+    let reset=app.buttons["lyric-style-reset"];reveal(reset,"typography");reset.tap();evidence("Scrollable lyric display settings at accessibility XXXL")
+    let title=app.staticTexts["settings-title-typography"]
+    title.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["typography-sheet-close"]);waitForExpectations(timeout:10)
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists);XCTAssertEqual(entry.frame.midY,entryY,accuracy:2)
+    openSettings(app,page:"typography");XCTAssertTrue(element("lyric-display-sheet").exists)
+    app.buttons["typography-sheet-close"].tap();XCTAssertTrue(app.staticTexts["settings-title-playback"].exists)
   }
   func testMiniAndNavigationSheetsWithLargeText() throws {
     let app=XCUIApplication()
