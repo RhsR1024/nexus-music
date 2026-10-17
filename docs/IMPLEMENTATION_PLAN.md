@@ -4,13 +4,13 @@
 
 ## 2026-10-17 A10 云端外观测试导航修复
 
-旧云端38934924631核心14/15通过，唯一失败在openSettings寻找settings-open-background的可点击断言；完整诊断ZIP摘要/CRC及录屏末帧已核验。设置页按页恢复滚动位置是既有产品行为，测试只向上滑无法到达上方目标。现按目标frame双向滚动，保留可点击/目标页断言，并在失败时保存截图与AX层级。本地正式入口1792197616945两项通过：外观持久化/主导航60.141秒、分组设置/草稿恢复74.290秒，零失败/跳过；日志ui-settings-direction-final.log。仅XCTest与文档修改，不增加功能完成度；新清洁本地IPA与云端继续，旧运行不重派、运行中不取消。
+旧云端38934924631核心14/15通过，唯一失败在openSettings寻找settings-open-background的可点击断言；完整诊断ZIP摘要/CRC及录屏末帧已核验。设置页按页恢复滚动位置是既有产品行为，测试只向上滑无法到达上方目标。现按目标frame双向滚动，保留可点击/目标页断言，并在失败时保存截图与AX层级。本地正式入口1792197616945两项通过：外观持久化/主导航60.141秒、分组设置/草稿恢复74.290秒，零失败/跳过；日志ui-settings-direction-final.log。仅XCTest与文档修改，不增加功能完成度；提交07870a4ca49bc530b6ba90c1a8a676cb56f74f0b已正常push并核对远端main；archive-settings-direction-clean.log为ARCHIVE SUCCEEDED，manifest dirty=false/workingTreeChanges=[]、arm64、SDK26.2、min15.1、设备族[1,2]、unsigned，正式入口隔离、IPA摘要/ZIP CRC/二进制一致性均通过。SHA256 a0a52f5902523e18858839a4877de75ece16ab25059467fdeb6c2a222b47e6c2，副本build/local-settings-direction-07870a4。08:48 API核对：38984903551继续运行，最新38988046090为唯一pending，旧pending38987122647已自动取消；再次实证single策略，取消旧运行不算通过。新云端/签名/真机仍待。
 
 ## 2026-10-17 A08 发现页面板归属与紧凑歌曲行
 
 发现详情的封面、歌曲文字和44点更多按钮改为同行。歌曲操作Sheet归属其发现页；从搜索打开的完整发现Modal不再把操作Sheet挂在页面外。加入歌单复用同一Sheet内的PlaylistPicker内容，取消/保存返回原详情，保留收藏身份、完整导入、已加载搜索/排序、权威队列和重复歌单条目。IPA只提供主题化Sheet名称线索，紧凑行视觉另参考补充截图；不宣称恢复Sollin私有调用图。
 
-修复前合成公开歌单真实UI回归1792196022730于69.228秒失败（完整发现页菜单未呈现）；修复后1792196266236于81.940秒通过。303项业务/类型检查通过。独立e2e入口注入公开wire响应，正式入口和matching音频隔离保留；云端第二测试组新增此专项。最终交叉组1792196898246两项零失败/跳过通过（歌词97.353秒、发现90.423秒）；本批69f57a4已正常push并核对远端main；清洁本地SDK26.2 unsigned IPA通过，manifest dirty=false/workingTreeChanges=[]、arm64、min15.1、设备族[1,2]，正式入口隔离、ZIP CRC及二进制/摘要一致性通过。SHA256 e6a3f81f3d9f94af5e61cd4bc929ead8c79993ee58a71d8ca0f3bc5a8b1a77a0。最新iOS27 38987122647为pending，38984903551为运行中，队列保持1运行/1等待；旧38934924631自然结束失败（非取消）。本条为08:36最新状态，云端/签名/真机仍待，不以合成界面通过替代真实平台、真机或完整对齐。决策及范围边界见[0027](decisions/0027-track-list-identity-and-views.md)，详细证据见[BUILD_STATUS.md](BUILD_STATUS.md)。
+修复前合成公开歌单真实UI回归1792196022730于69.228秒失败（完整发现页菜单未呈现）；修复后1792196266236于81.940秒通过。303项业务/类型检查通过。独立e2e入口注入公开wire响应，正式入口和matching音频隔离保留；云端第二测试组新增此专项。最终交叉组1792196898246两项零失败/跳过通过（歌词97.353秒、发现90.423秒）；本批69f57a4已正常push并核对远端main；清洁本地SDK26.2 unsigned IPA通过，manifest dirty=false/workingTreeChanges=[]、arm64、min15.1、设备族[1,2]，正式入口隔离、ZIP CRC及二进制/摘要一致性通过。SHA256 e6a3f81f3d9f94af5e61cd4bc929ead8c79993ee58a71d8ca0f3bc5a8b1a77a0。最新iOS27 38987122647为pending，38984903551为运行中，队列保持1运行/1等待；旧38934924631自然结束失败（非取消）。本条为08:36历史回执，最新状态以A10/08:48回执为准，云端/签名/真机仍待，不以合成界面通过替代真实平台、真机或完整对齐。决策及范围边界见[0027](decisions/0027-track-list-identity-and-views.md)，详细证据见[BUILD_STATUS.md](BUILD_STATUS.md)。
 
 ## 2026-10-17 A09 当前本地验收
 
