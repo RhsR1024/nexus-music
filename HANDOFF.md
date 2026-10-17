@@ -1,3 +1,9 @@
+## 2026-10-18 A04柔光与四场合成（静态阶段）
+
+reverse-skill新R2/mobile-reverse路由、固定离线scope/case-guard及严格review27E/26F/26P、8WI/54事件零错误/警告。E026→F025→P025核验900原始指令/10BL/16池加载，E027→F026→P026核验1296指令/109BL/58池加载；独立重放通过。恢复HSL软化、144×144预乘柔光、code-unit种子及四场运动/呼吸、独立全场旋转与渐变/贴图合成边界。完整锚点纵坐标、部分颜色、精确Random和完整过渡/运行仍未知；Cubic未打印控制量的推断明确未采纳。详见[静态报告](docs/2026-10-18_reverse-sollin-ambient-scene-report.md)。
+
+本批无产品变更、不增加A04完成度。下一步先亲读五参考并记录原生场景设计取舍，再原创实施与独立数学/原生/App验收；保留语义对比度、可见性/后台/减少动态效果、唯一播放意图。云端39072820731/8f865af仍运行、39077179759/25b1e05唯一pending，1运行/1排队；未取消或重派旧版，未新增云端成功。全部A/F/J、参考运行、真实服务/签名/手机保持active。
+
 ## 2026-10-18 三色背景清洁归档与push回执
 
 `25b1e0538c4c9a0e7221f14fdf87c29e0eca71ef`已正常push，远端main一致。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人/签名资源排除通过。IPA SHA256 `50371f64901f6414dab4762768fa0d75890c2a8dc8a5fdfcfca2e4b3d9f3b14c`，留存build/local-flow-palette-25b1e05。366业务/类型、完整native、正式背景App329.540秒及两页三色截图见下；验收后strict review25E/24F/24P、8WI/51事件零错误/警告。
