@@ -829,6 +829,14 @@ Sollin 私有云端服务、专用链接或不可授权接口不复制；优先�
 `920d193` 已正常 push 到 `RhsR1024/nexus-music`。提交后的本地清洁归档 `build/logs/archive-offline-transfer-920d193.log` 为 `ARCHIVE SUCCEEDED`，manifest `dirty=false`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、unsigned；IPA SHA256 `451c98c59cfb0fde012cb2c887f608550ca5733522ed366f0b3b5973f51d7ebc`，正式入口与 ZIP CRC 通过。该包不替代 iOS27、签名、真机或真实服务。
 
 push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d193`）最新排队，`39010767320`（`3e56d4d`）运行中；旧 `39014868431`（`7cc176c`）和 `39012949974`（`52a0aaf`）自动取消。保持 1 运行/1 排队，不取消运行中、不重派旧版本，pending/取消不计通过。
+
+# 2026-10-17 本地推荐/FM fallback 接入
+
+已新增 `LocalRecommendationStore`，从本机收藏、历史、歌单、曲库和播放统计生成稳定身份去重的本地推荐；FM 会尽量打散连续同歌手，候选耗尽后循环。音乐库首页提供本地推荐列表和本地 FM 入口，服务层暴露该 store；业务测试覆盖评分原因、去重、歌手打散、循环和订阅刷新。该能力不读取或上传平台凭据、Sollin 私有服务或音频文件。
+
+产品采用混合策略：用户已登录网易云、QQ 音乐或酷狗等 provider 且接口可用时，优先使用平台真实推荐、日推/FM、个人歌单和收藏；未登录、离线、未授权或接口失败时使用本地推荐/FM fallback。因此本地推荐可以在无账号时提供可用入口，但个性化准确度通常不及平台侧行为模型，不能把它记作平台推荐完成。平台 Keychain 登录、真实推荐/FM协议、失败回退和服务验收仍待实现；Sollin 私有账号体系、用户中心、服务支持、激活/赞助/商业权益及私有云端仍排除。
+
+本批代码未改变 E-004 的证据边界，也未宣称真实平台、签名、iOS27 或真机完成。进度按工作量更新为：排除真机反馈调试的当前开发约 **80.65%（对外约81%，剩余约19%）**；含真实服务、签名、真机和交付验收约 **57.93%（对外约58%）**。在线扩展工作包由20%代码实现上调为30%，因为本地 fallback 已有实现和测试；平台登录/真实推荐/FM/识曲仍是该包的主要剩余开发量。
 # 2026-10-17 E-004 provider/识曲边界严格复核回执
 
 本批已按 reverse-skill `mobile-reverse` PRIMARY 完成 Sollin IPA provider/auth、推荐/FM/taste profile 与 audio-match 静态边界核查。`source scripts/environment.sh && node scripts/sollin-reverse-gate.mjs ipa --review` 通过，4 Evidence、3 Finding、3 Path，0 error/0 warning；E-004 case-local 哈希清单和报告保留在忽略目录 `work/sollin-ipa/`。结论仅支持音枢的 provider-neutral/本地实现边界：平台登录凭据走既有 provider/Keychain，推荐优先曲库/历史/平台公开数据，识曲只采纳本地 PCM 准备约束；没有远端 URL、鉴权交换、配额、结果协议或运行时调用图证据。

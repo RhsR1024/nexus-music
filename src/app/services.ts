@@ -48,6 +48,7 @@ import {WebDAVSync} from '../storage/webdavSync.ts';
 import { decodeQueue, type SavedCursor, type SavedQueue } from '../storage/queuePersistence.ts';
 import {OfflineDownloadStore} from '../storage/offlineDownloads.ts';
 import {createOfflineDownloadFiles} from '../storage/offlineFiles.ts';
+import {LocalRecommendationStore} from '../providers/recommendations.ts';
 
 export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const repository = await openRepository();
@@ -71,6 +72,9 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const libraryMutations=new MutationQueue();
   const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations);await restore('library.v1','音乐库',()=>library.restore());
   const playbackStats=new PlaybackStatsStore(repository,Date.now,libraryMutations);await restore('playbackStats.v1','播放统计',()=>playbackStats.restore());
+  // Recommendations are derived from local library/statistics only. No Sollin
+  // account, private endpoint, or remote recommendation protocol is involved.
+  const recommendations=new LocalRecommendationStore(library,playbackStats,Date.now);
   const nativeLX = loadNativeLX();
   const registry = new SourceRegistry(nativeLX);
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
@@ -157,7 +161,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.backup.v1','云备份目录',()=>davBackups.restore());
   const davSync=new WebDAVSync({repository,accounts:davAccounts,transport:davTransport,library,mutations:libraryMutations,uuid:Crypto.randomUUID});
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
-  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
+  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;
