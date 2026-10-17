@@ -381,3 +381,8 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 本批 `ea81654` 已通过原生专项及本地清洁 device archive；manifest `dirty=false`、arm64、iphoneos26.2、最低 iOS 15.1、设备族 `[1,2]`、signed=false，正式入口隔离和 `verify-archive.mjs` 通过，IPA SHA256 `fe133e9a5d77da3033aa6946b99ae8c29cea3eee6e8684705bb9d8b992ed997b`。不将本机 unsigned 归档写成 iOS27、签名、真机或真实服务完成。
 
 提交 `4169643` 已正常 push；iOS27 运行 `39009861484` 进入最新排队，旧运行 `39006353281` 保持运行，等待终态后再记录云端证据。
+# M10 容量管理增量
+
+已实现 `offlineLimitMB` 持久化、总量检查、统计和清理入口；业务检查现为 307/307。暂停/续传、后台调度、完整性哈希和在播保护仍未实现。
+
+以本增量后的 307/307 和约15% M10 代码实现估计为当前口径。

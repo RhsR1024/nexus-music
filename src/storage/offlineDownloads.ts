@@ -26,6 +26,7 @@ export interface OfflineDownloadOptions {
   uuid():string;
   now():number;
   maxBytes?:number;
+  maxTotalBytes?:()=>number;
 }
 interface SavedDownloads {version:1;items:OfflineDownloadRecord[]}
 
@@ -52,6 +53,7 @@ export class OfflineDownloadStore {
   private options:OfflineDownloadOptions;
   constructor(repository:Pick<Repository,'get'|'put'>,options:OfflineDownloadOptions){this.repository=repository;this.options=options;}
   getSnapshot=()=>this.items;
+  getStatistics=()=>({bytes:this.items.filter(item=>item.status==='completed').reduce((sum,item)=>sum+item.bytes,0),files:this.items.filter(item=>item.status==='completed').length,pending:this.items.filter(item=>item.status==='queued'||item.status==='downloading').length});
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>this.listeners.delete(listener);};
   private publish(items:readonly OfflineDownloadRecord[]){this.items=items;for(const listener of this.listeners)listener();}
   private save(items:readonly OfflineDownloadRecord[]){return this.repository.put('offlineDownloads.v1',{version:1,items});}
@@ -83,10 +85,12 @@ export class OfflineDownloadStore {
         const media=await this.options.resolve(current.track,abort.signal);if(abort.signal.aborted)throw new Error('下载已取消');
         let bytes=await this.options.files.download(media.url,current.fileName,media.headers);if(!Number.isSafeInteger(bytes)||bytes<=0)bytes=this.options.files.size(current.fileName);
         const max=this.options.maxBytes??2*1024*1024*1024;if(!Number.isSafeInteger(bytes)||bytes<=0||bytes>max)throw new Error('离线文件大小无效');
+        const total=this.items.filter(value=>value.status==='completed'&&value.id!==id).reduce((sum,value)=>sum+value.bytes,0)+bytes;
+        if(total>(this.options.maxTotalBytes?.()??2*1024*1024*1024))throw new Error('离线容量已满，请先清理已保存文件');
         await this.update(id,{status:'completed',bytes,quality:media.quality,error:undefined});
       }catch(error){
         try{await this.options.files.remove(this.items.find(value=>value.id===id)?.fileName??'');}catch{/* Preserve the failed record for explicit cleanup. */}
-        if(!abort.signal.aborted)await this.update(id,{status:'failed',error:'下载失败，原有数据保留'});
+        if(!abort.signal.aborted)await this.update(id,{status:'failed',error:error instanceof Error&&error.message==='离线容量已满，请先清理已保存文件'?error.message:'下载失败，原有数据保留'});
       }finally{this.active.delete(id);}
     });
     this.tail=run.catch(()=>{});return run;
@@ -97,6 +101,7 @@ export class OfflineDownloadStore {
     this.active.get(id)?.abort();const next=this.items.filter(value=>value.id!==id);await this.save(next);this.publish(next);
     try{await this.options.files.remove(item.fileName);}catch{/* A missing file is already removed. */}
   }
+  async clearCompleted(){for(const item of [...this.items].filter(value=>value.status==='completed'))await this.remove(item.id);}
   async resolve(track:Track):Promise<{url:string;quality?:string}|undefined>{
     const item=this.find(track);if(!item||item.status!=='completed'||!this.options.files.exists(item.fileName))return;
     return {url:this.options.files.uri(item.fileName),quality:item.quality};

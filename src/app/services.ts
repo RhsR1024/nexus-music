@@ -94,7 +94,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   };
   const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal)=>{
     const media=await resolveTrack(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');return media;
-  },files:createOfflineDownloadFiles(),uuid:Crypto.randomUUID,now:Date.now});
+  },files:createOfflineDownloadFiles(),uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576});
   await restore('offlineDownloads.v1','离线下载',()=>offlineDownloads.restore());
   const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
     const saved=await offlineDownloads.resolve(track);if(saved)return saved;

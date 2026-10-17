@@ -13,7 +13,7 @@ function rig(saved:unknown=undefined){
   };
   const repository:Pick<Repository,'get'|'put'>={get:async<T>()=>value as T|undefined,put:async(_,next)=>{value=structuredClone(next);}};
   const store=new OfflineDownloadStore(repository,{resolve:async()=>({url:'https://audio.example/song.mp3',quality:'320k'}),files:adapter,uuid:()=>`00000000-0000-4000-8000-${String(++sequence).padStart(12,'0')}`,now:()=>1000+sequence});
-  return{store,files,setFail:(value:boolean)=>{fail=value;},saved:()=>value};
+  return{store,files:adapter,setFail:(value:boolean)=>{fail=value;},saved:()=>value};
 }
 
 test('offline downloads deduplicate by source identity and resolve only complete files',async()=>{
@@ -32,4 +32,10 @@ test('restore downgrades missing completed files and interrupted work to queued'
     {id:'a',track:track('a'),fileName:'00000000.audio',status:'completed',bytes:10,updatedAt:1},
     {id:'b',track:track('b'),fileName:'00000001.audio',status:'downloading',bytes:0,updatedAt:1},
   ]};const r=rig(saved);await r.store.restore();assert.deepEqual(r.store.getSnapshot().map(item=>item.status),['failed','queued']);
+});
+
+test('offline quota rejects a completed file without deleting existing files',async()=>{
+  const r=rig();const first=await r.store.enqueue(track('one'));await r.store.start(first.id);
+  const limited=new OfflineDownloadStore({get:async()=>r.saved() as never,put:async()=>{}},{resolve:async()=>({url:'https://audio.example/two.mp3'}),files:r.files,uuid:()=>`00000000-0000-4000-8000-000000000099`,now:()=>2000,maxTotalBytes:()=>12});
+  await limited.restore();const second=await limited.enqueue(track('two'));await limited.start(second.id);assert.equal(limited.getSnapshot()[1]!.status,'failed');assert.match(limited.getSnapshot()[1]!.error??'',/容量/);assert.equal(limited.getStatistics().files,1);
 });
