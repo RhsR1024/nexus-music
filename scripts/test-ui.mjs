@@ -43,6 +43,7 @@ const offlineUI=process.argv.slice(2).some(target=>target.endsWith('/testDownloa
 let blockOfflineStream=false;
 const offlineCounts={full:0,resumed:0,blocked:0};
 let holdDiscoveryDetail=false;
+let truncateDiscoveryPlaylist=true;
 const heldDiscoveryResponses=[];
 // Original, solid 32x32 RGB fixtures: no third-party covers or user data.
 const themeCovers={red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
@@ -67,6 +68,7 @@ const server = createServer(async (req, res) => {
   if(discoveryUI&&req.url.startsWith('/discovery-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('holdNext'))holdDiscoveryDetail=true;
+    if(control.searchParams.has('completePlaylist'))truncateDiscoveryPlaylist=false;
     if(control.searchParams.has('release'))for(const send of heldDiscoveryResponses.splice(0))send();
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length}));return;
   }
@@ -88,6 +90,13 @@ const server = createServer(async (req, res) => {
     const chunks=[];for await(const chunk of req)chunks.push(chunk);const {url,request}=JSON.parse(Buffer.concat(chunks).toString());const parsed=new URL(url);
     counts.online??={};counts.online[parsed.hostname]=(counts.online[parsed.hostname]??0)+1;
     res.setHeader('Content-Type','application/json');
+    if(discoveryUI&&parsed.hostname==='wapi.kuwo.cn'&&parsed.pathname.endsWith('/getRcmPlayList')){
+      res.end(JSON.stringify({data:{total:1,data:[{id:'101',name:'Synthetic completeness playlist',total:3}]}}));return;
+    }
+    if(discoveryUI&&parsed.hostname==='nplserver.kuwo.cn'&&parsed.pathname==='/pl.svc'){
+      counts.discovery??={lists:0,details:0};counts.discovery.completeness=(counts.discovery.completeness??0)+1;
+      res.end(JSON.stringify({title:'Synthetic completeness playlist',total:truncateDiscoveryPlaylist?3:2,musiclist:['one','two'].map((word,index)=>({id:String(9201+index),name:`Synthetic completeness ${word}`,artist:'Fixture artist',album:'Fixture album',duration:120}))}));return;
+    }
     if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/playlist/list'){
       counts.discovery??={lists:0,details:0};counts.discovery.lists++;
       res.end(JSON.stringify({code:200,more:false,playlists:[{id:'101',name:'Synthetic discovery playlist',description:'Original UI fixture',trackCount:2,coverImgUrl:'http://127.0.0.1:18439/discovery-cover.png'}]}));return;

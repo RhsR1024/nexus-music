@@ -1182,6 +1182,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(importButton.isEnabled);XCTAssertFalse(app.buttons["取消读取"].exists)
     XCTAssertEqual(try control("release=1"),0);XCTAssertFalse(app.alerts["导入公开歌单"].exists,"A cancelled request must never present a late import confirmation")
     importButton.tap();XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:10));app.alerts.buttons["取消"].tap();evidence("Discovery navigation cancels full read and allows a fresh import preview")
+    reach(back);back.tap();let kuwo=app.descendants(matching:.any).matching(identifier:"酷我").firstMatch;reach(kuwo);kuwo.tap();detail()
+    reach(importButton);importButton.tap()
+    let incomplete=app.staticTexts["歌曲数量与平台声明不符，未导入不完整歌单"]
+    XCTAssertTrue(incomplete.waitForExistence(timeout:10));XCTAssertFalse(app.alerts["导入公开歌单"].exists);XCTAssertTrue(importButton.isEnabled);XCTAssertTrue(more.exists == false)
+    evidence("Truncated provider playlist stays visible and cannot present an import confirmation")
+    _=try control("completePlaylist=1");importButton.tap();XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:10));XCTAssertTrue(app.alerts.staticTexts.containing(NSPredicate(format:"label CONTAINS %@","2 首")).firstMatch.exists);app.alerts.buttons["取消"].tap()
+    reach(back);back.tap();let netease=app.descendants(matching:.any).matching(identifier:"网易").firstMatch;reach(netease);netease.tap();detail()
     reach(more);evidence("Discovery compact song rows");actions()
     XCTAssertTrue(action("本地收藏").exists);evidence("Embedded discovery song actions")
     action("本地收藏").tap();actions();XCTAssertTrue(action("取消本地收藏").waitForExistence(timeout:5));action("取消本地收藏").tap()

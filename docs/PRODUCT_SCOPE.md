@@ -1,3 +1,7 @@
+## 2026-10-18 完整公开歌单读取保护
+
+按[0050](decisions/0050-complete-playlist-count-validation.md)仅修音枢原创数量/取消边界，保留重复项和原始顺序；reverse-skill E022静态边界与参考协议未恢复限制保持。359业务/类型、App完整发现125.372秒零失败/跳过及截图通过；5项失败基线留存。清洁归档/云端/真实服务/签名/手机另验，完整A/F/J范围保持。
+
 ## 2026-10-18 发现完整读取的导航取消（本地通过）
 
 reverse-skill新路由R2/mobile-reverse，既有离线scope/case-guard及E022→F021→P021严格review保持；采纳前39事件，验收后22E/21F/21P、8WI/40事件零错误/警告。五参考固定HEAD/生命周期/维护/Android/许可与边界见[决策0049](decisions/0049-discovery-read-navigation-cancellation.md)；不把参考静态loadAll名称解释为完整取消语义。

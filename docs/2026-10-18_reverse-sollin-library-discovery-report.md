@@ -1,6 +1,6 @@
 # Sollin 发现歌单与播放历史边界
 
-2026-10-18，普通移动逆向，flavor=null；本批先建立静态证据，随后仅采纳原创历史日期分隔；完整发现/分页/参考运行仍待。reverse-skill固定cab634bd855fc287f6e420c1f36fd1a6b9245960，原生ipa-library-discovery路由R2/mobile-reverse，PRIMARY/索引/case-guard与项目门禁通过。授权仅本机离线样本，不运行目标或访问服务。
+2026-10-18，普通移动逆向，flavor=null；本批先建立静态证据，随后采纳原创历史日期分隔、导航取消和完整读取校验；完整发现/分页/参考运行仍待。reverse-skill固定cab634bd855fc287f6e420c1f36fd1a6b9245960，原生ipa-library-discovery路由R2/mobile-reverse，PRIMARY/索引/case-guard与项目门禁通过。授权仅本机离线样本，不运行目标或访问服务。
 
 IPA SHA256 c2ee2deba236ef1b9e097e1d8cdc0b816137aa57cf85d4c8e2811dae9924bc07；App.framework/App成员640c6112584c017b45141a038f7aa975224c8b540ef1aaec1f40939a6aa5c84d。VA=slice偏移，FAT raw加0x4000。索引cstool5.0.3/Python限定解码，NO_CODE_ANALYSIS骨架仅作地址归属。notes/library-probe.py及library-evidence.py核对2033原始指令、15BL、5分配头和池偏移；不可变E022摘要a0a69e9757e0d613880df160bfca016e71c42850cb79fbcff07de43ecd40d693，观察2026-10-18T03:50:17+08:00。E022→F021 design/candidate/high→P021，WI008进行中。
 
@@ -26,3 +26,7 @@ E022/F021/P021、WI008的采纳前review为38事件、验收后39事件，22E/21
 ## 原创完整读取导航取消
 
 [0049](decisions/0049-discovery-read-navigation-cancellation.md)按新R2路由/既有scope及五参考核验，仅修音枢旧请求abort后importing未复位的真实缺口。E022只支持二级详情与独立loadAll边界，不证明参考取消语义。服务器hold/release屏障确认held=1，旧代码22.380秒失败于重入后导入入口未恢复；修复保留Abort/迟到guard，352业务/类型与最终App114.383秒通过、零失败/跳过，原收藏/歌单重复项/Sheet归属和清理保留，截图已亲看。3列表/5详情均为本机合成请求，不计真实平台；验收后strict review22E/21F/21P、8WI/40事件零错误/警告。清洁归档/对应云端/真实服务/签名/手机另验。
+
+## 原创完整读取一致性验收
+
+见[0050](decisions/0050-complete-playlist-count-validation.md)及其中Mermaid流程。5项独立失败基线证明音枢hasMore-only完整返回的数量/末页取消缺口；359业务/类型与App1792270600285完整发现125.372秒通过，零失败/跳过，截断2/3拒绝、已加载数据/重试预览及原交互/清理保留，截图已亲看。16次本机合成请求无音频，不计真实平台。E022不追加或改写为参考数量协议证明；WI008/timeline/journal记录原创验收，参考完整分页/取消运行仍待。清洁归档/对应云端/真实服务/签名/手机另记。

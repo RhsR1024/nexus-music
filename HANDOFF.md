@@ -1,3 +1,9 @@
+## 2026-10-18 完整歌单数量与取消校验（本地通过）
+
+reverse-skill新R2/mobile-reverse路由、既有离线scope/case-guard及E022→F021→P021采纳前40事件严格review通过；五参考固定HEAD/实现/维护/Android/许可及原创取舍见[0050](docs/decisions/0050-complete-playlist-count-validation.md)。E022只证明数量helper和独立loadAll边界，参考完整计数/分页/取消语义未恢复。
+
+5项独立失败基线复现终页截断/超量、非法/变化/遗忘已知数量及取消后末页返回。原创complete每页返回后检查abort，保留并核对声明总数，终页严格数量相等；未知总数、顺序/重复项与原分页上限保持。359业务/类型通过，App1792270600285完整发现专项125.372秒零失败/跳过：截断拒绝确认、重试完整结果预览2首、原导航取消/收藏/重复项/两种Sheet/清理通过；2/3计数与错误/两首歌曲保留截图已亲看。16次合成wire请求、无音频，不计真实服务。清洁归档/push/对应iOS27继续，全部A/F/J、参考完整运行、真实服务/签名/手机保留。
+
 ## 2026-10-18 发现取消修复清洁归档与push回执
 
 `0b57726995f5fb8de92f6c9f1823a470108d50b5`已正常push，远端main一致。352业务/类型、发现114.383秒/离线200.468秒实际PCM与Range专项通过，strict review22E/21F/21P、8WI/40事件零错误/警告。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `9817c8e2da16ef5d55c6a931b0a739fcdf6e870d07bda68b43b9f83fe0134b1f`，留存`build/local-discovery-cancel-0b57726`。初次归档核验参数误写完整提交号触发断言；从git/manifest取得实际完整SHA后核验通过，产物未改。此条覆盖本批归档/push待办。

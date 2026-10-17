@@ -122,11 +122,18 @@ export class DiscoveryProvider {
     return{title,items:rows.map(value=>onlineTrack(platform,value)),total,hasMore,page};
   }
   async complete(platform:OnlinePlatform,id:string,signal:AbortSignal,rank=false):Promise<{title:string;tracks:readonly Track[]}>{
-    const tracks:Track[]=[];let title='';const pages=new Set<string>();
+    const tracks:Track[]=[];let title='',expectedTotal:number|undefined;const pages=new Set<string>();
     for(let page=1;page<=200;page++){
-      throwIfAborted(signal);const result=await this.detail(platform,id,page,signal,rank);if(!title)title=result.title;
+      throwIfAborted(signal);const result=await this.detail(platform,id,page,signal,rank);throwIfAborted(signal);if(!title)title=result.title;
+      if(result.total!==undefined){
+        if(!Number.isSafeInteger(result.total)||result.total<0)throw new Error('平台歌曲数量无效，未导入不完整歌单');
+        if(expectedTotal!==undefined&&expectedTotal!==result.total)throw new Error('读取期间歌曲数量变化，请重新读取完整歌单');
+        expectedTotal=result.total;
+      }
       const signature=JSON.stringify(result.items.map(item=>item.origin.id));if(result.hasMore&&(!result.items.length||pages.has(signature)))throw new Error('平台未推进分页，已停止不完整导入');pages.add(signature);
-      tracks.push(...result.items);if(tracks.length>20000)throw new Error('歌单超过20000首，请分批导入');if(!result.hasMore)return{title:title||'公开平台歌单',tracks};
+      tracks.push(...result.items);if(tracks.length>20000)throw new Error('歌单超过20000首，请分批导入');
+      if(expectedTotal!==undefined&&(tracks.length>expectedTotal||!result.hasMore&&tracks.length!==expectedTotal))throw new Error('歌曲数量与平台声明不符，未导入不完整歌单');
+      if(!result.hasMore)return{title:title||'公开平台歌单',tracks};
     }
     throw new Error('歌单分页过多，未导入不完整结果');
   }

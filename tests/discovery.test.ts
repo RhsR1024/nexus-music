@@ -35,3 +35,47 @@ test('Migu category template retains playlist identity, art and explicit next pa
   const p=new DiscoveryProvider(sha,async()=>({code:'000000',data:{nextPageUrl:'http://app.c.nf.migu.cn/path?pageNumber=2',contentItemList:[{itemList:[{title:'Fixture',imageUrl:'https://example.test/cover',logEvent:{contentType:'2021',contentId:'123'}}]}]}}));
   const page=await p.playlists('mg',1,'1',new AbortController().signal);assert.equal(page.items[0]?.id,'123');assert.equal(page.hasMore,true);assert.equal(page.items[0]?.artwork,'https://example.test/cover');
 });
+
+test('complete import rejects a terminal provider page shorter or longer than its declared total',async()=>{
+  for(const total of [0,1,3]){
+    const p=new DiscoveryProvider(sha,async()=>({title:'Fixture',total,musiclist:[{id:'1',name:'One',artist:'Fixture'},{id:'2',name:'Two',artist:'Fixture'}]}));
+    await assert.rejects(p.complete('kw','123',new AbortController().signal),/完整|数量/);
+  }
+});
+test('complete import rejects fractional or unsafe declared totals',async()=>{
+  for(const total of [1.5,Number.MAX_SAFE_INTEGER+1]){
+    const p=new DiscoveryProvider(sha,async()=>({title:'Fixture',total,musiclist:[{id:'1',name:'One',artist:'Fixture'}]}));
+    await assert.rejects(p.complete('kw','123',new AbortController().signal),/数量/);
+  }
+});
+test('complete import rejects changing declared totals between pages',async()=>{
+  const p=new DiscoveryProvider(sha,async url=>{
+    const page=Number(new URL(url).searchParams.get('pn'));
+    return{title:'Fixture',total:page===0?101:102,musiclist:Array.from({length:page===0?100:2},(_,i)=>({id:String(page*100+i+1),name:'Synthetic',artist:'Fixture'}))};
+  });
+  await assert.rejects(p.complete('kw','123',new AbortController().signal),/数量|变化/);
+});
+test('complete import retains a known total when a later page omits it and preserves duplicates',async()=>{
+  const p=new DiscoveryProvider(sha,async url=>{
+    const page=Number(new URL(url).searchParams.get('pn'));
+    return{title:'Fixture',...(page===0?{total:101}:{}),musiclist:Array.from({length:page===0?100:1},(_,i)=>({id:String(page===0?i+1:1),name:'Synthetic',artist:'Fixture'}))};
+  });
+  const result=await p.complete('kw','123',new AbortController().signal);
+  assert.equal(result.tracks.length,101);assert.equal(result.tracks[100]?.origin.id,'1');assert.equal(result.tracks[0]?.origin.id,'1');
+});
+test('complete import cannot drop an earlier total to accept a truncated terminal page',async()=>{
+  const p=new DiscoveryProvider(sha,async url=>{
+    const page=Number(new URL(url).searchParams.get('pn'));
+    return{title:'Fixture',...(page===0?{total:102}:{}),musiclist:Array.from({length:page===0?100:1},(_,i)=>({id:String(page*100+i+1),name:'Synthetic',artist:'Fixture'}))};
+  });
+  await assert.rejects(p.complete('kw','123',new AbortController().signal),/完整|数量/);
+});
+test('complete import still supports unknown totals with a terminating short page',async()=>{
+  const p=new DiscoveryProvider(sha,async url=>({title:'Fixture',musiclist:Array.from({length:new URL(url).searchParams.get('pn')==='0'?100:1},(_,i)=>({id:String(i+1),name:'Synthetic',artist:'Fixture'}))}));
+  assert.equal((await p.complete('kw','123',new AbortController().signal)).tracks.length,101);
+});
+test('complete import rejects a late terminal response after cancellation even if transport ignores abort',async()=>{
+  const controller=new AbortController();
+  const p=new DiscoveryProvider(sha,async()=>{controller.abort();return{title:'Fixture',total:1,musiclist:[{id:'1',name:'One',artist:'Fixture'}]};});
+  await assert.rejects(p.complete('kw','123',controller.signal),{name:'AbortError'});
+});
