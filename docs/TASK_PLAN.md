@@ -1,3 +1,12 @@
+## 2026-10-17 A04/A05 全局背景独立控制
+
+- [x] E-010→F-009→P-009原始全局容器/分配分支证据与采纳前严格review（10E/9F/9P，零错误/警告）；保留摘要链纠正、商业激活/动态视频边界。
+- [x] 独立全局动效/播放页动效、旧偏好四组合迁移、调色失败/拒绝图片迟到保护及语义对比度，331项业务/类型通过。
+- [x] 正式App1792244188543.xcresult两项通过、零失败/跳过：全局红蓝/跨页/独立开关/暂停重启189.767秒，Files图片导入/播放背景持久化112.398秒；亲看全局流动单开设置与发现页截图。测试证明颜色/优先级/保存行为，不冒称实际动画帧率或参考shader等价。
+- [ ] 本批清洁unsigned归档、提交push及对应iOS27终态；手机功耗/后台/减少动态效果和真实服务/签名单独验收。
+
+详见[0039](decisions/0039-independent-global-background-motion.md)。A03/A06–A09其余交互和全部F01–F37/J01–J59继续，不提前转入新增平台能力。
+
 ## 2026-10-17 主题Sheet清洁归档与推送回执
 
 `b82aeba2cb7ffc29e35eba7c7d0dbd5654d70c27` 已正常push，远端main核对一致；`archive-theme-sheet-clean.log`成功，清洁manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带SHA256、包内可执行/JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过；IPA SHA256 `15fbe875bc23a3554654fe2e4da173a3a651c60045e89bc4de18efeffd6eb687`，留存`build/local-theme-sheet-b82aeba`。

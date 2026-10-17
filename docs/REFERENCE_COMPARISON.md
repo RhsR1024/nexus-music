@@ -1,3 +1,7 @@
+## 2026-10-17 全局背景分支与动效边界比较
+
+五固定HEAD已逐一复核：悦音theme.ts:1–40（MIT/README原边界）、Q/wtf ImageBackground.tsx:52–104（根Apache2.0、文件Meta MIT头）、Cy usePlayerBackground.tsx:1–122/useAppTheme.tsx（根Apache2.0、RNTP独立许可）、自有Wayferar HomeCardTheme.java:44–87（home-only，反编译/第三方边界保留）。分别参考主题状态、图片/内容分层、有界缓存/身份/语义可读性；不移植源码/依赖/原生补丁/资源，避免引入旧RN或RNTP/Expo版本与Android Activity差异。音枢原创全局/播放页动效独立与原子迁移，TS状态可共享Android，原生图片/生命周期分别验收，详见[0039](decisions/0039-independent-global-background-motion.md)。
+
 ## 2026-10-17 主题呈现复核
 
 五参考均沿固定HEAD/许可证：悦音Library908–947为三主题选项行，Cy settingModal615–645为原生MenuView；Q/wtf Theme/IsAutoTheme13–34通过平台支持开关复用主题store；Wayferar SourceSettings8–18不提供本次iOS模态方案。音枢采用已有原生pageSheet及原子PreferenceStore，无新依赖/源码移植；Android复用契约且独立验收。Sollin采纳限E-009直接包装调用，见[0038](decisions/0038-theme-mode-sheet.md)。

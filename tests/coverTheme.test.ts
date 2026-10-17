@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {CoverThemeStore} from '../src/appearance/coverTheme.ts';
 import {PlaybackController} from '../src/playback/controller.ts';
 import {makeQueue} from '../src/domain/queue.ts';
-import {appearanceDefaults,appearancePalette} from '../src/domain/appearance.ts';
+import {appearanceDefaults,appearancePalette,coverThemeGradient} from '../src/domain/appearance.ts';
 import {track,deferred} from './fixtures.ts';
 import type {Track} from '../src/domain/track.ts';
 
@@ -11,12 +11,12 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function rig(){
   const requests:{track:Track;signal:AbortSignal;result:ReturnType<typeof deferred<string|undefined>>}[]=[],palettes:{uri:string;result:ReturnType<typeof deferred<string>>}[]=[];
   const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio'})},{load(){},stop(){},play(){},pause(){}},makeQueue([],null));
-  let enabled=true;const listeners=new Set<()=>void>();
-  const store=new CoverThemeStore(controller,{getSnapshot:()=>({coverColor:enabled}),subscribe:listener=>{listeners.add(listener);return()=>{listeners.delete(listener);};}},
+  let enabled=true,flow=false;const listeners=new Set<()=>void>();
+  const store=new CoverThemeStore(controller,{getSnapshot:()=>({coverColor:enabled,globalBackgroundMotion:flow}),subscribe:listener=>{listeners.add(listener);return()=>{listeners.delete(listener);};}},
     {loadTrack:async(track,signal)=>{const result=deferred<string|undefined>();requests.push({track,signal,result});return result.promise;}},
     {color:async uri=>{const result=deferred<string>();palettes.push({uri,result});return result.promise;}});
   const select=(id:string,t:Track=track)=>controller.setQueue(makeQueue([{id,track:t}],id));
-  return{store,controller,requests,palettes,select,enable:(value:boolean)=>{enabled=value;for(const listener of listeners)listener();}};
+  return{store,controller,requests,palettes,select,enable:(value:boolean)=>{enabled=value;for(const listener of listeners)listener();},flow:(value:boolean)=>{flow=value;for(const listener of listeners)listener();}};
 }
 test('global cover theme ignores late downloads and palette results after rapid song changes',async()=>{
   const r=rig();r.select('a');r.requests[0]!.result.resolve('file:///a');await tick();r.select('b');
@@ -44,7 +44,7 @@ test('actual matched recording drives the cover, pause and progress keep the sam
 });
 test('same song cover/version changes and external invalidation cancel previous work',async()=>{
   const r=rig();r.select('same',{...track,metadata:{davVersion:'one'}});r.select('same',{...track,metadata:{davVersion:'two'}});assert.equal(r.requests[0]!.signal.aborted,true);
-  r.store.invalidate();assert.equal(r.requests[1]!.signal.aborted,true);assert.equal(r.requests.length,3);r.requests[2]!.result.resolve('file:///two');await tick();r.palettes[0]!.result.resolve('invalid');await tick();assert.deepEqual(r.store.getSnapshot(),{});
+  r.store.invalidate();assert.equal(r.requests[1]!.signal.aborted,true);assert.equal(r.requests.length,3);r.requests[2]!.result.resolve('file:///two');await tick();r.palettes[0]!.result.resolve('invalid');await tick();assert.deepEqual(r.store.getSnapshot(),{uri:'file:///two'});
   r.store.dispose();assert.equal(r.requests[2]!.signal.aborted,true);
 });
 function luminance(color:string){return [1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i]!,0);}
@@ -56,11 +56,29 @@ test('red and blue covers generate different light/dark backgrounds with readabl
       const palette=appearancePalette(mode,options,color);
       for(const background of palette.background){
         // Include the worst possible pixel of the faint blurred cover layer.
-        const opacity=mode==='light'?.035:.06,pixel=mode==='light'?0:255;
+        const opacity=mode==='light'?.045:.08,pixel=mode==='light'?0:255;
         const composite='#'+[1,3,5].map(i=>Math.round(parseInt(background.slice(i,i+2),16)*(1-opacity)+pixel*opacity).toString(16).padStart(2,'0')).join('');
         for(const text of [palette.text,palette.secondary])assert.ok(contrast(composite,text)>=4.5,`${mode} ${color}: ${composite}/${text}`);
       }
     }
     assert.deepEqual(appearancePalette(mode,appearanceDefaults,'#FF0000'),appearancePalette(mode,appearanceDefaults));
+  }
+});
+test('global flow loads without cover tint and survives palette failure without reviving rejected images',async()=>{
+  const r=rig();r.enable(false);r.flow(true);r.select('a');assert.equal(r.requests.length,1);
+  r.requests[0]!.result.resolve('file:///a');await tick();assert.deepEqual(r.store.getSnapshot(),{uri:'file:///a'});
+  r.palettes[0]!.result.reject(new Error('palette unavailable'));await tick();assert.deepEqual(r.store.getSnapshot(),{uri:'file:///a'});
+  r.enable(true);r.enable(false);assert.equal(r.requests.length,1,'tint switch must not reload the same flow image');
+  r.select('b');r.requests[1]!.result.resolve('file:///b');await tick();r.store.rejectImage('file:///b');r.palettes[1]!.result.resolve('#0000FF');await tick();assert.deepEqual(r.store.getSnapshot(),{});
+  r.flow(false);assert.equal(r.requests[1]!.signal.aborted,true);assert.deepEqual(r.store.getSnapshot(),{});r.store.dispose();
+});
+test('flow-only cover layer keeps text readable with the independent theme palette',()=>{
+  for(const mode of ['light','dark'] as const)for(const visualTheme of ['classic','blush','soft'] as const){
+    for(const color of ['#FF0000','#0000FF','#000000','#FFFFFF','#00FF00','#FF00FF'])for(const background of coverThemeGradient(color,mode)){
+      const palette=appearancePalette(mode,{...appearanceDefaults,visualTheme,globalBackgroundMotion:true},color);
+      const opacity=mode==='light'?.045:.08,pixel=mode==='light'?0:255;
+      const composite='#'+[1,3,5].map(i=>Math.round(parseInt(background.slice(i,i+2),16)*(1-opacity)+pixel*opacity).toString(16).padStart(2,'0')).join('');
+      for(const text of [palette.text,palette.secondary])assert.ok(contrast(composite,text)>=4.5,`${mode}/${visualTheme}/${color}: ${composite}/${text}`);
+    }
   }
 });

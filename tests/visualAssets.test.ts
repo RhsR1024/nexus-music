@@ -77,3 +77,17 @@ test('solid player backgrounds never resurrect a loaded cover and failed photos 
   assert.equal(playerBackgroundImage('photo',false,undefined,undefined),undefined);
   assert.equal(playerBackgroundImage('photo',false,'photo','cover',['photo','cover']),undefined);
 });
+
+test('old effective global motion migrates once and separate global/player choices persist atomically',async()=>{
+  for(const coverColor of [false,true])for(const dynamicBackground of [false,true]){
+    let record:unknown={coverColor,dynamicBackground};let fail=false;
+    const repository={get:async<T>()=>record as T,put:async(_:string,value:unknown)=>{if(fail)throw new Error('disk full');record=structuredClone(value);}} as unknown as Repository;
+    const store=new PreferenceStore(repository);await store.restore();assert.equal(store.getSnapshot().globalBackgroundMotion,coverColor&&dynamicBackground);
+    await store.update({globalBackgroundMotion:true,dynamicBackground:false});const saved=store.getSnapshot();
+    fail=true;await assert.rejects(store.update({globalBackgroundMotion:false}));assert.equal(store.getSnapshot(),saved);fail=false;
+    const restarted=new PreferenceStore(repository);await restarted.restore();assert.equal(restarted.getSnapshot().globalBackgroundMotion,true);assert.equal(restarted.getSnapshot().dynamicBackground,false);
+    await restarted.update({globalBackgroundMotion:false,dynamicBackground:true});const again=new PreferenceStore(repository);await again.restore();assert.equal(again.getSnapshot().globalBackgroundMotion,false);assert.equal(again.getSnapshot().dynamicBackground,true);
+    await assert.rejects(again.update({globalBackgroundMotion:'true'} as never));
+    record={...saved,globalBackgroundMotion:null};await assert.rejects(new PreferenceStore(repository).restore());
+  }
+});

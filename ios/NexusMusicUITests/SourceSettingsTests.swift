@@ -905,6 +905,8 @@ final class SourceSettingsTests: XCTestCase {
     let app=XCUIApplication();app.launch()
     func reveal(_ element:XCUIElement){for _ in 0..<24 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65:0.35)))};XCTAssertTrue(element.isHittable)}
     openSettings(app,page:"background");app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch.tap()
+    openSettings(app,page:"background")
+    for id in ["visual-global-motion","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "0"{control.tap()}}
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
     openSettings(app,page:"appearance");let follow=app.switches["appearance-cover-color"];reveal(follow);if follow.value as? String != "1"{follow.tap()}
     openSettings(app,page:"sources")
@@ -944,6 +946,22 @@ final class SourceSettingsTests: XCTestCase {
     let fallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[fallback],timeout:10),.completed)
     restoredFollow.tap();expectTint(false,"Blue cover enabled again")
     app.terminate();app.launch();openSettings(app,page:"appearance");expectTint(false,"Blue cover restored paused after restart")
+    // Global flow has its own persisted switch and works with tint disabled.
+    // Assert actual pixels, not merely the presence of the background view.
+    openSettings(app,page:"background")
+    let tint=app.switches["visual-cover-color"];reveal(tint);if tint.value as? String != "0"{tint.tap()}
+    let noCover=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[noCover],timeout:10),.completed)
+    let global=app.switches["visual-global-motion"];reveal(global);global.tap();XCTAssertEqual(global.value as? String,"1");expectTint(false,"Global flow without cover tint")
+    let playerMotion=app.switches["visual-motion"];reveal(playerMotion);XCTAssertEqual(playerMotion.value as? String,"0")
+    app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap();expectTint(false,"Global flow discovery independent of player motion")
+    app.terminate();app.launch();openSettings(app,page:"background")
+    let persistedGlobal=app.switches["visual-global-motion"];reveal(persistedGlobal);XCTAssertEqual(persistedGlobal.value as? String,"1");expectTint(false,"Global flow restored paused")
+    let persistedTint=app.switches["visual-cover-color"];reveal(persistedTint);XCTAssertEqual(persistedTint.value as? String,"0")
+    let persistedPlayer=app.switches["visual-motion"];reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"0");persistedPlayer.tap()
+    reveal(persistedGlobal);persistedGlobal.tap()
+    let restoredBase=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[restoredBase],timeout:10),.completed)
+    reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"1","Global switch must preserve playback animation choice")
+    persistedPlayer.tap()
     openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
     XCTAssertFalse(app.buttons["打开播放页"].exists)
   }

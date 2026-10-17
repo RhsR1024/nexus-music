@@ -1,3 +1,7 @@
+## 2026-10-17 全局背景独立控制：本地专项通过
+
+E-010采纳前reverse-skill严格review通过10E/9F/9P、7WI/15events，零错误/警告。`check-global-background.log`类型与331项业务通过，首轮两项新增断言失败保留`check-global-background-first-failed.log`，已修正语义色/空快照后完整复验通过。正式App1792244188543.xcresult两项通过、零失败/跳过：全局红蓝/跨页/独立开关/暂停重启189.767秒，Files图片导入/播放背景持久化112.398秒；亲看全局流动单开设置与发现页截图。测试证明颜色/优先级/保存行为，不冒称实际动画帧率或参考shader等价。日志`ui-global-background-passed.log`，counts/summary和附件已留存；最终typecheck通过。本批清洁归档/push/iOS27继续。云端39034909819/35e6f2f已通过checks/toolchain/native，核心App运行，39036339256/b82aeba唯一pending；未取消/重派。
+
 ## 2026-10-17 主题Sheet清洁归档与推送回执
 
 `b82aeba2cb7ffc29e35eba7c7d0dbd5654d70c27` 已正常push，远端main核对一致；`archive-theme-sheet-clean.log`成功，清洁manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带SHA256、包内可执行/JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过；IPA SHA256 `15fbe875bc23a3554654fe2e4da173a3a651c60045e89bc4de18efeffd6eb687`，留存`build/local-theme-sheet-b82aeba`。

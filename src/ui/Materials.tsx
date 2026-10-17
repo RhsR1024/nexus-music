@@ -16,13 +16,13 @@ export function AmbientBackground({services}:{services?:Services}){
     if(!services)return;
     const update=()=>{
       const state=services.playback.controller.getSnapshot();
-      const next=theme.appearance.dynamicBackground&&state.phase==='ready'&&state.intent==='playing'&&!state.buffering;
+      const next=theme.appearance.globalBackgroundMotion&&state.phase==='ready'&&state.intent==='playing'&&!state.buffering;
       setMoving(previous=>previous===next?previous:next);
     };
     update();
     return services.playback.controller.subscribe(update);
-  },[services,theme.appearance.dynamicBackground]);
-  if(theme.appearance.coverColor&&cover.color)return <View testID="ambient-cover-background" pointerEvents="none" style={StyleSheet.absoluteFill}>
+  },[services,theme.appearance.globalBackgroundMotion]);
+  if((theme.appearance.globalBackgroundMotion&&cover.uri)||(theme.appearance.coverColor&&cover.color))return <View testID="ambient-cover-background" pointerEvents="none" style={StyleSheet.absoluteFill}>
     <LinearGradient colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
     {cover.uri&&<MotionImage uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
   </View>;

@@ -1,3 +1,7 @@
+## 2026-10-17 A04 全局背景独立控制（本地专项通过）
+
+reverse-skill E-010→F-009→P-009采纳前严格review通过10E/9F/9P，零错误/警告；原始指令与分配头确认默认全局容器分别读取封面/有效流动设置，流动分支优先。此前摘要页链纠正保留；精确场景/媒体字段/动态视频仍待。音枢新增独立全局封面流动与旧偏好兼容，保留播放页动效/写真/主题图片及唯一播放器；331项业务/类型通过。正式App1792244188543.xcresult两项通过、零失败/跳过：全局红蓝/跨页/独立开关/暂停重启189.767秒，Files图片导入/播放背景持久化112.398秒；亲看全局流动单开设置与发现页截图。测试证明颜色/优先级/保存行为，不冒称实际动画帧率或参考shader等价。清洁归档/push及对应云端回执继续。见[0039](docs/decisions/0039-independent-global-background-motion.md)和[专项报告](docs/2026-10-17_reverse-sollin-global-background-report.md)。其余A03/A06–09、全部F/J和真实服务/签名/手机范围继续。
+
 ## 2026-10-17 主题Sheet清洁归档与推送回执
 
 `b82aeba2cb7ffc29e35eba7c7d0dbd5654d70c27` 已正常push，远端main核对一致；`archive-theme-sheet-clean.log`成功，清洁manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带SHA256、包内可执行/JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过；IPA SHA256 `15fbe875bc23a3554654fe2e4da173a3a651c60045e89bc4de18efeffd6eb687`，留存`build/local-theme-sheet-b82aeba`。

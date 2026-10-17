@@ -16,7 +16,12 @@ export class PreferenceStore {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   async restore() {
     const value = await this.repository.get<Preferences>('preferences.v1');
-    if (value) {try{this.value = this.validate({ ...defaults, ...value });}catch{throw new InvalidRecordError();}}
+    if (value) {try{
+      // The old motion switch animated the global layer only with cover color.
+      // Preserve that effective choice once, then persist both controls separately.
+      const globalBackgroundMotion=Object.hasOwn(value,'globalBackgroundMotion')?value.globalBackgroundMotion:value.dynamicBackground===true&&value.coverColor===true;
+      this.value = this.validate({ ...defaults, ...value,globalBackgroundMotion });
+    }catch{throw new InvalidRecordError();}}
   }
   private validate(value: Preferences): Preferences {
     if(typeof value.miniLyrics!=='boolean')throw new Error('迷你歌词设置无效');
@@ -24,7 +29,7 @@ export class PreferenceStore {
     if(!['auto','left','center'].includes(value.lyricAlignment))throw new Error('歌词对齐方式无效');
     if(!['classic','am','immersive','photo','vinyl','wave'].includes(value.playerLayout))throw new Error('播放界面无效');
     if(!['classic','blush','soft'].includes(value.visualTheme)||!['rose','coral','purple','blue','orange'].includes(value.accent)||!['gradient','solid','image'].includes(value.backgroundStyle)||typeof value.glassNavigation!=='boolean')throw new Error('外观设置无效');
-    if(!['artwork','solid','photo'].includes(value.playerBackground)||typeof value.coverColor!=='boolean'||typeof value.dynamicBackground!=='boolean'||!Number.isFinite(value.backgroundOpacity)||value.backgroundOpacity<0||value.backgroundOpacity>1||!Number.isFinite(value.playerBlur)||value.playerBlur<0||value.playerBlur>80||!Number.isFinite(value.playerDarkness)||value.playerDarkness<.35||value.playerDarkness>.9||!Number.isFinite(value.coverRadius)||value.coverRadius<0||value.coverRadius>48)throw new Error('图片外观设置无效');
+    if(!['artwork','solid','photo'].includes(value.playerBackground)||typeof value.coverColor!=='boolean'||typeof value.globalBackgroundMotion!=='boolean'||typeof value.dynamicBackground!=='boolean'||!Number.isFinite(value.backgroundOpacity)||value.backgroundOpacity<0||value.backgroundOpacity>1||!Number.isFinite(value.playerBlur)||value.playerBlur<0||value.playerBlur>80||!Number.isFinite(value.playerDarkness)||value.playerDarkness<.35||value.playerDarkness>.9||!Number.isFinite(value.coverRadius)||value.coverRadius<0||value.coverRadius>48)throw new Error('图片外观设置无效');
     if (!Number.isFinite(value.volume)||value.volume<0||value.volume>1||!normalizeQuality(value.quality) || !validGains(value.gains) || !validPreamp(value.preampDB) ||
       !['off', 'all', 'one'].includes(value.repeat) || !Number.isFinite(value.lyricOffsetMs) || Math.abs(value.lyricOffsetMs)>600000 || !Number.isFinite(value.fontScale) || value.fontScale < .7 || value.fontScale > 2 ||
       !['system', 'dark', 'light'].includes(value.theme) || !Number.isFinite(value.cacheLimitMB) || value.cacheLimitMB < 32 || value.cacheLimitMB > 2048 || !Number.isFinite(value.offlineLimitMB) || value.offlineLimitMB < 256 || value.offlineLimitMB > 8192) throw new Error('设置数据无效');

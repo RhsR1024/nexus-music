@@ -1,3 +1,7 @@
+## 2026-10-17 A04/A05 全局背景控制分离
+
+当前按[0039](decisions/0039-independent-global-background-motion.md)实施独立全局封面流动，沿E-010静态分支优先关系，保留旧设置实际效果及播放页动效。复用原媒体身份/CoverThemeStore/native Animated，无新播放器、依赖或参考源码；331项业务/类型通过。正式App1792244188543.xcresult两项通过、零失败/跳过：全局红蓝/跨页/独立开关/暂停重启189.767秒，Files图片导入/播放背景持久化112.398秒；亲看全局流动单开设置与发现页截图。测试证明颜色/优先级/保存行为，不冒称实际动画帧率或参考shader等价。清洁归档与本批云端继续记录。参考精确算法/动态树、动态视频及全部余项和真实服务/签名/真机继续。
+
 ## 2026-10-17 主题Sheet清洁归档与推送回执
 
 `b82aeba2cb7ffc29e35eba7c7d0dbd5654d70c27` 已正常push，远端main核对一致；`archive-theme-sheet-clean.log`成功，清洁manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned。ZIP CRC、附带SHA256、包内可执行/JS对归档字节一致、正式入口隔离与私人参考/签名资源排除通过；IPA SHA256 `15fbe875bc23a3554654fe2e4da173a3a651c60045e89bc4de18efeffd6eb687`，留存`build/local-theme-sheet-b82aeba`。

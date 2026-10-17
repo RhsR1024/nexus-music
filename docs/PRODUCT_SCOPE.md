@@ -1,3 +1,7 @@
+## 2026-10-17 全局与播放页动效边界
+
+按[0039](decisions/0039-independent-global-background-motion.md)将已有全局封面流动与播放页背景动效独立控制，保留主题图片/写真、封面取色及旧偏好实际效果。Sollin采纳限严格review后的E-010静态默认容器与分支关系；精确算法/动态视频/商业激活不移植，手机/签名/真实服务仍分别验收。全部既定F/J及对齐优先顺序不变。
+
 ## 2026-10-17 用户新增硬门禁：reverse-skill
 
 后续 Sollin IPA/APK 逆向分析及功能、UI、交互对齐**必须使用 reverse-skill**，先路由/PRIMARY、检查工具、校验离线 scope，再产生该批 Evidence→Finding→Path 并严格 review 后采纳；禁止绕过或以“已读”代替执行。包已克隆到 `/Users/ningli/WorkSpace/reverse-skill`，固定 `cab634bd855fc287f6e420c1f36fd1a6b9245960`，项目入口 `.agents/skills/reverse-skill-router`。开工运行 `node scripts/sollin-reverse-gate.mjs ipa|apk`，采纳前加 `--review`；功能证据须覆盖当前工作项，安装检查不能代替。安装/路由/两案例严格review已通过，高级反编译/动态工具缺口如实保留；当前不声称对象调用图或完整UI对齐完成。完整安装、命令、拒绝路径及工具结果见[强制工作流](REVERSE_SKILL_WORKFLOW.md)，根 AGENTS.md 同步作为接手硬约束。IPA首要、APK互补、截图辅助、音枢特有能力、许可与隐私边界不变。

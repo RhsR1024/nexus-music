@@ -26,8 +26,11 @@ export function VisualSettings({services}:{services:Services}){
     <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{([['artwork','歌曲封面背景'],['photo','自定义写真背景'],['solid','纯色播放背景']]as const).map(([mode,label])=>button(`player-background-${mode}`,label,()=>update({playerBackground:mode}),value.playerBackground===mode))}</View>
     <Text style={{color:p.secondary,fontSize:12}}>写真皮肤优先使用已导入写真；其他皮肤遵循背景选项。图片缺失时回退封面或纯色，模糊调为0可显示清晰写真。</Text>
     {adjust('playerBlur','播放背景模糊',10,0,80)}{adjust('playerDarkness','播放背景暗度',.1,.35,.9)}{adjust('coverRadius','封面圆角',8,0,48)}
-    {control('visual-cover-color','封面取色',value.coverColor,coverColor=>update({coverColor}))}{control('visual-motion','动态播放背景',value.dynamicBackground,dynamicBackground=>update({dynamicBackground}))}
-    <Text style={{color:p.secondary,fontSize:12}}>动效在暂停、缓冲、后台或系统减少动态效果时停止。</Text>
+    {control('visual-cover-color','封面取色',value.coverColor,coverColor=>update({coverColor}))}
+    {control('visual-global-motion','全局封面流动',value.globalBackgroundMotion,globalBackgroundMotion=>update({globalBackgroundMotion}))}
+    <Text style={{color:p.secondary,fontSize:12}}>全局封面流动可独立开启，优先显示当前歌曲封面；关闭后恢复封面取色或主题背景。</Text>
+    {control('visual-motion','播放页背景动效',value.dynamicBackground,dynamicBackground=>update({dynamicBackground}))}
+    <Text style={{color:p.secondary,fontSize:12}}>两处动效分别保存，在暂停、缓冲、后台或系统减少动态效果时停止。</Text>
     {!!message&&<Text testID="visual-status" accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
   </View>;
 }

@@ -1,3 +1,7 @@
+## 2026-10-17 E-010：全局默认背景链补证
+
+本批原始ARM64核验确认ThemedPageScaffold.build0x52a2dc分别watch封面槽0x2900与有效流动0x2918，进入已核分配类AppThemeBackground；build0x7a60e8以独立流动优先、静态封面回退。共享分配写头+固定Dart tag布局与解析类ID交叉检查4098/4539/4536；完整收据SHA256 `45ca9351edec5afd7e2663c1dd3526e883bb4ece186b7d4ddfd0b56db54c58b1`。严格review通过10E/9F/9P、零错误/警告。有效流动另读AuthState/isActivated（排除商业门槛），songDynamicCover仍独立；前批ArtworkSummaryState纠正保持，不给未核字段强行命名，也不宣称完整场景/动态等价。见[报告](2026-10-17_reverse-sollin-global-background-report.md)与[0039](decisions/0039-independent-global-background-motion.md)。
+
 ## 2026-10-17 软件主题Sheet本地验收
 
 reverse-skill IPA E-009→F-008→P-008采纳前严格review通过，原始BL确认两个主题包装→共用包装→Flutter showModalBottomSheet。音枢软件主题改为原生pageSheet，复用三态/原子持久化，显式关闭/系统dismiss保留外观分类和滚动，底层AX/触摸隔离；328项业务/类型通过；正式App1792242348845两项通过（外观持久化71.145秒、分组导航95.341秒，零失败/跳过），1792242792269最大辅助字号/下滑关闭/重新打开保持选择37.400秒通过。首轮新增测试因XCTest拖拽参数类型编译失败已修正并保留日志；最终文案收口后1792242979329同专项38.790秒再次通过并亲看截图，类型复验通过；清洁归档与本批云端继续记录。背景编辑器及其他叶页暂按既有实现，A04全局封面链未证明；全部F/J和真实服务/签名/真机边界保留。详见[决策0038](decisions/0038-theme-mode-sheet.md)。

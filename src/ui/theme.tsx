@@ -32,6 +32,6 @@ export function useAppearance(store?:PreferenceStore,covers?:CoverThemeStore){
   const preferences=useSyncExternalStore(store?.subscribe??emptySubscribe,store?.getSnapshot??defaultSnapshot),system=useColorScheme();
   const cover=useSyncExternalStore(covers?.subscribe??emptySubscribe,covers?.getSnapshot??emptyCoverSnapshot);
   const mode=(preferences.theme==='system'?system==='light':preferences.theme==='light')?'light':'dark';
-  return useMemo(()=>createTheme(mode,preferences,cover.color),[mode,cover.color,preferences.visualTheme,preferences.accent,preferences.backgroundStyle,preferences.glassNavigation,preferences.backgroundOpacity,preferences.playerBackground,preferences.playerBlur,preferences.playerDarkness,preferences.coverRadius,preferences.coverColor,preferences.dynamicBackground]);
+  return useMemo(()=>createTheme(mode,preferences,cover.uri||preferences.coverColor?cover.color:undefined),[mode,cover.color,cover.uri,preferences.visualTheme,preferences.accent,preferences.backgroundStyle,preferences.glassNavigation,preferences.backgroundOpacity,preferences.playerBackground,preferences.playerBlur,preferences.playerDarkness,preferences.coverRadius,preferences.coverColor,preferences.globalBackgroundMotion,preferences.dynamicBackground]);
 }
 export function useThemedStyles<T>(factory:(theme:Theme)=>T):T {const theme=useTheme();return useMemo(()=>factory(theme),[factory,theme]);}
