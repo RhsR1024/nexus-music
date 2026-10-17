@@ -1,3 +1,9 @@
+## 2026-10-18 历史日期分隔清洁归档与push回执
+
+`6c8be2ff4724a721e62e536cad4ceae2c5eaff5d`已正常push并核对远端main一致。清洁归档manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `8bfdf0f7b3b1c5195d5f8b4d5ce3685b8f99e39e312f99e6ac08b284ef7dcf7d`，留存`build/local-history-calendar-6c8be2f`。352业务/类型与正式App260.169秒、日期截图/重启及39事件严格review见下；此条覆盖本批归档/push待办。
+
+push后API实核39066065139/6c8be2f唯一pending，39058310652/332cac5继续运行（核心App及歌词/匹配/健康/发现已过，断服务离线组执行中），1运行/1排队。EQ旧pending39065099990/be16e10由single自动取消，不算通过；未手动取消运行或重派旧版。最新完整成功且IPA已核验仍为76c9cd0/39050349015，仅覆盖其祖先。下一发现完整读取取消/导航的原创状态边界审查继续，尚未产品修复或采纳新参考动态结论；全部A/F/J与真实服务/签名/手机目标保持active。
+
 ## 2026-10-18 播放历史本机日期分隔（本地通过）
 
 reverse-skill E022→F021→P021采纳前strict review22E/21F/21P、8WI/38事件零错误/警告，2033原始指令/15BL/5分配头及池偏移已独立核对。五参考固定HEAD/维护/Android/许可与原创取舍见[决策0048](decisions/0048-history-calendar-sections.md)。仅现有最近播放增加本机日历日期标题，不排序或改变歌曲索引/身份/前20项加载更多及唯一播放入口；无效日期回退，epoch0有效，不把未知参考时区/文案当作已还原。
