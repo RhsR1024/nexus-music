@@ -20,7 +20,7 @@ export function CloudBackup({services}:{services:Services}){
   return <View style={{marginVertical:10}}>{button('WebDAV云备份',show,false,'cloud-backup-open')}
     <Modal visible={open} onRequestClose={close} animationType="slide"><View style={{flex:1,padding:22,paddingTop:64,gap:12,backgroundColor:p.background[0]}}>
       {button('收起云备份',close,committing)}<Text style={{color:p.text,fontSize:28,fontWeight:'700'}}>云端音乐库备份</Text>
-      <ScrollView style={{flexGrow:0,maxHeight:'50%'}} keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,paddingBottom:8}}>
+      <ScrollView testID="cloud-backup-settings" style={{flexGrow:0,maxHeight:'50%'}} keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,paddingBottom:8}}>
         <Text style={{color:p.secondary,lineHeight:21}}>保存独立版本，上传后回读校验。恢复前先预览；备份包含收藏、歌单、历史、匹配与播放统计。请保护服务端目录的访问权限。</Text>
         {!accounts.length?<Text style={{color:p.text}}>请先收起此页，在音乐库的WebDAV入口验证并保存连接。</Text>:accounts.map(account=><View key={account.id}>{button(`${accountId===account.id?'● ':''}备份连接：${account.label}`,()=>{store.cancel();setAccountId(account.id);},busy)}</View>)}
         <TextInput accessibilityLabel="云备份相对目录" placeholder="连接根目录内的相对文件夹" placeholderTextColor={p.secondary} autoCapitalize="none" autoCorrect={false} editable={!busy} value={directory} onChangeText={value=>{store.cancel();setDirectory(value);setMessage('');}} style={{color:p.text,padding:12,borderWidth:1,borderColor:p.border,borderRadius:14}}/>

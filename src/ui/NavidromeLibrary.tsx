@@ -48,7 +48,7 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
   if(!accounts.length)return <View><Text style={styles.title}>私人曲库</Text><Text style={styles.caption}>连接Navidrome后，在这里浏览歌曲、专辑、歌手与服务端歌单。</Text>{button('前往连接设置',openSettings)}</View>;
   return <View>
     <Text style={styles.title}>私人曲库</Text>
-    <View style={styles.row}>{accounts.map(account=><Pressable key={account.id} onPress={()=>{setAccountId(account.id);setView({kind:'albums'});}} style={styles.button}><Text style={styles.buttonText}>{account.id===accountId?'● ':''}{account.username}</Text></Pressable>)}</View>
+    <View style={styles.row}>{accounts.map(account=><Pressable key={account.id} testID={`navidrome-account-${account.username}`} accessibilityState={{selected:account.id===accountId}} onPress={()=>{setAccountId(account.id);setView({kind:'albums'});}} style={styles.button}><Text style={styles.buttonText}>{account.id===accountId?'● ':''}{account.username}</Text></Pressable>)}</View>
     <View style={styles.row}>{(['songs','albums','artists','playlists']as const).map((kind,index)=><View key={kind}>{button(['歌曲','专辑','歌手','服务端歌单'][index]!,()=>setView({kind}))}</View>)}</View>
     <Text style={styles.heading}>{title}</Text>
     {view.kind==='songs'&&<View><TextInput accessibilityLabel="搜索私人曲库" value={query} onChangeText={setQuery} onSubmitEditing={()=>setView({kind:'songs',query})} placeholder="搜索自己的歌曲、歌手" placeholderTextColor="#768191" style={styles.input}/>{button('搜索私人曲库',()=>setView({kind:'songs',query}))}</View>}

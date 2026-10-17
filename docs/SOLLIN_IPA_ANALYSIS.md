@@ -1,3 +1,13 @@
+## 2026-10-17 播放器定向复核（reverse-skill IPA PRIMARY）
+
+通过离线门禁后，对固定 IPA 的 App.framework/App 重新定位 `waveCoreLyricsLineGap`、`immersive_wave_core_lyrics_preview`、`immersive_wave_core_lower_controls`、`immersive_landscape_phone_wave_core_ring`、`sollin_local_favorites_v1`、`apple_music2_favorite_button`、`player_host.dart` 与 themed sheet 标记。可重放脚本、成员摘要、raw file offsets 和不可变结果见本机 `work/sollin-ipa/notes/player-triage.py`、`evidence/player-triage.json`；WI-003→E-003→F-002→P-002→timeline 关联完整，严格 review 为0错误/0警告。
+
+这些只确认静态标记；三行歌词是根据既有声波核截图补充的原创布局选择，不能从字符串推出精确行数。暂停隐藏频谱与收藏原队列身份是音枢自身一致性要求，本地126.691秒专项证明音枢真实原生FFT可见/暂停消失及现代/经典收藏一致，不证明 Sollin 同样实现、像素一致或调用图已恢复。A03/A04对象关系和动态节奏继续待验。
+
+## 2026-10-17 reverse-skill 对象恢复工具预检
+
+沿 PRIMARY 对公开工具资料作补查：Blutter上游固定 `4a60ac648bf448c5a7596437243bcd0b9376fdf0` 的 [extract_dart_info.py:12–18/27–29](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/extract_dart_info.py#L12) 仍直接使用 ELFFile；[CMake平台/指针开关](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/scripts/CMakeLists.txt#L23) 不证明Mach-O已支持。[iOS实验PR204](https://github.com/worawit/blutter/pull/204) head `0039efb1b29d68ca6e5caece4d412d15e6f49428` 仍为Open，需另审查mapper、非压缩指针与Dart3.12.2并实际构建验证。当前PATH未检出cmake/ninja；本轮只做工具预检，没有执行其下载器/编译/反编译，不冒称恢复对象池。公共资料留work/references，目标样本分析继续离线。已进一步只读审查该PR的入口、extract_dart_info、macho.py以及DartApp/DartFunction补丁：macho.py直接使用未延迟求值的`str | None`等注解，与当前Python3.9存在版本兼容前提（源码判断，未执行补丁）；C++ mapper、运行时重定位和真实快照对象还未完整审查/验证。
+
 ## 2026-10-17 reverse-skill 首次双端 snapshot 复核
 
 已按固定包 PRIMARY `apk-reverse`→Flutter/native 分流，以索引中 Python 对原始 APK 的 `lib/arm64-v8a/libapp.so` ELF64 `.dynsym` 和其所属 section 作只读解析。完整脚本、结果和 E-003 位于忽略的 `work/sollin-apk/`，严格 review 通过；没有运行样本、patch或私有服务。

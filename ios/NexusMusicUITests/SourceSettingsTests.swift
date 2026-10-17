@@ -148,7 +148,15 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testCrossPlatformLyrics() throws {
     let app=XCUIApplication();app.launch()
-    func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<12 {if element.isHittable{break};if up{app.swipeUp()}else{app.swipeDown()}};XCTAssertTrue(element.isHittable)}
+    func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<12 {if element.isHittable{break};if element.exists {let above=element.frame.midY < app.frame.midY; if above {app.swipeDown()} else {app.swipeUp()}} else if up {app.swipeUp()} else {app.swipeDown()}};XCTAssertTrue(element.isHittable)}
+    // The preceding core tests intentionally leave the persisted player skin
+    // unchanged. Establish a modern layout here so this test exercises the
+    // modern player actions instead of depending on test order or simulator
+    // data from an earlier run.
+    openSettings(app,page:"skins")
+    let waveSkin=app.descendants(matching:.any).matching(identifier:"player-layout-wave").firstMatch
+    reach(waveSkin);waveSkin.tap()
+    XCTAssertTrue((waveSkin.value as? String)?.contains("实时音频频谱环") == true)
     openSettings(app,page:"sources")
     let source=app.textFields["音源订阅地址"];reach(source);source.tap();for character in "http://127.0.0.1:18439/matching-source.js"{source.typeText(String(character))};source.typeText("\n");app.buttons["从地址导入"].tap()
     let enable=app.buttons["启用音源：Nexus Matching Fixture"],enabled=app.buttons["停用音源：Nexus Matching Fixture"]
@@ -165,8 +173,28 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(handle.waitForExistence(timeout:5));handle.swipeDown()
     XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:10),"Swiping down from the player handle must dismiss the player")
     app.buttons["打开播放页"].tap()
-    XCTAssertTrue(app.staticTexts["正在通过 tx · Synthetic match tone 播放"].waitForExistence(timeout:30));XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
+    XCTAssertTrue(app.staticTexts["Synthetic match tone"].waitForExistence(timeout:30));XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:15))
+    let waveSpectrum=app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch
+    XCTAssertTrue(waveSpectrum.waitForExistence(timeout:15),"Playing wave layout must receive real native FFT bands")
+    let modernFavorite=app.buttons["收藏歌曲"].firstMatch
+    XCTAssertTrue(modernFavorite.waitForExistence(timeout:10))
+    // A rerun can retain the library fixture. Normalize that state before
+    // checking the original-track favorite transition.
+    if (modernFavorite.value as? String) == "已收藏" {
+      modernFavorite.tap()
+      expectation(for:NSPredicate(format:"value == %@","未收藏"),evaluatedWith:modernFavorite);waitForExpectations(timeout:5)
+    }
+    XCTAssertEqual(modernFavorite.value as? String,"未收藏")
+    modernFavorite.tap(); expectation(for:NSPredicate(format:"value == %@","已收藏"),evaluatedWith:modernFavorite);waitForExpectations(timeout:5)
+    app.buttons["更多播放控制"].tap(); XCTAssertTrue(app.buttons["队列与播放选项"].waitForExistence(timeout:5)); app.buttons["收起播放选项"].tap()
     let pause=app.buttons["暂停"].firstMatch;reach(pause);pause.tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:waveSpectrum);waitForExpectations(timeout:5)
+    // Full lyric expansion is exposed by the classic detail renderer. Keep
+    // the modern skin assertions above, then use the renderer that owns this
+    // existing lyrics/settings workflow.
+    app.buttons["更多播放控制"].tap(); app.buttons["播放界面样式"].tap()
+    app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch.tap()
+    XCTAssertTrue(app.buttons["取消本地收藏"].waitForExistence(timeout:5),"Modern favorite must update the original queue track used by classic controls")
     let sourceButton=app.buttons["选择歌词来源"].firstMatch;reach(sourceButton,up:false);sourceButton.tap()
     app.buttons["自动优选跨平台歌词"].tap()
     let lyricSource=app.staticTexts["lyric-source"].firstMatch
@@ -313,7 +341,7 @@ final class SourceSettingsTests: XCTestCase {
     let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
     defer{removeUIInterruptionMonitor(monitor)}
     let app=XCUIApplication();app.launch()
-    func reveal(_ element:XCUIElement){for _ in 0..<18{if element.isHittable{return};app.swipeUp()};XCTAssertTrue(element.isHittable)}
+    func reveal(_ element:XCUIElement){for _ in 0..<18{if element.isHittable{return};let above=element.exists && element.frame.midY < app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25)))};XCTAssertTrue(element.isHittable)}
     func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();for _ in 0..<8{app.swipeDown()}}
     func sync(){let entry=app.buttons["cloud-sync-open"];reveal(entry);entry.tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
     func confirm(){let button=app.buttons["cloud-sync-commit"];reveal(button);XCTAssertTrue(button.isEnabled);button.tap();XCTAssertTrue(app.alerts["确认同步音乐库？"].waitForExistence(timeout:5));app.alerts.buttons["确认同步两端"].tap();XCTAssertTrue(app.staticTexts["同步已完成，音乐库与基线已保存；本机历史、统计和播放队列保留"].waitForExistence(timeout:20))}
@@ -326,7 +354,7 @@ final class SourceSettingsTests: XCTestCase {
     let label=app.textFields["WebDAV连接名称"];label.tap();for character in "Sync fixture"{label.typeText(String(character))};label.typeText("\n");XCTAssertEqual(label.value as? String,"Sync fixture");app.buttons["验证并保存WebDAV"].tap()
     XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
     let suffix=String(Int(Date().timeIntervalSince1970)),original="Sync original "+suffix,local="Sync local "+suffix,cloud="Sync cloud "+suffix,folder="nexus-sync-"+suffix+"/"
-    let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in original{input.typeText(String(character))};input.typeText("\n");app.buttons["创建歌单"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
+    let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in original{input.typeText(String(character))};input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
     sync();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","同步连接：Sync fixture")).firstMatch;reveal(connection);connection.tap()
     let directory=app.textFields["多设备同步相对目录"];reveal(directory);replaceText(directory,with:folder,in:app)
     let save=app.buttons["cloud-sync-save"];reveal(save);save.tap();XCTAssertTrue(app.staticTexts["同步目录已保存，请读取合并预览"].waitForExistence(timeout:5));let preview=app.buttons["cloud-sync-preview"];reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15));confirm();app.buttons["收起多设备同步"].tap()
@@ -344,11 +372,11 @@ final class SourceSettingsTests: XCTestCase {
     let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
     defer{removeUIInterruptionMonitor(monitor)}
     let app=XCUIApplication();app.launch()
-    func reveal(_ element:XCUIElement){for _ in 0..<18{if element.isHittable{return};app.swipeUp()};XCTAssertTrue(element.isHittable)}
+    func reveal(_ element:XCUIElement){for _ in 0..<18{if element.isHittable{return};let above=element.exists && element.frame.midY < app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25)))};XCTAssertTrue(element.isHittable)}
     func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();for _ in 0..<8{app.swipeDown()}}
     func cloud(){let entry=app.buttons["cloud-backup-open"];reveal(entry);entry.tap();XCTAssertTrue(app.buttons["收起云备份"].waitForExistence(timeout:5))}
     func makePlaylist(_ name:String){
-      let tab=app.buttons["我的歌单"];reveal(tab);tab.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in name{input.typeText(String(character))};input.typeText("\n");app.buttons["创建歌单"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
+      let tab=app.buttons["我的歌单"];reveal(tab);tab.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in name{input.typeText(String(character))};input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
     }
     library();let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch;reveal(webdav);webdav.tap()
     let address=app.textFields["WebDAV服务器根目录"]
@@ -370,9 +398,20 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["cloud-backup-list"].tap();XCTAssertTrue(app.staticTexts["已读取 2 个JSON备份"].waitForExistence(timeout:15))
     let preview=app.buttons["cloud-backup-preview-0"];reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["内容摘要与格式已验证"].waitForExistence(timeout:15))
     let previewImage=XCTAttachment(screenshot:app.screenshot());previewImage.name="Verified cloud backup preview";previewImage.lifetime = .keepAlways;add(previewImage)
-    let restore=app.buttons["cloud-backup-restore"];reveal(restore);restore.tap();XCTAssertTrue(app.alerts["恢复云端备份？"].waitForExistence(timeout:5));app.alerts.buttons["取消"].tap();app.buttons["收起云备份"].tap()
+    let restore=app.buttons["cloud-backup-restore"]
+    func revealRestore(){
+      let settings=app.descendants(matching:.any).matching(identifier:"cloud-backup-settings").firstMatch
+      XCTAssertTrue(settings.exists)
+      for _ in 0..<18 {
+        if restore.isHittable{return}
+        let above=restore.exists && restore.frame.midY < settings.frame.midY
+        settings.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.2:0.8)).press(forDuration:0.05,thenDragTo:settings.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.8:0.2)))
+      }
+      XCTAssertTrue(restore.isHittable,"Restore must be reachable inside the preview settings scroll region")
+    }
+    revealRestore();restore.tap();XCTAssertTrue(app.alerts["恢复云端备份？"].waitForExistence(timeout:5));app.alerts.buttons["取消"].tap();app.buttons["收起云备份"].tap()
     for _ in 0..<8{app.swipeDown()};let laterRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",later+" ·")).firstMatch;reveal(laterRow);XCTAssertTrue(laterRow.exists,"Preview cancellation must preserve the newer local playlist")
-    cloud();app.buttons["cloud-backup-list"].tap();XCTAssertTrue(app.staticTexts["已读取 2 个JSON备份"].waitForExistence(timeout:10));reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["内容摘要与格式已验证"].waitForExistence(timeout:15));reveal(restore);restore.tap();app.alerts.buttons["确认恢复云备份"].tap()
+    cloud();app.buttons["cloud-backup-list"].tap();XCTAssertTrue(app.staticTexts["已读取 2 个JSON备份"].waitForExistence(timeout:10));reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["内容摘要与格式已验证"].waitForExistence(timeout:15));revealRestore();restore.tap();app.alerts.buttons["确认恢复云备份"].tap()
     XCTAssertTrue(app.staticTexts["本机音乐库与播放统计已恢复；音频文件和连接需在此设备另行配置"].waitForExistence(timeout:15))
     app.buttons["cloud-backup-list"].tap();XCTAssertTrue(app.staticTexts["已读取 2 个JSON备份"].waitForExistence(timeout:10));let broken=app.buttons["cloud-backup-preview-1"];reveal(broken);broken.tap();XCTAssertTrue(app.staticTexts["备份格式或大小不受支持，本机数据未更改"].waitForExistence(timeout:15));XCTAssertFalse(restore.exists)
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
@@ -403,6 +442,8 @@ final class SourceSettingsTests: XCTestCase {
     let password=app.secureTextFields["WebDAV密码"];password.tap();for character in "fixture-password"{password.typeText(String(character))};password.typeText("\n")
     app.buttons["验证并保存WebDAV"].tap()
     if later.waitForExistence(timeout:3){later.tap()}
+    let fixtureAccount=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","fixture-user")).firstMatch
+    if fixtureAccount.waitForExistence(timeout:5) && !fixtureAccount.label.hasPrefix("● "){fixtureAccount.tap()}
     let folder=app.buttons["文件夹：Fixture album"];XCTAssertTrue(folder.waitForExistence(timeout:20))
     waitForWebDAVControl(folder,in:app);folder.tap()
     let tagged=app.buttons.matching(NSPredicate(format:"identifier == %@ AND label CONTAINS %@","webdav-track-album/Remote%20Fixture.mp3","已读取远程音频标签")).firstMatch
@@ -422,11 +463,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:10));XCTAssertTrue(app.buttons["Synthetic embedded lyric"].waitForExistence(timeout:10))
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     app.buttons["暂停"].firstMatch.tap();app.terminate();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();entry.tap();XCTAssertTrue(folder.waitForExistence(timeout:10));folder.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();entry.tap();let fixtureAccountAfterRestart=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","fixture-user")).firstMatch;if fixtureAccountAfterRestart.waitForExistence(timeout:5) && !fixtureAccountAfterRestart.label.hasPrefix("● "){fixtureAccountAfterRestart.tap()};XCTAssertTrue(folder.waitForExistence(timeout:10));folder.tap()
     XCTAssertTrue(tagged.waitForExistence(timeout:20));song.tap();app.buttons["管理WebDAV连接"].tap()
+    let remainingAccounts=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","移除WebDAV连接：")).count-1
+    XCTAssertGreaterThanOrEqual(remainingAccounts,0)
     app.buttons["移除WebDAV连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10));app.buttons["收起WebDAV"].tap()
-    XCTAssertTrue(app.buttons["WebDAV · 0个连接"].waitForExistence(timeout:5))
+    XCTAssertTrue(app.buttons["WebDAV · \(remainingAccounts)个连接"].waitForExistence(timeout:5),"Removing this account must preserve unrelated connections")
     XCTAssertFalse(app.buttons["打开播放页"].exists,"Removing the active account must clear its playback entry")
   }
   func testSourceManagerAndFilePicker() throws {
@@ -607,7 +650,7 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();settings();reach(importer)
     XCTAssertTrue(globalStatus.label.contains("Nexus Fixture.ttf"));XCTAssertTrue(lyricStatus.label.contains("跟随全局"));XCTAssertTrue(lyricStatus.label.contains("Nexus Fixture.ttf"))
     reach(app.staticTexts["lyric-style-blur"]);XCTAssertEqual(app.staticTexts["lyric-style-blur"].label,"其他行模糊：1");XCTAssertTrue(app.buttons["逐字强调：关"].exists)
-    // Exercise the actual renderer with imported glyphs and persisted styles.
+    // Exercise imported glyphs and persisted styles in the actual player.
     app.terminate();try testZNavidromePlaybackAndCredentials()
     settings();
     let remove=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","font-delete-nexusfont_")).firstMatch;reach(remove);remove.tap();app.alerts.buttons["删除"].tap();
@@ -646,6 +689,8 @@ final class SourceSettingsTests: XCTestCase {
     func count() -> Int {guard statistic.exists else{return 0};return Int(statistic.label.components(separatedBy:" · 播放 ").last?.components(separatedBy:" 次").first ?? "") ?? 0}
     let previousCount=count()
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let playbackAccount=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch
+    XCTAssertTrue(playbackAccount.waitForExistence(timeout:10));reveal(playbackAccount);playbackAccount.tap()
     let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
     XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
     let play=app.buttons["播放全部"];XCTAssertTrue(play.waitForExistence(timeout:10));play.tap()
@@ -659,7 +704,8 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<5 {if am.isHittable{break};app.swipeDown()};am.tap()
     XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5), "Skin change must preserve paused intent")
     XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"AM lyric selection must remain reachable above clipped lyric lines")
-    XCTAssertTrue(app.staticTexts["Synthetic tone"].firstMatch.exists)
+    let amTitle=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","Synthetic tone")).firstMatch
+    XCTAssertTrue(amTitle.waitForExistence(timeout:5),"AM skin must keep the original Navidrome title accessible")
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
     XCTAssertTrue((progress.value as? String)?.hasSuffix(" / 2:00")==true,"Fixture duration must come from the decoded 120-second stream; actual progress: \(String(describing: progress.value))")
     let beforeSeek=progress.value as? String
@@ -695,8 +741,12 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
       XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"Lyric selection must fit in \(layout)")
-      if layout=="wave" {XCTAssertTrue(app.buttons["Synthetic lyric two"].firstMatch.isHittable,"Wave layout must show its active lyric completely below the selector")}
-      XCTAssertTrue(app.staticTexts["Synthetic tone"].firstMatch.exists)
+      if layout=="wave" {
+        XCTAssertTrue(app.buttons["Synthetic lyric two"].firstMatch.isHittable,"Wave layout must show its active lyric completely below the selector")
+        XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch.exists,"Paused wave playback must not fabricate a spectrum ring")
+      }
+      let skinTitle=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","Synthetic tone")).firstMatch
+      XCTAssertTrue(skinTitle.waitForExistence(timeout:5),"Skin \(layout) must keep the original Navidrome title accessible")
       let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     }
     app.buttons["更多播放控制"].tap()
@@ -724,7 +774,7 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"library-local").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["实际聆听统计"].waitForExistence(timeout:10))
     let recent=app.buttons["最近播放"]
-    for _ in 0..<8 {if recent.isHittable{break};app.swipeUp()}
+    for _ in 0..<8 {if recent.isHittable{break};let above=recent.exists && recent.frame.midY < app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.35)))}
     XCTAssertTrue(recent.isHittable,"Playback history tab must remain reachable after returning from the player")
     recent.tap()
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"history-item-0").firstMatch.waitForExistence(timeout:10),"Real playback must appear in the timeline history")
@@ -770,7 +820,8 @@ final class SourceSettingsTests: XCTestCase {
     }
     app.buttons["验证并保存连接"].tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:20))
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
-    let album=app.buttons["navidrome-item-album-fixture-album"];XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();XCTAssertTrue(app.buttons["播放全部"].waitForExistence(timeout:10));app.buttons["播放全部"].tap()
+    let themeAccount=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-theme").firstMatch;XCTAssertTrue(themeAccount.waitForExistence(timeout:10));if (themeAccount.value as? String) != "1" {themeAccount.tap()}
+    let album=app.buttons["navidrome-item-album-fixture-album"];XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();let redSong=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","red cover tone")).firstMatch;XCTAssertTrue(redSong.waitForExistence(timeout:10));reveal(redSong);redSong.tap()
     func redMinusBlue()->Int {
       // Sample the actual visible app margin, outside cards/text/mini. Convert
       // to a known RGBA context instead of assuming the screenshot byte order.
@@ -790,8 +841,11 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap();expectTint(true,"Red cover discovery")
     openSettings(app,page:"appearance");expectTint(true,"Red cover appearance settings")
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    // The private-library page remounts on tab changes and selects its first
+    // account. Select the color fixture explicitly before opening its album.
+    XCTAssertTrue(themeAccount.waitForExistence(timeout:10));reveal(themeAccount);themeAccount.tap()
     XCTAssertTrue(album.waitForExistence(timeout:15));reveal(album);album.tap()
-    let blue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","blue cover tone")).firstMatch;reveal(blue);blue.tap();expectTint(false,"Blue cover private library")
+    let blue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","blue cover tone")).firstMatch;XCTAssertTrue(blue.waitForExistence(timeout:15));for _ in 0..<20{if blue.isHittable{break};app.swipeUp()};XCTAssertTrue(blue.isHittable,"Blue cover song must be reachable in the album list");blue.tap();expectTint(false,"Blue cover private library")
     openSettings(app,page:"appearance");expectTint(false,"Blue cover appearance settings")
     let restoredFollow=app.switches["appearance-cover-color"];reveal(restoredFollow);restoredFollow.tap()
     let fallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[fallback],timeout:10),.completed)
@@ -883,9 +937,10 @@ final class SourceSettingsTests: XCTestCase {
   func testGraphicalEQPresetPersistence() throws {
     let app=XCUIApplication();app.launch()
     openSettings(app,page:"equalizer")
+    var viewportID="settings-viewport-equalizer"
     func reveal(_ element:XCUIElement) {
       for _ in 0..<36 {
-        let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-equalizer").firstMatch.frame
+        let viewport=app.descendants(matching:.any).matching(identifier:viewportID).firstMatch.frame
         if element.exists && element.isHittable && element.frame.minY >= viewport.minY+8 && element.frame.maxY <= viewport.maxY-8 { return }
         let above=element.exists && element.frame.minY < viewport.minY+8
         app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.60 : 0.40)))
@@ -899,7 +954,7 @@ final class SourceSettingsTests: XCTestCase {
     let curve=app.descendants(matching:.any).matching(identifier:"eq-curve").firstMatch;reveal(curve)
     curve.coordinate(withNormalizedOffset:CGVector(dx:0.45,dy:0.5)).press(forDuration:0.1,thenDragTo:curve.coordinate(withNormalizedOffset:CGVector(dx:0.45,dy:0.25)))
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.isSelected)
-    let band=app.staticTexts["eq-band-slider-value"];XCTAssertNotEqual(band.label,"0.0 dB");let savedBand=band.label
+    let band=app.staticTexts["eq-band-slider-value"];XCTAssertNotEqual(band.label,"0.0 dB");let savedCurve=curve.value as? String;XCTAssertTrue(savedCurve?.contains("500 Hz "+band.label) == true)
     let name=app.textFields["eq-preset-name"];reveal(name)
     name.tap();for character in "Nexus EQ Test" {name.typeText(String(character))};name.typeText("\n")
     let save=app.buttons["eq-save-preset"];reveal(save);save.tap()
@@ -909,9 +964,10 @@ final class SourceSettingsTests: XCTestCase {
     let preset=app.buttons["Nexus EQ Test"];reveal(preset);preset.tap()
     app.buttons["删除预设Nexus EQ Test"].tap();XCTAssertFalse(preset.exists)
     reveal(slider);XCTAssertEqual(value.label,savedValue)
-    let restoredBand=app.staticTexts["eq-gain-4"];reveal(restoredBand);XCTAssertEqual(restoredBand.label,savedBand)
+    reveal(curve);XCTAssertEqual(curve.value as? String,savedCurve,"Every persisted EQ band must match after restart and preset restore")
     reveal(flat);flat.tap();reveal(value);XCTAssertEqual(value.label,"0.0 dB")
     openSettings(app,page:"playback")
+    viewportID="settings-viewport-playback"
     let timer=app.buttons["15分钟"];reveal(timer);timer.tap()
     XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
     let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")

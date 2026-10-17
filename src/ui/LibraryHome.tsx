@@ -27,7 +27,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
   const playlist=library.playlists.find(item=>item.id===selected);
   useEffect(()=>{if(selected&&!playlist)setSelected(null);setName(playlist?.title??'');setVisibleCount(20);},[selected,playlist?.title,tab]);
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('保存未完成，已有音乐库保留；请重试');}finally{setBusy(false);}}
-  const button=(label:string,action:()=>void,disabled=busy)=><Pressable accessibilityRole="button" onPress={action} disabled={disabled} style={[styles.button,disabled&&{opacity:.4}]}><Text style={styles.action}>{label}</Text></Pressable>;
+  const button=(label:string,action:()=>void,disabled=busy,testID?:string)=><Pressable testID={testID} accessibilityRole="button" onPress={action} disabled={disabled} style={[styles.button,disabled&&{opacity:.4}]}><Text style={styles.action}>{label}</Text></Pressable>;
   const openPlaylistComposer=()=>{setTab('playlists');setSelected(null);setName('');};
   const iconButton=(id:string,label:string,icon:React.ComponentProps<typeof Ionicons>['name'],action:()=>void)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.iconButton}><Ionicons name={icon} size={22} color={theme.palette.accent}/></Pressable>;
   const tabButton=(value:'favorites'|'history'|'playlists',label:string)=><Pressable key={value} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:tab===value}} onPress={()=>{setTab(value);setSelected(null);}} style={[styles.tabButton,tab===value&&styles.tabButtonSelected]}><Text style={[styles.tabLabel,tab===value&&styles.tabLabelSelected]}>{label}</Text></Pressable>;
@@ -44,7 +44,7 @@ export function LibraryHome({services,openSearch,openSettings}:{services:Service
       {button('返回歌单列表',()=>setSelected(null))}
     </View></View>:tab==='playlists'?<View>
       <TextInput accessibilityLabel="创建音枢歌单名称" value={name} onChangeText={setName} placeholder="新歌单名称" placeholderTextColor="#768191" style={styles.input}/>
-      {button('创建歌单',()=>{void perform(async()=>{const id=await services.library.createPlaylist(name);setSelected(id);});},busy||!name.trim())}
+      {button('创建歌单',()=>{void perform(async()=>{const id=await services.library.createPlaylist(name);setSelected(id);});},busy||!name.trim(),'library-create-playlist-submit')}
       {library.playlists.map(item=><Pressable accessibilityRole="button" accessibilityLabel={`${item.title} · ${item.entries.length}首`} key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><View style={{flexDirection:"row",gap:14,alignItems:"center"}}><Cover services={services} track={item.entries[0]?.track} size={58}/><View style={{flex:1}}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首</Text></View></View></Pressable>)}
     </View>:null}
     {!!tracks.length&&<View style={styles.row}>{button('播放全部',()=>services.playTracks(tracks,0))}{button('随机播放',()=>{void services.preferences.update({shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));})}</View>}

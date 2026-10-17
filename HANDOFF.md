@@ -1,3 +1,21 @@
+# 2026-10-17 本轮进行中检查点（reverse-skill补充已交付）
+
+用户补充已落实并正常push：`c64c43b` 安装/硬门禁，`d997737` 双端snapshot/验证状态；远端main=d997737。2026-10-17本轮API核实云端39003956417为唯一运行、0pending；docs-only d997737没有重复触发构建。目标仍active，不得因安装阶段结束标全功能完成。
+
+当前本地303项/类型check-player-identity-final.log全通过，完整native-player-identity.log已通过；最新check-player-identity-reviewed.log再次303/303、零失败/跳过。首轮跨平台歌词/现代收藏1792212072221于124.460秒通过，但新增更强PCM/原曲收藏交叉断言后须另验。
+
+关联整组1792212451041已经结束：同步238.399秒通过；全局背景96.954、EQ74.606、备份183.703、DAV79.878、ND73.157秒失败。日志/计数已保存ui-player-related-first*，附件player-related-failures。根因及未提交修正：主题跨Tab重挂载后显式重选fixture-theme；正式ND显式选fixture-user（避免另一账号同名album）；EQ转播放设置后改查settings-viewport-playback；备份restore在上方独立ScrollView，新增cloud-backup-settings测试标识并在该区域滚动，亲看预览截图确认此前误滚下方FlatList；DAV删除后核对连接数准确减一并保留无关连接，不再假定整机零账号。所有真实取色/PCM/持久化/恢复/取消/坏文件/删除断言保留，字体测试原先被删除的实际ND播放器调用已恢复。
+
+**最新增强专项已通过**：`build/SourceUITests-1792213327138.xcresult`，126.691秒1/1、零失败/跳过。日志ui-player-identity-final-passed.log和ui-player-identity-final-counts.json；实际日志确认wave-spectrum-bars播放时存在、暂停后消失，现代收藏切经典核对原曲已收藏通过。
+
+**五项已结束**：结果包1792213572669，字体286.201秒、主题111.350秒、EQ79.053秒、DAV76.248秒通过，备份149.421秒在第404行失败（app.scrollViews中找不到cloud-backup-settings；恢复尚未执行）。已保存ui-player-related-final-first.log/counts，4/5不冒充全通过。测试改用descendants(.any)按标识找上方设置区，保留取消/恢复/坏文件/持久化断言。
+
+**备份修正版单项已通过**：1792214374827，226.595秒1/1零失败/跳过，日志ui-cloud-backup-final-passed.log/counts。日志确认cloud-backup-settings为Other；取消后保留新歌单、确认恢复旧快照、坏JSON不修改数据、重启确认歌单、连接清理均通过。最新303/303业务/类型通过，完整native此前通过且无native实现变更。本批共分段验证：现代PCM/原曲收藏126.691秒、同步238.399秒、字体286.201秒、主题111.350秒、EQ79.053秒、DAV76.248秒、备份226.595秒；不是全套同次运行，不代替云端/真机。
+
+工具增补审批待用户回复：已审查忽略脚本work/tooling/prepare-python-tools.sh，只拟安装固定CMake/Ninja/pyelftools到Tools/Reverse独立venv，未执行；依据外部RULES.md:11的新安装副作用要求，详细披露已发async确认，现有应用回归继续。公开Blutter审查和IPA播放器静态E-003已记录SOLLIN_IPA_ANALYSIS；双端E-003→工作项/时间线关联已补全，严格review均通过，未声称对象图恢复。
+
+本地最终清洁IPA、应用代码阶段提交/push与新iOS27仍待（所有上述本地专项已通过）：先验证、diff/隐私检查，提交后清洁归档和IPA摘要/正式入口隔离核验，再正常push；核对运行≤1/pending≤1，不取消运行中或重派旧版本。已有私密样本/工具索引/work/解包均在忽略目录。后续全部Sollin逆向/对齐先执行REVERSE_SKILL_WORKFLOW硬门；APK E-003只证明压缩指针布局不同，不证明对象/调用图已恢复。签名/真机/真实私人服务仍未验收。
+
 # 2026-10-17 reverse-skill 阶段推送回执与后续验证
 
 安装/硬门禁已正常push `c64c43bc06d516c1ce59fd159c4a1980a1e4dd04`，远端main一致；云端 `39003956417` 已运行、0pending，未完成，不算通过，也不覆盖仍未提交的播放器代码。APK PRIMARY流程新增E-003：Android3.12.2快照同hash但compressed-pointers，与IPA既有no-compressed-pointers不同，平台对象布局不能直接套用；严格review通过，原始证据/脚本留work，脱敏结论见SOLLIN_IPA_ANALYSIS。

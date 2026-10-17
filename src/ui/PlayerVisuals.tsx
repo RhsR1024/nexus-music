@@ -21,8 +21,9 @@ export function Vinyl({services,track,size,playing}:{services:Services;track:Tra
 }
 export function FrequencyHalo({services,playing,children}:PropsWithChildren<{services:Services;playing:boolean}>){
   const spectrum=useSyncExternalStore(services.playback.spectrum.subscribe,services.playback.spectrum.getSnapshot);
+  const showSpectrum=playing&&spectrum.supported&&spectrum.bands.length>=32;
   return <View style={{width:148,height:148,alignItems:'center',justifyContent:'center'}}>
-    {Array.from({length:32},(_,i)=>{const angle=(i/32)*Math.PI*2,length=3+(playing&&spectrum.supported?Math.min(1,Math.max(0,spectrum.bands[i]??0))*13:0);return <View key={i} accessible={false} style={{position:'absolute',width:3,height:length,borderRadius:2,backgroundColor:'rgba(255,255,255,0.66)',left:72+Math.cos(angle)*64,top:72+Math.sin(angle)*64-length/2,transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}
+    {showSpectrum&&<View testID="wave-spectrum-bars" pointerEvents="none" accessible={false} style={{position:'absolute',width:148,height:148}}>{Array.from({length:32},(_,i)=>{const angle=(i/32)*Math.PI*2,length=3+Math.min(1,Math.max(0,spectrum.bands[i]??0))*13;return <View key={i} accessible={false} style={{position:'absolute',width:3,height:length,borderRadius:2,backgroundColor:'rgba(255,255,255,0.66)',left:72+Math.cos(angle)*64,top:72+Math.sin(angle)*64-length/2,transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>}
     <View style={{width:104,height:104,borderRadius:52,borderWidth:3,borderColor:'rgba(255,255,255,0.5)',alignItems:'center',justifyContent:'center'}}>{children}</View>
   </View>;
 }

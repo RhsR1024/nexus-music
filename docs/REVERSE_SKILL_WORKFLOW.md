@@ -59,3 +59,7 @@ flowchart LR
 ```
 
 后续先按 PRIMARY 补 A03/A04 设置/背景对象关系和A06–A09现有交互证据；继续保留 LX、Navidrome、WebDAV、汽水匹配、PCM/EQ、权威队列和数据安全。安装本包不增加功能完成度，不把此前未通过的云端运行改写为通过。
+
+## 对象恢复工具增补的当前状态
+
+已只读审阅 Blutter 固定提交及其下载/构建脚本，未执行安装器。当前上游仍按ELF提取，iOS PR204实验性且未合并，详见 [IPA分析](SOLLIN_IPA_ANALYSIS.md)。缺少的CMake/Ninja先准备独立环境脚本 `work/tooling/prepare-python-tools.sh`（忽略、不进入产品）：新建 `/Users/ningli/WorkSpace/Tools/Reverse/python-env`，从PyPI安装 cmake3.31.6、ninja1.11.1.3、pyelftools0.32并检查版本；拒绝覆盖已有目录，不启动服务或改全局配置。按包RULES.md:11/37，已向用户单独披露新增工具下载/安装效果并请求批准，批准前保持未执行。此请求不阻塞既有应用回归；DartVM/ICU/Capstone及iOS实验mapper仍需后续审阅与独立验收。

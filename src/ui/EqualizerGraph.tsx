@@ -26,7 +26,7 @@ export function EqualizerGraph({gains,onChange}:{gains:readonly number[];onChang
     const next=[...(pending.current??gains)];next[band.current]=dbAtY(event.nativeEvent.locationY,height);pending.current=next;setDraft(next);
   };
   return <View style={{gap:10}}><View style={{flexDirection:'row',gap:10}}><View style={{height,justifyContent:'space-between'}}>{['+12','+6','0','−6','−12'].map(label=><Text key={label} style={{fontSize:11,color:palette.secondary}}>{label}</Text>)}</View>
-    <View testID="eq-curve" accessibilityLabel="均衡器频段曲线，可在下方精调" style={{height,flex:1}} onLayout={event=>setWidth(event.nativeEvent.layout.width)}
+    <View testID="eq-curve" accessible accessibilityLabel="均衡器频段曲线，可在下方精调" accessibilityValue={{text:shown.map((gain,i)=>`${eqFrequencies[i]} Hz ${db(gain)}`).join('，')}} style={{height,flex:1}} onLayout={event=>setWidth(event.nativeEvent.layout.width)}
       onStartShouldSetResponder={event=>{const i=Math.max(0,Math.min(9,Math.round((event.nativeEvent.locationX-10)/Math.max(1,width-20)*9)));return Math.abs(event.nativeEvent.locationX-x(i))<22&&Math.abs(event.nativeEvent.locationY-y(gains[i]!))<24;}} onMoveShouldSetResponder={()=>false} onResponderGrant={event=>preview(event,true)} onResponderMove={event=>preview(event)} onResponderTerminationRequest={()=>false}
       onResponderRelease={event=>{preview(event);if(pending.current)onChange(pending.current);pending.current=null;setDraft(null);}} onResponderTerminate={()=>{pending.current=null;setDraft(null);}}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
