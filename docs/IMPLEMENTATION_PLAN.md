@@ -1,3 +1,9 @@
+## 2026-10-17 全局背景批次清洁归档与push回执
+
+`b32ac94b30315ca12bf9ba679f87d70f1c186d4f`已正常push并核对远端main。`archive-global-background-clean.log`成功，manifest dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；ZIP CRC/附带SHA、可执行及JS对归档字节一致、正式入口隔离/私人资源排除通过。IPA SHA256 `3bd13c1d90ae3b7c13162cda113ac76ce913a030e3999cdd7041e11cb20ad504`，留存`build/local-global-background-b32ac94`。本条覆盖下方本批清洁归档/push待办；手机功耗、实际动画帧率、系统后台/减少动态效果、真实服务/签名仍单独验收。
+
+push后API实核39038052599/b32ac94唯一pending，39034909819/35e6f2f继续运行；旧pending39036339256/b82aeba由single自动取消，不计通过。1运行/1排队，未取消运行/重派旧版；新云端终态继续。A03/A06–09和全部F/J余项仍保留。
+
 ## 2026-10-17 A04/A05 全局背景控制分离
 
 当前按[0039](decisions/0039-independent-global-background-motion.md)实施独立全局封面流动，沿E-010静态分支优先关系，保留旧设置实际效果及播放页动效。复用原媒体身份/CoverThemeStore/native Animated，无新播放器、依赖或参考源码；331项业务/类型通过。正式App1792244188543.xcresult两项通过、零失败/跳过：全局红蓝/跨页/独立开关/暂停重启189.767秒，Files图片导入/播放背景持久化112.398秒；亲看全局流动单开设置与发现页截图。测试证明颜色/优先级/保存行为，不冒称实际动画帧率或参考shader等价。清洁归档与本批云端继续记录。参考精确算法/动态树、动态视频及全部余项和真实服务/签名/真机继续。
