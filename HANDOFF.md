@@ -1,3 +1,9 @@
+## 2026-10-18 EQ清洁归档与push回执
+
+`be16e10b52919a0a5a97f56ecb487ba9fcb94535`已正常push，远端main一致。清洁归档manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人参考/签名资源排除通过。IPA SHA256 `815aaa35f2e71efbed227ad13b237490d3b7f04f1c6a4113b1d99854fcae57e3`，留存`build/local-eq-state-be16e10`。350业务/类型、完整native和App184.998秒及两项失败基线见下；验收后strict review22E/21F/21P、8WI/38事件、零错误/警告。此条覆盖本批归档/push待办。
+
+push后API实核39065099990/be16e10唯一pending，39058310652/332cac5继续运行（核心App已过，歌词/匹配/健康/发现组执行中），1运行/1排队。背景旧pending39063744433/e8941b0由single自动取消，不算通过；未手动取消运行或重派旧版。最新完整成功且IPA已核验仍为76c9cd0/39050349015，仅覆盖其祖先，不覆盖AM2/mini/字体/背景/EQ。下一A08发现/歌单/历史已有E022静态证据与严格review，独立模型/UI审查继续，未采纳日期分组/完整分页或新后端；全部A/F/J、真实服务/签名/手机目标保持active。
+
 ## 2026-10-18 EQ权威状态与启用校验（本地通过）
 
 reverse-skill E021→F020→P020采纳前strict review21E/20F/20P、7WI/34事件，独立重放4433原始指令/18BL/manifest哈希通过；五参考固定HEAD及维护/Android/许可比较见[0047](docs/decisions/0047-eq-state-validation.md)。音枢原创validate补eqEnabled布尔校验：非法更新在持久化/订阅前拒绝，坏记录沿既有原始隔离；缺失旧字段默认false，关闭/写入失败保留曲线和前级。两项独立失败基线保留，修正后350业务/类型通过。首轮check被build内临时基线TS文件相对导入阻断，改为留存.txt后完整检查通过，未改工程编译排除规则。
