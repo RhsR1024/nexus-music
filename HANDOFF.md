@@ -1,3 +1,9 @@
+## 2026-10-17 设置对象关系与分类入口阶段
+
+reverse-skill mobile-reverse IPA E-008→F-007→P-007严格review通过（8E/7F/7P、7工作项、12事件、零错误/警告）。固定Blutter/Dart双端隔离构建与断网解析已完成；IPA独立容器检查24,298入口、1,455骨架重放及限定原始BL支持设置分类分派、二级页创建和播放→EQ。NO_CODE_ANALYSIS骨架不等于完整反编译/运行图；A03仍有Sheet/默认值待查。A04纠正：resolve/load/applyCoverTheme属于ArtworkSummaryState，尚未证明全局主题取色链，三个动态provider仍分开。
+
+音枢设置首页四分类同组，EQ移到播放分类下独立页；当前音质/布局摘要、来源独立、草稿/滚动/隐藏AX和原有功能保留。328项业务/类型通过；正式App1792240097837两项通过（EQ97.259秒、分组85.620秒，零失败/跳过），亲看首页/草稿截图。最大辅助字号、清洁设备归档与本批云端结果继续记录。详见[本批报告](docs/2026-10-17_reverse-sollin-settings-objects-report.md)。先收敛A03/A04及A06–A09，再推进平台能力，全部F01–F37/J01–J59及真实服务/签名/真机边界保留。
+
 ## 2026-10-17 EQ 卡片清洁设备归档回执
 
 实现提交 `26bc65eb6189ed6137200dc309c83484e94d3276` 的 `archive-eq-cards-clean.log` 为ARCHIVE SUCCEEDED。manifest为dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；正式入口/测试adapter排除、ZIP CRC、可执行文件和JS对归档字节一致、私人参考/签名资源排除均通过。IPA SHA256 `cfad16789e918f6e735c92e81d1226b7e33eac8d24cd06d39288a54a14dcaff0`，留存 `build/local-eq-cards-26bc65e`。本回执覆盖下方本批“清洁归档待做”，push/对应云端结果继续记录；不等于iOS27/签名/真机通过。
@@ -917,3 +923,5 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 当前最有用的源码参考是 `Sollin-Music-Desktop`（原始桌面源码，根 MIT）和 `Youmi-Music-IOS`（`7DaysMax/Youmi-Music-IOS` fork、未声明许可证）。Youmi 的网易登录、公开推荐/日推、私人 FM、缓存和 FM 预加载可用于 provider 行为对照；其 `APIConfig.swift` 指向外部网易服务，不能写入音枢，下载实现也不足以替代音枢已有的暂停/Range/摘要/在播保护设计。`lx-netease-music-mobile`、`api-enhanced`、`KuGouMusicApi`、`qqmusic_flac`、`meting` 可分别用于 provider 字段/协议研究；`QQMusicApi` 为 GPL-3.0，只做协议研究，不复制实现。
 
 发布仓库 `Sollin-mobile-release` 只有包发布说明，`PrismMusic-Release` 主要是截图；如需从包补充行为证据，继续遵守 `reverse-skill` IPA/APK PRIMARY、离线 scope、Evidence→Finding→Path 与严格 review，不把仓库 README 或截图当功能证据。Sollin 私有云端、账号体系、用户中心、服务支持、激活/赞助、遥测和专用链接仍排除；无法本地替代的能力登记待决，开发收尾和真实设备阶段再由用户决定。
+
+最大辅助字号补记：1792240831918.xcresult，经新首页→播放→EQ入口，单列卡片32.744秒通过，1/1、零失败/跳过。清洁归档/本批云端仍待。

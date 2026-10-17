@@ -1,3 +1,9 @@
+## 2026-10-17 设置对象关系与分类入口阶段
+
+reverse-skill mobile-reverse IPA E-008→F-007→P-007严格review通过（8E/7F/7P、7工作项、12事件、零错误/警告）。固定Blutter/Dart双端隔离构建与断网解析已完成；IPA独立容器检查24,298入口、1,455骨架重放及限定原始BL支持设置分类分派、二级页创建和播放→EQ。NO_CODE_ANALYSIS骨架不等于完整反编译/运行图；A03仍有Sheet/默认值待查。A04纠正：resolve/load/applyCoverTheme属于ArtworkSummaryState，尚未证明全局主题取色链，三个动态provider仍分开。
+
+音枢设置首页四分类同组，EQ移到播放分类下独立页；当前音质/布局摘要、来源独立、草稿/滚动/隐藏AX和原有功能保留。328项业务/类型通过；正式App1792240097837两项通过（EQ97.259秒、分组85.620秒，零失败/跳过），亲看首页/草稿截图。最大辅助字号、清洁设备归档与本批云端结果继续记录。详见[本批报告](2026-10-17_reverse-sollin-settings-objects-report.md)。先收敛A03/A04及A06–A09，再推进平台能力，全部F01–F37/J01–J59及真实服务/签名/真机边界保留。
+
 ## 2026-10-17 EQ 卡片清洁设备归档回执
 
 实现提交 `26bc65eb6189ed6137200dc309c83484e94d3276` 的 `archive-eq-cards-clean.log` 为ARCHIVE SUCCEEDED。manifest为dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned；正式入口/测试adapter排除、ZIP CRC、可执行文件和JS对归档字节一致、私人参考/签名资源排除均通过。IPA SHA256 `cfad16789e918f6e735c92e81d1226b7e33eac8d24cd06d39288a54a14dcaff0`，留存 `build/local-eq-cards-26bc65e`。本回执覆盖下方本批“清洁归档待做”，push/对应云端结果继续记录；不等于iOS27/签名/真机通过。
@@ -459,3 +465,5 @@ Sollin iOS 2.0.0 build 60 只提供移动端行为参考。四组设置完整贯
 ## 2026-10-17 16:30 云端匹配清理旧失败核对
 
 `39010767320`（3e56d4d）checks/native/首组App步骤通过，第二组4/5；唯一匹配用例在Swift337清理夹具断言失败，完整日志条目长度/CRC已验，证据见BUILD_STATUS及`build/ci-39010767320/FINDINGS.txt`。95c2e03修正已本地通过且包含于最新920d193，失败旧提交不包含它，无需重复补丁或重派。最新39016561400运行中（checks/native通过、核心App执行中，1运行/0排队），iPad/归档/终态尚待；全部其余F/J开发及真实服务/签名/真机缺口继续保留。
+
+最大辅助字号补记：1792240831918.xcresult，经新首页→播放→EQ入口，单列卡片32.744秒通过，1/1、零失败/跳过。清洁归档/本批云端仍待。

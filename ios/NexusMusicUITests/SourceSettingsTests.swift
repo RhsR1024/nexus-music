@@ -21,8 +21,8 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5))
     }
     let appearancePages=["theme","background","skins","accent","navigation","mini"]
-    enter(page=="typography" ? "playback" : page=="equalizer" ? "equalizer" : appearancePages.contains(page) ? "appearance" : page)
-    if page=="typography"{enter("typography")}else if appearancePages.contains(page){enter(page)}
+    enter(page=="typography" || page=="equalizer" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
+    if page=="typography" || page=="equalizer"{enter(page)}else if appearancePages.contains(page){enter(page)}
   }
   private func replaceText(_ field:XCUIElement,with value:String,in app:XCUIApplication){
     field.tap();field.press(forDuration:1.1)
@@ -126,6 +126,11 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["settings-back"].isHittable,"Back must stay above the scroll content")
     app.buttons["settings-back"].tap();XCTAssertFalse(source.exists,"Hidden settings must leave the accessibility tree")
     XCTAssertTrue(app.staticTexts["settings-title-home"].exists);evidence("Grouped mobile settings home")
+    XCTAssertFalse(app.buttons["settings-open-equalizer"].exists,"EQ belongs to playback settings, with its retained independent page")
+    let group=app.descendants(matching:.any).matching(identifier:"settings-category-group").firstMatch
+    XCTAssertTrue(group.exists)
+    let categoryRows=["playback","appearance","downloads","storage"].map{app.buttons["settings-open-"+$0]}
+    for (index,row) in categoryRows.enumerated(){XCTAssertTrue(row.exists);if index>0{XCTAssertGreaterThan(row.frame.minY,categoryRows[index-1].frame.minY)}}
     let sources=app.buttons["settings-open-sources"];reveal(sources);sources.tap()
     XCTAssertTrue(source.isHittable);XCTAssertEqual(source.value as? String,"https://example.invalid/draft.js");XCTAssertEqual(source.frame.midY,previousY,accuracy:2,"Back must restore the original scroll position")
     openSettings(app,page:"equalizer")
@@ -135,6 +140,8 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["settings-title-typography"].exists);XCTAssertTrue(app.buttons["font-import"].isHittable)
     app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
     openSettings(app,page:"equalizer");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
+    XCTAssertEqual(app.buttons["settings-back"].label,"返回播放与歌词")
+    app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-playback"].exists)
     openSettings(app,page:"appearance");app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the active settings tab must return to the settings root")
     openSettings(app,page:"downloads");XCTAssertFalse(name.exists)

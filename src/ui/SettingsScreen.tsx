@@ -1,5 +1,5 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,BackHandler,findNodeHandle,Keyboard,Pressable,ScrollView,View,type Text as NativeText} from 'react-native';
+import {AccessibilityInfo,BackHandler,findNodeHandle,Keyboard,Pressable,ScrollView,View,useWindowDimensions,type Text as NativeText} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
@@ -21,6 +21,7 @@ const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌�
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
   const {palette:p}=useTheme();
+  const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const [history,setHistory]=useState<SettingsPage[]>([initialPage]);
   const [visited,setVisited]=useState<SettingsPage[]>([initialPage]);
@@ -44,25 +45,31 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
   const open=(next:SettingsPage)=>{Keyboard.dismiss();setVisited(value=>value.includes(next)?value:[...value,next]);setHistory(value=>[...value,next]);};
   useEffect(()=>{let active=true;void AccessibilityInfo.isScreenReaderEnabled().then(enabled=>{if(active&&enabled){const node=findNodeHandle(heading.current);if(node)AccessibilityInfo.setAccessibilityFocus(node);}});return()=>{active=false;};},[page]);
   useEffect(()=>{const listener=BackHandler.addEventListener('hardwareBackPress',()=>{if(page==='home')return false;back();return true;});return()=>listener.remove();},[page,history.length]);
-  const row=(next:SettingsPage,subtitle:string,icon:React.ComponentProps<typeof Ionicons>['name'])=><Pressable testID={`settings-open-${next}`} accessibilityRole="button" accessibilityLabel={titles[next]} accessibilityHint={subtitle} onPress={()=>open(next)} style={{padding:18,minHeight:82,flexDirection:'row',alignItems:'center',gap:14,borderRadius:22,backgroundColor:p.surface,borderWidth:1,borderColor:p.border}}>
-    <View style={{width:44,height:44,borderRadius:14,backgroundColor:p.selected,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={24} color={p.accent}/></View>
+  const row=(next:SettingsPage,subtitle:string,icon:React.ComponentProps<typeof Ionicons>['name'],value?:string,grouped=false)=><Pressable testID={`settings-open-${next}`} accessibilityRole="button" accessibilityLabel={titles[next]} accessibilityHint={subtitle} accessibilityValue={value?{text:value}:undefined} onPress={()=>open(next)} style={{padding:18,minHeight:82,flexDirection:'row',alignItems:'center',gap:14,borderRadius:grouped?0:22,backgroundColor:grouped?'transparent':p.surface,borderWidth:grouped?0:1,borderColor:p.border}}>
+    <View style={{width:grouped?28:44,height:44,borderRadius:14,backgroundColor:grouped?'transparent':p.selected,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={24} color={p.accent}/></View>
     <View style={{flex:1,gap:6}}><Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>{titles[next]}</Text><Text style={{color:p.secondary,fontSize:13,lineHeight:20}}>{subtitle}</Text></View>
+    {value&&fontScale<=1.4&&<Text accessible={false} style={{color:p.secondary,fontSize:13,maxWidth:72,textAlign:'right'}}>{value}</Text>}
     <Ionicons name="chevron-forward" size={20} color={p.secondary}/>
   </Pressable>;
   const content=(key:SettingsPage)=>{
     switch(key){
       case 'home':return <View style={{gap:14}}>
         <Text style={{color:p.secondary,lineHeight:23,marginBottom:8}}>让每一次聆听，更像你。</Text>
-        {row('playback',`${preferences.quality} · 音质、睡眠与歌词`,'musical-notes-outline')}
-        {row('equalizer','10 段曲线、前级、预设与实时 PCM 处理','options-outline')}
-        {row('appearance','主题、背景、播放界面与迷你播放器','color-palette-outline')}
-        {row('downloads','下载偏好、任务、暂停续传与已保存文件','cloud-download-outline')}
-        {row('storage','缓存、备份、同步与歌单迁移','folder-outline')}
+        <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13}}>设置分类</Text>
+        <View testID="settings-category-group" style={{borderRadius:22,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,overflow:'hidden'}}>
+          {row('playback','音质、睡眠、歌词与均衡器','musical-notes-outline',preferences.quality.toUpperCase(),true)}
+          <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
+          {row('appearance','主题、字体、播放界面与迷你播放器','color-palette-outline',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核'}as const)[preferences.playerLayout],true)}
+          <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
+          {row('downloads','下载偏好、任务与已保存文件','cloud-download-outline','下载设置',true)}
+          <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
+          {row('storage','缓存、备份、同步与歌单迁移','folder-outline','本地数据',true)}
+        </View>
         <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13,marginTop:12}}>曲库与播放来源</Text>
         {row('sources','LX 音源与 Navidrome 私人曲库','server-outline')}
       </View>;
       case 'sources':return <><NavidromeSettings services={services}/><SourceSettings catalog={services.catalog} health={services.sourceHealth}/></>;
-      case 'playback':return <>{row('typography','歌词字体、颜色、对齐与逐字效果','text-outline')}<AudioSettings services={services}/><PlaybackSettings services={services}/></>;
+      case 'playback':return <><View style={{gap:12}}>{row('equalizer','10 段曲线、前级、预设与实时音效','options-outline')}{row('typography','歌词字体、颜色、对齐与逐字效果','text-outline')}</View><AudioSettings services={services}/><PlaybackSettings services={services}/></>;
       case 'equalizer':return <EqualizerSettings services={services}/>;
       case 'appearance':return <AppearanceOverview services={services} open={open}/>;
       case 'theme':case 'background':case 'skins':case 'mini':case 'navigation':case 'accent':return <AppearanceSettings services={services} section={key}/>;

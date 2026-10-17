@@ -84,3 +84,13 @@ ICU固定Git checkout在单次重试和批量对象下载中仍遇到连接重�
 预取补充：首个Capstone固定Git clone因Operation timed out退出，`build/logs/blutter-other-fixed-sources.log`保留；pkgconf/Blutter尚未进入该脚本后续步骤。没有把超时或不完整checkout登记为工具可用。
 
 ICU恢复进展：官方同提交归档中所需的icu4c及根文件共6,972项已逐一匹配固定Git树blob SHA1（5,995个独立blob），由Git写入对象库并以原生Git2.50.1恢复为固定HEAD/干净稀疏工作树。复核脚本 `work/tooling/restore-icu-fixed-blobs.py`、收据 `icu-verified-source.json` 和日志 `blutter-icu-source-verify.log` 保留本机。归档其余ICU4J字节仍可下载，未称整包完整；本次使用范围只限逐文件完整核验的ICU4c。手动恢复初次命中了旧CommandLineTools Git（不支持restore），失败日志已单独保留；已改用environment.sh及索引Python3.12，无全局配置变化。设备归档结束后开始原批准参数的ICU隔离编译（make -j2），不与Xcode重叠；尚未宣称工具或对象恢复成功。其余固定源码转用同一GitHub仓库SSH、原生Git预取，提交/许可不变。
+
+### 2026-10-17 隔离依赖构建与 Dart 源码格式核验
+
+ICU75.1 首次编译/安装完成，但 `icuinfo` 因裸 dylib install name 无法加载；原失败日志保留。仅增加 `--enable-rpath` 后清理重建，`icu-config --version` 为75.1、`icuinfo` 初始化 `U_ZERO_ERROR`，`otool -L` 逐项指向隔离prefix，不依赖临时DYLD覆盖。原批准scope继续有效；构建脚本的新SHA256为 `0090ddbb23fb63be60144bfa0f744bd3aca6fee56eaf655171b21d351e58a279`，修复过程记入本机批准收据，没有换版本/全局配置。官方ICU全归档最终1800秒超时，已改名partial-timeout；仅采用此前逐blob核验的完整ICU4c子树，未称全归档完整。
+
+Capstone5.0.3、pkgconf2.3.0和Blutter固定源已由同一官方GitHub仓库SSH取得并核对HEAD/干净受控文件；隔离pkgconf CLI2.3.0、Capstone pkg版本5.0.3及ARM64 `1f2003d5`→`nop`通过。四个依赖CLI二进制摘要及来源收据在 `work/tooling/isolated-dependency-receipt.json`，工具索引同步绝对路径。Dart3.12.2固定 `d684a576a6aa954ae107a03b2b4e1d61c3bebe93` 源码已准备；按官方15文件顺序本地重算格式MD5为 `ace654289f5abc240509fc941453ebc5`，与样本匹配，再用原版 `tools/make_version.py` 生成version.cc。SDK保留独立目录，通过本地链接接入Blutter；CMake canonical path产生的隔离packages目录也已链接。
+
+恢复首轮在Capstone头文件include路径失败，改用pkgconf的CAPSTONE_INCLUDE_DIRS后，两平台VM及解析器均构建完成，`build/logs/blutter-objectpool-resume.log` exit0；补丁留隔离工具logs，辅助脚本SHA256为 `4b510d27ba5a981ca89706572e7adcafa78d99c31adda9b8ac798d9fee593691`。全程ninja -j2、无Xcode重叠；7项上游合成Mach-O Python测试通过。两样本在deny-network sandbox离线生成对象池/骨架，未运行App/服务，Frida/IDA生成脚本未执行。格式摘要匹配是必要兼容条件，不能替代对象解析正确性。当前 `NO_CODE_ANALYSIS=true` 的 `asm/*.dart` 只包含对象/函数骨架，不能写成已取得机器指令反汇编、完整反编译或调用图；后续必须独立核对FAT raw/slice/VA以及功能对象关系，再建立功能证据并严格review。
+
+IPA独立FAT/segment/snapshot检查覆盖24,298个非零函数入口，全部落在可执行文件段；另进程重放1,455个骨架逐字节一致，仅证明重复性。限定原始ARM64 BL核查支持E-008设置分类/EQ关系，严格review通过8E/7F/7P、7工作项、12事件、零错误/警告。完整语义、动态调用与A04全局背景仍待，详见[本批报告](2026-10-17_reverse-sollin-settings-objects-report.md)。

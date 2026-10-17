@@ -1,3 +1,9 @@
+## 2026-10-17 设置对象关系与分类入口阶段
+
+reverse-skill mobile-reverse IPA E-008→F-007→P-007严格review通过（8E/7F/7P、7工作项、12事件、零错误/警告）。固定Blutter/Dart双端隔离构建与断网解析已完成；IPA独立容器检查24,298入口、1,455骨架重放及限定原始BL支持设置分类分派、二级页创建和播放→EQ。NO_CODE_ANALYSIS骨架不等于完整反编译/运行图；A03仍有Sheet/默认值待查。A04纠正：resolve/load/applyCoverTheme属于ArtworkSummaryState，尚未证明全局主题取色链，三个动态provider仍分开。
+
+音枢设置首页四分类同组，EQ移到播放分类下独立页；当前音质/布局摘要、来源独立、草稿/滚动/隐藏AX和原有功能保留。328项业务/类型通过；正式App1792240097837两项通过（EQ97.259秒、分组85.620秒，零失败/跳过），亲看首页/草稿截图。最大辅助字号、清洁设备归档与本批云端结果继续记录。详见[本批报告](2026-10-17_reverse-sollin-settings-objects-report.md)。先收敛A03/A04及A06–A09，再推进平台能力，全部F01–F37/J01–J59及真实服务/签名/真机边界保留。
+
 ## 2026-10-17 播放器定向复核（reverse-skill IPA PRIMARY）
 
 通过离线门禁后，对固定 IPA 的 App.framework/App 重新定位 `waveCoreLyricsLineGap`、`immersive_wave_core_lyrics_preview`、`immersive_wave_core_lower_controls`、`immersive_landscape_phone_wave_core_ring`、`sollin_local_favorites_v1`、`apple_music2_favorite_button`、`player_host.dart` 与 themed sheet 标记。可重放脚本、成员摘要、raw file offsets 和不可变结果见本机 `work/sollin-ipa/notes/player-triage.py`、`evidence/player-triage.json`；WI-003→E-003→F-002→P-002→timeline 关联完整，严格 review 为0错误/0警告。
@@ -6,7 +12,7 @@
 
 ## 2026-10-17 reverse-skill 对象恢复工具预检
 
-沿 PRIMARY 对公开工具资料作补查：Blutter上游固定 `4a60ac648bf448c5a7596437243bcd0b9376fdf0` 的 [extract_dart_info.py:12–18/27–29](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/extract_dart_info.py#L12) 仍直接使用 ELFFile；[CMake平台/指针开关](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/scripts/CMakeLists.txt#L23) 不证明Mach-O已支持。[iOS实验PR204](https://github.com/worawit/blutter/pull/204) head `0039efb1b29d68ca6e5caece4d412d15e6f49428` 仍为Open，需另审查mapper、非压缩指针与Dart3.12.2并实际构建验证。首次预检PATH未检出cmake/ninja；随后经用户批准已在Tools/Reverse独立venv安装并验证CMake/Ninja/pyelftools，详见REVERSE_SKILL_WORKFLOW。Blutter/DartVM下载器、编译、反编译仍未执行，不冒称恢复对象池。公共资料留work/references，目标样本分析继续离线。已进一步只读审查该PR的入口、extract_dart_info、macho.py以及DartApp/DartFunction补丁：macho.py直接使用未延迟求值的`str | None`等注解，与最初系统Python3.9存在版本兼容前提（源码判断，未执行补丁）；随后已确认桌面自带Python3.12.14可用，无需新装解释器；C++ mapper、运行时重定位和真实快照对象还未完整审查/验证。
+沿 PRIMARY 对公开工具资料作补查：Blutter上游固定 `4a60ac648bf448c5a7596437243bcd0b9376fdf0` 的 [extract_dart_info.py:12–18/27–29](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/extract_dart_info.py#L12) 仍直接使用 ELFFile；[CMake平台/指针开关](https://github.com/worawit/blutter/blob/4a60ac648bf448c5a7596437243bcd0b9376fdf0/scripts/CMakeLists.txt#L23) 不证明Mach-O已支持。[iOS实验PR204](https://github.com/worawit/blutter/pull/204) head `0039efb1b29d68ca6e5caece4d412d15e6f49428` 仍为Open，需另审查mapper、非压缩指针与Dart3.12.2并实际构建验证。首次预检PATH未检出cmake/ninja；随后经用户批准已在Tools/Reverse独立venv安装并验证CMake/Ninja/pyelftools，详见REVERSE_SKILL_WORKFLOW。此为最初预检状态；本轮固定构建、对象解析与限定独立验证已完成，见顶部E-008回执，完整反编译仍未完成。公共资料留work/references，目标样本分析继续离线。已进一步只读审查该PR的入口、extract_dart_info、macho.py以及DartApp/DartFunction补丁：macho.py直接使用未延迟求值的`str | None`等注解，与最初系统Python3.9存在版本兼容前提（源码判断，未执行补丁）；随后已确认桌面自带Python3.12.14可用，无需新装解释器；C++ mapper、运行时重定位和真实快照对象还未完整审查/验证。
 
 ## 2026-10-17 reverse-skill 首次双端 snapshot 复核
 
