@@ -4,6 +4,11 @@ export type VisualSlot='background'|'photo';
 export interface VisualAsset {id:string;name:string;width:number;height:number}
 export interface VisualState {version:1;background:VisualAsset|null;photo:VisualAsset|null}
 export interface VisualNative {importVisual(uri:string):Promise<{id:string;width:number;height:number}>;resolveVisual(id:string):Promise<string>;reconcileVisuals(ids:readonly string[]):Promise<void>;visualPalette(uri:string):Promise<string>}
+// Only stable stages cross the UI boundary; native errors may contain private paths.
+export class VisualImportError extends Error {
+  readonly stage:'read'|'validate'|'save';
+  constructor(stage:'read'|'validate'|'save'){super(`Visual import failed: ${stage}`);this.name='VisualImportError';this.stage=stage;}
+}
 const empty:VisualState={version:1,background:null,photo:null};
 function asset(value:unknown):VisualAsset|null{
   if(value===null)return null;
@@ -23,7 +28,13 @@ export class VisualAssetStore {
   private run(action:()=>Promise<void>){const pending=this.tail.then(action);this.tail=pending.catch(()=>{});return pending;}
   import(slot:VisualSlot,uri:string,name:string){return this.run(async()=>{
     if(!['background','photo'].includes(slot)||!uri.startsWith('file:'))throw new Error('请选择本机图片');
-    try{const imported=await this.native.importVisual(uri),image=asset({...imported,name:name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,240)||'自定义图片'});await this.publish({...this.value,[slot]:image});}
+    try{
+      let imported:Awaited<ReturnType<VisualNative['importVisual']>>;
+      try{imported=await this.native.importVisual(uri);}catch{throw new VisualImportError('read');}
+      let image:VisualAsset|null;
+      try{image=asset({...imported,name:name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,240)||'自定义图片'});}catch{throw new VisualImportError('validate');}
+      try{await this.publish({...this.value,[slot]:image});}catch{throw new VisualImportError('save');}
+    }
     finally{await this.cleanup();}
   });}
   remove(slot:VisualSlot){return this.run(async()=>{if(!['background','photo'].includes(slot))throw new Error('图片槽位无效');await this.publish({...this.value,[slot]:null});await this.cleanup();});}

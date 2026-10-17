@@ -53,7 +53,9 @@ const healthScript=matchingScript.replace('Nexus Matching Fixture','Nexus Health
 // scrolls and queries accessibility on slower runners. Natural EOF is covered
 // by the native playback tests; serve truthful 120-second metadata and bytes.
 const navidromeAudio=matchingAudio,navidromeDuration=120;
-const song=()=>({id:'fixture-song',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+// Version the synthetic recording when its bytes change. Existing test devices
+// can still contain the original 12-second recording in the normal audio cache.
+const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
   if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
   if(req.url==='/health-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(healthScript);return;}

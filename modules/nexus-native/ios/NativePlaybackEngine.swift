@@ -24,6 +24,7 @@ final class NativePlaybackEngine {
   private var preampDB = 0.0
   private var eqEnabled = false, gains = [Double](repeating: 0, count: 10)
   private var observation: NSKeyValueObservation?
+  private var durationObservation: NSKeyValueObservation?
   private var playerObservation: NSKeyValueObservation?
   private var endObserver: NSObjectProtocol?, interruption: NSObjectProtocol?, routeObserver: NSObjectProtocol?
   private var progress: Any?, spectrumTimer: Timer?
@@ -35,6 +36,7 @@ final class NativePlaybackEngine {
   private var artworkRevision = 0
   private static let artworkQueue = DispatchQueue(label: "nexus.system-artwork", qos: .utility)
   private var metadata: [String: Any] = [:]
+  private var knownDuration = 0.0
   private var initialPosition: Double = 0
   private var initialSeekPending = false
   private var listeningSession = UUID().uuidString
@@ -167,13 +169,23 @@ final class NativePlaybackEngine {
     loading = Task { [weak self] in
       do {
         let tracks = try await asset.loadTracks(withMediaType: .audio)
+        let loadedDuration = (try? await asset.load(.duration).seconds) ?? 0
         guard let self, !Task.isCancelled else { return }
         await MainActor.run {
           guard self.generation == newGeneration, self.entryID == id else { return }
+          self.knownDuration = loadedDuration.isFinite && loadedDuration > 0 ? loadedDuration : 0
           let item = AVPlayerItem(asset: asset), dsp = NexusAudioDSP()
           dsp.configure(enabled: self.eqEnabled, gains: self.gains.map(NSNumber.init(value:)), preampDB: self.preampDB)
           if let track = tracks.first { item.audioMix = dsp.audioMix(for: track) }
           self.dsp = dsp
+          self.durationObservation = item.observe(\.duration, options: [.new]) { [weak self] item, _ in
+            DispatchQueue.main.async {
+              guard let self, self.player.currentItem === item, self.entryID == id else { return }
+              let duration = item.duration.seconds
+              guard duration.isFinite, duration > 0 else { return }
+              self.report("duration")
+            }
+          }
           self.observation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             DispatchQueue.main.async {
               guard let self, self.player.currentItem === item, self.entryID == id else { return }
@@ -234,11 +246,11 @@ final class NativePlaybackEngine {
     report("stopped")
     if !preservingSleep { sleepTimer.trackChanged(to: "") }
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
-    observation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
+    observation = nil; durationObservation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
     player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
     if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
     if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
-    entryID = ""; metadata = [:]; systemItemID = ""; systemFavorite = false; systemArtwork = nil; artworkRevision += 1
+    entryID = ""; metadata = [:]; knownDuration = 0; systemItemID = ""; systemFavorite = false; systemArtwork = nil; artworkRevision += 1
     updateSystemCommands()
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     MPNowPlayingInfoCenter.default().playbackState = .stopped
@@ -276,7 +288,9 @@ final class NativePlaybackEngine {
     if wasActuallyPlaying { listenedSeconds += max(0, clock - listeningClock) }
     listeningClock = clock
     wasActuallyPlaying = player.timeControlStatus == .playing && wantsPlay && kind != "ended" && kind != "stopped" && kind != "error"
-    let seconds = player.currentTime().seconds, duration = player.currentItem?.duration.seconds ?? 0
+    let seconds = player.currentTime().seconds
+    let itemDuration = player.currentItem?.duration.seconds ?? 0
+    let duration = itemDuration.isFinite && itemDuration > 0 ? itemDuration : knownDuration
     emit("playback", ["kind": kind, "entryId": entryID, "generation": generation,
       "position": seconds.isFinite ? seconds : 0, "duration": duration.isFinite ? duration : 0,
       "playing": player.rate > 0, "buffering": player.timeControlStatus == .waitingToPlayAtSpecifiedRate,
@@ -290,7 +304,9 @@ final class NativePlaybackEngine {
       MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
       MPNowPlayingInfoPropertyPlaybackRate: player.rate]
     if let systemArtwork { info[MPMediaItemPropertyArtwork] = systemArtwork }
-    let seconds = player.currentTime().seconds, duration = player.currentItem?.duration.seconds ?? 0
+    let seconds = player.currentTime().seconds
+    let itemDuration = player.currentItem?.duration.seconds ?? 0
+    let duration = itemDuration.isFinite && itemDuration > 0 ? itemDuration : knownDuration
     if seconds.isFinite { info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = seconds }
     if duration.isFinite && duration > 0 { info[MPMediaItemPropertyPlaybackDuration] = duration }
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info

@@ -17,6 +17,12 @@
 
 旧设置迁移与校验、类型与全量业务回归；在合成 Navidrome 实际播放/暂停后切 AM→沉浸→经典，确认暂停意图/当前曲保留，截图检查布局；新选择写入同一持久化模型。播放器/手势仍需大字/小屏/长歌词及真机背景性能验收。云端先跟踪 2cb91a6 的 S1 原生材质/新依赖，不推新提交取消运行。
 
+## 2026-10-17 播放设置面板的呈现修正
+
+IPA 中 `_showPlayerInterfaceStyleSheet`、`_PlayerInterfaceStyleSheet`、`_showLyricDisplaySettingsSheet` 是独立面板的静态线索，不证明必须同时创建多个原生 Modal。亲读项目 RN0.81.5 的 `RCTModalHostViewComponentView.mm:134–139`，其从所在 `reactViewController` 调用 `presentViewController`。此前播放菜单、样式和歌词三个同级 Modal 可同时 visible；正式入口本地 `SourceUITests-1792194068675.xcresult` 在点击歌词显示设置后未出现标题（Swift 第673行），不能用仅覆盖歌词候选的 `testCrossPlatformLyrics` 当作这条路径已通过。
+
+本批改为单个 iOS pageSheet 呈现宿主，分别显示菜单、样式、歌词设置与完整选项；面板切换重置其滚动位置，菜单进入样式时关闭返回菜单，播放器直达样式时关闭返回播放器。偏好、保存失败保留、权威队列及播放意图保持原实现。该方案是音枢的行为重实现，不宣称还原 Sollin 的 Flutter 调用图；既有五参考、来源许可及 Android 适配边界不变。完整 Navidrome 正式入口专项、本地 IPA 与对应新云端仍须分别验证。
+
 ## 其余三种皮肤的基础实现
 
 PlayerVisuals 为原创 RN 几何黑胶/唱针与32频带环形布局，无复制参考图片或纹理。黑胶以 Animated 原生驱动每圈22秒，不通过 React 每帧更新角度；暂停、缓冲、后台、系统减少动态效果均停止。旋转继续从当前值开始；未声称唱针具备完整机械仿真。声波核只订阅原有频带快照，32条长度来自实际FFT，暂停时回到基线，不制造随机频谱。

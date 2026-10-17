@@ -3,16 +3,16 @@ import {Alert,Pressable,Switch,View} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
-import type {VisualSlot} from '../storage/visualAssets.ts';
+import {VisualImportError,type VisualSlot} from '../storage/visualAssets.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {useVisualAssets,useVisualImage,VisualPreview} from './VisualBackground.tsx';
 export function VisualSettings({services}:{services:Services}){
   const {palette:p}=useTheme(),value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),assets=useVisualAssets(services);
   const background=useVisualImage(services,assets.background),photo=useVisualImage(services,assets.photo),[busy,setBusy]=useState(false),[message,setMessage]=useState('');const working=useRef(false);
-  async function perform(action:()=>Promise<void>){if(working.current)return;working.current=true;setBusy(true);setMessage('');try{await action();}catch{setMessage('图片或设置未保存，请检查格式与大小后重试；之前的数据保留。');}finally{working.current=false;setBusy(false);}}
+  async function perform(action:()=>Promise<void>,fallback='图片或设置未保存，请重试；之前的数据保留。'){if(working.current)return;working.current=true;setBusy(true);setMessage('');try{await action();}catch(error){setMessage(error instanceof VisualImportError?({read:'图片读取或处理失败，请检查格式与大小后重新选择。[V02]',validate:'图片处理结果无效，请重新选择。[V03]',save:'图片信息未保存，请重试。[V04]'}[error.stage]+' 之前的数据保留。'):fallback);}finally{working.current=false;setBusy(false);}}
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{void perform(()=>services.preferences.update(patch));};
-  async function importImage(slot:VisualSlot){await perform(async()=>{const result=await DocumentPicker.getDocumentAsync({type:'image/*',copyToCacheDirectory:true});if(result.canceled)return;const asset=result.assets[0]!;try{await services.visualAssets.import(slot,asset.uri,asset.name);setMessage(slot==='background'?'主题背景图片已保存':'写真图片已保存');}finally{if(asset.uri.startsWith(Paths.cache.uri)){try{const file=new File(asset.uri);if(file.exists)file.delete();}catch{}}}});}
+  async function importImage(slot:VisualSlot){await perform(async()=>{const result=await DocumentPicker.getDocumentAsync({type:'image/*',copyToCacheDirectory:true});if(result.canceled)return;const asset=result.assets[0]!;try{await services.visualAssets.import(slot,asset.uri,asset.name);setMessage(slot==='background'?'主题背景图片已保存':'写真图片已保存');}finally{if(asset.uri.startsWith(Paths.cache.uri)){try{const file=new File(asset.uri);if(file.exists)file.delete();}catch{}}}},'系统文件选择或复制失败，请重新选择图片。[V01] 之前的数据保留。');}
   const button=(id:string,label:string,action:()=>void,selected?:boolean)=><Pressable key={id} testID={id} accessibilityRole={selected===undefined?'button':'radio'} accessibilityLabel={label} accessibilityState={selected===undefined?undefined:{selected}} disabled={busy} onPress={action} style={{padding:12,borderRadius:14,backgroundColor:selected?p.selected:p.surface,borderWidth:1,borderColor:p.border,opacity:busy?.5:1}}><Text style={{color:p.accent,fontSize:13}}>{label}</Text></Pressable>;
   const control=(id:string,label:string,on:boolean,action:(value:boolean)=>void)=><View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:16}}><Text style={{color:p.text,flex:1}}>{label}</Text><Switch testID={id} accessibilityLabel={label} value={on} disabled={busy} onValueChange={action}/></View>;
   const adjust=(field:'backgroundOpacity'|'playerBlur'|'playerDarkness'|'coverRadius',label:string,step:number,min:number,max:number)=><View style={{gap:8}}><Text testID={`visual-value-${field}`} style={{color:p.secondary}}>{label} · {field==='playerBlur'||field==='coverRadius'?value[field]:`${Math.round(value[field]*100)}%`}</Text><View style={{flexDirection:'row',gap:12}}>{button(`visual-${field}-down`,`减少${label}`,()=>update({[field]:Math.max(min,Math.round((value[field]-step)*100)/100)}))}{button(`visual-${field}-up`,`增加${label}`,()=>update({[field]:Math.min(max,Math.round((value[field]+step)*100)/100)}))}</View></View>;
@@ -28,6 +28,6 @@ export function VisualSettings({services}:{services:Services}){
     {adjust('playerBlur','播放背景模糊',10,0,80)}{adjust('playerDarkness','播放背景暗度',.1,.35,.9)}{adjust('coverRadius','封面圆角',8,0,48)}
     {control('visual-cover-color','封面取色',value.coverColor,coverColor=>update({coverColor}))}{control('visual-motion','动态播放背景',value.dynamicBackground,dynamicBackground=>update({dynamicBackground}))}
     <Text style={{color:p.secondary,fontSize:12}}>动效在暂停、缓冲、后台或系统减少动态效果时停止。</Text>
-    {!!message&&<Text accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
+    {!!message&&<Text testID="visual-status" accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
   </View>;
 }

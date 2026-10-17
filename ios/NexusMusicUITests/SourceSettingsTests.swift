@@ -654,7 +654,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"AM lyric selection must remain reachable above clipped lyric lines")
     XCTAssertTrue(app.staticTexts["Synthetic tone"].firstMatch.exists)
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
-    XCTAssertTrue((progress.value as? String)?.hasSuffix(" / 2:00")==true,"Fixture duration must come from the decoded 120-second stream")
+    XCTAssertTrue((progress.value as? String)?.hasSuffix(" / 2:00")==true,"Fixture duration must come from the decoded 120-second stream; actual progress: \(String(describing: progress.value))")
     let beforeSeek=progress.value as? String
     // Seek far from the current position in the 120-second fixture while the
     // second lyric remains active, and retain the paused playback intent.
@@ -913,13 +913,23 @@ final class SourceSettingsTests: XCTestCase {
       choose(id)
       selectLocalFixture("Nexus Visual Fixture",in:app)
     }
+    func expectImported(_ id:String){
+      let name=app.staticTexts[id]
+      let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","Nexus Visual Fixture.png"),object:name)
+      let result=XCTWaiter.wait(for:[ready],timeout:20)
+      if result != .completed {
+        let image=XCTAttachment(screenshot:app.screenshot());image.name="Visual import failure";image.lifetime = .keepAlways;add(image)
+        let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Visual import failure hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+      }
+      XCTAssertEqual(result,.completed,"Image name must update after import; status: \(app.staticTexts["visual-status"].exists ? app.staticTexts["visual-status"].label : "no status")")
+    }
     openSettings(app,page:"background")
     let imageBackground=app.descendants(matching:.any).matching(identifier:"background-image").firstMatch
     reveal(imageBackground);XCTAssertFalse(imageBackground.isEnabled,"Image background must stay unavailable until a theme image is imported")
     let background=app.buttons["visual-import-background"];reveal(background);importFixture("visual-import-background")
-    expectation(for:NSPredicate(format:"label CONTAINS %@","Nexus Visual Fixture.png"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:20)
+    expectImported("visual-background-name")
     let photo=app.buttons["visual-import-photo"];reveal(photo);importFixture("visual-import-photo")
-    expectation(for:NSPredicate(format:"label CONTAINS %@","Nexus Visual Fixture.png"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:20)
+    expectImported("visual-photo-name")
     let importedImage=XCTAttachment(screenshot:app.screenshot());importedImage.name="Imported background and photo previews";importedImage.lifetime = .keepAlways;add(importedImage)
     choose("background-image");choose("player-background-photo");choose("visual-backgroundOpacity-up");choose("visual-playerBlur-up");choose("visual-coverRadius-up");for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()}}
     let savedValues=["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label}

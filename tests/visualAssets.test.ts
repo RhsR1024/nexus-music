@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {VisualAssetStore,VisualColorCache,type VisualNative} from '../src/storage/visualAssets.ts';
+import {VisualAssetStore,VisualColorCache,VisualImportError,type VisualNative} from '../src/storage/visualAssets.ts';
 import {PreferenceStore,defaults} from '../src/app/preferences.ts';
 import {darkenCoverColor,playerBackgroundImage} from '../src/domain/appearance.ts';
 import {deferred} from './fixtures.ts';
@@ -28,6 +28,19 @@ test('visual writes serialize imports and removal, reject invalid records and to
 });
 test('native result corruption cannot publish image slots and previous state remains intact',async()=>{
   const r=rig();await r.store.import('photo','file:///cache/a','old.png');const old=r.store.getSnapshot();r.native.importVisual=async()=>({id:'../../escape',width:4000,height:1});await assert.rejects(r.store.import('photo','file:///cache/b','new'));assert.equal(r.store.getSnapshot(),old);
+});
+test('visual import failures report safe stages and preserve both slots for retry',async()=>{
+  const r=rig();await r.store.import('background','file:///cache/a','old.png');const old=r.store.getSnapshot();
+  const nativeImport=r.native.importVisual;
+  r.native.importVisual=async()=>{throw new Error('file:///private/personal-photo.png secret-token');};
+  await assert.rejects(r.store.import('photo','file:///cache/b','new.png'),error=>error instanceof VisualImportError&&error.stage==='read'&&!/personal|secret|file:/.test(String(error)));
+  assert.equal(r.store.getSnapshot(),old);assert.deepEqual(r.retained.at(-1),['a'.repeat(64)]);
+  r.native.importVisual=async()=>({id:'bad',width:1,height:1});
+  await assert.rejects(r.store.import('photo','file:///cache/b','new.png'),error=>error instanceof VisualImportError&&error.stage==='validate');
+  r.native.importVisual=nativeImport;r.fail(true);
+  await assert.rejects(r.store.import('photo','file:///cache/b','new.png'),error=>error instanceof VisualImportError&&error.stage==='save');
+  assert.equal(r.store.getSnapshot(),old);r.fail(false);await r.store.import('photo','file:///cache/b','new.png');
+  assert.equal(r.store.getSnapshot().photo?.id,'b'.repeat(64));assert.equal(r.store.getSnapshot().background?.id,'a'.repeat(64));
 });
 test('color requests coalesce, validate results and evict the oldest cache entry',async()=>{
   let calls=0;const gate=deferred<string>();const cache=new VisualColorCache({visualPalette:async()=>{calls++;return gate.promise;}});

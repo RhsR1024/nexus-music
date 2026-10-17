@@ -56,7 +56,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
     </View>
     {!!result?.warning&&<Pressable accessibilityRole="button" accessibilityLabel="重试歌词" onPress={()=>setRetry(value=>value+1)}><Text style={{color:presentation?'#FFFFFF':theme.palette.accent}}>{result.warning} · 重试</Text></Pressable>}
     {!expanded&&chooser}
-    {!presentation&&settings}
+    {!presentation&&!expanded&&settings}
     <View style={{gap:12,...(presentation?{flex:1,overflow:'hidden',justifyContent:'center'}:{})}}>
     {error?<Pressable onPress={()=>setRetry(value=>value+1)}><Text style={{color:theme.color('#D6B69A')}}>{error}</Text></Pressable>:!result?<Text style={{color:theme.color('#959EAC')}}>正在获取歌词…</Text>:!document?.lines.length&&!document?.plain.length?<Text style={{color:theme.color('#959EAC')}}>暂无歌词</Text>:null}
     {(result?.variants.length??0)>1&&<View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)}><Text style={{color:variant===index?theme.color('#D9F49B'):theme.color('#959EAC')}}>{item.label}</Text></Pressable>)}</View>}

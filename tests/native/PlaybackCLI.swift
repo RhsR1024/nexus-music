@@ -8,9 +8,14 @@ import Foundation
     let statisticsMode = sleepMode == "statistics"
     let startedAt=ProcessInfo.processInfo.systemUptime
     var listenedMs=0.0, sessionIDs=Set<String>(), pauseStarted=false, pauseStable=true, pausedMs=0.0
+    var readyDuration=0.0, maximumDuration=0.0
     var engine: NativePlaybackEngine!
     engine = NativePlaybackEngine(muted: true) { event, body in
       if event == "playback", let kind = body["kind"] as? String {
+        if let duration=body["duration"] as? Double, duration.isFinite {
+          maximumDuration=max(maximumDuration,duration)
+          if kind == "ready" { readyDuration=duration }
+        }
         listenedMs=body["listenedMs"] as? Double ?? 0
         if let session=body["listeningSession"] as? String, body["entryId"] as? String == "fixture" {sessionIDs.insert(session)}
         if statisticsMode, !pauseStarted, body["playing"] as? Bool == true, (body["position"] as? Double ?? 0)>0.15 {
@@ -40,7 +45,7 @@ import Foundation
     let deadline = Date().addingTimeInterval(20)
     while !done && Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
     engine.dispose()
-    let result: [String: Any] = ["failed": failed, "ended": ended, "pcmSupported": supported, "spectrumEvents": samples, "sleepPaused": sleepPaused,"listenedMs":listenedMs,"elapsedMs":(ProcessInfo.processInfo.systemUptime-startedAt)*1000,"sessionCount":sessionIDs.count,"pauseStable":pauseStable,"pauseStarted":pauseStarted]
+    let result: [String: Any] = ["failed": failed, "ended": ended, "pcmSupported": supported, "spectrumEvents": samples, "sleepPaused": sleepPaused,"listenedMs":listenedMs,"elapsedMs":(ProcessInfo.processInfo.systemUptime-startedAt)*1000,"sessionCount":sessionIDs.count,"pauseStable":pauseStable,"pauseStarted":pauseStarted,"readyDuration":readyDuration,"maximumDuration":maximumDuration]
     print(String(data: try! JSONSerialization.data(withJSONObject: result), encoding: .utf8)!)
     if failed || (sleepMode.isEmpty || statisticsMode ? !ended : (!sleepPaused || ended)) || !supported || samples == 0 { exit(1) }
   }

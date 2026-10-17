@@ -33,6 +33,8 @@ async function play(url,start=0,key,sleepMode) {
   const code = await new Promise(resolve => child.on('exit', resolve));
   assert.equal(code, 0, `Native playback failed: ${stdout}; ${stderr.slice(-1000)}`);
   const result = JSON.parse(stdout); assert.equal(result.pcmSupported, true); assert.equal(result.ended, !sleepMode||sleepMode==='statistics');if(sleepMode&&sleepMode!=='statistics')assert.equal(result.sleepPaused,true);
+  assert.ok(result.readyDuration>1.9&&result.readyDuration<2.3,`Ready must expose the decoded duration, including paused/cached media: ${JSON.stringify(result)}`);
+  assert.ok(result.maximumDuration>1.9&&result.maximumDuration<2.3,'Duration must stay consistent through progress, seek and stop');
   assert.ok(result.listenedMs>0,'Real playback must accumulate native listening time');assert.equal(result.sessionCount,1);
   if(sleepMode==='statistics'){assert.equal(result.pauseStarted,true);assert.equal(result.pauseStable,true);assert.ok(result.listenedMs>400&&result.listenedMs<result.elapsedMs-250,`Pause must be excluded and seek cannot add more than active wall time: ${JSON.stringify(result)}`);}
 }
