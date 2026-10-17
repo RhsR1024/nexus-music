@@ -1,6 +1,6 @@
 # Sollin EQ 控制器与实际预设状态证据
 
-2026-10-18，普通移动逆向，flavor=null。此批是新增静态证据与现有实现审查前提，尚无新产品实施或验收声明。
+2026-10-18，普通移动逆向，flavor=null。此批静态证据支持现有状态审查；原创补启用校验和独立专项见后文，不宣称完整参考后端或运行等价。
 
 reverse-skill固定cab634bd855fc287f6e420c1f36fd1a6b9245960；原生master-route的ipa-equalizer-controller路由R2/mobile-reverse。已读PRIMARY、工具索引并通过项目门禁/case-guard，复用已授权离线scope，无目标网络或App运行。IPA SHA256 c2ee2deba236ef1b9e097e1d8cdc0b816137aa57cf85d4c8e2811dae9924bc07；App.framework/App成员SHA256 640c6112584c017b45141a038f7aa975224c8b540ef1aaec1f40939a6aa5c84d。VA为arm64 slice偏移，FAT原文件加0x4000。
 
@@ -36,3 +36,9 @@ flowchart LR
 图仅覆盖静态已证实调用；参考原生音效/异步失败和运行时未包含。docs-generator普通逆向结构，diagram-generator可编辑Mermaid；无恶意样本或ATT&CK适用项。
 
 本机图渲染脚本返回缺mmdc，保留源码，未安装或声称图片已渲染。原始流程journal见本机field-journal/eq-controller-convergence.md。
+
+## 原创实施与独立验收
+
+[0047](decisions/0047-eq-state-validation.md)记录五参考固定HEAD/维护/Android/许可与取舍。发现PreferenceStore.validate缺少eqEnabled布尔校验，两项独立基线确认非法更新/坏记录未被拒绝；只补类型校验，保留原子保存、原始隔离、旧值恢复、唯一DSP和实际曲线/前级选中。350业务/类型通过；一次typecheck被build临时TS基线相对导入阻断，改留.txt后完整检查通过，失败日志保留。
+
+正式App1792266325928 EQ184.998秒通过、零失败/跳过：归零保留十频段、前级参与选中、旁路后重启不丢曲线/前级、自定义再应用、重置全部为零/平直选中并保留启用、删除及睡眠；截图亲看，零网络。完整native-eq-state.log exit0，实际RMS/逐样本旁路与真实合成解码PCM通过，既有Swift Sendable警告保留。无新原生音频/依赖；清洁归档/push/对应iOS27和真实服务/签名/手机继续。

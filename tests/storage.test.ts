@@ -223,3 +223,23 @@ test('AM2 preferences migrate, persist independently and reject invalid or faile
   await assert.rejects(restored.update({am2DelaySeconds:0}));assert.equal(restored.getSnapshot().am2DelaySeconds,3);
   repository.put=async()=>{throw new Error('disk full');};await assert.rejects(restored.update({am2AutoLyrics:true,volume:.8}));assert.equal(restored.getSnapshot().am2AutoLyrics,false);assert.equal(restored.getSnapshot().volume,.4);db.close();
 });
+
+test('EQ enable rejects nonboolean mutations before persistence or native subscribers',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');
+  const preferences=new PreferenceStore(repository);await preferences.update({eqEnabled:true,preampDB:-3,gains:[4,2,1,0,0,0,0,0,0,0]});const before=preferences.getSnapshot(),saved=await repository.get('preferences.v1');
+  let notifications=0,writes=0;preferences.subscribe(()=>notifications++);const put=repository.put.bind(repository);repository.put=async(...args)=>{writes++;await put(...args);};
+  for(const eqEnabled of ['false',0,1,null,undefined,{},[]])await assert.rejects(preferences.update({eqEnabled:eqEnabled as never}));
+  assert.equal(preferences.getSnapshot(),before);assert.equal(writes,0);assert.equal(notifications,0);assert.deepEqual(await repository.get('preferences.v1'),saved);
+  repository.put=async()=>{throw Error('disk full');};await assert.rejects(preferences.update({eqEnabled:false}));assert.equal(preferences.getSnapshot(),before);assert.equal(notifications,0);
+  repository.put=put;await preferences.update({eqEnabled:false});const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().eqEnabled,false);assert.deepEqual(restored.getSnapshot().gains,before.gains);assert.equal(restored.getSnapshot().preampDB,-3);db.close();
+});
+test('EQ corrupted enable records are quarantined exactly while missing legacy flags default safely',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts'),{restoreRecord}=await import('../src/storage/recovery.ts');
+  let i=0;
+  for(const eqEnabled of ['false',0,1,null,{},[]]){
+    const raw={...defaults,eqEnabled,preampDB:-4,gains:[3,2,1,0,0,0,0,0,0,0]};await repository.put('preferences.v1',raw);const preferences=new PreferenceStore(repository);const before=preferences.getSnapshot(),key=`recovery.preferences.v1.eq-${++i}`;
+    assert.equal(await restoreRecord(repository,'preferences.v1',()=>preferences.restore(),()=>`eq-${i}`),false);assert.equal(preferences.getSnapshot(),before);assert.equal(preferences.getSnapshot().eqEnabled,false);assert.deepEqual(await repository.get(key),raw);assert.equal(await repository.get('preferences.v1'),undefined);
+  }
+  const {eqEnabled,...legacy}=defaults;await repository.put('preferences.v1',legacy);const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().eqEnabled,false);
+  await preferences.update({eqEnabled:true});const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().eqEnabled,true);db.close();
+});

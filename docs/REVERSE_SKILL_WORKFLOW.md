@@ -17,6 +17,8 @@
 1. 读包根 `README_AI.md`、`RULES.md`、对应平台文档，以及 `skills/SKILL.md`、`MASTER-ROUTING.md`。查询 field-journal 索引；相似 Flutter 案例仅是方法参考，不是 Sollin 证据。
 2. 使用包内 `skills/scripts/master-route.sh`（macOS）按具体任务路由；本轮 IPA 为 R2 `mobile-reverse/SKILL.md`，APK 为 R1 `apk-reverse/SKILL.md`。读取实际 PRIMARY，不能预设脚本输出。
 3. 用 `case-init.sh --preset offline-sample --sample <明确本地文件>` 在项目 `work/<case>/` 建立 scope，注明用户本次授权和原文件，`case-guard.sh` 校验 auth=granted、offline、ready=true；分析不出网，不探测参考私有服务，不注入/签名安装。
+   **既有案例禁止重跑case-init**：Bash初始化器会无条件覆盖scope/workitems/timeline/README。新案例使用唯一目录；已存在案例只重跑case-guard与项目门禁，并在新路由下追加功能证据。2026-10-18误调用事故已从保留工具输出恢复36条完整事件及7条原工作项、补回新状态，原始Evidence未变；恢复后严格哈希review通过，事件另记，不改写失败。
+
 4. 工具路径和状态以当前机器新生成的 `skills/tool-index.md/json` 为准；路径存在、CLI可执行、MCP注册/服务可用分别记录。不能照抄 APK SKILL.md 中作者机器的工具版本。
 5. 先通过项目门禁，再执行 PRIMARY 的适用工作流。每个功能新建或追加工作项、不可变 Evidence、Finding、Path 和 timeline；原始字符串仅是静态线索，不等于数据关系或函数调用。
 6. 采纳/提交前严格 review 当前案例，逐项核对该批功能的证据，而非复用本次安装检查。截图补充视觉，音枢本地回归/本地IPA/云端iOS27/真实服务/签名/真机分别记录。

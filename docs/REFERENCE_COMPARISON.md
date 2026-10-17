@@ -1,3 +1,7 @@
+## 2026-10-18 EQ权威状态审查
+
+五参考本批固定HEAD逐一核对，Q增益/有界预设/await原生apply与等待保存职责亲读；悦音/wtf/Cy限定src、Wayferar限定docs检索无equalizer/preamp匹配，不外推全仓。沿音枢原子偏好/唯一DSP，原创补启用布尔校验和独立归零/重置/旁路持久化验收，不复制0.06容差/预设/商业后端；维护/Android/许可见[0047](decisions/0047-eq-state-validation.md)。
+
 ## 2026-10-18 主题与背景设置弹层
 
 五参考固定HEAD再次逐一核对，亲读悦音theme.ts:9–33、Q/wtf ImageBackground.tsx:52–96、Cy usePlayerBackground.tsx:20–115及自有Wayferar HomeCardTheme.java:44–87；实现/维护/Android/逐文件许可和取舍见[0046](decisions/0046-theme-background-sheet.md)。原生Sheet只组合现有原创控件，无源码/资源/依赖或原生补丁移植。Sollin采用经严格review的E020/E009有限模态边界，不移植商业或完整调色默认逻辑。

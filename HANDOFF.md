@@ -1,3 +1,11 @@
+## 2026-10-18 EQ权威状态与启用校验（本地通过）
+
+reverse-skill E021→F020→P020采纳前strict review21E/20F/20P、7WI/34事件，独立重放4433原始指令/18BL/manifest哈希通过；五参考固定HEAD及维护/Android/许可比较见[0047](docs/decisions/0047-eq-state-validation.md)。音枢原创validate补eqEnabled布尔校验：非法更新在持久化/订阅前拒绝，坏记录沿既有原始隔离；缺失旧字段默认false，关闭/写入失败保留曲线和前级。两项独立失败基线保留，修正后350业务/类型通过。首轮check被build内临时基线TS文件相对导入阻断，改为留存.txt后完整检查通过，未改工程编译排除规则。
+
+正式入口SourceUITests-1792266325928的EQ专项184.998秒通过、零失败/跳过：实际前级/曲线选中、独立归零不改频段、关闭后重启保留设置、禁用仍按实际预设选中、重置十频段与前级为0且保持启用、自定义重应用/删除及睡眠。已亲看平直曲线和选中卡截图，零网络请求；完整native-eq-state.log exit0，真实RMS/逐样本旁路/解码PCM等通过（既有Swift Sendable警告）。UI开关不冒充实际声音证据；无新原生后端/依赖，清洁归档/push/对应iOS27待，真实服务/签名/手机及完整参考运行另验。
+
+下一发现/歌单/历史E022已形成2033原始指令/15BL/5分配头证据；暂未产品采纳。重跑case-init误覆盖案例记录，已从原工具输出恢复完整36事件/7原工作项、补回状态并记录事故，原始Evidence未改；恢复strict review22E/21F/21P、8WI/37事件零错误/警告，禁止既有案例再次初始化。全部A/F/J目标继续active。
+
 ## 2026-10-18 背景Sheet清洁归档与push回执
 
 `e8941b014eac04f9f84e38dcb0e81a20b7605d26`已正常push，远端main一致。清洁归档manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离/私人参考及签名资源排除通过。IPA SHA256 `18857ebea41640ce2308f38ae2bba0a2bb7b6ac042e553a10ca9ed2bdea8d644`，留存`build/local-background-sheet-e8941b0`。348业务/类型和最终分项Files102.911秒/大字86.835秒及首轮实际背景/外观回归见下；验收后strict review21E/20F/20P、7WI/35事件，零错误/警告。
