@@ -22,3 +22,7 @@ IPA SHA256 c2ee2deba236ef1b9e097e1d8cdc0b816137aa57cf85d4c8e2811dae9924bc07；Ap
 [0048](decisions/0048-history-calendar-sections.md)逐一比较五参考，保留音枢实际playedAt、原曲序/索引/稳定身份和权威播放入口；按本机日历增加相邻日期标题。精确参考时区/日期文案没有证据，不声称完整运行等价。352业务/类型通过，时区子进程覆盖跨年、午夜、闰日和夏令时两种变化；正式App1792267559956合成实音/PCM/八布局/歌词/统计/mini/凭据清理260.169秒通过，日期标题可达/重启保持和截图检查通过。鉴权8次成功/0失败，无新stream请求，允许已有音频缓存；不计真实服务或本次冷下载。
 
 E022/F021/P021、WI008的采纳前review为38事件、验收后39事件，22E/21F/21P、8WI零错误/警告。范围沿本机work/sollin-ipa/scope.md；timeline、workitems与journal追加本地验收，不更改不可变Evidence。清洁归档/云端iOS27/真实服务/签名/手机继续独立记录。
+
+## 原创完整读取导航取消
+
+[0049](decisions/0049-discovery-read-navigation-cancellation.md)按新R2路由/既有scope及五参考核验，仅修音枢旧请求abort后importing未复位的真实缺口。E022只支持二级详情与独立loadAll边界，不证明参考取消语义。服务器hold/release屏障确认held=1，旧代码22.380秒失败于重入后导入入口未恢复；修复保留Abort/迟到guard，352业务/类型与最终App114.383秒通过、零失败/跳过，原收藏/歌单重复项/Sheet归属和清理保留，截图已亲看。3列表/5详情均为本机合成请求，不计真实平台；验收后strict review22E/21F/21P、8WI/40事件零错误/警告。清洁归档/对应云端/真实服务/签名/手机另验。

@@ -173,7 +173,12 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testDownloadSettingsAndOfflinePlayback() throws {
     let app=XCUIApplication();app.launch()
-    func reveal(_ element:XCUIElement){for _ in 0..<32 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))};XCTAssertTrue(element.isHittable)}
+    func reveal(_ element:XCUIElement){
+      func visible()->Bool{guard element.exists else{return false};let frame=element.frame;return frame.width>0 && frame.height>0 && app.frame.insetBy(dx:4,dy:44).contains(frame) && element.isHittable}
+      for _ in 0..<32 {if visible(){break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      if !visible(){let capture=XCTAttachment(screenshot:app.screenshot());capture.name="Offline control not fully visible: "+element.identifier;capture.lifetime = .keepAlways;add(capture);let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.lifetime = .keepAlways;add(hierarchy)}
+      XCTAssertTrue(visible(),"Offline control must be fully visible and hittable: \(element.identifier)")
+    }
     func type(_ field:XCUIElement,_ value:String){reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")}
     func control(_ block:Bool?=nil) throws -> [String:Int] {
       let done=expectation(description:"Read isolated fixture counters"),path="http://127.0.0.1:18439/offline-fixture-control"+(block == nil ? "" : "?block=\(block! ? 1 : 0)")
@@ -186,6 +191,7 @@ final class SourceSettingsTests: XCTestCase {
     _=try control(false)
     defer{_=try? control(false)}
     openSettings(app,page:"skins");let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch;reveal(classic);classic.tap()
+    let skinDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["skins-sheet-close"]);XCTAssertEqual(XCTWaiter.wait(for:[skinDismissed],timeout:10),.completed,"Skin selection must finish dismissing its sheet before navigating to downloads")
     // A failed prior run can leave this synthetic fixture saved. Remove only
     // that record through the actual UI so retries cannot reuse its bytes.
     openSettings(app,page:"downloads");let initialTasks=app.buttons["settings-open-downloadTasks"];reveal(initialTasks);initialTasks.tap()
@@ -1160,7 +1166,23 @@ final class SourceSettingsTests: XCTestCase {
     func action(_ name:String)->XCUIElement{app.buttons["discovery-action-"+name]}
     func actions(){reach(more);more.tap();XCTAssertTrue(panel.waitForExistence(timeout:10));for name in ["下一首","加入队列","加入歌单"]{XCTAssertTrue(action(name).waitForExistence(timeout:10));XCTAssertTrue(action(name).isHittable)}}
     let name="Nexus discovery actions "+String(UUID().uuidString.prefix(8))
-    tab("discover");detail();reach(more);evidence("Discovery compact song rows");actions()
+    tab("discover");detail()
+    func control(_ query:String="") throws -> Int {
+      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/discovery-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Int])?["held"] ?? -1
+    }
+    _=try control("holdNext=1");defer{_=try? control("release=1")}
+    let importButton=app.buttons["导入完整歌单到音乐库"]
+    reach(importButton);importButton.tap();XCTAssertTrue(app.buttons["取消读取"].waitForExistence(timeout:10))
+    let held=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? control())==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[held],timeout:10),.completed,"The original full-read request must be held before navigating")
+    let back=app.buttons["返回歌单广场"];reach(back);back.tap();detail()
+    XCTAssertTrue(importButton.waitForExistence(timeout:5),"Returning to detail must restore the full-read action after cancelling its previous request")
+    guard importButton.exists else{throw NSError(domain:"Discovery cancelled read state",code:1)}
+    XCTAssertTrue(importButton.isEnabled);XCTAssertFalse(app.buttons["取消读取"].exists)
+    XCTAssertEqual(try control("release=1"),0);XCTAssertFalse(app.alerts["导入公开歌单"].exists,"A cancelled request must never present a late import confirmation")
+    importButton.tap();XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:10));app.alerts.buttons["取消"].tap();evidence("Discovery navigation cancels full read and allows a fresh import preview")
+    reach(more);evidence("Discovery compact song rows");actions()
     XCTAssertTrue(action("本地收藏").exists);evidence("Embedded discovery song actions")
     action("本地收藏").tap();actions();XCTAssertTrue(action("取消本地收藏").waitForExistence(timeout:5));action("取消本地收藏").tap()
     actions();action("加入歌单").tap()

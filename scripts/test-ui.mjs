@@ -42,6 +42,8 @@ const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlob
 const offlineUI=process.argv.slice(2).some(target=>target.endsWith('/testDownloadSettingsAndOfflinePlayback'));
 let blockOfflineStream=false;
 const offlineCounts={full:0,resumed:0,blocked:0};
+let holdDiscoveryDetail=false;
+const heldDiscoveryResponses=[];
 // Original, solid 32x32 RGB fixtures: no third-party covers or user data.
 const themeCovers={red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
 const matchingAudio=Buffer.alloc(44+48000*2*120);audio.copy(matchingAudio,0,0,44);matchingAudio.writeUInt32LE(matchingAudio.length-8,4);matchingAudio.writeUInt32LE(matchingAudio.length-44,40);
@@ -62,6 +64,12 @@ const navidromeAudio=matchingAudio,navidromeDuration=120;
 // can still contain the original 12-second recording in the normal audio cache.
 const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
+  if(discoveryUI&&req.url.startsWith('/discovery-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1');
+    if(control.searchParams.has('holdNext'))holdDiscoveryDetail=true;
+    if(control.searchParams.has('release'))for(const send of heldDiscoveryResponses.splice(0))send();
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length}));return;
+  }
   if(offlineUI&&req.url.startsWith('/offline-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('block'))blockOfflineStream=control.searchParams.get('block')==='1';
@@ -87,7 +95,8 @@ const server = createServer(async (req, res) => {
     if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/v6/playlist/detail'){
       counts.discovery??={lists:0,details:0};counts.discovery.details++;
       const tracks=['one','two'].map((word,index)=>({id:String(9101+index),name:`Synthetic discovery ${word}`,ar:[{name:'Fixture artist'}],al:{name:'Synthetic discovery album',picUrl:'http://127.0.0.1:18439/discovery-cover.png'},dt:120000}));
-      res.end(JSON.stringify({code:200,playlist:{name:'Synthetic discovery playlist',trackIds:tracks.map(({id})=>({id})),tracks}}));return;
+      const send=()=>{if(!res.destroyed)res.end(JSON.stringify({code:200,playlist:{name:'Synthetic discovery playlist',trackIds:tracks.map(({id})=>({id})),tracks}}));};
+      if(holdDiscoveryDetail){holdDiscoveryDetail=false;heldDiscoveryResponses.push(send);counts.discovery.held=(counts.discovery.held??0)+1;}else send();return;
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname.includes('/api/v1/resource/comments/')){
       const offset=Number(parsed.searchParams.get('offset')??0);counts.comments??={first:0,next:0};
