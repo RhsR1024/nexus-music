@@ -38,3 +38,7 @@ Color分配头解出cid2695，原始比较器选择偏移−0xfbe，固定ARM64 
 ## 最终本地验收
 
 正式入口SourceUITests-1792277163729完整背景专项329.540秒通过，1/0/0；两页实际三色像素、原红蓝跨页/开关/重启、经典页PCM、Home→激活、收起/暂停及开关恢复/凭据清理通过，截图已亲看。build/logs/ui-flow-palette-passed.log、-summary.json、-counts.json与build/flow-palette-passed留存。12次合成鉴权成功/0失败，无新增stream，本轮使用既有临时音频缓存，不计真实私人服务或冷下载。366业务/类型、完整native及JPEG专项通过；清洁归档/push/对应iOS27继续。第四轮partial无终态不算通过，后续成功不改写历史失败；原始E025不变。完整场景/功耗、参考运行与真实服务/签名/手机另验。
+
+## 清洁交付回执
+
+25b1e05已清洁归档并正常push；arm64/SDK26.2、实际min15.1/设备族[1,2]、unsigned，CRC/附带摘要/归档字节/生产入口/私人资源核验通过，IPA SHA256 `50371f64901f6414dab4762768fa0d75890c2a8dc8a5fdfcfca2e4b3d9f3b14c`。39077179759唯一pending、39072820731运行，1运行/1排队；对应iOS27未计通过。详见[构建记录](BUILD_STATUS.md)。

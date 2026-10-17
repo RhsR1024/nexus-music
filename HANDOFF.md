@@ -1,3 +1,15 @@
+## 2026-10-18 三色背景清洁归档与push回执
+
+`25b1e0538c4c9a0e7221f14fdf87c29e0eca71ef`已正常push，远端main一致。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人/签名资源排除通过。IPA SHA256 `50371f64901f6414dab4762768fa0d75890c2a8dc8a5fdfcfca2e4b3d9f3b14c`，留存build/local-flow-palette-25b1e05。366业务/类型、完整native、正式背景App329.540秒及两页三色截图见下；验收后strict review25E/24F/24P、8WI/51事件零错误/警告。
+
+push后API实核39077179759/25b1e05唯一pending，39072820731/8f865af仍运行，1运行/1排队；未取消运行或重派旧版。新三小时iOS预算随本提交生效，未计新云端通过；最新完整成功且IPA核验仍为76c9cd0/39050349015。下一A04柔光/场景构造已新路由及前置门禁，初步原字节探查仅留忽略notes，尚无新功能Evidence/产品采纳。完整A/F/J、参考完整运行、真实服务/签名/手机目标保持active。
+
+## 2026-10-18 06:59 心跳：历史批次超时与后续队列
+
+API实核 `6c8be2f` / [39066065139](https://github.com/RhsR1024/nexus-music/actions/runs/39066065139) 已因原120分钟预算结束为cancelled：checks/native、核心App、歌词匹配健康发现和离线断服务播放步骤成功，iPad步骤被取消，设备归档/IPA上传跳过；不能计完整成功。官方Annotations及实际作业日志的2h上限与分项证据见 [GITHUB_ACTIONS](docs/GITHUB_ACTIONS.md)。这与pending被single替换及人为取消分别记录。
+
+当前 `8f865af` /39072820731仍在核心App，1运行/0排队，继续保留；其工作流仍为120分钟。新三色批次 `25b1e05` 已包含180分钟预算，checks仍15分钟，全部原生/手机/离线/iPad/归档断言及single策略保留；尚待该批清洁归档/push和新云端终态，增加预算本身不算通过。完整目标及真实服务/签名/手机缺口保持，本心跳未启动竞争构建或重派旧版。
+
 ## 2026-10-18 A04三色取样（本地验收通过）
 
 reverse-skill R2/mobile-reverse、离线scope/case-guard与E025→F024→P024采纳前strict review通过；2307原始指令/9BL/11池加载独立重放通过。按[0053](docs/decisions/0053-three-color-flow-palette.md)五参考比较后原创接入24×24 HSV三色、灰阶亮度分位、40°分离/补齐、有界缓存和三色背景，保留单色语义主题及唯一播放意图。366业务/类型与完整native通过；正式入口SourceUITests-1792277163729背景全流程329.540秒通过，1通过/零失败/跳过：两页实际红绿蓝像素、原红蓝切歌/跨页/开关/重启、经典页PCM、系统Home→激活、收起/暂停/开关恢复和凭据清理。截图已亲看；12次本机合成鉴权成功/0失败，本轮无新stream，复用已有临时音频缓存，不计真实私人服务或冷下载。
