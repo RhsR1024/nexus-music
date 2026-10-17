@@ -1,3 +1,9 @@
+## 2026-10-18 背景Sheet清洁归档与push回执
+
+`e8941b014eac04f9f84e38dcb0e81a20b7605d26`已正常push，远端main一致。清洁归档manifest dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS对归档字节一致、正式入口隔离/私人参考及签名资源排除通过。IPA SHA256 `18857ebea41640ce2308f38ae2bba0a2bb7b6ac042e553a10ca9ed2bdea8d644`，留存`build/local-background-sheet-e8941b0`。348业务/类型和最终分项Files102.911秒/大字86.835秒及首轮实际背景/外观回归见下；验收后strict review21E/20F/20P、7WI/35事件，零错误/警告。
+
+push后API实核39063744433/e8941b0唯一pending，39058310652/332cac5继续运行，1运行/1排队。字体旧pending39061650305/b79edb6由single自动取消，不算通过；未取消运行或重派旧版。最新完整成功且核验产物仍为76c9cd0/39050349015，只覆盖其祖先，不覆盖AM2/mini/字体/背景。下一EQ已完成E021静态review/独立字节重放与两项原创失败基线，补齐布尔校验/独立归零/重置/旁路持久化专项继续；全部A/F/J、真实服务/签名/真机保持active。
+
 ## 2026-10-18 下一 EQ 状态链静态证据
 
 reverse-skill重新路由mobile-reverse并补E021→F020→P020，4433条原始指令和18条BL/池偏移支持控件汇入单一update及实际前级/频段预设匹配；strict review21E/20F/20P、7WI/34事件、零错误/警告。仅静态审查前提，尚未采纳新参数/默认值或修改EQ产品行为，独立审查/验收继续，见[专项报告](2026-10-18_reverse-sollin-eq-controller-report.md)。原生后端/运行与存储失败语义未恢复，不计新功能完成。
