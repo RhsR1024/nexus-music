@@ -1,3 +1,9 @@
+## 2026-10-18 首批截图构图清洁归档与push回执
+
+338560502d0fcbb0196f980234cfadcd58b937b0已正常push，ls-remote实核main一致。最终387业务/类型、完整App295.404秒1/0/0、39E/38F/38P严格review与31原件/副本摘要通过。清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64/min15.1/设备族[1,2]；CRC/附带SHA/可执行及JS与归档字节/正式入口/私人签名资源排除通过。IPA SHA256 `a2c63feae7e962a6796b0df1d797392624dc98921e72f2dfd3699b9585a08db7`；包与verification留build/local-presentation-3385605，日志archive-player-composition-clean.log。
+
+API实核新[39137919717](https://github.com/RhsR1024/nexus-music/actions/runs/39137919717)/3385605唯一pending，b492261/39127780177继续in_progress，393adcf已success；1运行/1排队，无手动取消/重派。本批iOS27终态、真实服务/签名/真机均待。下一AM已新R2路由224708、PRIMARY mobile-reverse及原offline scope/IPA门禁通过，仅定位元数据入口，完整原字节调用/字段关系尚待，未据此实施AM。其余31图差异继续，不以首批修正宣称整体对齐完成。
+
 ## 2026-10-18 新31图归档与首批构图本地通过
 
 31张用户原图已原字节归档到本机忽略目录resource/reference-ui/sollin-2026-10-18，132,113,191字节；原件/副本/manifest/迁移基线SHA全部复核。逐图差异与后续顺序见[截图矩阵](SOLLIN_SCREENSHOT_REVIEW_2026-10-18.md)。按reverse-skill R2路由215123、PRIMARY mobile-reverse、原offline scope和39E/38F/38P strict review零错误/警告，E039补充截图，E013/E037/E038保持主要IPA结构证据。
