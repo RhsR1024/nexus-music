@@ -1,3 +1,7 @@
+## 2026-10-18 WebDAV 前台预览阶段回执
+
+提交 `42156f0737326ed3c805a79594f4f3ee9914b771` 补齐 WebDAV 同步初始化/前台恢复自动预览；冲突仍需确认，不自动提交。`npm run check` 376/376。清洁 unsigned archive 成功，manifest 对应42156f0、dirty=false/changes=[]、arm64、iphoneos26.2、min15.1、设备族[1,2]、signed=false；IPA SHA256 `da4d52f1657f5490d82aca6acd347b7aa26dd09f4fe40cbc9f20c85e37746e62`，`verify-presentation-archive.py`通过。push后最新运行39112637167为42156f0 pending，39111966447为23090d0运行中；保持1运行/1排队，不取消运行中。
+
 ## 2026-10-18 经典安全区回归与漫途范围更新
 
 产品提交 `7b8b023dce470743717f0017277326082c1ad49a`：经典播放器安全区专项通过，完整背景回归在捕获重试后通过（`SourceUITests-1792311318332`，475.014s，1/0/0；过渡视频60帧/8中间色/红蓝0.481667s）；`npm run check` 375/375、`npm run test:native` 通过。清洁 unsigned archive `build/distribution` 对应7b8b023，manifest dirty=false/changes=[]、arm64、iphoneos26.2、min15.1、设备族[1,2]、signed=false；IPA SHA256 `c96fd9dadc99c8198a6758313ff1b52bce1042f584d5ac043b2ebd6bd06423d`，`verify-presentation-archive.py`通过，回执留 `build/local-presentation-7b8b023`。
