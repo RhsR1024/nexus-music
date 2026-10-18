@@ -34,8 +34,9 @@ export function Vinyl({services,track,size,playing}:{services:Services;track:Tra
     animation.start();return()=>{animation.stop();tonearm.stopAnimation();};
   },[playing,visible,reduce,foreground,tonearm]);
   // The square is the complete deck; record and tonearm use separate local
-  // coordinates. Keep stable non-rotating geometry for layout/accessibility.
-  const disc=size*.728,label=disc*.46,armWidth=Math.max(7,size*.035),armLength=size*.54;
+  // coordinates. The audited direction (cos theta, sin theta) maps to a
+  // downward View rotated by theta - pi/2. Keep stable layout geometry.
+  const disc=size*.728,label=disc*.46,armWidth=Math.max(7,size*.035),armLength=size*.472;
   return <View testID="vinyl-turntable" collapsable={false} accessible={false} pointerEvents="none" style={{height:size+12,alignItems:'center',justifyContent:'center'}}>
     <View testID="vinyl-canvas" collapsable={false} style={{width:size,height:size}}>
       <View testID="vinyl-deck" collapsable={false} style={{position:'absolute',left:size*.015,right:size*.015,top:size*.055,bottom:size*.025,borderRadius:size*.06,backgroundColor:'#353B40',borderWidth:1,borderColor:'#697176',boxShadow:'0px 4px 7px rgba(0,0,0,0.24)'}}>
@@ -48,9 +49,10 @@ export function Vinyl({services,track,size,playing}:{services:Services;track:Tra
         </Animated.View>
         <View testID="vinyl-spindle" collapsable={false} style={{position:'absolute',width:8,height:8,borderRadius:4,backgroundColor:'#D7DDDF',borderWidth:2,borderColor:'#53585B'}}/>
       </View>
-      <Animated.View testID="vinyl-tonearm" collapsable={false} style={{position:'absolute',width:armWidth,height:armLength,left:size*.835-armWidth/2,top:size*.175,transform:[{rotate:tonearm.interpolate({inputRange:[0,1],outputRange:['4deg','24deg']})}],transformOrigin:'top'}}>
-        <View style={{position:'absolute',top:0,left:0,width:armWidth,height:armLength*.86,borderRadius:armWidth/2,backgroundColor:'#A6ADB1',borderWidth:1,borderColor:'#D6DCDF'}}/>
-        <View style={{position:'absolute',top:armLength*.78,left:-armWidth*.3,width:armWidth*1.6,height:armLength*.22,borderRadius:2,backgroundColor:'#515A60',borderWidth:1,borderColor:'#C0C7CB',transform:[{rotate:'-12deg'}]}}/>
+      <Animated.View testID="vinyl-tonearm" collapsable={false} style={{position:'absolute',width:armWidth,height:armLength,left:size*.835-armWidth/2,top:size*.175,transform:[{rotate:tonearm.interpolate({inputRange:[0,1],outputRange:['0deg','21.6deg']})}],transformOrigin:'top'}}>
+        <View style={{position:'absolute',top:size*.035,left:0,width:armWidth,height:size*.36,borderRadius:armWidth/2,backgroundColor:'#A6ADB1',borderWidth:1,borderColor:'#D6DCDF'}}/>
+        <View testID="vinyl-cartridge" collapsable={false} style={{position:'absolute',top:size*.38,left:-armWidth*.3,width:armWidth*1.6,height:size*.09,borderRadius:2,backgroundColor:'#515A60',borderWidth:1,borderColor:'#C0C7CB'}}/>
+        <View testID="vinyl-counterweight" collapsable={false} style={{position:'absolute',top:-size*.151,left:(armWidth-size*.078)/2,width:size*.078,height:size*.112,borderRadius:size*.015,backgroundColor:'#626D73',borderWidth:1,borderColor:'#C0C7CB'}}><View style={{position:'absolute',left:2,right:2,top:'40%',height:2,backgroundColor:'rgba(255,255,255,0.25)'}}/></View>
       </Animated.View>
       <View testID="vinyl-pivot" collapsable={false} style={{position:'absolute',width:size*.10,height:size*.10,left:size*.785,top:size*.125,borderRadius:size*.05,backgroundColor:'#535D64',borderWidth:2,borderColor:'#B5BEC3',alignItems:'center',justifyContent:'center'}}><View style={{width:size*.035,height:size*.035,borderRadius:size*.018,backgroundColor:'#D8DFE2'}}/></View>
     </View>

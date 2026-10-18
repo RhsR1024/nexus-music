@@ -1,3 +1,17 @@
+## 2026-10-18 新31图归档与首批构图本地通过
+
+31张用户原图已原字节归档到本机忽略目录resource/reference-ui/sollin-2026-10-18，132,113,191字节；原件/副本/manifest/迁移基线SHA全部复核。逐图差异与后续顺序见[截图矩阵](SOLLIN_SCREENSHOT_REVIEW_2026-10-18.md)。按reverse-skill R2路由215123、PRIMARY mobile-reverse、原offline scope和39E/38F/38P strict review零错误/警告，E039补充截图，E013/E037/E038保持主要IPA结构证据。
+
+按[0070](decisions/0070-player-square-composition.md)修完整方形封面、当前歌词可见和黑胶主体尺寸；独立底部歌词Sheet保留原来源/偏移/展开功能。0069唱臂/配重原独立App299.054秒通过，本批最终SourceUITests-1792333778177完整295.404秒1通过/0失败/0跳过；387业务/类型通过。新增实际封面包含/黑胶尺寸/歌词frame包含，原PCM/八布局/唱臂像素/前后台/歌词定位/统计/重启/凭据清理均保持，9合成鉴权/0失败、无新stream/coverArt（复用缓存），不计真实服务。最终必要PNG及摘要留build/player-composition-visible-passed，声波当前歌词和黑胶暂停截图已亲看；完整导出自动清理。
+
+首次设置导航15.735秒失败、黑胶歌词入口136.904秒失败和304.377秒虽回归通过但截图发现声波歌词裁切均保留，不改写为最终视觉成功。声波仍需三行/标题居中/底部工具预算、其余AM/写真/舞台/菜单/设置均按矩阵待，完整材质/手势/目标运行未证明，不增加开发百分比。下一优先AM完整封面和正文切换证据，随后写真/舞台；音枢特有功能及许可/隐私保持。
+
+云端393adcf/39121914443已completed/success（checks、iOS27全部原生/手机/在线/离线/iPad/unsigned归档及上传步骤成功），只证明该提交；云端包未下载核字节。b492261/39127780177正在运行；本批清洁unsigned归档/正常push/对应iOS27随后记回执。真实服务、签名和真机无新结论。磁盘约41GiB可用，清理回执build/logs/cleanup-player-composition-2026-10-18.json；原图/不可变证据/未解决原结果和最新产物保留，无盲删。
+
+## 2026-10-18 黑胶主轴方向与配重（验收中）
+
+新reverse-skill R2路由203610、原offline scope/IPA门禁和E038→F037→P037独立1886原始指令/258BL/108池引用/20方向向量通过，采纳前38E/37F/37P strict review零错误/警告。经cos/sin/端点保存/画布变换作用域证据，按[0069](decisions/0069-vinyl-primary-axis.md)把原创4°/24°修正为有证据的主轴0°/21.6°和.035S→.395S可见线段，补后部配重；完整唱头/渐变/精确缓动/手势和目标运行仍未知。387业务/类型通过，正式App完整回归正在串行执行，新增实际唱头/支点/配重范围，原PCM/八布局/像素/生命周期断言保持。归档/提交/对应iOS27待；真实服务/签名/真机不变。
+
 ## 2026-10-18 黑胶分层清洁归档与push回执
 
 b49226167093d849f6afc054d43bc0c75f6305cc已正常push并实核远端main一致。387业务/类型及完整App288.843秒1/0/0通过，E036/E037独立原字节重放及37E/36F/36P严格review通过。清洁unsigned归档ARCHIVE SUCCEEDED，dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64/min15.1/设备族[1,2]；ZIP CRC/附带SHA/包内可执行与JS字节/正式入口及私人签名资源排除通过。IPA SHA256 `050818fb2baed5c4f375688896a19c1a46cd1ea3d1f080355dff2fc0d51f7936`，包与verification留build/local-presentation-b492261，日志archive-vinyl-layout-clean.log。

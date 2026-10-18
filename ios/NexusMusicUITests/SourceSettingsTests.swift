@@ -1031,6 +1031,11 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["播放界面样式"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-immersive").firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
+    let artworkViewport=app.descendants(matching:.any).matching(identifier:"player-artwork-viewport").firstMatch
+    let artworkSquare=app.descendants(matching:.any).matching(identifier:"player-artwork-square").firstMatch
+    XCTAssertTrue(artworkViewport.waitForExistence(timeout:5));XCTAssertTrue(artworkSquare.exists)
+    XCTAssertEqual(artworkViewport.frame.width,artworkViewport.frame.height,accuracy:1,"Immersive artwork must be displayed as a complete square")
+    XCTAssertTrue(artworkViewport.frame.insetBy(dx:-1,dy:-1).contains(artworkSquare.frame),"The actual square cover must not be clipped by a shorter parent")
     XCTAssertTrue(app.buttons["播放"].isHittable, "Immersive transport controls must fit on screen")
     app.buttons["调整播放界面"].tap()
     XCTAssertTrue(app.staticTexts["播放界面样式"].waitForExistence(timeout:5), "The dedicated style control must open the style sheet")
@@ -1042,6 +1047,14 @@ final class SourceSettingsTests: XCTestCase {
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
+      if layout=="wave" {
+        let viewport=app.descendants(matching:.any).matching(identifier:"player-artwork-viewport").firstMatch
+        let cover=app.descendants(matching:.any).matching(identifier:"player-artwork-square").firstMatch
+        XCTAssertTrue(viewport.exists && cover.exists)
+        XCTAssertEqual(viewport.frame.width,viewport.frame.height,accuracy:1)
+        XCTAssertTrue(viewport.frame.insetBy(dx:-1,dy:-1).contains(cover.frame),"Wave cover must remain complete above its lyric group")
+        let image=XCTAttachment(screenshot:app.screenshot());image.name="Wave complete cover";image.lifetime = .keepAlways;add(image)
+      }
       if layout=="vinyl" {
         let turntable=app.descendants(matching:.any).matching(identifier:"vinyl-turntable").firstMatch
         let needle=app.descendants(matching:.any).matching(identifier:"vinyl-tonearm").firstMatch
@@ -1052,12 +1065,18 @@ final class SourceSettingsTests: XCTestCase {
         let spindle=app.descendants(matching:.any).matching(identifier:"vinyl-spindle").firstMatch
         let pivot=app.descendants(matching:.any).matching(identifier:"vinyl-pivot").firstMatch
         XCTAssertTrue(canvas.exists && deck.exists && platter.exists && spindle.exists && pivot.exists)
+        XCTAssertGreaterThan(canvas.frame.width,app.frame.width*0.75,"The turntable must occupy the main artwork area rather than a small lyric illustration")
         XCTAssertTrue(canvas.frame.contains(deck.frame) && deck.frame.contains(platter.frame),"The complete deck and platter must fit their actual visible canvas")
         XCTAssertEqual(platter.frame.midX,spindle.frame.midX,accuracy:1);XCTAssertEqual(platter.frame.midY,spindle.frame.midY,accuracy:1)
         XCTAssertLessThan(platter.frame.midX,canvas.frame.midX,"Leave space for the independent tonearm pivot")
         XCTAssertGreaterThan(pivot.frame.midX,platter.frame.midX);XCTAssertLessThan(pivot.frame.midY,platter.frame.midY)
         XCTAssertTrue(canvas.frame.contains(pivot.frame),"The fixed pivot must remain visible")
-        let parkedNeedle=needle.frame
+        let cartridge=app.descendants(matching:.any).matching(identifier:"vinyl-cartridge").firstMatch
+        let counterweight=app.descendants(matching:.any).matching(identifier:"vinyl-counterweight").firstMatch
+        XCTAssertTrue(cartridge.exists && counterweight.exists)
+        XCTAssertTrue(canvas.frame.contains(cartridge.frame) && canvas.frame.contains(counterweight.frame),"Parked head and rear weight must fit the visible canvas")
+        let parkedNeedle=needle.frame,parkedHead=cartridge.frame,parkedPivot=pivot.frame
+        XCTAssertGreaterThan(counterweight.frame.midX,platter.frame.midX);XCTAssertLessThan(counterweight.frame.midY,pivot.frame.midY,"Rear weight belongs behind the pivot")
         func discPixels()->[UInt8]{
           guard let image=BackgroundPixels.decode(XCUIScreen.main.screenshot().pngRepresentation) else{return []}
           let frame=platter.frame,diameter=frame.width*0.91,scale=UIScreen.main.scale
@@ -1070,6 +1089,10 @@ final class SourceSettingsTests: XCTestCase {
         app.buttons["播放"].tap()
         let engaged=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in needle.frame.width>parkedNeedle.width+15},object:nil)
         XCTAssertEqual(XCTWaiter.wait(for:[engaged],timeout:10),.completed,"Playing must move the actual needle onto the disc")
+        XCTAssertLessThan(cartridge.frame.midX,parkedHead.midX-20,"Engagement must carry the actual head left onto the record")
+        XCTAssertTrue(platter.frame.contains(cartridge.frame),"The engaged head must remain on the actual platter")
+        XCTAssertTrue(canvas.frame.contains(counterweight.frame),"The rear weight remains within the canvas during engagement")
+        XCTAssertEqual(pivot.frame.midX,parkedPivot.midX,accuracy:0.5);XCTAssertEqual(pivot.frame.midY,parkedPivot.midY,accuracy:0.5)
         let spinning=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
           let next=discPixels();return next.count==324 && zip(pausedDisc,next).reduce(0){$0+abs(Int($1.0)-Int($1.1))}>100
         },object:nil)
@@ -1081,6 +1104,7 @@ final class SourceSettingsTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in let next=discPixels();return next.count==324 && next != beforeResume},object:nil)],timeout:10),.completed,"Actual disc resumes after foreground restoration")
         app.buttons["暂停"].tap()
         XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(needle.frame.width-parkedNeedle.width)<1},object:nil)],timeout:10),.completed,"Pause returns the actual needle to its parked angle")
+        XCTAssertEqual(cartridge.frame.midX,parkedHead.midX,accuracy:1);XCTAssertEqual(cartridge.frame.midY,parkedHead.midY,accuracy:1)
         let stopped=discPixels();XCTAssertEqual(stopped.count,324);XCTAssertEqual(stopped,discPixels(),"Pause freezes the disc independently of returning the needle")
         let parkedShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());parkedShot.name="Vinyl parked needle and stopped asymmetric cover";parkedShot.lifetime = .keepAlways;add(parkedShot)
       }
@@ -1120,14 +1144,27 @@ final class SourceSettingsTests: XCTestCase {
         let am2Image=XCTAttachment(screenshot:app.screenshot());am2Image.name="AM2 independent cover and volume with paused shared clock";am2Image.lifetime = .keepAlways;add(am2Image)
         app.buttons["am2-settings"].tap();app.buttons["am2-show-volume"].tap();app.buttons["am2-delay-plus"].tap();app.buttons["am2-delay-plus"].tap();app.buttons["am2-settings"].tap();lyrics.tap()
       }
+      if layout=="vinyl" {
+        XCTAssertTrue(app.buttons["歌词与来源"].isHittable,"Vinyl keeps lyrics in its dedicated tool rather than shrinking the record")
+        app.buttons["歌词与来源"].tap()
+        XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.waitForExistence(timeout:5))
+      }
       XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"Lyric selection must fit in \(layout)")
+      if layout=="vinyl" {
+        XCTAssertTrue(app.buttons["Synthetic lyric two"].firstMatch.isHittable,"The original shared lyric content remains available")
+        app.buttons["收起黑胶歌词"].tap()
+        XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5),"Returning from lyrics must preserve paused playback")
+      }
       if layout=="stage" {
         let group=app.descendants(matching:.any).matching(identifier:"lyric-stage-group").firstMatch
         XCTAssertTrue(group.waitForExistence(timeout:10));XCTAssertEqual(group.label,"two","Stage must select the last real timed group at the shared 60-second position")
         let stageImage=XCTAttachment(screenshot:app.screenshot());stageImage.name="Stage real group with paused transport";stageImage.lifetime = .keepAlways;add(stageImage)
       }
       if layout=="wave" {
-        XCTAssertTrue(app.buttons["Synthetic lyric two"].firstMatch.isHittable,"Wave layout must show its active lyric completely below the selector")
+        let activeLyric=app.buttons["Synthetic lyric two"].firstMatch
+        XCTAssertTrue(activeLyric.isHittable,"Wave layout must show its active lyric completely below the selector")
+        let lyricViewport=app.descendants(matching:.any).matching(identifier:"player-lyric-viewport").firstMatch
+        XCTAssertTrue(lyricViewport.frame.insetBy(dx:-1,dy:-1).contains(activeLyric.frame),"Actual lyric frame must fit its clipping viewport, not only exist in AX")
         XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch.exists,"Paused wave playback must not fabricate a spectrum ring")
         let ring=app.descendants(matching:.any).matching(identifier:"wave-seek-ring").firstMatch
         XCTAssertTrue(ring.isHittable,"The ring must expose a separate adjustable surface around the play button")

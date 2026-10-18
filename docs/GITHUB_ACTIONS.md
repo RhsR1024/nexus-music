@@ -1,3 +1,7 @@
+## 2026-10-18 393adcf完整云端成功
+
+官方API实核[39121914443](https://github.com/RhsR1024/nexus-music/actions/runs/39121914443)/393adcf completed/success，checks和ios两个job成功。iOS27工具链、完整native、核心App、匹配/歌词/源健康/发现、断网下载播放、原生iPad旋转、unsigned归档与IPA上传步骤均success。jobs回执留build/ci-393adcf-jobs.json；尚未下载本次云端IPA核字节，不宣称签名/真机或393adcf之后代码云端通过。b492261/39127780177已自动运行，无手动重派或取消；后续push仍须核对至多1运行/1排队。
+
 ## 2026-10-18 诊断日志独立上传
 
 557999a失败诊断包625107504字节超过GitHub连接器536870912字节上限，Chrome调试器也未附加成功，导致尚不能取得完整三色失败录屏/xcresult。新增`Upload compact test logs`，始终独立上传已有文本日志、summary/counts JSON、视频核验文本及CSV；原完整诊断上传、原始xcresult/视频、保留期和全部测试仍保持。独立小包用于取得完整失败日志，不把小包当作完整视频/xcresult或全ZIP核验；实际大小和下载仍待新云端确认。同工作流/分支的single/保留运行中策略不变。
