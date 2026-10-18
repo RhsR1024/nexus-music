@@ -84,3 +84,8 @@ test('history, statistics and settings remain device-local and do not invalidate
 test('configuration failure retains old settings; corrupt saved baseline is rejected instead of used',async()=>{
   const c=client();await c.configure();const config=c.sync.getSnapshot().config;c.fail(true);await assert.rejects(c.sync.configure(account.id,'other'));assert.equal(c.sync.getSnapshot().config,config);c.fail(false);c.records.set('webdav.sync.v1',{version:99});await assert.rejects(new WebDAVSync(c.options).restore(),error=>error instanceof InvalidRecordError);
 });
+test('foreground refresh only previews configured sync and never commits automatically',async()=>{
+  const c=client();assert.equal(await c.sync.previewIfConfigured(),false);await c.configure();await c.library.createPlaylist('Foreground');
+  assert.equal(await c.sync.previewIfConfigured(),true);assert.ok(c.sync.getSnapshot().preview);assert.equal(c.shared.puts(),0);
+  assert.equal(c.sync.getSnapshot().message.includes('确认'),true);
+});

@@ -84,6 +84,13 @@ export class WebDAVSync {
     if(read.status!==404){status(read.status,[200]);etag=strongBackupETag(read.etag);if(!etag)throw new SyncError('format');remote=decodeSync(read.body);}
     const plan=planSync(local,remote,baseline);return{preview:{plan,etag,localSignature:canonical(syncRecords(snapshot))},message:plan.conflicts.length?`发现 ${plan.conflicts.length} 项冲突，请逐项选择后确认`:'合并预览已就绪，确认后同步两端音乐库'};
   });}
+  /** Refresh a configured sync preview when the app returns to the foreground.
+   * Conflicts remain explicit and require the existing user confirmation path;
+   * foreground refresh never commits data automatically. */
+  previewIfConfigured(){
+    if(!this.value.config||this.value.busy||!this.selectedAccount())return Promise.resolve(false);
+    return this.preview().then(()=>true).catch(()=>false);
+  }
   commit(choices:SyncChoices={}){
     const preview=this.value.preview;if(!preview)return Promise.reject(new SyncError('format'));
     // Freeze the user's choices before any asynchronous operation.

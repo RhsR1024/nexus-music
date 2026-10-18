@@ -2,6 +2,8 @@
 
 用户明确取消“音枢与漫途歌单之间的同步功能”。漫途能力标记为不实现持续/双向歌单同步，定位为多个平台公开歌单的一次性导入来源；保留解析、预览、顺序/去重、汽水原始身份和跨平台匹配。已同步 PRODUCT_SCOPE、TASK_PLAN、IMPLEMENTATION_PLAN、FEATURE_STATUS 和 PROGRESS_ESTIMATE。排除后期真机反馈调试后，当前代码开发量按工作量重估为 **80.95%（约81%，剩余19.05%）**；含真实服务、签名、真机及交付验收约 **57.93%（约58%）**。
 
+本轮新增 WebDAV 前台自动预览：初始化及回到前台时刷新已配置目录的合并预览，冲突仍需逐项确认，不自动提交或覆盖本地数据。`npm run check` 376/376；真实服务、双设备和真机验收仍待。
+
 ## 2026-10-18 当前接续：经典独立专项通过，完整背景继续
 
 session43157的正式联合回归SourceUITests-1792310358432正在运行；testClassicPlayerWindowSafeArea已98.693秒通过，包含实际合成播放、滚动/队列返回、横屏cutout及转回。完整testGlobalCoverThemeChangesAcrossPages仍运行，原像素/PCM/异步/三色/明暗重启断言保持，尚不记整批通过。日志build/logs/ui-classic-separated-final.log及ui-catalog.log；终态先保存catalog/counts/summary再启动下一Xcode。

@@ -168,6 +168,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.backup.v1','云备份目录',()=>davBackups.restore());
   const davSync=new WebDAVSync({repository,accounts:davAccounts,transport:davTransport,library,mutations:libraryMutations,uuid:Crypto.randomUUID});
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
+  AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
+  void davSync.previewIfConfigured();
   return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
