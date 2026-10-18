@@ -1,3 +1,9 @@
+## 2026-10-18 A04全场旋转与确定性参数
+
+最终完整native及368业务/类型、正式App1792289108066的406.668秒1/0/0通过；原三色及运动/停止/异步/PCM/恢复断言保持，视频59帧/6中间色。截图已亲看，清洁归档/push/云端继续，仍不计完整配色或参考运行等价。
+
+[0056](decisions/0056-seeded-ambient-rotation.md)采纳前严格review31E/30F/30P与独立E031重放通过；替换早期原创锚点/随机，接入全场旋转及物理渐变方向。368业务和独立参数/投影检查通过，完整native/App继续；HSL、双色、主题覆盖层及参考完整视觉仍待，A04不标完成。
+
 ## 2026-10-18 两场过渡清洁归档与push回执
 
 `e6d9d113bbd6b55966fa66c98ea09ca77c521d5d`已正常push到RhsR1024/nexus-music，远端main一致。清洁归档dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带SHA、可执行及JS与归档字节一致、正式入口及私人/签名资源排除通过。IPA SHA256 `7a7d865ab3fde2f3b267b5838f7ccf81b56e898dba4f99ceba898475edc0d38f`，留build/local-ambient-transition-e6d9d11。368业务/类型、最终完整native、正式App388.381秒及65帧/11中间色画面验收见下；验收后strict review30E/29F/29P、8WI/61事件零错误/警告。

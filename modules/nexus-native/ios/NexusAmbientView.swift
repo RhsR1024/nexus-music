@@ -4,6 +4,7 @@ import UIKit
 private final class AmbientSceneLayer: CALayer {
   let scene: AmbientScene
   private let gradient = CAGradientLayer()
+  private let fieldContainer = CALayer()
   private let fields = (0..<4).map { _ in CALayer() }
   init(scene: AmbientScene, colors: [String]) {
     self.scene = scene
@@ -15,17 +16,22 @@ private final class AmbientSceneLayer: CALayer {
     }
     gradient.startPoint = .zero; gradient.endPoint = CGPoint(x: 1, y: 1)
     addSublayer(gradient)
+    addSublayer(fieldContainer)
     for (index, field) in fields.enumerated() {
       field.contents = scene.images[index % scene.images.count]
       field.contentsGravity = .resize
-      addSublayer(field)
+      fieldContainer.addSublayer(field)
     }
   }
   required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
   func render(size: CGSize, time: Double) {
     frame = CGRect(origin: .zero, size: size); gradient.frame = bounds
-    let points = AmbientScene.gradientPoints(size: size)
+    let angle = scene.angle(at: time)
+    let points = AmbientScene.gradientPoints(size: size, angle: angle)
     gradient.startPoint = points.start; gradient.endPoint = points.end
+    fieldContainer.bounds = bounds
+    fieldContainer.position = CGPoint(x: size.width / 2, y: size.height / 2)
+    fieldContainer.setAffineTransform(CGAffineTransform(rotationAngle: angle).scaledBy(x: 1.12, y: 1.12))
     for (index, field) in scene.fields.enumerated() {
       fields[index].frame = scene.rect(field, size: size, time: time)
       fields[index].opacity = Float(field.opacity * 0.42)

@@ -1,20 +1,38 @@
 import Foundation
 import CoreGraphics
 
-// Original finite scene policy. Only radial falloff and bounded field math
-// follow reviewed behavior; anchors and PRNG are explicitly Nexus choices.
+// Original native implementation of the finite E026/E027/E028/E031 scene math.
 struct AmbientScene {
-  // CAGradientLayer projects in unit space; preserve the existing physical
-  // (0,0)->(width,height) CGGradient when the view is not square.
-  static func gradientPoints(size: CGSize) -> (start: CGPoint, end: CGPoint) {
+  // Convert the physical center +/- .65*maxDimension axis to a unit-space
+  // projection, including its length, rather than just normalizing endpoints.
+  static func gradientPoints(size: CGSize, angle: Double) -> (start: CGPoint, end: CGPoint) {
     guard size.width > 0, size.height > 0, size.width.isFinite, size.height.isFinite else {
       return (.zero, CGPoint(x: 1, y: 1))
     }
-    let ratio = size.width / size.height
-    let a = ratio * ratio / (1 + ratio * ratio), b = 1 - a
-    let scale = 1 / (a * a + b * b)
-    return (CGPoint(x: 0.5 - scale * a / 2, y: 0.5 - scale * b / 2),
-      CGPoint(x: 0.5 + scale * a / 2, y: 0.5 + scale * b / 2))
+    let radius = 0.65 * max(size.width, size.height)
+    let x = size.width * cos(angle) / (2 * radius), y = size.height * sin(angle) / (2 * radius)
+    let scale = 1 / (x * x + y * y)
+    return (CGPoint(x: 0.5 - scale * x / 2, y: 0.5 - scale * y / 2),
+      CGPoint(x: 0.5 + scale * x / 2, y: 0.5 + scale * y / 2))
+  }
+  struct Random {
+    private(set) var state: UInt64
+    init(seed: UInt32) {
+      let value = UInt64(seed)
+      var mixed = (~value) &+ (value << 21)
+      mixed ^= mixed >> 24; mixed = mixed &* 265
+      mixed ^= mixed >> 14; mixed = mixed &* 21
+      mixed ^= mixed >> 28; mixed = mixed &+ (mixed << 31)
+      state = mixed == 0 ? 0x5a17 : mixed
+      for _ in 0..<4 { advance() }
+    }
+    private mutating func advance() { state = 0xffffda61 &* (state & 0xffffffff) &+ (state >> 32) }
+    mutating func unit() -> Double {
+      advance(); let high = state & 0x3ffffff
+      advance(); let low = state & 0x7ffffff
+      return Double(high * 134217728 + low) / 9007199254740992
+    }
+    mutating func direction() -> Double { advance(); return state & 1 == 0 ? 1 : -1 }
   }
   struct Field {
     let anchor: CGPoint
@@ -28,6 +46,13 @@ struct AmbientScene {
   }
   let images: [CGImage]
   let fields: [Field]
+  let period: Double
+  let phase: Double
+  let direction: Double
+
+  func angle(at time: Double) -> Double {
+    phase + 2 * .pi * (time.isFinite ? max(0, time) : 0) / period * direction
+  }
 
   static func seed(_ identity: String) -> UInt32 {
     var value: UInt32 = 0x811c9dc5
@@ -40,17 +65,15 @@ struct AmbientScene {
     let images = colors.compactMap(Self.softLight)
     guard images.count == 3 else { return nil }
     self.images = images
-    var random = Self.seed(identity)
-    func unit() -> Double {
-      random = random &* 1664525 &+ 1013904223
-      return Double(random) / 4294967296
-    }
-    let anchors = [CGPoint(x: 0.12, y: 0.22), CGPoint(x: 0.88, y: 0.3), CGPoint(x: 0.32, y: 0.76), CGPoint(x: 0.82, y: 0.82)]
+    var random = Random(seed: Self.seed(identity))
+    func unit() -> Double { random.unit() }
+    let anchors = [CGPoint(x: 0.12, y: 0.18), CGPoint(x: 0.88, y: 0.38), CGPoint(x: 0.32, y: 0.84), CGPoint(x: 0.82, y: 0.92)]
     fields = anchors.map { anchor in
       Field(anchor: anchor, amplitude: CGPoint(x: 0.15 + 0.1 * unit(), y: 0.13 + 0.09 * unit()),
         xPeriod: 9 + 7 * unit(), yPeriod: 12 + 9 * unit(), phase: 2 * .pi * unit(),
         width: 0.9 + 0.22 * unit(), height: 0.62 + 0.18 * unit(), opacity: 0.62 + 0.1 * unit())
     }
+    period = 20 + 10 * unit(); phase = 2 * .pi * unit(); direction = random.direction()
   }
 
   static func softLight(_ color: String) -> CGImage? {
@@ -93,6 +116,10 @@ struct AmbientScene {
   func draw(in context: CGContext, size: CGSize, time: Double) {
     guard size.width > 0, size.height > 0, size.width.isFinite, size.height.isFinite else { return }
     context.saveGState()
+    context.translateBy(x: size.width / 2, y: size.height / 2)
+    context.rotate(by: angle(at: time))
+    context.scaleBy(x: 1.12, y: 1.12)
+    context.translateBy(x: -size.width / 2, y: -size.height / 2)
     // CGImage has an upward axis; preserve the scene's UIKit anchor coordinates.
     context.translateBy(x: 0, y: size.height)
     context.scaleBy(x: 1, y: -1)

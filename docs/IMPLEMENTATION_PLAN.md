@@ -1,3 +1,15 @@
+## 2026-10-18 A04确定性随机与全场旋转
+
+本地最终368业务/类型、完整native和正式App1792289108066通过406.668秒1/0/0；实际像素/PCM/两页三色和异步/恢复断言保持，视频59帧/6中间色。首轮native封面等待失败与限时实际结果等待修正、截图亲看和边界见0056。清洁归档/push/iOS27继续，HSL/双色/覆盖层下一批不变。
+
+E031→F030→P030和严格review31E/30F/30P通过；[0056](decisions/0056-seeded-ambient-rotation.md)原创原生实现替换早期锚点/LCG，四场及全场使用已核序列、方向/周期/相位，容器旋转1.12缩放，渐变按物理投影转换CAGradientLayer端点。只更新图层几何，不整屏逐帧画/传React。独立向量/32参数/手机平板投影和368业务通过，完整native/App继续。后续仍须HSL/双色/主题覆盖层与完整视觉收敛，不因旧测试易过保留已知差异；云端失败另核。
+
+## 2026-10-18 09:58 心跳：云端统计断言失败待复核
+
+`25b1e05` / [39077179759](https://github.com/RhsR1024/nexus-music/actions/runs/39077179759) 已失败，checks及完整native步骤成功；核心App为23项中22通过，唯一 `testZNavidromePlaybackAndCredentials` 在旧Swift1052断言实际播放次数4、预期1，177.317秒。后续600秒诊断收集超时不是首因；在线组/离线/iPad/归档跳过，无本批云端IPA。官方原始job日志已下载，证据见本机忽略目录 `build/ci-39077179759/FINDINGS.txt` 与job-logs.txt:877、955–974。
+
+诊断artifact12120974173已登记495628911字节及发布摘要6af1665c；浏览器下载被Chrome以ERR_BLOCKED_BY_CLIENT阻止，未绕过，未称ZIP/xcresult/录屏已下载或校验。测试初始count在导航后无等待、条目不存在即返回0，UI仅展示前五个统计且按标题匹配；这些只属基线/身份疑点，尚不能认定统计重复或测试问题，需补看基线/完整诊断或本地复现再修复，不改预期为4或删会话/重启断言。后续39086161205/e6d9d11已自动运行，保持1运行/0排队，无重派/取消；当前旋转批次在开发，本心跳未启动竞争构建或提交。全部功能与真实服务/签名/手机验收继续。
+
 ## 2026-10-18 两场过渡清洁归档与push回执
 
 `e6d9d113bbd6b55966fa66c98ea09ca77c521d5d`已正常push到RhsR1024/nexus-music，远端main一致。清洁归档dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带SHA、可执行及JS与归档字节一致、正式入口及私人/签名资源排除通过。IPA SHA256 `7a7d865ab3fde2f3b267b5838f7ccf81b56e898dba4f99ceba898475edc0d38f`，留build/local-ambient-transition-e6d9d11。368业务/类型、最终完整native、正式App388.381秒及65帧/11中间色画面验收见下；验收后strict review30E/29F/29P、8WI/61事件零错误/警告。

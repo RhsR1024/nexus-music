@@ -11,6 +11,10 @@ import CoreGraphics
     }
     func pump(_ seconds: Double = 0.2) { RunLoop.main.run(until: Date().addingTimeInterval(seconds)) }
     func info() -> [String: Any] { MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:] }
+    func awaitArtwork() {
+      let deadline = Date().addingTimeInterval(5)
+      while !(info()[MPMediaItemPropertyArtwork] is MPMediaItemArtwork) && Date() < deadline { pump(0.02) }
+    }
     let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("NexusSystemMediaTests-" + UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
@@ -30,10 +34,10 @@ import CoreGraphics
     load("a", 1)
     check(info()[MPMediaItemPropertyTitle] as? String == "a", "title")
     check(info()[MPMediaItemPropertyAlbumTitle] as? String == "System album", "album")
-    engine.setSystemArtwork(picture.absoluteString, "a"); pump()
+    engine.setSystemArtwork(picture.absoluteString, "a"); awaitArtwork()
     check(info()[MPMediaItemPropertyArtwork] is MPMediaItemArtwork, "decoded system artwork")
     check(engine.handleSystemCommand("pause") == .success, "native immediate pause")
-    engine.setSystemArtwork(picture.absoluteString, "a"); pump()
+    engine.setSystemArtwork(picture.absoluteString, "a"); awaitArtwork()
     check(info()[MPMediaItemPropertyArtwork] is MPMediaItemArtwork, "pause generation must retain item artwork")
     check((info()[MPNowPlayingInfoPropertyPlaybackRate] as? NSNumber)?.doubleValue == 0, "paused rate")
     check(engine.handleSystemCommand("favorite", favorite: true) == .success, "favorite accepted")

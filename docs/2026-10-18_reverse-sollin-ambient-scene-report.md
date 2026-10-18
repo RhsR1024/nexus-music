@@ -26,6 +26,14 @@ python3 build/verify-scene-transition-evidence.py
 node scripts/sollin-reverse-gate.mjs ipa --review
 ```
 
+## E031 精确种子随机补证
+
+新R2/mobile-reverse路由master-route-20261018-093241及既有offline scope通过；E031→F030→P030不可变收据SHA256 `af0f6d6b16e53d8acfaa73bc280266f85dc84f1209e0098ecb79a911f1d50696`。五函数226原始指令，有限寄存器解释与独立unsigned64公式在8种子/272unit一致。采纳前严格review31E/30F/30P、9WI/63事件零错误警告。
+
+seed混洗为64位逻辑移位/溢出，结果零用0x5a17，预热4次；state=0xffffda61×low32+high32。nextInt的power-of-two分支给出原始low32掩码；nextDouble两次tagged max为0x8000000/0x10000000，即**高26位/低27位**，组合(high×2^27+low)/2^53。E027此前“27/26bit组合”只表示组成量，现明确其顺序，未改写不可变收据。四场消耗32unit，随后20+10U、2πU、nextBool(true→+1,false→−1)。音枢identity命名空间独立，不宣称跨产品同歌曲同轨迹。
+
+这只是离线ARM64有限解释，不是参考App执行、完整DartABI模拟或SDK Random源码核验；未种子分支和一般非二幂nextInt未采纳。按[0056](decisions/0056-seeded-ambient-rotation.md)原创接入随机/已核锚点/全场旋转，HSL/双色/主题覆盖层仍待，完整App/云端/手机另验。
+
 ## 柔光、颜色与种子
 
 HSL.fromColor及withSaturation/withLightness的原始字段支持饱和度与亮度身份。当s<0.06时，亮度改为Brightness枚举0的0.34，否则0.72；此处只记录枚举0，不声称实际恢复的用户主题。其他颜色的s′为`clamp(s×0.76,0.26,枚举0?0.6:0.48)`；L′为`clamp(L×0.12+(枚举0?0.32:0.62),枚举0?0.31:0.62,枚举0?0.41:0.74)`，最终经HSL.toColor返回。
