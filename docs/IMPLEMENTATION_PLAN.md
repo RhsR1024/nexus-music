@@ -1,3 +1,9 @@
+## 2026-10-18 两场过渡清洁归档与push回执
+
+`e6d9d113bbd6b55966fa66c98ea09ca77c521d5d`已正常push到RhsR1024/nexus-music，远端main一致。清洁归档dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带SHA、可执行及JS与归档字节一致、正式入口及私人/签名资源排除通过。IPA SHA256 `7a7d865ab3fde2f3b267b5838f7ccf81b56e898dba4f99ceba898475edc0d38f`，留build/local-ambient-transition-e6d9d11。368业务/类型、最终完整native、正式App388.381秒及65帧/11中间色画面验收见下；验收后strict review30E/29F/29P、8WI/61事件零错误/警告。
+
+push后API实核39086161205/e6d9d11唯一pending，39077179759/25b1e05继续运行核心App，1运行/1排队。旧ea4f5d6 pending39083490325由single自动取消，不算通过；未取消运行或重派旧版。最新完整成功且IPA核验仍为76c9cd0/39050349015，只覆盖其代码。下一已有背景旋转/原始运动复核继续按新路由及严格门禁，再逐页收敛A03/A06–A09；全部F/J与真实服务/签名/手机/性能目标保持active。
+
 ## 2026-10-18 两场过渡与加载回退（本地通过）
 
 reverse-skill新R2/mobile-reverse路由及既有离线scope，E028/E029/E030独立原字节重放与采纳前严格review通过；按[0055](decisions/0055-bounded-ambient-transition.md)五参考比较后原创实现显式pending、显示层暂留、最多两场/0.6秒Cubic整体混合和停止/失败清理。媒体URI/色板仍立即清旧，abort/当前URI守卫保持；原生属性一次应用，渐变按宽高比保留原物理投影。
