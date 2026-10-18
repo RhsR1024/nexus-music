@@ -1318,3 +1318,9 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 阶段提交056459c已形成，尚待本批清洁归档/push。387业务/类型、评论40.307秒及既有AM2/八布局/PCM267.694秒通过，用户图标Release资源编译/两份RGB1024摘要通过。新联合1792317751597最终1通过/1失败/0跳过：字体383.819秒通过（明确等待样式自动关闭，全部原断言保持）；完整背景414.693秒失败于深色重启后暂停三色。原日志/summary/counts已另存ui-resume-font-background-*，xcresult及附件build/resume-background-failed保留；失败PNG71C94B03已亲看，独立Pillow读原14点均opaque但只有红/蓝主色；本轮测试采样同时返回空数组。不能仅归因于捕获瞬态，也未确定场景seed/几何或色板根因；保留三色门槛、PCM和全部断言，下一优先定位。评论/图标和字体修复按各自专项验收，不将整组失败计通过。
 
 云端39111966447/23090d0已completed/failure，核心22通过/2失败；小日志SHA/CRC通过，完整792MB包仍未取得。后续39115107158/4797970已自动运行，checks/iOS27工具链/完整native成功，核心App仍进行；未取消或重派。新独立失败截图/文本导出已用既有失败结果实际核验，下一代码CI验证上传；原始完整诊断保留。真实服务、签名、真机没有新增结论；本轮未完成全部A/F/J，继续按既定顺序推进。
+
+## 2026-10-18 评论/图标及清理规则：清洁归档与push回执
+
+产品/诊断056459c及规则/回执8aefb2399744ba8977140e7ed80a0fe05918c2bb已正常push到RhsR1024/nexus-music，ls-remote确认main一致。8aefb23清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]；79条目ZIP CRC、附带SHA、包内可执行/JS与原归档字节、正式入口及私人/签名资源排除通过。IPA SHA256 `3d96654726ccef96b01e81c4115674e88d87e38604556ff3e08a00ad873fcaff`，收据与包留build/local-comments-icon-8aefb23，日志archive-comments-icon-resume-clean.log。
+
+push后API实核新iOS27运行39119277363/8aefb23为唯一pending，39115107158/4797970继续in_progress，保持1运行/1排队；未取消或重派。新云端终态待，原背景本地1失败及23090d0云端2失败不改写。下一优先深色重启暂停实际场景/三色缺绿的取证与修复，全部其余A/F/J继续，真实服务/签名/真机无新结论。临时清理已加入项目规则和既有跟进任务，本轮约1.93GB回收及保留原始证据见下方清理记录。

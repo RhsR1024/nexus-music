@@ -1,3 +1,9 @@
+## 2026-10-18 评论/图标及清理规则：清洁归档与push回执
+
+产品/诊断056459c及规则/回执8aefb2399744ba8977140e7ed80a0fe05918c2bb已正常push到RhsR1024/nexus-music，ls-remote确认main一致。8aefb23清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]；79条目ZIP CRC、附带SHA、包内可执行/JS与原归档字节、正式入口及私人/签名资源排除通过。IPA SHA256 `3d96654726ccef96b01e81c4115674e88d87e38604556ff3e08a00ad873fcaff`，收据与包留build/local-comments-icon-8aefb23，日志archive-comments-icon-resume-clean.log。
+
+push后API实核新iOS27运行39119277363/8aefb23为唯一pending，39115107158/4797970继续in_progress，保持1运行/1排队；未取消或重派。新云端终态待，原背景本地1失败及23090d0云端2失败不改写。下一优先深色重启暂停实际场景/三色缺绿的取证与修复，全部其余A/F/J继续，真实服务/签名/真机无新结论。临时清理已加入项目规则和既有跟进任务，本轮约1.93GB回收及保留原始证据见下方清理记录。
+
 ## 2026-10-18 清理规则与本轮回归终态（最新）
 
 用户新增要求：临时诊断包、日志和缓存使用后定期清理，避免占满磁盘。已写入AGENTS与BUILDING，并更新既有ios27跟进任务，每天首次可用运行/阶段收尾检查；临时7天、普通日志14天、已解决完整结果30天轮换，活动构建目录/最新两批有效产物/未解决关键证据/reverse-skill样本与Evidence保护。首轮仅删除重复failure-exports与无使用者DeviceDerivedData-color，共1932582912分配字节（约1.93GB）；回执build/logs/cleanup-2026-10-18.json。原始xcresult、必要PNG与所有逆向案例保留，不把清理计作功能进度。
