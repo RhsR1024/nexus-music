@@ -68,7 +68,7 @@ const healthScript=matchingScript.replace('Nexus Matching Fixture','Nexus Health
 const navidromeAudio=matchingAudio,navidromeDuration=120;
 // Version the synthetic recording when its bytes change. Existing test devices
 // can still contain the original 12-second recording in the normal audio cache.
-const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
   if(coverThemeUI&&req.url.startsWith('/theme-fixture-control')){
     // This endpoint observes changing in-flight requests, never cached data.
@@ -249,7 +249,7 @@ const server = createServer(async (req, res) => {
       heldThemeResponses.push(held);
       res.once('close',()=>{const index=heldThemeResponses.indexOf(held);if(index>=0)heldThemeResponses.splice(index,1);});return;
     }
-    res.setHeader('Content-Type','image/png');res.end(Buffer.from(coverThemeUI&&params.get('u')==='fixture-theme'?themeCovers[params.get('id')]??themeCovers.red:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64'));return;
+    res.setHeader('Content-Type','image/png');res.end(Buffer.from(coverThemeUI&&params.get('u')==='fixture-theme'?themeCovers[params.get('id')]??themeCovers.red:themeCovers.multi,'base64'));return;
   }
   if(method==='ping')respond({type:'Navidrome',serverVersion:'0.64.0'});
   else if(method==='getOpenSubsonicExtensions')respond({openSubsonicExtensions:[{name:'songLyrics',versions:[1]}]});

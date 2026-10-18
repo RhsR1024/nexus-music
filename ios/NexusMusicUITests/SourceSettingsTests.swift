@@ -1042,6 +1042,37 @@ final class SourceSettingsTests: XCTestCase {
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
+      if layout=="vinyl" {
+        let turntable=app.descendants(matching:.any).matching(identifier:"vinyl-turntable").firstMatch
+        let needle=app.descendants(matching:.any).matching(identifier:"vinyl-tonearm").firstMatch
+        XCTAssertTrue(turntable.waitForExistence(timeout:10));XCTAssertTrue(needle.exists)
+        let parkedNeedle=needle.frame
+        func discPixels()->[UInt8]{
+          guard let image=BackgroundPixels.decode(XCUIScreen.main.screenshot().pngRepresentation) else{return []}
+          let frame=turntable.frame,diameter=frame.height-12,scale=UIScreen.main.scale
+          return (-4...4).flatMap{y->[UInt8] in (-4...4).flatMap{x in
+            BackgroundPixels.rgba(image,at:CGPoint(x:(frame.midX+CGFloat(x)*diameter*0.035)*scale,y:(frame.midY+CGFloat(y)*diameter*0.035)*scale))
+          }}
+        }
+        let pausedDisc=discPixels();XCTAssertEqual(pausedDisc.count,324,"Read actual asymmetric cover pixels, never an empty stability baseline")
+        XCTAssertEqual(pausedDisc,discPixels(),"Paused disc must retain its native phase")
+        app.buttons["播放"].tap()
+        let engaged=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in needle.frame.width>parkedNeedle.width+15},object:nil)
+        XCTAssertEqual(XCTWaiter.wait(for:[engaged],timeout:10),.completed,"Playing must move the actual needle onto the disc")
+        let spinning=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+          let next=discPixels();return next.count==324 && zip(pausedDisc,next).reduce(0){$0+abs(Int($1.0)-Int($1.1))}>100
+        },object:nil)
+        XCTAssertEqual(XCTWaiter.wait(for:[spinning],timeout:10),.completed,"Native rotation must change actual asymmetric cover pixels")
+        let playingShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());playingShot.name="Vinyl engaged needle and rotating asymmetric cover";playingShot.lifetime = .keepAlways;add(playingShot)
+        XCUIDevice.shared.press(.home);app.activate()
+        XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10),"Foreground restoration retains playback intent")
+        let beforeResume=discPixels()
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in let next=discPixels();return next.count==324 && next != beforeResume},object:nil)],timeout:10),.completed,"Actual disc resumes after foreground restoration")
+        app.buttons["暂停"].tap()
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(needle.frame.width-parkedNeedle.width)<1},object:nil)],timeout:10),.completed,"Pause returns the actual needle to its parked angle")
+        let stopped=discPixels();XCTAssertEqual(stopped.count,324);XCTAssertEqual(stopped,discPixels(),"Pause freezes the disc independently of returning the needle")
+        let parkedShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());parkedShot.name="Vinyl parked needle and stopped asymmetric cover";parkedShot.lifetime = .keepAlways;add(parkedShot)
+      }
       if layout=="am2" {
         // An interrupted previous run can leave AM2's persisted controls set.
         // Establish this scenario through the same settings used by the user.

@@ -1,3 +1,7 @@
+## 2026-10-18 黑胶双动效与相位
+
+五固定HEAD逐一实核，亲读悦音原生旋转、Q/wtf静态封面/常亮、Cy实际播放与意图区分、自有Wayferar附着/可见/动画缩放职责；实现/维护/Android/许可逐项见[0066](decisions/0066-vinyl-independent-motion.md)。没有完整参考唱针实现可移植，音枢依据门禁后的E034/E035有限证据原创实现，未复制源码/资源/依赖或原生补丁；实际App验证进行中。
+
 ## 2026-10-18 评论容器与固定头比较
 
 本批重新核对五参考固定HEAD并亲读评论状态/标题/列表或构建边界，具体来源、维护/许可/Android取舍见[0063](decisions/0063-comments-sheet.md)；Sollin IPA E033经reverse-skill采纳前strict review，报告见[评论静态报告](2026-10-18_reverse-sollin-comments-report.md)。原创实现原生Sheet/固定头/虚拟分区，不移植网络SDK/参考源码/资源/依赖。

@@ -44,3 +44,36 @@ node scripts/sollin-reverse-gate.mjs ipa --review
 ```
 
 未联网搜索目标知识或扩大scope；现场日志和案例索引随本批更新，产品采纳仍待下一阶段证据和独立验收。
+
+
+## 2026-10-18 标志槽位与相位后续
+
+新R2路由master-route-20261018-191117复用已授权离线scope，E035→F034→P034新增827原始指令、68BL、41池引用；不可变manifest SHA256 `244c0d926fd538a8d1489fa89f392e782eefbc6817e7082fa68cd0c335196286`。独立重放与采纳前35E/34F/34P严格review通过。前表的“完整标志/参数待核”由下列有限结论补充，不追溯声称E034已证明它们。
+
+- 共享guard0x68d3ec读取widget槽0x18与0x20，返回前者且非后者。父构建0x54c544将processingState loading/buffering比较结果送入0x20；0x18来自listenable值，完整源声明仍未知，不凭Acrylic canonical别名认定接收者。
+- 唱针target由0x18决定1/0，0x28控制直接value或forward/reverse；父组件继续向该动画开关槽转发自己的0x38，完整设置来源未恢复。
+- 父构建调用BoardSong.key并存入widget0x40；didUpdateWidget0x68f0f8比较新旧0x40，不等时相位和controller归零。停止分支用phase+value经SDK叶DartModulo0x740按1折回；绘制closure0x59bd60使用(phase+value)*2π。初步误标Fmod在证据生成前被固定SDK断言拒绝，正式证据正确为DartModulo。
+- init0x6cf284与AnimationController命名参数描述符/栈位置支持正向Duration620000、反向480000，旋转构造前LibcRound0x768得到13513514；按Dart微秒契约解释名义时长，未观察参考实际帧表现。精确ThreePointCubic坐标、几何/手势及后台/无障碍flag来源仍未恢复。
+
+```mermaid
+flowchart TD
+  parent[父组件处理状态与歌曲key] --> guard[共享旋转guard]
+  guard --> run[可旋转时repeat]
+  guard --> stop[停止并保留模1相位]
+  parent --> identity[歌曲key变化归零]
+  parent --> arm[唱针独立目标]
+  arm --> direct[动画关闭时直接就位]
+  arm --> animate[动画开启时正反向控制]
+```
+
+图仅表示已核静态控制职责；不表示完整设置来源、目标运行或音频调用。五固定参考/Android/许可比较与音枢原创实现见[0066](decisions/0066-vinyl-independent-motion.md)，App验证进行中，不把静态review算作产品验收。
+
+本机补充复现（依赖固定样本和忽略输出）：
+
+```bash
+source scripts/environment.sh
+node scripts/sollin-reverse-gate.mjs ipa
+python3 work/sollin-ipa/notes/vinyl-flags-probe.py
+python3 build/verify-vinyl-flags-evidence.py
+node scripts/sollin-reverse-gate.mjs ipa --review
+```
