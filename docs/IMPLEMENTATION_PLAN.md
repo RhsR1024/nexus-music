@@ -1,3 +1,13 @@
+## 2026-10-18 黑胶有限几何证据补齐（未采纳产品）
+
+新reverse-skill R2路由200307、原离线scope/IPA门禁、E036→F035→P035独立3117原始指令/361BL/221池引用与36E/35F/35P严格review通过。确认有限支点(width×0.835,height×0.175)、90°至111.6°内部绘制方向和独立底座/盘托/唱盘结构；内部角度不直接等于RN屏幕角度。完整父布局/唱头/渐变/手势/目标运行未恢复，本批没有产品几何采纳。详见[几何报告](2026-10-18_reverse-sollin-vinyl-geometry-report.md)，下一补画布坐标映射后再原创实施与验收；其余A/F/J及真实服务/签名/真机保持。
+
+## 2026-10-18 测试导航修复清洁归档/push回执
+
+204273619e3602059f63c339eb152e8cdc68791d已正常push并触发最新pending39125685677，393adcf/39121914443仍运行；3313457旧pending自动替换，未手动取消/重派，1运行/1排队。两项Release App2/0/0和原断言保持见0067。
+
+本批清洁unsigned归档成功，manifest dirty=false/changes=[]；Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]，CRC/附带SHA/包内可执行与JS字节/正式入口及私人签名资源排除通过。IPA SHA256 `f3c644fffd36519400b80cada0523d51791f7a0e2d4b24cda122299f9566f1e0`，包及verification留build/local-presentation-2042736，日志archive-sheet-eq-repair-clean.log。对应iOS27、真实服务/签名/真机待，不计新增功能或提高完成比例。下一黑胶几何已新路由200307/PRIMARY mobile-reverse与原离线scope、IPA门禁通过，正在静态取证，尚未采纳新几何。
+
 ## 2026-10-18 云端Sheet/EQ失败定向修复本地通过
 
 按[0067](decisions/0067-cloud-sheet-eq-test-navigation.md)核对39115107158官方小日志的准确失败行：背景Sheet关闭后父入口可触达竞态、EQ右边缘拖动后预设仍在视口外。仅测试增加关闭/入口明确等待，并将EQ双向滚动移至左侧4%留白，完整原断言保持；产品设置/背景/音频代码未变。
