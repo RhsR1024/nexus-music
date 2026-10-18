@@ -1,3 +1,9 @@
+## 2026-10-18 云端Sheet/EQ失败定向修复本地通过
+
+按[0067](docs/decisions/0067-cloud-sheet-eq-test-navigation.md)核对39115107158官方小日志的准确失败行：背景Sheet关闭后父入口可触达竞态、EQ右边缘拖动后预设仍在视口外。仅测试增加关闭/入口明确等待，并将EQ双向滚动移至左侧4%留白，完整原断言保持；产品设置/背景/音频代码未变。
+
+Release App结果SourceUITests-1792324493576：背景大字号91.912秒、EQ182.995秒，2通过/0失败/0跳过；包含关闭重开/下滑/重启持久化、增益/各频段恢复/归零/重置/旁路/预设增删/睡眠定时。正式入口Release编译通过，非合成业务适配入口。6张必要PNG/manifest留build/cloud-sheet-eq-repair-passed，自定义选中与大字截图已亲看；完整临时导出自动清理，原xcresult及ui-cloud-sheet-eq-repair-{catalog.log,summary.json,counts.json}保留。没有新真实服务、签名或手机验收；对应新云端终态仍待。
+
 ## 2026-10-18 黑胶批次清洁归档与云端回执
 
 33134574d46db4ad8189e8acd6dc72993a58cf09已正常push，远程为RhsR1024/nexus-music。清洁unsigned归档成功，manifest dirty=false/changes=[]；Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]。ZIP CRC、附带SHA、包内可执行/JS与归档字节、正式入口及私人/签名资源排除通过。IPA SHA256 `04b569c04234bf4d2212eee8582d4a2aaf3c29ab9ea2fa7d1f35c976e44d9b7c`；包和verification留build/local-presentation-3313457，日志archive-vinyl-motion-clean.log。E034/E035独立原字节重放及35E/34F/34P严格review通过。

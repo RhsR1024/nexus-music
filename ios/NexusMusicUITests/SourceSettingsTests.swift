@@ -1626,8 +1626,9 @@ final class SourceSettingsTests: XCTestCase {
         let surface=app.descendants(matching:.any).matching(identifier:viewportID).firstMatch,viewport=surface.frame
         if element.exists && element.isHittable && element.frame.minY >= viewport.minY+8 && element.frame.maxY <= viewport.maxY-8 { return }
         let above=element.exists && element.frame.minY < viewport.minY+8
-        // Stay in the scroll view's outer padding, outside curve/slider responders.
-        surface.coordinate(withNormalizedOffset:CGVector(dx:0.99,dy:above ? 0.25 : 0.75)).press(forDuration:0.05,thenDragTo:surface.coordinate(withNormalizedOffset:CGVector(dx:0.99,dy:above ? 0.75 : 0.25)))
+        // Left content padding avoids both curve/slider responders and the
+        // native scroll indicator at the right edge (x396 on the cloud phone).
+        surface.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.25 : 0.75)).press(forDuration:0.05,thenDragTo:surface.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.75 : 0.25)))
       }
       let failure=XCTAttachment(screenshot:app.screenshot());failure.name="EQ scroll reachability failure";failure.lifetime = .keepAlways;add(failure)
       XCTFail("Control not fully visible: \(element)\n\(app.debugDescription)")
@@ -1748,6 +1749,8 @@ final class SourceSettingsTests: XCTestCase {
     let motion=app.switches["visual-motion"];reveal(motion)
     let bottom=XCTAttachment(screenshot:app.screenshot());bottom.name="Theme background independent motion controls at accessibility XXXL";bottom.lifetime = .keepAlways;add(bottom)
     app.buttons["background-sheet-close"].tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["background-sheet-close"]);waitForExpectations(timeout:10)
+    expectation(for:NSPredicate(format:"hittable == true"),evaluatedWith:app.buttons["settings-open-background"]);waitForExpectations(timeout:10)
     let entry=app.buttons["settings-open-background"],entryY=app.buttons["settings-open-background"].frame.midY
     XCTAssertTrue(entry.isHittable);entry.tap();reveal(soft);XCTAssertTrue(soft.isSelected)
     let title=app.staticTexts["settings-title-background"]
