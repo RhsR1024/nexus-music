@@ -1,3 +1,9 @@
+## 2026-10-18 背景呈现批次清洁归档与push回执
+
+`b6f66a267b1694a0364b96bdf1140f1a519d91a4`已正常push到RhsR1024/nexus-music，ls-remote核对main一致。375业务/类型、最终完整native、正式背景466.067秒及iPad两项135.232/39.899秒通过，详见0060/0061。清洁unsigned归档ARCHIVE SUCCEEDED；manifest dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、signed=false。完整ZIP CRC、附带SHA、包内可执行/JS与归档字节一致、正式入口及私人/签名资源排除通过，IPA SHA256 `726605bad9033e3642099b8d73123cab9ea3e6d5989229b7ff0e346d58f9d800`，收据与包留build/local-presentation-b6f66a2。
+
+push后API实核[39104211437](https://github.com/RhsR1024/nexus-music/actions/runs/39104211437)对应b6f66a2已in_progress，实际1运行/0排队；未取消运行或重派旧版。新云端iOS27终态仍待，最新完整成功且IPA核验仍为76c9cd0/39050349015；本地归档不证明云端修复、真实服务、签名或手机。下一已有UI缺口：经典ScrollView视口安全区（实际父层恢复截图已确认内容进入状态栏），及独立全屏业务背景；全部A/F/J继续。安全区批次新R2路由master-route-20261018-142527与IPA门禁已通过，未新增Sollin安全区语义结论。
+
 ## 2026-10-18T14:19 背景呈现批次本地验收完成，待清洁归档与push
 
 正式背景SourceUITests-1792303322232：466.067秒、1通过/0失败/0跳过；嵌套全屏队列及独立发现关闭后实际运动恢复、PCM/Home/暂停稳定、封面异步/迟到/失败、两页三色与明暗重启通过。视频59帧/10中间色，红切换0.505秒；16次合成鉴权/0失败，无新stream、复用缓存。日志/counts/summary另存ui-presentation-barrier-passed-*，附件build/presentation-barrier-passed，深色及父层恢复截图已亲看。

@@ -1,3 +1,5 @@
+2026-10-18 阶段闭环：背景呈现b6f66a2已通过本地业务/native/正式背景/iPad及清洁unsigned归档，正常push；新云端39104211437运行中，1运行/0排队，尚未通过。构建收据见[BUILD_STATUS](BUILD_STATUS.md)。下一经典滚动安全区与独立全屏业务背景继续，范围和真实服务/签名/手机缺口保持。
+
 2026-10-18 最终背景回归：正式入口SourceUITests-1792303322232已exit0，466.067秒、1通过/0失败/0跳过。嵌套全屏队列及独立发现关闭后的实际背景运动恢复、PCM、前后台、暂停稳定、红蓝挂起/迟到/失败回退、两页三色和明暗重启检查全部通过；过渡视频59帧/10中间色，红切换0.505秒。16次本机合成鉴权/0失败，无新stream，复用临时音频缓存。counts明确保留旧恢复封面请求并正常响应，只有本轮red/blue/missing进入屏障，按序释放；没有删除产品缓存或放宽断言。catalog/counts/summary另存ui-presentation-barrier-passed-*，附件build/presentation-barrier-passed，深色及父层恢复截图已亲看。375业务/类型通过；完整native已exit0（native-presentation-resume-final.log）；iPad正式入口1792304057941两项通过/0失败/0跳过：AM2旋转135.232秒、窗口/导航/Modal旋转39.899秒，截图已亲看，catalog/counts/summary另存ui-presentation-ipad-passed-*。本批清洁归档、正常push与对应iOS27仍待，不代替真实服务/签名/手机。
 
 ## 2026-10-18 平台登录与每日推荐参考调整（用户明确补充）
