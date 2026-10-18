@@ -70,6 +70,9 @@ const navidromeAudio=matchingAudio,navidromeDuration=120;
 const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
   if(coverThemeUI&&req.url.startsWith('/theme-fixture-control')){
+    // This endpoint observes changing in-flight requests, never cached data.
+    res.setHeader('Cache-Control','no-store');
+    counts.themeControlPolls=(counts.themeControlPolls??0)+1;
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('transition'))transitionFixture=true;
     const release=control.searchParams.get('release');
@@ -236,9 +239,14 @@ const server = createServer(async (req, res) => {
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),audio.length-1):audio.length-1;if(start>=audio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${audio.length}`);res.end(audio.subarray(start,end+1));}else res.end(audio);return;
   }
   if(method==='getCoverArt'){
-    if(coverThemeUI&&params.get('id')?.startsWith('transition-')){
+    if(coverThemeUI){counts.themeCoverIds??=[];counts.themeCoverIds.push(params.get('id'));}
+    // A simulator can restore the preceding run's current track before this
+    // test selects its new album. Only this run's identities are barriers.
+    if(coverThemeUI&&params.get('id')?.startsWith('transition-')&&params.get('id').endsWith(`-${transitionVersion}`)){
       const color=params.get('id').split('-')[1];
-      heldThemeResponses.push({color,send:()=>{counts.transitionReleases??=[];counts.transitionReleases.push(color);if(color==='missing'){res.writeHead(404);res.end();}else{res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers[color],'base64'));}}});return;
+      const held={color,send:()=>{counts.transitionReleases??=[];counts.transitionReleases.push(color);if(color==='missing'){res.writeHead(404);res.end();}else{res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers[color],'base64'));}}};
+      heldThemeResponses.push(held);
+      res.once('close',()=>{const index=heldThemeResponses.indexOf(held);if(index>=0)heldThemeResponses.splice(index,1);});return;
     }
     res.setHeader('Content-Type','image/png');res.end(Buffer.from(coverThemeUI&&params.get('u')==='fixture-theme'?themeCovers[params.get('id')]??themeCovers.red:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64'));return;
   }

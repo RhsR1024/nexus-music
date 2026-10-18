@@ -4,14 +4,16 @@ import {RingSeekGesture,ringFraction} from '../domain/ringSeek.ts';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';
+import {usePresentationVisible} from './AdaptiveModal.tsx';
 export function Vinyl({services,track,size,playing}:{services:Services;track:Track;size:number;playing:boolean}){
+  const visible=usePresentationVisible();
   const rotation=useRef(new Animated.Value(0)).current,[reduce,setReduce]=useState(true),[foreground,setForeground]=useState(AppState.currentState==='active');
   useEffect(()=>{let active=true;void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(active)setReduce(value);});const motion=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduce),app=AppState.addEventListener('change',value=>setForeground(value==='active'));return()=>{active=false;motion.remove();app.remove();};},[]);
   useEffect(()=>{let active=true,animation:Animated.CompositeAnimation|undefined;
     const turn=(value:number)=>{if(!active)return;animation=Animated.timing(rotation,{toValue:value+1,duration:22000,useNativeDriver:true,isInteraction:false});animation.start(({finished})=>{if(finished&&active)turn(value+1);});};
-    if(playing&&!reduce&&foreground)rotation.stopAnimation(turn);else rotation.stopAnimation();
+    if(playing&&visible&&!reduce&&foreground)rotation.stopAnimation(turn);else rotation.stopAnimation();
     return()=>{active=false;animation?.stop();rotation.stopAnimation();};
-  },[playing,reduce,foreground,rotation]);
+  },[playing,visible,reduce,foreground,rotation]);
   return <View accessible={false} style={{height:size+12,alignItems:'center',justifyContent:'center'}}>
     <Animated.View style={{width:size,height:size,borderRadius:size/2,backgroundColor:'#111214',borderWidth:2,borderColor:'#333638',alignItems:'center',justifyContent:'center',transform:[{rotate:rotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}>
       {Array.from({length:14},(_,i)=><View key={i} style={{position:'absolute',width:size-i*size*.035,height:size-i*size*.035,borderWidth:1,borderColor:i%2?'#252729':'#1A1C1E',borderRadius:size/2}}/>)}

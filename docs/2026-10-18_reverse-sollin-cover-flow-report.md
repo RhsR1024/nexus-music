@@ -48,3 +48,13 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testGlobalCoverTh
 原字节、scope、timeline、工作项与现场日志留本机忽略目录；公开文档只保留脱敏结论及复现引用。
 
 实施验收追加：正式入口SourceUITests-1792273286451的完整背景专项308.007秒、1通过/零失败/跳过，红蓝像素/跨页/独立偏好/重启、经典实际PCM、Home→激活、收起恢复/暂停和凭据清理通过。两张最终截图已亲看；20鉴权成功/0失败、8次本机合成stream，不计真实个人服务。359业务/类型通过；不将Animated门控标识当作隐藏层实测功耗、帧率或参考运行。清洁归档/对应云端另记。
+
+## 2026-10-18 全屏层级实施与验证边界
+
+新路由master-route-20261018-135148命中R2/mobile-reverse，既有scope/case-guard及采纳前严格review32E/31F/31P通过；E024的2358原始指令/28BL/9池加载再次独立重放。沿E024→F023→P023只采用当前呈现和活动实例的职责边界；没有把静态面积选择或计时器代码当作参考实际遮挡、帧率与功耗结果。E032配色算术的独立证据仍见[配色报告](2026-10-18_reverse-sollin-ambient-scene-report.md)。
+
+[0060](decisions/0060-presentation-background-ownership.md)将音枢旧的Player单一回调扩展为应用实例内父子呈现注册表。全屏子层关闭后恢复父层，再关闭播放器恢复根层；page/form/透明Sheet保留父层背景。图片动效、黑胶及原生场景读取同一可见边界；播放控制器和队列仍独立。375业务/类型通过，含7项父子、同级、孤儿、迟到清理、通知、Sheet和循环拒绝覆盖。实际原生快速连续开关、隐藏层能耗和参考App运行仍待。
+
+[0061](decisions/0061-background-pixel-sampling.md)另记录验证工具的两个已复现问题：旧AX图像裁剪得到透明零值，近中性点又误拒绝已含三种主色的截图。手机专项使用独立屏幕捕获和物理像素RGBA8读取，仍要求14处采样中红绿蓝全部齐全，缺色/透明不能通过。1792302794209的新请求诊断另确认上一轮恢复封面污染HTTP屏障，夹具按本轮标识隔离并清理已关闭响应；不修改产品缓存或播放行为，不把此结论推广到旧云端。失败证据均保留，完整最终App、本地归档和新iOS27终态分别追加于BUILD_STATUS，不以该报告宣称全部验收。
+
+2026-10-18 最终背景回归：正式入口SourceUITests-1792303322232已exit0，466.067秒、1通过/0失败/0跳过。嵌套全屏队列及独立发现关闭后的实际背景运动恢复、PCM、前后台、暂停稳定、红蓝挂起/迟到/失败回退、两页三色和明暗重启检查全部通过；过渡视频59帧/10中间色，红切换0.505秒。16次本机合成鉴权/0失败，无新stream，复用临时音频缓存。counts明确保留旧恢复封面请求并正常响应，只有本轮red/blue/missing进入屏障，按序释放；没有删除产品缓存或放宽断言。catalog/counts/summary另存ui-presentation-barrier-passed-*，附件build/presentation-barrier-passed，深色及父层恢复截图已亲看。375业务/类型通过；完整native已exit0（native-presentation-resume-final.log）；iPad正式入口1792304057941两项通过/0失败/0跳过：AM2旋转135.232秒、窗口/导航/Modal旋转39.899秒，截图已亲看，catalog/counts/summary另存ui-presentation-ipad-passed-*。本批清洁归档、正常push与对应iOS27仍待，不代替真实服务/签名/手机。

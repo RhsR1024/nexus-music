@@ -1,3 +1,11 @@
+## 2026-10-18 平台登录与每日推荐参考调整（用户明确补充）
+
+QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；先已有UI/交互、后新增功能顺序不变。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](Q_MUSIC_ANDROID_REFERENCE.md)。
+
+## 2026-10-18 全屏呈现与背景拥有关系
+
+[0060](decisions/0060-presentation-background-ownership.md)按E024限定路由/活动证据继续0052。重新核对五固定HEAD并亲读：悦音局部active清理、Q/wtf图片children分层、Cy URI/active与LRU、自有Wayferar home图层/前景；没有现成层级拥有算法，音枢原创实例内注册表和Context。保留根MIT/README、Q/wtf Apache2及文件MetaMIT、Cy Apache2/RNTP独立许可、自有/反编译/第三方边界；未复制代码/资源/依赖/补丁。TS状态可共享，Android Modal关闭回调和原生动画需独立适配。375业务/类型通过，App呈现恢复/完整回归待实际结果，不宣称能耗或参考运行。
+
 ## 2026-10-18 HSL/双色配色采纳前比较
 
 亲读五固定HEAD：悦音d6f1af7的theme.ts9–33只提供模式缓存/延时保存；Q547ccfe与wtf6624ab5的ImageBackground.tsx52–104提供图片/内容分层与旧RN尺寸修补；Cybf0d469的usePlayerBackground.tsx20–122提供iOS background而非primary、相对亮度上限、URI/active拒绝迟到及50LRU；自有Wayferar8e47cdc的HomeCardTheme.java44–87区分home图层恢复和文字/控制前景。均没有本批HSL/双色/主题覆盖算法，不以这些参考替代Sollin门禁后E026/E027/E028/E030/E032证据。
@@ -94,7 +102,7 @@ reverse-skill mobile-reverse E-011→F-010→P-010严格review通过（11E/10F/1
 
 ## 通用后端能力的 Sollin 对齐边界（2026-10-17）
 
-参考 Sollin 时比较的不只是 UI：凡属于通用音乐产品的请求、鉴权、队列、下载、缓存、完整性、后台调度和状态恢复逻辑，都要先记录 IPA/APK 的静态或动态证据，再在音枢现有 provider、播放器和数据安全边界内原创实现。登录、推荐/FM、识曲和离线下载属于此类能力；不得以一次接口成功或一个按钮存在代替逻辑证据。
+参考 Sollin 时比较的不只是 UI：凡属于通用音乐产品的请求、鉴权、队列、下载、缓存、完整性、后台调度和状态恢复逻辑，都要先记录 IPA/APK 的静态或动态证据，再在音枢现有 provider、播放器和数据安全边界内原创实现。三平台登录/每日推荐已按2026-10-18用户指令改用Q-music安卓源码，不再依赖Sollin后端逆向；其他推荐/FM、识曲和离线下载中依赖Sollin结论的部分仍属于此类能力；不得以一次接口成功或一个按钮存在代替逻辑证据。
 
 逆向分析统一走项目安装的 `reverse-skill-router`，执行平台 PRIMARY、`case-init`/`case-guard`、工具索引检查和功能工作项严格 review；未形成当前功能的 Evidence→Finding→Path 时，不得把 Sollin 结论用于实现或进度宣告。Sollin 自有账号体系、用户中心、服务支持、激活/赞助及商业权益仍是排除项。
 

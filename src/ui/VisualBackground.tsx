@@ -3,15 +3,17 @@ import {AccessibilityInfo,Animated,AppState,Image,StyleSheet,View,type ViewProps
 import {requireNativeView} from 'expo';
 import type {Services} from '../app/services.ts';
 import type {VisualAsset} from '../storage/visualAssets.ts';
+import {usePresentationVisible} from './AdaptiveModal.tsx';
 export function useVisualImage(services:Services|undefined,image:VisualAsset|null|undefined){
   const [resolved,setResolved]=useState<{id:string;uri:string}>();
   useEffect(()=>{let valid=true;setResolved(undefined);if(services&&image)void services.visualAssets.resolve(image).then(uri=>{if(valid&&uri)setResolved({id:image.id,uri});});return()=>{valid=false;};},[services,image?.id]);
   return resolved?.id===image?.id?resolved?.uri:undefined;
 }
 function useMotionGate(moving:boolean){
+  const visible=usePresentationVisible();
   const [reduce,setReduce]=useState(true),[active,setActive]=useState(AppState.currentState==='active');
   useEffect(()=>{let valid=true;void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(valid)setReduce(value);});const motion=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduce),app=AppState.addEventListener('change',state=>setActive(state==='active'));return()=>{valid=false;motion.remove();app.remove();};},[]);
-  return moving&&!reduce&&active;
+  return moving&&visible&&!reduce&&active;
 }
 const NativeAmbient=requireNativeView<ViewProps&{colors:readonly string[];identity:string;moving:boolean;pending:boolean;dark:boolean}>('NexusNative','Ambient');
 export function AmbientSoftLights({colors,identity,moving,pending,dark}:{colors:readonly string[];identity:string;moving:boolean;pending:boolean;dark:boolean}){

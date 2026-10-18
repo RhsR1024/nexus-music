@@ -8,9 +8,11 @@ import {AccessibilityInfo,Image,StyleSheet,View,type StyleProp,type ViewStyle,ty
 import {requireNativeView} from 'expo';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useTheme} from './theme.tsx';
+import {usePresentationVisible} from './AdaptiveModal.tsx';
 const NativeMaterial=requireNativeView<ViewProps&{dark:boolean}>('NexusNative');
 const noSubscribe=()=>()=>{},noCover:CoverTheme={},noCoverSnapshot=()=>noCover;
 export function AmbientBackground({services,visible=true}:{services?:Services;visible?:boolean}){
+  const presented=usePresentationVisible(),shown=visible&&presented;
   const theme=useTheme(),assets=useVisualAssets(services),uri=useVisualImage(services,assets.background);
   const cover=useSyncExternalStore(services?.coverTheme.subscribe??noSubscribe,services?.coverTheme.getSnapshot??noCoverSnapshot);
   const [moving,setMoving]=useState(false);
@@ -18,12 +20,12 @@ export function AmbientBackground({services,visible=true}:{services?:Services;vi
     if(!services)return;
     const update=()=>{
       const state=services.playback.controller.getSnapshot();
-      const next=visible&&theme.appearance.globalBackgroundMotion&&state.phase==='ready'&&state.intent==='playing'&&!state.buffering;
+      const next=shown&&theme.appearance.globalBackgroundMotion&&state.phase==='ready'&&state.intent==='playing'&&!state.buffering;
       setMoving(previous=>previous===next?previous:next);
     };
     update();
     return services.playback.controller.subscribe(update);
-  },[services,visible,theme.appearance.globalBackgroundMotion]);
+  },[services,shown,theme.appearance.globalBackgroundMotion]);
   const flowColors=theme.appearance.globalBackgroundMotion?cover.flowPalette:undefined;
   const fallback=flowColors?flowThemeGradient(flowColors,theme.mode):theme.palette.background;
   const hasCover=!!((theme.appearance.globalBackgroundMotion&&cover.uri)||(theme.appearance.coverColor&&cover.color));
@@ -32,8 +34,8 @@ export function AmbientBackground({services,visible=true}:{services?:Services;vi
     :theme.appearance.backgroundStyle==='gradient'?<LinearGradient colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>:null;
   return <View testID={hasCover?'ambient-cover-background':undefined} pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}>
     {base}
-    {visible&&hasCover&&cover.uri&&!flowColors&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
-    {visible&&theme.appearance.globalBackgroundMotion&&<View testID={flowColors?'ambient-three-color':undefined} pointerEvents="none" style={StyleSheet.absoluteFill}><AmbientSoftLights colors={flowColors??[]} identity={cover.uri??''} moving={moving} pending={!!cover.pending} dark={theme.mode==='dark'}/></View>}
+    {shown&&hasCover&&cover.uri&&!flowColors&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
+    {shown&&theme.appearance.globalBackgroundMotion&&<View testID={flowColors?'ambient-three-color':undefined} pointerEvents="none" style={StyleSheet.absoluteFill}><AmbientSoftLights colors={flowColors??[]} identity={cover.uri??''} moving={moving} pending={!!cover.pending} dark={theme.mode==='dark'}/></View>}
   </View>;
 }
 export function GlassSurface({children,style}:PropsWithChildren<{style?:StyleProp<ViewStyle>}>){

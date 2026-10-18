@@ -1,3 +1,47 @@
+## 2026-10-18T14:19 背景呈现批次本地验收完成，待清洁归档与push
+
+正式背景SourceUITests-1792303322232：466.067秒、1通过/0失败/0跳过；嵌套全屏队列及独立发现关闭后实际运动恢复、PCM/Home/暂停稳定、封面异步/迟到/失败、两页三色与明暗重启通过。视频59帧/10中间色，红切换0.505秒；16次合成鉴权/0失败，无新stream、复用缓存。日志/counts/summary另存ui-presentation-barrier-passed-*，附件build/presentation-barrier-passed，深色及父层恢复截图已亲看。
+
+375业务/类型与最终完整native通过；iPad1792304057941两项通过/零失败/跳过：AM2旋转135.232秒，窗口/导航/Modal旋转39.899秒，截图已亲看。日志/counts/summary另存ui-presentation-ipad-passed-*，附件build/presentation-ipad-passed。当前没有活跃Xcode测试。reverse-skill新R2路由135148、scope/IPA门禁、E024独立原字节重放及严格review32E/31F/31P通过，案例workitems/timeline/现场日志和公开0060/0061已同步；380个文档相对链接及diff检查通过。
+
+1792302794209旧失败保留：lastHeldRed=2，新id诊断确认旧轮恢复封面污染夹具屏障；只修本轮身份/response close清理，最终按原断言通过。1792302119491中断缺Info.plist、无终态，不计通过。0059实际overlay推断修正与独立小日志上传同批，云端仍待对应新运行验证。HEAD/origin目前8cf108d，接下来审查暂存→阶段提交→清洁unsigned归档/CRC/SHA/正式入口隐私排除→正常push→核对新云端至多1运行/1排队。无真实服务/签名/手机新证据；全部A/F/J保持，下一经典长滚动安全区、各独立全屏背景及其余功能继续。
+
+## 2026-10-18 Q-music安卓参考调整提交回执
+
+用户指定三平台登录/每日推荐及评论后端参考Q-music android；评论UI仍按Sollin IPA优先/截图补充与reverse-skill。固定源码5db858f32695d10c5e9ef0f7037d586aef6a8c4b已克隆并核对干净HEAD，Apache2/NOTICE与酷狗MIT来源已读，未复制产品代码/资源/依赖。新接入记录、PRODUCT_SCOPE及J矩阵已按文档批次提交8cf108d71886568b6c120aad59254a0d795d31d3，正常push并实核origin/main一致；其余计划/交接补充与背景产品批次仍在工作区。相关文档相对链接通过。
+
+参考源码离线mock入口20项中19通过/1失败：登录路由与18账号检查通过，daily入口因上游verify-account-playlists测试桩缺./qqCredentials而加载失败；未改参考，不计真实账号/日推成功。源码路径、iOS适配、评论五源与验收边界见Q_MUSIC_ANDROID_REFERENCE。当前375业务/类型检查通过（check-presentation-reference-final.log）。push后GitHub API核对0运行/0排队，最新仍为dfd304b原生测试失败；文档提交不触发iOS构建，没有新增云端成功或提高完成度。
+
+## 2026-10-18 背景采样复测与跨页面回归检查点
+
+最终采样复测 `1792301048820` / PID91772已终态exit65，366.600秒0通过/1失败；失败位于1251行heldRed的30秒实际HTTP挂起观察，尚未执行后续三色断言。catalog/counts/summary另存`ui-presentation-sampling-failed-*`，附件`build/presentation-sampling-failed`与录屏333/336秒独立帧已亲看：点击已切到transition red tone，不能将失败归咎于未点中。仅3次getCoverArt、15次合成鉴权/0失败、无新stream；现有计数未记录封面id，不足以断言缓存或原生队列首因。合成控制接口增加no-store及调用/封面id诊断，不改变产品或放宽断言。此前99551的失败记录继续保留，像素修正仍未获最终整项通过。
+
+跨页面回归正在session90935/PID93406运行，结果包`build/SourceUITests-1792301687706.xcresult`，日志`build/logs/ui-presentation-cross-page.log`和实时`ui-catalog.log`。先核实实际live/终态再继续，不重复启动Xcode、不覆盖现有证据。本批最终背景/iPad/清洁归档/提交push及对应iOS27仍待，全部A/F/J目标保持。
+
+## 2026-10-18 平台登录与每日推荐参考调整（用户明确补充）
+
+QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；先已有UI/交互、后新增功能顺序不变。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](docs/Q_MUSIC_ANDROID_REFERENCE.md)。
+
+## 2026-10-18 最终背景失败取证与采样修正（下一轮待验）
+
+session99551/PID90227已终态exit65，不能继续当live；1792300131198在深色重启后暂停的三色断言失败，392.492秒。完整日志/counts/summary另存ui-presentation-final-failed-*，附件build/presentation-final-failed已导出、失败截图已亲看。记录的14组RGBA全零与实际三色不透明PNG不符；独立Pillow/CoreGraphics读取确认实际alpha255/红绿蓝。同时证实旧Set精确相等把一个近中性−1点当额外颜色，误拒绝已含三色的截图。
+
+按[0061](docs/decisions/0061-background-pixel-sampling.md)改用独立屏幕捕获、物理像素裁切/sRGB RGBA8及“三种有效色必须齐全”的原要求，保留14位置/2与6色差/20秒及全部音频/异步/重启断言。只属于UITest的BackgroundPixels.swift及原生像素单测已接入维护工程/脚本；6确切像素、非法坐标/中性过渡/缺每一种颜色/透明拒绝及实际失败PNG均独立通过，目标归属已核验无生产引用。产品场景和0060可见拥有关系不变；不将本机原因直接推广到旧云端557999a，下一完整App/跨页面/iPad/归档/提交push仍待。
+
+## 2026-10-18T13:12:50+08:00 持续目标当前执行检查点（未提交，勿重复启动UI）
+
+当前f7ccab0之上有本批0060/正确overlay修正/小日志上传的未提交改动。375业务/类型通过；完整native-presentation-ownership-full.log已exit0，包含正确显式CGFloat覆盖层与全部原生套件。初轮App1792299470328两项全通过、零失败/跳过：扩展背景459.205秒（实际嵌套队列/独立发现关闭恢复运动及原PCM/异步/明暗/重启），设置草稿111.019秒；62视频帧/9中间色、15合成鉴权/0失败、无新stream。日志/counts/summary已保存ui-presentation-first-*，附件build/presentation-first，队列关闭后的截图已亲看；未声称此轮包含随后一行重开重新登记及RGBA失败文字调整。
+
+**最终生产入口背景回归正在session99551/PID90227运行，结果包build/SourceUITests-1792300131198.xcresult、汇总build/logs/ui-presentation-final-background.log、实时ui-catalog.log；已用ps确认真实live。** 下轮先复查该handle或PID，不因观察超时重开。没有其他活跃本地构建；旧UI86379/native38651均已exit0。当前手机BD3F486B-04DE-4BA7-9E58-64F10166B39D booted，iPad50499F11-A62A-4A97-B47F-5C6549190766 shutdown。终态后先另存ui-catalog/counts/summary，再做跨平台歌词/发现操作及iPad窗口/AM2旋转相关回归；本批最终App/清洁归档/提交push/新iOS27仍待，不覆盖日志或同时启动Xcode。
+
+逆向新R2路由master-route-20261018-124839、E024原字节重放与采纳前review保持；当前case strict review32E/31F/31P、10WI/69事件零错误/警告。39098201855/dfd304b旧云端已失败，实际overlay推断表达式已更正，不能称首轮中心像素拆分修复首因。此次后续提交再验证云端，仍single/保留运行中、不重派旧版。全部F/J目标active；下一已有UI缺口明确为经典ScrollView滚动内容进入状态栏（见SOLLIN_UI_ALIGNMENT新证据），及独立发现等全屏业务自身背景样式，尚未记完整A04/A09。
+
+## 2026-10-18 全屏业务层背景拥有关系（验收中）
+
+按[0060](docs/decisions/0060-presentation-background-ownership.md)，reverse-skill新R2路由、既有离线scope、E024独立2358原始指令/28BL/9池加载及采纳前严格review通过，五固定参考已亲读。原创实例内层级注册表/Context接入全屏Modal、全局原生背景、图片动效与黑胶；page/form/透明Sheet不抢父背景，iOS等实际onDismiss释放，保留唯一播放意图。375业务/类型（含7项层级/竞争/清理）通过；原版背景基线1792298919988为422.277秒1/0/0、65视频帧/10中间色、15合成鉴权/0失败且无新stream，明暗截图已亲看。新版含嵌套队列/独立发现关闭恢复的背景与设置回归仍运行，不能提前记本批App完成。
+
+39098201855/dfd304b已在原生测试再次失败。完整官方源码上下文定位实际是overlay alpha的CGFloat/zip推断；前次仅按行号误改中心像素，没有修到首因，历史失败保留。现按[0059](docs/decisions/0059-swift-color-oracle-inference.md)显式CGFloat逐项验证，原alpha/明暗/阈值与32向量保持，本地原生场景专项通过，新云端待提交；未执行该失败批次App/归档。独立小日志artifact新增但保留完整诊断/全部测试和single队列，实际下载待新CI。旧三色云端失败仍未完整取证，不放宽断言；新增失败RGBA数值诊断。全部A/F/J与真实服务/签名/真机目标继续。
+
 ## 2026-10-18 当前总工作量表与编译修正回执
 
 用户询问的总工作量已按[进度表](docs/PROGRESS_ESTIMATE.md)核对：保守开发约81%/剩余约19%，完整交付约58%。14工作包新增剩余总量百分点与执行顺序，保留原权重/评分，合计100/80.65/19.35/57.93已复算；[功能状态表](docs/FEATURE_STATUS.md)当前总览已更新为八布局、原生背景、启动/前台恢复及最新云端边界，移除当前表中“无完整Xcode”等过时说明。未因测试数/提交数自动上调进度，全部F01–F37/J01–J59继续。

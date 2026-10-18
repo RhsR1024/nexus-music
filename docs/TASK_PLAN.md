@@ -1,3 +1,15 @@
+2026-10-18 最终背景回归：正式入口SourceUITests-1792303322232已exit0，466.067秒、1通过/0失败/0跳过。嵌套全屏队列及独立发现关闭后的实际背景运动恢复、PCM、前后台、暂停稳定、红蓝挂起/迟到/失败回退、两页三色和明暗重启检查全部通过；过渡视频59帧/10中间色，红切换0.505秒。16次本机合成鉴权/0失败，无新stream，复用临时音频缓存。counts明确保留旧恢复封面请求并正常响应，只有本轮red/blue/missing进入屏障，按序释放；没有删除产品缓存或放宽断言。catalog/counts/summary另存ui-presentation-barrier-passed-*，附件build/presentation-barrier-passed，深色及父层恢复截图已亲看。375业务/类型通过；完整native已exit0（native-presentation-resume-final.log）；iPad正式入口1792304057941两项通过/0失败/0跳过：AM2旋转135.232秒、窗口/导航/Modal旋转39.899秒，截图已亲看，catalog/counts/summary另存ui-presentation-ipad-passed-*。本批清洁归档、正常push与对应iOS27仍待，不代替真实服务/签名/手机。
+
+## 2026-10-18 平台登录与每日推荐参考调整（用户明确补充）
+
+QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；先已有UI/交互、后新增功能顺序不变。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](Q_MUSIC_ANDROID_REFERENCE.md)。
+
+## 2026-10-18 全屏业务层背景拥有关系（验收中）
+
+按[0060](decisions/0060-presentation-background-ownership.md)，reverse-skill新R2路由、既有离线scope、E024独立2358原始指令/28BL/9池加载及采纳前严格review通过，五固定参考已亲读。原创实例内层级注册表/Context接入全屏Modal、全局原生背景、图片动效与黑胶；page/form/透明Sheet不抢父背景，iOS等实际onDismiss释放，保留唯一播放意图。375业务/类型（含7项层级/竞争/清理）通过；原版背景基线1792298919988为422.277秒1/0/0、65视频帧/10中间色、15合成鉴权/0失败且无新stream，明暗截图已亲看。新版含嵌套队列/独立发现关闭恢复的背景与设置回归仍运行，不能提前记本批App完成。
+
+39098201855/dfd304b已在原生测试再次失败。完整官方源码上下文定位实际是overlay alpha的CGFloat/zip推断；前次仅按行号误改中心像素，没有修到首因，历史失败保留。现按[0059](decisions/0059-swift-color-oracle-inference.md)显式CGFloat逐项验证，原alpha/明暗/阈值与32向量保持，本地原生场景专项通过，新云端待提交；未执行该失败批次App/归档。独立小日志artifact新增但保留完整诊断/全部测试和single队列，实际下载待新CI。旧三色云端失败仍未完整取证，不放宽断言；新增失败RGBA数值诊断。全部A/F/J与真实服务/签名/真机目标继续。
+
 ## 2026-10-18 当前总工作量表与编译修正回执
 
 用户询问的总工作量已按[进度表](PROGRESS_ESTIMATE.md)核对：保守开发约81%/剩余约19%，完整交付约58%。14工作包新增剩余总量百分点与执行顺序，保留原权重/评分，合计100/80.65/19.35/57.93已复算；[功能状态表](FEATURE_STATUS.md)当前总览已更新为八布局、原生背景、启动/前台恢复及最新云端边界，移除当前表中“无完整Xcode”等过时说明。未因测试数/提交数自动上调进度，全部F01–F37/J01–J59继续。

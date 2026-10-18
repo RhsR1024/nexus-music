@@ -106,8 +106,13 @@ import CoreGraphics
     precondition(abs(two.base[1].blue - 0.9341176470588235) < 1e-12 && abs(two.base[1].red - 0.8101960784313725) < 1e-12, "Second stop comes from index1; third color remains a light")
     for dark in [true, false] {
       let overlay = AmbientScene.overlay(dark: dark)
-      precondition(zip(overlay.map(\.alpha), dark ? [4.0 / 255, 24.0 / 255] : [18.0 / 255, 48.0 / 255]).allSatisfy { abs($0 - $1) < 1e-12 })
-      precondition(overlay.allSatisfy { abs($0.components![0] - (dark ? 0 : 1)) < 1e-12 })
+      let expectedAlpha: [CGFloat] = dark ? [4.0 / 255.0, 24.0 / 255.0] : [18.0 / 255.0, 48.0 / 255.0]
+      let expectedComponent: CGFloat = dark ? 0 : 1
+      precondition(overlay.count == expectedAlpha.count)
+      for (index, color) in overlay.enumerated() {
+        precondition(abs(color.alpha - expectedAlpha[index]) < 1e-12)
+        precondition(abs(color.components![0] - expectedComponent) < 1e-12)
+      }
     }
     let oracle = [0.6423800803434274,0.7996776565954771,0.7328928612880675,0.5038841947976348,0.5370979384379907,0.15002840077248558,0.746054916324208,0.19892449669909162,0.7358964947715063,0.6261406109570188,0.7229430716217585,0.21253528162167445,0.6478638577634781,0.9753633612231072,0.15923753158162623,0.7660382389049191,0.5522403967356488,0.49906547263420753,0.8212380075226587,0.18974153784060588,0.14303750933699588,0.8536244501538214,0.648370361401777,0.6419638026987944,0.7556728062904924,0.17075917564416732,0.7916080401322311,0.20964516342084472,0.9419019599461145,0.9385626596645583,0.38139896476549684,0.6780317380183377]
     let seeded = AmbientScene(colors: ["#ff0000", "#00ff00", "#0000ff"], identity: "A")!

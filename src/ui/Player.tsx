@@ -31,7 +31,7 @@ function Spectrum({ services }: { services: Services }) {
     <Text style={styles.caption}>{playback.intent==='paused'?'频谱已暂停':state.supported ? '实时音频频谱' : '等待可处理的PCM；此媒体尚未提供频谱/EQ处理能力。'}</Text>
   </View>;
 }
-export function Player({ services,onVisibilityChange }: { services: Services;onVisibilityChange?:(visible:boolean)=>void }) {
+export function Player({ services }: { services: Services }) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const {width,height}=useWindowDimensions(),landscape=width>height;
   const { controller } = services.playback;
@@ -53,8 +53,6 @@ export function Player({ services,onVisibilityChange }: { services: Services;onV
     if(Math.abs(dy)>36&&Math.abs(dy)>Math.abs(dx)*1.2&&((direction==='up'&&dy<0)||(direction==='down'&&dy>0)))action();
   };
   const entry = currentEntry(state.queue);
-  const presented=open&&!!entry;
-  useEffect(()=>{onVisibilityChange?.(presented);return()=>onVisibilityChange?.(false);},[presented,onVisibilityChange]);
   if (!entry) return null;
   const match=entry.track.origin.kind==='imported'||entry.track.origin.kind==='online'?services.library.matchFor(entry.track):undefined;
   const actualMatch=state.media?.matchedTrack,lyricTrack=actualMatch??(entry.track.origin.kind==='imported'?match?.target:match?.method==='manual'&&!state.media?match.target:undefined)??entry.track;
