@@ -33,8 +33,7 @@ export class MusicAuthFlow<T> {
         if(event.type==='success'){this.publish({status:'succeeded',generation});resolve(event.value);return;}
         if(event.type==='cancel'){this.publish({status:'cancelled',generation});reject(new MusicAuthError('cancelled','授权已取消'));return;}
         if(event.type==='expired'){this.publish({status:'expired',generation});reject(new MusicAuthError('expired','授权已过期'));return;}
-        const message=event.error instanceof Error?event.error.message:'授权失败';
-        this.publish({status:'failed',generation,error:message});reject(new MusicAuthError('failed','授权失败'));
+        this.publish({status:'failed',generation,error:'授权失败，请重试'});reject(new MusicAuthError('failed','授权失败'));
       };
       try{
         const stop=launch(finish);

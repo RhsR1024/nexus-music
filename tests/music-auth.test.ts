@@ -24,7 +24,7 @@ test('a new attempt invalidates callbacks from the previous generation',async()=
 test('expiry and launcher failure expose bounded user-facing states',async()=>{
   const flow=new MusicAuthFlow<string>();let emit:(event:any)=>void=()=>{};
   const expired=flow.start(callback=>{emit=callback;return()=>{}});emit({type:'expired'});await assert.rejects(expired,(error)=>error instanceof MusicAuthError&&error.kind==='expired');
-  const failed=flow.start(()=>{throw new Error('private protocol detail')});await assert.rejects(failed,(error)=>error instanceof MusicAuthError&&error.kind==='failed');assert.equal(flow.getSnapshot().error,'private protocol detail');
+  const failed=flow.start(()=>{throw new Error('private protocol detail')});await assert.rejects(failed,(error)=>error instanceof MusicAuthError&&error.kind==='failed');assert.equal(flow.getSnapshot().error,'授权失败，请重试');assert.doesNotMatch(JSON.stringify(flow.getSnapshot()),/private protocol/);
 });
 
 test('cleanup errors never leave an authorization promise pending',async()=>{

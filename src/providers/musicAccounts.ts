@@ -25,6 +25,7 @@ const validAccount=(value:unknown):value is MusicAccount=>{
     Number.isSafeInteger(item.updatedAt)&&Number(item.updatedAt)>=0;
 };
 const safeSession=(value:unknown):value is MusicSession=>!!value&&typeof value==='object'&&!Array.isArray(value);
+const accountFields=(item:MusicAccount):MusicAccount=>({id:item.id,platform:item.platform,label:item.label,username:item.username,capabilities:[...item.capabilities],updatedAt:item.updatedAt});
 
 /** Account metadata is recoverable; session material is always kept in the platform keychain entry. */
 export class MusicAccounts {
@@ -41,14 +42,14 @@ export class MusicAccounts {
   private mutate<T>(run:()=>Promise<T>){const next=this.tail.then(run);this.tail=next.catch(()=>{});return next;}
   async restore(){
     const saved=await this.repository.get<unknown>('music.accounts.v1')??[];
-    if(!Array.isArray(saved)||saved.some(item=>!validAccount(item)))throw new InvalidRecordError();
-    this.publish(saved);
+    if(!Array.isArray(saved)||saved.some(item=>!validAccount(item))||new Set(saved.map(item=>item.id)).size!==saved.length)throw new InvalidRecordError();
+    this.publish(saved.map(accountFields));
   }
   async save(account:Omit<MusicAccount,'id'|'updatedAt'>,session:MusicSession){
     return this.mutate(async()=>{
       if(!platforms.has(account.platform)||!account.label.trim()||!account.username.trim()||!safeSession(session))throw new Error('平台账号资料无效');
       const now=Date.now(),id=await this.hash(JSON.stringify([account.platform,account.username.trim()]));
-      const record:MusicAccount={...account,id,label:account.label.trim(),username:account.username.trim(),updatedAt:now};
+      const record:MusicAccount={id,platform:account.platform,label:account.label.trim(),username:account.username.trim(),capabilities:[...account.capabilities],updatedAt:now};
       if(!validAccount(record))throw new Error('平台账号资料无效');
       const key=`nexus.music.${record.id}`,old=await this.secrets.get(key),next=[...this.value.filter(item=>item.id!==id),record];
       await this.secrets.set(key,JSON.stringify(session));
@@ -57,8 +58,9 @@ export class MusicAccounts {
     });
   }
   async session(id:string):Promise<MusicSession>{
-    if(!this.value.some(item=>item.id===id))throw new Error('平台账号不存在');
+    const account=this.value.find(item=>item.id===id);if(!account)throw new Error('平台账号不存在');
     const raw=await this.secrets.get(`nexus.music.${id}`);if(!raw)throw new Error('平台会话已失效，请重新登录');
+    if(!this.value.includes(account))throw new Error('平台账号已更改，请重试');
     let parsed:unknown;try{parsed=JSON.parse(raw);}catch{throw new Error('平台会话不可用');}
     if(!safeSession(parsed))throw new Error('平台会话不可用');return parsed;
   }
