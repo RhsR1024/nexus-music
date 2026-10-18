@@ -128,6 +128,24 @@ import CoreGraphics
     precondition(abs(seeded.angle(at: seeded.period/4)-seeded.phase-Double.pi/2)<1e-12)
     precondition(seeded.angle(at: .nan) == seeded.phase)
     precondition(AmbientScene(colors:["#ff0000","#00ff00","#0000ff"],identity:"")!.direction == -1)
+    // Independent geometry counterexample: a three-color scene need not show
+    // three dominant hues at fourteen fixed margins in its stopped pose.
+    let counterexample = AmbientScene(colors: ["#ff0000", "#0000ff", "#00ff00"], identity: "geometry-57", dark: true)!
+    let screen = CGSize(width: 430, height: 932), angle = counterexample.angle(at: 0)
+    precondition(abs(angle - 1.4213604993442501) < 1e-12)
+    let thirdRect = counterexample.rect(counterexample.fields[2], size: screen, time: 0)
+    var radii: [Double] = []
+    for step in 2...8 { for x: Double in [6, 424] {
+      let dx = x - 215, dy = 932 * Double(step) / 10 - 466
+      let localX = (cos(angle) * dx + sin(angle) * dy) / 1.12 + 215
+      let localY = (-sin(angle) * dx + cos(angle) * dy) / 1.12 + 466
+      let rx = (localX - Double(thirdRect.midX)) / (Double(thirdRect.width) / 2)
+      let ry = (localY - Double(thirdRect.midY)) / (Double(thirdRect.height) / 2)
+      radii.append(hypot(rx, ry))
+    } }
+    let independentRadii = [1.3074,2.4284,1.2211,2.3695,1.1492,2.3195,1.0945,2.2789,1.0597,2.2482,1.0468,2.2278,1.0566,2.2180]
+    precondition(zip(radii, independentRadii).allSatisfy { abs($0 - $1) < 0.00006 })
+    precondition(radii.allSatisfy { $0 > 1 }, "The third light is transparent at every fixed margin for this legitimate stopped scene")
     for invalid in ["private/path", "#123", "#+12345", "#12345g", "#１２３４５６"] { precondition(AmbientScene.softLight(invalid) == nil) }
     let red = AmbientScene.softLight("#FF0000")!
     precondition(red.width == 144 && red.height == 144)

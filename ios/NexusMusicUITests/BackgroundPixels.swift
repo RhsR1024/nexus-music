@@ -1,9 +1,14 @@
 import Foundation
 import CoreGraphics
+import ImageIO
 
 // Test-only sampling in an explicit sRGB/RGBA8 buffer. The caller supplies
 // physical screenshot pixels, independent of an application's AX frame.
 enum BackgroundPixels {
+  static func decode(_ data: Data) -> CGImage? {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+    return CGImageSourceCreateImageAtIndex(source, 0, nil)
+  }
   static func rgba(_ image: CGImage, at point: CGPoint) -> [UInt8] {
     guard point.x.isFinite, point.y.isFinite, point.x >= 0, point.y >= 0,
       point.x < CGFloat(image.width), point.y < CGFloat(image.height),

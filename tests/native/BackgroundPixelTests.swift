@@ -16,6 +16,17 @@ import ImageIO
     for point in [CGPoint(x:-1,y:0), CGPoint(x:3,y:0), CGPoint(x:0,y:2), CGPoint(x:Double.nan,y:0), CGPoint(x:0,y:Double.infinity)] {
       precondition(BackgroundPixels.rgba(image, at: point).isEmpty)
     }
+    let encoded = NSMutableData()
+    let destination = CGImageDestinationCreateWithData(encoded, "public.png" as CFString, 1, nil)!
+    CGImageDestinationAddImage(destination, image, nil)
+    precondition(CGImageDestinationFinalize(destination))
+    let decoded = BackgroundPixels.decode(encoded as Data)!
+    precondition(decoded.width == 3 && decoded.height == 2)
+    for y in 0..<2 { for x in 0..<3 {
+      precondition(BackgroundPixels.rgba(decoded, at: CGPoint(x: x, y: y)) == BackgroundPixels.rgba(image, at: CGPoint(x: x, y: y)))
+    } }
+    precondition(BackgroundPixels.decode(Data()) == nil)
+    precondition(BackgroundPixels.decode(Data("not an image".utf8)) == nil)
     // Independent values read from the actual failed PNG: all three hues are
     // present; one near-neutral transition must not invalidate those colors.
     let red: [UInt8] = [60,23,42,255], green: [UInt8] = [44,58,49,255], blue: [UInt8] = [31,19,67,255]
@@ -36,6 +47,6 @@ import ImageIO
       precondition(BackgroundPixels.hasPrimaryHues(samples))
       print("Actual failed PNG RGBA: \(samples)")
     }
-    print("PASS screenshot sampling: explicit RGBA8,six exact pixels,finite bounds,three required hues,neutral transitions,each missing hue and transparent rejection")
+    print("PASS screenshot sampling: PNG decode,six exact roundtrip pixels,invalid data rejection,explicit RGBA8,finite bounds,three required hues,neutral transitions,each missing hue and transparent rejection")
   }
 }

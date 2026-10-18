@@ -1,3 +1,13 @@
+## 2026-10-18 背景暂停基线最终本地通过
+
+[0065](decisions/0065-paused-background-pixel-baseline.md)最终完整专项1792320461405：467.221秒、1通过/0失败/0跳过。保留原PCM/活动恢复/异步挂起与迟到/失败回退/播放态三色；深色暂停重启14点RGBA与原基线完全相同，恢复浅色与浅色暂停基线相同，明暗差/暂停稳定/独立开关/实际移除成功后mini清理通过。16次合成鉴权/0失败、无新stream（复用缓存），视频59帧/7中间色，红阈值0.528333秒，不计FPS/功耗或真实服务。日志/summary/counts留ui-background-baseline-passed-*；四张关键PNG与独立Pillow14点opaque精确比较收据留build/background-baseline-passed，深浅截图已亲看；重复完整导出在finally删除。480.111秒的首轮最后清理失败仍保留，不改写为通过。
+
+387业务/类型、PNG往返/坏数据及几何native专项通过；独立失败导出成功/出错均删除自己的临时目录，原结果保留。34E/33F/33P严格review通过，下一黑胶控制器静态报告已补齐，标志/参数/手势与产品采纳仍待。本批尚待清洁归档、正常push及对应新iOS27，全部其余A/F/J和真实服务/签名/真机缺口保持。
+
+## 2026-10-18 暂停背景验收规则核查（实施中）
+
+新R2路由master-route-20261018-182947、既有IPA离线scope/strict review及E032862原始指令/20向量重放通过。按[0065](decisions/0065-paused-background-pixel-baseline.md)，独立几何反例证明双色基底/局部第三柔光不保证静止14个边缘点均有三主色；原失败截图不改写。生产背景/播放未改，测试保留当前夹具播放时原三色门槛，静止重启改为同14点opaque实际暂停基线的完全像素恢复，并直接PNG解码，防止空采样假稳定。387业务/类型、PNG往返/坏数据及新几何native通过；完整App正在串行复验，提交/归档/对应云端仍待。当前云端仍39115107158运行/39119277363排队。临时导出finally清理已实际核验，原始结果与必要证据保留；所有F/J和真实服务/签名/真机缺口继续。
+
 ## 2026-10-18 评论/图标及清理规则：清洁归档与push回执
 
 产品/诊断056459c及规则/回执8aefb2399744ba8977140e7ed80a0fe05918c2bb已正常push到RhsR1024/nexus-music，ls-remote确认main一致。8aefb23清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]；79条目ZIP CRC、附带SHA、包内可执行/JS与原归档字节、正式入口及私人/签名资源排除通过。IPA SHA256 `3d96654726ccef96b01e81c4115674e88d87e38604556ff3e08a00ad873fcaff`，收据与包留build/local-comments-icon-8aefb23，日志archive-comments-icon-resume-clean.log。

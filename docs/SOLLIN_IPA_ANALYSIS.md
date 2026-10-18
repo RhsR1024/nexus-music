@@ -1,3 +1,7 @@
+## 2026-10-18 黑胶双控制器有限静态边界
+
+E034→F033→P033按新R2路由及既有offline scope，独立核1544原始指令/138BL/114池引用；34E/33F/33P strict review通过。确认两动画控制器构造/释放、init/update到sync，以及repeat/stop/value与forward/reverse有限调用边；标志位、有效时长/转速、几何、连续手势和参考运行仍待。尚未采纳新产品行为，见[报告](2026-10-18_reverse-sollin-vinyl-motion-report.md)。背景暂停基线修正是音枢自有验收规则，见[0065](decisions/0065-paused-background-pixel-baseline.md)，不当作新参考运行事实。
+
 ## 2026-10-18 E028元数据步幅修正
 
 reverse-skill新R2/mobile-reverse路由、固定样本/离线scope和28E/27F/27P严格review通过。独立工具只修未装箱字段分支步幅，补齐四场锚点、Brightness0=dark、sRGB黑白/覆盖alpha及Cubic(.645,.045,.355,1)；E027旧收据的标准曲线推断在新证据中纠正，原收据不改。36,392条函数边界、36,928条名称及完整分派字节与原工具一致。工具源码/二进制/原始输出留忽略目录，[报告](2026-10-18_reverse-sollin-ambient-scene-report.md)记录新收据摘要、复现和失败探查；没有参考App执行或完整调用图。音枢在验场景仍为明确原创锚点/随机/有界色策略，不因补字段静默改变产品。

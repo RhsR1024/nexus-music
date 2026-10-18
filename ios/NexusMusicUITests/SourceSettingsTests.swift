@@ -1211,11 +1211,18 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     let themeAccount=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-theme").firstMatch;XCTAssertTrue(themeAccount.waitForExistence(timeout:10));if (themeAccount.value as? String) != "1" {themeAccount.tap()}
     let album=app.buttons["navidrome-item-album-fixture-album"];XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();let redSong=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","red cover tone")).firstMatch;XCTAssertTrue(redSong.waitForExistence(timeout:10));reveal(redSong);redSong.tap()
-    func rgbPixel(_ image:UIImage,_ point:CGPoint)->[UInt8] {
-      guard let cg=image.cgImage,image.size.width>0,image.size.height>0 else{return []}
-      return BackgroundPixels.rgba(cg,at:CGPoint(x:point.x/image.size.width*CGFloat(cg.width),y:point.y/image.size.height*CGFloat(cg.height)))
+    func screenImage()->CGImage? {
+      // XCTScreenshot can encode a valid PNG while UIImage.cgImage is nil.
+      // Read that immutable PNG directly and use physical screen pixels.
+      let image=BackgroundPixels.decode(XCUIScreen.main.screenshot().pngRepresentation)
+      XCTAssertNotNil(image,"The actual screen PNG must decode before checking colors")
+      return image
     }
-    func redMinusBlue()->Int {let rgba=rgbPixel(XCUIScreen.main.screenshot().image,CGPoint(x:6,y:180));return rgba.count==4 ? Int(rgba[0])-Int(rgba[2]) : 0}
+    func redMinusBlue()->Int {
+      guard let image=screenImage() else{return 0}
+      let scale=UIScreen.main.scale,rgba=BackgroundPixels.rgba(image,at:CGPoint(x:6*scale,y:180*scale))
+      return rgba.count==4 ? Int(rgba[0])-Int(rgba[2]) : 0
+    }
     func expectTint(_ red:Bool,_ title:String){
       let expectation=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in let delta=redMinusBlue();return red ? delta>12 : delta < -12},object:app)
       XCTAssertEqual(XCTWaiter.wait(for:[expectation],timeout:20),.completed,"Visible global tint must follow the decoded \(red ? "red" : "blue") cover on \(title)")
@@ -1259,13 +1266,14 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"ambient-soft-lights").firstMatch.waitForExistence(timeout:10),"Three-color flow must mount the registered native soft-light view")
     }
     func backgroundPixels()->[UInt8]{
-      let image=XCUIScreen.main.screenshot().image
+      guard let image=screenImage() else{return []}
+      let margin=6*UIScreen.main.scale
       return [0.22,0.36,0.5,0.64,0.78].flatMap{fraction->[UInt8] in
-        [CGFloat(6),image.size.width-6].flatMap{x in Array(rgbPixel(image,CGPoint(x:x,y:image.size.height*fraction)).prefix(3))}
+        [margin,CGFloat(image.width)-margin].flatMap{x in Array(BackgroundPixels.rgba(image,at:CGPoint(x:x,y:CGFloat(image.height)*fraction)).prefix(3))}
       }
     }
     motion(false)
-    let stoppedPixels=backgroundPixels();XCTAssertEqual(stoppedPixels,backgroundPixels(),"Paused native scene must retain stable actual background pixels")
+    let stoppedPixels=backgroundPixels();XCTAssertEqual(stoppedPixels.count,30);XCTAssertEqual(stoppedPixels,backgroundPixels(),"Paused native scene must retain stable actual background pixels")
     openSettings(app,page:"skins")
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch;reveal(classic);classic.tap()
     app.buttons["mini-action-toggle"].tap();motion(true)
@@ -1357,20 +1365,22 @@ final class SourceSettingsTests: XCTestCase {
     // Restore the original full-flow assertions after the asynchronous probe.
     let multi=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","multi cover tone")).firstMatch
     XCTAssertTrue(multi.waitForExistence(timeout:15));reveal(multi);multi.tap()
+    func flowSamples()->[[UInt8]] {
+      guard let image=screenImage() else{return []}
+      let margin=6*UIScreen.main.scale
+      return (2...8).flatMap{step in [margin,CGFloat(image.width)-margin].map{x in
+        BackgroundPixels.rgba(image,at:CGPoint(x:x,y:CGFloat(image.height)*CGFloat(step)/10))
+      }}
+    }
     func expectThreeColors(_ name:String){
       XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"ambient-three-color").firstMatch.waitForExistence(timeout:10))
       // The two-stop base and four moving softened fields do not map to three
       // fixed stops. Sample only bare margins, requiring all three actual hues.
       var lastSamples=[[UInt8]]()
       let different=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
-        // Simulator screen capture can briefly expose a UIImage wrapper without
-        // a CGImage while the native scene is rebuilding after a theme restart.
-        // Retry the capture itself; never relax the hue or alpha requirements.
         var best=[[UInt8]]()
         for _ in 0..<5 {
-          let image=XCUIScreen.main.screenshot().image
-          let points=(2...8).flatMap{step in [CGPoint(x:6,y:image.size.height*CGFloat(step)/10),CGPoint(x:image.size.width-6,y:image.size.height*CGFloat(step)/10)]}
-          let samples=points.map{rgbPixel(image,$0)}
+          let samples=flowSamples()
           if samples.filter({$0.count==4}).count > best.filter({$0.count==4}).count { best=samples }
           if BackgroundPixels.hasPrimaryHues(samples) { lastSamples=samples; return true }
         }
@@ -1382,22 +1392,44 @@ final class SourceSettingsTests: XCTestCase {
       if result != .completed {print("Background RGB samples for \(name): \(lastSamples)")}
       XCTAssertEqual(result,.completed,"Three-color flow must render distinct red, green and blue actual margins: \(name); last RGBA samples \(lastSamples)")
     }
+    func pausedScene(_ name:String)->[[UInt8]] {
+      motion(false)
+      let pixels=flowSamples()
+      XCTAssertEqual(pixels.count,14)
+      XCTAssertTrue(pixels.allSatisfy{$0.count==4 && $0[3]==255},"Paused baseline must contain fourteen opaque actual pixels")
+      XCTAssertEqual(pixels,flowSamples(),"Paused scene must settle before using it as a restart baseline")
+      let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)
+      return pixels
+    }
+    func expectPausedScene(_ expected:[[UInt8]],_ name:String){
+      motion(false)
+      var actual=[[UInt8]]()
+      let restored=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in actual=flowSamples();return actual==expected},object:app)
+      let result=XCTWaiter.wait(for:[restored],timeout:20)
+      let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)
+      XCTAssertEqual(result,.completed,"The same identity, palette and stopped pose must restore all fourteen pixels: \(name); expected \(expected), actual \(actual)")
+    }
     expectThreeColors("Three-color flow actual private library pixels")
     app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap()
     expectThreeColors("Three-color flow actual discovery pixels")
+    app.buttons["mini-action-toggle"].tap()
+    let lightPaused=pausedScene("Light paused scene before theme and restart")
     func marginBrightness()->Double {let bytes=backgroundPixels();return Double(bytes.reduce(0){$0+Int($1)})/Double(bytes.count)}
     let lightBrightness=marginBrightness()
+    app.buttons["mini-action-toggle"].tap();motion(true)
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-dark").firstMatch.tap()
     app.buttons["theme-sheet-close"].tap()
     expectThreeColors("Softened dark flow actual appearance pixels")
     XCTAssertLessThan(marginBrightness(),lightBrightness-60,"The same raw cover must rebuild a substantially darker native scene")
+    app.buttons["mini-action-toggle"].tap()
+    let darkPaused=pausedScene("Dark paused scene before restart")
     app.terminate();app.launch();motion(false)
-    expectThreeColors("Softened dark flow restored paused")
+    expectPausedScene(darkPaused,"Softened dark flow restored paused")
     XCTAssertLessThan(marginBrightness(),lightBrightness-60,"Dark scene must survive restart")
     let darkStopped=backgroundPixels();XCTAssertEqual(darkStopped,backgroundPixels(),"Paused dark scene must remain stable")
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
     app.buttons["theme-sheet-close"].tap()
-    expectThreeColors("Softened light flow restored paused")
+    expectPausedScene(lightPaused,"Softened light flow restored paused")
     XCTAssertGreaterThan(marginBrightness(),lightBrightness-30,"Light theme must rebuild even with unchanged identity and palette")
     openSettings(app,page:"background");setSwitch(persistedPlayer,true)
     setSwitch(persistedGlobal,false)
@@ -1406,6 +1438,9 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"background");reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"1","Global switch must preserve playback animation choice")
     setSwitch(persistedPlayer,false)
     openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:15),"Wait for Keychain and repository removal to finish")
+    let cleared=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["打开播放页"])
+    XCTAssertEqual(XCTWaiter.wait(for:[cleared],timeout:10),.completed,"Removing the active account must clear its mini entry")
     XCTAssertFalse(app.buttons["打开播放页"].exists)
   }
   func testBackgroundMotionSwitchRoundTrip() throws {

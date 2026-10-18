@@ -1324,3 +1324,15 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 产品/诊断056459c及规则/回执8aefb2399744ba8977140e7ed80a0fe05918c2bb已正常push到RhsR1024/nexus-music，ls-remote确认main一致。8aefb23清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]；79条目ZIP CRC、附带SHA、包内可执行/JS与原归档字节、正式入口及私人/签名资源排除通过。IPA SHA256 `3d96654726ccef96b01e81c4115674e88d87e38604556ff3e08a00ad873fcaff`，收据与包留build/local-comments-icon-8aefb23，日志archive-comments-icon-resume-clean.log。
 
 push后API实核新iOS27运行39119277363/8aefb23为唯一pending，39115107158/4797970继续in_progress，保持1运行/1排队；未取消或重派。新云端终态待，原背景本地1失败及23090d0云端2失败不改写。下一优先深色重启暂停实际场景/三色缺绿的取证与修复，全部其余A/F/J继续，真实服务/签名/真机无新结论。临时清理已加入项目规则和既有跟进任务，本轮约1.93GB回收及保留原始证据见下方清理记录。
+
+## 2026-10-18 背景暂停基线与下一黑胶证据（待最终App）
+
+[0065](decisions/0065-paused-background-pixel-baseline.md)记录合法几何反例、PNG读取及精确暂停恢复验收。387业务/类型、PNG/native几何专项通过；首轮1792319723943在480.111秒只因最后移除连接后立即查mini失败，深浅暂停恢复和原PCM/异步/播放态三色已执行，整项不计通过。只读后态确认合成账号已删、queue/cursor currentId均null，补实际完成消息/mini消失屏障并保留原断言，完整复验继续。独立失败导出及时清理自己的staging，原始结果和必要PNG保留。
+
+下一黑胶/唱针E034→F033→P033已独立重放1544原始指令/138BL/114池引用，strict review34E/33F/33P、12WI/78事件零问题；两控制器构造/同步/释放及有限分支见[静态报告](2026-10-18_reverse-sollin-vinyl-motion-report.md)。完整标志/参数/几何/手势与产品采纳未完成，不提高进度；没有目标运行/私有服务/签名/真机新证据。
+
+## 2026-10-18 背景暂停基线最终本地通过
+
+[0065](decisions/0065-paused-background-pixel-baseline.md)最终完整专项1792320461405：467.221秒、1通过/0失败/0跳过。保留原PCM/活动恢复/异步挂起与迟到/失败回退/播放态三色；深色暂停重启14点RGBA与原基线完全相同，恢复浅色与浅色暂停基线相同，明暗差/暂停稳定/独立开关/实际移除成功后mini清理通过。16次合成鉴权/0失败、无新stream（复用缓存），视频59帧/7中间色，红阈值0.528333秒，不计FPS/功耗或真实服务。日志/summary/counts留ui-background-baseline-passed-*；四张关键PNG与独立Pillow14点opaque精确比较收据留build/background-baseline-passed，深浅截图已亲看；重复完整导出在finally删除。480.111秒的首轮最后清理失败仍保留，不改写为通过。
+
+387业务/类型、PNG往返/坏数据及几何native专项通过；独立失败导出成功/出错均删除自己的临时目录，原结果保留。34E/33F/33P严格review通过，下一黑胶控制器静态报告已补齐，标志/参数/手势与产品采纳仍待。本批尚待清洁归档、正常push及对应新iOS27，全部其余A/F/J和真实服务/签名/真机缺口保持。
