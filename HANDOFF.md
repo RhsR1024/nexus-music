@@ -1,3 +1,11 @@
+## 2026-10-18 AM 批次清洁归档与 push 回执
+
+292e0763ad81b676a6c5728e455ad468dcd4224e已正常push到RhsR1024/nexus-music，ls-remote实核main一致。387业务/类型、最终大字154.595秒及完整八布局307.761秒2/0/0通过；普通手机横屏100.565秒、iPad120.417秒分项结果与大字视觉补修边界见[0071](docs/decisions/0071-am-body-and-artwork.md)。40E/39F/39P strict review及独立1830原始字/BL/manifest通过。
+
+清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64/min15.1/设备族[1,2]。ZIP CRC/附带SHA、可执行及JS与归档字节、正式入口及私人签名资源排除通过。IPA SHA256 `bc907d15342c30c7ab8cd82a2d0013f3be24dd135491934f09935a44bcbbf7e9`；包与verification留build/local-presentation-292e076，日志archive-am-body-clean.log。
+
+API实核新[39142704842](https://github.com/RhsR1024/nexus-music/actions/runs/39142704842)/292e076唯一pending，b492261/39127780177继续in_progress，3385605旧pending被single自动替换；1运行/1排队，无手动取消/重派。本批iOS27终态、真实服务/签名/真机均待。下一写真已新R2路由234045/PRIMARY mobile-reverse、原scope/IPA前置门禁通过，1485原始指令/122BL/138池引用只留限定探查，尚无新不可变功能Evidence/review或产品采纳；继续先已有UI后新增功能，AM评论正文/写真/舞台/菜单/设置及全部A/F/J保持active。临时完整导出自动清理，必要截图/原结果/所有逆向证据保留，磁盘约46GiB可用。
+
 ## 2026-10-18 AM 完整封面与正文切换本地通过
 
 reverse-skill R2/mobile-reverse、原offline scope及E040→F039→P039的1830原始指令/160BL/128池引用独立重放通过，40E/39F/39P严格review零错误/警告。按[0071](docs/decisions/0071-am-body-and-artwork.md)原创完整AM封面、互斥歌词/权威队列正文、重复选择回封面及独立主控；保留原曲收藏/评论与实际录音封面/歌词、唯一播放意图和音枢功能。固定IPA只证实三态，评论正文仍待，未把实际音质回调误记评论。
