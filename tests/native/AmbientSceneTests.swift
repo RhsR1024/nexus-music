@@ -97,7 +97,10 @@ import CoreGraphics
         precondition(zip(actual, expected).allSatisfy { abs($0 - $1) < 1e-12 })
       }
       let imageBytes = Array(colorScene.images[0].dataProvider!.data! as Data)
-      precondition(Array(imageBytes[(72 * 144 + 72) * 4..<(72 * 144 + 72) * 4 + 4]) == bytes.map(UInt8.init) + [255], "The same quantized palette must feed the soft light")
+      let centerOffset: Int = (72 * 144 + 72) * 4
+      let centerPixel: [UInt8] = Array(imageBytes[centerOffset..<(centerOffset + 4)])
+      let expectedPixel: [UInt8] = bytes.map { UInt8($0) } + [UInt8(255)]
+      precondition(centerPixel == expectedPixel, "The same quantized palette must feed the soft light")
     }
     let two = AmbientScene(colors: ["#ff0000", "#0000ff", "#00ff00"], identity: "two", dark: false)!
     precondition(abs(two.base[1].blue - 0.9341176470588235) < 1e-12 && abs(two.base[1].red - 0.8101960784313725) < 1e-12, "Second stop comes from index1; third color remains a light")
