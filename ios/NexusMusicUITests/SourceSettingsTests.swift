@@ -1046,10 +1046,21 @@ final class SourceSettingsTests: XCTestCase {
         let turntable=app.descendants(matching:.any).matching(identifier:"vinyl-turntable").firstMatch
         let needle=app.descendants(matching:.any).matching(identifier:"vinyl-tonearm").firstMatch
         XCTAssertTrue(turntable.waitForExistence(timeout:10));XCTAssertTrue(needle.exists)
+        let canvas=app.descendants(matching:.any).matching(identifier:"vinyl-canvas").firstMatch
+        let deck=app.descendants(matching:.any).matching(identifier:"vinyl-deck").firstMatch
+        let platter=app.descendants(matching:.any).matching(identifier:"vinyl-platter").firstMatch
+        let spindle=app.descendants(matching:.any).matching(identifier:"vinyl-spindle").firstMatch
+        let pivot=app.descendants(matching:.any).matching(identifier:"vinyl-pivot").firstMatch
+        XCTAssertTrue(canvas.exists && deck.exists && platter.exists && spindle.exists && pivot.exists)
+        XCTAssertTrue(canvas.frame.contains(deck.frame) && deck.frame.contains(platter.frame),"The complete deck and platter must fit their actual visible canvas")
+        XCTAssertEqual(platter.frame.midX,spindle.frame.midX,accuracy:1);XCTAssertEqual(platter.frame.midY,spindle.frame.midY,accuracy:1)
+        XCTAssertLessThan(platter.frame.midX,canvas.frame.midX,"Leave space for the independent tonearm pivot")
+        XCTAssertGreaterThan(pivot.frame.midX,platter.frame.midX);XCTAssertLessThan(pivot.frame.midY,platter.frame.midY)
+        XCTAssertTrue(canvas.frame.contains(pivot.frame),"The fixed pivot must remain visible")
         let parkedNeedle=needle.frame
         func discPixels()->[UInt8]{
           guard let image=BackgroundPixels.decode(XCUIScreen.main.screenshot().pngRepresentation) else{return []}
-          let frame=turntable.frame,diameter=frame.height-12,scale=UIScreen.main.scale
+          let frame=platter.frame,diameter=frame.width*0.91,scale=UIScreen.main.scale
           return (-4...4).flatMap{y->[UInt8] in (-4...4).flatMap{x in
             BackgroundPixels.rgba(image,at:CGPoint(x:(frame.midX+CGFloat(x)*diameter*0.035)*scale,y:(frame.midY+CGFloat(y)*diameter*0.035)*scale))
           }}

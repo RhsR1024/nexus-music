@@ -1,3 +1,7 @@
+## 2026-10-18 黑胶分层几何本地通过
+
+按[0068](decisions/0068-vinyl-layered-geometry.md)，E036/E037严格review及五固定参考比较后，原创底座/盘托/偏置唱片/封面/支点，保留native双动效、唯一播放意图及音枢功能。387业务/类型及完整App1792326094312通过：288.843秒、1通过/0失败/0跳过；实际几何包含/共心、81点非空停转/旋转、唱针往返/Home恢复和原八布局/PCM/歌词/统计/重启/凭据清理均保持。两张黑胶PNG已亲看，独立封面内部120×120裁切差异通过；必要PNG/manifest/verification留build/vinyl-layout-passed，临时完整导出已自动清理，原xcresult及ui-vinyl-layout-{catalog.log,summary.json,counts.json}保留。9次合成鉴权/0失败，无新stream/coverArt，复用既有缓存，不计真实服务。清洁归档/正常push/本批iOS27待；完整唱头/渐变/手势、参考运行与签名/真机边界保持。
+
 ## 2026-10-18 黑胶有限几何证据补齐（未采纳产品）
 
 新reverse-skill R2路由200307、原离线scope/IPA门禁、E036→F035→P035独立3117原始指令/361BL/221池引用与36E/35F/35P严格review通过。确认有限支点(width×0.835,height×0.175)、90°至111.6°内部绘制方向和独立底座/盘托/唱盘结构；内部角度不直接等于RN屏幕角度。完整父布局/唱头/渐变/手势/目标运行未恢复，本批没有产品几何采纳。详见[几何报告](2026-10-18_reverse-sollin-vinyl-geometry-report.md)，下一补画布坐标映射后再原创实施与验收；其余A/F/J及真实服务/签名/真机保持。

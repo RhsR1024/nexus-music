@@ -33,12 +33,27 @@ export function Vinyl({services,track,size,playing}:{services:Services;track:Tra
     const animation=Animated.timing(tonearm,{toValue:target,duration:playing?620:480,easing:Easing.inOut(Easing.cubic),useNativeDriver:true,isInteraction:false});
     animation.start();return()=>{animation.stop();tonearm.stopAnimation();};
   },[playing,visible,reduce,foreground,tonearm]);
-  return <View testID="vinyl-turntable" collapsable={false} accessible={false} style={{height:size+12,alignItems:'center',justifyContent:'center'}}>
-    <Animated.View testID="vinyl-record" collapsable={false} style={{width:size,height:size,borderRadius:size/2,backgroundColor:'#111214',borderWidth:2,borderColor:'#333638',alignItems:'center',justifyContent:'center',transform:[{rotate:rotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}>
-      {Array.from({length:14},(_,i)=><View key={i} style={{position:'absolute',width:size-i*size*.035,height:size-i*size*.035,borderWidth:1,borderColor:i%2?'#252729':'#1A1C1E',borderRadius:size/2}}/>)}
-      <View style={{width:size*.4,height:size*.4,borderRadius:size,overflow:'hidden'}}><Cover services={services} track={track} size={size*.4}/></View><View style={{position:'absolute',width:10,height:10,borderRadius:5,backgroundColor:'#BCC2C4',borderWidth:2,borderColor:'#53585B'}}/>
-    </Animated.View>
-    <Animated.View testID="vinyl-tonearm" collapsable={false} style={{position:'absolute',width:10,height:size*.62,borderRadius:5,backgroundColor:'#A6ADB1',right:size*.09,top:8,transform:[{rotate:tonearm.interpolate({inputRange:[0,1],outputRange:['4deg','24deg']})}],transformOrigin:'top'}}/>
+  // The square is the complete deck; record and tonearm use separate local
+  // coordinates. Keep stable non-rotating geometry for layout/accessibility.
+  const disc=size*.728,label=disc*.46,armWidth=Math.max(7,size*.035),armLength=size*.54;
+  return <View testID="vinyl-turntable" collapsable={false} accessible={false} pointerEvents="none" style={{height:size+12,alignItems:'center',justifyContent:'center'}}>
+    <View testID="vinyl-canvas" collapsable={false} style={{width:size,height:size}}>
+      <View testID="vinyl-deck" collapsable={false} style={{position:'absolute',left:size*.015,right:size*.015,top:size*.055,bottom:size*.025,borderRadius:size*.06,backgroundColor:'#353B40',borderWidth:1,borderColor:'#697176',boxShadow:'0px 4px 7px rgba(0,0,0,0.24)'}}>
+        <View style={{position:'absolute',left:3,right:3,top:3,bottom:3,borderRadius:size*.05,borderWidth:1,borderColor:'rgba(255,255,255,0.10)'}}/>
+      </View>
+      <View testID="vinyl-platter" collapsable={false} style={{position:'absolute',left:size*.035,top:size*.135,width:size*.8,height:size*.8,borderRadius:size*.4,backgroundColor:'#7D8589',borderWidth:2,borderColor:'#AAB0B2',alignItems:'center',justifyContent:'center',boxShadow:'0px 2px 4px rgba(0,0,0,0.4)'}}>
+        <Animated.View testID="vinyl-record" collapsable={false} style={{width:disc,height:disc,borderRadius:disc/2,backgroundColor:'#111214',borderWidth:2,borderColor:'#333638',alignItems:'center',justifyContent:'center',transform:[{rotate:rotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}>
+          {Array.from({length:14},(_,i)=><View key={i} style={{position:'absolute',width:disc-i*disc*.035,height:disc-i*disc*.035,borderWidth:1,borderColor:i%2?'#252729':'#1A1C1E',borderRadius:disc/2}}/>)}
+          <View style={{width:label,height:label,borderRadius:label/2,overflow:'hidden'}}><Cover services={services} track={track} size={label}/></View>
+        </Animated.View>
+        <View testID="vinyl-spindle" collapsable={false} style={{position:'absolute',width:8,height:8,borderRadius:4,backgroundColor:'#D7DDDF',borderWidth:2,borderColor:'#53585B'}}/>
+      </View>
+      <Animated.View testID="vinyl-tonearm" collapsable={false} style={{position:'absolute',width:armWidth,height:armLength,left:size*.835-armWidth/2,top:size*.175,transform:[{rotate:tonearm.interpolate({inputRange:[0,1],outputRange:['4deg','24deg']})}],transformOrigin:'top'}}>
+        <View style={{position:'absolute',top:0,left:0,width:armWidth,height:armLength*.86,borderRadius:armWidth/2,backgroundColor:'#A6ADB1',borderWidth:1,borderColor:'#D6DCDF'}}/>
+        <View style={{position:'absolute',top:armLength*.78,left:-armWidth*.3,width:armWidth*1.6,height:armLength*.22,borderRadius:2,backgroundColor:'#515A60',borderWidth:1,borderColor:'#C0C7CB',transform:[{rotate:'-12deg'}]}}/>
+      </Animated.View>
+      <View testID="vinyl-pivot" collapsable={false} style={{position:'absolute',width:size*.10,height:size*.10,left:size*.785,top:size*.125,borderRadius:size*.05,backgroundColor:'#535D64',borderWidth:2,borderColor:'#B5BEC3',alignItems:'center',justifyContent:'center'}}><View style={{width:size*.035,height:size*.035,borderRadius:size*.018,backgroundColor:'#D8DFE2'}}/></View>
+    </View>
   </View>;
 }
 export function FrequencyHalo({services,playing,children}:PropsWithChildren<{services:Services;playing:boolean}>){

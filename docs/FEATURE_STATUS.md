@@ -1,3 +1,7 @@
+## 2026-10-18 黑胶分层几何本地通过
+
+按[0068](decisions/0068-vinyl-layered-geometry.md)，E036/E037严格review及五固定参考比较后，原创底座/盘托/偏置唱片/封面/支点，保留native双动效、唯一播放意图及音枢功能。387业务/类型及完整App1792326094312通过：288.843秒、1通过/0失败/0跳过；实际几何包含/共心、81点非空停转/旋转、唱针往返/Home恢复和原八布局/PCM/歌词/统计/重启/凭据清理均保持。两张黑胶PNG已亲看，独立封面内部120×120裁切差异通过；必要PNG/manifest/verification留build/vinyl-layout-passed，临时完整导出已自动清理，原xcresult及ui-vinyl-layout-{catalog.log,summary.json,counts.json}保留。9次合成鉴权/0失败，无新stream/coverArt，复用既有缓存，不计真实服务。清洁归档/正常push/本批iOS27待；完整唱头/渐变/手势、参考运行与签名/真机边界保持。
+
 ## 2026-10-18 黑胶归档与push补录
 
 3313457清洁unsigned归档及正常push完成；SHA256 `04b569c04234bf4d2212eee8582d4a2aaf3c29ab9ea2fa7d1f35c976e44d9b7c`，SDK26.2、arm64及ZIP/字节/正式入口/私人签名资源排除通过。39124884346为最新pending、393adcf运行；对应iOS27终态、真实服务/签名/真机仍待。完整回执见[BUILD_STATUS](BUILD_STATUS.md)，不因本地归档提高完成比例。
