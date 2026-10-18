@@ -1,3 +1,13 @@
+## 2026-10-18 暂停背景基线批次：清洁归档与云端排队回执
+
+测试/诊断提交 `393adcff072740f5f11867eb3e97dabe661236d7` 已正常 push 到 RhsR1024/nexus-music，ls-remote 实核 main 一致。完整背景专项467.221秒通过，387业务/类型及PNG/几何native专项通过；生产背景和音频未改，暂停恢复改用实际14点RGBA基线，播放态三色与原PCM/异步/明暗检查保留，原失败不改写。
+
+清洁unsigned归档 ARCHIVE SUCCEEDED：manifest dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]。79条目ZIP CRC、附带SHA、可执行/JS与归档字节一致、正式入口及私人/签名资源名称排除通过。IPA SHA256 `d27332f3397de78c7097ed33e74161e9d84b701baeb230a3279fe0711d50b3f8`；包及verification留build/local-background-baseline-393adcf，日志archive-background-paused-baseline-clean.log。
+
+push后API实核新iOS27运行[39121914443](https://github.com/RhsR1024/nexus-music/actions/runs/39121914443)/393adcf为唯一pending，39115107158/4797970保持in_progress；single自动替换旧pending 39119277363/8aefb23，未手动取消/重派，1运行/1排队。对应新云端终态仍待，本地SDK26.2归档不计iOS27成功。下一继续黑胶必要标志/参数的reverse-skill证据与五参考比较，再采纳已有UI/交互；其余A/F/J及真实服务/签名/真机缺口继续。
+
+本轮临时完整附件导出与失败导出中间目录已在成功/出错finally清理，关键四张PNG/原xcresult/必要失败证据及逆向case保留。当前本机可用约45GiB；每日首次可用跟进与阶段收尾按AGENTS/BUILDING轮换清理，活动构建缓存不清理。
+
 ## 2026-10-18 背景暂停基线最终本地通过
 
 [0065](docs/decisions/0065-paused-background-pixel-baseline.md)最终完整专项1792320461405：467.221秒、1通过/0失败/0跳过。保留原PCM/活动恢复/异步挂起与迟到/失败回退/播放态三色；深色暂停重启14点RGBA与原基线完全相同，恢复浅色与浅色暂停基线相同，明暗差/暂停稳定/独立开关/实际移除成功后mini清理通过。16次合成鉴权/0失败、无新stream（复用缓存），视频59帧/7中间色，红阈值0.528333秒，不计FPS/功耗或真实服务。日志/summary/counts留ui-background-baseline-passed-*；四张关键PNG与独立Pillow14点opaque精确比较收据留build/background-baseline-passed，深浅截图已亲看；重复完整导出在finally删除。480.111秒的首轮最后清理失败仍保留，不改写为通过。

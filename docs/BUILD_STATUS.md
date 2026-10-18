@@ -1,3 +1,13 @@
+## 2026-10-18 暂停背景基线批次：清洁归档与云端排队回执
+
+测试/诊断提交 `393adcff072740f5f11867eb3e97dabe661236d7` 已正常 push 到 RhsR1024/nexus-music，ls-remote 实核 main 一致。完整背景专项467.221秒通过，387业务/类型及PNG/几何native专项通过；生产背景和音频未改，暂停恢复改用实际14点RGBA基线，播放态三色与原PCM/异步/明暗检查保留，原失败不改写。
+
+清洁unsigned归档 ARCHIVE SUCCEEDED：manifest dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]。79条目ZIP CRC、附带SHA、可执行/JS与归档字节一致、正式入口及私人/签名资源名称排除通过。IPA SHA256 `d27332f3397de78c7097ed33e74161e9d84b701baeb230a3279fe0711d50b3f8`；包及verification留build/local-background-baseline-393adcf，日志archive-background-paused-baseline-clean.log。
+
+push后API实核新iOS27运行[39121914443](https://github.com/RhsR1024/nexus-music/actions/runs/39121914443)/393adcf为唯一pending，39115107158/4797970保持in_progress；single自动替换旧pending 39119277363/8aefb23，未手动取消/重派，1运行/1排队。对应新云端终态仍待，本地SDK26.2归档不计iOS27成功。下一继续黑胶必要标志/参数的reverse-skill证据与五参考比较，再采纳已有UI/交互；其余A/F/J及真实服务/签名/真机缺口继续。
+
+本轮临时完整附件导出与失败导出中间目录已在成功/出错finally清理，关键四张PNG/原xcresult/必要失败证据及逆向case保留。当前本机可用约45GiB；每日首次可用跟进与阶段收尾按AGENTS/BUILDING轮换清理，活动构建缓存不清理。
+
 ## 2026-10-18 账号隐私修正版构建回执
 
 产品提交 `4797970ec9fc386a9d7ac9ba5e39482966d327b6` 已在 387/387 检查及 clean unsigned archive 校验后正常 push。manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]/signed=false，ZIP CRC、归档可执行文件与 JS 字节一致、正式入口及私人资源名称排除通过；IPA SHA256 `dfaaa1c0964dc298d6d512e24ed335aca8bb7cd20b401b2b76eb56346b7f5d8b`。日志留 `build/logs/archive-auth-privacy-final.log` 与 `verify-auth-privacy-final.json`。
