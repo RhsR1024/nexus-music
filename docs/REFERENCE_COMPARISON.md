@@ -1,3 +1,7 @@
+## 2026-10-18 评论容器与固定头比较
+
+本批重新核对五参考固定HEAD并亲读评论状态/标题/列表或构建边界，具体来源、维护/许可/Android取舍见[0063](decisions/0063-comments-sheet.md)；Sollin IPA E033经reverse-skill采纳前strict review，报告见[评论静态报告](2026-10-18_reverse-sollin-comments-report.md)。原创实现原生Sheet/固定头/虚拟分区，不移植网络SDK/参考源码/资源/依赖。
+
 ## 2026-10-18 经典滚动视口安全区
 
 [0062](decisions/0062-classic-player-scroll-safe-area.md)记录五固定HEAD实核、亲读的安全区职责与逐项维护/Android/许可取舍。本批为音枢实际截图确认的本地缺陷修复，不移植参考功能或声称Sollin具体insets已恢复；使用既有safe-area-context约束经典滚动视口，背景、播放和队列保持。375业务/类型通过，正式App旋转/滚动几何和原背景回归仍待终态。

@@ -1,6 +1,6 @@
 # 0023 本地播放统计
 
-2026-10-16；对应F34/J55。统计与识曲分别实施，识曲仍待服务与权限设计。
+2026-10-16；对应F34/J55。统计与识曲分别评估；2026-10-18用户决定识曲本期不实现，后续有需求再触发，播放统计保留。
 
 参考固定提交见REFERENCE_COMPARISON。限定六参考已检出的TS/JS/docs检索listenTime/listeningTime/playedTime/scrobble/播放统计/听歌统计：悦音src/data/mock.ts:156的playCount是模拟歌单热度，Q/wtf的SonglistDetail/Header与musicSdk/songList、Cy helpers/userApi/xiaoqiu.js:120/452、Sollin services/neteaseAuth.ts:639等是服务器歌单播放量；都不是个人实际听歌时长。Wayferar当前检出的docs多为歌词累计绘制，未据此推导整个工程没有统计。没有可直接采用的个人时长链路，不复制这些字段或明文历史存储。维护上保留现有原生AVPlayer和一个队列，无新依赖/第二播放器；各参考MIT/Apache/自有资产许可边界不变。
 

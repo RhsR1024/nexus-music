@@ -330,6 +330,8 @@ final class SourceSettingsTests: XCTestCase {
     let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Matching Fixture").firstMatch;reach(selected);selected.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
   func testPublicComments() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer { XCUIDevice.shared.orientation = .portrait }
     let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
     let query=app.textFields["搜索歌曲或歌手"];for _ in 0..<8 {if query.isHittable{break};app.swipeUp()};XCTAssertTrue(query.isHittable)
@@ -340,9 +342,46 @@ final class SourceSettingsTests: XCTestCase {
     let more=app.buttons["加载更多评论"];for _ in 0..<6 {if more.isHittable{break};app.swipeUp()};more.tap()
     let retry=app.buttons["重试评论"];XCTAssertTrue(retry.waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["Synthetic comment 2"].exists);retry.tap()
     XCTAssertTrue(app.staticTexts["Synthetic comment 3"].waitForExistence(timeout:10));XCTAssertFalse(app.buttons["加载更多评论"].exists)
-    let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
-    let refresh=app.buttons["刷新评论"];for _ in 0..<5 {if refresh.isHittable{break};app.swipeDown()};refresh.tap();XCTAssertTrue(app.buttons["加载更多评论"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["热门评论"].exists);XCTAssertTrue(app.staticTexts["最新评论"].exists)
+    let header=app.descendants(matching:.any).matching(identifier:"comments-header").firstMatch
+    let list=app.descendants(matching:.any).matching(identifier:"comments-list").firstMatch
+    let refresh=app.buttons["刷新评论"]
+    XCTAssertTrue(header.waitForExistence(timeout:5));XCTAssertTrue(list.exists)
+    func checkFixedHeader() {
+      let initial=header.frame
+      list.swipeUp()
+      XCTAssertEqual(header.frame.minY,initial.minY,accuracy:2)
+      XCTAssertGreaterThanOrEqual(list.frame.minY,header.frame.maxY-2)
+      XCTAssertTrue(refresh.isHittable);XCTAssertTrue(app.buttons["收起歌曲评论"].isHittable)
+      let window=app.windows.firstMatch.frame
+      XCTAssertGreaterThanOrEqual(header.frame.minX,window.minX)
+      XCTAssertLessThanOrEqual(header.frame.maxX,window.maxX)
+    }
+    checkFixedHeader()
+    XCUIDevice.shared.orientation = .landscapeLeft
+    app.activate()
+    expectation(for:NSPredicate { _,_ in app.windows.firstMatch.frame.width>app.windows.firstMatch.frame.height },evaluatedWith:app)
+    waitForExpectations(timeout:10)
+    XCTAssertTrue(refresh.waitForExistence(timeout:5));checkFixedHeader()
+    let landscape=XCTAttachment(screenshot:XCUIScreen.main.screenshot());landscape.name="Comments fixed header landscape";landscape.lifetime = .keepAlways;add(landscape)
+    XCUIDevice.shared.orientation = .portrait
+    app.activate()
+    expectation(for:NSPredicate { _,_ in app.windows.firstMatch.frame.height>app.windows.firstMatch.frame.width },evaluatedWith:app)
+    waitForExpectations(timeout:10)
+    refresh.tap()
+    let moreAfterRefresh=app.buttons["加载更多评论"]
+    XCTAssertTrue(moreAfterRefresh.waitForExistence(timeout:10))
+    for _ in 0..<5 {if moreAfterRefresh.isHittable{break};list.swipeUp()}
+    XCTAssertTrue(moreAfterRefresh.isHittable)
+    let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Comments sheet sections after refresh";screenshot.lifetime = .keepAlways;add(screenshot)
     app.buttons["收起歌曲评论"].tap();XCTAssertFalse(app.buttons["暂停"].exists)
+    // Reopen and dismiss through the native sheet gesture; no playback intent.
+    comments.tap();XCTAssertTrue(app.buttons["刷新评论"].waitForExistence(timeout:10))
+    let start=header.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.1))
+    start.press(forDuration:0.1,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.98)))
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["收起歌曲评论"])
+    waitForExpectations(timeout:10)
+    XCTAssertFalse(app.buttons["暂停"].exists)
   }
   func testSourceHealth() throws {
     let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
@@ -907,6 +946,8 @@ final class SourceSettingsTests: XCTestCase {
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
     XCTAssertTrue((app.descendants(matching:.any).matching(identifier:"player-layout-wave").firstMatch.value as? String)?.contains("实时音频频谱环") == true,"Style choices should expose a concise behavior description")
     reveal(classic);classic.tap()
+    let skinDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["skins-sheet-close"])
+    XCTAssertEqual(XCTWaiter.wait(for:[skinDismissed],timeout:10),.completed,"Skin selection must finish dismissing before navigating to sources")
     openSettings(app,page:"sources")
     let address=app.textFields["Navidrome服务器地址"]
     XCTAssertTrue(address.waitForExistence(timeout:15))

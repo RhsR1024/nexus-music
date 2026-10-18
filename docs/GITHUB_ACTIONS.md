@@ -167,3 +167,9 @@ S3 图片阶段 `8cb083ce21fd89f4e0cea4b1403385d32c5181c3` 已正常 push，远�
 J40/J49/源健康输入修正阶段 `13dc4505d7b85a8839c226173d6455d6e3e7ce37` 已正常 push，远端 main 一致。`archive-mini-clean.log` 为 ARCHIVE SUCCEEDED；manifest dirty=false / workingTreeChanges=[] / arm64 / iphoneos26.2 / min15.1 / signed=false，正式入口隔离与 SHA256 再核对通过。最新本地 IPA 为 `build/distribution/NexusMusic-unsigned.ipa`，SHA256 `7e1d996701f4c6c3ea5bee9ecc59dd0ed21634ca31180d461e5ed536509f68df`。
 
 新云端 [38889054633](https://github.com/RhsR1024/nexus-music/actions/runs/38889054633) 对应 13dc450，pending；图片 38886233605 仍 pending，S2 38878989928 已过 native、核心 App 执行中。没有重复派发/取消或将旧失败说成已修复上云通过。接续 S8/F32 WebDAV 云备份（上传后校验、目录配置、预览恢复），F33 冲突同步另行实现；完整 S2/S3/S4/S7/S8/S9/M10 和手机/真实个人服务目标仍 active。
+
+## 2026-10-18 失败截图与文本独立产物
+
+39111966447核心组22通过/2失败，小日志515010字节已实际下载并通过API摘要/完整ZIP CRC；完整诊断792056801字节超过连接器512MiB上限，尚未取得其截图/录屏。为保留可用取证，test-ui在结果摘要确认失败后按失败testIdentifier导出该测试附件（含断言前具名截图），仅复制PNG/JPEG/文本/manifest到独立目录，单文件32MiB、合计128MiB上限，export-index逐项记录纳入与排除。视频和原始xcresult仍由原完整诊断产物保存；导出失败只报告诊断错误，保留原测试退出码。
+
+新步骤独立上传ios-failure-evidence；single/保留运行中/所有原测试不变。以本机已有失败结果1792300131198实际验收：导出426条附件、46文件纳入48548651字节，包括失败前具名PNG与manifest；视频未复制。此证明本地导出能力，不冒称已取得旧云端完整包或新云端上传成功。

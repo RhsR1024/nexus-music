@@ -19,6 +19,17 @@ try {
   const actual=execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
   if(actual!==pin)throw new Error('reverse-skill revision changed; review and update the pin before use');
   if(execFileSync('git',['-C',root,'status','--porcelain','--untracked-files=no'],{encoding:'utf8'}).trim())throw new Error('Tracked reverse-skill files changed; review before use');
+  if(kind==='apk') {
+    const apkRoot=realpathSync(resolve(project,'../apk-reverse'));
+    const apkPin='1b94651b1e3c4479336406b8b5c06d4c1fd7082e';
+    if(execFileSync('git',['-C',apkRoot,'rev-parse','HEAD'],{encoding:'utf8'}).trim()!==apkPin)throw new Error('User-specified APK skill revision changed; review before use');
+    if(execFileSync('git',['-C',apkRoot,'status','--porcelain','--untracked-files=no'],{encoding:'utf8'}).trim())throw new Error('Tracked APK skill files changed');
+    const installed=realpathSync(resolve(project,'.agents/skills/sollin-apk-reverse'));
+    if(installed!==resolve(project,'work/installed-skills/sollin-apk-reverse'))throw new Error('APK skill must use the project-scoped installation');
+    const files=execFileSync('git',['-C',apkRoot,'ls-files','skills/apk-reverse'],{encoding:'utf8'}).trim().split('\n');
+    for(const file of files)if(!readFileSync(resolve(apkRoot,file)).equals(readFileSync(resolve(installed,file.slice('skills/apk-reverse/'.length)))))throw new Error(`Installed APK skill differs: ${file}`);
+    if(!readFileSync(resolve(apkRoot,'LICENSE')).equals(readFileSync(resolve(installed,'LICENSE'))))throw new Error('APK skill license missing or changed');
+  }
   for(const file of ['README_AI.md','RULES.md','skills/SKILL.md','skills/MASTER-ROUTING.md',`skills/${sample.primary}`])statSync(resolve(root,file));
   const indexPath=resolve(root,'skills/tool-index.json'),index=JSON.parse(readFileSync(indexPath,'utf8'));
   if(index.platform!=='macos'||Date.now()-statSync(indexPath).mtimeMs>7*86400000)throw new Error('Refresh tool-index on this Mac before proceeding');

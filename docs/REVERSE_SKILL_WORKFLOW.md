@@ -98,3 +98,24 @@ Capstone5.0.3、pkgconf2.3.0和Blutter固定源已由同一官方GitHub仓库SSH
 恢复首轮在Capstone头文件include路径失败，改用pkgconf的CAPSTONE_INCLUDE_DIRS后，两平台VM及解析器均构建完成，`build/logs/blutter-objectpool-resume.log` exit0；补丁留隔离工具logs，辅助脚本SHA256为 `4b510d27ba5a981ca89706572e7adcafa78d99c31adda9b8ac798d9fee593691`。全程ninja -j2、无Xcode重叠；7项上游合成Mach-O Python测试通过。两样本在deny-network sandbox离线生成对象池/骨架，未运行App/服务，Frida/IDA生成脚本未执行。格式摘要匹配是必要兼容条件，不能替代对象解析正确性。当前 `NO_CODE_ANALYSIS=true` 的 `asm/*.dart` 只包含对象/函数骨架，不能写成已取得机器指令反汇编、完整反编译或调用图；后续必须独立核对FAT raw/slice/VA以及功能对象关系，再建立功能证据并严格review。
 
 IPA独立FAT/segment/snapshot检查覆盖24,298个非零函数入口，全部落在可执行文件段；另进程重放1,455个骨架逐字节一致，仅证明重复性。限定原始ARM64 BL核查支持E-008设置分类/EQ关系，严格review通过8E/7F/7P、7工作项、12事件、零错误/警告。完整语义、动态调用与A04全局背景仍待，详见[本批报告](2026-10-17_reverse-sollin-settings-objects-report.md)。
+
+## 2026-10-18 用户指定的 APK 专项 skill
+
+用户新增指定 [RhsR1024/apk-reverse](https://github.com/RhsR1024/apk-reverse)，仅用于IPA证据不足时补充Sollin APK的UI、业务及后端边界。IPA继续既有reverse-skill路由；APK保留原master-route/scope/case-guard/Evidence→Finding→Path/strict review，再使用新专项skill的分类、G1–G4和实际适用工具。安装或doctor通过不代替功能证据。本批评论IPA证据足够，没有重复分析APK，不执行目标、不探测私有服务。
+
+- 相邻仓库：`/Users/ningli/WorkSpace/apk-reverse`，固定提交 `1b94651b1e3c4479336406b8b5c06d4c1fd7082e`，MIT，保留其contributors版权。首次完整clone连接失败，HTTP/1.1浅clone成功；另下载同固定提交官方codeload归档留本机，未执行下载内容的安装脚本。
+- 已审阅README、SKILL、许可、doctor与capabilities探测实现。使用系统skill-installer助手按固定ref安装至忽略目录`work/installed-skills/sollin-apk-reverse`，补保留LICENSE；项目入口`.agents/skills/sollin-apk-reverse`指向该安装，下轮项目技能发现可用。不更改原同名路由skill或全局客户端配置，不将工具代码纳入音枢产品。
+- `scripts/sollin-reverse-gate.mjs apk --review`现在额外校验新仓库固定HEAD/受控文件、项目安装路径、每个已跟踪skill文件字节及LICENSE。原样本SHA和离线scope不变，既有案例没有重新case-init。本机两案例严格review通过；此轮APK仍只有既有容器/安装结论。
+- 已执行新`doctor.py --json`，返回3/blocked：如RASC构建产物、部分capstone/Frida/设备/签名能力未闭合。它如实描述全能力矩阵，不代表skill未安装，也不证明所有分析链可用；日志`build/apk-reverse-doctor.json`。当前未发起APK功能分析，故不为安装而批量装设备/签名/Hook工具；未来按具体层补齐，并重读tool-index和doctor报告。原独立IPA工具能力不从该通用探测推翻。
+
+复现安装（已有目录不能覆盖，先核对固定版本）：
+
+```bash
+python3 /Users/ningli/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
+  --repo RhsR1024/apk-reverse --path skills/apk-reverse \
+  --ref 1b94651b1e3c4479336406b8b5c06d4c1fd7082e \
+  --dest /Users/ningli/WorkSpace/NexusMusic/work/installed-skills --name sollin-apk-reverse
+cp ../apk-reverse/LICENSE work/installed-skills/sollin-apk-reverse/LICENSE
+source scripts/environment.sh
+node scripts/sollin-reverse-gate.mjs apk --review
+```

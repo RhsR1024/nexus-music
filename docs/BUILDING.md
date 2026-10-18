@@ -22,7 +22,7 @@ npm run ios:build
 
 Pods/DerivedData/IPA/构建日志不提交；提交npm lock与Podfile.lock。生成工程中的`.xcode.env`可提交，`.xcode.env.local`为本机Node位置，不提交。
 
-Release模拟器产物：`build/DerivedData/Build/Products/Release-iphonesimulator/app.app`；Debug运行可用 `npm run ios`，Metro用 `npm start`。目前还没有IPA打包/个人签名验收。
+Release模拟器产物：`build/DerivedData/Build/Products/Release-iphonesimulator/app.app`；Debug运行可用 `npm run ios`，Metro用 `npm start`。已有多批生产入口 unsigned IPA 打包及完整性校验；个人签名、续签和覆盖升级仍待独立验收，最新逐批结果见 [BUILD_STATUS](BUILD_STATUS.md)。
 
 独立领域与竞态测试使用Node24内置TypeScript去类型执行，无依赖测试框架。没有安装全局React Native/Expo CLI；使用工程本地CLI。
 

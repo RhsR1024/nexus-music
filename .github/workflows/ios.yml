@@ -131,6 +131,14 @@ jobs:
             build/logs/*.csv
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload failure screenshots and text
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-failure-evidence-${{ github.sha }}
+          path: build/failure-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload build diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)

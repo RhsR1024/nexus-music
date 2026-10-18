@@ -1,5 +1,7 @@
 # 0022：暂用漫途 App 图标
 
+> 2026-10-18已由用户提供的新图标替代，见[0064](0064-user-app-icon.md)。以下保留历史。
+
 2026-10-16，F18/F25。用户明确授权暂用自有漫途音乐图标，并允许适配尺寸。
 
 - 来源：本机 `ReferenceProject/Wayferar-Music`，固定提交 `8e47cdc701cdbb772577b2bf7abb699e285b0fa6`，`app/src/main/res/drawable-nodpi/ic_launcher.png`（512×512）。

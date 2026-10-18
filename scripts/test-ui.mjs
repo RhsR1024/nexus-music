@@ -5,6 +5,7 @@ import { spawn,execFileSync } from 'node:child_process';
 import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync } from 'node:fs';
 import {resolve,sep} from 'node:path';
 import { createHash } from 'node:crypto';
+import {exportFailureEvidence} from './export-failure-evidence.mjs';
 
 let localFixtureDirectory;
 function seedLocalAudio() {
@@ -290,5 +291,9 @@ try {
     const summary=JSON.parse(summaryJSON);
     console.log(`UI results: ${summary.passedTests} passed, ${summary.failedTests} failed, ${summary.skippedTests} skipped; ${resultPath}`);
     for(const failure of summary.testFailures??[])console.error(`${failure.testIdentifierString}: ${failure.failureText}`);
+    if(summary.failedTests>0){
+      try{console.log(`Failure screenshots and text: ${exportFailureEvidence(resultPath,summary.testFailures.map(failure=>failure.testIdentifierString))}`);}
+      catch(error){console.error(`Failure attachment export unavailable: ${error.message}; original result: ${resultPath}`);}
+    }
   } catch { console.error(`UI summary unavailable; inspect ${resultPath} and build/logs/ui-catalog.log`); }
 } finally { if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync('build/logs/ui-server-counts.json',JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }
