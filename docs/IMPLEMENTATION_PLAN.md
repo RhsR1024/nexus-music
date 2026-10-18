@@ -1,3 +1,9 @@
+## 2026-10-18 统计验收修正清洁归档与push
+
+557999acfbbd892e9dd6841d7e97b64df4acfc75已正常push，远端main一致。清洁归档dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned，ZIP CRC/附带SHA、归档可执行及JS字节一致、正式入口和私人/签名资源排除通过；IPA SHA256 `67a92440f91cc8975739f9bf027a83fe61f30bed449090ae50814bbcb3c2f296`，留存build/local-statistics-557999a。正式App270.029秒与368业务/类型沿0057，不代替iOS27/真实服务/签名/手机。
+
+push后API实核39091013423/557999a唯一pending、39086161205/e6d9d11仍运行；24aafa4旧pending39089783874由single自动取消，不算通过。最多1运行/1排队，无人为取消或重派。最新完整成功且IPA已核验仍为76c9cd0/39050349015；下一E032原生配色实施继续，全部A/F/J目标active。
+
 ## 2026-10-18 配色证据与统计验收隔离
 
 E032→F031→P031及strict review32E/31F/31P通过，862原始指令/4helpers、20独立向量支持原始色板→HSL量化→双色基底/柔光→两场混合→主题覆盖层，尚未产品接线；五参考重核与独立语义前景边界见[参考比较](REFERENCE_COMPARISON.md)。原样本地统计189.708秒41/1失败后，按[0057](decisions/0057-statistics-ui-baseline.md)仅修测试真实清空/显式0，缺行与解析失败不再默认0；368业务检查通过，正式App1792290648455专项270.029秒1通过/0失败/0跳过、截图亲看；归档/push/新云端另验。

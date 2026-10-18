@@ -1,3 +1,9 @@
+## 2026-10-18 统计验收修正清洁归档与push
+
+557999acfbbd892e9dd6841d7e97b64df4acfc75已正常push，远端main一致。清洁归档dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned，ZIP CRC/附带SHA、归档可执行及JS字节一致、正式入口和私人/签名资源排除通过；IPA SHA256 `67a92440f91cc8975739f9bf027a83fe61f30bed449090ae50814bbcb3c2f296`，留存build/local-statistics-557999a。正式App270.029秒与368业务/类型沿0057，不代替iOS27/真实服务/签名/手机。
+
+push后API实核39091013423/557999a唯一pending、39086161205/e6d9d11仍运行；24aafa4旧pending39089783874由single自动取消，不算通过。最多1运行/1排队，无人为取消或重派。最新完整成功且IPA已核验仍为76c9cd0/39050349015；下一E032原生配色实施继续，全部A/F/J目标active。
+
 ## 2026-10-18 统计显式基线本地专项通过
 
 [0057](decisions/0057-statistics-ui-baseline.md)保留原样失败189.708秒41/1；仅修测试通过真实清空确认建立显式0，缺行/解析不再当0，生产计数不变。368业务/类型通过；SourceUITests-1792290648455正式App专项270.029秒、1通过/0失败/0跳过，八布局/PCM/歌词/一次会话+1/重启/mini/凭据清理均保持。已亲看重置前41次、统计历史、AM2及四按钮mini截图；8合成鉴权/0失败，无新stream、复用临时音频缓存。日志/摘要/counts留build/logs/ui-statistics-explicit-*，附件build/statistics-explicit-passed。清洁归档/push/对应iOS27继续，未据此认定云端全部根因。
