@@ -1,3 +1,9 @@
+## 2026-10-18 AM 完整封面与正文切换本地通过
+
+reverse-skill R2/mobile-reverse、原offline scope及E040→F039→P039的1830原始指令/160BL/128池引用独立重放通过，40E/39F/39P严格review零错误/警告。按[0071](decisions/0071-am-body-and-artwork.md)原创完整AM封面、互斥歌词/权威队列正文、重复选择回封面及独立主控；保留原曲收藏/评论与实际录音封面/歌词、唯一播放意图和音枢功能。固定IPA只证实三态，评论正文仍待，未把实际音质回调误记评论。
+
+387业务/类型通过；最终build/SourceUITests-1792337928789.xcresult两项2/0/0：大字154.595秒、完整八布局/PCM/黑胶像素/歌词/统计/重启/凭据清理307.761秒。大字当前行首frame断言通过，原先147.057秒操作虽通过但视觉发现长行居中裁首的截图保留，修正版另验。普通手机横屏100.565秒、iPad窗口/旋转120.417秒此前通过，普通字号分支未受行首补修影响；不是全部同一次运行。最终五张必要PNG/manifest/摘要留build/am-final-passed，修正后大字行首与完整封面已亲看；超高行仍需滚动阅读，不承诺整行同屏。完整临时导出已自动清理，清洁归档/正常push/对应iOS27随后记回执；真实服务/签名/真机未新增。其余AM评论正文、写真、舞台、菜单/设置与全部A/F/J继续，不提高开发百分比。
+
 ## 2026-10-18 首批截图构图清洁归档与push回执
 
 338560502d0fcbb0196f980234cfadcd58b937b0已正常push，ls-remote实核main一致。最终387业务/类型、完整App295.404秒1/0/0、39E/38F/38P严格review与31原件/副本摘要通过。清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64/min15.1/设备族[1,2]；CRC/附带SHA/可执行及JS与归档字节/正式入口/私人签名资源排除通过。IPA SHA256 `a2c63feae7e962a6796b0df1d797392624dc98921e72f2dfd3699b9585a08db7`；包与verification留build/local-presentation-3385605，日志archive-player-composition-clean.log。
