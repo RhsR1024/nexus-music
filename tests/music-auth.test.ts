@@ -26,3 +26,9 @@ test('expiry and launcher failure expose bounded user-facing states',async()=>{
   const expired=flow.start(callback=>{emit=callback;return()=>{}});emit({type:'expired'});await assert.rejects(expired,(error)=>error instanceof MusicAuthError&&error.kind==='expired');
   const failed=flow.start(()=>{throw new Error('private protocol detail')});await assert.rejects(failed,(error)=>error instanceof MusicAuthError&&error.kind==='failed');assert.equal(flow.getSnapshot().error,'private protocol detail');
 });
+
+test('cleanup errors never leave an authorization promise pending',async()=>{
+  const flow=new MusicAuthFlow<string>();let emit:(event:any)=>void=()=>{};
+  const promise=flow.start(callback=>{emit=callback;return()=>{throw new Error('native teardown failed');}});emit({type:'success',value:'session'});
+  assert.equal(await promise,'session');assert.equal(flow.getSnapshot().status,'succeeded');
+});

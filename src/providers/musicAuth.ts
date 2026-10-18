@@ -29,7 +29,7 @@ export class MusicAuthFlow<T> {
       let active=true;
       const finish=(event:MusicAuthEvent<T>)=>{
         if(!active||this.snapshot.generation!==generation)return;
-        active=false;const stop=this.stop;this.stop=undefined;this.settle=undefined;stop?.();
+        active=false;const stop=this.stop;this.stop=undefined;this.settle=undefined;try{stop?.();}catch{}
         if(event.type==='success'){this.publish({status:'succeeded',generation});resolve(event.value);return;}
         if(event.type==='cancel'){this.publish({status:'cancelled',generation});reject(new MusicAuthError('cancelled','授权已取消'));return;}
         if(event.type==='expired'){this.publish({status:'expired',generation});reject(new MusicAuthError('expired','授权已过期'));return;}
@@ -46,7 +46,7 @@ export class MusicAuthFlow<T> {
   }
   cancel(){
     if(!this.settle)return;
-    const settle=this.settle;this.settle=undefined;const stop=this.stop;this.stop=undefined;stop?.();
+    const settle=this.settle;this.settle=undefined;const stop=this.stop;this.stop=undefined;try{stop?.();}catch{}
     const generation=this.snapshot.generation;this.publish({status:'cancelled',generation});settle.reject(new MusicAuthError('cancelled','授权已取消'));
   }
 }
