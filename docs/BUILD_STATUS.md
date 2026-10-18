@@ -1,3 +1,11 @@
+## 2026-10-18 黑胶批次清洁归档与云端回执
+
+33134574d46db4ad8189e8acd6dc72993a58cf09已正常push，远程为RhsR1024/nexus-music。清洁unsigned归档成功，manifest dirty=false/changes=[]；Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]。ZIP CRC、附带SHA、包内可执行/JS与归档字节、正式入口及私人/签名资源排除通过。IPA SHA256 `04b569c04234bf4d2212eee8582d4a2aaf3c29ab9ea2fa7d1f35c976e44d9b7c`；包和verification留build/local-presentation-3313457，日志archive-vinyl-motion-clean.log。E034/E035独立原字节重放及35E/34F/34P严格review通过。
+
+push后API核验[39124884346](https://github.com/RhsR1024/nexus-music/actions/runs/39124884346)/3313457为唯一pending，[39121914443](https://github.com/RhsR1024/nexus-music/actions/runs/39121914443)/393adcf继续运行，1运行/1排队；未取消或重派。对应iOS27终态待，不将本地SDK26.2计为云端成功。
+
+旧39115107158/4797970已失败：checks/工具链/完整native通过，核心24项22通过/2失败；后续在线/离线/iPad/归档跳过，无IPA。官方小日志537369字节、SHA256 `3bbb867dc472c58afd49cf8bce57ff49b1f548210f9e1bc4c310437630d46c39`及CRC核验通过，留build/ci-4797970-compact。catalog47224定位背景Sheet关闭后立即检测父入口不可触达（旧源码1645）；56074定位EQ自定义预设滚动失败（旧1526），右侧手势x≈398与原生滚动条x396重合、预设仍在视口下方。先修测试关闭等待/手势触达，再专项验证；不据此宣称产品EQ或背景持久化损坏/已修复。真实服务/签名/真机及其余A/F/J保持。
+
 ## 2026-10-18 黑胶双动效本地通过
 
 按[0066](decisions/0066-vinyl-independent-motion.md)原创线性转盘、歌曲身份相位隔离、独立唱针与ready门控；387业务/类型及完整八布局/PCM/歌词/统计/重启/凭据清理App1792322360079通过，282.844秒、1/0/0。新增实际非空像素停转/转动、唱针frame正反变化、Home恢复均通过；两张画面已亲看，独立中心裁切像素变化与摘要收据留build/vinyl-motion-passed，完整临时导出已finally清理。10合成鉴权/0失败、无新stream，复用缓存，不计真实服务。E034/E035原字节重放与35E/34F/34P严格review通过；完整几何/手势、曲线/动画开关来源及运行中减少动态效果/曲目切换/缓冲和真机仍待。清洁归档、正常push及对应iOS27尚待，其他A/F/J保持。

@@ -33,3 +33,5 @@ reverse-skill新路由master-route-20261018-191117为R2/mobile-reverse，既有�
 系统减少动态效果实时切换、完整曲目切换/缓冲时序与长时间相位精度尚待实际设备/专项验证；原生驱动源码检查不能替代这些验收。
 
 2026-10-18 本地终态：SourceUITests-1792322360079完整八布局/PCM/歌词/统计/重启/凭据清理及新增黑胶专项282.844秒通过，1通过/0失败/0跳过。暂停81点/324字节非空像素稳定、播放实际像素变化、真实唱针frame变化/返回、Home→激活继续转动通过。两张黑胶画面已亲看，独立Pillow中心150×150区域有超过1000个像素差异（不是全画面动态背景差异）；图片/摘要/收据留build/vinyl-motion-passed，日志/catalog/summary/counts另存ui-vinyl-motion-*。10合成鉴权成功/0失败，1coverArt、无新stream请求、复用缓存；不计真实服务或本次冷下载。完整临时附件导出在finally删除，原xcresult与两张必要PNG保留。387业务/类型通过；清洁归档/提交push/对应iOS27仍待。精确缓动时序、运行中减少动态效果/曲目切换/缓冲专项及真机验收未由本次测试证明。
+
+清洁归档及正常push已完成：3313457，IPA SHA256 `04b569c04234bf4d2212eee8582d4a2aaf3c29ab9ea2fa7d1f35c976e44d9b7c`；build/local-presentation-3313457验证收据。云端39124884346排队、393adcf运行，尚无本批iOS27终态，详见BUILD_STATUS。
