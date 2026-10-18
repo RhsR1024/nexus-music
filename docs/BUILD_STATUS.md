@@ -1,3 +1,9 @@
+## 2026-10-18 原生柔光清洁归档与push回执
+
+产品提交9b13459及静态/构建文档提交 `ea4f5d66f608a307d19af91815b11daaf88880b6` 已正常push到RhsR1024/nexus-music，远端main一致。最终干净归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离及私人/签名资源排除均通过。IPA SHA256 `61441439204e2b57cfaa59173cda67c560fff5322ee1b4b507ba17eea4046259`，留存build/local-ambient-scene-ea4f5d6。首轮9b13459归档成功但期间心跳追加文档，另存首包；最终ea4f5d6全程干净，未混用两份收据。366业务/类型、最终完整native、正式背景354.349秒与截图验收见下。
+
+push后API实核新运行39083490325/ea4f5d6唯一pending，39077179759/25b1e05继续运行，1运行/1排队；未取消运行或重派旧版。8f865af旧两小时运行超时取消不算通过；最新完整成功且IPA核验仍为76c9cd0/39050349015。E030静态补证后的strict review30E/29F/29P、8WI/59事件零错误/警告。下一批先解决切歌加载空态与最多两场过渡的可见所有权，再做实际帧/快速切换/停止回退验收；不得弱化CoverThemeStore旧请求/迟到结果守卫。完整A/F/J、参考运行及真实服务/签名/手机/性能仍待，目标保持active。
+
 ## 2026-10-18 08:28 心跳：背景批次旧预算超时
 
 API核实 `8f865af` / [39072820731](https://github.com/RhsR1024/nexus-music/actions/runs/39072820731) 已结束为cancelled；官方Annotations明确“exceeded the maximum execution time of 2h0m0s”。checks、native、核心App和歌词/匹配/健康/发现步骤成功，离线步骤被取消，iPad/设备归档/IPA上传跳过；不能计完整成功，也不能据此判定离线产品失败。诊断上传另报创建ZIP失败，artifact API为0项，没有可下载核验的诊断包或本批云端IPA；API原始回执与边界留忽略目录 `build/ci-39072820731/FINDINGS.txt`。
