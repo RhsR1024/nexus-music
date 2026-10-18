@@ -50,6 +50,7 @@ import {OfflineDownloadStore} from '../storage/offlineDownloads.ts';
 import {createOfflineDownloadFiles} from '../storage/offlineFiles.ts';
 import {LocalRecommendationStore} from '../providers/recommendations.ts';
 import {MusicAccounts} from '../providers/musicAccounts.ts';
+import {MusicAuthFlow} from '../providers/musicAuth.ts';
 
 export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const repository = await openRepository();
@@ -71,6 +72,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('navidrome.accounts.v1','连接',()=>accounts.restore());
   const musicAccounts=new MusicAccounts(repository,nativeSecrets,hash);
   await restore('music.accounts.v1','音乐平台账号',()=>musicAccounts.restore());
+  const musicAuth={wy:new MusicAuthFlow<Record<string,unknown>>(),tx:new MusicAuthFlow<Record<string,unknown>>(),kg:new MusicAuthFlow<Record<string,unknown>>()};
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
   const libraryMutations=new MutationQueue();
   const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations);await restore('library.v1','音乐库',()=>library.restore());
@@ -173,7 +175,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
-  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, library, lyrics, fonts, recoveryWarnings };
+  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

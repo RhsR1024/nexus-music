@@ -1355,3 +1355,7 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 ## 2026-10-18 平台账号底座构建回执
 
 `09480afbeb1f3b9f34abc755e868b39548849622` 已正常 push。`npm run check` 379/379；本地 clean unsigned archive 与 `verify-presentation-archive.py` 通过，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、signed=false、dirty=false，IPA SHA256 `792ef3cad6b3aad97bee716a235e5e4759bfb95f8a5d21dbac908e94cb879d5e`。新云端运行 39113628537 对应该提交，当前 pending；旧 39111966447 仍运行，保持 1 running/1 pending，不取消运行中任务。
+
+## 2026-10-18 平台授权状态机阶段
+
+新增 `src/providers/musicAuth.ts`，服务暴露 `musicAuth.wy/tx/kg` 独立流程。新尝试会失效旧回调，取消会释放原生句柄，过期/失败不会泄露协议细节；4 项新增测试使 `npm run check` 达到 383/383。当前尚未接入 WKWebView、外部 App 回跳、酷狗二维码或真实账号。下一步按 Q-music 固定提交实现各平台授权适配，再做本地 UI、云端 iOS27 和真机/真实服务证据。

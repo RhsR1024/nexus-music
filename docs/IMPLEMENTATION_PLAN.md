@@ -770,3 +770,7 @@ WebDAV 同步的自动触发已收口为安全的前台预览：服务初始化�
 ## 2026-10-18 平台账号安全底座
 
 实现 `src/providers/musicAccounts.ts` 与 `services.musicAccounts` 接线。仓库记录平台、显示名、账号标识和能力声明；会话 JSON 仅进入 Keychain，账号替换与退出采用串行原子写入并在仓库失败时恢复旧会话。新增测试覆盖秘密隔离、替换回滚和退出清理，379/379 通过。该底座不替代各平台授权流程；QQ/网易云网页会话及酷狗二维码流程需按固定 Q-music 证据逐平台适配。
+
+## 2026-10-18 平台授权状态机
+
+`src/providers/musicAuth.ts` 实现单实例授权生命周期，`createServices()` 暴露 `musicAuth.wy/tx/kg`。状态机以代次隔离迟到回调，统一处理 success/cancel/expired/error，并确保 native cleanup 只执行一次；测试覆盖四类竞态，383/383 通过。具体平台协议接入仍需严格按 Q-music 参考和 iOS WKWebView/二维码边界分别完成。
