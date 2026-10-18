@@ -1363,3 +1363,7 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 ## 2026-10-18 平台授权状态机构建回执
 
 `8b217c9` 已正常 push；`npm run check` 383/383，本地 clean unsigned archive 与归档校验通过，IPA SHA256 `11566adb7b0f092bdafb631437b9887ad5a87758397288523a32c4179b1d0e8f`，arm64/iOS SDK26.2/min15.1/设备族[1,2]/signed=false。账号授权流程仍未接真实平台。旧运行和本批 iOS27 队列以 API 实际状态为准。
+
+## 2026-10-18 授权清理异常修复回执
+
+`fd376cc` 已正常 push；授权状态机清理异常保护通过，`npm run check` 384/384，本地 clean unsigned archive/校验通过，IPA SHA256 `c74b8d5fb6377d4d50874e730f5bf58d57eadf9d511dd8fdada79327458cd180`。对应新 iOS27 运行以 API 实际队列为准；仍不能宣称真实平台授权或真机通过。

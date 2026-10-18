@@ -1280,3 +1280,7 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 ## 2026-10-18 平台授权状态机归档回执
 
 提交 `8b217c9aa891dcb06e2db5875bab74279e779c04` 的本地 clean unsigned archive 已成功：Xcode 26.3、iOS SDK 26.2、arm64、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`、`dirty=false`、`workingTreeChanges=[]`。`build/verify-presentation-archive.py` 通过 ZIP CRC、归档可执行文件与 `main.jsbundle` 一致、正式入口和私人资源排除；IPA SHA256 `11566adb7b0f092bdafb631437b9887ad5a87758397288523a32c4179b1d0e8f`。该归档不替代真实平台授权、签名或真机验收。
+
+## 2026-10-18 授权清理异常修复归档回执
+
+提交 `fd376cc82dd5afa0023d247d7c4f0c5b1e7e3ddc` 在原生清理回调异常保护修复后重新完成 clean unsigned archive；`npm run check` 384/384。归档校验通过，arm64、iOS SDK 26.2、最低 iOS 15.1、设备族 `[1,2]`、signed=false、dirty=false；IPA SHA256 `c74b8d5fb6377d4d50874e730f5bf58d57eadf9d511dd8fdada79327458cd180`。真实平台授权、签名和真机仍未验收。
