@@ -1,3 +1,7 @@
+## 2026-10-18 漫途排除项与进度计算复核
+
+漫途持续/双向歌单同步明确不实现，一次性多平台公开歌单导入保留；音枢自身WebDAV多设备同步范围不变。复核修正旧80.95%算法：取消前已开发80.65单位保持不变，只从100单位分母移除暂估0.30单位未开发同步量，当前80.65÷99.70≈**80.89%（对外约81%）**，剩余**19.11%（约19%）**。排除后期真机反馈调试；完整交付归一化约58.25%，无新服务/签名/真机结论。账号底座/状态机及隐私修正不提高本轮评分，评论探查尚未采纳。依据和14工作包见[进度估算](docs/PROGRESS_ESTIMATE.md)。历史80.95%记载由本条更正。
+
 ## 2026-10-18 账号隐私修正版构建回执
 
 产品提交 `4797970ec9fc386a9d7ac9ba5e39482966d327b6` 已在 387/387 检查及 clean unsigned archive 校验后正常 push。manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]/signed=false，ZIP CRC、归档可执行文件与 JS 字节一致、正式入口及私人资源名称排除通过；IPA SHA256 `dfaaa1c0964dc298d6d512e24ed335aca8bb7cd20b401b2b76eb56346b7f5d8b`。日志留 `build/logs/archive-auth-privacy-final.log` 与 `verify-auth-privacy-final.json`。
