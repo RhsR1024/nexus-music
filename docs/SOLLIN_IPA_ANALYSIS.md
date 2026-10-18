@@ -1,3 +1,7 @@
+## 2026-10-18 E028元数据步幅修正
+
+reverse-skill新R2/mobile-reverse路由、固定样本/离线scope和28E/27F/27P严格review通过。独立工具只修未装箱字段分支步幅，补齐四场锚点、Brightness0=dark、sRGB黑白/覆盖alpha及Cubic(.645,.045,.355,1)；E027旧收据的标准曲线推断在新证据中纠正，原收据不改。36,392条函数边界、36,928条名称及完整分派字节与原工具一致。工具源码/二进制/原始输出留忽略目录，[报告](2026-10-18_reverse-sollin-ambient-scene-report.md)记录新收据摘要、复现和失败探查；没有参考App执行或完整调用图。音枢在验场景仍为明确原创锚点/随机/有界色策略，不因补字段静默改变产品。
+
 ## 2026-10-18 A04共享取色与背景活动边界（静态阶段）
 
 新reverse-skill R2/mobile-reverse路由、固定离线scope/case-guard通过；E024→F023→P023核验2358原始ARM64指令、28BL、9池加载及manifest，独立重放通过。全局createScene调用共享extractPalette后进入自身柔光/场景；24×24/HSV分桶及路由当前态/生命周期/活动id/面积选择/计时器守卫边界已确认。严格review24E/23F/23P、8WI/44事件零错误/警告。完整权重/回退、字段名、遮挡/运行/功耗仍未恢复，无新产品采纳，不增加实现完成度。详见[报告](2026-10-18_reverse-sollin-cover-flow-report.md)。初次手写总数2458误记触发断言，修正13范围合计2358后才创建不可变Evidence，原字节未改。

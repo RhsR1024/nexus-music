@@ -22,6 +22,9 @@ build/tests/native-cache
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/CoverCache.swift tests/native/CoverCacheTests.swift -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers -o build/tests/native-covers
 build/tests/native-covers
 
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/AmbientScene.swift tests/native/AmbientSceneTests.swift -framework CoreGraphics -o build/tests/native-ambient
+build/tests/native-ambient
+
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/PlaybackSleepTimer.swift tests/native/SleepTimerTests.swift -o build/tests/native-sleep
 build/tests/native-sleep
 

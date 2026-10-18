@@ -64,6 +64,8 @@ flowchart LR
 
 ## 对象恢复工具增补的当前状态
 
+2026-10-18增补：原独立工具及不可变收据保留，新增同固定Blutter/Dart源的隔离unboxed-reader。审阅发现非压缩模式的未装箱字段分支与公共循环各前进8字节，导致跳过相邻字段；仅修正该分支步幅。CLI、deny-network解析、36,392条函数边界/36,928条名称及完整分派字节交叉核验通过，二进制SHA256 `351db11eecbf0d7670d3e482281deb29ed1167213a6b7d19fc7a391c9a30e6fb`已登记本机索引。E028→F027→P027及28E/27F/27P严格review补齐锚点/颜色/Cubic0.045并纠正E027未采纳的标准曲线推断，详见[场景报告](2026-10-18_reverse-sollin-ambient-scene-report.md)。此为主机VM元数据恢复，不是参考App运行或完整反编译。
+
 已只读审阅 Blutter 固定提交及其下载/构建脚本，未执行安装器。当前上游仍按ELF提取，iOS PR204实验性且未合并，详见 [IPA分析](SOLLIN_IPA_ANALYSIS.md)。缺少的CMake/Ninja先准备独立环境脚本 `work/tooling/prepare-python-tools.sh`（忽略、不进入产品）：新建 `/Users/ningli/WorkSpace/Tools/Reverse/python-env`，从PyPI安装 cmake3.31.6、ninja1.11.1.3、pyelftools0.32并检查版本；拒绝覆盖已有目录，不启动服务或改全局配置。用户随后明确批准“批准独立工具安装”，已原样执行该脚本并exit0：cmake CLI3.31.6、ninja CLI1.11.1.git.kitware.jobserver-1（wheel1.11.1.3）、pyelftools0.32均验证通过。实际路径均在该venv/bin，安装日志build/logs/reverse-python-tools-install.log；无服务启动或全局配置变化。已刷新外部索引并补充这三项绝对路径、wheel/CLI版本、来源及验证命令（通用refresh仅检测内置34项，后续刷新需重新验证并登记这些补充项）。此请求不阻塞既有应用回归；DartVM/ICU/Capstone及iOS实验mapper仍需后续审阅与独立验收。
 
 桌面依赖工具已只读确认另带Python3.12.14，路径`/Users/ningli/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3`；无需安装新解释器。当前工具索引主Python选此路径；隔离venv内仍是原已披露Python3.9.6，pyelftools在该venv使用。CMake/Ninja先决工具可用不等于Blutter/DartVM/ICU/Capstone已构建，更不等于对象图恢复。两离线案例严格review仍通过。

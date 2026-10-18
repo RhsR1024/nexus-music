@@ -1,5 +1,7 @@
 import {useEffect,useRef,useState,useSyncExternalStore,type PropsWithChildren} from 'react';
-import {AccessibilityInfo,Animated,AppState,Image,StyleSheet,View} from 'react-native';
+import {AccessibilityInfo,Animated,AppState,Image,StyleSheet,View,type ViewProps} from 'react-native';
+import {requireNativeView} from 'expo';
+import type {FlowPalette} from '../domain/appearance.ts';
 import type {Services} from '../app/services.ts';
 import type {VisualAsset} from '../storage/visualAssets.ts';
 export function useVisualImage(services:Services|undefined,image:VisualAsset|null|undefined){
@@ -7,10 +9,18 @@ export function useVisualImage(services:Services|undefined,image:VisualAsset|nul
   useEffect(()=>{let valid=true;setResolved(undefined);if(services&&image)void services.visualAssets.resolve(image).then(uri=>{if(valid&&uri)setResolved({id:image.id,uri});});return()=>{valid=false;};},[services,image?.id]);
   return resolved?.id===image?.id?resolved?.uri:undefined;
 }
-export function MotionImage({uri,blur=0,opacity=1,moving=false,onError,testID}:{testID?:string;uri:string;blur?:number;opacity?:number;moving?:boolean;onError?:()=>void}){
-  const phase=useRef(new Animated.Value(0)).current,[reduce,setReduce]=useState(true),[active,setActive]=useState(AppState.currentState==='active');
+function useMotionGate(moving:boolean){
+  const [reduce,setReduce]=useState(true),[active,setActive]=useState(AppState.currentState==='active');
   useEffect(()=>{let valid=true;void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(valid)setReduce(value);});const motion=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduce),app=AppState.addEventListener('change',state=>setActive(state==='active'));return()=>{valid=false;motion.remove();app.remove();};},[]);
-  const running=moving&&!reduce&&active;
+  return moving&&!reduce&&active;
+}
+const NativeAmbient=requireNativeView<ViewProps&{colors:readonly string[];identity:string;moving:boolean}>('NexusNative','Ambient');
+export function AmbientSoftLights({colors,identity,moving}:{colors:FlowPalette;identity:string;moving:boolean}){
+  const running=useMotionGate(moving);
+  return <View testID={`ambient-motion-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeAmbient testID="ambient-soft-lights" colors={colors} identity={identity} moving={running} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
+}
+export function MotionImage({uri,blur=0,opacity=1,moving=false,onError,testID}:{testID?:string;uri:string;blur?:number;opacity?:number;moving?:boolean;onError?:()=>void}){
+  const phase=useRef(new Animated.Value(0)).current,running=useMotionGate(moving);
   useEffect(()=>{let alive=true,animation:Animated.CompositeAnimation|undefined;
     const step=(next:number)=>{if(!alive)return;animation=Animated.timing(phase,{toValue:next,duration:18000,useNativeDriver:true,isInteraction:false});animation.start(({finished})=>{if(finished&&alive)step(next===1?0:1);});};
     if(running)step(1);else{phase.stopAnimation();phase.setValue(0);}

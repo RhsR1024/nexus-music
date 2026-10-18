@@ -1,6 +1,6 @@
 # Sollin 柔光贴图与四场背景的静态边界
 
-全局背景在共享三色取样后软化颜色、生成144×144柔光图，再创建四个运动色场；底层渐变与色场具有分开的运动参数。音枢当前的三色渐变与封面平移尚不能代表这一合成场景。本批恢复有限数学和绘制边界，没有运行Sollin或新增产品实现；缺失的锚点纵坐标、部分颜色分量、精确随机序列和完整过渡策略仍保持未知。普通逆向报告，flavor=null。
+全局背景在共享三色取样后软化颜色、生成144×144柔光图，再创建四个运动色场；底层渐变与色场具有分开的运动参数。E026/E027恢复有限数学和绘制边界，后续E028修复工具漏读，补齐锚点、颜色与曲线字段。后续E029恢复旧新场景替换/结束/清理边界；精确随机序列、完整异步载入与参考运行仍未验证。音枢原创实施及验收另记在文末，不由静态恢复推导等价。普通逆向报告，flavor=null。
 
 ## 范围、来源与复现
 
@@ -10,8 +10,10 @@
 | --- | --- | --- |
 | E026，scene-color-evidence.json；SHA256 `a50461ab9407f2888a6117c6bbc36c4353c2153870b205dd817df8c8245be481` | F025 → P025 | 900原始ARM64指令、10选定BL、16池加载、3个原始getter；HSL软化、贴图和种子 |
 | E027，scene-geometry-evidence.json；SHA256 `0510f691cd286e3b4c9832871832565c0a5986569ca71270555ec26e1dafb98a` | F026 → P026 | 1296原始指令、109BL、58池加载；四场构造、几何与绘制边界 |
+| E028，unboxed-scene-fields-evidence.json；SHA256 `85162e5228fa9f859dcbd446ced97d10be5365d4e5873ae63dfc1339bb5e4ee8` | F027 → P027 | 工具单文件步幅修正、完整锚点/颜色/曲线、原始池加载及函数/名称/分派一致性 |
+| E029，scene-transition-evidence.json；SHA256 `e3f9fbc8aee6b533b20207547ba2380baa3b4975acb8bcc17dc3a5b4024ff869` | F028 → P028 | 362原始指令、42BL、12池加载；旧新交接、timer/释放与共享空函数 |
 
-E→F→P完整条目在本机case report/global-background.md，关联WI002及追加timeline，field-journal/scene-primitives-alias.md保留方法纠错。严格review为27E/26F/26P、8WI/54事件，零错误/警告；独立重放日志与不可变收据均保留。审查通过证明记录一致与哈希有效，数学结论仍由逐指令审阅负责。
+E→F→P完整条目在本机case report/global-background.md，关联WI002及追加timeline，field-journal/scene-primitives-alias.md保留方法纠错。E026/E027初次严格review为27E/26F/26P、8WI/54事件，后续E028复核见下；独立重放日志与不可变收据均保留。审查通过证明记录一致与哈希有效，数学结论仍由逐指令审阅负责。
 
 在该固定本机案例下可重放以下命令；生成器只允许首次创建收据，不重复覆盖：
 
@@ -19,6 +21,8 @@ E→F→P完整条目在本机case report/global-background.md，关联WI002及�
 source scripts/environment.sh
 python3 build/verify-scene-color-evidence.py
 python3 build/verify-scene-geometry-evidence.py
+python3 build/verify-unboxed-scene-evidence.py
+python3 build/verify-scene-transition-evidence.py
 node scripts/sollin-reverse-gate.mjs ipa --review
 ```
 
@@ -44,8 +48,28 @@ Color红色浮点getter分派索引2731的canonical名称是SystemTextScaler.tex
 
 紧凑对象输出只给锚点横坐标0.12/0.88/0.32/0.82，未给完整纵坐标；部分Color分量也缺失，不能补成猜测值。E027不可变收据曾将标准Cubic控制点写为0.645/0/0.355/1；本次pool实际只打印0.645/0.355，因此其余两个控制量未被采纳为样本恢复结论。原收据保持不变，E027登记、Finding与timeline已明确这一限制。
 
+## E028修正：非压缩字段步幅
+
+新路由work/master-route-20261018-073220仍为R2/mobile-reverse，既有离线scope未重初始化。固定Blutter0039efb1的dumpInstanceFields在未装箱分支和公共循环各增加一个指针字长；本样本非压缩8字节模式因此每次前进16字节，跳过相邻字段。独立工具仅将该分支改为`sizeof(uint64_t)−kCompressedWordSize`，加上公共循环后两种指针模式均前进8字节。原工具、输出及旧收据未改。
+
+独立修正版CLI帮助和deny-network解析通过，二进制SHA256为`351db11eecbf0d7670d3e482281deb29ed1167213a6b7d19fc7a391c9a30e6fb`。逐源文件比较仅DartDumper.cpp一处改动；36,392条函数边界、36,928条命名记录及完整dispatch字节与原输出一致。整个addNames含新字段注释/ASLR，不要求原文一致；初次全文比较和误把73,320当命名数的失败均保留，后者实际为两类记录之和，不是唯一函数数。
+
+新字段恢复四个锚点，顺序为(0.12,0.18)/(0.88,0.38)/(0.32,0.84)/(0.82,0.92)。Cubic四字段实际为(0.645,0.045,0.355,1)，明确纠正E027收据中的y1=0推断。Brightness枚举0名称为dark；黑/白Color完整分量与sRGB字段恢复，主题覆盖渐变分别为黑色alpha4/255→24/255及白色18/255→48/255。四处原始池加载指令与E027重核，新字段独立读取通过；严格review为28E/27F/27P、8WI/55事件，零错误/警告。这里只补元数据，不等于有效用户设置或原始画面观测。
+
+## E029：场景交接、结束与清理
+
+新路由work/master-route-20261018-075534为R2/mobile-reverse；复用既有离线scope并通过前置门禁。E029→F028→P028收据scene-transition-evidence.json，SHA256 `e3f9fbc8aee6b533b20207547ba2380baa3b4975acb8bcc17dc3a5b4024ff869`。独立重放362原始指令、42BL、12池加载及manifest通过；严格review29E/28F/28P、8WI/56事件零错误/警告。
+
+install先取消两个既有timer、清重试量并释放旧场景。动态分支把当前场景移入previous槽，再安装新场景，以Stopwatch微秒除以1e6写起点，随后同步帧timer并创建raw整数600000的Duration定时器，与E027绘制0.6区间一致，但没有测量实际墙钟延迟。完成回调先清previous槽再释放，只在State仍挂载时请求setState。关闭动态的分支直接释放当前、清previous、安装新场景并写起点哨兵-1000；clear同时清两槽后逐一释放资源。
+
+完成回调的池项canonical名称是Shader构造器，但原始两指令只是返回null，属于共享空函数，不能解释成创建Shader。sceneDispose有图片集合移除/最后引用释放边界，未观察实际GPU释放。didUpdateWidget的0x17字段身份变化，或0xf字段经分派判断不相等，会重新resolve；字段业务名及完整异步load/retry/迟到结果守卫未恢复，不据此宣称切歌异步正确或参考运行等价。本补证不改变当前原创产品的同步场景替换策略。
+
 ## 原创实施的下一步
 
 音枢应先记录五个固定参考的图层、资源、动画停止、Android及许可取舍，再设计有界原生柔光场景。可明确采用自己的锚点、随机与文字对比度策略，但必须与参考已核结构分开记录；不能把场景软化色直接替换现有语义文字背景。保留图片身份/迟到拒绝、缓存预算、全屏可见拥有者、暂停/缓冲、后台与减少动态效果门控，唯一队列和原生音频不变。新增实现需独立数学/原生与App像素、切歌、跨页、停止/恢复验收，之后分别做清洁归档和对应iOS27验证。
 
 本批无产品改动，不增加A04完成度，不重复以打包代替播放验收。参考运行、完整视觉等价、能耗/帧率、真实服务、签名和真机均未验证。上一三色批次的本地验收及云端排队状态见[构建记录](BUILD_STATUS.md)，不由本报告扩展其结论。
+
+## 原创实施跟进（与静态收据分开）
+
+[0054](decisions/0054-native-ambient-soft-lights.md)记录五参考重核与采纳前取舍，原创增加有界四场原生柔光层，仍使用现有三色基础渐变和语义明暗色，不采纳HSL软化/参考锚点/参考随机/完整旋转合成或过渡曲线。原生独立数值/实际栅格专项、完整native和366业务/类型通过；最终图层版正式App354.349秒通过，含实际暂停/播放像素、两页三色、PCM/前后台、播放中独立开关及恢复清理；12合成鉴权成功/0失败，无新stream，复用临时音频缓存。最终完整native再次退出0；清洁IPA和对应iOS27继续。不以这些原创测试推导参考运行等价。

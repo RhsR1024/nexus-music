@@ -17,6 +17,12 @@ public final class NexusNativeModule: Module {
     View(NexusMaterialView.self) {
       Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }
     }
+    View(NexusAmbientView.self) {
+      ViewName("Ambient")
+      Prop("colors") { (view: NexusAmbientView, colors: [String]) in view.setColors(colors) }
+      Prop("identity") { (view: NexusAmbientView, identity: String) in view.setIdentity(identity) }
+      Prop("moving") { (view: NexusAmbientView, moving: Bool) in view.setMoving(moving) }
+    }
     AsyncFunction("decodeImportText") { (base64: String) throws -> String in try ScriptUtilities.perform("importText", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("probeAudioURL") { (id: String, url: String, promise: Promise) in
       guard self.probes[id] == nil, self.probes.count < 2 else { promise.reject("PROBE_BUSY", "请等待其他检查完成"); return }

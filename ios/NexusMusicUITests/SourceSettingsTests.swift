@@ -1084,9 +1084,26 @@ final class SourceSettingsTests: XCTestCase {
   func testGlobalCoverThemeChangesAcrossPages() throws {
     let app=XCUIApplication();app.launch()
     func reveal(_ element:XCUIElement){for _ in 0..<24 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65:0.35)))};XCTAssertTrue(element.isHittable)}
+    func setSwitch(_ element:XCUIElement,_ enabled:Bool){
+      reveal(element)
+      // Use the actual switch track, as verified by the round-trip App test.
+      let expected=enabled ? "1":"0"
+      if element.value as? String != expected {element.coordinate(withNormalizedOffset:CGVector(dx:0.8,dy:0.5)).tap()}
+      let saved=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@",expected),object:element)
+      let result=XCTWaiter.wait(for:[saved],timeout:10)
+      if result != .completed {
+        let shot=XCTAttachment(screenshot:app.screenshot());shot.name="Background switch failed: "+element.identifier;shot.lifetime = .keepAlways;add(shot)
+        let tree=XCTAttachment(string:app.debugDescription);tree.name="Background switch hierarchy";tree.lifetime = .keepAlways;add(tree)
+      }
+      XCTAssertEqual(result,.completed,"Background preference must reach the requested state: \(element.identifier)")
+    }
     openSettings(app,page:"background");app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch.tap()
+    // Other appearance tests import an image and persist its selection. Choose
+    // an explicit neutral base before asserting restoration after flow stops.
     openSettings(app,page:"background")
-    for id in ["visual-global-motion","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "0"{control.tap()}}
+    let solid=app.descendants(matching:.any).matching(identifier:"background-solid").firstMatch;reveal(solid);solid.tap()
+    openSettings(app,page:"background")
+    for id in ["visual-global-motion","visual-motion"] {setSwitch(app.switches[id],false)}
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
     openSettings(app,page:"appearance");let follow=app.switches["appearance-cover-color"];reveal(follow);if follow.value as? String != "1"{follow.tap()}
     openSettings(app,page:"sources")
@@ -1142,16 +1159,30 @@ final class SourceSettingsTests: XCTestCase {
     let persistedTint=app.switches["visual-cover-color"];reveal(persistedTint);XCTAssertEqual(persistedTint.value as? String,"0")
     let persistedPlayer=app.switches["visual-motion"];reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"0")
     app.buttons["background-sheet-close"].tap();expectTint(false,"Global flow restored paused")
-    // Exercise the real Animated gate through playback, native presentation,
+    // Exercise the real native scene gate through playback, presentation,
     // foreground restoration and pause; pixel checks above remain independent.
     func motion(_ active:Bool){
       let id="ambient-motion-"+(active ? "active":"still")
       XCTAssertTrue(app.descendants(matching:.any).matching(identifier:id).firstMatch.waitForExistence(timeout:10))
+      XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"ambient-soft-lights").firstMatch.waitForExistence(timeout:10),"Three-color flow must mount the registered native soft-light view")
+    }
+    func backgroundPixels()->[UInt8]{
+      let image=app.screenshot().image
+      return [0.22,0.36,0.5,0.64,0.78].flatMap{fraction->[UInt8] in
+        [CGFloat(6),image.size.width-6].flatMap{x in Array(rgbPixel(image,CGPoint(x:x,y:image.size.height*fraction)).prefix(3))}
+      }
     }
     motion(false)
+    let stoppedPixels=backgroundPixels();XCTAssertEqual(stoppedPixels,backgroundPixels(),"Paused native scene must retain stable actual background pixels")
     openSettings(app,page:"skins")
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch;reveal(classic);classic.tap()
     app.buttons["mini-action-toggle"].tap();motion(true)
+    let firstMotionPixels=backgroundPixels()
+    let actualMotion=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      let next=backgroundPixels()
+      return next.count==30 && zip(firstMotionPixels,next).reduce(0){$0+abs(Int($1.0)-Int($1.1))}>=5
+    },object:app)
+    XCTAssertEqual(XCTWaiter.wait(for:[actualMotion],timeout:20),.completed,"Native soft lights must change actual margin pixels while audio plays")
     app.buttons["打开播放页"].tap();motion(true)
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:20),"Background presentation must preserve native PCM playback")
     let activeBackground=XCTAttachment(screenshot:app.screenshot());activeBackground.name="Classic foreground background with native PCM";activeBackground.lifetime = .keepAlways;add(activeBackground)
@@ -1186,14 +1217,32 @@ final class SourceSettingsTests: XCTestCase {
     expectThreeColors("Three-color flow actual private library pixels")
     app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap()
     expectThreeColors("Three-color flow actual discovery pixels")
-    openSettings(app,page:"background");reveal(persistedPlayer);persistedPlayer.tap()
-    reveal(persistedGlobal);persistedGlobal.tap()
+    openSettings(app,page:"background");setSwitch(persistedPlayer,true)
+    setSwitch(persistedGlobal,false)
     app.buttons["background-sheet-close"].tap()
     let restoredBase=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[restoredBase],timeout:10),.completed)
     openSettings(app,page:"background");reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"1","Global switch must preserve playback animation choice")
-    persistedPlayer.tap()
+    setSwitch(persistedPlayer,false)
     openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
     XCTAssertFalse(app.buttons["打开播放页"].exists)
+  }
+  func testBackgroundMotionSwitchRoundTrip() throws {
+    let app=XCUIApplication();app.launch();openSettings(app,page:"background")
+    let control=app.switches["visual-motion"],scroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    for _ in 0..<16 {if control.isHittable{break};scroll.swipeUp()}
+    XCTAssertTrue(control.isHittable)
+    let initial=control.value as? String
+    let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in control.isHittable && control.isEnabled},object:control)
+    XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed)
+    control.coordinate(withNormalizedOffset:CGVector(dx:0.8,dy:0.5)).tap()
+    let changed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value != %@",initial ?? ""),object:control)
+    XCTAssertEqual(XCTWaiter.wait(for:[changed],timeout:10),.completed)
+    app.terminate();app.launch();openSettings(app,page:"background")
+    for _ in 0..<16 {if control.isHittable{break};scroll.swipeUp()}
+    XCTAssertNotEqual(control.value as? String,initial)
+    control.coordinate(withNormalizedOffset:CGVector(dx:0.8,dy:0.5)).tap()
+    let restored=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@",initial ?? ""),object:control)
+    XCTAssertEqual(XCTWaiter.wait(for:[restored],timeout:10),.completed)
   }
   func testDiscoverySongActions() throws {
     let app=XCUIApplication();app.launch()

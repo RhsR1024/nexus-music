@@ -1,3 +1,9 @@
+## 2026-10-18 A04原生四场柔光（本地验收通过）
+
+按[0054](decisions/0054-native-ambient-soft-lights.md)原创实现144×144预乘贴图、四个复用CGImage的CALayer与有界几何，tick只更新矩形/透明度，不逐帧重绘整屏或传入React。366业务/类型和最终完整native通过；正式入口SourceUITests-1792282616128完整背景流程354.349秒、1通过/零失败/跳过：具名原生视图、暂停实际像素稳定/播放像素变化、两页三色、红蓝切歌/跨页/开关/重启、经典页PCM、Home→激活、收起/暂停，以及播放中打开独立动效再关闭全局动效、恢复底色/独立偏好和凭据清理。截图已亲看；12次本机合成鉴权成功/0失败，本轮无新stream，复用临时音频缓存，不计冷下载或真实个人服务。
+
+前五轮完整流程及播放中短探针失败、两个独立短专项通过、图层首个短探针缺队列而未到目标步骤均保留；最终自建连接/队列的完整流程通过，不推断实测CPU/FPS或全部根因。日志/摘要/counts留build/logs/ui-ambient-layer-*，附件build/ambient-layer-passed。reverse-skill新R2路由/离线scope后E026–E029原字节独立重放通过，严格review29E/28F/28P、8WI/57事件零错误/警告；E029仅核有限交接/释放，当前产品同步替换，完整异步load/retry/参考运行仍待。见[报告](2026-10-18_reverse-sollin-ambient-scene-report.md)。清洁归档/提交push/对应云端继续；全部A/F/J、真实服务/签名/手机及性能边界保持active。
+
 ## 2026-10-18 三色背景清洁归档与push回执
 
 `25b1e0538c4c9a0e7221f14fdf87c29e0eca71ef`已正常push，远端main一致。清洁归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离和私人/签名资源排除通过。IPA SHA256 `50371f64901f6414dab4762768fa0d75890c2a8dc8a5fdfcfca2e4b3d9f3b14c`，留存build/local-flow-palette-25b1e05。366业务/类型、完整native、正式背景App329.540秒及两页三色截图见下；验收后strict review25E/24F/24P、8WI/51事件零错误/警告。
