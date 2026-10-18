@@ -13,3 +13,5 @@
 本地 `check-ambient-swift-inference.log` 为368/368，`native-ambient-swift-inference.log` 完整套件exit0，包含原32向量/贴图/合成断言；现有Swift Sendable警告保留。E032字节与20独立向量复核、32E/31F/31P严格review零错误/警告通过。清洁归档及新云端终态继续记录。
 
 修正定位后的本地 `native-ambient-inference-corrected.log` 原生场景专项通过；Xcode27仍需新提交实际验证。39098201855没有进入App/归档，不能改写为通过。
+
+云端分项回执：b6f66a2/39104211437的官方jobs API确认checks、Apple Silicon/iOS27工具链和完整Native contracts and audio processing步骤均success（本机build/ci-presentation-jobs.json）。这才是实际overlay表达式修正后的新云端编译/原生测试证据；不把原dfd304b失败改写为通过，App、iPad与归档仍按整次终态分别记录。

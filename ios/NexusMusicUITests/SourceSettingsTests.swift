@@ -790,7 +790,8 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testAM2PlayerWithLargeText() throws { try verifyAM2Window(largeText:true) }
   func testAM2PlayerWindowRotation() throws { try verifyAM2Window(largeText:false) }
-  private func verifyAM2Window(largeText:Bool) throws {
+  func testClassicPlayerWindowSafeArea() throws {try verifyAM2Window(largeText:false,classic:true)}
+  private func verifyAM2Window(largeText:Bool,classic:Bool=false) throws {
     let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait
     defer{XCUIDevice.shared.orientation = .portrait}
     if largeText{app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]}
@@ -813,7 +814,7 @@ final class SourceSettingsTests: XCTestCase {
       }
       XCTAssertTrue(item.isHittable)
     }
-    openSettings(app,page:"skins");let am2=element("player-layout-am2");reveal(am2);am2.tap()
+    openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":"player-layout-am2");reveal(am2);am2.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["skins-sheet-close"]);waitForExpectations(timeout:10)
     openSettings(app,page:"sources")
     for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名","fixture-user"),("Navidrome密码","fixture-password")]{
@@ -826,6 +827,35 @@ final class SourceSettingsTests: XCTestCase {
     element("tab-private").tap();let account=element("navidrome-account-fixture-user");reveal(account);account.tap()
     let album=element("navidrome-item-album-fixture-album");XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();app.buttons["播放全部"].tap()
     let open=app.buttons["打开播放页"];XCTAssertTrue(open.waitForExistence(timeout:10));open.tap()
+    if classic {
+      let viewport=element("classic-player-scroll")
+      XCTAssertTrue(viewport.waitForExistence(timeout:10))
+      XCTAssertGreaterThanOrEqual(viewport.frame.minY,app.frame.minY+20)
+      XCTAssertLessThanOrEqual(viewport.frame.maxY,app.frame.maxY-10)
+      let queue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
+      reveal(queue);queue.tap()
+      let closeQueue=app.buttons["收起队列"];XCTAssertTrue(closeQueue.waitForExistence(timeout:10));closeQueue.tap()
+      XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:closeQueue)],timeout:10),.completed)
+      XCTAssertGreaterThanOrEqual(viewport.frame.minY,app.frame.minY+20)
+      let portrait=XCTAttachment(screenshot:XCUIScreen.main.screenshot());portrait.name="Classic scrolled portrait safe viewport after queue";portrait.lifetime = .keepAlways;add(portrait)
+      XCUIDevice.shared.orientation = .landscapeLeft;app.activate()
+      var frames=""
+      let rotated=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+        let window=app.frame,frame=viewport.frame;frames="window: \(window), viewport: \(frame)"
+        let side:CGFloat=UIDevice.current.userInterfaceIdiom == .pad ? 0:20
+        return window.width>window.height && frame.minX>=window.minX+side && frame.maxX<=window.maxX-side && frame.maxY<=window.maxY-10
+      },object:app)
+      let result=XCTWaiter.wait(for:[rotated],timeout:15)
+      let landscape=XCTAttachment(screenshot:XCUIScreen.main.screenshot());landscape.name="Classic scrolled landscape safe viewport";landscape.lifetime = .keepAlways;add(landscape)
+      XCTAssertEqual(result,.completed,frames)
+      XCUIDevice.shared.orientation = .portrait;app.activate()
+      let restored=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.frame.height>app.frame.width && viewport.frame.minY>=app.frame.minY+20 && viewport.frame.maxY<=app.frame.maxY-10},object:app)
+      XCTAssertEqual(XCTWaiter.wait(for:[restored],timeout:15),.completed)
+      let close=app.buttons["收起播放页"];reveal(close);close.tap()
+      openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+      XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
+      return
+    }
     XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10));app.buttons["暂停"].tap()
     let lyrics=app.buttons["am2-content-lyrics"];XCTAssertTrue(lyrics.isHittable);lyrics.tap()
     XCTAssertTrue(element("am2-lyrics-list").waitForExistence(timeout:10))
@@ -1100,7 +1130,9 @@ final class SourceSettingsTests: XCTestCase {
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
   }
   func testGlobalCoverThemeChangesAcrossPages() throws {
-    let app=XCUIApplication();app.launch()
+    XCUIDevice.shared.orientation = .portrait
+    defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch();app.activate()
     func themeControl(_ query:String="") throws -> Int {
       let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/theme-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
       return (try JSONSerialization.jsonObject(with:bytes) as? [String:Int])?["held"] ?? -1
@@ -1204,6 +1236,10 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(XCTWaiter.wait(for:[actualMotion],timeout:20),.completed,"Native soft lights must change actual margin pixels while audio plays")
     app.buttons["打开播放页"].tap();motion(true)
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:20),"Background presentation must preserve native PCM playback")
+    let classicViewport=app.descendants(matching:.any).matching(identifier:"classic-player-scroll").firstMatch
+    XCTAssertTrue(classicViewport.waitForExistence(timeout:10))
+    XCTAssertGreaterThanOrEqual(classicViewport.frame.minY,app.frame.minY+20,"The scroll viewport itself must exclude the portrait status bar, including after content is scrolled")
+    XCTAssertLessThanOrEqual(classicViewport.frame.maxY,app.frame.maxY-10,"Classic controls must stay above the home indicator")
     let activeBackground=XCTAttachment(screenshot:XCUIScreen.main.screenshot());activeBackground.name="Classic foreground background with native PCM";activeBackground.lifetime = .keepAlways;add(activeBackground)
     // A full-screen child covers the classic background; closing it must
     // restore that exact parent, and closing the player must restore the root.
@@ -1220,6 +1256,7 @@ final class SourceSettingsTests: XCTestCase {
     },object:app)
     XCTAssertEqual(XCTWaiter.wait(for:[resumedMotion],timeout:20),.completed,"Dismissing the full-screen queue must resume actual parent background motion without changing playback")
     let restoredBackground=XCTAttachment(screenshot:XCUIScreen.main.screenshot());restoredBackground.name="Classic parent restored after full-screen queue";restoredBackground.lifetime = .keepAlways;add(restoredBackground)
+    XCTAssertGreaterThanOrEqual(classicViewport.frame.minY,app.frame.minY+20,"Returning from the full-screen queue must preserve the clipped scroll viewport")
     XCUIDevice.shared.press(.home);app.activate();motion(true)
     let closePlayer=app.buttons["收起播放页"];reveal(closePlayer);closePlayer.tap();motion(true)
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
@@ -1285,9 +1322,18 @@ final class SourceSettingsTests: XCTestCase {
       // fixed stops. Sample only bare margins, requiring all three actual hues.
       var lastSamples=[[UInt8]]()
       let different=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
-        let image=XCUIScreen.main.screenshot().image
-        let points=(2...8).flatMap{step in [CGPoint(x:6,y:image.size.height*CGFloat(step)/10),CGPoint(x:image.size.width-6,y:image.size.height*CGFloat(step)/10)]}
-        lastSamples=points.map{rgbPixel(image,$0)}
+        // Simulator screen capture can briefly expose a UIImage wrapper without
+        // a CGImage while the native scene is rebuilding after a theme restart.
+        // Retry the capture itself; never relax the hue or alpha requirements.
+        var best=[[UInt8]]()
+        for _ in 0..<5 {
+          let image=XCUIScreen.main.screenshot().image
+          let points=(2...8).flatMap{step in [CGPoint(x:6,y:image.size.height*CGFloat(step)/10),CGPoint(x:image.size.width-6,y:image.size.height*CGFloat(step)/10)]}
+          let samples=points.map{rgbPixel(image,$0)}
+          if samples.filter({$0.count==4}).count > best.filter({$0.count==4}).count { best=samples }
+          if BackgroundPixels.hasPrimaryHues(samples) { lastSamples=samples; return true }
+        }
+        lastSamples=best
         return BackgroundPixels.hasPrimaryHues(lastSamples)
       },object:app)
       let result=XCTWaiter.wait(for:[different],timeout:20)

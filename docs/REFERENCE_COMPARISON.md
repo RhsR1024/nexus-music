@@ -1,3 +1,7 @@
+## 2026-10-18 经典滚动视口安全区
+
+[0062](decisions/0062-classic-player-scroll-safe-area.md)记录五固定HEAD实核、亲读的安全区职责与逐项维护/Android/许可取舍。本批为音枢实际截图确认的本地缺陷修复，不移植参考功能或声称Sollin具体insets已恢复；使用既有safe-area-context约束经典滚动视口，背景、播放和队列保持。375业务/类型通过，正式App旋转/滚动几何和原背景回归仍待终态。
+
 ## 2026-10-18 平台登录与每日推荐参考调整（用户明确补充）
 
 QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；先已有UI/交互、后新增功能顺序不变。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](Q_MUSIC_ANDROID_REFERENCE.md)。

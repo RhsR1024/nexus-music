@@ -15,12 +15,20 @@ import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Lyrics } from './Lyrics.tsx';
 import { FontSettings } from './FontSettings.tsx';
-import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type PropsWithChildren } from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent, useWindowDimensions} from 'react-native';
 import {Modal,SheetModal} from './AdaptiveModal.tsx';
+import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { PlayerLayout } from '../app/preferences.ts';
 import { currentEntry, remove, move } from '../domain/queue.ts';
+function PlayerScroll({classic,children}:PropsWithChildren<{classic:boolean}>){
+  const styles=useThemedStyles(makeStyles);
+  const scroll=<ScrollView testID={classic?'classic-player-scroll':undefined} style={{flex:1}} contentContainerStyle={[styles.content,classic&&{paddingTop:12}]}>{children}</ScrollView>;
+  // A full-screen Modal can rotate without rotating its presenting root.
+  // Read the native safe area of this window instead of the root's stale insets.
+  return classic?<SafeAreaProvider style={{flex:1}}><SafeAreaView style={{flex:1}}>{scroll}</SafeAreaView></SafeAreaProvider>:scroll;
+}
 function time(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2, '0')}`; }
 function Spectrum({ services }: { services: Services }) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
@@ -113,12 +121,12 @@ export function Player({ services }: { services: Services }) {
       {open&&<StatusBar style={preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
       <View style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:'#183647'}}>
       {open&&(preferences.playerLayout==='classic'?<AmbientBackground services={services}/>:<ArtworkBackdrop services={services} track={actualMatch??entry.track} photo={preferences.playerLayout==='photo'}/>)}
-      {preferences.playerLayout==='am2'?<View style={{flex:1,paddingHorizontal:landscape?60:24,paddingTop:landscape?12:55,paddingBottom:20}}><Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" color="#FFFFFF" size={28}/></Pressable>{open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout="am2" visible={!details} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}}/>}</View>:<ScrollView style={{flex:1}} contentContainerStyle={styles.content}>
+      {preferences.playerLayout==='am2'?<View style={{flex:1,paddingHorizontal:landscape?60:24,paddingTop:landscape?12:55,paddingBottom:20}}><Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" color="#FFFFFF" size={28}/></Pressable>{open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout="am2" visible={!details} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}}/>}</View>:<PlayerScroll classic={preferences.playerLayout==='classic'}>
         {preferences.playerLayout==='classic'?<View onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} style={{minHeight:44,justifyContent:'center',alignSelf:'stretch'}} testID="player-drag-handle">{button('收起播放页',()=>setOpen(false))}</View>:<Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:48,minHeight:44,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
         {preferences.playerLayout==='classic'&&skinSelector}
         {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}}/>}
         {preferences.playerLayout==='classic'&&detailContent}
-      </ScrollView>}</View>
+      </PlayerScroll>}</View>
       <SheetModal visible={details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={closeDetails}>
         {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
         <ScrollView key={detailPanel} style={styles.root} contentContainerStyle={styles.content}>

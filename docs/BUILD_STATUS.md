@@ -1,3 +1,17 @@
+## 2026-10-18 当前接续：经典独立专项通过，完整背景继续
+
+session43157的正式联合回归SourceUITests-1792310358432正在运行；testClassicPlayerWindowSafeArea已98.693秒通过，包含实际合成播放、滚动/队列返回、横屏cutout及转回。完整testGlobalCoverThemeChangesAcrossPages仍运行，原像素/PCM/异步/三色/明暗重启断言保持，尚不记整批通过。日志build/logs/ui-classic-separated-final.log及ui-catalog.log；终态先保存catalog/counts/summary再启动下一Xcode。
+
+云端39104211437/b6f66a2已failure：checks/iOS27工具链/完整native通过、核心22通过1失败0跳过，EQ开关滚动触达失败；后续步骤跳过，无该批云端IPA。原始官方日志转录和下载限制留build/ci-39104211437/FINDINGS.txt。下一复现并修复EQ触达，保留全部原断言；0运行0排队，不重派旧版。下方旧session14771和“云端运行中”仅为历史。
+
+## 2026-10-18 经典视口横屏首因已取证（最终修正复测中）
+
+1792307131284在300.962秒明确记录window(0,0,932,430)、viewport(0,59,932,337)：根SafeAreaProvider在全屏Modal旋转时沿用竖屏insets，原margin方案确实未修好横屏，失败catalog/counts/summary和截图留ui-classic-viewport-stale-insets-failed-*及build/classic-viewport-stale-insets-failed，截图已亲看。前面类型查询/AX根/设置页触达失败各自保留，不混同此确定坐标证据。
+
+现PlayerScroll仅经典布局使用本Modal独立SafeAreaProvider及原生SafeAreaView约束四边；背景仍为全屏兄弟，未改播放/队列/其他布局/依赖。375业务/类型通过（check-classic-modal-safearea.log），当前唯一本地Xcode为session14771，正式完整背景日志build/logs/ui-classic-modal-safearea.log及实时ui-catalog.log；保留全部原像素/PCM/异步/主题重启和新增竖屏/滚动/队列返回/横屏/转回断言。先核实终态、保存结果再继续构建，尚未验收本批App/归档/云端。
+
+背景产品b6f66a2及回执a3b0bc5已正常push/清洁归档，见下文；云端39104211437已通过checks/iOS27工具链/完整native，当前App步骤运行，1运行/0排队，未取消或重派。全部A/F/J继续；真实服务/签名/手机没有新证据。0062含新reverse-skill R2路由142527、scope/strict review、五参考固定HEAD/许可/平台比较；本批不声称Sollin具体安全区已还原。
+
 ## 2026-10-18 背景呈现批次清洁归档与push回执
 
 `b6f66a267b1694a0364b96bdf1140f1a519d91a4`已正常push到RhsR1024/nexus-music，ls-remote核对main一致。375业务/类型、最终完整native、正式背景466.067秒及iPad两项135.232/39.899秒通过，详见0060/0061。清洁unsigned归档ARCHIVE SUCCEEDED；manifest dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、signed=false。完整ZIP CRC、附带SHA、包内可执行/JS与归档字节一致、正式入口及私人/签名资源排除通过，IPA SHA256 `726605bad9033e3642099b8d73123cab9ea3e6d5989229b7ff0e346d58f9d800`，收据与包留build/local-presentation-b6f66a2。
