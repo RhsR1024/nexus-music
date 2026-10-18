@@ -1272,3 +1272,7 @@ IPA artifact `12076096155` 为9769140字节；完整ZIP SHA256 `9212ab3dca22a205
 ## 2026-10-18 E032原生配色本地专项通过
 
 [0058](decisions/0058-native-ambient-color-composition.md)接入原始色板、HSL字节量化、双色基底、共享柔光和混合外主题覆盖层；pending/主题重建/后台/减少动态/两场所有权保持。368业务/类型、完整native及32独立颜色向量通过。`SourceUITests-1792293700730`背景专项434.412秒、1通过/0失败/0跳过；视频62帧、10中间色帧、红切换0.481667秒，加载中红/迟到蓝/失败清场、明暗、PCM/Home/重启/开关/凭据清理通过。19合成鉴权/0失败、无新stream、复用缓存；不替代真实服务、iOS27、签名或真机。`ce192a4`已正常push，远端main一致；清洁归档dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned，IPA SHA256 `9739b02a7fc68ae213be0147801875cdf7c758ec14310a2c3724488cd1825c06`，留存`build/local-ambient-color-ce192a4`。新iOS27运行`39094486501`当前pending。
+
+## 2026-10-18 平台账号安全底座归档回执
+
+提交 `09480afbeb1f3b9f34abc755e868b39548849622` 已完成本地 clean unsigned archive：Xcode 26.3、iOS SDK 26.2、arm64、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`、`dirty=false`、`workingTreeChanges=[]`。`build/verify-presentation-archive.py` 已通过 ZIP CRC、归档可执行文件与 `main.jsbundle` 字节一致、正式入口及私人资源排除；IPA SHA256 为 `792ef3cad6b3aad97bee716a235e5e4759bfb95f8a5d21dbac908e94cb879d5e`。本地归档不证明真实平台登录、签名或真机验收。

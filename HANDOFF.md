@@ -1351,3 +1351,7 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 ## 2026-10-18 平台账号安全底座阶段
 
 新增 `src/providers/musicAccounts.ts` 并由 `createServices()` 暴露 `musicAccounts`。QQ/网易云/酷狗账号元数据保存在 `music.accounts.v1`，会话 token/Cookie/设备材料仅保存到 `nexus.music.<id>` Keychain 项；保存替换、退出、恢复和仓库失败回滚已用 3 项测试覆盖，`npm run check` 379/379。当前工作树包含该阶段实现，真实平台授权、日推/FM、个人歌单/收藏、UI、签名/真机仍未验收；开发百分比维持 80.95%，待完成登录协议和实际服务证据后再重估。
+
+## 2026-10-18 平台账号底座构建回执
+
+`09480afbeb1f3b9f34abc755e868b39548849622` 已正常 push。`npm run check` 379/379；本地 clean unsigned archive 与 `verify-presentation-archive.py` 通过，Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、signed=false、dirty=false，IPA SHA256 `792ef3cad6b3aad97bee716a235e5e4759bfb95f8a5d21dbac908e94cb879d5e`。新云端运行 39113628537 对应该提交，当前 pending；旧 39111966447 仍运行，保持 1 running/1 pending，不取消运行中任务。
