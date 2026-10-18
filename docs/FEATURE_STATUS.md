@@ -1,3 +1,9 @@
+## 2026-10-18 黑胶分层清洁归档与push回执
+
+b49226167093d849f6afc054d43bc0c75f6305cc已正常push并实核远端main一致。387业务/类型及完整App288.843秒1/0/0通过，E036/E037独立原字节重放及37E/36F/36P严格review通过。清洁unsigned归档ARCHIVE SUCCEEDED，dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64/min15.1/设备族[1,2]；ZIP CRC/附带SHA/包内可执行与JS字节/正式入口及私人签名资源排除通过。IPA SHA256 `050818fb2baed5c4f375688896a19c1a46cd1ea3d1f080355dff2fc0d51f7936`，包与verification留build/local-presentation-b492261，日志archive-vinyl-layout-clean.log。
+
+API实核新iOS27运行39127780177/b492261为唯一pending，39121914443/393adcf仍in_progress；旧2042736pending自动替换，未手动取消/重派，1运行/1排队。没有新云端终态、真实服务/签名/真机结论。完整唱头/渐变/手势、精确缓动和其余A/F/J继续；下一以逆向证据补齐有限绘制变换及实际设备动效边界，再收敛其余既有UI。阶段收尾检查空闲约48GiB，完整临时导出已删除，最新两批有效产物/原测试结果/未解决云端证据和reverse case保留。
+
 ## 2026-10-18 黑胶分层几何本地通过
 
 按[0068](decisions/0068-vinyl-layered-geometry.md)，E036/E037严格review及五固定参考比较后，原创底座/盘托/偏置唱片/封面/支点，保留native双动效、唯一播放意图及音枢功能。387业务/类型及完整App1792326094312通过：288.843秒、1通过/0失败/0跳过；实际几何包含/共心、81点非空停转/旋转、唱针往返/Home恢复和原八布局/PCM/歌词/统计/重启/凭据清理均保持。两张黑胶PNG已亲看，独立封面内部120×120裁切差异通过；必要PNG/manifest/verification留build/vinyl-layout-passed，临时完整导出已自动清理，原xcresult及ui-vinyl-layout-{catalog.log,summary.json,counts.json}保留。9次合成鉴权/0失败，无新stream/coverArt，复用既有缓存，不计真实服务。清洁归档/正常push/本批iOS27待；完整唱头/渐变/手势、参考运行与签名/真机边界保持。
