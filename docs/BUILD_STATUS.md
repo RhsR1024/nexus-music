@@ -1,3 +1,9 @@
+## 2026-10-18 经典安全区回归与漫途范围更新
+
+产品提交 `7b8b023dce470743717f0017277326082c1ad49a`：经典播放器安全区专项通过，完整背景回归在捕获重试后通过（`SourceUITests-1792311318332`，475.014s，1/0/0；过渡视频60帧/8中间色/红蓝0.481667s）；`npm run check` 375/375、`npm run test:native` 通过。清洁 unsigned archive `build/distribution` 对应7b8b023，manifest dirty=false/changes=[]、arm64、iphoneos26.2、min15.1、设备族[1,2]、signed=false；IPA SHA256 `c96fd9dadc99c8198a6758313ff1b52bce1042f584d5ac043b2ebd6bd06423d`，`verify-presentation-archive.py`通过，回执留 `build/local-presentation-7b8b023`。
+
+用户随后明确取消音枢与漫途歌单持续/双向同步；漫途只作为多个平台公开歌单的一次性导入来源。已在范围与计划文档标记不实现并重算开发量：80.95%/19.05%，完整交付57.93%。文档提交23090d0已正常push；对应iOS27运行39111966447正在执行，遵循single队列。
+
 ## 2026-10-18 当前接续：经典独立专项通过，完整背景继续
 
 session43157的正式联合回归SourceUITests-1792310358432正在运行；testClassicPlayerWindowSafeArea已98.693秒通过，包含实际合成播放、滚动/队列返回、横屏cutout及转回。完整testGlobalCoverThemeChangesAcrossPages仍运行，原像素/PCM/异步/三色/明暗重启断言保持，尚不记整批通过。日志build/logs/ui-classic-separated-final.log及ui-catalog.log；终态先保存catalog/counts/summary再启动下一Xcode。
