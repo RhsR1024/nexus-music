@@ -1347,3 +1347,7 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 发布仓库 `Sollin-mobile-release` 只有包发布说明，`PrismMusic-Release` 主要是截图；如需从包补充行为证据，继续遵守 `reverse-skill` IPA/APK PRIMARY、离线 scope、Evidence→Finding→Path 与严格 review，不把仓库 README 或截图当功能证据。Sollin 私有云端、账号体系、用户中心、服务支持、激活/赞助、遥测和专用链接仍排除；无法本地替代的能力登记待决，开发收尾和真实设备阶段再由用户决定。
 
 最大辅助字号补记：1792240831918.xcresult，经新首页→播放→EQ入口，单列卡片32.744秒通过，1/1、零失败/跳过。清洁归档/本批云端仍待。
+
+## 2026-10-18 平台账号安全底座阶段
+
+新增 `src/providers/musicAccounts.ts` 并由 `createServices()` 暴露 `musicAccounts`。QQ/网易云/酷狗账号元数据保存在 `music.accounts.v1`，会话 token/Cookie/设备材料仅保存到 `nexus.music.<id>` Keychain 项；保存替换、退出、恢复和仓库失败回滚已用 3 项测试覆盖，`npm run check` 379/379。当前工作树包含该阶段实现，真实平台授权、日推/FM、个人歌单/收藏、UI、签名/真机仍未验收；开发百分比维持 80.95%，待完成登录协议和实际服务证据后再重估。
