@@ -1,3 +1,9 @@
+## 2026-10-18 账号隐私修正版构建回执
+
+产品提交 `4797970ec9fc386a9d7ac9ba5e39482966d327b6` 已在 387/387 检查及 clean unsigned archive 校验后正常 push。manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]/signed=false，ZIP CRC、归档可执行文件与 JS 字节一致、正式入口及私人资源名称排除通过；IPA SHA256 `dfaaa1c0964dc298d6d512e24ed335aca8bb7cd20b401b2b76eb56346b7f5d8b`。日志留 `build/logs/archive-auth-privacy-final.log` 与 `verify-auth-privacy-final.json`。
+
+push 后 API 核对新运行 `39115107158`/4797970 唯一 pending，`39111966447`/23090d0 仍 in_progress；后者 checks、iOS27 工具链和完整 native 已通过，核心 App 步骤尚在运行。single 自动替换旧 pending，未手动取消或重派，保持 1 running/1 pending。无新增云端成功、真实平台授权、个人签名或真机结论。下一批须继续既有 Sollin UI/交互未完成项的 reverse-skill 门禁及平台具体授权适配，不能将账号底座当完整登录。
+
 ## 2026-10-18 平台账号隐私与迟到读取修正
 
 账号元数据改为显式字段白名单，保存与恢复不发布额外运行时字段，能力数组与调用方分离；恢复拒绝重复账号 ID。Keychain 读取返回后复核原账号实例，已退出或替换的账号不能返回迟到会话。授权错误状态改为固定提示，原始协议错误不进入可订阅快照。新增三项账号回归及错误脱敏断言，`npm run check` 387/387；日志 `build/logs/check-auth-privacy.log`。此前状态机的错误脱敏描述在本批前并不完整，本批明确补齐。无真实账号/日推/FM、签名或真机新证据，进度不增加。

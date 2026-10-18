@@ -1,3 +1,9 @@
+## 2026-10-18 账号隐私修正版构建回执
+
+产品提交 `4797970ec9fc386a9d7ac9ba5e39482966d327b6` 已在 387/387 检查及 clean unsigned archive 校验后正常 push。manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]/signed=false，ZIP CRC、归档可执行文件与 JS 字节一致、正式入口及私人资源名称排除通过；IPA SHA256 `dfaaa1c0964dc298d6d512e24ed335aca8bb7cd20b401b2b76eb56346b7f5d8b`。日志留 `build/logs/archive-auth-privacy-final.log` 与 `verify-auth-privacy-final.json`。
+
+push 后 API 核对新运行 `39115107158`/4797970 唯一 pending，`39111966447`/23090d0 仍 in_progress；后者 checks、iOS27 工具链和完整 native 已通过，核心 App 步骤尚在运行。single 自动替换旧 pending，未手动取消或重派，保持 1 running/1 pending。无新增云端成功、真实平台授权、个人签名或真机结论。下一批须继续既有 Sollin UI/交互未完成项的 reverse-skill 门禁及平台具体授权适配，不能将账号底座当完整登录。
+
 ## 2026-10-18 WebDAV 前台预览阶段回执
 
 提交 `42156f0737326ed3c805a79594f4f3ee9914b771` 补齐 WebDAV 同步初始化/前台恢复自动预览；冲突仍需确认，不自动提交。`npm run check` 376/376。清洁 unsigned archive 成功，manifest 对应42156f0、dirty=false/changes=[]、arm64、iphoneos26.2、min15.1、设备族[1,2]、signed=false；IPA SHA256 `da4d52f1657f5490d82aca6acd347b7aa26dd09f4fe40cbc9f20c85e37746e62`，`verify-presentation-archive.py`通过。push后最新运行39112637167为42156f0 pending，39111966447为23090d0运行中；保持1运行/1排队，不取消运行中。
