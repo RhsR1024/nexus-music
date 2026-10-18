@@ -1,3 +1,9 @@
+## 2026-10-18 原生旋转清洁归档与push
+
+产品提交`24aafa4ec7bad6b419e55b8c9822f287e28cee44`正常push、远端main一致。archive-ambient-rotation-clean.log成功，核验器verify-rotation-archive.py确认dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned，ZIP CRC/附带SHA、可执行及JS与归档逐字节一致、正式入口/私人及签名资源排除均通过。IPA SHA256 `68f71527ff7736839dda2eccebed17495d2a62002248c4f2284384bb8d3ee661`，留存build/local-ambient-rotation-24aafa4，核验收据build/logs/verify-rotation-archive.json。
+
+2026-10-18 10:22 API实核[39089783874](https://github.com/RhsR1024/nexus-music/actions/runs/39089783874)/24aafa4唯一pending，[39086161205](https://github.com/RhsR1024/nexus-music/actions/runs/39086161205)/e6d9d11核心App运行中、checks/native成功，1运行/1排队，无取消或重派。最新完整成功且IPA已核验仍为76c9cd0/39050349015。本批云端、真实服务、签名、手机和性能仍待；HSL/双色/主题覆盖层不计完成。
+
 ## 2026-10-18 原生旋转本地验收
 
 [0056](decisions/0056-seeded-ambient-rotation.md)经reverse-skill E031及31E/30F/30P严格review后实施。368业务/类型、完整native最终通过；正式App SourceUITests-1792289108066为406.668秒、1通过/0失败/0跳过，原背景完整断言保留；视频59帧/6中间色，蓝0/红0.581667秒阈值穿越，两页/经典/中间帧截图亲看。15合成鉴权/0失败，无新stream、复用临时音频缓存，不计真实服务。
