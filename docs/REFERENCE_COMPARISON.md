@@ -1,3 +1,11 @@
+## 2026-10-18 HSL/双色配色采纳前比较
+
+亲读五固定HEAD：悦音d6f1af7的theme.ts9–33只提供模式缓存/延时保存；Q547ccfe与wtf6624ab5的ImageBackground.tsx52–104提供图片/内容分层与旧RN尺寸修补；Cybf0d469的usePlayerBackground.tsx20–122提供iOS background而非primary、相对亮度上限、URI/active拒绝迟到及50LRU；自有Wayferar8e47cdc的HomeCardTheme.java44–87区分home图层恢复和文字/控制前景。均没有本批HSL/双色/主题覆盖算法，不以这些参考替代Sollin门禁后E026/E027/E028/E030/E032证据。
+
+下一原创实施将原始色板送入有界原生场景，HSL软化/字节量化后供贴图与双色基底，主题覆盖层置于两场混合外；现有语义前景映射保持独立，安全三色和额外.42不能当完整对齐。维护上不引入旧RN/RNTP补丁、全局事件或新依赖。TS身份/活动契约可共享Android，CALayer/CGImage需Android独立实现；不宣称双端已交付。
+
+许可沿已核边界：悦音根MIT及README限制，Q/wtf根Apache2且该文件Meta MIT头，Cy根Apache2/RNTP另许可，Wayferar自有/反编译/第三方各自边界。只做结构/职责对照，不复制源代码、图片、依赖或原生补丁。当前仅静态证据ready，下一实际颜色/像素/明暗主题/生命周期与异步回归通过后才采纳。
+
 ## 2026-10-18 全场旋转采纳比较
 
 [0056](decisions/0056-seeded-ambient-rotation.md)再次亲读五参考固定HEAD：悦音模式缓存，Q/wtf图片/内容分层，Cy URI/active/50LRU，自有Wayferar home图层与前景职责。均不提供本次随机旋转；实现/维护/Android/逐文件许可取舍已记录，无源码/资源/依赖/原生补丁移植。算法依据门禁后的Sollin E027/E028/E031有限证据，Nexus原生实现和实际App独立验收。

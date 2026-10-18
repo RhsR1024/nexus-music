@@ -895,9 +895,27 @@ final class SourceSettingsTests: XCTestCase {
     }
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     app.descendants(matching:.any).matching(identifier:"library-local").firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["我的音乐库"].waitForExistence(timeout:10))
+    // The home card shows only the five most recent statistics. A missing row
+    // cannot establish a zero baseline after other scenarios played >5 tracks.
+    // Reset only synthetic local statistics through the real confirmation UI.
+    let baselineImage=XCTAttachment(screenshot:app.screenshot());baselineImage.name="Listening statistics before explicit baseline reset";baselineImage.lifetime = .keepAlways;add(baselineImage)
+    let clearStatistics=app.buttons["清空播放统计"]
+    if clearStatistics.exists {
+      reveal(clearStatistics);clearStatistics.tap()
+      XCTAssertTrue(app.alerts["清空播放统计？"].waitForExistence(timeout:5))
+      app.alerts["清空播放统计？"].buttons["清空"].tap()
+    }
+    let emptyStatistics=app.staticTexts.matching(NSPredicate(format:"label ENDSWITH %@"," · 播放统计 0")).firstMatch
+    XCTAssertTrue(emptyStatistics.waitForExistence(timeout:10),"Require an actual empty persisted-statistics baseline, not absence from the five-row card")
     let statistic=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","Synthetic tone · 播放 ")).firstMatch
-    func count() -> Int {guard statistic.exists else{return 0};return Int(statistic.label.components(separatedBy:" · 播放 ").last?.components(separatedBy:" 次").first ?? "") ?? 0}
-    let previousCount=count()
+    func count() -> Int {
+      XCTAssertTrue(statistic.waitForExistence(timeout:10),"A missing statistic must fail rather than count as zero")
+      let value=Int(statistic.label.components(separatedBy:" · 播放 ").last?.components(separatedBy:" 次").first ?? "")
+      XCTAssertNotNil(value,"The visible listening count must parse: \(statistic.label)")
+      return value ?? -1
+    }
+    let previousCount=0
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     let playbackAccount=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch
     XCTAssertTrue(playbackAccount.waitForExistence(timeout:10));reveal(playbackAccount);playbackAccount.tap()

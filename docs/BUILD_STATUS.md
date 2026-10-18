@@ -1,3 +1,9 @@
+## 2026-10-18 统计显式基线本地专项通过
+
+[0057](decisions/0057-statistics-ui-baseline.md)保留原样失败189.708秒41/1；仅修测试通过真实清空确认建立显式0，缺行/解析不再当0，生产计数不变。368业务/类型通过；SourceUITests-1792290648455正式App专项270.029秒、1通过/0失败/0跳过，八布局/PCM/歌词/一次会话+1/重启/mini/凭据清理均保持。已亲看重置前41次、统计历史、AM2及四按钮mini截图；8合成鉴权/0失败，无新stream、复用临时音频缓存。日志/摘要/counts留build/logs/ui-statistics-explicit-*，附件build/statistics-explicit-passed。清洁归档/push/对应iOS27继续，未据此认定云端全部根因。
+
+E032配色静态证据已strict review32E/31F/31P通过，尚未产品采纳、不增加A04完成度。云端39086161205/e6d9d11仍运行，39089783874/24aafa4唯一pending；真实服务/签名/手机继续。
+
 ## 2026-10-18 原生旋转清洁归档与push
 
 产品提交`24aafa4ec7bad6b419e55b8c9822f287e28cee44`正常push、远端main一致。archive-ambient-rotation-clean.log成功，核验器verify-rotation-archive.py确认dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned，ZIP CRC/附带SHA、可执行及JS与归档逐字节一致、正式入口/私人及签名资源排除均通过。IPA SHA256 `68f71527ff7736839dda2eccebed17495d2a62002248c4f2284384bb8d3ee661`，留存build/local-ambient-rotation-24aafa4，核验收据build/logs/verify-rotation-archive.json。

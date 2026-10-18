@@ -34,7 +34,34 @@ seed混洗为64位逻辑移位/溢出，结果零用0x5a17，预热4次；state=
 
 这只是离线ARM64有限解释，不是参考App执行、完整DartABI模拟或SDK Random源码核验；未种子分支和一般非二幂nextInt未采纳。按[0056](decisions/0056-seeded-ambient-rotation.md)原创接入随机/已核锚点/全场旋转，HSL/双色/主题覆盖层仍待，完整App/云端/手机另验。
 
-## 柔光、颜色与种子
+## E032 软化色板、双色基底与最终覆盖层
+
+新路由master-route-20261018-101821继续为R2/mobile-reverse，既有离线scope/case-guard及采纳前严格review通过：32E/31F/31P、10WI/66事件，零错误/警告。E032→F031→P031收据color-composition-evidence.json，SHA256 `8932dbb247043b9c98c0b0ef86c22573f25ffe3102117e3549d7186322c8ae1c`，观测时间2026-10-18T10:27:28+08:00。原始输出只留本机work；沿本报告固定样本/成员摘要和scope，未重新初始化或探测参考服务。
+
+新增四个辅助函数862条原始指令：GrowableList.first 0x2b4a48..0x2b4ab0、Color.lerp 0x2298bc..0x229d60、HSL.toColor 0x25a1cc..0x25a31c、colorFromHue 0x25a31c..0x25aa38。7个直接BL和10个池加载与原始字节/固定函数边界一致。E030构造在0x4b4880软化每个颜色并加入列表，同一列表既生成柔光图片，也在0x4b4c44/54传入sceneCreate。
+
+first辅助明确返回索引0，第二基底选择索引1（列表仅一项则复用first）。HSL.toColor用chroma=(1−abs(2L−1))×S、x=chroma×(1−abs((H/60)%2−1))、m=L−chroma/2，六个色相分支后对alpha/RGB使用LibcRound得到字节，再存为字节/255的sRGB浮点。**先软化并量化，再浮点插值**，不能用原始RGB直接插值或沿用音枢安全浅色映射。
+
+本批只核非空且同为sRGB的Color.lerp路径，组件为a×(1−t)+b×t并限制0..1；暗色第一/第二分别以.45/.54向黑插值，亮色以.5/.6向白插值。已独立解释三个原始RGB算术片段，并以分离的色相分段公式重放20组HSL/量化/基底向量。E028的黑4/255→24/255或白18/255→48/255纵向覆盖层在两个场景绘制之后；产品应放在两场混合层外。E027的场透明度已含单场因子，当前产品额外.42仍是明确待消除差异。
+
+```mermaid
+flowchart LR
+  raw[共享原始色板] --> hsl[HSL软化与字节量化]
+  hsl --> base[前两色与黑白插值]
+  hsl --> lights[柔光图片]
+  base --> scene[有限场景]
+  lights --> scene
+  scene --> blend[旧新场景混合]
+  blend --> overlay[主题纵向覆盖层]
+```
+
+复现：`source scripts/environment.sh`后执行`python3 build/verify-color-composition-evidence.py`及`node scripts/sollin-reverse-gate.mjs ipa --review`。F031为info/reverse_algo、validated/high，仅限上述静态路径；P031为原始色板→量化软化→基底/柔光→两场→覆盖层的callflow。相关WI010及timeline第66事件、field-journal均已追加，E026–E031不可变收据保持。
+
+宽色域、null/error插值、完整Dart/Flutter执行、GPU色彩空间、有效参考主题、原始像素和能耗仍未核。**当前尚无本批产品采纳**；下一步按五固定参考/许可/Android职责记录后原创接线，并分别进行数学、原生、真实App像素与活动/异步回归。音枢语义文字颜色继续独立，完整A04不计完成。
+
+图表保留可编辑Mermaid源码，已检查节点/连线语法；本机render_diagram.py尝试因缺mmdc退出1，未生成或宣称SVG渲染成功，未安装全局工具。该限制不影响原字节/数学证据复核。
+
+## E026 软化与贴图数学
 
 HSL.fromColor及withSaturation/withLightness的原始字段支持饱和度与亮度身份。当s<0.06时，亮度改为Brightness枚举0的0.34，否则0.72；此处只记录枚举0，不声称实际恢复的用户主题。其他颜色的s′为`clamp(s×0.76,0.26,枚举0?0.6:0.48)`；L′为`clamp(L×0.12+(枚举0?0.32:0.62),枚举0?0.31:0.62,枚举0?0.41:0.74)`，最终经HSL.toColor返回。
 
