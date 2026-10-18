@@ -47,6 +47,8 @@ let truncateDiscoveryPlaylist=true;
 let pagerDiscovery=false,pagerReplacement=false,pagerFailNext=false;
 const pagerPages=[];
 const heldDiscoveryResponses=[];
+const transitionVersion=String(Date.now()),heldThemeResponses=[];
+let transitionFixture=false,themeRecorder;
 // Original solid 32x32 and three-stripe 24x24 RGB fixtures; no user covers.
 const themeCovers={multi:'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAIklEQVR4nGP4z8CAFWEXxSMxatCoQaMGjRo0atCoQQNvEADG3T3fu7tafwAAAABJRU5ErkJggg==',red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
 const matchingAudio=Buffer.alloc(44+48000*2*120);audio.copy(matchingAudio,0,0,44);matchingAudio.writeUInt32LE(matchingAudio.length-8,4);matchingAudio.writeUInt32LE(matchingAudio.length-44,40);
@@ -67,6 +69,26 @@ const navidromeAudio=matchingAudio,navidromeDuration=120;
 // can still contain the original 12-second recording in the normal audio cache.
 const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
+  if(coverThemeUI&&req.url.startsWith('/theme-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1');
+    if(control.searchParams.has('transition'))transitionFixture=true;
+    const release=control.searchParams.get('release');
+    if(release)for(let i=heldThemeResponses.length-1;i>=0;i--)if(heldThemeResponses[i].color===release)heldThemeResponses.splice(i,1)[0].send();
+    if(control.searchParams.has('record')){
+      const file=resolve('build/logs',`ambient-transition-${transitionVersion}.mp4`);
+      themeRecorder=spawn('xcrun',['simctl','io',process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D','recordVideo','--codec=h264',file],{stdio:['ignore','ignore','pipe']});
+      const recorder=themeRecorder;
+      try{await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>reject(new Error('Simulator video did not start')),15000);
+        const finish=error=>{clearTimeout(timer);error?reject(error):resolve();};
+        recorder.once('error',finish);recorder.once('exit',()=>finish(new Error('Simulator video exited before readiness')));
+        recorder.stderr.on('data',data=>{if(data.toString().includes('Recording started'))finish();});
+      });}catch{recorder.kill('SIGINT');themeRecorder=undefined;res.writeHead(500);res.end();return;}
+      counts.transitionVideo=file;
+    }
+    if(control.searchParams.has('stop')&&themeRecorder){const recorder=themeRecorder;themeRecorder=undefined;recorder.kill('SIGINT');await new Promise(resolve=>recorder.once('exit',resolve));}
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:new Set(heldThemeResponses.map(item=>item.color)).size}));return;
+  }
   if(discoveryUI&&req.url.startsWith('/discovery-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('holdNext'))holdDiscoveryDetail=true;
@@ -213,11 +235,17 @@ const server = createServer(async (req, res) => {
     res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/bytes=(\d+)-(\d*)/);
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),audio.length-1):audio.length-1;if(start>=audio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${audio.length}`);res.end(audio.subarray(start,end+1));}else res.end(audio);return;
   }
-  if(method==='getCoverArt'){res.setHeader('Content-Type','image/png');res.end(Buffer.from(coverThemeUI&&params.get('u')==='fixture-theme'?themeCovers[params.get('id')]??themeCovers.red:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64'));return;}
+  if(method==='getCoverArt'){
+    if(coverThemeUI&&params.get('id')?.startsWith('transition-')){
+      const color=params.get('id').split('-')[1];
+      heldThemeResponses.push({color,send:()=>{counts.transitionReleases??=[];counts.transitionReleases.push(color);if(color==='missing'){res.writeHead(404);res.end();}else{res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers[color],'base64'));}}});return;
+    }
+    res.setHeader('Content-Type','image/png');res.end(Buffer.from(coverThemeUI&&params.get('u')==='fixture-theme'?themeCovers[params.get('id')]??themeCovers.red:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64'));return;
+  }
   if(method==='ping')respond({type:'Navidrome',serverVersion:'0.64.0'});
   else if(method==='getOpenSubsonicExtensions')respond({openSubsonicExtensions:[{name:'songLyrics',versions:[1]}]});
   else if(method==='getAlbumList2')respond({albumList2:{album:[{id:'fixture-album',name:'Synthetic album',artist:'Fixture artist',coverArt:'fixture-cover',songCount:coverThemeUI&&params.get('u')==='fixture-theme'?3:1}]}});
-  else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:coverThemeUI&&params.get('u')==='fixture-theme'?['red','blue','multi'].map(color=>({...song(),id:color,title:`${color} cover tone`,coverArt:color})):[song()]}});
+  else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:coverThemeUI&&params.get('u')==='fixture-theme'?[...['red','blue','multi'].map(color=>({...song(),id:color,title:`${color} cover tone`,coverArt:color})),...(transitionFixture?['red','blue','missing'].map(color=>({...song(),id:`transition-${color}`,title:`transition ${color} tone`,coverArt:`transition-${color}-${transitionVersion}`})):[])]:[song()]}});
   else if(method==='search3')respond({searchResult3:{song:[song()]}});
   else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:navidromeDuration*1000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:navidromeDuration*1000,value:'two'}]}]}]}});
   else if(method==='star'||method==='unstar'){starred=method==='star';respond({});}
@@ -239,6 +267,12 @@ try {
   const child = spawn('xcodebuild', args, { stdio: ['ignore', log, log] });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;
+  if(code===0&&counts.transitionVideo){
+    try{
+      const verification=execFileSync('xcrun',['swift',resolve('scripts/verify-ambient-transition-video.swift'),counts.transitionVideo],{encoding:'utf8',timeout:60000,maxBuffer:1024*1024});
+      writeFileSync(counts.transitionVideo+'.verification.txt',verification);console.log(verification.trim());
+    }catch(error){process.exitCode=1;console.error('Production transition video verification failed:',error.message);}
+  }
   console.log(`iOS source UI test exit: ${code}; log: build/logs/ui-catalog.log`);
   // Keep individual failure messages visible even when the failed test is far
   // above the workflow's final 100 log lines. Never change the xcodebuild status.
@@ -249,4 +283,4 @@ try {
     console.log(`UI results: ${summary.passedTests} passed, ${summary.failedTests} failed, ${summary.skippedTests} skipped; ${resultPath}`);
     for(const failure of summary.testFailures??[])console.error(`${failure.testIdentifierString}: ${failure.failureText}`);
   } catch { console.error(`UI summary unavailable; inspect ${resultPath} and build/logs/ui-catalog.log`); }
-} finally { logWatcher.close();writeFileSync('build/logs/ui-server-counts.json',JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }
+} finally { if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync('build/logs/ui-server-counts.json',JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }

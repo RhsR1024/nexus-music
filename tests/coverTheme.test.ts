@@ -18,9 +18,35 @@ function rig(){
   const select=(id:string,t:Track=track)=>controller.setQueue(makeQueue([{id,track:t}],id));
   return{store,controller,requests,palettes,select,enable:(value:boolean)=>{enabled=value;for(const listener of listeners)listener();},flow:(value:boolean)=>{flow=value;for(const listener of listeners)listener();}};
 }
+test('pending distinguishes current cover work from no image or failure and cannot be ended by an old request',async()=>{
+  const r=rig();r.select('A');assert.deepEqual(r.store.getSnapshot(),{pending:true});
+  r.select('B');r.requests[0]!.result.resolve(undefined);await tick();
+  assert.deepEqual(r.store.getSnapshot(),{pending:true},'old no-image result must not end the current load');
+  r.requests[1]!.result.reject(new Error('private address'));await tick();assert.deepEqual(r.store.getSnapshot(),{});
+  r.select('C');r.requests[2]!.result.resolve(undefined);await tick();assert.deepEqual(r.store.getSnapshot(),{});
+  r.select('D');r.enable(false);r.requests[3]!.result.reject(new Error('late'));await tick();assert.deepEqual(r.store.getSnapshot(),{});
+  r.store.dispose();
+});
+test('three-color pending spans decoded image and ends only on the current valid, invalid or failed palette',async()=>{
+  const controller=new PlaybackController({resolve:async()=>({url:'https://example.test/audio'})},{load(){},stop(){},play(){},pause(){}},makeQueue([],null));
+  const palettes:ReturnType<typeof deferred<readonly string[]>>[]=[];
+  const store=new CoverThemeStore(controller,{getSnapshot:()=>({coverColor:false,globalBackgroundMotion:true}),subscribe:()=>()=>{}},
+    {loadTrack:async t=>'file:///'+t.title},{color:async()=> '#112233',flowPalette:async()=>{const gate=deferred<readonly string[]>();palettes.push(gate);return gate.promise;}});
+  const select=(id:string)=>controller.setQueue(makeQueue([{id,track:{...track,title:id}}],id));
+  select('A');await tick();assert.deepEqual(store.getSnapshot(),{uri:'file:///A',color:'#112233',pending:true});
+  select('B');await tick();palettes[0]!.resolve(['#FF0000','#00FF00','#0000FF']);await tick();
+  assert.deepEqual(store.getSnapshot(),{uri:'file:///B',color:'#112233',pending:true});
+  palettes[1]!.reject(new Error('palette failed'));await tick();assert.deepEqual(store.getSnapshot(),{uri:'file:///B',color:'#112233'});
+  select('C');await tick();palettes[2]!.resolve(['bad']);await tick();assert.deepEqual(store.getSnapshot(),{uri:'file:///C',color:'#112233'});
+  select('D');await tick();store.rejectImage('file:///D');palettes[3]!.resolve(['#FF0000','#00FF00','#0000FF']);await tick();
+  assert.deepEqual(store.getSnapshot(),{color:'#112233'},'rejected image must not remain pending or revive');
+  select('E');await tick();palettes[4]!.resolve(['#FF0000','#00FF00','#0000FF']);await tick();
+  assert.deepEqual(store.getSnapshot(),{uri:'file:///E',color:'#112233',flowPalette:['#FF0000','#00FF00','#0000FF']});
+  store.dispose();
+});
 test('global cover theme ignores late downloads and palette results after rapid song changes',async()=>{
   const r=rig();r.select('a');r.requests[0]!.result.resolve('file:///a');await tick();r.select('b');
-  assert.equal(r.requests[0]!.signal.aborted,true);assert.deepEqual(r.store.getSnapshot(),{});
+  assert.equal(r.requests[0]!.signal.aborted,true);assert.deepEqual(r.store.getSnapshot(),{pending:true});
   r.requests[1]!.result.resolve('file:///b');await tick();r.palettes[1]!.result.resolve('#0033FF');await tick();
   assert.equal(r.store.getSnapshot().color,'#0033FF');r.palettes[0]!.result.resolve('#FF0000');await tick();assert.equal(r.store.getSnapshot().uri,'file:///b');
   r.select('c');r.select('d');r.requests[2]!.result.resolve('file:///c');await tick();assert.equal(r.palettes.length,2);

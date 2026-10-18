@@ -1,7 +1,6 @@
 import {useEffect,useRef,useState,useSyncExternalStore,type PropsWithChildren} from 'react';
 import {AccessibilityInfo,Animated,AppState,Image,StyleSheet,View,type ViewProps} from 'react-native';
 import {requireNativeView} from 'expo';
-import type {FlowPalette} from '../domain/appearance.ts';
 import type {Services} from '../app/services.ts';
 import type {VisualAsset} from '../storage/visualAssets.ts';
 export function useVisualImage(services:Services|undefined,image:VisualAsset|null|undefined){
@@ -14,10 +13,10 @@ function useMotionGate(moving:boolean){
   useEffect(()=>{let valid=true;void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(valid)setReduce(value);});const motion=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduce),app=AppState.addEventListener('change',state=>setActive(state==='active'));return()=>{valid=false;motion.remove();app.remove();};},[]);
   return moving&&!reduce&&active;
 }
-const NativeAmbient=requireNativeView<ViewProps&{colors:readonly string[];identity:string;moving:boolean}>('NexusNative','Ambient');
-export function AmbientSoftLights({colors,identity,moving}:{colors:FlowPalette;identity:string;moving:boolean}){
+const NativeAmbient=requireNativeView<ViewProps&{colors:readonly string[];identity:string;moving:boolean;pending:boolean}>('NexusNative','Ambient');
+export function AmbientSoftLights({colors,identity,moving,pending}:{colors:readonly string[];identity:string;moving:boolean;pending:boolean}){
   const running=useMotionGate(moving);
-  return <View testID={`ambient-motion-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeAmbient testID="ambient-soft-lights" colors={colors} identity={identity} moving={running} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
+  return <View testID={`ambient-motion-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeAmbient testID="ambient-soft-lights" colors={colors} identity={identity} moving={running} pending={pending} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
 }
 export function MotionImage({uri,blur=0,opacity=1,moving=false,onError,testID}:{testID?:string;uri:string;blur?:number;opacity?:number;moving?:boolean;onError?:()=>void}){
   const phase=useRef(new Animated.Value(0)).current,running=useMotionGate(moving);

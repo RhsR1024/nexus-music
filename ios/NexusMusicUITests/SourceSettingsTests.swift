@@ -1083,6 +1083,12 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testGlobalCoverThemeChangesAcrossPages() throws {
     let app=XCUIApplication();app.launch()
+    func themeControl(_ query:String="") throws -> Int {
+      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/theme-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Int])?["held"] ?? -1
+    }
+    _=try themeControl("transition=1")
+    defer{_=try? themeControl("release=red&stop=1");_=try? themeControl("release=blue");_=try? themeControl("release=missing")}
     func reveal(_ element:XCUIElement){for _ in 0..<24 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65:0.35)))};XCTAssertTrue(element.isHittable)}
     func setSwitch(_ element:XCUIElement,_ enabled:Bool){
       reveal(element)
@@ -1194,6 +1200,32 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     XCTAssertTrue(themeAccount.waitForExistence(timeout:10));reveal(themeAccount);themeAccount.tap()
     XCTAssertTrue(album.waitForExistence(timeout:15));reveal(album);album.tap()
+    // Fresh synthetic artwork identities bypass only fixture cache reuse.
+    // The real production loader is held at HTTP, then the display is recorded
+    // independently so a final screenshot cannot masquerade as a crossfade.
+    let transitionRed=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition red tone")).firstMatch
+    XCTAssertTrue(transitionRed.waitForExistence(timeout:15));reveal(transitionRed);transitionRed.tap()
+    let heldRed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[heldRed],timeout:10),.completed)
+    expectTint(false,"Previous blue scene retained while red cover HTTP is held")
+    _=try themeControl("record=1");_=try themeControl("release=red")
+    expectTint(true,"Current red scene after bounded crossfade")
+    _=try themeControl("stop=1")
+    let transitionBlue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition blue tone")).firstMatch
+    reveal(transitionBlue);transitionBlue.tap()
+    let heldBlue=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[heldBlue],timeout:10),.completed)
+    expectTint(true,"Previous red scene retained while blue cover HTTP is held")
+    let missing=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition missing tone")).firstMatch
+    reveal(missing);missing.tap()
+    _=try themeControl("release=blue")
+    let heldMissing=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[heldMissing],timeout:10),.completed)
+    expectTint(true,"Late blue artwork cannot replace the retained red scene for a newer identity")
+    _=try themeControl("release=missing")
+    let failedFallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app)
+    XCTAssertEqual(XCTWaiter.wait(for:[failedFallback],timeout:15),.completed,"Current cover failure must clear the retained scene")
+    // Restore the original full-flow assertions after the asynchronous probe.
     let multi=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","multi cover tone")).firstMatch
     XCTAssertTrue(multi.waitForExistence(timeout:15));reveal(multi);multi.tap()
     func expectThreeColors(_ name:String){

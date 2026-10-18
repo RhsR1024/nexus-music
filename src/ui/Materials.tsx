@@ -25,12 +25,15 @@ export function AmbientBackground({services,visible=true}:{services?:Services;vi
     return services.playback.controller.subscribe(update);
   },[services,visible,theme.appearance.globalBackgroundMotion]);
   const flowColors=theme.appearance.globalBackgroundMotion&&cover.flowPalette?flowThemeGradient(cover.flowPalette,theme.mode):undefined;
-  if((theme.appearance.globalBackgroundMotion&&cover.uri)||(theme.appearance.coverColor&&cover.color))return <View testID="ambient-cover-background" pointerEvents="none" style={StyleSheet.absoluteFill}>
-    <LinearGradient testID={flowColors?'ambient-three-color':undefined} colors={flowColors??theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
-    {visible&&cover.uri&&(flowColors?<AmbientSoftLights colors={flowColors} identity={cover.uri} moving={moving}/>:<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />)}
+  const hasCover=!!((theme.appearance.globalBackgroundMotion&&cover.uri)||(theme.appearance.coverColor&&cover.color));
+  const base=hasCover?<LinearGradient colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+    :theme.appearance.backgroundStyle==='image'&&uri?<View style={StyleSheet.absoluteFill}><Image source={{uri}} resizeMode="cover" style={[StyleSheet.absoluteFill,{opacity:theme.appearance.backgroundOpacity}]}/><View style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0],opacity:.78}]}/></View>
+    :theme.appearance.backgroundStyle==='gradient'?<LinearGradient colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>:null;
+  return <View testID={hasCover?'ambient-cover-background':undefined} pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}>
+    {base}
+    {visible&&hasCover&&cover.uri&&!flowColors&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
+    {visible&&theme.appearance.globalBackgroundMotion&&<View testID={flowColors?'ambient-three-color':undefined} pointerEvents="none" style={StyleSheet.absoluteFill}><AmbientSoftLights colors={flowColors??[]} identity={cover.uri??''} moving={moving} pending={!!cover.pending}/></View>}
   </View>;
-  if(theme.appearance.backgroundStyle==='image'&&uri)return <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}><Image source={{uri}} resizeMode="cover" style={[StyleSheet.absoluteFill,{opacity:theme.appearance.backgroundOpacity}]}/><View style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0],opacity:.78}]}/></View>;
-  return theme.appearance.backgroundStyle==='gradient'?<LinearGradient pointerEvents="none" colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>:<View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}/>;
 }
 export function GlassSurface({children,style}:PropsWithChildren<{style?:StyleProp<ViewStyle>}>){
   const theme=useTheme(),[reduce,setReduce]=useState(true);

@@ -1,3 +1,11 @@
+## 2026-10-18 两场过渡与加载回退（本地通过）
+
+reverse-skill新R2/mobile-reverse路由及既有离线scope，E028/E029/E030独立原字节重放与采纳前严格review通过；按[0055](docs/decisions/0055-bounded-ambient-transition.md)五参考比较后原创实现显式pending、显示层暂留、最多两场/0.6秒Cubic整体混合和停止/失败清理。媒体URI/色板仍立即清旧，abort/当前URI守卫保持；原生属性一次应用，渐变按宽高比保留原物理投影。
+
+368业务/类型和最终完整native通过。正式入口SourceUITests-1792285502088完整背景388.381秒、1通过/零失败/跳过；本机HTTP屏障验证旧蓝/红保留、迟到蓝隔离、当前失败回退，原三色两页/暂停稳定/播放变化/跨页重启/经典PCM/Home→激活/开关与底色恢复/凭据清理均通过。独立视频65帧/11中间色帧，蓝0至红0.563333秒阈值穿越；这是连续画面证据，不推断精确时长、FPS/能耗或参考运行。截图亲看；15次合成鉴权成功/0失败，无新stream，复用临时音频缓存。
+
+首次完整流程暴露三色像素回归，物理/单位渐变投影纠正后原断言通过，失败留存；Pods探查上游失效转源码/生成文件未就绪的零测试构建失败也保留，已用本机已有预编译包恢复且锁文件不改。日志/摘要/counts为build/logs/ui-transition-passed*，视频/CSV/预览/核验为build/logs/ambient-transition-1792285502074.mp4*，附件build/transition-passed。清洁归档/本批push/对应iOS27继续；完整旋转/参考Random/逐页复核及全部A/F/J、真实服务/签名/手机仍待，目标active。
+
 ## 2026-10-18 原生柔光清洁归档与push回执
 
 产品提交9b13459及静态/构建文档提交 `ea4f5d66f608a307d19af91815b11daaf88880b6` 已正常push到RhsR1024/nexus-music，远端main一致。最终干净归档dirty=false/workingTreeChanges=[]、Xcode26.3/SDK26.2、arm64、实际min15.1/设备族[1,2]、unsigned；ZIP CRC/附带摘要、可执行及JS与归档字节一致、正式入口隔离及私人/签名资源排除均通过。IPA SHA256 `61441439204e2b57cfaa59173cda67c560fff5322ee1b4b507ba17eea4046259`，留存build/local-ambient-scene-ea4f5d6。首轮9b13459归档成功但期间心跳追加文档，另存首包；最终ea4f5d6全程干净，未混用两份收据。366业务/类型、最终完整native、正式背景354.349秒与截图验收见下。

@@ -22,6 +22,8 @@ public final class NexusNativeModule: Module {
       Prop("colors") { (view: NexusAmbientView, colors: [String]) in view.setColors(colors) }
       Prop("identity") { (view: NexusAmbientView, identity: String) in view.setIdentity(identity) }
       Prop("moving") { (view: NexusAmbientView, moving: Bool) in view.setMoving(moving) }
+      Prop("pending") { (view: NexusAmbientView, pending: Bool) in view.setPending(pending) }
+      OnViewDidUpdateProps { (view: NexusAmbientView) in view.applyProps() }
     }
     AsyncFunction("decodeImportText") { (base64: String) throws -> String in try ScriptUtilities.perform("importText", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("probeAudioURL") { (id: String, url: String, promise: Promise) in

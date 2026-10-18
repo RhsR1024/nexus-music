@@ -4,6 +4,18 @@ import CoreGraphics
 // Original finite scene policy. Only radial falloff and bounded field math
 // follow reviewed behavior; anchors and PRNG are explicitly Nexus choices.
 struct AmbientScene {
+  // CAGradientLayer projects in unit space; preserve the existing physical
+  // (0,0)->(width,height) CGGradient when the view is not square.
+  static func gradientPoints(size: CGSize) -> (start: CGPoint, end: CGPoint) {
+    guard size.width > 0, size.height > 0, size.width.isFinite, size.height.isFinite else {
+      return (.zero, CGPoint(x: 1, y: 1))
+    }
+    let ratio = size.width / size.height
+    let a = ratio * ratio / (1 + ratio * ratio), b = 1 - a
+    let scale = 1 / (a * a + b * b)
+    return (CGPoint(x: 0.5 - scale * a / 2, y: 0.5 - scale * b / 2),
+      CGPoint(x: 0.5 + scale * a / 2, y: 0.5 + scale * b / 2))
+  }
   struct Field {
     let anchor: CGPoint
     let amplitude: CGPoint
