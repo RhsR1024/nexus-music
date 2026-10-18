@@ -13,10 +13,10 @@ function useMotionGate(moving:boolean){
   useEffect(()=>{let valid=true;void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(valid)setReduce(value);});const motion=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduce),app=AppState.addEventListener('change',state=>setActive(state==='active'));return()=>{valid=false;motion.remove();app.remove();};},[]);
   return moving&&!reduce&&active;
 }
-const NativeAmbient=requireNativeView<ViewProps&{colors:readonly string[];identity:string;moving:boolean;pending:boolean}>('NexusNative','Ambient');
-export function AmbientSoftLights({colors,identity,moving,pending}:{colors:readonly string[];identity:string;moving:boolean;pending:boolean}){
+const NativeAmbient=requireNativeView<ViewProps&{colors:readonly string[];identity:string;moving:boolean;pending:boolean;dark:boolean}>('NexusNative','Ambient');
+export function AmbientSoftLights({colors,identity,moving,pending,dark}:{colors:readonly string[];identity:string;moving:boolean;pending:boolean;dark:boolean}){
   const running=useMotionGate(moving);
-  return <View testID={`ambient-motion-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeAmbient testID="ambient-soft-lights" colors={colors} identity={identity} moving={running} pending={pending} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
+  return <View testID={`ambient-motion-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeAmbient testID="ambient-soft-lights" colors={colors} identity={identity} moving={running} pending={pending} dark={dark} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
 }
 export function MotionImage({uri,blur=0,opacity=1,moving=false,onError,testID}:{testID?:string;uri:string;blur?:number;opacity?:number;moving?:boolean;onError?:()=>void}){
   const phase=useRef(new Animated.Value(0)).current,running=useMotionGate(moving);

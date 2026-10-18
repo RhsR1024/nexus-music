@@ -1224,21 +1224,26 @@ final class SourceSettingsTests: XCTestCase {
     let transitionRed=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition red tone")).firstMatch
     XCTAssertTrue(transitionRed.waitForExistence(timeout:15));reveal(transitionRed);transitionRed.tap()
     let heldRed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
-    XCTAssertEqual(XCTWaiter.wait(for:[heldRed],timeout:10),.completed)
+    // Cover extraction is bounded by the native cache queue and can follow
+    // the preceding blue request; give that queue its documented headroom.
+    XCTAssertEqual(XCTWaiter.wait(for:[heldRed],timeout:30),.completed)
     expectTint(false,"Previous blue scene retained while red cover HTTP is held")
+    // Theme changes are verified below with multi-point scene samples; keep
+    // this held-request checkpoint focused on the async owner identity.
+    let heldThemeImage=XCTAttachment(screenshot:app.screenshot());heldThemeImage.name="Pending red identity while blue scene remains visible after theme rebuild";heldThemeImage.lifetime = .keepAlways;add(heldThemeImage)
     _=try themeControl("record=1");_=try themeControl("release=red")
     expectTint(true,"Current red scene after bounded crossfade")
     _=try themeControl("stop=1")
     let transitionBlue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition blue tone")).firstMatch
     reveal(transitionBlue);transitionBlue.tap()
     let heldBlue=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
-    XCTAssertEqual(XCTWaiter.wait(for:[heldBlue],timeout:10),.completed)
+    XCTAssertEqual(XCTWaiter.wait(for:[heldBlue],timeout:30),.completed)
     expectTint(true,"Previous red scene retained while blue cover HTTP is held")
     let missing=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition missing tone")).firstMatch
     reveal(missing);missing.tap()
     _=try themeControl("release=blue")
     let heldMissing=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
-    XCTAssertEqual(XCTWaiter.wait(for:[heldMissing],timeout:10),.completed)
+    XCTAssertEqual(XCTWaiter.wait(for:[heldMissing],timeout:30),.completed)
     expectTint(true,"Late blue artwork cannot replace the retained red scene for a newer identity")
     _=try themeControl("release=missing")
     let failedFallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app)
@@ -1248,11 +1253,11 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(multi.waitForExistence(timeout:15));reveal(multi);multi.tap()
     func expectThreeColors(_ name:String){
       XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"ambient-three-color").firstMatch.waitForExistence(timeout:10))
-      // CoverCache re-encodes JPEG, so equal source stripes need not retain
-      // equal scores/order. Require all three actual screen hues in any order.
+      // The two-stop base and four moving softened fields do not map to three
+      // fixed stops. Sample only bare margins, requiring all three actual hues.
       let different=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
         let image=app.screenshot().image
-        let points=[CGPoint(x:6,y:180),CGPoint(x:6,y:image.size.height*0.52),CGPoint(x:image.size.width-6,y:image.size.height-190)]
+        let points=(2...8).flatMap{step in [CGPoint(x:6,y:image.size.height*CGFloat(step)/10),CGPoint(x:image.size.width-6,y:image.size.height*CGFloat(step)/10)]}
         let hues=points.map{point->Int in
           let rgba=rgbPixel(image,point);guard rgba.count==4 else{return -1}
           let ranked=[0,1,2].sorted{rgba[$0]>rgba[$1]}
@@ -1267,6 +1272,20 @@ final class SourceSettingsTests: XCTestCase {
     expectThreeColors("Three-color flow actual private library pixels")
     app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap()
     expectThreeColors("Three-color flow actual discovery pixels")
+    func marginBrightness()->Double {let bytes=backgroundPixels();return Double(bytes.reduce(0){$0+Int($1)})/Double(bytes.count)}
+    let lightBrightness=marginBrightness()
+    openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-dark").firstMatch.tap()
+    app.buttons["theme-sheet-close"].tap()
+    expectThreeColors("Softened dark flow actual discovery pixels")
+    XCTAssertLessThan(marginBrightness(),lightBrightness-60,"The same raw cover must rebuild a substantially darker native scene")
+    app.terminate();app.launch();motion(false)
+    expectThreeColors("Softened dark flow restored paused")
+    XCTAssertLessThan(marginBrightness(),lightBrightness-60,"Dark scene must survive restart")
+    let darkStopped=backgroundPixels();XCTAssertEqual(darkStopped,backgroundPixels(),"Paused dark scene must remain stable")
+    openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
+    app.buttons["theme-sheet-close"].tap()
+    expectThreeColors("Softened light flow restored paused")
+    XCTAssertGreaterThan(marginBrightness(),lightBrightness-30,"Light theme must rebuild even with unchanged identity and palette")
     openSettings(app,page:"background");setSwitch(persistedPlayer,true)
     setSwitch(persistedGlobal,false)
     app.buttons["background-sheet-close"].tap()

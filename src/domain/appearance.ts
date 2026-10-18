@@ -34,8 +34,8 @@ export function darkenCoverColor(color:string):string {
   const scale=Math.min(1,72/Math.max(...rgb,1));return '#'+rgb.map(value=>Math.round(value*scale).toString(16).padStart(2,'0')).join('');
 }
 
-// Preserve the existing semantic luminance bounds while letting distinct
-// recovered palette hues affect different stops of the flow background.
+// Bounded static fallback behind the native scene, also used before it mounts.
+// The native scene receives the raw palette and owns its HSL/gradient math.
 export function flowThemeGradient(palette:FlowPalette,mode:'light'|'dark'):FlowPalette {
   return [coverThemeGradient(palette[0],mode)[0],coverThemeGradient(palette[1],mode)[1],coverThemeGradient(palette[2],mode)[2]];
 }

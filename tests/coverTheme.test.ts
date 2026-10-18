@@ -134,7 +134,7 @@ test('malformed three-color results never enter the theme snapshot',async()=>{
     await tick();assert.deepEqual(store.getSnapshot(),{uri:'file:///cover',color:'#112233'});store.dispose();
   }
 });
-test('all extreme three-color combinations preserve readable light and dark semantic text',()=>{
+test('static flow fallback preserves readable semantic text for all extreme palettes',()=>{
   const colors=['#FF0000','#0000FF','#000000','#FFFFFF','#00FF00','#FF00FF'];
   for(const mode of ['light','dark'] as const)for(const a of colors)for(const b of colors)for(const c of colors){
     const palette=appearancePalette(mode,{...appearanceDefaults,globalBackgroundMotion:true},a);

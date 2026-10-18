@@ -57,7 +57,7 @@ flowchart LR
 
 复现：`source scripts/environment.sh`后执行`python3 build/verify-color-composition-evidence.py`及`node scripts/sollin-reverse-gate.mjs ipa --review`。F031为info/reverse_algo、validated/high，仅限上述静态路径；P031为原始色板→量化软化→基底/柔光→两场→覆盖层的callflow。相关WI010及timeline第66事件、field-journal均已追加，E026–E031不可变收据保持。
 
-宽色域、null/error插值、完整Dart/Flutter执行、GPU色彩空间、有效参考主题、原始像素和能耗仍未核。**当前尚无本批产品采纳**；下一步按五固定参考/许可/Android职责记录后原创接线，并分别进行数学、原生、真实App像素与活动/异步回归。音枢语义文字颜色继续独立，完整A04不计完成。
+宽色域、null/error插值、完整Dart/Flutter执行、GPU色彩空间、有效参考主题、原始像素和能耗仍未核。本批静态证据完成后，已按五固定参考/许可/Android职责记录原创接入[0058](decisions/0058-native-ambient-color-composition.md)：原始色板/dark、HSL字节量化后双色插值、共享柔光/双色基底和混合外单次覆盖层。368业务/类型、完整native和20+12颜色/阈值向量通过；真实App像素/明暗/加载/重启与活动异步回归运行中，尚未本批App验收。音枢语义文字和静态fallback继续独立，完整A04不计完成。
 
 图表保留可编辑Mermaid源码，已检查节点/连线语法；本机render_diagram.py尝试因缺mmdc退出1，未生成或宣称SVG渲染成功，未安装全局工具。该限制不影响原字节/数学证据复核。
 

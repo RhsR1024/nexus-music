@@ -1,3 +1,7 @@
+## 2026-10-18 原生主题配色实施（本地通过）
+
+[0058](docs/decisions/0058-native-ambient-color-composition.md)沿E032采纳前strict review与五参考比较，已接原始色板/dark、HSL软化字节量化、双色浮点基底/共享柔光和混合外单次主题覆盖层，消除额外.42；pending主题变化只重建显示中的旧色板，活动/后台/异步/两场守卫保持。368业务/类型与完整native、20+12颜色/阈值向量通过；正式App1792293700730背景专项434.412秒1/0/0通过，视频62帧/10中间色、红切换0.481667秒，明暗/加载/重启/PCM/异步/清理通过。截图已亲看；19合成鉴权/0失败、无新stream、复用缓存。清洁归档/push/iOS27继续，完整A04不计完成。
+
 ## 2026-10-18 统计验收修正清洁归档与push
 
 557999acfbbd892e9dd6841d7e97b64df4acfc75已正常push，远端main一致。清洁归档dirty=false/changes=[]、Xcode26.3/SDK26.2、arm64、min15.1、设备族[1,2]、unsigned，ZIP CRC/附带SHA、归档可执行及JS字节一致、正式入口和私人/签名资源排除通过；IPA SHA256 `67a92440f91cc8975739f9bf027a83fe61f30bed449090ae50814bbcb3c2f296`，留存build/local-statistics-557999a。正式App270.029秒与368业务/类型沿0057，不代替iOS27/真实服务/签名/手机。

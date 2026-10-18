@@ -6,14 +6,10 @@ private final class AmbientSceneLayer: CALayer {
   private let gradient = CAGradientLayer()
   private let fieldContainer = CALayer()
   private let fields = (0..<4).map { _ in CALayer() }
-  init(scene: AmbientScene, colors: [String]) {
+  init(scene: AmbientScene) {
     self.scene = scene
     super.init()
-    gradient.colors = colors.map { color -> CGColor in
-      let rgb = UInt32(color.dropFirst(), radix: 16)!
-      return UIColor(red: CGFloat((rgb >> 16) & 255) / 255,
-        green: CGFloat((rgb >> 8) & 255) / 255, blue: CGFloat(rgb & 255) / 255, alpha: 1).cgColor
-    }
+    gradient.colors = scene.base.map(\.cgColor)
     gradient.startPoint = .zero; gradient.endPoint = CGPoint(x: 1, y: 1)
     addSublayer(gradient)
     addSublayer(fieldContainer)
@@ -34,7 +30,7 @@ private final class AmbientSceneLayer: CALayer {
     fieldContainer.setAffineTransform(CGAffineTransform(rotationAngle: angle).scaledBy(x: 1.12, y: 1.12))
     for (index, field) in scene.fields.enumerated() {
       fields[index].frame = scene.rect(field, size: size, time: time)
-      fields[index].opacity = Float(field.opacity * 0.42)
+      fields[index].opacity = Float(field.opacity)
     }
   }
 }
@@ -47,6 +43,7 @@ private final class AmbientFrameTarget: NSObject {
 
 private final class AmbientCanvas: UIView {
   var requestedMotion = false
+  private let overlay = CAGradientLayer()
   private var transition = AmbientTransition<AmbientSceneLayer>()
   private var displayLink: CADisplayLink?
   private var startedAt: CFTimeInterval?
@@ -59,6 +56,8 @@ private final class AmbientCanvas: UIView {
   override init(frame: CGRect) {
     super.init(frame: frame)
     isOpaque = false; isUserInteractionEnabled = false
+    overlay.startPoint = CGPoint(x: 0.5, y: 0); overlay.endPoint = CGPoint(x: 0.5, y: 1)
+    overlay.isHidden = true; layer.addSublayer(overlay)
     let center = NotificationCenter.default
     for name in [UIApplication.didBecomeActiveNotification, UIApplication.willResignActiveNotification,
       UIApplication.didEnterBackgroundNotification, UIAccessibility.reduceMotionStatusDidChangeNotification] {
@@ -73,16 +72,18 @@ private final class AmbientCanvas: UIView {
     if note.name == UIApplication.willResignActiveNotification || note.name == UIApplication.didEnterBackgroundNotification { stop() }
     else { syncMotion() }
   }
-  func install(colors: [String], identity: String) {
+  func install(colors: [String], identity: String, dark: Bool) {
     CATransaction.begin(); CATransaction.setDisableActions(true)
     transition.previous?.removeFromSuperlayer()
     transition.settle()
-    let next = AmbientScene(colors: colors, identity: identity).map { AmbientSceneLayer(scene: $0, colors: colors) }
+    let next = AmbientScene(colors: colors, identity: identity, dark: dark).map { AmbientSceneLayer(scene: $0) }
     let animated = canMove && next != nil
     if !animated { transition.current?.removeFromSuperlayer() }
     previousTime = elapsed
     transition.replace(next, at: CACurrentMediaTime(), animated: animated)
-    if let next { layer.addSublayer(next) }
+    if let next { layer.insertSublayer(next, below: overlay) }
+    overlay.colors = AmbientScene.overlay(dark: dark)
+    overlay.isHidden = next == nil
     startedAt = nil; elapsed = 0
     CATransaction.commit()
     syncMotion()
@@ -111,6 +112,7 @@ private final class AmbientCanvas: UIView {
     transition.advance(to: time)
     if transition.previous == nil { previous?.removeFromSuperlayer() }
     CATransaction.begin(); CATransaction.setDisableActions(true)
+    overlay.frame = bounds
     // Opaque old beneath current alpha p gives complementary effective weights.
     transition.previous?.opacity = 1
     transition.previous?.render(size: bounds.size, time: previousTime)
@@ -125,6 +127,7 @@ final class NexusAmbientView: ExpoView {
   private var colors: [String] = [], appliedColors: [String] = []
   private var identity = "", appliedIdentity = ""
   private var pending = false, moving = false
+  private var dark = false, appliedDark = false
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     clipsToBounds = true; addSubview(canvas)
@@ -133,11 +136,17 @@ final class NexusAmbientView: ExpoView {
   func setIdentity(_ value: String) { identity = value }
   func setPending(_ value: Bool) { pending = value }
   func setMoving(_ value: Bool) { moving = value }
+  func setDark(_ value: Bool) { dark = value }
   func applyProps() {
     canvas.requestedMotion = moving
-    if !pending && (colors != appliedColors || identity != appliedIdentity) {
+    if !pending && (colors != appliedColors || identity != appliedIdentity || dark != appliedDark) {
       appliedColors = colors; appliedIdentity = identity
-      canvas.install(colors: colors, identity: identity)
+      appliedDark = dark
+      canvas.install(colors: colors, identity: identity, dark: dark)
+    } else if dark != appliedDark {
+      // A pending new URI must not replace the displayed palette on a theme change.
+      appliedDark = dark
+      canvas.install(colors: appliedColors, identity: appliedIdentity, dark: dark)
     } else { canvas.syncMotion() }
   }
   override func layoutSubviews() { super.layoutSubviews(); canvas.frame = bounds }

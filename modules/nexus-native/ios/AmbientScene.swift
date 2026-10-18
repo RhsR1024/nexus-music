@@ -1,8 +1,59 @@
 import Foundation
 import CoreGraphics
 
-// Original native implementation of the finite E026/E027/E028/E031 scene math.
+// Original native implementation of the finite E026–E032 scene math.
 struct AmbientScene {
+  struct RGB: Equatable {
+    let red: Double, green: Double, blue: Double
+    var channels: [Double] { [red, green, blue] }
+    var cgColor: CGColor { CGColor(srgbRed: red, green: green, blue: blue, alpha: 1) }
+    init(_ red: Double, _ green: Double, _ blue: Double) { self.red = red; self.green = green; self.blue = blue }
+    init?(hex: String) {
+      guard hex.utf8.count == 7, hex.first == "#", hex.dropFirst().utf8.allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }),
+        let value = UInt32(hex.dropFirst(), radix: 16) else { return nil }
+      self.init(Double((value >> 16) & 255) / 255, Double((value >> 8) & 255) / 255, Double(value & 255) / 255)
+    }
+    func softened(dark: Bool) -> RGB {
+      let maximum = channels.max()!, minimum = channels.min()!, delta = maximum - minimum
+      let lightness = (maximum + minimum) / 2
+      let saturation = delta == 0 ? 0 : delta / (1 - abs(2 * lightness - 1))
+      var hue = 0.0
+      if delta > 0 {
+        if maximum == red { hue = ((green - blue) / delta).truncatingRemainder(dividingBy: 6) }
+        else if maximum == green { hue = (blue - red) / delta + 2 }
+        else { hue = (red - green) / delta + 4 }
+        hue *= 60
+        if hue < 0 { hue += 360 }
+      }
+      let s = saturation < 0.06 ? saturation : min(dark ? 0.6 : 0.48, max(0.26, saturation * 0.76))
+      let l = saturation < 0.06 ? (dark ? 0.34 : 0.72)
+        : min(dark ? 0.41 : 0.74, max(dark ? 0.31 : 0.62, lightness * 0.12 + (dark ? 0.32 : 0.62)))
+      let chroma = (1 - abs(2 * l - 1)) * s
+      let x = chroma * (1 - abs((hue / 60).truncatingRemainder(dividingBy: 2) - 1)), m = l - chroma / 2
+      let rgb: [Double]
+      switch Int(hue / 60) {
+      case 0: rgb = [chroma, x, 0]
+      case 1: rgb = [x, chroma, 0]
+      case 2: rgb = [0, chroma, x]
+      case 3: rgb = [0, x, chroma]
+      case 4: rgb = [x, 0, chroma]
+      default: rgb = [chroma, 0, x]
+      }
+      // HSL.toColor quantizes before the subsequent floating-point lerp.
+      let bytes = rgb.map { ((min(1, max(0, $0 + m)) * 255).rounded()) / 255 }
+      return RGB(bytes[0], bytes[1], bytes[2])
+    }
+    func mixed(with target: Double, amount: Double) -> RGB {
+      let values = channels.map { min(1, max(0, $0 * (1 - amount) + target * amount)) }
+      return RGB(values[0], values[1], values[2])
+    }
+  }
+  static func overlay(dark: Bool) -> [CGColor] {
+    let color = dark ? 0.0 : 1.0
+    return (dark ? [4.0, 24.0] : [18.0, 48.0]).map {
+      CGColor(srgbRed: color, green: color, blue: color, alpha: $0 / 255)
+    }
+  }
   // Convert the physical center +/- .65*maxDimension axis to a unit-space
   // projection, including its length, rather than just normalizing endpoints.
   static func gradientPoints(size: CGSize, angle: Double) -> (start: CGPoint, end: CGPoint) {
@@ -45,6 +96,8 @@ struct AmbientScene {
     let opacity: Double
   }
   let images: [CGImage]
+  let palette: [RGB]
+  let base: [RGB]
   let fields: [Field]
   let period: Double
   let phase: Double
@@ -60,10 +113,16 @@ struct AmbientScene {
     return value
   }
 
-  init?(colors: [String], identity: String) {
-    guard colors.count == 3 else { return nil }
-    let images = colors.compactMap(Self.softLight)
-    guard images.count == 3 else { return nil }
+  init?(colors: [String], identity: String, dark: Bool = false) {
+    guard (1...3).contains(colors.count) else { return nil }
+    let raw = colors.compactMap { RGB(hex: $0) }
+    guard raw.count == colors.count else { return nil }
+    let palette = raw.map { $0.softened(dark: dark) }
+    let images = palette.compactMap(Self.softLight)
+    guard images.count == palette.count else { return nil }
+    self.palette = palette
+    base = [palette[0].mixed(with: dark ? 0 : 1, amount: dark ? 0.45 : 0.5),
+      palette[min(1, palette.count - 1)].mixed(with: dark ? 0 : 1, amount: dark ? 0.54 : 0.6)]
     self.images = images
     var random = Random(seed: Self.seed(identity))
     func unit() -> Double { random.unit() }
@@ -77,9 +136,10 @@ struct AmbientScene {
   }
 
   static func softLight(_ color: String) -> CGImage? {
-    guard color.utf8.count == 7, color.first == "#", color.dropFirst().utf8.allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }),
-      let rgb = UInt32(color.dropFirst(), radix: 16) else { return nil }
-    let channels = [Double((rgb >> 16) & 255), Double((rgb >> 8) & 255), Double(rgb & 255)]
+    RGB(hex: color).flatMap(Self.softLight)
+  }
+  static func softLight(_ color: RGB) -> CGImage? {
+    let channels = color.channels.map { $0 * 255 }
     let side = 144
     var bytes = [UInt8](repeating: 0, count: side * side * 4)
     for y in 0..<side {
@@ -94,7 +154,7 @@ struct AmbientScene {
     }
     guard let provider = CGDataProvider(data: Data(bytes) as CFData) else { return nil }
     return CGImage(width: side, height: side, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: side * 4,
-      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+      space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
       provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
   }
 
@@ -127,7 +187,7 @@ struct AmbientScene {
     for (index, field) in fields.enumerated() {
       let r = rect(field, size: size, time: time)
       let flipped = CGRect(x: r.minX, y: size.height - r.maxY, width: r.width, height: r.height)
-      context.setAlpha(field.opacity * 0.42)
+      context.setAlpha(field.opacity)
       context.draw(images[index % images.count], in: flipped)
     }
     context.restoreGState()
