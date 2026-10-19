@@ -1,5 +1,7 @@
 ## 2026-10-20 共享播放器/背景回归最终本地结果
 
+阶段闭环补记：`npm run check` 401/401、reverse-skill strict review 43E/41F/41P、17WI/94 timeline通过；最终 clean unsigned IPA `build/local-presentation-ui-2cd956b/NexusMusic-unsigned.ipa` SHA-256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef` 已完成归档/字节一致性与隐私排除核验。提交`2cd956b`对应 [iOS27 run 39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267) 仍运行、0排队。上一条中“最终clean归档待重建”已过时；视觉分数仍未达90%，真实服务、签名及真机边界不变。
+
 Release App播放器回归 `build/SourceUITests-1792432689070.xcresult`：1/0/0，416.640秒；背景大字专项 `1792432251070`：1/0/0，148.083秒。已亲看 AM 队列和默认 blush/rose 外观截图；4855 5.76% SSIM/MAD29.53，4856 -1.95%/31.60，远低90%，两页仍为实施中。歌词全文继续使用原完整组件，仅共享进行中的请求并遵循服务缓存失效。业务/类型401/401、reverse strict review 43E/41F/41P、17WI/94 timeline、零错误/警告通过。已将远端35ddf58 Beans Music比较交接提交并入本地历史，HANDOFF两侧记录均保留。第一份arm64/iphoneos26.2 unsigned IPA已通过ZIP、包内JS、入口和隐私排除检查，SHA `4365e247f67dd2ef9578589a8c6ffd382af2fdafe471760ae839409df8a93ba7`；它的构建manifest明确为dirty=true，仅作审阅证据，最终clean归档待本次交接文档提交后重建。远端产品失败39210631200无变化，不能手动重派。真实私人服务、iOS27新提交、签名及真机仍待。
 
 ## 2026-10-20 封面专项和独立录屏最终本地通过

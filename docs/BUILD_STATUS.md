@@ -1,4 +1,8 @@
-## 2026-10-20 共享播放器/背景批次本地结果
+## 2026-10-20 共享播放器/背景批次与云端状态
+
+播放器Release UI `SourceUITests-1792432689070` 416.640秒1/0/0，背景大字专项`1792432251070`148.083秒1/0/0；`npm run check` 401/401，reverse-skill strict review 43E/41F/41P、17WI/94 timeline、零错误/警告。默认主题4855/4856 SSIM为5.76%/-1.95%，未达到90%且仍实施中。最终 clean unsigned IPA留存`build/local-presentation-ui-2cd956b`，SHA256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef`；归档CRC/字节一致性及隐私排除检查通过。`2cd956b`对应[39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267)仍in_progress，API实核1运行/0排队，无需重派；真实服务、Apple签名和真机验收未完成。
+
+## 2026-10-20 共享播放器/背景批次本地结果（历史记录）
 
 播放器Release UI `SourceUITests-1792432689070` 416.640秒1/0/0，通过真实AM封面/歌词/权威队列切换、单曲→随机→顺序、播放意图/时钟与截图；背景大字专项`1792432251070`148.083秒1/0/0。前一轮因旧断言二进制失败未计通过，源码重编译后本轮通过。最新默认主题截图亲看；4855/4856 SSIM仅5.76%/-1.95%、MAD29.53/31.60，远低90%，不能标记页面对齐。`npm run check`401/401与offline case strict review43E/41F/41P、17WI/94 timeline/0 errors通过。首份arm64/iphoneos26.2 unsigned IPA SHA256 `4365e247f67dd2ef9578589a8c6ffd382af2fdafe471760ae839409df8a93ba7`，ZIP/归档JS字节/正式入口及测试适配器、fixture凭据和签名材料排除均通过；构建manifest为dirty=true，因此只作为审阅产物保留。远端35ddf58 Beans Music比较/交接已merge并保留；clean unsigned归档将在最终文档提交后重建。iOS27新提交、真实服务/签名/真机未验。
 
