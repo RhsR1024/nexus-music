@@ -11,3 +11,5 @@
 Xcode测试后系统诊断收集提示找不到simctl；测试返回0，所需xcresult/截图/统计成功导出，不宣称完整系统诊断。最终组合回归、clean archive、提交/push与iOS27另记。此项验证封面作为写真主图的路径，未把导入写真坏文件/全手势/参考动态/真机性能等未验项标成通过；完整计划继续active。
 
 最终组合SourceUITests-1792369614570通过2/0/0：图片专项139.533秒，完整八布局/真实PCM/黑胶像素/歌词/统计/重启/凭据清理320.837秒。395业务/类型和更新的原生像素单测通过；41次合成鉴权/0失败、16次流请求，图片计数portrait1/landscape1/missing2/corrupt1，均为本机合成响应。五张PNG及SHA/计数/结果留build/photo-artwork-final-passed；最终坏图和返回纵图亲看，独立PNG几何与首轮一致，完整临时导出自动清理。清洁归档与新云端随后记录。
+
+946b638ae2b4f576aeddd682b64362bcb7e05605清洁unsigned归档通过：dirty=false/changes=[]，Xcode26.3/SDK26.2、arm64/min15.1/[1,2]。ZIP CRC、附带SHA、归档可执行/JS字节及正式入口/私人资源排除通过；测试控制端点和fixture-photo不在正式JS。IPA SHA256 `eb7a6cabe05f1e83ac5720e9d9f5d267800f4ed286b78a712a757fb90bcda374`，保留build/local-presentation-946b638。已正常push并核对远程main；新[39182097746](https://github.com/RhsR1024/nexus-music/actions/runs/39182097746)pending，0302b24/39179554648仍App验证，1运行/1排队。iOS27终态与真实服务/签名/真机继续待验。
