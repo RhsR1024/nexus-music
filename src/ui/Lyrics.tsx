@@ -52,7 +52,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
   const stageGroup=activeStageGroup(stageLines,state.position*1000,offset);
   const active=document?activeLyric(document.lines,state.position*1000,offset):-1;
   const {fontScale:systemFontScale}=useWindowDimensions();
-  const fullPage=presentation==='am'||presentation==='am2',alignStart=presentation==='am'&&systemFontScale>1.8;
+  const fullPage=presentation==='am'||presentation==='am2'||presentation==='photo',alignStart=(presentation==='am'||presentation==='photo')&&systemFontScale>1.8;
   const count=visibleLines??(presentation==='am'?3:presentation?2:4),firstVisible=Math.max(0,active-(count===1?0:1));
   useEffect(()=>{if(expanded&&active>=0)list.current?.scrollToIndex({index:active,animated:true,viewPosition:.45});},[active,expanded]);
   const size=(presentation==='stage'?44:presentation==='am'||presentation==='am2'?32:presentation==='photo'?26:presentation?22:20)*preferences.fontScale;
@@ -72,7 +72,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
     {(result?.variants.length??0)>1&&<View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)}><Text style={{color:variant===index?theme.color('#D9F49B'):theme.color('#959EAC')}}>{item.label}</Text></Pressable>)}</View>}
     {document?.synced&&!presentation&&<Pressable accessibilityRole="button" onPress={()=>setExpanded(true)}><Text style={{color:theme.color('#D9F49B')}}>全部歌词 · 双击行定位，长按打开设置</Text></Pressable>}
     {fullPage&&document?.synced&&!expanded&&<View style={{flex:1}}>
-      <AM2LyricRows alignStart={alignStart} testID={presentation==='am'?'am-lyrics-list':'am2-lyrics-list'} services={services} lines={document.lines} active={active} center={center} font={font} size={size} offset={offset} style={style} activeColor={activeColor} inactiveColor={inactiveColor} seek={seek} openSettings={openAllLyrics}/>
+      <AM2LyricRows alignStart={alignStart} testID={presentation==='photo'?'photo-lyrics-list':presentation==='am'?'am-lyrics-list':'am2-lyrics-list'} services={services} lines={document.lines} active={active} center={center} font={font} size={size} offset={offset} style={style} activeColor={activeColor} inactiveColor={inactiveColor} seek={seek} openSettings={openAllLyrics}/>
     </View>}
     {presentation==='stage'&&document?.synced&&!expanded&&<View testID="lyric-stage" style={{flex:1,gap:12}}>
       <ScrollView key={stageGroup?.id??'gap'} contentContainerStyle={{flexGrow:1,justifyContent:'center'}}>

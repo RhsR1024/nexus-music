@@ -832,7 +832,10 @@ final class SourceSettingsTests: XCTestCase {
   func testClassicPlayerWindowSafeArea() throws {try verifyAM2Window(largeText:false,classic:true)}
   func testAMPlayerWithLargeText() throws {try verifyAM2Window(largeText:true,am:true)}
   func testAMPlayerWindowRotation() throws {try verifyAM2Window(largeText:false,am:true)}
-  private func verifyAM2Window(largeText:Bool,classic:Bool=false,am:Bool=false) throws {
+  func testPhotoPlayerWindowRotation() throws {try verifyAM2Window(largeText:false,photo:true)}
+  func testPhotoPlayerWithLargeText() throws {try verifyAM2Window(largeText:true,photo:true)}
+
+  private func verifyAM2Window(largeText:Bool,classic:Bool=false,am:Bool=false,photo:Bool=false) throws {
     let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait
     defer{XCUIDevice.shared.orientation = .portrait}
     if largeText{app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]}
@@ -855,7 +858,7 @@ final class SourceSettingsTests: XCTestCase {
       }
       XCTAssertTrue(item.isHittable)
     }
-    openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":am ? "player-layout-am":"player-layout-am2");reveal(am2);am2.tap()
+    openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":photo ? "player-layout-photo":am ? "player-layout-am":"player-layout-am2");reveal(am2);am2.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["skins-sheet-close"]);waitForExpectations(timeout:10)
     openSettings(app,page:"sources")
     for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名","fixture-user"),("Navidrome密码","fixture-password")]{
@@ -868,6 +871,30 @@ final class SourceSettingsTests: XCTestCase {
     element("tab-private").tap();let account=element("navidrome-account-fixture-user");reveal(account);account.tap()
     let album=element("navidrome-item-album-fixture-album");XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();app.buttons["播放全部"].tap()
     let open=app.buttons["打开播放页"];XCTAssertTrue(open.waitForExistence(timeout:10));open.tap()
+    if photo {
+      XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10));app.buttons["暂停"].tap()
+      let viewport=element("photo-lyric-viewport"),list=element("photo-lyrics-list"),info=element("photo-song-info")
+      XCTAssertTrue(list.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].isHittable)
+      XCTAssertGreaterThan(viewport.frame.height,100);XCTAssertTrue(app.frame.insetBy(dx:-1,dy:-1).contains(viewport.frame));XCTAssertTrue(app.frame.insetBy(dx:-1,dy:-1).contains(info.frame))
+      XCTAssertTrue(app.buttons["选择歌词来源"].isHittable)
+      let portrait=XCTAttachment(screenshot:XCUIScreen.main.screenshot());portrait.name=largeText ? "Photo accessibility lyrics and song controls":"Photo portrait composition";portrait.lifetime = .keepAlways;add(portrait)
+      if !largeText {
+        XCUIDevice.shared.orientation = .landscapeLeft;app.activate()
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in element("photo-horizontal").exists && viewport.frame.height>100},object:nil)],timeout:15),.completed)
+        XCTAssertTrue(app.buttons["播放"].isHittable);XCTAssertTrue(app.buttons["更多播放控制"].isHittable);XCTAssertTrue(app.buttons["选择歌词来源"].isHittable)
+        let landscape=XCTAttachment(screenshot:XCUIScreen.main.screenshot());landscape.name="Photo landscape lyric column";landscape.lifetime = .keepAlways;add(landscape)
+        XCUIDevice.shared.orientation = .portrait;app.activate()
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in element("photo-vertical").exists},object:nil)],timeout:15),.completed)
+      }
+      app.buttons["photo-actions-toggle"].tap();let progress=element("播放进度");XCTAssertTrue(progress.waitForExistence(timeout:5));XCTAssertTrue(progress.isHittable)
+      app.buttons["更多播放控制"].tap();XCTAssertTrue(app.buttons["收起播放选项"].waitForExistence(timeout:5));app.buttons["收起播放选项"].tap()
+      XCTAssertFalse(element("photo-quick-actions").exists,"Opening another presentation clears photo action state")
+      let restored=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.buttons["收起播放选项"].exists && element("photo-player").exists && app.buttons["播放"].isHittable},object:nil)
+      XCTAssertEqual(XCTWaiter.wait(for:[restored],timeout:8),.completed,"The native options sheet must finish dismissing and restore the actual photo transport")
+      XCTAssertTrue(app.buttons["播放"].isHittable);app.buttons["收起播放页"].tap()
+      openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+      XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10));return
+    }
     if classic {
       let viewport=element("classic-player-scroll")
       XCTAssertTrue(viewport.waitForExistence(timeout:10))
@@ -1077,6 +1104,28 @@ final class SourceSettingsTests: XCTestCase {
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
+      if layout=="photo" {
+        let element: (String)->XCUIElement = { app.descendants(matching:.any).matching(identifier:$0).firstMatch }
+        let viewport=element("photo-lyric-viewport"),list=element("photo-lyrics-list"),mask=element("photo-hero-mask")
+        XCTAssertTrue(list.waitForExistence(timeout:10));XCTAssertTrue(mask.waitForExistence(timeout:10))
+        XCTAssertGreaterThan(viewport.frame.height,150);XCTAssertTrue(app.frame.insetBy(dx:-1,dy:-1).contains(viewport.frame))
+        let activeLine=app.buttons["定位歌词：Synthetic lyric two"].firstMatch
+        XCTAssertTrue(activeLine.isHittable);XCTAssertTrue(viewport.frame.insetBy(dx:-1,dy:-1).contains(activeLine.frame))
+        XCTAssertFalse(element("photo-quick-actions").exists,"Hidden photo controls must be absent from AX and touch")
+        let shot=XCUIScreen.main.screenshot()
+        let attachment=XCTAttachment(screenshot:shot);attachment.name="Photo clear masked hero and virtual lyrics";attachment.lifetime = .keepAlways;add(attachment)
+        if let image=BackgroundPixels.decode(shot.pngRepresentation) {
+          let top=BackgroundPixels.rgba(image,at:CGPoint(x:CGFloat(image.width)*0.5,y:CGFloat(image.height)*0.2))
+          let bottom=BackgroundPixels.rgba(image,at:CGPoint(x:CGFloat(image.width)*0.5,y:CGFloat(image.height)*0.86))
+          XCTAssertGreaterThan(Int(top.prefix(3).max() ?? 0),Int(bottom.prefix(3).max() ?? 0)+40,"Actual fullbleed artwork must fade into the dark lyric foundation")
+        } else { XCTFail("Photo screenshot must decode") }
+        app.buttons["photo-actions-toggle"].tap();XCTAssertTrue(element("photo-quick-actions").waitForExistence(timeout:5));XCTAssertTrue(progress.isHittable)
+        let pausedPosition=progress.value as? String
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !element("photo-quick-actions").exists},object:nil)],timeout:9),.completed,"Idle photo actions expire")
+        app.buttons["photo-actions-toggle"].tap();XCTAssertTrue(progress.waitForExistence(timeout:5));XCTAssertEqual(progress.value as? String,pausedPosition,"Showing and expiring photo actions never seeks the paused controller")
+        let controls=XCTAttachment(screenshot:app.screenshot());controls.name="Photo revealed controls and shared paused progress";controls.lifetime = .keepAlways;add(controls)
+        app.buttons["photo-actions-toggle"].tap();XCTAssertFalse(element("photo-quick-actions").exists)
+      }
       if layout=="wave" {
         let viewport=app.descendants(matching:.any).matching(identifier:"player-artwork-viewport").firstMatch
         let cover=app.descendants(matching:.any).matching(identifier:"player-artwork-square").firstMatch
@@ -1878,11 +1927,20 @@ final class SourceSettingsTests: XCTestCase {
     func reveal(_ item:XCUIElement){
       let scroll=element("mini-sheet-scroll")
       for _ in 0..<30 {
-        if item.exists && item.isHittable && item.frame.minY>=scroll.frame.minY && item.frame.maxY<=scroll.frame.maxY{break}
-        let above=item.exists && item.frame.midY<scroll.frame.midY
-        scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.75:0.25)))
+        let viewport=scroll.frame.intersection(app.frame)
+        if item.exists && item.isHittable && viewport.contains(item.frame){break}
+        guard !viewport.isNull && viewport.width>44 && viewport.height>100 else {break}
+        let above=item.exists && item.frame.midY<viewport.midY
+        let base=app.coordinate(withNormalizedOffset:CGVector(dx:0,dy:0))
+        let start=base.withOffset(CGVector(dx:viewport.midX-app.frame.minX,dy:viewport.minY+viewport.height*(above ? 0.25:0.75)-app.frame.minY))
+        let end=base.withOffset(CGVector(dx:viewport.midX-app.frame.minX,dy:viewport.minY+viewport.height*(above ? 0.75:0.25)-app.frame.minY))
+        start.press(forDuration:0.05,thenDragTo:end)
       }
-      XCTAssertTrue(item.isHittable)
+      if !item.isHittable {
+        let image=XCTAttachment(screenshot:app.screenshot());image.name="Mini sheet unreachable control";image.lifetime = .keepAlways;add(image)
+        let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Mini sheet unreachable hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+      }
+      XCTAssertTrue(item.isHittable,"Mini control must remain reachable: \(item.identifier), frame: \(item.frame), scroll: \(scroll.frame), window: \(app.frame)")
     }
     let close=app.buttons["mini-sheet-close"]
     XCTAssertTrue(element("mini-settings-sheet").exists);XCTAssertFalse(app.buttons["settings-open-background"].exists)

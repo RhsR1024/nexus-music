@@ -1,5 +1,6 @@
+import {failureAttachmentExtension} from './lib/failure-attachments.ts';
 import {execFileSync} from 'node:child_process';
-import {copyFileSync,mkdirSync,mkdtempSync,readdirSync,rmSync,statSync,writeFileSync} from 'node:fs';
+import {copyFileSync,mkdirSync,mkdtempSync,readdirSync,readFileSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {basename,extname,join,resolve} from 'node:path';
 
 // Keep screenshots and hierarchy text available independently of large videos
@@ -19,9 +20,11 @@ export function exportFailureEvidence(resultPath,testIdentifiers){
       execFileSync('xcrun',['xcresulttool','export','attachments','--path',resultPath,'--output-path',directory,'--test-id',testIdentifier],{stdio:'pipe',timeout:60000});
       for(const name of readdirSync(directory).sort()){
         const path=join(directory,name),stat=statSync(path);
-        const included=stat.isFile()&&['.png','.jpg','.jpeg','.txt','.json'].includes(extname(name).toLowerCase())&&stat.size<=32*1024*1024&&total+stat.size<=128*1024*1024;
-        files.push({testIdentifier,name,bytes:stat.size,included});
-        if(included){copyFileSync(path,join(destination,name));total+=stat.size;}
+        const withinBudget=stat.isFile()&&stat.size<=32*1024*1024&&total+stat.size<=128*1024*1024;
+        const extension=withinBudget?failureAttachmentExtension(name,readFileSync(path)):undefined;
+        const included=!!extension,outputName=included?(extname(name).toLowerCase()===extension?name:name+extension):undefined;
+        files.push({testIdentifier,name,bytes:stat.size,included,outputName});
+        if(included){copyFileSync(path,join(destination,outputName));total+=stat.size;}
       }
     } finally {
       // Only this call's private staging copy is disposable. The original

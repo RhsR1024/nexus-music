@@ -17,6 +17,10 @@ public final class NexusNativeModule: Module {
     View(NexusMaterialView.self) {
       Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }
     }
+    View(NexusPhotoMaskView.self) {
+      ViewName("PhotoMask")
+      OnViewDidUpdateProps { (view: NexusPhotoMaskView) in view.applyMask() }
+    }
     View(NexusAmbientView.self) {
       ViewName("Ambient")
       Prop("colors") { (view: NexusAmbientView, colors: [String]) in view.setColors(colors) }
