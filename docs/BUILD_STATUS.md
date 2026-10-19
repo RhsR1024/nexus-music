@@ -1,6 +1,6 @@
 ## 2026-10-20 共享播放器/背景批次本地结果
 
-播放器Release UI `SourceUITests-1792432689070` 416.640秒1/0/0，通过真实AM封面/歌词/权威队列切换、单曲→随机→顺序、播放意图/时钟与截图；背景大字专项`1792432251070`148.083秒1/0/0。前一轮因旧断言二进制失败未计通过，源码重编译后本轮通过。最新默认主题截图亲看；4855/4856 SSIM仅5.76%/-1.95%、MAD29.53/31.60，远低90%，不能标记页面对齐。`npm run check`401/401与offline case strict review43E/41F/41P、17WI/94 timeline/0 errors通过。清洁unsigned IPA正在执行；包隐私排除、最终diff、远端35ddf58整合和新iOS27仍待。真实服务/签名/真机未验。
+播放器Release UI `SourceUITests-1792432689070` 416.640秒1/0/0，通过真实AM封面/歌词/权威队列切换、单曲→随机→顺序、播放意图/时钟与截图；背景大字专项`1792432251070`148.083秒1/0/0。前一轮因旧断言二进制失败未计通过，源码重编译后本轮通过。最新默认主题截图亲看；4855/4856 SSIM仅5.76%/-1.95%、MAD29.53/31.60，远低90%，不能标记页面对齐。`npm run check`401/401与offline case strict review43E/41F/41P、17WI/94 timeline/0 errors通过。首份arm64/iphoneos26.2 unsigned IPA SHA256 `4365e247f67dd2ef9578589a8c6ffd382af2fdafe471760ae839409df8a93ba7`，ZIP/归档JS字节/正式入口及测试适配器、fixture凭据和签名材料排除均通过；构建manifest为dirty=true，因此只作为审阅产物保留。远端35ddf58 Beans Music比较/交接已merge并保留；clean unsigned归档将在最终文档提交后重建。iOS27新提交、真实服务/签名/真机未验。
 
 ## 2026-10-19 iOS27 d2d24e2 新失败待专项复验
 
