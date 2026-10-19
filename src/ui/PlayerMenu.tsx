@@ -52,6 +52,11 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       {row('text-outline','歌词显示设置','字体与颜色',onLyricsSettings)}
       {row('list-outline','队列与播放选项',`${queueCount} 首`,onQueue,true)}
     </View>
+    <Text style={styles.section}>歌曲操作</Text>
+    <View style={styles.group}>
+      {row('share-outline','分享歌曲','分享',share)}
+      {row('add-circle-outline','添加到歌单','选择歌单',onPlaylist,true)}
+    </View>
     {track.origin.kind==='online'&&<><Text style={styles.section}>发现</Text>
     <View style={styles.group}>{row('chatbubble-outline','热门评论','查看',onComments,true)}</View></>}
   </View>;

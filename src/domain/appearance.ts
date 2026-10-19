@@ -4,18 +4,20 @@ export type FlowPalette=readonly[string,string,string];
 export function isFlowPalette(value:unknown):value is FlowPalette {return Array.isArray(value)&&value.length===3&&[0,1,2].every(index=>typeof value[index]==='string'&&/^#[0-9a-f]{6}$/i.test(value[index]));}
 export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgroundStyle:'gradient'|'solid'|'image';backgroundOpacity:number;playerBackground:'artwork'|'solid'|'photo';playerBlur:number;playerDarkness:number;coverRadius:number;coverColor:boolean;globalBackgroundMotion:boolean;dynamicBackground:boolean;glassNavigation:boolean}
 export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,coverColor:false,globalBackgroundMotion:false,dynamicBackground:false,glassNavigation:true};
-export const accentColors:Record<Accent,readonly[string,string]>={rose:['#BE3458','#FF94B0'],coral:['#BA4240','#FF9B94'],purple:['#7650AB','#D4B4FF'],blue:['#2E64A0','#9AC8FF'],orange:['#A65A14','#FFC485']};
+export const accentColors:Record<Accent,readonly[string,string]>={rose:['#E83D56','#FF94B0'],coral:['#BA4240','#FF9B94'],purple:['#7650AB','#D4B4FF'],blue:['#2E64A0','#9AC8FF'],orange:['#A65A14','#FFC485']};
 export function appearancePalette(mode:'light'|'dark',options:AppearanceOptions,coverColor?:string){
   const dark=mode==='dark';
   const backgrounds:Record<VisualTheme,readonly[string,string,string]>={
     classic:dark?['#17202C','#1D2533','#222434']:['#F5F6FA','#E1EAF5','#F7F1F4'],
-    blush:dark?['#241C27','#35232F','#222334']:['#FAF1EE','#F1D5DF','#E1E8F7'],
+    // Light stops are sampled from the Sollin reference captures (IMG_4851/4854/4855):
+    // warm paper instead of the previous cool lavender third stop.
+    blush:dark?['#241C27','#35232F','#222334']:['#FBF4EF','#F7E9DE','#F3EDE6'],
     soft:dark?['#1A242C','#24303A','#242839']:['#EEF3F7','#DAE6EF','#ECE7F0'],
   };
   const tinted=(options.coverColor||options.globalBackgroundMotion)&&coverColor&&/^#[0-9a-f]{6}$/i.test(coverColor);
-  return {background:tinted?coverThemeGradient(coverColor!,mode):backgrounds[options.visualTheme],text:dark?'#F6F0F2':'#242026',secondary:dark?'#C2B6C2':tinted?'#625762':'#756A75',
-    accent:accentColors[options.accent][dark?1:0],surface:dark?'#332B38':'#FFF5F5',border:dark?'#514454':'#E4CCD3',
-    glass:dark?'rgba(41,33,46,0.75)':'rgba(255,245,249,0.68)',selected:dark?'#503044':'#EDD0DB'};
+  return {background:tinted?coverThemeGradient(coverColor!,mode):backgrounds[options.visualTheme],text:dark?'#F6F0F2':'#2A241F',secondary:dark?'#C2B6C2':tinted?'#625762':'#8C7F75',
+    accent:accentColors[options.accent][dark?1:0],surface:dark?'#332B38':'#FFF9F5',border:dark?'#514454':'#EADFD6',
+    glass:dark?'rgba(41,33,46,0.75)':'rgba(255,249,245,0.72)',selected:dark?'#503044':'#F3E2D8'};
 }
 
 // Original bounded tint mapping, not a recovered Sollin palette algorithm.
