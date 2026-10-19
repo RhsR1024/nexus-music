@@ -832,10 +832,11 @@ final class SourceSettingsTests: XCTestCase {
   func testClassicPlayerWindowSafeArea() throws {try verifyAM2Window(largeText:false,classic:true)}
   func testAMPlayerWithLargeText() throws {try verifyAM2Window(largeText:true,am:true)}
   func testAMPlayerWindowRotation() throws {try verifyAM2Window(largeText:false,am:true)}
+  func testPhotoArtworkAspectAndFallback() throws {try verifyAM2Window(largeText:false,photo:true,artwork:true)}
   func testPhotoPlayerWindowRotation() throws {try verifyAM2Window(largeText:false,photo:true)}
   func testPhotoPlayerWithLargeText() throws {try verifyAM2Window(largeText:true,photo:true)}
 
-  private func verifyAM2Window(largeText:Bool,classic:Bool=false,am:Bool=false,photo:Bool=false) throws {
+  private func verifyAM2Window(largeText:Bool,classic:Bool=false,am:Bool=false,photo:Bool=false,artwork:Bool=false) throws {
     let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait
     defer{XCUIDevice.shared.orientation = .portrait}
     if largeText{app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]}
@@ -858,19 +859,72 @@ final class SourceSettingsTests: XCTestCase {
       }
       XCTAssertTrue(item.isHittable)
     }
+    if artwork {
+      openSettings(app,page:"background")
+      let photoName=app.staticTexts["visual-photo-name"];reveal(photoName)
+      XCTAssertTrue(photoName.label.contains("尚未导入"),"This isolated artwork scenario requires an empty fixture photo slot")
+      let cover=element("player-background-artwork");reveal(cover);cover.tap();XCTAssertTrue(cover.isSelected)
+    }
+    let fixtureUser=artwork ? "fixture-photo":"fixture-user"
     openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":photo ? "player-layout-photo":am ? "player-layout-am":"player-layout-am2");reveal(am2);am2.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["skins-sheet-close"]);waitForExpectations(timeout:10)
     openSettings(app,page:"sources")
-    for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名","fixture-user"),("Navidrome密码","fixture-password")]{
+    for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名",fixtureUser),("Navidrome密码","fixture-password")]{
       let field=label=="Navidrome密码" ? app.secureTextFields[label] : app.textFields[label]
       reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
     }
     let save=app.buttons["验证并保存连接"];reveal(save);save.tap()
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
     let rail=element("rail-tab-library");(rail.exists ? rail : element("tab-library")).tap()
-    element("tab-private").tap();let account=element("navidrome-account-fixture-user");reveal(account);account.tap()
+    element("tab-private").tap();let account=element("navidrome-account-"+fixtureUser);reveal(account);account.tap()
     let album=element("navidrome-item-album-fixture-album");XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();app.buttons["播放全部"].tap()
     let open=app.buttons["打开播放页"];XCTAssertTrue(open.waitForExistence(timeout:10));open.tap()
+    if artwork {
+      func fixtureRequests() throws -> [String:Int] {
+        let data=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/photo-artwork-fixture-control")!)
+        let result=try XCTUnwrap(JSONSerialization.jsonObject(with:data) as? [String:Any])
+        return try XCTUnwrap(result["requests"] as? [String:Int])
+      }
+      func actions(){if !element("photo-quick-actions").exists{app.buttons["photo-actions-toggle"].tap()};XCTAssertTrue(element("photo-quick-actions").waitForExistence(timeout:5))}
+      func cycle(_ target:String){
+        for _ in 0..<3 {let button=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","循环：")).firstMatch;if button.label==target{break};button.tap()}
+        XCTAssertTrue(app.buttons[target].exists)
+      }
+      app.buttons["更多播放控制"].tap();app.buttons["队列与播放选项"].tap()
+      let shuffled=app.buttons["随机：开"].exists
+      if shuffled{let button=app.buttons["随机：开"];reveal(button);button.tap()}
+      let close=app.buttons["收起播放选项"];reveal(close);close.tap()
+      XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !close.exists && app.buttons["暂停"].isHittable},object:nil)],timeout:8),.completed)
+      actions();let repeatBefore=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","循环：")).firstMatch.label;cycle("循环：all")
+      if element("photo-quick-actions").exists{app.buttons["photo-actions-toggle"].tap()}
+      for (index,kind) in ["portrait","landscape","missing","corrupt","portrait"].enumerated() {
+        XCTAssertTrue(app.staticTexts[kind+" artwork tone"].waitForExistence(timeout:10));XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10));app.buttons["暂停"].tap()
+        let valid=kind=="portrait" || kind=="landscape"
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in ((try? fixtureRequests()[kind]) ?? 0)>0},object:nil)],timeout:10),.completed,"The real cover endpoint must serve the selected fixture")
+        if valid {
+          var measured: CGRect?,expected:CGFloat=0
+          let rendered=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+            guard element("photo-hero-image").exists,let image=BackgroundPixels.decode(XCUIScreen.main.screenshot().pngRepresentation),let bounds=BackgroundPixels.greenBounds(image) else{return false}
+            let source=kind=="portrait" ? CGSize(width:64,height:256):CGSize(width:256,height:64)
+            expected=16*max(CGFloat(image.width)/source.width,CGFloat(image.height)/source.height);measured=bounds
+            return abs(bounds.width/bounds.height-1)<0.12 && abs(bounds.width/expected-1)<0.2 && abs(bounds.height/expected-1)<0.2
+          },object:nil)
+          XCTAssertEqual(XCTWaiter.wait(for:[rendered],timeout:12),.completed,"The actual raster circle must remain circular under cover cropping: \(kind), bounds \(String(describing:measured)), expected diameter \(expected)")
+        } else {
+          XCTAssertFalse(element("photo-hero-image").exists,"404 and corrupt bytes must not retain the preceding track image")
+          XCTAssertTrue(app.buttons["播放"].isHittable);XCTAssertTrue(app.buttons["选择歌词来源"].isHittable)
+        }
+        let attachment=XCTAttachment(screenshot:XCUIScreen.main.screenshot());attachment.name="Photo artwork \(index) \(kind)";attachment.lifetime = .keepAlways;add(attachment)
+        actions();let progress=element("播放进度");XCTAssertTrue(progress.isHittable);XCTAssertTrue(app.buttons["播放"].exists)
+        if index<4{app.buttons["下一首"].tap()}else{cycle(repeatBefore);app.buttons["photo-actions-toggle"].tap()}
+      }
+      app.buttons["更多播放控制"].tap();app.buttons["队列与播放选项"].tap()
+      if shuffled{let button=app.buttons["随机：关"];reveal(button);button.tap()}
+      reveal(close);close.tap()
+      XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !close.exists && app.buttons["播放"].isHittable},object:nil)],timeout:8),.completed)
+      app.buttons["收起播放页"].tap();openSettings(app,page:"sources")
+      let remove=app.buttons["移除连接：fixture-photo"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10));return
+    }
     if photo {
       XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10));app.buttons["暂停"].tap()
       let viewport=element("photo-lyric-viewport"),list=element("photo-lyrics-list"),info=element("photo-song-info")

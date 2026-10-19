@@ -1,3 +1,11 @@
+## 2026-10-19 写真封面比例与坏图补验本地通过
+
+新reverse-skill R2路由081447/mobile-reverse、原offline scope及41E/40F/40P严格review通过；E041独立1946原始字/BL/manifest重放通过，无新增参考动态结论。按[0074](decisions/0074-photo-artwork-coverage.md)加入原创64×256/256×64 PNG、404及成功HTTP坏字节，正式入口/真实Navidrome客户端/原生缓存路径独立验收；原播放器和缓存尺寸/策略未改，背景说明与0072清晰前景职责对齐。
+
+最终SourceUITests-1792369614570两项2/0/0：图片139.533秒、完整八布局/实际PCM/黑胶像素/歌词/统计/重启/凭据清理320.837秒；395业务/类型与原生像素单测通过。41合成鉴权/0失败、16流请求；portrait1/landscape1/missing2/corrupt1图片响应。独立PNG圆形310×311和672×675符合cover裁切，无拉伸；坏图无旧圆，返回纵图恢复。五图/摘要留photo-artwork-final-passed，最终坏图与返回图亲看；不算真实服务或参考动态/真机验收。
+
+清洁归档/正常push及对应新iOS27待。当前0302b24/[39179554648](https://github.com/RhsR1024/nexus-music/actions/runs/39179554648)仍在App验证，checks已success，无重派或取消；最新成功仍b492261。下一舞台已新R2路由083205及前置门禁通过，2642原始指令/197BL/248池引用仅作本机探查；尚未形成E042/严格review，不据此采纳样式，也不移植参考赞助逻辑。其余AM评论正文、舞台/菜单/设置及全部A/F/J继续active，不提高百分比。
+
 ## 2026-10-19 写真清洁归档与正常 push 回执
 
 0302b24f8b22582cbead91a2be7376dd2e82f70a已正常push至RhsR1024/nexus-music，ls-remote实核main一致。395业务/类型、完整原生CLI、写真手机三项3/0/0及iPad113.592秒1/0/0通过；新Mini可见窗口夹具162.737秒1/0/0通过，旧流程本机通过不能代替新iOS27结论。41E/40F/40P严格review、独立1946原始字/BL/manifest及394本地文档链接通过；截图/失败和云端边界见[0072](decisions/0072-photo-lyrics-composition.md)/[0073](decisions/0073-ci-mini-sheet-viewport-and-evidence.md)。

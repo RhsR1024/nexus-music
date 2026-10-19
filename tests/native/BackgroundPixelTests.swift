@@ -25,6 +25,13 @@ import ImageIO
     for y in 0..<2 { for x in 0..<3 {
       precondition(BackgroundPixels.rgba(decoded, at: CGPoint(x: x, y: y)) == BackgroundPixels.rgba(image, at: CGPoint(x: x, y: y)))
     } }
+    precondition(BackgroundPixels.greenBounds(image)==CGRect(x:1,y:0,width:1,height:1))
+    precondition(BackgroundPixels.greenBounds(decoded)==CGRect(x:1,y:0,width:1,height:1))
+    let neutralBytes=Data([UInt8](repeating:90,count:4*3*4))
+    let neutralImage=CGImage(width:4,height:3,bitsPerComponent:8,bitsPerPixel:32,bytesPerRow:16,space:CGColorSpace(name:CGColorSpace.sRGB)!,bitmapInfo:CGBitmapInfo(rawValue:CGImageAlphaInfo.premultipliedLast.rawValue),provider:CGDataProvider(data:neutralBytes as CFData)!,decode:nil,shouldInterpolate:false,intent:.defaultIntent)!
+    precondition(BackgroundPixels.greenBounds(neutralImage)==nil)
+    let translucent=CGImage(width:1,height:1,bitsPerComponent:8,bitsPerPixel:32,bytesPerRow:4,space:CGColorSpace(name:CGColorSpace.sRGB)!,bitmapInfo:CGBitmapInfo(rawValue:CGImageAlphaInfo.premultipliedLast.rawValue),provider:CGDataProvider(data:Data([UInt8](arrayLiteral:0,100,0,128)) as CFData)!,decode:nil,shouldInterpolate:false,intent:.defaultIntent)!
+    precondition(BackgroundPixels.greenBounds(translucent)==nil)
     precondition(BackgroundPixels.decode(Data()) == nil)
     precondition(BackgroundPixels.decode(Data("not an image".utf8)) == nil)
     // Independent values read from the actual failed PNG: all three hues are

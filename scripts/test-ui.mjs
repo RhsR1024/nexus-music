@@ -1,3 +1,4 @@
+import {photoArtwork} from './fixtures/photo-artwork.mjs';
 import {fixtureFont} from './fixtures/font.mjs';
 import {silentMP3} from './fixtures/silent-mp3.mjs';
 import { createServer } from 'node:http';
@@ -68,8 +69,13 @@ const healthScript=matchingScript.replace('Nexus Matching Fixture','Nexus Health
 const navidromeAudio=matchingAudio,navidromeDuration=120;
 // Version the synthetic recording when its bytes change. Existing test devices
 // can still contain the original 12-second recording in the normal audio cache.
+const photoArtworkVersion=String(Date.now()),photoArtworkKinds=['portrait','landscape','missing','corrupt'];
+const photoCoverRequests=counts.photoCoverRequests={};
+const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
 const song=()=>({id:'fixture-song-120s-v2',title:'Synthetic tone',artist:'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const server = createServer(async (req, res) => {
+  if(req.url==='/photo-artwork-fixture-control'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:photoArtworkVersion,requests:photoCoverRequests}));return;}
+
   if(coverThemeUI&&req.url.startsWith('/theme-fixture-control')){
     // This endpoint observes changing in-flight requests, never cached data.
     res.setHeader('Cache-Control','no-store');
@@ -216,7 +222,7 @@ const server = createServer(async (req, res) => {
   const url=new URL(req.url,'http://127.0.0.1'),chunks=[];
   for await(const chunk of req)chunks.push(chunk);
   const params=req.method==='POST'?new URLSearchParams(Buffer.concat(chunks).toString()):url.searchParams;
-  const authenticated=(params.get('u')==='fixture-user'||coverThemeUI&&params.get('u')==='fixture-theme')&&params.get('t')===createHash('md5').update('fixture-password'+params.get('s')).digest('hex');
+  const authenticated=(params.get('u')==='fixture-user'||params.get('u')==='fixture-photo'||coverThemeUI&&params.get('u')==='fixture-theme')&&params.get('t')===createHash('md5').update('fixture-password'+params.get('s')).digest('hex');
   if(authenticated)counts.authSuccesses++;else counts.authFailures++;
   const respond=body=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({'subsonic-response':{status:'ok',version:'1.16.1',...body}}));};
   if(!authenticated){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({'subsonic-response':{status:'failed',error:{code:40,message:'fixture auth failure'}}}));return;}
@@ -240,6 +246,13 @@ const server = createServer(async (req, res) => {
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),audio.length-1):audio.length-1;if(start>=audio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${audio.length}`);res.end(audio.subarray(start,end+1));}else res.end(audio);return;
   }
   if(method==='getCoverArt'){
+    if(params.get('u')==='fixture-photo'){
+      const kind=photoArtworkKinds.find(kind=>params.get('id')===`photo-${kind}-${photoArtworkVersion}`);
+      if(kind){photoCoverRequests[kind]=(photoCoverRequests[kind]??0)+1;
+        if(kind==='missing'){res.writeHead(404);res.end();return;}
+        res.setHeader('Content-Type','image/png');res.end(kind==='corrupt'?Buffer.from('Original deliberately invalid image fixture'):photoArtwork[kind].png);return;
+      }
+    }
     if(coverThemeUI){counts.themeCoverIds??=[];counts.themeCoverIds.push(params.get('id'));}
     // A simulator can restore the preceding run's current track before this
     // test selects its new album. Only this run's identities are barriers.
@@ -253,8 +266,8 @@ const server = createServer(async (req, res) => {
   }
   if(method==='ping')respond({type:'Navidrome',serverVersion:'0.64.0'});
   else if(method==='getOpenSubsonicExtensions')respond({openSubsonicExtensions:[{name:'songLyrics',versions:[1]}]});
-  else if(method==='getAlbumList2')respond({albumList2:{album:[{id:'fixture-album',name:'Synthetic album',artist:'Fixture artist',coverArt:'fixture-cover',songCount:coverThemeUI&&params.get('u')==='fixture-theme'?3:1}]}});
-  else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:coverThemeUI&&params.get('u')==='fixture-theme'?[...['red','blue','multi'].map(color=>({...song(),id:color,title:`${color} cover tone`,coverArt:color})),...(transitionFixture?['red','blue','missing'].map(color=>({...song(),id:`transition-${color}`,title:`transition ${color} tone`,coverArt:`transition-${color}-${transitionVersion}`})):[])]:[song()]}});
+  else if(method==='getAlbumList2')respond({albumList2:{album:[{id:'fixture-album',name:'Synthetic album',artist:'Fixture artist',coverArt:'fixture-cover',songCount:params.get('u')==='fixture-photo'?4:coverThemeUI&&params.get('u')==='fixture-theme'?3:1}]}});
+  else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:params.get('u')==='fixture-photo'?photoSongs():coverThemeUI&&params.get('u')==='fixture-theme'?[...['red','blue','multi'].map(color=>({...song(),id:color,title:`${color} cover tone`,coverArt:color})),...(transitionFixture?['red','blue','missing'].map(color=>({...song(),id:`transition-${color}`,title:`transition ${color} tone`,coverArt:`transition-${color}-${transitionVersion}`})):[])]:[song()]}});
   else if(method==='search3')respond({searchResult3:{song:[song()]}});
   else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:navidromeDuration*1000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:navidromeDuration*1000,value:'two'}]}]}]}});
   else if(method==='star'||method==='unstar'){starred=method==='star';respond({});}

@@ -22,6 +22,23 @@ enum BackgroundPixels {
     }
     return sampled ? bytes : []
   }
+  static func greenBounds(_ image: CGImage) -> CGRect? {
+    let width=image.width,height=image.height
+    guard width>0 && height>0 && width<=8192 && height<=8192 && width*height<=40_000_000 else{return nil}
+    var bytes=[UInt8](repeating:0,count:width*height*4)
+    let rendered=bytes.withUnsafeMutableBytes { memory -> Bool in
+      guard let context=CGContext(data:memory.baseAddress,width:width,height:height,bitsPerComponent:8,bytesPerRow:width*4,space:CGColorSpace(name:CGColorSpace.sRGB)!,bitmapInfo:CGBitmapInfo.byteOrder32Big.rawValue|CGImageAlphaInfo.premultipliedLast.rawValue) else{return false}
+      context.draw(image,in:CGRect(x:0,y:0,width:width,height:height));return true
+    }
+    guard rendered else{return nil}
+    var minX=width,minY=height,maxX = -1,maxY = -1
+    for y in 0..<height {for x in 0..<width {
+      let i=(y*width+x)*4,r=Int(bytes[i]),g=Int(bytes[i+1]),b=Int(bytes[i+2])
+      if bytes[i+3]==255 && g>30 && g>r+30 && g>b+30 {minX=min(minX,x);minY=min(minY,y);maxX=max(maxX,x);maxY=max(maxY,y)}
+    }}
+    guard maxX>=minX && maxY>=minY else{return nil}
+    return CGRect(x:minX,y:minY,width:maxX-minX+1,height:maxY-minY+1)
+  }
   static func hasPrimaryHues(_ samples: [[UInt8]]) -> Bool {
     var hues = Set<Int>()
     for rgba in samples {

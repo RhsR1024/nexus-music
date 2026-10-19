@@ -25,7 +25,7 @@ export function VisualSettings({services}:{services:Services}){
     <VisualPreview testID="visual-photo-preview" uri={photo} blur={value.playerBlur} opacity={1-value.playerDarkness}><Text style={{color:'#FFFFFF'}}>播放写真预览</Text><Text testID="visual-photo-name" style={{color:'#FFFFFF',marginTop:8}}>{assets.photo?.name??'尚未导入写真图片'}</Text></VisualPreview>
     <View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{button('visual-import-photo','导入写真图片',()=>{void importImage('photo');})}{assets.photo&&button('visual-remove-photo','移除写真图片',()=>remove('photo'))}</View>
     <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{([['artwork','歌曲封面背景'],['photo','自定义写真背景'],['solid','纯色播放背景']]as const).map(([mode,label])=>button(`player-background-${mode}`,label,()=>update({playerBackground:mode}),value.playerBackground===mode))}</View>
-    <Text style={{color:p.secondary,fontSize:12}}>写真皮肤优先使用已导入写真；其他皮肤遵循背景选项。图片缺失时回退封面或纯色，模糊调为0可显示清晰写真。</Text>
+    <Text style={{color:p.secondary,fontSize:12}}>写真皮肤优先使用已导入写真；其他皮肤遵循背景选项。写真主图保持清晰；图片缺失时使用封面或纯色，模糊仅影响背景。</Text>
     {adjust('playerBlur','播放背景模糊',10,0,80)}{adjust('playerDarkness','播放背景暗度',.1,.35,.9)}{adjust('coverRadius','封面圆角',8,0,48)}
     {control('visual-cover-color','封面取色',value.coverColor,coverColor=>update({coverColor}))}
     {control('visual-global-motion','全局封面流动',value.globalBackgroundMotion,globalBackgroundMotion=>update({globalBackgroundMotion}))}
