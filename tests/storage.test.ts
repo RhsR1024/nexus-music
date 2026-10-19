@@ -243,3 +243,15 @@ test('EQ corrupted enable records are quarantined exactly while missing legacy f
   const {eqEnabled,...legacy}=defaults;await repository.put('preferences.v1',legacy);const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().eqEnabled,false);
   await preferences.update({eqEnabled:true});const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().eqEnabled,true);db.close();
 });
+
+
+test('stage preferences migrate independently, persist and reject invalid or failed writes',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {stageStyle,stageBackdrop,...legacy}=defaults;await repository.put('preferences.v1',{...legacy,playerLayout:'stage',lyricOffsetMs:250});
+  const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().stageStyle,'neon');assert.equal(preferences.getSnapshot().stageBackdrop,true);
+  await Promise.all([preferences.update({stageStyle:'aurora'}),preferences.update({stageBackdrop:false})]);
+  const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().stageStyle,'aurora');assert.equal(restored.getSnapshot().stageBackdrop,false);assert.equal(restored.getSnapshot().lyricOffsetMs,250);
+  const before=preferences.getSnapshot();await assert.rejects(preferences.update({stageStyle:'unknown' as never}));await assert.rejects(preferences.update({stageBackdrop:1 as never}));assert.equal(preferences.getSnapshot(),before);
+  const write=repository.put.bind(repository);repository.put=async()=>{throw new Error('disk full');};await assert.rejects(preferences.update({stageStyle:'classic'}));assert.equal(preferences.getSnapshot(),before);
+  repository.put=write;await preferences.update({stageStyle:'cyberpunk'});assert.equal(preferences.getSnapshot().stageBackdrop,false);db.close();
+});

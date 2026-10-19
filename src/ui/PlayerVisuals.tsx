@@ -5,6 +5,7 @@ import type {Services} from '../app/services.ts';
 import {trackKey,type Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';
 import {usePresentationVisible} from './AdaptiveModal.tsx';
+import {paper,radius} from './tokens.ts';
 export function Vinyl({services,track,size,playing}:{services:Services;track:Track;size:number;playing:boolean}){
   const visible=usePresentationVisible();
   const identity=trackKey(track.origin);
@@ -36,25 +37,31 @@ export function Vinyl({services,track,size,playing}:{services:Services;track:Tra
   // The square is the complete deck; record and tonearm use separate local
   // coordinates. The audited direction (cos theta, sin theta) maps to a
   // downward View rotated by theta - pi/2. Keep stable layout geometry.
-  const disc=size*.728,label=disc*.46,armWidth=Math.max(7,size*.035),armLength=size*.472;
-  return <View testID="vinyl-turntable" collapsable={false} accessible={false} pointerEvents="none" style={{height:size+12,alignItems:'center',justifyContent:'center'}}>
+  // Proportions follow IMG_4851: the record fills the matte deck, leaving a
+  // narrow visible edge instead of a raised grey platter.
+  const platterSide=size*.94,disc=platterSide*.985,label=disc*.43,armWidth=Math.max(6,size*.028),armLength=size*.445;
+  const platterLeft=(size-platterSide)/2-1;
+  return <View testID="vinyl-turntable" collapsable={false} accessible={false} pointerEvents="none" style={{height:size,alignItems:'center',justifyContent:'center'}}>
     <View testID="vinyl-canvas" collapsable={false} style={{width:size,height:size}}>
-      <View testID="vinyl-deck" collapsable={false} style={{position:'absolute',left:size*.015,right:size*.015,top:size*.055,bottom:size*.025,borderRadius:size*.06,backgroundColor:'#353B40',borderWidth:1,borderColor:'#697176',boxShadow:'0px 4px 7px rgba(0,0,0,0.24)'}}>
-        <View style={{position:'absolute',left:3,right:3,top:3,bottom:3,borderRadius:size*.05,borderWidth:1,borderColor:'rgba(255,255,255,0.10)'}}/>
+      <View testID="vinyl-deck" collapsable={false} style={{position:'absolute',left:0,top:0,width:size,height:size,borderRadius:radius.deck,backgroundColor:paper.deck,borderWidth:1,borderColor:paper.deckEdge,boxShadow:'0px 10px 22px rgba(46,36,30,0.26)'}}>
+        <View style={{position:'absolute',left:1,right:1,top:1,height:size*.5,borderTopLeftRadius:radius.deck,borderTopRightRadius:radius.deck,backgroundColor:'rgba(255,255,255,0.035)'}}/>
       </View>
-      <View testID="vinyl-platter" collapsable={false} style={{position:'absolute',left:size*.035,top:size*.135,width:size*.8,height:size*.8,borderRadius:size*.4,backgroundColor:'#7D8589',borderWidth:2,borderColor:'#AAB0B2',alignItems:'center',justifyContent:'center',boxShadow:'0px 2px 4px rgba(0,0,0,0.4)'}}>
-        <Animated.View testID="vinyl-record" collapsable={false} style={{width:disc,height:disc,borderRadius:disc/2,backgroundColor:'#111214',borderWidth:2,borderColor:'#333638',alignItems:'center',justifyContent:'center',transform:[{rotate:rotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}>
-          {Array.from({length:14},(_,i)=><View key={i} style={{position:'absolute',width:disc-i*disc*.035,height:disc-i*disc*.035,borderWidth:1,borderColor:i%2?'#252729':'#1A1C1E',borderRadius:disc/2}}/>)}
-          <View style={{width:label,height:label,borderRadius:label/2,overflow:'hidden'}}><Cover services={services} track={track} size={label}/></View>
+      <View testID="vinyl-platter" collapsable={false} style={{position:'absolute',left:platterLeft,top:(size-platterSide)/2,width:platterSide,height:platterSide,borderRadius:platterSide/2,backgroundColor:'#0F0F10',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+        <Animated.View testID="vinyl-record" collapsable={false} style={{width:disc,height:disc,borderRadius:disc/2,backgroundColor:paper.record,alignItems:'center',justifyContent:'center',transform:[{rotate:rotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}>
+          {Array.from({length:24},(_,i)=>{const d=disc-(i*disc*.0245);return <View key={i} style={{position:'absolute',width:d,height:d,borderWidth:1,borderColor:i%2?paper.grooveA:paper.grooveB,borderRadius:d/2,opacity:Math.max(.25,1-i*.03)}}/>;})}
+          <View style={{width:label,height:label,borderRadius:label/2,overflow:'hidden',borderWidth:1,borderColor:'rgba(255,255,255,0.10)'}}><Cover services={services} track={track} size={label}/></View>
         </Animated.View>
-        <View testID="vinyl-spindle" collapsable={false} style={{position:'absolute',width:8,height:8,borderRadius:4,backgroundColor:'#D7DDDF',borderWidth:2,borderColor:'#53585B'}}/>
+        <View testID="vinyl-spindle" collapsable={false} style={{position:'absolute',width:9,height:9,borderRadius:5,backgroundColor:'#D7DDDF',borderWidth:2,borderColor:'#53585B'}}/>
       </View>
       <Animated.View testID="vinyl-tonearm" collapsable={false} style={{position:'absolute',width:armWidth,height:armLength,left:size*.835-armWidth/2,top:size*.175,transform:[{rotate:tonearm.interpolate({inputRange:[0,1],outputRange:['0deg','21.6deg']})}],transformOrigin:'top'}}>
-        <View style={{position:'absolute',top:size*.035,left:0,width:armWidth,height:size*.36,borderRadius:armWidth/2,backgroundColor:'#A6ADB1',borderWidth:1,borderColor:'#D6DCDF'}}/>
-        <View testID="vinyl-cartridge" collapsable={false} style={{position:'absolute',top:size*.38,left:-armWidth*.3,width:armWidth*1.6,height:size*.09,borderRadius:2,backgroundColor:'#515A60',borderWidth:1,borderColor:'#C0C7CB'}}/>
-        <View testID="vinyl-counterweight" collapsable={false} style={{position:'absolute',top:-size*.151,left:(armWidth-size*.078)/2,width:size*.078,height:size*.112,borderRadius:size*.015,backgroundColor:'#626D73',borderWidth:1,borderColor:'#C0C7CB'}}><View style={{position:'absolute',left:2,right:2,top:'40%',height:2,backgroundColor:'rgba(255,255,255,0.25)'}}/></View>
+        <View style={{position:'absolute',top:size*.03,left:0,width:armWidth,height:size*.34,borderRadius:armWidth/2,backgroundColor:paper.arm,borderWidth:1,borderColor:paper.armEdge}}/>
+        <View testID="vinyl-cartridge" collapsable={false} style={{position:'absolute',top:size*.335,left:-armWidth*.45,width:armWidth*1.9,height:size*.082,borderRadius:3,backgroundColor:paper.armDark,borderWidth:1,borderColor:paper.armEdge}}>
+          <View style={{position:'absolute',right:3,top:4,width:3,height:3,borderRadius:2,backgroundColor:'rgba(255,255,255,0.55)'}}/>
+          <View style={{position:'absolute',right:3,bottom:4,width:3,height:3,borderRadius:2,backgroundColor:'rgba(255,255,255,0.55)'}}/>
+        </View>
+        <View testID="vinyl-counterweight" collapsable={false} style={{position:'absolute',top:-size*.155,left:(armWidth-size*.072)/2,width:size*.072,height:size*.115,borderRadius:size*.014,backgroundColor:paper.arm,borderWidth:1,borderColor:paper.armEdge}}><View style={{position:'absolute',left:2,right:2,top:'42%',height:2,backgroundColor:'rgba(0,0,0,0.22)'}}/></View>
       </Animated.View>
-      <View testID="vinyl-pivot" collapsable={false} style={{position:'absolute',width:size*.10,height:size*.10,left:size*.785,top:size*.125,borderRadius:size*.05,backgroundColor:'#535D64',borderWidth:2,borderColor:'#B5BEC3',alignItems:'center',justifyContent:'center'}}><View style={{width:size*.035,height:size*.035,borderRadius:size*.018,backgroundColor:'#D8DFE2'}}/></View>
+      <View testID="vinyl-pivot" collapsable={false} style={{position:'absolute',width:size*.105,height:size*.105,left:size*.7825,top:size*.1225,borderRadius:size*.0525,backgroundColor:'#3A3F45',borderWidth:2,borderColor:paper.armEdge,alignItems:'center',justifyContent:'center'}}><View style={{width:size*.036,height:size*.036,borderRadius:size*.018,backgroundColor:'#D8DFE2'}}/></View>
     </View>
   </View>;
 }

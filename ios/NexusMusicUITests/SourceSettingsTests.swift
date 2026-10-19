@@ -832,11 +832,13 @@ final class SourceSettingsTests: XCTestCase {
   func testClassicPlayerWindowSafeArea() throws {try verifyAM2Window(largeText:false,classic:true)}
   func testAMPlayerWithLargeText() throws {try verifyAM2Window(largeText:true,am:true)}
   func testAMPlayerWindowRotation() throws {try verifyAM2Window(largeText:false,am:true)}
+  func testStageStylesAndWindow() throws {try verifyAM2Window(largeText:false,stage:true)}
+  func testStageStylesWithLargeText() throws {try verifyAM2Window(largeText:true,stage:true)}
   func testPhotoArtworkAspectAndFallback() throws {try verifyAM2Window(largeText:false,photo:true,artwork:true)}
   func testPhotoPlayerWindowRotation() throws {try verifyAM2Window(largeText:false,photo:true)}
   func testPhotoPlayerWithLargeText() throws {try verifyAM2Window(largeText:true,photo:true)}
 
-  private func verifyAM2Window(largeText:Bool,classic:Bool=false,am:Bool=false,photo:Bool=false,artwork:Bool=false) throws {
+  private func verifyAM2Window(largeText:Bool,classic:Bool=false,am:Bool=false,photo:Bool=false,artwork:Bool=false,stage:Bool=false) throws {
     let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait
     defer{XCUIDevice.shared.orientation = .portrait}
     if largeText{app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]}
@@ -866,7 +868,7 @@ final class SourceSettingsTests: XCTestCase {
       let cover=element("player-background-artwork");reveal(cover);cover.tap();XCTAssertTrue(cover.isSelected)
     }
     let fixtureUser=artwork ? "fixture-photo":"fixture-user"
-    openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":photo ? "player-layout-photo":am ? "player-layout-am":"player-layout-am2");reveal(am2);am2.tap()
+    openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":stage ? "player-layout-stage":photo ? "player-layout-photo":am ? "player-layout-am":"player-layout-am2");reveal(am2);am2.tap()
     expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["skins-sheet-close"]);waitForExpectations(timeout:10)
     openSettings(app,page:"sources")
     for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名",fixtureUser),("Navidrome密码","fixture-password")]{
@@ -924,6 +926,51 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !close.exists && app.buttons["播放"].isHittable},object:nil)],timeout:8),.completed)
       app.buttons["收起播放页"].tap();openSettings(app,page:"sources")
       let remove=app.buttons["移除连接：fixture-photo"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10));return
+    }
+    if stage {
+      XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10));app.buttons["暂停"].tap()
+      let progress=element("播放进度")
+      XCTAssertTrue(progress.isHittable)
+      progress.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()
+      expectation(for:NSPredicate(format:"value == %@","1:00 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:5)
+      let viewport=element("stage-lyric-viewport"),group=element("lyric-stage-group"),selector=app.buttons["stage-style-selector"]
+      XCTAssertTrue(group.waitForExistence(timeout:10));XCTAssertEqual(group.label,"two")
+      XCTAssertGreaterThan(viewport.frame.height,100);XCTAssertTrue(app.frame.insetBy(dx:-1,dy:-1).contains(viewport.frame));XCTAssertTrue(app.buttons["播放"].isHittable);XCTAssertTrue(selector.isHittable)
+      selector.tap();let backdrop=app.switches["舞台背景"];XCTAssertTrue(backdrop.waitForExistence(timeout:5));reveal(backdrop)
+      let beforeBackdrop=backdrop.value as? String == "1"
+      let beforeStyle=["classic","neon","cyberpunk","aurora"].first{element("stage-style-"+$0).isSelected}!
+      if beforeBackdrop{backdrop.tap()}
+      let initialClose=app.buttons["收起舞台样式"];reveal(initialClose);initialClose.tap()
+      var rendered:[[UInt8]]=[]
+      for (id,label) in [("classic","经典"),("neon","霓虹"),("cyberpunk","赛博"),("aurora","炫彩")] {
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in selector.isHittable},object:nil)],timeout:8),.completed)
+        selector.tap();let option=element("stage-style-"+id);XCTAssertTrue(option.waitForExistence(timeout:5));reveal(option);option.tap()
+        expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:option);waitForExpectations(timeout:5)
+        let closeStage=app.buttons["收起舞台样式"];reveal(closeStage);closeStage.tap()
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in selector.isHittable && selector.value as? String == label},object:nil)],timeout:8),.completed)
+        XCTAssertFalse(element("stage-backdrop").exists);XCTAssertEqual(progress.value as? String,"1:00 / 2:00");XCTAssertTrue(app.buttons["播放"].isHittable)
+        let shot=group.screenshot(),image=try XCTUnwrap(BackgroundPixels.decode(shot.pngRepresentation))
+        var samples:[UInt8]=[]
+        for y in 0..<32{for x in 0..<96{samples += BackgroundPixels.rgba(image,at:CGPoint(x:(CGFloat(x)+0.5)*CGFloat(image.width)/96,y:(CGFloat(y)+0.5)*CGFloat(image.height)/32))}}
+        XCTAssertEqual(samples.count,96*32*4)
+        if !largeText {for previous in rendered{XCTAssertNotEqual(samples,previous,"Native ink must visibly change with backdrop disabled: \(id)")};rendered.append(samples)}
+        let attachment=XCTAttachment(screenshot:XCUIScreen.main.screenshot());attachment.name="Stage native \(id) large \(largeText)";attachment.lifetime = .keepAlways;add(attachment)
+      }
+      selector.tap();reveal(backdrop);backdrop.tap();let closeStage=app.buttons["收起舞台样式"];reveal(closeStage);closeStage.tap()
+      XCTAssertTrue(element("stage-backdrop").waitForExistence(timeout:8))
+      app.terminate();app.launch();let reopen=app.buttons["打开播放页"];XCTAssertTrue(reopen.waitForExistence(timeout:10));reopen.tap()
+      XCTAssertTrue(selector.waitForExistence(timeout:10));XCTAssertEqual(selector.value as? String,"炫彩");XCTAssertTrue(element("stage-backdrop").exists);XCTAssertTrue(app.buttons["播放"].isHittable)
+      if !largeText {
+        XCUIDevice.shared.orientation = .landscapeLeft;app.activate()
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.frame.width>app.frame.height && app.buttons["播放"].isHittable && selector.isHittable},object:nil)],timeout:15),.completed)
+        XCTAssertTrue(app.buttons["选择歌词来源"].isHittable)
+        let landscape=XCTAttachment(screenshot:XCUIScreen.main.screenshot());landscape.name="Stage landscape native controls";landscape.lifetime = .keepAlways;add(landscape)
+        XCUIDevice.shared.orientation = .portrait;app.activate()
+      }
+      selector.tap();if !beforeBackdrop{reveal(backdrop);backdrop.tap()};let original=element("stage-style-"+beforeStyle);reveal(original);original.tap();let cleanupClose=app.buttons["收起舞台样式"];reveal(cleanupClose);cleanupClose.tap()
+      XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons["收起播放页"].isHittable && !app.buttons["收起舞台样式"].exists},object:nil)],timeout:8),.completed)
+      app.buttons["收起播放页"].tap();openSettings(app,page:"sources")
+      let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10));return
     }
     if photo {
       XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout:10));app.buttons["暂停"].tap()
@@ -1156,7 +1203,20 @@ final class SourceSettingsTests: XCTestCase {
       app.buttons["更多播放控制"].tap()
       app.buttons["播放界面样式"].tap()
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
+      // Wait for the style sheet to actually dismiss. The vinyl composition mounts
+      // more layers than the other skins, so checking hittability while the sheet
+      // is still animating produced a false "transport does not fit" failure.
+      let styleDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["收起播放界面样式"])
+      XCTAssertEqual(XCTWaiter.wait(for:[styleDismissed],timeout:8),.completed,"Style sheet must dismiss before transport checks in \(layout)")
       XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5))
+      // iOS keeps a dismissal snapshot above the player after the sheet's AX
+      // elements disappear. Wait for the real hit test instead of asserting on
+      // the first frame, which previously reported a false "transport does not fit".
+      let tappable=XCTNSPredicateExpectation(predicate:NSPredicate(format:"isHittable == true"),object:app.buttons["播放"])
+      if XCTWaiter.wait(for:[tappable],timeout:8) != .completed {
+        let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Transport hierarchy \(layout)";hierarchy.lifetime = .keepAlways;add(hierarchy)
+        let failureShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());failureShot.name="Transport failure \(layout)";failureShot.lifetime = .keepAlways;add(failureShot)
+      }
       XCTAssertTrue(app.buttons["播放"].isHittable, "Transport must fit in \(layout)")
       if layout=="photo" {
         let element: (String)->XCUIElement = { app.descendants(matching:.any).matching(identifier:$0).firstMatch }
@@ -1210,6 +1270,7 @@ final class SourceSettingsTests: XCTestCase {
         XCTAssertTrue(canvas.frame.contains(cartridge.frame) && canvas.frame.contains(counterweight.frame),"Parked head and rear weight must fit the visible canvas")
         let parkedNeedle=needle.frame,parkedHead=cartridge.frame,parkedPivot=pivot.frame
         XCTAssertGreaterThan(counterweight.frame.midX,platter.frame.midX);XCTAssertLessThan(counterweight.frame.midY,pivot.frame.midY,"Rear weight belongs behind the pivot")
+        let composition=XCTAttachment(screenshot:XCUIScreen.main.screenshot());composition.name="Vinyl reference composition";composition.lifetime = .keepAlways;add(composition)
         func discPixels()->[UInt8]{
           guard let image=BackgroundPixels.decode(XCUIScreen.main.screenshot().pngRepresentation) else{return []}
           let frame=platter.frame,diameter=frame.width*0.91,scale=UIScreen.main.scale

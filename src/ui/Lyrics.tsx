@@ -55,7 +55,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
   const fullPage=presentation==='am'||presentation==='am2'||presentation==='photo',alignStart=(presentation==='am'||presentation==='photo')&&systemFontScale>1.8;
   const count=visibleLines??(presentation==='am'?3:presentation?2:4),firstVisible=Math.max(0,active-(count===1?0:1));
   useEffect(()=>{if(expanded&&active>=0)list.current?.scrollToIndex({index:active,animated:true,viewPosition:.45});},[active,expanded]);
-  const size=(presentation==='stage'?44:presentation==='am'||presentation==='am2'?32:presentation==='photo'?26:presentation?22:20)*preferences.fontScale;
+  const size=(presentation==='stage'?80:presentation==='am'||presentation==='am2'?32:presentation==='photo'?26:presentation?22:20)*preferences.fontScale;
   const style=preferences.lyricStyle;
   const auxiliaryFont={fontFamily:font,fontSize:14,lineHeight:Math.ceil(14*style.lineHeight)};
   const activeColor=style.activeColor==='auto'?(presentation?'#FFFFFF':theme.color('#D9F49B')):style.activeColor,inactiveColor=style.inactiveColor==='auto'?(presentation?'#A0A0A8':theme.color('#959EAC')):style.inactiveColor;
@@ -79,7 +79,7 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
         {stageGroup?<Pressable testID="lyric-stage-group" accessibilityRole="button" accessibilityLabel={stageGroup.line.text}
           accessibilityValue={{text:stageGroup.line.words?'逐字歌词':'行级歌词'}} accessibilityHint="双击定位到当前段，长按打开歌词设置"
           onPress={event=>seek(stageGroup.line.startMs,Number(stageGroup.id.split(':')[0])*2001+Number(stageGroup.id.split(':')[1]),event.nativeEvent.timestamp)} onLongPress={()=>setExpanded(true)}>
-          <NativeLyricLine line={stageGroup.line} position={state.position*1000-offset} playing={state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={activeColor} center lineHeight={style.lineHeight} emphasis={style.emphasis}/>
+          <NativeLyricLine line={stageGroup.line} position={state.position*1000-offset} playing={state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={activeColor} center lineHeight={style.lineHeight} emphasis={style.emphasis} stageStyle={preferences.stageStyle}/>
           {stageGroup.line.translation&&<LyricText style={{...auxiliaryFont,textAlign:'center',color:'#D5D5DA',marginTop:12}}>{stageGroup.line.translation}</LyricText>}
           {stageGroup.line.romanization&&<LyricText style={{...auxiliaryFont,textAlign:'center',color:'#D5D5DA',marginTop:8}}>{stageGroup.line.romanization}</LyricText>}
         </Pressable>:<Text testID="lyric-stage-gap" style={{textAlign:'center',color:inactiveColor}}>等待下一句…</Text>}
@@ -95,8 +95,8 @@ export function Lyrics({services,track,font,presentation,visibleLines}:{services
         {item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:13,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
       </Pressable>;
     })}
-    {!document?.synced&&fullPage&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
-    {!document?.synced&&!fullPage&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
+    {!document?.synced&&(fullPage||presentation==='stage')&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
+    {!document?.synced&&!fullPage&&presentation!=='stage'&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
     </View>
     <SheetModal visible={expanded} onRequestClose={()=>setExpanded(false)} animationType="slide">
       <View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:64}}>

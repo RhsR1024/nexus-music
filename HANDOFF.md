@@ -1,3 +1,19 @@
+## 2026-10-19 UI 90% 目标、Skill 安装与黑胶构图 V1
+
+用户确认结构/像素/动效均需 90%+，真机录屏稍后提供，并接受 UI 权重重估。按[进度重估](docs/PROGRESS_ESTIMATE.md)：代码口径约 **74.2%**（区间 70–76%），完整交付约 **52.0%**（区间 48–55%）；差值全部来自 UI 分母 9→21 单位，不是功能倒退。若 39 个参考态逐页 diff 后才计完成，权重可能升至 25 单位、代码口径回落至约 68–70%。
+
+Skill 可用性：Codex 侧 `.agents/skills` 与外链 `../reverse-skill` 原样保留。已复制同字节副本到用户级 `~/.codebuddy/skills/reverse-skill-router` 与 `~/.codebuddy/skills/apk-reverse`，`use_skill` 实际加载成功；`diff -r` 与源一致，未改 Codex 配置或固定提交。门禁 `node scripts/sollin-reverse-gate.mjs ipa` prerequisite PASS，路由 `master-route` → PRIMARY `mobile-reverse`，复用原 offline scope。
+
+本批按 [UI 对齐记录](docs/SOLLIN_UI_ALIGNMENT.md) 先做黑胶页（IMG_4851），依据既有 E036–E038 与截图实测，不新增 IPA 反汇编结论。新增 `src/ui/tokens.ts`（间距/圆角/字级/纸面色）与 `src/ui/VinylPlayer.tsx`（独立构图：纸面浅色主题、94% 唱片、46pt 播放键、细进度条、细线图标、来源脚注），`PlaybackProgress` 增加 paper 变体，`Player.tsx` 黑胶走独立分支与深色状态栏，`ModernPlayer` 移除通用模板里的黑胶分支。睡眠入口未接，工具行保持 5 个而非伪造第 6 个。
+
+验证：396 业务/类型通过；`testZNavidromePlaybackAndCredentials` 1/0/0，含黑胶实际尺寸/唱臂/像素/歌词入口和原八布局/PCM/统计/重启/凭据清理。期间定位并修正 pageSheet 关闭竞态：先关 Sheet 再写偏好，命中判断改为限时等待真实可点击（原断言保留）；这是夹具同步修正，不是放宽标准。构图截图 `build/tmp-vinyl-shot2/7D5CC850-24A6-4262-900F-44ADD08E3515.png` 已亲看：标题/进度/运输/工具纵向位置与参考差约 0–6pt，唱臂因暂停停在 0°。
+
+**未达成 90%**：尚无像素 diff 分数，剩余 38 个参考态未收敛，动效层缺真机录屏。下一批先做截图 diff 工具（同逻辑尺寸、区域 SSIM + 人工亲看），再按 4852/4853 → 4854 → 4855/4856 → 4857 → AM 顺序逐页收敛；随后平台登录/日推/FM/评论与离线下载。真实服务/签名/真机仍无新证据。本批改动与原舞台/歌词批次一并提交，云端 iOS 27 结果待跟进。
+
+## 2026-10-19 舞台样式实施与验收中
+
+按E042严格review及独立冻结重放，原创四样式、独立背景偏好/Sheet和剩余高度舞台主体已接入，详见[0075](docs/decisions/0075-stage-style-presentation.md)。五固定参考相关源码亲读并核对工作字节等于HEAD，无源码/依赖/资产移植。396业务/类型通过，新增偏好迁移/保存失败与独立开关检查；正式App像素差异/位置保持/重启、横屏/大字/iPad和完整八布局回归正在验证，归档/提交/对应云端待。完整参考转场/粒子/动态背景、真实服务/签名/真机未完成，全部计划active。
+
 ## 2026-10-19 舞台样式静态证据通过，实施待
 
 reverse-skill新R2路由083205/mobile-reverse、原offline scope及E042→F041→P041严格review通过：42E/41F/41P、16WI/93事件，0错误/警告。6229原始字/455BL/424池引用独立冻结重放通过，确认四枚举选择、整数保存/恢复、偏好与有效覆盖的区别、组/绘制器字段以及独立背景开关；完整特效/转场/目标动态仍未恢复，详见[舞台报告](docs/2026-10-19_reverse-sollin-stage-styles-report.md)。无新产品采纳或完成度增长；下一亲读相关代码/五参考后实现原创样式，并独立验证原生绘制、生命周期和主控可达。全部计划继续active。

@@ -29,6 +29,7 @@ final class NexusLyricLineView: ExpoView {
   private var signature = "", color = UIColor.white
   private var observers: [NSObjectProtocol] = []
   private var blur = 0.0, emphasis = true
+  private var stageStyle = "classic"
   private var blurred: UIImage?
   private var blurredSize = CGSize.zero
   private static let imageContext = CIContext(options: [.cacheIntermediates: false])
@@ -60,11 +61,13 @@ final class NexusLyricLineView: ExpoView {
     emphasis = object["emphasis"] as? Bool != false
     let hex = object["color"] as? String ?? "#FFFFFF"
     let fontURI = object["fontURI"] as? String ?? ""
+    let requestedStyle = object["stageStyle"] as? String ?? "classic"
+    let nextStyle = ["classic", "neon", "cyberpunk", "aurora"].contains(requestedStyle) ? requestedStyle : "classic"
     let rawWords = object["words"] as? [[String: Any]] ?? []
     let wordData = (try? JSONSerialization.data(withJSONObject: rawWords)) ?? Data()
-    let layoutKey = "\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(height)|\(radius)|\(wordData.base64EncodedString())"
+    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(height)|\(radius)|\(wordData.base64EncodedString())"
     if signature != layoutKey {
-      signature = layoutKey; blur = radius; blurred = nil
+      signature = layoutKey; stageStyle = nextStyle; blur = radius; blurred = nil
       let value = UInt32(hex.replacingOccurrences(of: "#", with: ""), radix: 16) ?? 0xFFFFFF
       color = UIColor(red: CGFloat((value >> 16) & 255) / 255, green: CGFloat((value >> 8) & 255) / 255, blue: CGFloat(value & 255) / 255, alpha: 1)
       var font = UIFont.systemFont(ofSize: size, weight: .semibold)
@@ -75,6 +78,15 @@ final class NexusLyricLineView: ExpoView {
       let paragraph = NSMutableParagraphStyle(); paragraph.alignment = center ? .center : .left
       paragraph.minimumLineHeight = ceil(size * height); paragraph.maximumLineHeight = ceil(size * height)
       storage.setAttributedString(NSAttributedString(string: text, attributes: [.font: font, .paragraphStyle: paragraph, .foregroundColor: color]))
+      if stageStyle == "aurora" {
+        // Original stable spectrum across composed characters. Layout and real
+        // word ranges remain unchanged; no inferred per-character timestamps.
+        let palette: [UIColor] = [.init(red: 0.55, green: 0.9, blue: 1, alpha: 1), .init(red: 0.8, green: 0.65, blue: 1, alpha: 1), .init(red: 1, green: 0.65, blue: 0.84, alpha: 1), .init(red: 1, green: 0.85, blue: 0.55, alpha: 1), .init(red: 0.6, green: 1, blue: 0.75, alpha: 1)]
+        var index = 0
+        text.enumerateSubstrings(in: text.startIndex..<text.endIndex, options: .byComposedCharacterSequences) { _, range, _, _ in
+          self.storage.addAttribute(.foregroundColor, value: palette[index % palette.count], range: NSRange(range, in: text)); index += 1
+        }
+      }
       words.removeAll(keepingCapacity: true); var offset = 0
       if rawWords.count <= 2000 {
         for word in rawWords {
@@ -98,6 +110,22 @@ final class NexusLyricLineView: ExpoView {
       link.preferredFramesPerSecond = 30; link.add(to: .main, forMode: .common); clock = link
     } else if !active { clock?.invalidate(); clock = nil }
   }
+  private func drawInk(_ glyphs: NSRange, in context: CGContext) {
+    context.saveGState()
+    if !UIAccessibility.isReduceTransparencyEnabled {
+      if stageStyle == "neon" {
+        context.setShadow(offset: .zero, blur: 8, color: UIColor.cyan.withAlphaComponent(0.7).cgColor)
+      } else if stageStyle == "aurora" {
+        context.setShadow(offset: .zero, blur: 5, color: UIColor.systemPurple.withAlphaComponent(0.45).cgColor)
+      } else if stageStyle == "cyberpunk" {
+        context.setShadow(offset: CGSize(width: -2, height: 0), blur: 0, color: UIColor.cyan.withAlphaComponent(0.8).cgColor)
+        manager.drawGlyphs(forGlyphRange: glyphs, at: .zero)
+        context.setShadow(offset: CGSize(width: 2, height: 0), blur: 0, color: UIColor.magenta.withAlphaComponent(0.8).cgColor)
+      }
+    }
+    manager.drawGlyphs(forGlyphRange: glyphs, at: .zero)
+    context.restoreGState()
+  }
   override func draw(_ rect: CGRect) {
     guard let context = UIGraphicsGetCurrentContext() else { return }
     let all = manager.glyphRange(for: container)
@@ -110,7 +138,7 @@ final class NexusLyricLineView: ExpoView {
       }
       if let image = blurred { image.draw(in: bounds); return }
     }
-    context.saveGState(); context.setAlpha(words.isEmpty ? 1 : 0.32); manager.drawGlyphs(forGlyphRange: all, at: .zero); context.restoreGState()
+    context.saveGState(); context.setAlpha(words.isEmpty ? 1 : 0.32); drawInk(all, in: context); context.restoreGState()
     let time = position + (playing && clock != nil ? min(1000, (CACurrentMediaTime() - anchor) * 1000) : 0)
     for word in words {
       let fraction = word.end > word.start ? min(1, max(0, (time - word.start) / (word.end - word.start))) : (time >= word.start ? 1.0 : 0.0)
@@ -123,7 +151,7 @@ final class NexusLyricLineView: ExpoView {
         let width = min(region.width, remaining); remaining -= width; if width <= 0 { continue }
         context.saveGState(); context.clip(to: CGRect(x: region.minX, y: region.minY, width: width, height: region.height))
         if emphasis && fraction < 1 && !UIAccessibility.isReduceMotionEnabled { context.setShadow(offset: .zero, blur: 3, color: color.withAlphaComponent(0.45).cgColor) }
-        manager.drawGlyphs(forGlyphRange: glyphs, at: .zero); context.restoreGState()
+        drawInk(glyphs, in: context); context.restoreGState()
       }
     }
   }

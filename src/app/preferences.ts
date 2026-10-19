@@ -5,9 +5,10 @@ import type { Repository } from '../storage/repository.ts';
 import { normalizeQuality, type Quality } from '../domain/quality.ts';
 import {appearanceDefaults,type AppearanceOptions} from '../domain/appearance.ts';
 import {miniPlayerDefaults,normalizeMiniActions,toggleMiniAction,moveMiniAction,type MiniPlayerOptions,type MiniAction} from '../domain/miniPlayer.ts';
+export type StageStyle='classic'|'neon'|'cyberpunk'|'aurora';
 export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage'|'am2';
-export interface Preferences extends AppearanceOptions,MiniPlayerOptions { am2AutoLyrics:boolean;am2DelaySeconds:number;am2ShowVolume:boolean; lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number }
-export const defaults: Preferences = { ...appearanceDefaults,...miniPlayerDefaults,am2AutoLyrics:true,am2DelaySeconds:5,am2ShowVolume:false,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048 };
+export interface Preferences extends AppearanceOptions,MiniPlayerOptions { stageStyle:StageStyle;stageBackdrop:boolean; am2AutoLyrics:boolean;am2DelaySeconds:number;am2ShowVolume:boolean; lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number }
+export const defaults: Preferences = { ...appearanceDefaults,...miniPlayerDefaults,stageStyle:'neon',stageBackdrop:true,am2AutoLyrics:true,am2DelaySeconds:5,am2ShowVolume:false,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048 };
 export class PreferenceStore {
   private repository: Repository; private value: Preferences = defaults;
   private listeners = new Set<() => void>(); private tail: Promise<unknown> = Promise.resolve();
@@ -24,6 +25,7 @@ export class PreferenceStore {
     }catch{throw new InvalidRecordError();}}
   }
   private validate(value: Preferences): Preferences {
+    if(!['classic','neon','cyberpunk','aurora'].includes(value.stageStyle)||typeof value.stageBackdrop!=='boolean')throw new Error('舞台样式无效');
     if(typeof value.am2AutoLyrics!=='boolean'||typeof value.am2ShowVolume!=='boolean'||!Number.isFinite(value.am2DelaySeconds)||value.am2DelaySeconds<1||value.am2DelaySeconds>60)throw new Error('AM2 设置无效');
     if(typeof value.miniLyrics!=='boolean')throw new Error('迷你歌词设置无效');
     if(typeof value.autoMatch!=='boolean')throw new Error('自动匹配设置无效');
