@@ -1,3 +1,11 @@
+## 2026-10-19 写真清洁归档与正常 push 回执
+
+0302b24f8b22582cbead91a2be7376dd2e82f70a已正常push至RhsR1024/nexus-music，ls-remote实核main一致。395业务/类型、完整原生CLI、写真手机三项3/0/0及iPad113.592秒1/0/0通过；新Mini可见窗口夹具162.737秒1/0/0通过，旧流程本机通过不能代替新iOS27结论。41E/40F/40P严格review、独立1946原始字/BL/manifest及394本地文档链接通过；截图/失败和云端边界见[0072](docs/decisions/0072-photo-lyrics-composition.md)/[0073](docs/decisions/0073-ci-mini-sheet-viewport-and-evidence.md)。
+
+清洁unsigned归档ARCHIVE SUCCEEDED：dirty=false/workingTreeChanges=[]，Xcode26.3/SDK26.2、arm64/min15.1/设备族[1,2]；CRC/附带SHA/可执行和JS与归档字节/正式入口/私人签名资源排除均通过。IPA SHA256 `a5abb0015f7398ba98a1fc34211551af34cef9b5ac8765d75fa95f321e75ab14`，包和verification留build/local-presentation-0302b24，日志archive-photo-composition-clean.log。
+
+新[39179554648](https://github.com/RhsR1024/nexus-music/actions/runs/39179554648)/0302b24已in_progress，API实核1运行/0排队；b492261成功、292e076失败均保留原结论，无重派或取消云端任务。对应iOS27终态、真实服务、签名/真机仍待。下一继续写真宽高比/坏图补验与舞台/菜单/设置、AM评论正文和全部A/F/J；不提高开发百分比。收尾磁盘约45GiB，必要失败/最后两阶段有效IPA和摘要及逆向原始证据保留，无盲删构建缓存；清理回执已更新。
+
 ## 2026-10-19 写真本地通过与 iOS27 失败跟进
 
 按reverse-skill E041→F040→P040/41E40F40P严格review和[0072](docs/decisions/0072-photo-lyrics-composition.md)原创写真主图/纵向遮罩、歌词正文和五秒操作区，保留唯一意图/权威队列及音枢功能。395业务/类型（含计时与失败附件识别）通过，完整原生CLI通过；最终手机SourceUITests-1792340980963三项3/0/0：旋转78.470秒、大字122.324秒、完整八布局/PCM/歌词/统计/重启/凭据清理311.934秒。21合成鉴权/0失败，无新stream/coverArt，复用缓存，不是真实服务。五张必要PNG已亲看，独立PNG顶部/底部最大色值169/90通过；超大字长行保留滚动阅读，不承诺全部同屏。

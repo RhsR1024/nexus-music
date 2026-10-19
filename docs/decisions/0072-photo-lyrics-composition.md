@@ -19,3 +19,5 @@
 首轮完整App118.538秒在真实像素渐隐断言失败，录像确认Fabric finalize会清根layer.mask（RCTViewComponentView.mm1065）；ExpoFabricViewObjC.mm119–137先super后OnViewDidUpdateProps。最终在该钩子、layout和trait更新恢复mask，保留RN子视图原有父子/卸载契约。高亮图片的文字对比层继续受playerDarkness控制；前景清晰指无模糊，不指取消深浅偏好。首轮操作窗81.762秒/大字128.040秒通过但未解决视觉问题，不列为最终视觉验收。
 
 最终手机三项3/0/0（78.470/122.324/311.934秒），iPad窗口旋转113.592秒1/0/0，完整原生CLI/395业务类型通过；手机五张及iPad两张必要PNG亲看，独立PNG169/90采样通过。手机结果先于仅iPad夹具关闭等待补修，产品代码未变；所有首次失败/旧操作通过但视觉不合格结果保留。真实服务/签名/真机、不同图片宽高比/坏图与精确参考动态仍待；不将上述局部验收解释为全部31图或全计划完成。
+
+0302b24清洁SDK26.2 unsigned归档/CRC/正式入口/私人签名资源排除通过，IPA SHA256 a5abb0015f7398ba98a1fc34211551af34cef9b5ac8765d75fa95f321e75ab14；正常push和远程main已实核。对应新iOS27运行[39179554648](https://github.com/RhsR1024/nexus-music/actions/runs/39179554648)已in_progress，1运行/0排队；其终态及真实服务/签名/真机仍待。
