@@ -1,6 +1,6 @@
 ## 2026-10-20 共享播放器/背景回归最终本地结果
 
-Release App播放器回归 `build/SourceUITests-1792432689070.xcresult`：1/0/0，416.640秒；背景大字专项 `1792432251070`：1/0/0，148.083秒。已亲看 AM 队列和默认 blush/rose 外观截图；4855 5.76% SSIM/MAD29.53，4856 -1.95%/31.60，远低90%，两页仍为实施中。歌词全文继续使用原完整组件，仅共享进行中的请求并遵循服务缓存失效。业务/类型401/401、reverse strict review 43E/41F/41P、17WI/94 timeline、零错误/警告通过。现进行清洁本地 unsigned IPA，后续做包隐私排除/diff、合入远端35ddf58且保留Beans文档、正常commit/push及队列核对；远端产品失败39210631200无变化，不能手动重派。真实私人服务、iOS27新提交、签名及真机仍待。
+Release App播放器回归 `build/SourceUITests-1792432689070.xcresult`：1/0/0，416.640秒；背景大字专项 `1792432251070`：1/0/0，148.083秒。已亲看 AM 队列和默认 blush/rose 外观截图；4855 5.76% SSIM/MAD29.53，4856 -1.95%/31.60，远低90%，两页仍为实施中。歌词全文继续使用原完整组件，仅共享进行中的请求并遵循服务缓存失效。业务/类型401/401、reverse strict review 43E/41F/41P、17WI/94 timeline、零错误/警告通过。已将远端35ddf58 Beans Music比较交接提交并入本地历史，HANDOFF两侧记录均保留。下一步清洁unsigned IPA/diff/隐私核查、正常push和Actions队列核对；远端产品失败39210631200无变化，不能手动重派。真实私人服务、iOS27新提交、签名及真机仍待。
 
 ## 2026-10-20 封面专项和独立录屏最终本地通过
 
@@ -76,7 +76,13 @@ Release App播放器回归 `build/SourceUITests-1792432689070.xcresult`：1/0/0�
 按用户“截图作基准、逆向仅补充”的要求，本批只做经典页构图，不新增反汇编结论。量测 4854（430×932pt）：封面 308 方形/左右 61、标题 22+歌手 14、三行居中歌词、轨心 671、播放圆 70、工具行 838、脚注 899。新增 `ClassicLyrics`/`ClassicLyricChrome`（首屏仅留构图元素，来源/偏移/全部歌词移到折叠线以下，标签与可达性保留）与 `useLyricDocument` 共享缓存（按 track+signature+choice+version 去重，避免双份请求）；经典分支的重复 `player-drag-handle` 已合并。展开态不再与页面副本同时渲染偏移设置，修复 `+100ms` 多匹配。
 
 评分夹具：`testZNavidromePlaybackAndCredentials` 起始先经真实设置页恢复 blush/rose/gradient，颜色分数不再受上次运行残留的 classic/blue 影响；该用例同时新增「Appearance background page」与滚动后两张附件，供 4855/4856 评分。最近一次 1/0/0 通过（384.8 秒）。`visual-diff` 全局 SSIM 73.56%/MAD 32.34（改前 71.72%/33.53），遮罩封面后 37.62%/18.27；差距在封面取色背景与合成封面/两行歌词夹具，**不记为已对齐**。证据：`build/ui-screenshots/001-Classic-reference-composition.png`、`build/visual-diff/4854-v6`。下一批 4855/4856 主题背景、4857 播放样式，其余 36 态待逐页收敛；动效仍需真机录屏。
+## 2026-10-19 Windows 同步与 Beans-Music 源码比较
 
+本轮按用户要求把 Windows 音枢从 b0f0803 快进至远端 main `d2d24e2c96a4cadfd32981a36ccb3909c93de1ed`；相邻 `Z:\Z-WorkSpace\Beans-Music` 新建浅克隆，main `f9881318caf774129205c3160510ef0dfa318adc`，两者已与当次 ls-remote 核对。没有覆盖本地改动或改变全局 Git 信任配置。
+
+具体清单见 [Beans-Music 比较](docs/BEANS_MUSIC_REFERENCE_REVIEW.md)：15项候选，重点为三平台授权、网易/酷狗日推与私人FM候选协议、账号歌单、QQ/酷狗评论及在线歌手专辑。QQ“日推”实际为榜单混合；酷狗FM预取的playtime服务端语义未确认，收藏的本地/云端状态也须分别处理。保留音枢权威队列、脚本宿主、PCM/EQ、下载续传/摘要和凭据隔离。文件分享、设置/资源备份、材质/英文仅为候选，不自动扩范围；既定Sollin UI目标及执行顺序不变。本轮未移植产品代码、未运行参考App/真实服务或iOS构建，不增加完成度。
+
+提交前已审校候选/验收措辞，补充Mac本机SSD获取固定SHA的步骤、授权launcher/账号client/FM供曲任务和取消/账号隔离/真实播放验收表。Mac拉取后以当前源码核对缺口，不能依据本次d2d24e2快照重复开发。识曲专项未发现Beans公开提交的采样/匹配实现，原“本期不实现”决定保留；详情见比较文档与RECOGNITION_ASSESSMENT。本批仅提交这组比较、来源入口和交接文档，不触发产品实施。
 ## 2026-10-19 倍速/睡眠功能与中等高度面板（IMG_4889–4891）
 
 用户确认环境安全，后续命令免批准；新增三张参考图已按原字节归档到本机 `resource/reference-ui/sollin-2026-10-18`，manifest 与 INDEX 已补 SHA256（`7c672d…`/`290464…`/`6590ad…`），图片不进仓库。

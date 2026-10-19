@@ -1,3 +1,7 @@
+## 2026-10-19 Beans-Music 补充参考
+
+用户指定 Beans-Music 已同步至相邻 Windows 目录，固定 main / `f9881318caf774129205c3160510ef0dfa318adc`。与音枢 `d2d24e2` 的15项具体比较、双方源码/符号/行号、适配建议、许可和验收边界见 [BEANS_MUSIC_REFERENCE_REVIEW.md](BEANS_MUSIC_REFERENCE_REVIEW.md)。优先补账号provider行为，不替换现有播放/宿主/存储架构或Sollin视觉目标；报告不是产品采纳或完成记录。
+
 ## 2026-10-19 写真主体与操作区比较
 
 五固定HEAD实核，逐一亲读图片/容器/歌词/异步边界；实现、维护、Android、许可和验收逐项见[0072](decisions/0072-photo-lyrics-composition.md)。不复制代码/资产/依赖/原生补丁，静态E041经严格review后原创适配，实际App验收中。

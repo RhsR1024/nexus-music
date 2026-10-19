@@ -2,6 +2,13 @@
 
 日期：2026-10-14。固定提交用于复核，在线文档在正式实现时重新检查。此文件不代表第三方代码已导入或许可统一。
 
+## Beans-Music（2026-10-19 补充）
+
+- 仓库：<https://github.com/XIaodou0416/Beans-Music>；main / `f9881318caf774129205c3160510ef0dfa318adc`；本地 `Z:\Z-WorkSpace\Beans-Music`，最新提交浅克隆。
+- [项目配置](https://github.com/XIaodou0416/Beans-Music/blob/f9881318caf774129205c3160510ef0dfa318adc/project.yml)：Swift 5、iOS 15、版本1.6.5.1/build39，XcodeGen；不是音枢RN依赖候选。
+- [根许可证](https://github.com/XIaodou0416/Beans-Music/blob/f9881318caf774129205c3160510ef0dfa318adc/LICENSE)：MIT / XIaodou0416；第三方实现、品牌和资源仍需逐项核查。
+- 三平台授权、日推/FM、歌单收藏、评论/实体、导出备份/歌词等固定源码和音枢差异见 [具体清单](BEANS_MUSIC_REFERENCE_REVIEW.md)。仅研究，未导入第三方代码或资源，未运行参考App。
+
 ## 三个开源参考
 
 ### CyMusic
