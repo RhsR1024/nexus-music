@@ -16,8 +16,10 @@ import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {paper} from './tokens.ts';
 import { Lyrics } from './Lyrics.tsx';
 import { FontSettings } from './FontSettings.tsx';
+import { PlayerMenu } from './PlayerMenu.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type PropsWithChildren } from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent, useWindowDimensions} from 'react-native';
+const layoutLabels={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'} as const;
 import {Modal,SheetModal} from './AdaptiveModal.tsx';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
@@ -133,20 +135,14 @@ export function Player({ services }: { services: Services }) {
       </PlayerScroll>}</View>
       <SheetModal visible={details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={closeDetails}>
         {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
-        <ScrollView key={detailPanel} style={styles.root} contentContainerStyle={styles.content}>
+        <ScrollView key={detailPanel} style={[styles.root,detailPanel==='menu'&&{backgroundColor:theme.palette.background[0]}]} contentContainerStyle={detailPanel==='menu'?{flexGrow:1}:styles.content}>
           {detailPanel==='style'?<>
             {button('收起播放界面样式',()=>{if(styleReturnsToMenu.current)setDetailPanel('menu');else closeDetails();})}
             <Text style={styles.title}>播放界面样式</Text>{skinSelector}
           </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
             {button(detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置',()=>setDetailPanel(detailPanel==='lyrics'?'menu':'lyrics'))}
             <Text style={styles.title}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text><FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
-          </>:detailPanel==='menu'?<>
-            {button('收起播放选项',closeDetails)}
-            <Text style={styles.title}>播放选项</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="播放界面样式" onPress={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} style={styles.optionRow}><View style={{flex:1}}><Text style={styles.optionTitle}>播放界面样式</Text><Text style={styles.caption}>{(['classic','am','immersive','photo','vinyl','wave','stage','am2'] as const).includes(preferences.playerLayout)?({classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'} as const)[preferences.playerLayout]:'经典'}</Text></View><Ionicons name="chevron-forward" size={20} color={theme.palette.secondary}/></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="歌词显示设置" onPress={()=>setDetailPanel('lyrics')} style={styles.optionRow}><View style={{flex:1}}><Text style={styles.optionTitle}>歌词显示设置</Text><Text style={styles.caption}>字体、颜色、对齐、行距与逐字效果</Text></View><Ionicons name="chevron-forward" size={20} color={theme.palette.secondary}/></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="队列与播放选项" onPress={()=>setDetailPanel('content')} style={styles.optionRow}><View style={{flex:1}}><Text style={styles.optionTitle}>队列与播放选项</Text><Text style={styles.caption}>歌词、匹配、收藏、队列和播放控制</Text></View><Ionicons name="chevron-forward" size={20} color={theme.palette.secondary}/></Pressable>
-          </>:<>
+          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])}/>:<>
             {button('收起播放选项',closeDetails)}
             {button('返回播放选项',()=>setDetailPanel('menu'))}
             <Text style={styles.title}>队列与播放选项</Text>{detailContent}

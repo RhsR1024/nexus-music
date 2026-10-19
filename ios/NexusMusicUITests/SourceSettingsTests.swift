@@ -1201,6 +1201,10 @@ final class SourceSettingsTests: XCTestCase {
     let immersiveImage=XCTAttachment(screenshot:app.screenshot());immersiveImage.lifetime = .keepAlways;add(immersiveImage)
     for layout in ["photo","vinyl","wave","stage","am2"] {
       app.buttons["更多播放控制"].tap()
+      if layout=="vinyl" {
+        XCTAssertTrue(app.buttons["队列与播放选项"].waitForExistence(timeout:5))
+        let menuShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());menuShot.name="Vinyl playback options menu";menuShot.lifetime = .keepAlways;add(menuShot)
+      }
       app.buttons["播放界面样式"].tap()
       app.descendants(matching:.any).matching(identifier:"play-skin-\(layout)").firstMatch.tap()
       // Wait for the style sheet to actually dismiss. The vinyl composition mounts
