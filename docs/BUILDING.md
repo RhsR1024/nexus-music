@@ -41,6 +41,7 @@ Release模拟器产物：`build/DerivedData/Build/Products/Release-iphonesimulat
 - `npm run check`：类型与契约测试，只覆盖代码逻辑。
 - `npm run ios:build`：原生编译与Release JS bundle，不能证明网络、后台和音频正常。
 - 安装/启动/截图：只证明该模拟器界面可运行。
+- 截图导出统一走 `node scripts/export-ui-screenshots.mjs --xcresult <结果包|latest> --match <可读名子串> --output build/ui-screenshots [--clean]`：脚本内部完成附件导出、可读名清洗、`index.json` 记账与自身临时目录回收；`--clean` 只删除本目录index记录过的旧产物。清理范围限定为本次 staging 与本目录 index 记录的附件，执行前仍须核对引用和保留规则。`--list` 可先查看匹配项。
 - LX源/真实Navidrome/签名/后台播放：各自单独记录，真实手机不能由模拟器替代。
 
 LX离线探针与进度见 [LX_HOST_PROGRESS.md](LX_HOST_PROGRESS.md)。

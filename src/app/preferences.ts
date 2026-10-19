@@ -3,7 +3,7 @@ import {normalizePresets,validGains,validPreamp,type EQPreset} from '../domain/e
 import {InvalidRecordError} from '../storage/recovery.ts';
 import type { Repository } from '../storage/repository.ts';
 import { normalizeQuality, type Quality } from '../domain/quality.ts';
-import {appearanceDefaults,type AppearanceOptions} from '../domain/appearance.ts';
+import {appearanceDefaults,visualThemes,type AppearanceOptions,type VisualTheme} from '../domain/appearance.ts';
 import {miniPlayerDefaults,normalizeMiniActions,toggleMiniAction,moveMiniAction,type MiniPlayerOptions,type MiniAction} from '../domain/miniPlayer.ts';
 export type StageStyle='classic'|'neon'|'cyberpunk'|'aurora';
 export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage'|'am2';
@@ -31,7 +31,8 @@ export class PreferenceStore {
     if(typeof value.autoMatch!=='boolean')throw new Error('自动匹配设置无效');
     if(!['auto','left','center'].includes(value.lyricAlignment))throw new Error('歌词对齐方式无效');
     if(!['classic','am','immersive','photo','vinyl','wave','stage','am2'].includes(value.playerLayout))throw new Error('播放界面无效');
-    if(!['classic','blush','soft'].includes(value.visualTheme)||!['rose','coral','purple','blue','orange'].includes(value.accent)||!['gradient','solid','image'].includes(value.backgroundStyle)||typeof value.glassNavigation!=='boolean')throw new Error('外观设置无效');
+    if(!visualThemes.includes(value.visualTheme as VisualTheme)||!['rose','coral','purple','blue','orange'].includes(value.accent)||!['gradient','solid','image'].includes(value.backgroundStyle)||typeof value.glassNavigation!=='boolean')throw new Error('外观设置无效');
+    if(typeof value.cardOpacity!=='number'||!Number.isFinite(value.cardOpacity)||value.cardOpacity<0||value.cardOpacity>1||typeof value.backgroundMask!=='number'||!Number.isFinite(value.backgroundMask)||value.backgroundMask<0||value.backgroundMask>1||typeof value.maskColor!=='string'||!/^#[0-9a-f]{6}$/i.test(value.maskColor))throw new Error('卡片与遮罩设置无效');
     if(!['artwork','solid','photo'].includes(value.playerBackground)||typeof value.coverColor!=='boolean'||typeof value.globalBackgroundMotion!=='boolean'||typeof value.dynamicBackground!=='boolean'||!Number.isFinite(value.backgroundOpacity)||value.backgroundOpacity<0||value.backgroundOpacity>1||!Number.isFinite(value.playerBlur)||value.playerBlur<0||value.playerBlur>80||!Number.isFinite(value.playerDarkness)||value.playerDarkness<.35||value.playerDarkness>.9||!Number.isFinite(value.coverRadius)||value.coverRadius<0||value.coverRadius>48)throw new Error('图片外观设置无效');
     if (typeof value.eqEnabled!=='boolean'||!Number.isFinite(value.volume)||value.volume<0||value.volume>1||!normalizeQuality(value.quality) || !validGains(value.gains) || !validPreamp(value.preampDB) ||
       !['off', 'all', 'one'].includes(value.repeat) || !Number.isFinite(value.lyricOffsetMs) || Math.abs(value.lyricOffsetMs)>600000 || !Number.isFinite(value.fontScale) || value.fontScale < .7 || value.fontScale > 2 || !Number.isFinite(value.rate) || value.rate < .5 || value.rate > 3 ||

@@ -16,7 +16,9 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
   const favorite=services.library.isFavorite(favoriteTrack),side=Math.max(1,Math.min(bounds.width,bounds.height,560));
   const [error,setError]=useState('');
   const select=(next:Content)=>setContent(previous=>previous===next?'cover':next);
-  const tool=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string,selected?:boolean)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={action} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center',borderRadius:24,backgroundColor:selected?'rgba(255,255,255,.18)':'transparent'}}><Ionicons name={name} size={24} color="#FFFFFF"/></Pressable>;
+  // IMG_4861/4866 keep the tool row as four plain outline glyphs; the active
+  // content is conveyed by the panel itself rather than a filled pill.
+  const tool=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string,selected?:boolean)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={action} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={25} color={selected?'#FFFFFF':'rgba(255,255,255,0.72)'}/></Pressable>;
   const info=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:8,minHeight:64}}>
     {content!=='cover'&&<Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')}><Cover services={services} track={track} size={52}/></Pressable>}
     <View style={{flex:1,minWidth:0,gap:5}}><Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:22,fontWeight:'700'}}>{track.title}</Text><Text numberOfLines={1} style={{color:'#D5D5DA',fontSize:15}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
@@ -27,7 +29,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
     {content!=='cover'&&!columns&&info}
     <View testID={columns?'am-horizontal':'am-vertical'} style={{flex:1,minHeight:0,flexDirection:columns?'row':'column',gap:12}}>
     <View testID="am-body" collapsable={false} onLayout={event=>{const {width,height}=event.nativeEvent.layout;setBounds(previous=>previous.width===width&&previous.height===height?previous:{width,height});}} style={{flex:1,minHeight:0,overflow:'hidden'}}>
-      {content==='cover'?<View testID="am-cover-panel" style={{flex:1,alignItems:'center',justifyContent:'center'}}><View testID="am-artwork-square" collapsable={false} style={{width:side,height:side}}><Cover services={services} track={track} size={side}/></View></View>:content==='lyrics'?<View testID="am-lyrics-panel" style={{flex:1}}><Lyrics services={services} track={lyricTrack} font={font} presentation="am"/></View>:<View testID="am-queue-panel" style={{flex:1}}><QueuePanel services={services}/></View>}
+      {content==='cover'?<View testID="am-cover-panel" style={{flex:1,alignItems:'center',justifyContent:'center'}}><View testID="am-artwork-square" collapsable={false} style={{width:side,height:side}}><Cover services={services} track={track} size={side}/></View></View>:content==='lyrics'?<View testID="am-lyrics-panel" style={{flex:1}}><Lyrics services={services} track={lyricTrack} font={font} presentation="am"/></View>:<View testID="am-queue-panel" style={{flex:1}}><QueuePanel services={services} tone="dark"/></View>}
     </View>
     <ScrollView testID="am-controls" style={{flexGrow:0,flexShrink:0,maxHeight:columns?'100%':'48%',width:columns?Math.min(360,width*.42):undefined}} contentContainerStyle={{gap:6}}>
       {(columns||content==='cover')&&info}{!!error&&<Text accessibilityRole="alert" style={{color:'#FFD7BA'}}>{error}</Text>}{controls}

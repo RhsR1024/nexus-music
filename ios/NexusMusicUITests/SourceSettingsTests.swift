@@ -39,6 +39,21 @@ final class SourceSettingsTests: XCTestCase {
     selectAll.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
     XCTAssertEqual(field.value as? String,value)
   }
+  private func selectClassicSourcePlayback(in app:XCUIApplication) {
+    // Source playback assertions use the classic page's PCM and queue controls.
+    // Stage/window tests persist their layout, including across app launches.
+    openSettings(app,page:"skins")
+    let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
+    XCTAssertTrue(classic.waitForExistence(timeout:5))
+    let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-skins").firstMatch
+    for _ in 0..<12 {
+      if classic.isHittable{break}
+      viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.25)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.75)))
+    }
+    XCTAssertTrue(classic.isHittable);classic.tap()
+    let dismissed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.buttons["skins-sheet-close"].exists},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[dismissed],timeout:10),.completed,"Persist the source test's classic layout before playback")
+  }
   private func dismissPasswordSuggestion(in container:XCUIElement) -> Bool {
     // iOS 27 can present this remote sheet only after the credential modal closes.
     // Match its title so unrelated alerts (including our removal confirmation) stay visible.
@@ -582,6 +597,7 @@ final class SourceSettingsTests: XCTestCase {
     let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
     defer{removeUIInterruptionMonitor(monitor)}
     let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch
     XCTAssertTrue(entry.waitForExistence(timeout:15));for _ in 0..<6{if entry.isHittable{break};app.swipeUp()};XCTAssertTrue(entry.isHittable);entry.tap()
@@ -760,6 +776,7 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testYLocalAudioFileImport() throws {
     let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
     XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
@@ -787,6 +804,10 @@ final class SourceSettingsTests: XCTestCase {
     entry.tap();app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["音频正在使用或删除失败，原数据保留"].waitForExistence(timeout:5))
     app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap()
+    // Classic now exposes queue mutations through its actual queue sheet.
+    let queue=app.buttons["查看播放队列"]
+    for _ in 0..<12 {if queue.isHittable{break};if queue.exists && queue.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}}
+    XCTAssertTrue(queue.isHittable);queue.tap()
     let remove=app.buttons["移除"].firstMatch;for _ in 0..<12 {if remove.isHittable{break};app.swipeUp()};remove.tap()
     XCTAssertTrue(entry.waitForExistence(timeout:5));entry.tap();app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["音频已删除"].waitForExistence(timeout:5));XCTAssertFalse(song.exists)
@@ -940,6 +961,9 @@ final class SourceSettingsTests: XCTestCase {
       let beforeBackdrop=backdrop.value as? String == "1"
       let beforeStyle=["classic","neon","cyberpunk","aurora"].first{element("stage-style-"+$0).isSelected}!
       if beforeBackdrop{backdrop.tap()}
+      // IMG_4872 shows the stage with its style panel open; capture the same state
+      // so the 4872 comparison is not made against a different screen.
+      let stageStyleShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());stageStyleShot.name="Stage style panel";stageStyleShot.lifetime = .keepAlways;add(stageStyleShot)
       let initialClose=app.buttons["收起舞台样式"];reveal(initialClose);initialClose.tap()
       var rendered:[[UInt8]]=[]
       for (id,label) in [("classic","经典"),("neon","霓虹"),("cyberpunk","赛博"),("aurora","炫彩")] {
@@ -1073,6 +1097,46 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testZNavidromePlaybackAndCredentials() throws {
     let app=XCUIApplication();app.launch()
+    // Colour scores are only meaningful under the shipping default theme. A
+    // previous run can persist classic/blue/solid, so restore blush/rose/gradient
+    // through the real settings pages before any screenshot is captured.
+    let blush=app.descendants(matching:.any).matching(identifier:"visual-blush")
+    openSettings(app,page:"background")
+    let blushChoice=blush.firstMatch
+    if blushChoice.exists && !blushChoice.isSelected {blushChoice.tap()}
+    let gradient=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
+    if gradient.exists && !gradient.isSelected {gradient.tap()}
+    // Use the shipping theme for colour evidence, including settings captures.
+    let reset=app.buttons["appearance-reset"]
+    XCTAssertTrue(reset.waitForExistence(timeout:5));reset.tap()
+    let appearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());appearanceShot.name="Appearance background page";appearanceShot.lifetime = .keepAlways;add(appearanceShot)
+    let backgroundScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    if backgroundScroll.exists {backgroundScroll.swipeUp()}
+    // IMG_4856 records 背景透明度 100% / 卡片透明度 30% / 背景遮罩 0% / 背景模糊 0; move
+    // the real sliders to those values so the comparison is not a default mismatch.
+    func reachValue(_ identifier:String,_ target:String,_ up:Bool){
+      let label=app.staticTexts["visual-value-"+identifier]
+      for _ in 0..<18 {
+        if label.exists && label.label==target {return}
+        let step=app.buttons["visual-"+identifier+(up ? "-up":"-down")]
+        XCTAssertTrue(step.exists);if !step.exists {return}
+        for _ in 0..<4 where !step.isHittable {app.swipeUp()}
+        step.tap()
+      }
+    }
+    reachValue("backgroundOpacity","100%",true)
+    reachValue("cardOpacity","30%",false)
+    reachValue("playerBlur","0",false)
+    let lowerAppearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());lowerAppearanceShot.name="Appearance background page scrolled";lowerAppearanceShot.lifetime = .keepAlways;add(lowerAppearanceShot)
+    // 25% and 55 are deliberately not on the slider step lattice. Restore via
+    // the real reset action, rather than attempting unreachable stepping loops.
+    openSettings(app,page:"background")
+    XCTAssertTrue(reset.waitForExistence(timeout:5));reset.tap()
+    let restoredBlush=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
+    if restoredBlush.waitForExistence(timeout:5) && !restoredBlush.isSelected {restoredBlush.tap()}
+    openSettings(app,page:"accent")
+    let rose=app.descendants(matching:.any).matching(identifier:"accent-rose").firstMatch
+    if rose.exists && !rose.isSelected {rose.tap()}
     openSettings(app,page:"skins")
     func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
     // Establish the initial layout through the actual setting, including when a
@@ -1133,8 +1197,11 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<3 {if app.buttons["暂停"].firstMatch.isHittable{break};app.swipeUp()}
     app.buttons["暂停"].firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5))
+    // Classic now keeps its style selector in the options sheet like the reference,
+    // instead of rendering an inline list above the artwork.
+    app.buttons["更多播放控制"].tap();XCTAssertTrue(app.buttons["播放界面样式"].waitForExistence(timeout:5));app.buttons["播放界面样式"].tap()
     let am=app.descendants(matching:.any).matching(identifier:"play-skin-am").firstMatch
-    for _ in 0..<5 {if am.isHittable{break};app.swipeDown()};am.tap()
+    XCTAssertTrue(am.waitForExistence(timeout:5));for _ in 0..<5 {if am.isHittable{break};app.swipeUp()};am.tap()
     XCTAssertTrue(app.buttons["播放"].waitForExistence(timeout:5), "Skin change must preserve paused intent")
     let amCover=app.descendants(matching:.any).matching(identifier:"am-artwork-square").firstMatch
     let amBody=app.descendants(matching:.any).matching(identifier:"am-body").firstMatch
@@ -1152,6 +1219,12 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["播放队列"].waitForExistence(timeout:5))
     XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","1. Synthetic tone")).firstMatch.isHittable)
     XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"am-lyrics-list").firstMatch.exists)
+    let singleMode=app.descendants(matching:.any).matching(identifier:"queue-mode-one").firstMatch
+    let shuffleMode=app.descendants(matching:.any).matching(identifier:"queue-mode-shuffle").firstMatch
+    let sequenceMode=app.descendants(matching:.any).matching(identifier:"queue-mode-off").firstMatch
+    singleMode.tap();XCTAssertTrue(singleMode.isSelected)
+    shuffleMode.tap();XCTAssertTrue(shuffleMode.isSelected);XCTAssertFalse(singleMode.isSelected)
+    sequenceMode.tap();XCTAssertTrue(sequenceMode.isSelected)
     let amQueueImage=XCTAttachment(screenshot:XCUIScreen.main.screenshot());amQueueImage.name="AM exclusive authoritative queue body";amQueueImage.lifetime = .keepAlways;add(amQueueImage)
     app.buttons["am-content-queue"].tap()
     XCTAssertTrue(amCover.waitForExistence(timeout:5),"Repeated body selection returns to the cover")
@@ -1160,7 +1233,15 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["播放"].isHittable,"Body switching must preserve paused intent")
     app.buttons["am-content-lyrics"].tap()
     let amLyricImage=XCTAttachment(screenshot:XCUIScreen.main.screenshot());amLyricImage.name="AM full scrolling lyrics body";amLyricImage.lifetime = .keepAlways;add(amLyricImage)
-    XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"AM lyric selection must remain reachable above clipped lyric lines")
+    // IMG_4861 has no inline diagnostic row: the lyric-source entry now lives in
+    // the playback options menu, so assert that path instead of the old inline one.
+    let amMore=app.buttons["更多播放控制"].firstMatch
+    XCTAssertTrue(amMore.isHittable)
+    amMore.tap()
+    app.buttons["歌词显示设置"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.waitForExistence(timeout:5),"AM lyric selection must remain reachable from the lyrics settings panel")
+    app.buttons["收起歌词显示设置"].firstMatch.tap()
+    app.buttons["收起播放选项"].firstMatch.tap()
     let amTitle=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","Synthetic tone")).firstMatch
     XCTAssertTrue(amTitle.waitForExistence(timeout:5),"AM skin must keep the original Navidrome title accessible")
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
@@ -1317,7 +1398,18 @@ final class SourceSettingsTests: XCTestCase {
         app.buttons["暂停"].tap()
         XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(needle.frame.width-parkedNeedle.width)<1},object:nil)],timeout:10),.completed,"Pause returns the actual needle to its parked angle")
         XCTAssertEqual(cartridge.frame.midX,parkedHead.midX,accuracy:1);XCTAssertEqual(cartridge.frame.midY,parkedHead.midY,accuracy:1)
-        let stopped=discPixels();XCTAssertEqual(stopped.count,324);XCTAssertEqual(stopped,discPixels(),"Pause freezes the disc independently of returning the needle")
+        // AX needle geometry and the screenshot compositor settle separately.
+        // Require three consecutive byte-identical, nonempty disc samples;
+        // preserve exact pixel equality rather than introducing a tolerance.
+        var stopped=discPixels(),stableSamples=1
+        XCTAssertEqual(stopped.count,324)
+        let discStopped=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+          let next=discPixels()
+          if next.count==324 && next==stopped {stableSamples += 1}else{stableSamples=1}
+          stopped=next
+          return next.count==324 && stableSamples>=3
+        },object:nil)
+        XCTAssertEqual(XCTWaiter.wait(for:[discStopped],timeout:10),.completed,"Pause freezes the disc independently of returning the needle (three exact samples)")
         let parkedShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());parkedShot.name="Vinyl parked needle and stopped asymmetric cover";parkedShot.lifetime = .keepAlways;add(parkedShot)
       }
       if layout=="am2" {
@@ -1400,6 +1492,7 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["更多播放控制"].tap()
     app.buttons["播放界面样式"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch.tap()
+    let classicShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());classicShot.name="Classic reference composition";classicShot.lifetime = .keepAlways;add(classicShot)
     let lyricChoice=app.buttons["选择歌词来源"].firstMatch
     for _ in 0..<8 {if lyricChoice.isHittable{break};app.swipeUp()};XCTAssertTrue(lyricChoice.isHittable);lyricChoice.tap()
     XCTAssertFalse(app.buttons["自动优选跨平台歌词"].exists,"Private library metadata must not enter automatic public searches")
@@ -1583,11 +1676,14 @@ final class SourceSettingsTests: XCTestCase {
     let activeBackground=XCTAttachment(screenshot:XCUIScreen.main.screenshot());activeBackground.name="Classic foreground background with native PCM";activeBackground.lifetime = .keepAlways;add(activeBackground)
     // A full-screen child covers the classic background; closing it must
     // restore that exact parent, and closing the player must restore the root.
+    let queueEntry=app.buttons["查看播放队列"];reveal(queueEntry);queueEntry.tap()
     let fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
     reveal(fullQueue);fullQueue.tap()
     let closeQueue=app.buttons["收起队列"];XCTAssertTrue(closeQueue.waitForExistence(timeout:10));closeQueue.tap()
     let queueDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:closeQueue)
     XCTAssertEqual(XCTWaiter.wait(for:[queueDismissed],timeout:10),.completed)
+    let closeOptions=app.buttons["收起播放选项"];reveal(closeOptions);closeOptions.tap()
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:closeOptions)],timeout:10),.completed)
     motion(true)
     let resumedPixels=backgroundPixels()
     let resumedMotion=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
@@ -1989,10 +2085,23 @@ final class SourceSettingsTests: XCTestCase {
     func reveal(_ item:XCUIElement){
       let scroll=element("background-sheet-scroll")
       for _ in 0..<35 {
-        if item.exists && item.isHittable && item.frame.minY>=scroll.frame.minY && item.frame.maxY<=scroll.frame.maxY{break}
-        let above=item.exists && item.frame.midY<scroll.frame.midY
-        scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:scroll.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:above ? 0.75:0.25)))
-      };XCTAssertTrue(item.isHittable)
+        // AX can report content extending beyond the sheet's visible window.
+        // Keep both drag endpoints inside the visible scroll area, away from
+        // the rounded sheet edge, as in the mini settings regression fixture.
+        let viewport=scroll.frame.intersection(app.frame)
+        if item.exists && item.isHittable && viewport.contains(item.frame){break}
+        guard !viewport.isNull && viewport.width>44 && viewport.height>100 else{break}
+        let above=item.exists && item.frame.midY<viewport.midY
+        let base=app.coordinate(withNormalizedOffset:CGVector(dx:0,dy:0))
+        let start=base.withOffset(CGVector(dx:viewport.midX-app.frame.minX,dy:viewport.minY+viewport.height*(above ? 0.25:0.75)-app.frame.minY))
+        let end=base.withOffset(CGVector(dx:viewport.midX-app.frame.minX,dy:viewport.minY+viewport.height*(above ? 0.75:0.25)-app.frame.minY))
+        start.press(forDuration:0.05,thenDragTo:end)
+      }
+      if !item.isHittable {
+        let image=XCTAttachment(screenshot:app.screenshot());image.name="Background sheet unreachable control";image.lifetime = .keepAlways;add(image)
+        let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Background sheet unreachable hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+      }
+      XCTAssertTrue(item.isHittable,"Background control must remain reachable: \(item.identifier), frame: \(item.frame), scroll: \(scroll.frame), window: \(app.frame)")
     }
     openSettings(app,page:"background")
     XCTAssertTrue(element("theme-background-sheet").exists);XCTAssertFalse(app.buttons["settings-open-globalFont"].exists)

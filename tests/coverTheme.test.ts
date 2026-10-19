@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {CoverThemeStore} from '../src/appearance/coverTheme.ts';
 import {PlaybackController} from '../src/playback/controller.ts';
 import {makeQueue} from '../src/domain/queue.ts';
-import {appearanceDefaults,appearancePalette,coverThemeGradient,flowThemeGradient} from '../src/domain/appearance.ts';
+import {appearanceDefaults,appearancePalette,coverThemeGradient,flowThemeGradient,visualThemes} from '../src/domain/appearance.ts';
 import {track,deferred} from './fixtures.ts';
 import type {Track} from '../src/domain/track.ts';
 
@@ -99,7 +99,7 @@ test('global flow loads without cover tint and survives palette failure without 
   r.flow(false);assert.equal(r.requests[1]!.signal.aborted,true);assert.deepEqual(r.store.getSnapshot(),{});r.store.dispose();
 });
 test('flow-only cover layer keeps text readable with the independent theme palette',()=>{
-  for(const mode of ['light','dark'] as const)for(const visualTheme of ['classic','blush','soft'] as const){
+  for(const mode of ['light','dark'] as const)for(const visualTheme of visualThemes){
     for(const color of ['#FF0000','#0000FF','#000000','#FFFFFF','#00FF00','#FF00FF'])for(const background of coverThemeGradient(color,mode)){
       const palette=appearancePalette(mode,{...appearanceDefaults,visualTheme,globalBackgroundMotion:true},color);
       const opacity=mode==='light'?.045:.08,pixel=mode==='light'?0:255;

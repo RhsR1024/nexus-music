@@ -49,7 +49,7 @@ let truncateDiscoveryPlaylist=true;
 let pagerDiscovery=false,pagerReplacement=false,pagerFailNext=false;
 const pagerPages=[];
 const heldDiscoveryResponses=[];
-const transitionVersion=String(Date.now()),heldThemeResponses=[];
+const transitionVersion=String(Date.now()),heldThemeResponses=[],releasedThemeColors=new Set();
 let transitionFixture=false,themeRecorder;
 // Original solid 32x32 and three-stripe 24x24 RGB fixtures; no user covers.
 const themeCovers={multi:'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAIklEQVR4nGP4z8CAFWEXxSMxatCoQaMGjRo0atCoQQNvEADG3T3fu7tafwAAAABJRU5ErkJggg==',red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
@@ -83,7 +83,13 @@ const server = createServer(async (req, res) => {
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('transition'))transitionFixture=true;
     const release=control.searchParams.get('release');
-    if(release)for(let i=heldThemeResponses.length-1;i>=0;i--)if(heldThemeResponses[i].color===release)heldThemeResponses.splice(i,1)[0].send();
+    if(release){
+      // A cover can time out while simulator recording starts. Keep the barrier
+      // open for retries even if its original response has already closed.
+      releasedThemeColors.add(release);
+      counts.transitionReleaseCommands??=[];counts.transitionReleaseCommands.push(release);
+      for(let i=heldThemeResponses.length-1;i>=0;i--)if(heldThemeResponses[i].color===release)heldThemeResponses.splice(i,1)[0].send();
+    }
     if(control.searchParams.has('record')){
       const file=resolve('build/logs',`ambient-transition-${transitionVersion}.mp4`);
       themeRecorder=spawn('xcrun',['simctl','io',process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D','recordVideo','--codec=h264',file],{stdio:['ignore','ignore','pipe']});
@@ -259,6 +265,7 @@ const server = createServer(async (req, res) => {
     if(coverThemeUI&&params.get('id')?.startsWith('transition-')&&params.get('id').endsWith(`-${transitionVersion}`)){
       const color=params.get('id').split('-')[1];
       const held={color,send:()=>{counts.transitionReleases??=[];counts.transitionReleases.push(color);if(color==='missing'){res.writeHead(404);res.end();}else{res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers[color],'base64'));}}};
+      if(releasedThemeColors.has(color)){held.send();return;}
       heldThemeResponses.push(held);
       res.once('close',()=>{const index=heldThemeResponses.indexOf(held);if(index>=0)heldThemeResponses.splice(index,1);});return;
     }

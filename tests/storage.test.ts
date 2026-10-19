@@ -132,6 +132,25 @@ test('appearance defaults migrate older preferences without changing playback se
   const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().accent,'blue');assert.equal(restored.getSnapshot().glassNavigation,false);db.close();
 });
 
+test('new visual controls migrate, round-trip and reject invalid values atomically',async()=>{
+  const {db,repository}=store();await repository.migrate();
+  const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {cardOpacity,backgroundMask,maskColor,...legacy}=defaults;
+  await repository.put('preferences.v1',legacy);
+  const preferences=new PreferenceStore(repository);await preferences.restore();
+  assert.equal(preferences.getSnapshot().cardOpacity,1);assert.equal(preferences.getSnapshot().backgroundMask,0);assert.equal(preferences.getSnapshot().maskColor,'#FFFFFF');
+  await preferences.update({visualTheme:'lotus',cardOpacity:.3,backgroundMask:.4,maskColor:'#123456'});
+  const restored=new PreferenceStore(repository);await restored.restore();
+  assert.equal(restored.getSnapshot().visualTheme,'lotus');assert.equal(restored.getSnapshot().cardOpacity,.3);assert.equal(restored.getSnapshot().backgroundMask,.4);assert.equal(restored.getSnapshot().maskColor,'#123456');
+  const before=preferences.getSnapshot();
+  for(const patch of [{cardOpacity:NaN},{cardOpacity:1.1},{backgroundMask:-1},{backgroundMask:Infinity},{maskColor:'url(private)'}]){
+    await assert.rejects(preferences.update(patch));assert.equal(preferences.getSnapshot(),before);
+  }
+  const put=repository.put.bind(repository);repository.put=async()=>{throw new Error('write failed');};
+  await assert.rejects(preferences.update({cardOpacity:.8}));assert.equal(preferences.getSnapshot(),before);
+  repository.put=put;db.close();
+});
+
 test('appearance failed writes and invalid fields preserve the last valid settings',async()=>{
   const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');
   const preferences=new PreferenceStore(repository);await preferences.update({accent:'purple'});const before=preferences.getSnapshot();

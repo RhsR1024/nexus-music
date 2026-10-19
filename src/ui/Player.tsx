@@ -14,10 +14,12 @@ import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {paper} from './tokens.ts';
-import { Lyrics } from './Lyrics.tsx';
+import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
+import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
 import { RatePanel, SleepPanel } from './PlaybackSheets.tsx';
+import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type PropsWithChildren } from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent, useWindowDimensions} from 'react-native';
 const layoutLabels={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'} as const;
@@ -53,6 +55,7 @@ export function Player({ services }: { services: Services }) {
   const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
   useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [commenting,setCommenting]=useState<Track|null>(null);
+  const [choosingLyric,setChoosingLyric]=useState(false),[classicLyricRequest,setClassicLyricRequest]=useState(0);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
   const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'globalFont'|'lyricFont'>('menu');
@@ -114,6 +117,47 @@ export function Player({ services }: { services: Services }) {
           })}
         </View>)}
   </>);
+  const iconButton=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24)=>(
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color={theme.palette.text}/></Pressable>);
+  const cycleRepeat=()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));};
+  // IMG_4854: 308pt square at 430pt width (61pt side margins), transport 70pt play.
+  const artworkSide=Math.min(width-122,308);
+  const classicHero=<>
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+      <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
+      {iconButton('ellipsis-horizontal','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);})}
+    </View>
+    <View testID="classic-artwork" collapsable={false} style={{alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
+    <View style={{alignItems:'center',gap:2}}>
+      <Text numberOfLines={1} style={{fontSize:22,lineHeight:28,fontWeight:'700',color:theme.palette.text}}>{entry.track.title}</Text>
+      <Text numberOfLines={1} style={{fontSize:14,color:theme.palette.secondary}}>{entry.track.artist}</Text>
+    </View>
+    <View style={{marginTop:6}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
+    {/* Reference metrics: track centre 671pt, transport centre 766pt, tools 838pt. */}
+    <View style={{marginTop:8}}><PlaybackProgress services={services} variant={theme.mode==='dark'?'default':'paper'}/></View>
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:26,marginTop:2}}>
+      {iconButton('play-skip-back','上一首',()=>services.playback.next(-1),30)}
+      <Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{width:70,height:70,borderRadius:35,backgroundColor:theme.palette.accent,alignItems:'center',justifyContent:'center'}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={30} color="#FFFFFF" style={state.intent==='playing'?undefined:{marginLeft:4}}/></Pressable>
+      {iconButton('play-skip-forward','下一首',()=>services.playback.next(),30)}
+    </View>
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:2}}>
+      {iconButton('repeat',`循环：${preferences.repeat}`,cycleRepeat,22)}
+      {iconButton('chatbubble-outline','歌曲评论',()=>setCommenting(entry.track),22)}
+      {iconButton(services.library.isFavorite(entry.track)?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},22)}
+      {iconButton('albums-outline','查看播放队列',()=>{setDetailPanel('content');setDetails(true);},22)}
+      {iconButton('list','播放队列',()=>{setDetailPanel('content');setDetails(true);},22)}
+    </View>
+    {/* Kept above the safe-area fold (932pt screen, ~898pt viewport) so the
+        reference's last line is not clipped by the scroll viewport. */}
+    <Text style={{textAlign:'center',fontSize:11,color:theme.palette.secondary}}>{preferences.quality} 档位 · {state.media?.quality??'待解析'} 实际请求</Text>
+    <ClassicLyricChrome services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
+  </>;
+  const classicTools=<View style={{gap:12,marginTop:12}}>
+    <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
+    <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
+    <Spectrum services={services}/>
+    <View style={styles.row}>{button('−15秒',()=>controller.seek(state.position-15))}{button('＋15秒',()=>controller.seek(state.position+15))}{button(`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle});})}{button('匹配歌曲',()=>setMatching(entry.track))}</View>
+  </View>;
   return <>
     <View testID="mini-player" onTouchStart={startTouch(miniTouchStart)} onTouchEnd={finishTouch(miniTouchStart,'up',()=>setOpen(true))}><GlassSurface><View style={styles.mini}>
       <Cover services={services} track={entry.track} size={44}/>
@@ -132,11 +176,11 @@ export function Player({ services }: { services: Services }) {
       {open&&<StatusBar style={preferences.playerLayout==='vinyl'?'dark':preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
       <View style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:preferences.playerLayout==='vinyl'?paper.background:'#183647'}}>
       {open&&(preferences.playerLayout==='classic'?<AmbientBackground services={services}/>:preferences.playerLayout==='vinyl'?null:<ArtworkBackdrop services={services} track={actualMatch??entry.track} photo={preferences.playerLayout==='photo'}/>)}
-      {(preferences.playerLayout==='vinyl'||preferences.playerLayout==='am2'||preferences.playerLayout==='am'||preferences.playerLayout==='photo'||preferences.playerLayout==='stage')?<View style={{flex:1,paddingHorizontal:preferences.playerLayout==='vinyl'?0:landscape?60:24,paddingTop:preferences.playerLayout==='vinyl'?0:landscape?12:55,paddingBottom:preferences.playerLayout==='vinyl'?0:20}}><Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={preferences.playerLayout==='vinyl'?{position:'absolute',top:6,left:6,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:2}:{minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" color={preferences.playerLayout==='vinyl'?paper.icon:'#FFFFFF'} size={28}/></Pressable>{open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onQueue={()=>{setDetailPanel('content');setDetails(true);}}/>}</View>:<PlayerScroll classic={preferences.playerLayout==='classic'}>
-        {preferences.playerLayout==='classic'?<View onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} style={{minHeight:44,justifyContent:'center',alignSelf:'stretch'}} testID="player-drag-handle">{button('收起播放页',()=>setOpen(false))}</View>:<Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:48,minHeight:44,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
-        {preferences.playerLayout==='classic'&&skinSelector}
-        {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}}/>}
-        {preferences.playerLayout==='classic'&&detailContent}
+      {(preferences.playerLayout==='vinyl'||preferences.playerLayout==='am2'||preferences.playerLayout==='am'||preferences.playerLayout==='photo'||preferences.playerLayout==='stage')?<View style={{flex:1,paddingHorizontal:preferences.playerLayout==='vinyl'?0:landscape?60:24,paddingTop:preferences.playerLayout==='vinyl'?0:landscape?12:55,paddingBottom:preferences.playerLayout==='vinyl'?0:20}}><Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{position:'absolute',top:preferences.playerLayout==='vinyl'?4:52,left:6,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:2}}><Ionicons name="chevron-down" color={preferences.playerLayout==='vinyl'?paper.icon:'#FFFFFF'} size={28}/></Pressable>{open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onQueue={()=>{setDetailPanel('content');setDetails(true);}}/>}</View>:<PlayerScroll classic={preferences.playerLayout==='classic'}>
+        {preferences.playerLayout!=='classic'&&<Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:48,minHeight:44,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
+        {preferences.playerLayout==='classic'&&classicHero}
+        {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onQueue={()=>{setDetailPanel('content');setDetails(true);}}/>}
+        {preferences.playerLayout==='classic'&&classicTools}
       </PlayerScroll>}</View>
       <SheetModal visible={details&&open} animationType="slide" onRequestClose={closeDetails}>
         {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
@@ -146,8 +190,8 @@ export function Player({ services }: { services: Services }) {
             <Text style={styles.title}>播放界面样式</Text>{skinSelector}
           </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
             {button(detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置',()=>setDetailPanel(detailPanel==='lyrics'?'menu':'lyrics'))}
-            <Text style={styles.title}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text><FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
-          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])}/>:<>
+            <Text style={styles.title}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text>{detailPanel==='lyrics'&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>{closeDetails();setTimeout(()=>setChoosingLyric(true),320);}} style={styles.button}><Text style={styles.buttonText}>选择歌词来源</Text></Pressable>}<FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
+          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])} onDownload={saveOffline} downloadLabel={offline?.status==='completed'?'已下载':offline?.status==='downloading'?'下载中':'下载'}/>:<>
             {button('收起播放选项',closeDetails)}
             {button('返回播放选项',()=>setDetailPanel('menu'))}
             <Text style={styles.title}>队列与播放选项</Text>{detailContent}
@@ -164,6 +208,7 @@ export function Player({ services }: { services: Services }) {
         </SafeAreaView>
       </View>}
       <CommentsModal services={services} track={commenting} onClose={()=>setCommenting(null)}/>
+      <LyricChoiceModal services={services} track={choosingLyric?lyricTrack:null} onClose={()=>setChoosingLyric(false)}/>
       <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
       <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
     </Modal>

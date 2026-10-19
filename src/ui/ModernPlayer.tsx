@@ -64,13 +64,22 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
   // Keep artwork square inside its measured viewport. The remaining vertical
   // budget belongs to lyrics/controls, not a crop of the album artwork.
   const artworkSide=Math.max(1,Math.min(width-48,430,height*(layout==='wave'?.30:.34)));
+  // IMG_4867 centres the title under the artwork and moves every action into the
+  // bottom row; the immersive skin keeps the left-aligned header.
+  const centered=layout==='wave';
   return <View style={{gap:16}}>
-    {<><View testID="player-artwork-viewport" collapsable={false} style={{width:artworkSide,height:artworkSide,alignSelf:'center',overflow:'hidden',borderRadius:preferences.coverRadius}}><View testID="player-artwork-square" collapsable={false}><Cover services={services} track={track} size={artworkSide}/></View></View><View style={{flexDirection:'row',alignItems:'center',gap:12}}><View style={{flex:1,gap:8}}><Text style={{fontSize:27,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text style={styles.small}>{track.artist}</Text></View>{favoriteButton}{icon('ellipsis-horizontal','更多播放控制',onMore)}</View></>}
-    <View testID="player-lyric-viewport" collapsable={false} style={{height:150,overflow:'hidden',justifyContent:'center'}}><Lyrics services={services} track={lyricTrack} font={font} visibleLines={layout==='wave'||layout==='immersive'?1:undefined} presentation="immersive"/></View>
+    {<><View testID="player-artwork-viewport" collapsable={false} style={{width:artworkSide,height:artworkSide,alignSelf:'center',overflow:'hidden',borderRadius:preferences.coverRadius}}><View testID="player-artwork-square" collapsable={false}><Cover services={services} track={track} size={artworkSide}/></View></View><View style={{flexDirection:'row',alignItems:'center',gap:12,justifyContent:centered?'center':undefined}}><View style={{flex:centered?0:1,gap:8,alignItems:centered?'center':'flex-start'}}><Text style={{fontSize:centered?22:27,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text style={styles.small}>{track.artist}</Text></View>{!centered&&favoriteButton}{!centered&&icon('ellipsis-horizontal','更多播放控制',onMore)}</View></>}
+    <View testID="player-lyric-viewport" collapsable={false} style={{height:centered?96:150,overflow:'hidden',justifyContent:'center'}}><Lyrics services={services} track={lyricTrack} font={font} visibleLines={layout==='wave'||layout==='immersive'?1:undefined} presentation="immersive"/></View>
     {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.small}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
     <PlaybackProgress services={services}/>
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingVertical:12}}>{icon('play-back','上一首',()=>services.playback.next(-1),42)}{layout==='wave'?<FrequencyHalo services={services} playing={state.intent==='playing'&&!state.buffering}>{transport}</FrequencyHalo>:transport}{icon('play-forward','下一首',()=>services.playback.next(),42)}</View>
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around'}}>{icon('repeat',`循环：${preferences.repeat}`,()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));})}{icon('shuffle',`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle}).catch(()=>Alert.alert('设置未保存'));})}{icon('list','队列与播放选项',onMore)}{icon('options-outline','调整播放界面',onStyle)}</View>
+    {centered?<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around'}}>
+      {icon('repeat',`循环：${preferences.repeat}`,()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));},22)}
+      {favoriteButton}
+      {icon('text-outline','歌词显示设置',onLyricsSettings??onMore,22)}
+      {icon('list','播放队列',onQueue??onMore,22)}
+      {icon('ellipsis-horizontal','更多播放控制',onMore,22)}
+    </View>:<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around'}}>{icon('repeat',`循环：${preferences.repeat}`,()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));})}{icon('shuffle',`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle}).catch(()=>Alert.alert('设置未保存'));})}{icon('list','队列与播放选项',onMore)}{icon('options-outline','调整播放界面',onStyle)}</View>}
   </View>;
 }
 const styles=StyleSheet.create({small:{color:'rgba(255,255,255,0.64)',fontSize:13,lineHeight:20}});
