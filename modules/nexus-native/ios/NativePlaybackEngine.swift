@@ -15,6 +15,7 @@ final class NativePlaybackEngine {
   private var generation = 0, entryID = ""
   private lazy var sleepTimer = PlaybackSleepTimer(changed: { [weak self] body in self?.emit("sleep", body) }, expired: { [weak self] in self?.remotePause() })
   private var wantsPlay = false
+  private var playbackRate: Float = 1
   private var loading: Task<Void, Never>?
   private var retainedLocalURL: URL?
   private var offlinePlaybackAlias: URL?
@@ -206,10 +207,10 @@ final class NativePlaybackEngine {
                   self.player.seek(to: CMTime(seconds:position,preferredTimescale:600),toleranceBefore:.zero,toleranceAfter:.zero) { [weak self] _ in
                     DispatchQueue.main.async {
                       guard let self,self.player.currentItem === item else { return }
-                      self.initialSeekPending=false;if self.wantsPlay {self.player.play()}
+                      self.initialSeekPending=false;if self.wantsPlay {self.player.play(); self.player.rate = self.playbackRate}
                     }
                   }
-                } else {self.initialSeekPending=false;if self.wantsPlay {self.player.play()}}
+                } else {self.initialSeekPending=false;if self.wantsPlay {self.player.play(); self.player.rate = self.playbackRate}}
               }
             }
           }
@@ -236,7 +237,7 @@ final class NativePlaybackEngine {
       try session.setCategory(.playback, mode: .default, options: [])
       try session.setActive(true)
       #endif
-      wantsPlay = true; if player.currentItem?.status == .readyToPlay && !initialSeekPending { player.play() }; report("status")
+      wantsPlay = true; if player.currentItem?.status == .readyToPlay && !initialSeekPending { player.play(); player.rate = playbackRate }; report("status")
     } catch { report("error") }
   }
   func pause(_ newGeneration: Int) {
@@ -277,6 +278,14 @@ final class NativePlaybackEngine {
     guard seconds.isFinite, seconds >= 0, id == entryID, newGeneration == generation else { return }
     let duration = player.currentItem?.duration.seconds ?? .infinity
     player.seek(to: CMTime(seconds: min(seconds, duration.isFinite ? duration : seconds), preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+  }
+  func configureRate(_ value: Double) {
+    guard value.isFinite else { return }
+    playbackRate = Float(min(3, max(0.5, value)))
+    if #available(iOS 16.0, *) { player.defaultRate = playbackRate }
+    // Setting `rate` on a paused player would resume it, so only adjust an
+    // item that is already playing.
+    if wantsPlay && player.rate > 0 { player.rate = playbackRate }
   }
   func configureVolume(_ value: Double) {
     guard value.isFinite else { return }; player.volume = Float(min(1, max(0, value)))

@@ -1,3 +1,4 @@
+import {useSyncExternalStore} from 'react';
 import {Alert, Pressable, Share, StyleSheet, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
@@ -9,11 +10,14 @@ import {radius, space, typography} from './tokens.ts';
 
 const platformName:Record<string,string>={wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水'};
 
-export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onQueue,onComments,onPlaylist,onClose}:{
+export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onQueue,onRate,onSleep,onComments,onPlaylist,onClose}:{
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
-  onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;
+  onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;
 }){
   const theme=useTheme(),styles=makeStyles(theme);
+  const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
+  const sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
+  const sleepLabel=sleep.mode==='off'?'已关闭':sleep.mode==='track'?'本曲结束后':`剩余 ${Math.max(0,Math.ceil((sleep.deadline-Date.now())/60000))} 分钟`;
   const favorite=services.library.isFavorite(favoriteTrack);
   const platform=track.origin.kind==='online'?platformName[track.origin.platform]:track.origin.kind==='imported'?'汽水':'本地';
   const subtitle=[track.artist,track.album,platform].filter(Boolean).join(' · ');
@@ -50,6 +54,8 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
     <View style={styles.group}>
       {row('options-outline','播放界面样式',layoutLabel,onStyle)}
       {row('text-outline','歌词显示设置','字体与颜色',onLyricsSettings)}
+      {row('speedometer-outline','播放倍速',`${preferences.rate}x`,onRate)}
+      {row('moon-outline','睡眠定时器',sleepLabel,onSleep)}
       {row('list-outline','队列与播放选项',`${queueCount} 首`,onQueue,true)}
     </View>
     <Text style={styles.section}>歌曲操作</Text>

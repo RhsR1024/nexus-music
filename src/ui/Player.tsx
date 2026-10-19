@@ -17,9 +17,11 @@ import {paper} from './tokens.ts';
 import { Lyrics } from './Lyrics.tsx';
 import { FontSettings } from './FontSettings.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
+import { RatePanel, SleepPanel } from './PlaybackSheets.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type PropsWithChildren } from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent, useWindowDimensions} from 'react-native';
 const layoutLabels={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'} as const;
+const isPaperPanel=(panel:string)=>panel==='menu';
 import {Modal,SheetModal} from './AdaptiveModal.tsx';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
@@ -54,6 +56,8 @@ export function Player({ services }: { services: Services }) {
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
   const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'globalFont'|'lyricFont'>('menu');
+  const [panel,setPanel]=useState<'rate'|'sleep'|null>(null),[panelReturnsToMenu,setPanelReturnsToMenu]=useState(false);
+  const closePanel=()=>{setPanel(null);if(panelReturnsToMenu){setPanelReturnsToMenu(false);setDetailPanel('menu');setTimeout(()=>setDetails(true),320);}};
   const styleReturnsToMenu=useRef(true);
   const miniTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
   const dismissTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
@@ -85,6 +89,7 @@ export function Player({ services }: { services: Services }) {
         {(entry.track.origin.kind==='imported'||entry.track.origin.kind==='online')&&<View style={styles.row}><Text style={styles.caption}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
         {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)}/>}
         <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
+        <View style={styles.row}>{button(`播放倍速 ${preferences.rate}x`,()=>setPanel('rate'))}{button('睡眠定时器',()=>setPanel('sleep'))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10))}
@@ -133,22 +138,31 @@ export function Player({ services }: { services: Services }) {
         {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}}/>}
         {preferences.playerLayout==='classic'&&detailContent}
       </PlayerScroll>}</View>
-      <SheetModal visible={details&&open&&preferences.playerLayout!=='classic'} animationType="slide" onRequestClose={closeDetails}>
+      <SheetModal visible={details&&open} animationType="slide" onRequestClose={closeDetails}>
         {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
-        <ScrollView key={detailPanel} style={[styles.root,detailPanel==='menu'&&{backgroundColor:theme.palette.background[0]}]} contentContainerStyle={detailPanel==='menu'?{flexGrow:1}:styles.content}>
+        <ScrollView key={detailPanel} style={[styles.root,isPaperPanel(detailPanel)&&{backgroundColor:theme.palette.background[0]}]} contentContainerStyle={isPaperPanel(detailPanel)?{flexGrow:1}:styles.content}>
           {detailPanel==='style'?<>
             {button('收起播放界面样式',()=>{if(styleReturnsToMenu.current)setDetailPanel('menu');else closeDetails();})}
             <Text style={styles.title}>播放界面样式</Text>{skinSelector}
           </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
             {button(detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置',()=>setDetailPanel(detailPanel==='lyrics'?'menu':'lyrics'))}
             <Text style={styles.title}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text><FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
-          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])}/>:<>
+          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])}/>:<>
             {button('收起播放选项',closeDetails)}
             {button('返回播放选项',()=>setDetailPanel('menu'))}
             <Text style={styles.title}>队列与播放选项</Text>{detailContent}
           </>}
         </ScrollView>
       </SheetModal>
+      {open&&panel&&<View style={{position:'absolute',left:0,right:0,top:0,bottom:0}}>
+        <Pressable accessibilityRole="button" accessibilityLabel="关闭面板" onPress={()=>setPanel(null)} style={{flex:1,backgroundColor:'rgba(24,18,16,0.28)'}}/>
+        <SafeAreaView edges={['bottom']} style={{maxHeight:'78%',backgroundColor:theme.palette.background[0],borderTopLeftRadius:28,borderTopRightRadius:28}}>
+          <View style={{alignSelf:'center',width:40,height:5,borderRadius:3,backgroundColor:theme.palette.border,marginTop:8}}/>
+          <ScrollView contentContainerStyle={{paddingBottom:20}}>
+            {panel==='rate'?<RatePanel services={services} onBack={closePanel}/>:<SleepPanel services={services} onBack={closePanel}/>}
+          </ScrollView>
+        </SafeAreaView>
+      </View>}
       <CommentsModal services={services} track={commenting} onClose={()=>setCommenting(null)}/>
       <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
       <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>

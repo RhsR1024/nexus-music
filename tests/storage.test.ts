@@ -141,6 +141,15 @@ test('appearance failed writes and invalid fields preserve the last valid settin
   repository.put=write;await preferences.update({visualTheme:'soft'});assert.equal(preferences.getSnapshot().accent,'purple');assert.equal(preferences.getSnapshot().visualTheme,'soft');db.close();
 });
 
+test('playback rate defaults for legacy records and rejects out-of-range values',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {rate,...legacy}=defaults;await repository.put('preferences.v1',legacy);
+  const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().rate,1);
+  await preferences.update({rate:1.25});assert.equal(preferences.getSnapshot().rate,1.25);
+  for(const bad of [0.4,3.1,NaN])await assert.rejects(preferences.update({rate:bad}));
+  assert.equal(preferences.getSnapshot().rate,1.25);db.close();
+});
+
 test('EQ migrates legacy records and serializes named preset capture with pending edits',async()=>{
   const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
   const {preampDB,eqPresets,...legacy}=defaults;await repository.put('preferences.v1',legacy);

@@ -21,6 +21,7 @@ interface NativePlayback extends SystemMediaNative {
   configureSleep(seconds:number,finishCurrent:boolean):Promise<Record<string,unknown>>;
   sleepSnapshot():Promise<Record<string,unknown>>;
   configureVolume(value:number):Promise<void>;
+  configureRate(value:number):Promise<void>;
   configureEQ(enabled: boolean, gains: readonly number[], preampDB: number): Promise<void>;
   addListener(event: string, callback: (event: Record<string, unknown>) => void): { remove(): void };
 }
@@ -38,6 +39,11 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   const native = requireNativeModule<NativePlayback>('NexusPlayback');
   const systemMedia=new SystemMediaSession(native,system.covers,system.library);
   const spectrum = new SpectrumStore(),sleepStore=new SleepStore();
+  // Keep the native player's rate in sync with the persisted preference so a
+  // relaunch or a change from the settings page applies immediately.
+  let appliedRate=preferences.getSnapshot().rate;
+  void native.configureRate(appliedRate).catch(()=>{});
+  preferences.subscribe(()=>{const rate=preferences.getSnapshot().rate;if(rate===appliedRate)return;appliedRate=rate;void native.configureRate(rate).catch(()=>{});});
   native.addListener('sleep',sleepStore.update);
   void native.sleepSnapshot().then(sleepStore.update).catch(()=>{});
   const playedListeners=new Set<(track:Track)=>void>();let lastPlayedGeneration=-1;
@@ -108,5 +114,5 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   });
   const configure = () => { const value = preferences.getSnapshot(); safe(native.configureVolume(value.volume)); safe(native.configureEQ(value.eqEnabled, value.gains, value.preampDB));safe(native.configureCache(value.cacheLimitMB)); };
   preferences.subscribe(configure); configure();
-  return { controller, spectrum, next, sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onListening:(listener:(sample:ListeningSample)=>void)=>{listeningListeners.add(listener);return()=>{listeningListeners.delete(listener);};}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};} };
+  return { controller, spectrum, next, sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onListening:(listener:(sample:ListeningSample)=>void)=>{listeningListeners.add(listener);return()=>{listeningListeners.delete(listener);};}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};}, setRate:async(value:number)=>{if(!Number.isFinite(value)||value<.5||value>3)throw new Error('播放倍速无效');await preferences.update({rate:value});await native.configureRate(value);} };
 }
