@@ -1,3 +1,11 @@
+## 2026-10-20 4856 滚动落点/滑轨与 4863 波形批次
+
+本地 Release UI 两次通过：`testZNavidromePlaybackAndCredentials` 1/0/0（滚动补偿 `SourceUITests-1792477605376`、滑轨与波形 `SourceUITests-1792478387341`），导出 `build/ui-screenshots-batch16-scrollfix`、`build/ui-screenshots-batch17-track` 并亲看；`npm run typecheck` 通过、`npm run check` 401/401。写真单像素夹具、歌词两行夹具与默认主题未改。
+
+4856 滚动归一循环此前每次被按压拖动吞掉约 10pt（目标 136 却停在 146.0），改为 `correction=delta±10` 后附件证据为 `background-gradient maxY=135.99999pt`（目标 136、参考 136.7）。字段/四行锚点收敛到 -2.7..+0.7pt；滑轨 3→6pt（参考 5.7pt）、遮罩底→模糊标签 35.7→31.3pt（参考 31.1）；分数 7.07→**28.64%/MAD 21.24**（仅滚动）→**31.67%/MAD 21.01**（含滑轨/行距）。背景页滚动 >90pt 时标题/操作淡出、关闭 X 固定；残余 44pt 表头带与 X。4863 播放指示换为 5 柱波形，36.36/38.55 持平；4866 29.11/38.82、4855 19.12/24.43 无相关改动重截一致。底色 blush `#fbf4ef` vs 参考蓝灰 `#d6e4ef` 仍是主要差距；除 4851 90.62% 外无页面达 90%。
+
+云端单队列：39367954644（a39e8c1）ios 自 04:42Z 起 in_progress（约 2 小时无更新，疑似 runner 挂起），39378551259（e232a36）pending；不取消/不重派。39360042052 失败附件仍受 401 权限限制。真实服务、Apple 签名、真机未验收。
+
 ## 2026-10-20 AM 信息块与 4855/4856 场景批次
 
 本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792475773655`），导出 `build/ui-screenshots-batch14-classic` 并亲看；`npm run typecheck` 通过、`npm run check` 401/401。写真单像素夹具、歌词两行夹具与默认主题未改。

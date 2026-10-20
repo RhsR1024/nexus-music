@@ -27,7 +27,7 @@ function QueueRow({entry,index,services,tone='auto'}:{entry:QueueEntry;index:num
       <Text numberOfLines={1} style={{fontSize:14,fontWeight:'600',color:ink(current?'#FFFFFF':'#F2EEF5')}}>{entry.track.title}</Text>
       <Text numberOfLines={1} style={{fontSize:13,color:ink('#C9C1D4')}}>{entry.track.artist}{source?` · ${source}`:''}</Text>
     </Pressable>
-    {current&&<Ionicons name="pulse" size={17} color={ink('#FFFFFF')}/>}
+    {current&&<View accessible={false} style={{width:17,height:17,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:2}}>{[7,11,17,11,7].map((height,index)=><View key={index} style={{width:1.5,height,borderRadius:1,backgroundColor:ink('#FFFFFF')}}/>)}</View>}
     {action('移除','trash-outline',()=>{const snapshot=services.playback.controller.getSnapshot(),queue=remove(snapshot.queue,entry.id);if(entry.id===snapshot.queue.currentId&&snapshot.intent==='playing')void services.playback.controller.play(queue);else services.playback.controller.setQueue(queue);})}
     <View {...responder.panHandlers} accessible accessibilityRole="adjustable" accessibilityLabel={`拖动排序：${entry.track.title}`} accessibilityActions={[{name:'increment'},{name:'decrement'}]} onAccessibilityAction={event=>{const queue=services.playback.controller.getSnapshot().queue,from=queue.entries.findIndex(item=>item.id===entry.id),to=from+(event.nativeEvent.actionName==='increment'?1:-1);if(to>=0&&to<queue.entries.length)services.playback.controller.setQueue(move(queue,entry.id,to));}} style={{width:34,height:44,justifyContent:'center',alignItems:'center'}}><Ionicons name="reorder-three-outline" size={22} color={ink('#D5D5DA')}/></View>
   </Animated.View>;

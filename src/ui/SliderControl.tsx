@@ -4,7 +4,7 @@ import {Ionicons} from '@expo/vector-icons';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 
-// Thin reference slider (IMG_4856): a 3pt track with a 14pt thumb, dragging maps
+// Reference slider (IMG_4856): a 6pt track with a 14pt thumb, dragging maps
 // the horizontal offset to the value. The -/+ buttons stay because they are the
 // accessible stepping path the UI tests and VoiceOver rely on.
 export function SliderControl({testID,label,value,min,max,step,format,onChange,disabled,stacked=false}:{
@@ -29,7 +29,10 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
   const display=format?format(value):String(value);
   const step_=(direction:1|-1)=>onChange(Number(clamp(value+direction*step).toFixed(4)));
   const ticks=Array.from({length:17},(_,index)=>index/16);
-  return <View style={{gap:10,opacity:disabled?.5:1}}>
+  // IMG_4856 puts the track 31.7pt below the label ink; the 32pt control box
+  // already supplies that gap, so the extra 10pt moves below the track to keep
+  // the 95pt row pitch that the lower sheet anchors were measured against.
+  return <View style={{gap:0,paddingBottom:10,opacity:disabled?.5:1}}>
     <View style={{flexDirection:stacked?'column':'row',alignItems:stacked?'flex-start':'center',justifyContent:'space-between',gap:stacked?8:0}}>
       <Text style={{color:theme.palette.text,fontSize:17,fontWeight:'600'}}>{label}</Text>
       <Text testID={`visual-value-${testID}`} style={{color:theme.palette.secondary,fontSize:15,fontVariant:['tabular-nums']}}>{display}</Text>
@@ -47,8 +50,8 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
         onLayout={event=>{widthRef.current=event.nativeEvent.layout.width;setWidth(event.nativeEvent.layout.width);}}
         style={{flex:stacked?undefined:1,height:32,justifyContent:'center'}}
         {...responder.panHandlers}>
-        <View style={{height:3,borderRadius:2,backgroundColor:theme.palette.border}}/>
-        <View style={{position:'absolute',left:0,top:14.5,height:3,borderRadius:2,width:Math.max(0,position*width),backgroundColor:theme.palette.accent}}/>
+        <View style={{height:6,borderRadius:3,backgroundColor:theme.palette.border}}/>
+        <View style={{position:'absolute',left:0,top:13,height:6,borderRadius:3,width:Math.max(0,position*width),backgroundColor:theme.palette.accent}}/>
         {ticks.map(tick=><View key={tick} pointerEvents="none" style={{position:'absolute',top:14.5,left:`${tick*100}%`,width:3,height:3,borderRadius:2,marginLeft:-1.5,backgroundColor:tick<=position+0.001?'rgba(255,255,255,0.5)':theme.palette.secondary+'55'}}/>)}
         <View style={{position:'absolute',top:9,left:Math.max(0,Math.min(width-14,position*width-7)),width:14,height:14,borderRadius:7,backgroundColor:theme.palette.accent,transform:[{scale:dragging?1.15:1}]}}/>
       </View>

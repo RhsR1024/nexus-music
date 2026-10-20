@@ -33,6 +33,12 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
   const [visited,setVisited]=useState<SettingsPage[]>([firstPage]);
   const [appearanceSheet,setAppearanceSheet]=useState<{section:AppearanceSheetSection;visible:boolean;session:number}>({section:isAppearanceSheet(initialPage)?initialPage:'theme',visible:isAppearanceSheet(initialPage),session:0});
   const closeSheet=()=>setAppearanceSheet(value=>({...value,visible:false,session:value.session+1}));
+  // IMG_4856 is scrolled past the sheet title and actions, so the background
+  // sheet retires that row while its content moves instead of pinning it over
+  // the reference's blank top band. The close button stays pinned for testing
+  // and for users who prefer a tap target over swipe dismissal.
+  const [headerCollapsed,setHeaderCollapsed]=useState(false);
+  useEffect(()=>{if(appearanceSheet.visible)setHeaderCollapsed(false);},[appearanceSheet.visible,appearanceSheet.section]);
   const heading=useRef<NativeText>(null),page=history[history.length-1]!;
   const scrolls=useRef<Partial<Record<SettingsPage,ScrollView|null>>>({}),offsets=useRef<Partial<Record<SettingsPage,number>>>({});
   const restoring=useRef<SettingsPage|null>(null);
@@ -103,11 +109,17 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
           <View accessible={false} style={{alignItems:'center',paddingBottom:10}}><View style={{width:34,height:5,borderRadius:3,backgroundColor:p.secondary+'66'}}/></View>
         </>}
         <View style={{flexDirection:'row',alignItems:'center',gap:appearanceSheet.section==='background'?4:12}}>
-          <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>{titles[appearanceSheet.section]}</Text>
-          {appearanceSheet.section==='background'&&<BackgroundThemeActions services={services}/>}
+          <View
+            style={{flex:1,flexDirection:'row',alignItems:'center',gap:4,opacity:appearanceSheet.section==='background'&&headerCollapsed?0:1}}
+            pointerEvents={appearanceSheet.section==='background'&&headerCollapsed?'none':'auto'}
+            accessibilityElementsHidden={appearanceSheet.section==='background'&&headerCollapsed}
+            importantForAccessibility={appearanceSheet.section==='background'&&headerCollapsed?'no-hide-descendants':'auto'}>
+            <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>{titles[appearanceSheet.section]}</Text>
+            {appearanceSheet.section==='background'&&<BackgroundThemeActions services={services}/>}
+          </View>
           <Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{minWidth:36,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>
         </View>
-        <ScrollView key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
+        <ScrollView key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={appearanceSheet.section==='background'?64:undefined} onScroll={appearanceSheet.section==='background'?event=>setHeaderCollapsed(event.nativeEvent.contentOffset.y>90):undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
           // A completed write from an earlier presentation must not close a newly opened sheet.
           const session=appearanceSheet.session;
           setAppearanceSheet(value=>value.session===session?{...value,visible:false,session:value.session+1}:value);

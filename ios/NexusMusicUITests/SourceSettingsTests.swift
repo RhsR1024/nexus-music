@@ -1141,23 +1141,27 @@ final class SourceSettingsTests: XCTestCase {
     reachValue("backgroundOpacity","100%",true)
     reachValue("cardOpacity","30%",false)
     reachValue("playerBlur","0",false)
-    // IMG_4856 starts with the background-type capsule just under the status
-    // bar (lower edge 136pt) and 视觉参数 at 394.3pt. The sheet header is
-    // pinned above the scroll view, so align the capsule to 142pt to put the
-    // colour fields and sliders at the reference heights. Step taps leave
-    // momentum behind, so settle and re-measure after every drag.
+    // IMG_4856 shows the background-type capsule at a 136.7pt lower edge and
+    // 视觉参数 at 394.3pt while the title/actions have scrolled away. Normalise
+    // to that measured edge. The 0.6s press swallows about 10pt before the
+    // scroll view starts panning, so each correction adds that distance back;
+    // without it a 10pt residual never moves and the page stays ~9pt low. The
+    // final frame is attached as evidence instead of assuming an exact landing.
     Thread.sleep(forTimeInterval:1.2)
     let backgroundType=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
     for _ in 0..<10 {
       if !backgroundType.exists {break}
-      let delta=backgroundType.frame.maxY-142
+      let delta=backgroundType.frame.maxY-136
       if abs(delta)<4 {break}
+      let correction=delta+(delta>0 ? 10:-10)
       let start=backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:0.35))
-      let endY=min(0.9,max(0.05,0.35-delta/backgroundScroll.frame.height))
+      let endY=min(0.9,max(0.05,0.35-correction/backgroundScroll.frame.height))
       start.press(forDuration:0.6,thenDragTo:backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:endY)),withVelocity:.slow,thenHoldForDuration:0.2)
       Thread.sleep(forTimeInterval:0.5)
     }
     Thread.sleep(forTimeInterval:0.8)
+    let capsuleEvidence=XCTAttachment(string:"background-gradient maxY=\(backgroundType.frame.maxY)pt; target 136pt, reference 136.7pt")
+    capsuleEvidence.name="4856 capsule normalization evidence";capsuleEvidence.lifetime = .keepAlways;add(capsuleEvidence)
     let lowerAppearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());lowerAppearanceShot.name="Appearance background page scrolled";lowerAppearanceShot.lifetime = .keepAlways;add(lowerAppearanceShot)
     // 25% and 55 are deliberately not on the slider step lattice. Restore via
     // the real reset action, rather than attempting unreachable stepping loops.

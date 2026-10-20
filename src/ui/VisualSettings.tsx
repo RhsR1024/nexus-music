@@ -30,16 +30,21 @@ export function VisualSettings({services}:{services:Services}){
     <Text testID="visual-value-maskColor" style={{flex:1,color:p.text,fontSize:17,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel="选择遮罩颜色" disabled={busy} onPress={()=>Alert.alert('遮罩颜色','选择播放背景遮罩颜色。',[...maskColors.map(([color,label])=>({text:label,onPress:()=>update({maskColor:color})})),{text:'取消',style:'cancel' as const}])} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={22} color={p.secondary}/></Pressable>
   </View>;
-  return <View style={{gap:18,paddingVertical:18}}>
+  // IMG_4856 measures 40.3pt from the last colour field to 视觉参数 (13pt top),
+  // 39pt from that header to the first label (4pt section gap) and 31.7pt from
+  // each label to its track (handled by SliderControl).
+  return <View style={{gap:18,paddingTop:13,paddingBottom:18}}>
     {/* IMG_4856 order: 背景透明度 / 卡片透明度 / 背景遮罩 / 遮罩颜色 / 背景模糊. */}
-    <View style={{gap:12}}>
+    <View style={{gap:4}}>
       <Text accessibilityRole="header" style={{color:p.secondary,fontSize:16}}>视觉参数</Text>
       <View style={{borderRadius:18,backgroundColor:card,paddingHorizontal:16}}>
         {row('backgroundOpacity',0,adjust('backgroundOpacity','背景透明度',.1,0,1))}
         {row('cardOpacity',1,adjust('cardOpacity','卡片透明度',.1,0,1))}
         {row('backgroundMask',2,adjust('backgroundMask','背景遮罩',.1,0,1))}
         {row('maskColor',3,maskField)}
-        {row('playerBlur',4,adjust('playerBlur','背景模糊',10,0,80))}
+        {/* IMG_4856 leaves 31.1pt from the mask field bottom to the 背景模糊 label,
+            while the standard 16+16 row padding measures 35.7pt. */}
+        <View style={{paddingTop:11,paddingBottom:16}}>{adjust('playerBlur','背景模糊',10,0,80)}</View>
       </View>
     </View>
     <Text accessibilityRole="header" style={{color:p.text,fontSize:20,fontWeight:'600'}}>图片与播放背景</Text><Text style={{color:p.secondary,lineHeight:21,fontSize:12}}>图片仅保存在此设备，支持JPEG、PNG、HEIC等可读取格式，最大20MiB。导入后缩放并去除原图元数据；音乐库备份不包含图片。</Text>
