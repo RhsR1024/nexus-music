@@ -1,10 +1,16 @@
 # iOS 27：2026-10-19 失败诊断
 
+## 0b4052a 清洁归档回执
+
+补修提交`0b4052a04a3e08135c2cff3e6606dd29536ada29`已完成清洁unsigned归档：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC、包内JS字节、正式入口及隐私排除通过。IPA SHA-256 `d660acf22c94fe337c994f006a9483a9ff6b9fedd92e11f9d367b8ae6e1c3e7c`，留`build/local-ios27-recovery-0b4052a`。该包不替代新iOS27、Apple签名或真机验收。
+
 ## run 39427267903 / 1fd71e8
 
 [39427267903](https://github.com/RhsR1024/nexus-music/actions/runs/39427267903) checks/native通过，iOS27手机App 29通过/2失败/0跳过；在线、离线、iPad与归档步骤跳过。已保留compact logs/失败证据，二者SHA-256分别为`bbb9000b96ef7f1515bfc3fa47eaecedf778798ee0f00edfcd3ea025a8bdbb05`与`06e01e2f570bb908ef9051ab95f20aa631c57f087fe5d03d98bb9467089e2982`，CRC通过。
 
 背景大字用例在向下拖动前已经把标题滚出可访问树，之后查询标题即失败；现改为使用固定`background-sheet-close` 44pt抓手完成原生下滑，保留测试的真实手势与持久化断言。舞台大字用例日志显示`stage-style-aurora`连续不可达；产品原先把四个48pt大字号芯片强制单行，现普通字号仍单行，XXXL允许换行。本地背景大字`1792510252469`、舞台大字`1792510589729`、普通舞台`1792510859019`均1/0/0。新iOS27终态待提交后的实际运行。
+
+后续用户已明确当前仅验收iPhone常态布局，因此新CI只保留常态字号与基础横屏门禁，大字/iPad测试代码仅作手动兼容回归。完整播放器Release`1792511494373`为1/0/0、570.452秒；其两行基线IMG_4854三口径见E-049。三行歌词测试候选降低分数后已撤回。该范围决定不把旧run改写为通过，仍需新提交的iOS27实际结果。
 
 ## 2026-10-20 三项失败测试导航闭环
 

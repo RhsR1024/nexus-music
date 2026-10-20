@@ -1,3 +1,7 @@
+## 2026-10-21 0b4052a 最终清洁归档
+
+提交`0b4052a04a3e08135c2cff3e6606dd29536ada29`的清洁unsigned归档成功：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC与包内JS字节一致，私人/测试/签名资源排除通过。IPA SHA-256 `d660acf22c94fe337c994f006a9483a9ff6b9fedd92e11f9d367b8ae6e1c3e7c`，留`build/local-ios27-recovery-0b4052a`。阶段清理约555MiB可重建IPA临时Payload；push及对应iOS27待。
+
 ## 2026-10-20 局部 SSIM 度量批次与干净 unsigned IPA
 
 `testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792491019445`），导出 `build/ui-screenshots-batch20b`；`npm run check` 401/401（Node 24.14）。本地归档 `bash scripts/archive-unsigned.sh` 输出 `build/distribution/NexusMusic-unsigned.ipa`，11 MiB，SHA-256 `524d9924d8ab959ccba64d677b7dbcdaa7478c55f855424fb81ef8e04dbd98f9`，`build/distribution/build-manifest.json` 记录 commit `f3b3942`、dirty=false、arm64/iphoneos26.2、Xcode 26.3、minOS 15.1；`verify-archive.mjs` 通过。
@@ -5,6 +9,10 @@
 脚本退出码为 2 但归档成功：`trap` 里的 `rm -rf build/ipa.XXXX` 被本机沙箱的批量删除保护拦截（57 个文件 > 阈值 50），发生在 IPA 生成与哈希打印之后，不影响产物；临时目录需另行小批清理。CI 无此保护。本机 WorkBuddy 终端还须 `export NODE_OPTIONS= PYTHONPATH=`，否则 Metro 打包因 node shim 的 broker IPC 断开报 `write EPIPE`。
 
 视觉度量改为 7×7 局部 SSIM 后：4856 88.06→89.68（柔和 89.91）、4854 重采 78.48（遮罩封面 90.42）、4851 78.54、4855 82.89、4861 58.76、4863 63.18、4866 59.76、4867 60.40、4868 70.28、4872 44.91。旧全局统计值不再作为验收依据。
+
+## 2026-10-21 iPhone 常态范围、完整回归与控件可比区
+
+用户将当前视觉验收收缩为 iPhone 常态字号/常态布局，大字与 iPad 专用适配暂缓。`npm run check` 401/401；完整 `testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792511494373`，570.452秒）。三行测试歌词候选虽通过功能断言，但 IMG_4854 降至整屏76.20%、遮封面85.97%，已撤回。重新从未试验的`SourceUITests-1792507578198`导出两行基线（PNG SHA-256 `a06f5e40c280e6c3fe5f2c9e4834ef5e6f783bb0c7191c125eda256e6bcbeb23`），整屏78.48%/MAD30.79、仅遮封面88.94%/18.93、再遮不同文本内容后的UI控件可比区93.12%/12.47。E-049绑定三份报告和diff；93.12%不冒充整屏。CI YAML通过，自动门禁不再包含大字/iPad；reverse-skill IPA/APK strict review分别49E/41F/41P、17WI/100 timeline和3E/2F/2P，均0错误/警告。清洁归档、push与新iOS27终态待。
 
 ## 2026-10-20 4855/4856 字号层级批次
 
