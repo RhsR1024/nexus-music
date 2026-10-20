@@ -41,7 +41,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
   // IMG_4855 keeps the sections on the sheet's own tinted surface; only the
   // summary card and control rows carry a fill.
   const flat=page==='background';
-  const darkMode=theme.mode==='dark',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)',glass=darkMode?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.45)';
+  // Follow 卡片透明度 for the glass fills; IMG_4856 at 30% shows the sheet
+  // gradient through the theme grid and type capsule rather than white panels.
+  const darkMode=theme.mode==='dark',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)',glassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.45,value.cardOpacity*0.45)),glass=`rgba(255,255,255,${glassAlpha})`;
   // The reference order (Sollin, 脸红佳人, Pearl … 黄赤藕荷) first, then the two
   // themes original to 音枢. 3 columns × 5 rows is the user-confirmed layout
   // for 13 chips, so the lower page keeps its measured alignment.
@@ -77,9 +79,13 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
         </View>
       </View>
       <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:31,marginBottom:20}}>颜色</Text>
-      {outlined('accent','强调色',theme.palette.accent,theme.palette.accent,()=>Alert.alert('强调色','选择主题强调色。',[...(Object.keys(accentColors) as Accent[]).map((id,index)=>({text:['玫瑰','珊瑚','紫色','蓝色','橙色'][index]!,onPress:()=>update({accent:id})})),{text:'取消',style:'cancel' as const}]))}
-      <View style={{height:28}}/>
-      {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'))}
+      {/* IMG_4856 puts both outlined fields 32pt from the screen edge (16pt inside
+          the sheet gutter) while the section label stays on the gutter. */}
+      <View style={{marginHorizontal:16}}>
+        {outlined('accent','强调色',theme.palette.accent,theme.palette.accent,()=>Alert.alert('强调色','选择主题强调色。',[...(Object.keys(accentColors) as Accent[]).map((id,index)=>({text:['玫瑰','珊瑚','紫色','蓝色','橙色'][index]!,onPress:()=>update({accent:id})})),{text:'取消',style:'cancel' as const}]))}
+        <View style={{height:28}}/>
+        {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'))}
+      </View>
     </View>}
     {page==='skins'&&section('播放界面样式',<View accessibilityLabel="可选播放界面样式" style={{borderRadius:18,overflow:'hidden',borderWidth:1,borderColor:theme.palette.border}}>{([
       ['classic','经典','albums-outline','歌词、播放控制与队列'],

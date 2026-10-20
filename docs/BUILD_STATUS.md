@@ -1,3 +1,11 @@
+## 2026-10-20 4856 控件调色/卡片透明度批次
+
+本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792481796152`），导出 `build/ui-screenshots-batch18b`（默认 032、柔和/玫瑰 031、外观首页 033）并亲看；typecheck 通过。写真单像素夹具、歌词两行夹具、默认主题与默认 accent 未改。
+
+`controlColor` 由 accent 派生哑色（玫瑰 #854C55 vs 参考 #864D4F），滑轨填充/拇指与空轨/33 刻度按参考重做；两个色块再内缩 16pt（边框距屏幕 32pt，参考 x=96px）。外观玻璃底与视觉参数卡片底改随卡片透明度派生：30% 时柔和态卡片 #e0eaf1 vs 栅格 #dee9f1（参考 #d0e1ef/#d4e4f1，剩余偏浅来自主题渐变），默认 blush 卡片与栅格已不可分。同状态补充态由柔和/珊瑚改为柔和/玫瑰（参考字段值 #E83D56）。两态归一证据均 135.99999pt。分数：4856 默认 **33.57%/MAD 17.37**（33.44/20.85→）、柔和/玫瑰 **33.90%/12.76**（33.64/17.30→）、4855 20.09/24.18 持平。除 4851 90.62% 外无页面达 90%；sheet 顶 59 vs 92.7pt 与参考无 X 仍是结构主因。
+
+大字号/持久化回归 `testBackgroundSheetWithLargeTextAndPersistence` 1/0/0（`SourceUITests-1792482704621`）。云端单队列：39378551259（e232a36）进行中、39383137897（4e80965）pending，按序等待，不取消/不重派；真实服务、Apple 签名、真机未验收。
+
 ## 2026-10-20 4856 滚动落点/滑轨与 4863 波形批次
 
 本地 Release UI 两次通过：`testZNavidromePlaybackAndCredentials` 1/0/0（滚动补偿 `SourceUITests-1792477605376`、滑轨与波形 `SourceUITests-1792478387341`），导出 `build/ui-screenshots-batch16-scrollfix`、`build/ui-screenshots-batch17-track` 并亲看；`npm run typecheck` 通过、`npm run check` 401/401。写真单像素夹具、歌词两行夹具与默认主题未改。

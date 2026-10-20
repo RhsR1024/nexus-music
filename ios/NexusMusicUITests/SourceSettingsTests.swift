@@ -1125,6 +1125,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(reset.waitForExistence(timeout:5));reset.tap()
     let appearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());appearanceShot.name="Appearance background page";appearanceShot.lifetime = .keepAlways;add(appearanceShot)
     let backgroundScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
     if backgroundScroll.exists {backgroundScroll.swipeUp()}
     // IMG_4856 records 背景透明度 100% / 卡片透明度 30% / 背景遮罩 0% / 背景模糊 0; move
     // the real sliders to those values so the comparison is not a default mismatch.
@@ -1163,6 +1164,32 @@ final class SourceSettingsTests: XCTestCase {
     let capsuleEvidence=XCTAttachment(string:"background-gradient maxY=\(backgroundType.frame.maxY)pt; target 136pt, reference 136.7pt")
     capsuleEvidence.name="4856 capsule normalization evidence";capsuleEvidence.lifetime = .keepAlways;add(capsuleEvidence)
     let lowerAppearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());lowerAppearanceShot.name="Appearance background page scrolled";lowerAppearanceShot.lifetime = .keepAlways;add(lowerAppearanceShot)
+    // Supplementary same-state capture: IMG_4856 sits on a blue-grey surface while
+    // the shipping default is warm paper. Capture the same measured layout under
+    // the closest built-in theme (柔和) while keeping the default rose accent, which
+    // already matches the reference field value (#E83D56). The blush capture above
+    // stays the baseline and the app defaults, fixture contract and photo pixel
+    // assertion are untouched.
+    openSettings(app,page:"background")
+    let softTone=app.descendants(matching:.any).matching(identifier:"visual-soft").firstMatch
+    XCTAssertTrue(softTone.waitForExistence(timeout:10));reveal(softTone);softTone.tap()
+    openSettings(app,page:"background")
+    let softScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    let softType=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
+    for _ in 0..<10 {
+      if !softType.exists {break}
+      let delta=softType.frame.maxY-136
+      if abs(delta)<4 {break}
+      let correction=delta+(delta>0 ? 10:-10)
+      let start=softScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:0.35))
+      let endY=min(0.9,max(0.05,0.35-correction/softScroll.frame.height))
+      start.press(forDuration:0.6,thenDragTo:softScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:endY)),withVelocity:.slow,thenHoldForDuration:0.2)
+      Thread.sleep(forTimeInterval:0.5)
+    }
+    Thread.sleep(forTimeInterval:0.8)
+    let softEvidence=XCTAttachment(string:"soft/rose background-gradient maxY=\(softType.frame.maxY)pt; target 136pt (supplementary, not the shipping default)")
+    softEvidence.name="4856 supplementary soft rose normalization evidence";softEvidence.lifetime = .keepAlways;add(softEvidence)
+    let softShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());softShot.name="Appearance background supplementary soft rose";softShot.lifetime = .keepAlways;add(softShot)
     // 25% and 55 are deliberately not on the slider step lattice. Restore via
     // the real reset action, rather than attempting unreachable stepping loops.
     openSettings(app,page:"background")
@@ -1173,7 +1200,6 @@ final class SourceSettingsTests: XCTestCase {
     let rose=app.descendants(matching:.any).matching(identifier:"accent-rose").firstMatch
     if rose.exists && !rose.isSelected {rose.tap()}
     openSettings(app,page:"skins")
-    func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
     // Establish the initial layout through the actual setting, including when a
     // previous interrupted test left a different persisted skin selected.
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch

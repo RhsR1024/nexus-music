@@ -10,6 +10,21 @@ export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgr
 // reference screenshot itself is at 30%.
 export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,cardOpacity:1,backgroundMask:0,maskColor:'#FFFFFF',playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,coverColor:false,globalBackgroundMotion:false,dynamicBackground:false,glassNavigation:true};
 export const accentColors:Record<Accent,readonly[string,string]>={rose:['#E83D56','#FF94B0'],coral:['#BA4240','#FF9B94'],purple:['#7650AB','#D4B4FF'],blue:['#2E64A0','#9AC8FF'],orange:['#A65A14','#FFC485']};
+// IMG_4856 keeps the accent swatch at #E83D56 while slider fills and thumbs use a
+// desaturated brick (#864D4F), so controls derive their own muted tone from the
+// accent hue instead of reusing the swatch colour.
+export function controlColor(accent:string,dark:boolean){
+  if(!/^#[0-9a-f]{6}$/i.test(accent))return dark?'#B79AA0':'#864D4F';
+  const channels=[1,3,5].map(index=>parseInt(accent.slice(index,index+2),16)/255);
+  const [red=0,green=0,blue=0]=channels;
+  const max=Math.max(red,green,blue),min=Math.min(red,green,blue),delta=max-min;
+  let hue=0;
+  if(delta){hue=max===red?((green-blue)/delta)%6:max===green?(blue-red)/delta+2:(red-green)/delta+4;hue*=60;if(hue<0)hue+=360;}
+  const saturation=.27,lightness=dark?.62:.41,chroma=(1-Math.abs(2*lightness-1))*saturation;
+  const second=chroma*(1-Math.abs((hue/60)%2-1)),offset=lightness-chroma/2;
+  const rgb=hue<60?[chroma,second,0]:hue<120?[second,chroma,0]:hue<180?[0,chroma,second]:hue<240?[0,second,chroma]:hue<300?[second,0,chroma]:[chroma,0,second];
+  return '#'+rgb.map(value=>Math.round((value+offset)*255).toString(16).padStart(2,'0')).join('');
+}
 // Theme gradients are identified by the swatch hues in IMG_4855. The sampled
 // swatch colours are keyed with their raw values; light stops are blended toward
 // paper white and dark stops toward the app's dark foundation so body text keeps

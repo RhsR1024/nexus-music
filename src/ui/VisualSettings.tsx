@@ -21,7 +21,9 @@ export function VisualSettings({services}:{services:Services}){
   const percent=(next:number)=>`${Math.round(next*100)}%`;
   const adjust=(field:'backgroundOpacity'|'cardOpacity'|'backgroundMask'|'playerBlur'|'playerDarkness'|'coverRadius',label:string,step:number,min:number,max:number)=><SliderControl testID={field} label={label} value={value[field]} min={min} max={max} step={step} disabled={busy} stacked={stacked} format={field==='playerBlur'||field==='coverRadius'?undefined:percent} onChange={next=>update({[field]:next})}/>;
   const remove=(slot:VisualSlot)=>Alert.alert('移除此图片？','仅删除音枢保存的副本，系统文件中的原图保留。',[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void perform(()=>services.visualAssets.remove(slot));}}]);
-  const darkMode=theme.mode==='dark',card=darkMode?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.5)',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)';
+  // IMG_4856's 30% card opacity leaves these cards almost invisible over the
+  // blue-grey sheet, while a fixed 50% white washed them out to near-paper.
+  const darkMode=theme.mode==='dark',cardAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.5,value.cardOpacity*0.5)),card=`rgba(255,255,255,${cardAlpha})`,outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)';
   const maskColors=[['#FFFFFF','白色'],['#000000','黑色'],['#2A241F','暖褐']] as const;
   const row=(key:string,index:number,children:React.ReactNode)=><View key={key} style={{paddingVertical:16,borderBottomWidth:index<4?StyleSheet.hairlineWidth:0,borderBottomColor:p.border}}>{children}</View>;
   const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12}}>

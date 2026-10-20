@@ -3,6 +3,7 @@ import {PanResponder,Pressable,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {controlColor} from '../domain/appearance.ts';
 
 // Reference slider (IMG_4856): a 6pt track with a 14pt thumb, dragging maps
 // the horizontal offset to the value. The -/+ buttons stay because they are the
@@ -28,7 +29,12 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
   })).current;
   const display=format?format(value):String(value);
   const step_=(direction:1|-1)=>onChange(Number(clamp(value+direction*step).toFixed(4)));
-  const ticks=Array.from({length:17},(_,index)=>index/16);
+  // The reference track carries a dense row of 1pt dots (32 intervals) and a
+  // neutral, translucent empty rail that follows whatever sheet tint sits behind
+  // it; the fill and thumb use the muted control tone, not the accent swatch.
+  const ticks=Array.from({length:33},(_,index)=>index/32);
+  const dark=theme.mode==='dark',ink=dark?'rgba(255,255,255,0.24)':'rgba(0,0,0,0.14)',control=controlColor(theme.palette.accent,dark);
+  const tickFilled=dark?'rgba(255,255,255,0.32)':'rgba(255,255,255,0.18)',tickEmpty=dark?'rgba(255,255,255,0.38)':'rgba(0,0,0,0.16)';
   // IMG_4856 puts the track 31.7pt below the label ink; the 32pt control box
   // already supplies that gap, so the extra 10pt moves below the track to keep
   // the 95pt row pitch that the lower sheet anchors were measured against.
@@ -50,10 +56,10 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
         onLayout={event=>{widthRef.current=event.nativeEvent.layout.width;setWidth(event.nativeEvent.layout.width);}}
         style={{flex:stacked?undefined:1,height:32,justifyContent:'center'}}
         {...responder.panHandlers}>
-        <View style={{height:6,borderRadius:3,backgroundColor:theme.palette.border}}/>
-        <View style={{position:'absolute',left:0,top:13,height:6,borderRadius:3,width:Math.max(0,position*width),backgroundColor:theme.palette.accent}}/>
-        {ticks.map(tick=><View key={tick} pointerEvents="none" style={{position:'absolute',top:14.5,left:`${tick*100}%`,width:3,height:3,borderRadius:2,marginLeft:-1.5,backgroundColor:tick<=position+0.001?'rgba(255,255,255,0.5)':theme.palette.secondary+'55'}}/>)}
-        <View style={{position:'absolute',top:9,left:Math.max(0,Math.min(width-14,position*width-7)),width:14,height:14,borderRadius:7,backgroundColor:theme.palette.accent,transform:[{scale:dragging?1.15:1}]}}/>
+        <View style={{height:6,borderRadius:3,backgroundColor:ink}}/>
+        <View style={{position:'absolute',left:0,top:13,height:6,borderRadius:3,width:Math.max(0,position*width),backgroundColor:control}}/>
+        {ticks.map(tick=><View key={tick} pointerEvents="none" style={{position:'absolute',top:14.5,left:`${tick*100}%`,width:3,height:3,borderRadius:2,marginLeft:-1.5,backgroundColor:tick<=position+0.001?tickFilled:tickEmpty}}/>)}
+        <View style={{position:'absolute',top:9,left:Math.max(0,Math.min(width-14,position*width-7)),width:14,height:14,borderRadius:7,backgroundColor:control,transform:[{scale:dragging?1.15:1}]}}/>
       </View>
       <Pressable testID={`visual-${testID}-up`} accessibilityRole="button" accessibilityLabel={`增加${label}`} disabled={disabled} onPress={()=>step_(1)} hitSlop={stacked?undefined:10} style={{width:stacked?undefined:18,height:stacked?44:32,alignItems:'center',justifyContent:'center'}}><Ionicons name="add" size={16} color={theme.palette.secondary}/></Pressable>
     </View>
