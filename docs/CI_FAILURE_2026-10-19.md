@@ -6,6 +6,8 @@
 
 最终本地：样式大字 + EQ 大字 2/0/0（`SourceUITests-1792500633689`），经典安全区 1/0/0（`SourceUITests-1792500411868`）。未改产品播放、设置持久化、UI 像素或安全区阈值。对应新 iOS27 run 必须由本次提交实际触发，旧 run 39305209267 仍保持 failure 结论。
 
+测试提交`1df0562`已重新完成清洁unsigned归档：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、unsigned；产品JS哈希与上一产品提交相同，IPA SHA-256 `9b5fd83a23573fa91227114cbc3c72d17033f4721c9e1c60f58466a5b25cd9a0`，留存`build/local-appearance-test-nav-1df0562`。ZIP CRC、包内JS字节一致和私人/测试/签名材料排除通过；仍需推送后核对实际iOS27终态。
+
 ## run 39305209267 / 2cd956b
 
 运行 [39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267) 对应 `2cd956b3a143a114f4c8c11960d738c4777c2d7b`，于 2026-10-19 20:43Z completed/failure。checks、原生检查通过，首组App测试28通过/3失败/0跳过；后续测试、iPad、归档未执行。失败后模拟器诊断收集超时为次生现象。GitHub REST核对最新运行状态，无queued或in_progress任务；没有重派旧提交。

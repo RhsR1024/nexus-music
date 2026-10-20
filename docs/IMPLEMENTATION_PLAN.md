@@ -1052,6 +1052,6 @@ WebDAV 同步的自动触发已收口为安全的前台预览：服务初始化�
 
 `SourceSettingsTests` 增加有限 frame + 可点击的状态等待，避免 RN 隐藏 tab 的 `{{inf, inf}, {0,0}}` 触发 XCTest Activation point 失败；`openSettings` 在 tab shell 不可达时关闭实际全屏播放器。样式 Sheet 每次打开、关闭与消失均等待对应状态，经典安全区改由真实“查看播放队列”入口进入完整队列，关闭队列宿主后继续原横竖 viewport 检查。
 
-验证：样式 + EQ 2/0/0（`SourceUITests-1792500633689`，259.199秒），经典安全区 1/0/0（`SourceUITests-1792500411868`）；check 401/401、Swift parse、diff check通过。生产 UI/播放未改，像素与动效完成度不增加；clean IPA、新 iOS27 run、签名与真机待继续。
+验证：样式 + EQ 2/0/0（`SourceUITests-1792500633689`，259.199秒），经典安全区 1/0/0（`SourceUITests-1792500411868`）；check 401/401、diff check通过。生产 UI/播放未改，像素与动效完成度不增加；`1df0562`清洁unsigned IPA及JS/隐私检查通过，新iOS27 run、签名与真机待继续。
 
 ## 2026-10-20 4855/4856 字号层级实施状态

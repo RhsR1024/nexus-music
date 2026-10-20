@@ -8,6 +8,8 @@
 
 提交 `330ff9ddc18dcf2f8927a2ae0b1d55fd2029587a` 的清洁 unsigned archive 已成功：manifest `dirty=false`/`workingTreeChanges=[]`、arm64、iphoneos26.2、最低iOS15.1、设备族`[1,2]`、`signed=false`。ZIP CRC、arm64、包内可执行入口、IPA与xcarchive `main.jsbundle`字节SHA `c0a01a9154efbdb41df722e8af000b77084417ecdc24edd33e0c7fdf20e18941`一致、正式入口及私人/测试/签名材料排除通过。IPA SHA-256 `ccdd754b5eb1dca3a7ff06a1e23c235c4ee6a779ced99582b7f5afa3807785dd`，留存`build/local-appearance-330ff9d`。该包装不等于iOS27、Apple签名或真机通过；下一步正常push并核对单队列。
 
+在测试导航修复提交`1df056234c756ed3349067cb93aafb6096d50ce7`上又完成一次清洁归档；产品JS字节仍为`c0a01a9154efbdb41df722e8af000b77084417ecdc24edd33e0c7fdf20e18941`，manifest `dirty=false`、arm64/iphoneos26.2/min15.1/设备族[1,2]、unsigned，IPA SHA-256 `9b5fd83a23573fa91227114cbc3c72d17033f4721c9e1c60f58466a5b25cd9a0`，留`build/local-appearance-test-nav-1df0562`。ZIP CRC、包内JS字节一致与私人/测试/签名材料排除再次通过；下一步正常push。
+
 ## 2026-10-20 UI 度量修正、经典页采集修复与 4856 收口
 
 发现并修正一个贯穿多轮的方法论缺陷：`scripts/visual-diff.mjs` 把整幅图当作单个窗口，用全局均值/方差/协方差算分，并非 SSIM 定义的局部窗口均值。同一张图会得到与视觉不同向的结果——4851 旧 90.62% 实为 **78.54%**，4867 旧 13.89% 实为 **60.40%**，4856 旧 44.87% 实为 **89.68%**。现改为 7×7 局部窗口相似度图的均值（边缘截断、遮罩跳过），保留 `legacyGlobalSsim` 仅作历史对照；旧分数不再作为验收依据。9 个已采状态新基线：均值 **67.6%**，0 个整屏 ≥90%，1 个 ≥85%（4856 89.68，柔和态 89.91），4855 82.89，最小 4872 44.91。

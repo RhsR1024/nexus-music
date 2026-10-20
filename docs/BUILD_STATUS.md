@@ -1572,4 +1572,6 @@ push后API实核新iOS27运行39119277363/8aefb23为唯一pending，39115107158/
 
 Release 结果：播放样式 + EQ 同批 2/0/0（`SourceUITests-1792500633689`，259.199 秒）；经典安全区 1/0/0（`SourceUITests-1792500411868`，约208.4秒）。两者均在 NexusMusic iPhone 15 Pro Max / iOS26.3.1 x86_64 模拟器。`npm run check` 401/401、Swift parse、diff check通过。iOS27 新 run、clean IPA 与真机仍待。
 
+测试提交`1df056234c756ed3349067cb93aafb6096d50ce7`的清洁unsigned归档已完成：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC、产品JS字节、正式入口及私人/测试/签名排除通过。IPA SHA-256 `9b5fd83a23573fa91227114cbc3c72d17033f4721c9e1c60f58466a5b25cd9a0`，留`build/local-appearance-test-nav-1df0562`。推送后仍需实际iOS27终态；不能由本地归档代替。
+
 ## 2026-10-20 局部 SSIM 度量批次与干净 unsigned IPA
