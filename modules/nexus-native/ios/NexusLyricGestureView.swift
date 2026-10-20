@@ -6,6 +6,7 @@ import UIKit
 final class NexusLyricGestureView: ExpoView, UIGestureRecognizerDelegate {
   let onDoubleTap = EventDispatcher()
   let onLongPress = EventDispatcher()
+  private var lastDoubleTap = 0.0
 
   private lazy var doubleTap: UITapGestureRecognizer = {
     let recognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
@@ -33,18 +34,35 @@ final class NexusLyricGestureView: ExpoView, UIGestureRecognizerDelegate {
   }
 
   override func accessibilityActivate() -> Bool {
-    onDoubleTap()
+    emitDoubleTap()
     return true
   }
 
   @objc private func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
     guard recognizer.state == .ended else { return }
-    onDoubleTap()
+    emitDoubleTap()
   }
 
   @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
     guard recognizer.state == .began else { return }
     onLongPress()
+  }
+
+  override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+    if touches.first?.tapCount == 2 { emitDoubleTap() }
+    super.touchesEnded(touches, with: event)
+  }
+
+  override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    guard isUserInteractionEnabled, !isHidden, alpha > 0.01, self.point(inside: point, with: event) else { return nil }
+    return self
+  }
+
+  private func emitDoubleTap() {
+    let now = CACurrentMediaTime()
+    guard now - lastDoubleTap > 0.15 else { return }
+    lastDoubleTap = now
+    onDoubleTap()
   }
 
   func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
