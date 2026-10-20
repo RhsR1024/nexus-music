@@ -32,6 +32,17 @@
 
 本页属于开源源码接入记录，Evidence 为固定源码，Finding 为上表静态路径，Path 为 iOS/provider适配及分平台验收；不冒充 Sollin IPA 案例的新 Evidence，也未探测私人服务或使用真实凭据。完成度暂保持开发约81%/完整交付约58%。
 
+## 2026-10-21 网易账号日推协议客户端（未接真实登录）
+
+已从固定 Q-music `5db858f.../src/core/musicAccount/daily.ts` 的 `neteaseDaily` 路径和固定 Beans `NetEaseAPI.swift:509` 的 `dailyRecommend` 交叉核对，新增 `src/providers/accountDaily.ts`：
+
+- `parseNeteaseDaily` 只转换已授权的 `dailySongs` 响应，按平台 ID 保序去重、跳过坏行并限制 30 首；不把本地推荐混入平台结果。
+- `AccountDailyClient` 使用账号 ID、平台和 `updatedAt` 组成缓存/请求快照键；换账号、取消、401/403、空列表和坏响应分别返回明确错误或空态，不制造“成功列表”。
+- 客户端必须由登录 launcher 提供已鉴权 endpoint/transport；默认未注入 endpoint 时直接返回 unavailable，避免未登录请求或把公开接口误当账号日推。
+- `tests/account-daily.test.ts` 6/6 通过，覆盖坏行/去重/上限、账号缓存隔离、请求中换账号、取消、空响应、未鉴权 endpoint 和 local fallback 标记；`npm run typecheck` 通过。
+
+**未完成**：真实 WKWebView/Cookie session、QQ 日推授权 key、酷狗/FM 客户端、日推 UI 展示及真实账号联调。该模块不提高 F30 完成度，也不把候选 endpoint 与合成夹具计为真实平台成功。固定来源许可/归属仍按本页上方记录。
+
 
 ## 评论后端参考与UI边界
 

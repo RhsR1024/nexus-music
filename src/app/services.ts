@@ -35,7 +35,7 @@ import { SearchCoordinator } from '../providers/searchCoordinator.ts';
 import { makeQueue, append, appendMany, enqueueNext } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
 import type { Track } from '../domain/track.ts';
-import type {HTTPClient} from '../providers/http.ts';
+import {requestJSON,type HTTPClient} from '../providers/http.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
 import { NavidromeClient } from '../providers/navidrome.ts';
 import { nativeSecrets } from '../storage/nativeSecrets.ts';
@@ -51,6 +51,7 @@ import {createOfflineDownloadFiles} from '../storage/offlineFiles.ts';
 import {LocalRecommendationStore} from '../providers/recommendations.ts';
 import {MusicAccounts} from '../providers/musicAccounts.ts';
 import {MusicAuthFlow} from '../providers/musicAuth.ts';
+import {AccountDailyClient} from '../providers/accountDaily.ts';
 
 export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const repository = await openRepository();
@@ -80,6 +81,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   // Recommendations are derived from local library/statistics only. No Sollin
   // account, private endpoint, or remote recommendation protocol is involved.
   const recommendations=new LocalRecommendationStore(library,playbackStats,Date.now);
+  const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON});
+  musicAccounts.subscribe(()=>accountDaily.clear());
   const nativeLX = loadNativeLX();
   const registry = new SourceRegistry(nativeLX);
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
@@ -175,7 +178,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
-  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, library, lyrics, fonts, recoveryWarnings };
+  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, accountDaily, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;
