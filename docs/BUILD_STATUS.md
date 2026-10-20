@@ -1,3 +1,11 @@
+## 2026-10-20 局部 SSIM 度量批次与干净 unsigned IPA
+
+`testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792491019445`），导出 `build/ui-screenshots-batch20b`；`npm run check` 401/401（Node 24.14）。本地归档 `bash scripts/archive-unsigned.sh` 输出 `build/distribution/NexusMusic-unsigned.ipa`，11 MiB，SHA-256 `524d9924d8ab959ccba64d677b7dbcdaa7478c55f855424fb81ef8e04dbd98f9`，`build/distribution/build-manifest.json` 记录 commit `f3b3942`、dirty=false、arm64/iphoneos26.2、Xcode 26.3、minOS 15.1；`verify-archive.mjs` 通过。
+
+脚本退出码为 2 但归档成功：`trap` 里的 `rm -rf build/ipa.XXXX` 被本机沙箱的批量删除保护拦截（57 个文件 > 阈值 50），发生在 IPA 生成与哈希打印之后，不影响产物；临时目录需另行小批清理。CI 无此保护。本机 WorkBuddy 终端还须 `export NODE_OPTIONS= PYTHONPATH=`，否则 Metro 打包因 node shim 的 broker IPC 断开报 `write EPIPE`。
+
+视觉度量改为 7×7 局部 SSIM 后：4856 88.06→89.68（柔和 89.91）、4854 重采 78.48（遮罩封面 90.42）、4851 78.54、4855 82.89、4861 58.76、4863 63.18、4866 59.76、4867 60.40、4868 70.28、4872 44.91。旧全局统计值不再作为验收依据。
+
 ## 2026-10-20 4855/4856 字号层级批次
 
 本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792485014622`），导出 `build/ui-screenshots-batch19c`（默认 032、柔和/玫瑰 031、外观首页 033）并亲看；`npm run check` 401/401；大字号/持久化回归 `testBackgroundSheetWithLargeTextAndPersistence` 1/0/0（`SourceUITests-1792484768700`）。写真单像素夹具、歌词两行夹具、默认主题与默认 accent 未改。

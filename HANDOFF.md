@@ -8,7 +8,7 @@
 
 Skill 可用性：当前 WorkBuddy 环境原先读不到 `.agents/skills`，两个 skill 都不可调用；已增量安装到 `~/.workbuddy/skills/reverse-skill-router/`（固定 `cab634b`/1.0.1）与 `~/.workbuddy/skills/sollin-apk-reverse/`（固定 `1b94651`，frontmatter 名 `apk-reverse`），未改 Codex 的 `~/.codex` 或项目链接。`Skill()` 实测两个入口均加载成功；`sollin-reverse-gate.mjs ipa/apk` 均 PASS。复现与边界见 [REVERSE_SKILL_WORKFLOW](docs/REVERSE_SKILL_WORKFLOW.md)。
 
-验证：`testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792491019445`，截图 `build/ui-screenshots-batch20b`），`npm run check` 401/401；本机 WorkBuddy 终端需 `export NODE_OPTIONS= PYTHONPATH=`，否则 Metro 阶段因 node shim 的 broker IPC 断开报 `write EPIPE`（已记入 BUILDING.md）。新增 [UI 差距分析](docs/UI_GAP_ANALYSIS_2026-10-20.md) 记录度量前后对照、归因、31 图覆盖与 90% 可行性。下一步：4854 底部工具行（参考 838pt）/页脚（899pt）锚点、4855 芯片行高、4872 面板展开态重采；真实服务、Apple 签名与真机验收仍未完成。
+验证：`testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792491019445`，截图 `build/ui-screenshots-batch20b`），`npm run check` 401/401；本机 WorkBuddy 终端需 `export NODE_OPTIONS= PYTHONPATH=`，否则 Metro 阶段因 node shim 的 broker IPC 断开报 `write EPIPE`（已记入 BUILDING.md）。干净 unsigned IPA：`build/distribution/NexusMusic-unsigned.ipa`，SHA-256 `524d9924d8ab959ccba64d677b7dbcdaa7478c55f855424fb81ef8e04dbd98f9`，manifest commit `f3b3942`/dirty=false/arm64/iphoneos26.2（归档脚本退出码 2 仅因沙箱批量删除保护拦了临时目录清理，见 BUILD_STATUS）。新增 [UI 差距分析](docs/UI_GAP_ANALYSIS_2026-10-20.md) 记录度量前后对照、归因、31 图覆盖与 90% 可行性。下一步：4854 底部工具行（参考 838pt）/页脚（899pt）锚点、4855 芯片行高、4872 面板展开态重采；真实服务、Apple 签名与真机验收仍未完成。
 
 ## 2026-10-20 AM 传输键/舞台进度色/4855 3×5 收口本地批次
 
