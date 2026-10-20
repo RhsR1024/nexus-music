@@ -1,5 +1,13 @@
 # iOS 27：2026-10-19 失败诊断
 
+## run 39305209267 / 2cd956b
+
+运行 [39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267) 对应 `2cd956b3a143a114f4c8c11960d738c4777c2d7b`，于 2026-10-19 20:43Z completed/failure。checks、原生检查通过，首组App测试28通过/3失败/0跳过；后续测试、iPad、归档未执行。失败后模拟器诊断收集超时为次生现象。GitHub REST核对最新运行状态，无queued或in_progress任务；没有重派旧提交。
+
+已保留失败证据artifact `12220915812`，本地ZIP `build/ci-39305209267/ios-failure-evidence-2cd956b3a143a114f4c8c11960d738c4777c2d7b.zip` SHA-256 `89f3fc7ccf55264943763a42cf4e4ecf61c74b09f31bd518f603c4d6275f831f`（与artifact摘要相同）。其中 `SourceSettingsTests/testPlayerStyleSheetWithLargeTextAndPersistence` 的失败附件报告tap `skins-sheet-close` 时无匹配按钮，当前可访问层级已是外观分类页，说明Sheet已关闭且UITest helper对旧元素继续点击。EQ大字用例的失败层级为全屏经典播放器，缺少预期EQ viewport；症状是导航/恢复状态不符，当前导出不能确定触发步骤。`testClassicPlayerWindowSafeArea` 失败附件未包含，具体断言待日志。
+
+日志artifact `12220162151` 为587877 bytes，完整诊断artifact `12220381594` 为683680572 bytes；公开API可列出artifact元数据，但下载API返回401，本机无可用GitHub凭据。故本次不将推测写作确证根因，不改生产代码或放宽断言。取得有权限的compact log/full diagnostics后定位三项失败，再按当前实施批次做专用本地检查；本机只有Xcode26.3/iOS26.3 runtime，无iOS27 runtime，已启动的用户模拟器不用于重跑。真实服务、签名、真机不由模拟器结果代替。
+
 ## 2026-10-20 完整播放器源码重编译回归
 
 此前混合复验中，背景测试1/0/0（148.083秒）通过，播放器因实际编译进测试二进制的旧 `循环：off` 断言失败；当时工作树源码已删除此断言，但对应 `SourceSettingsTests.o` 仍早于源码时间，旧失败准确反映二进制内容，未据此修改产品循环逻辑。先保存原日志/summary/counts和源码摘要，强制源码重编译后单独执行 `SourceSettingsTests/testZNavidromePlaybackAndCredentials`。结果 `build/SourceUITests-1792432689070.xcresult`：416.640秒，1/0/0，完整播放/暂停/恢复、经典到AM、AM互斥封面/歌词/队列、顺序→单曲→随机→顺序选中、完整队列返回、歌词/主题设置截图及结束清理断言通过。summary SHA256 `9833858e9c14d7b58786bda4b0758f593d67d5c6cc048679ab48906dc66caceb`；完整日志、服务计数和result bundle保留 `build/ci-regression-2026-10-20/review-player-passed` 及原xcresult。模拟器为iOS26.3.1/Xcode26.3，不代表iOS27、真实Navidrome、签名或真机。
@@ -76,4 +84,4 @@ Swift 前端语法解析通过；夹具回放、JS 语法与 diff 检查通过�
 
 精简日志 ZIP：artifact `12168274225`，561229 字节，SHA256 `e9bdab1923206c878bc93966682591ee9b71bf406f3a5808b6f523e795d565a9`。失败截图 ZIP：artifact `12169271028`，26497760 字节，SHA256 `d555fac7db8dba1fa4ffb6cb631bdbc27d7f8a47cd92b58b1e5fa1de843d3a0c`。两包本机 SHA 与 ZIP CRC 均通过，已从 Downloads 移至上述本机诊断目录保留唯一原始包；1.86GB 完整 xcresult ZIP 未下载。清理回执 `build/logs/cleanup-ci-failure-2026-10-19.json`，约 42GiB 可用，无删除、无缓存清理，必要失败/最近两阶段产物及逆向证据均保留。
 
-最新 `d2d24e2` / [39210631200](https://github.com/RhsR1024/nexus-music/actions/runs/39210631200) 保留运行中，0 pending；没有取消运行或重派旧版本。真实服务、签名和真机仍独立待验。
+当时最新的 `d2d24e2` / [39210631200](https://github.com/RhsR1024/nexus-music/actions/runs/39210631200) 保留运行中，0 pending；这条状态已由本文顶部的39305209267后续运行覆盖。真实服务、签名和真机仍独立待验。

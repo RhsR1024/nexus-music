@@ -1,3 +1,11 @@
+## 2026-10-20 AM/舞台/4855 3×5 本地批次
+
+组合回归 `SourceUITests-1792462187452` 2/2通过、0失败/跳过（舞台125.930秒、两来源播放473.780秒）；最终舞台复测 `1792463600128` 121.352秒1/0/0；`npm run check` 401/401。舞台截图已导出亲看。
+
+分数（`--ignore-top 180`）：4866 11.72→**19.91%**（MAD 39.99；遮罩封面30.27%）、4863 12.13→**16.18%**（MAD 45.37）、4872 8.14→**37.78%**（MAD 24.06）、4868保持26.79、4854保持74.38；4855因按用户要求改为13芯片3×5为**14.73%**（参考11芯片四行，内容差异）、4856为**-5.52%**（截图滚动位置比参考多约一屏、固定Sheet头与卡面/刻度缺失）。舞台面板锚点已对齐到≤1.5pt，歌词四行墨迹≤5pt；详情见[SOLLIN_UI_ALIGNMENT](docs/SOLLIN_UI_ALIGNMENT.md)。写真单像素夹具契约未改。
+
+除黑胶4851 90.62%外无页面达到90%，不增加已对齐页数。下一步：4855/4856先对齐滚动状态与视觉参数卡，舞台处理高亮灰度/芯片文案，AM队列需真实长列表。`2cd956b`的iOS27 run 39305209267仍为失败状态；本批提交后将产生新run，按单队列跟进，不重派旧run。真实服务、Apple签名和真机验收仍未完成。
+
 ## 2026-10-20 Windows同步与Mineradio/AMLL/Youmi参考比较
 
 Windows音枢从35ddf58正常fast-forward至`e72827d91c6a3238c1ed0844b9befa61048d07f4`，同步前工作树干净。三个独立参考已浅克隆至`Z:\Z-WorkSpace\`：Mineradio-paused main/d43de565、applemusic-like-lyrics main/ca0f41d6、Youmi-Music-IOS main/152567b3；完整SHA、来源和Mac复核命令见[三项目比较](docs/MINERADIO_AMLL_YOUMI_REFERENCE_REVIEW.md)。Youmi首轮长路径失败后仅在该参考仓启用core.longpaths并补全检出/索引；不运行随仓build/IPA/签名产物、不复制到音枢。
@@ -6,9 +14,17 @@ Windows音枢从35ddf58正常fast-forward至`e72827d91c6a3238c1ed0844b9befa61048
 
 许可事实：Mineradio GPL-3.0-only且明确停更；AMLL已查六包均AGPL-3.0-only；Youmi无独立LICENSE，README仅学习研究声明。本轮仅行为/契约研究，不移植实现或资源、不改变音枢整体许可。没有识曲采样/匹配链的新证据，识曲仍本期不做；Widget/MusicKit/AutoMix/评论写入等不自动新增。既定Q-music/Beans账号参考和Sollin视觉目标/门禁保留。本轮只同步与文档比较，无新依赖、真实服务/账号、iOS构建、真机或完成度增长。
 
+## 2026-10-20 iOS27 39305209267 失败接续
+
+提交 `2cd956b3a143a114f4c8c11960d738c4777c2d7b` 的 [iOS27 run 39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267) 已 completed/failure；测试组为28通过/3失败/0跳过，后续测试、iPad及IPA归档未执行。GitHub REST 实核最新运行为该run，当前无queued/in_progress运行；不重派旧提交。测试日志artifact `12220162151`（587877 bytes）和完整诊断artifact `12220381594`（683680572 bytes）可见，但本机没有可用GitHub API凭据，下载返回401；不要把失败后600秒模拟器诊断收集超时当首因。
+
+已保留并核验失败证据ZIP `build/ci-39305209267/ios-failure-evidence-2cd956b3a143a114f4c8c11960d738c4777c2d7b.zip`，SHA-256 `89f3fc7ccf55264943763a42cf4e4ecf61c74b09f31bd518f603c4d6275f831f`。`testPlayerStyleSheetWithLargeTextAndPersistence` 的失败附件显示 `openSettings` 试图tap `skins-sheet-close` 时，实际层级已经是外观分类页，sheet关闭按钮不存在，符合选择布局自动dismiss后测试helper使用陈旧元素的竞态。`testEQPresetCardsWithLargeText` 的失败层级显示全屏经典播放器，而非EQ页；导航/恢复状态偏差已证实，触发它的具体步骤仍待compact log。`testClassicPlayerWindowSafeArea` 失败附件因导出限制未包含；确切断言仍待compact log/full diagnostics。当前未修改产品或放宽断言，也未将模拟器结果冒充iOS27复现。
+
+本机Xcode 26.3无iOS27 runtime；已启动的 `NexusMusic iPhone 15 Pro Max` iOS26.3模拟器保持不动，未发现xcodebuild进程；磁盘可用约35GiB。下一步取得具有访问权限的artifact日志，分别核实三项失败的精确步骤和状态转换后再补修/复验。真实服务、Apple签名和真机验收仍未完成；视觉阈值4855/4856仍低于90%，相关页面保持实施中。
+
 ## 2026-10-20 共享播放器/背景回归最终本地结果
 
-阶段闭环补记：`npm run check` 401/401、reverse-skill strict review 43E/41F/41P、17WI/94 timeline通过；最终 clean unsigned IPA `build/local-presentation-ui-2cd956b/NexusMusic-unsigned.ipa` SHA-256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef` 已完成归档/字节一致性与隐私排除核验。提交`2cd956b`对应 [iOS27 run 39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267) 仍运行、0排队。上一条中“最终clean归档待重建”已过时；视觉分数仍未达90%，真实服务、签名及真机边界不变。
+阶段闭环补记：`npm run check` 401/401、reverse-skill strict review 43E/41F/41P、17WI/94 timeline通过；最终 clean unsigned IPA `build/local-presentation-ui-2cd956b/NexusMusic-unsigned.ipa` SHA-256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef` 已完成归档/字节一致性与隐私排除核验。提交`2cd956b`对应的iOS27 run `39305209267` 已失败，失败事实及未决诊断见本文件顶部和[CI失败记录](docs/CI_FAILURE_2026-10-19.md)。视觉分数仍未达90%，真实服务、签名及真机边界不变。
 
 Release App播放器回归 `build/SourceUITests-1792432689070.xcresult`：1/0/0，416.640秒；背景大字专项 `1792432251070`：1/0/0，148.083秒。已亲看 AM 队列和默认 blush/rose 外观截图；4855 5.76% SSIM/MAD29.53，4856 -1.95%/31.60，远低90%，两页仍为实施中。歌词全文继续使用原完整组件，仅共享进行中的请求并遵循服务缓存失效。业务/类型401/401、reverse strict review 43E/41F/41P、17WI/94 timeline、零错误/警告通过。已将远端35ddf58 Beans Music比较交接提交并入本地历史，HANDOFF两侧记录均保留。第一份arm64/iphoneos26.2 unsigned IPA已通过ZIP、包内JS、入口和隐私排除检查，SHA `4365e247f67dd2ef9578589a8c6ffd382af2fdafe471760ae839409df8a93ba7`；它的构建manifest明确为dirty=true，仅作审阅证据，最终clean归档待本次交接文档提交后重建。远端产品失败39210631200无变化，不能手动重派。真实私人服务、iOS27新提交、签名及真机仍待。
 
@@ -31,6 +47,16 @@ Release App播放器回归 `build/SourceUITests-1792432689070.xcresult`：1/0/0�
 [39204735117 / 56f37c0](https://github.com/RhsR1024/nexus-music/actions/runs/39204735117) 首组 App 28/3/0，checks/原生通过，后续组/归档未执行。已校验小日志与失败包：全局取色夹具在原请求超时后丢失 release；WebDAV/本地来源测试继承舞台布局，未挂载其等待的频谱。已补持久释放屏障及两来源用例的真实设置页经典基线，原 PCM/歌词/删除等断言保留。详见[失败诊断与精确证据](docs/CI_FAILURE_2026-10-19.md)。
 
 397 业务/类型、夹具回放、JS/Swift 语法、diff 检查通过；正式 App 应先跑舞台专项再跑两来源并复验封面跨淡化，本地清洁 IPA/提交/push/新 iOS27 均待，不算云端恢复。共享经典播放器/歌词批次未完成，未覆盖或提交。最新 d2d24e2 / 39210631200 保留运行，0 pending，无重派/取消。约42GiB可用；必要原始 ZIP 移入忽略诊断目录，无删除，收据在 build/logs/cleanup-ci-failure-2026-10-19.json。真实服务/签名/真机及整体计划仍待。
+
+## 2026-10-20 写真底部渐隐（4868 18.66%）
+
+`PhotoPlayer` 增加 `photo-bottom-scrim`（底部 42% 高度、透明→rgba(0,0,0,0.72) 的 LinearGradient），对应参考里写真向深色歌词底过渡的层次。4868 14.25%→**18.66%**（MAD 31.26），4854 保持 74.38%。底部渐隐也顺带缓解了歌词密度提高后“歌词落在底部高光区”的问题，但仍不足以让 8 行歌词夹具通过 `Actual fullbleed artwork...` 断言：该断言取 x=50%、y=86% 的**单个像素**比亮度，歌词行数一变就可能落在字形上（实测 169 vs 295）。要扩容夹具，得把该断言改为区域均值或改为校验 scrim 存在，这属于放宽真实像素契约，需单独评审。用例 1/0/0 通过（469.1 秒）。
+
+## 2026-10-20 非活动歌词弱化（本轮唯一采纳改动）
+
+深色播放页的非活动歌词由 `#A0A0A8` 改为 `rgba(255,255,255,0.45)`，更接近参考的“只有当前句亮”的层次。默认主题实测：4854 73.58→**74.38%**、4868 12.27→**14.25%**、4861 11.85%、4866 6.37%；4855 22.25%（暖底、3 列 5 行芯片）。用例 1/0/0 通过（415.9 秒）。
+
+同轮否决：歌词夹具 2→8 行（写真页明暗像素断言失败，169/295 vs top>bottom+40；共享夹具同时承担写真页明暗契约，需为歌词状态单独准备多行音轨）、封面取色默认开启（撞 `red and blue covers...` 契约测试）、芯片改 4 列（`flexBasis:23%`+gap 仍 3 个/行，参考亦为 3 列）。
 
 ## 2026-10-19 歌词夹具扩容尝试（被沉浸布局断言挡住，已回退）
 

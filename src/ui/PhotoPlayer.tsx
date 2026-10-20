@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {AccessibilityInfo,Alert,Animated,AppState,Pressable,ScrollView,View,useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {PhotoActions} from '../domain/photoPlayer.ts';
@@ -30,17 +31,19 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
   const tool=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24,id?:string,value?:string)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} onPress={()=>{presentation.interact();action();}} style={{minWidth:44,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color="#FFFFFF"/></Pressable>;
   const favoriteButton=tool(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));},24,undefined,favorite?'已收藏':'未收藏');
   return <View testID="photo-player" style={{flex:1,minHeight:0,gap:6}}>
+    /* IMG_4868: the artwork fades into a dark foundation so lyrics stay legible */
+    <LinearGradient testID="photo-bottom-scrim" pointerEvents="none" colors={['transparent','rgba(0,0,0,0.72)']} locations={[0,1]} style={{position:'absolute',left:0,right:0,bottom:0,height:'42%'}}/>
     <View testID={columns?'photo-horizontal':'photo-vertical'} style={{flex:1,minHeight:0,flexDirection:columns?'row':'column',gap:12}}>
-      <Pressable testID="photo-artwork-region" accessibilityRole="button" accessibilityLabel="切换写真操作" onPress={()=>presentation.toggle()} style={{...(columns?{width:'42%'}:{height:Math.max(0,Math.min(height*(height<720?.42:.44)-120,height*(fontScale>1.8?.12:.38)))}),justifyContent:'flex-end'}}>
+      <Pressable testID="photo-artwork-region" accessibilityRole="button" accessibilityLabel="切换写真操作" onPress={()=>presentation.toggle()} style={{...(columns?{width:'42%'}:{height:Math.max(0,Math.min(height*(height<720?.46:.48)-100,height*(fontScale>1.8?.12:.38)))}),justifyContent:'flex-end'}}>
       </Pressable>
       <View style={{flex:1,minHeight:0,gap:12}}>
         <View testID="photo-song-info" style={{flexDirection:'row',alignItems:'center',gap:6}}>
-          <View style={{flex:1,minWidth:0,gap:6}}><Text numberOfLines={1} style={{fontSize:24,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:15,color:'#D5D5DA'}}>{track.artist}</Text></View>
-          {tool(state.intent==='playing'?'pause':'play',state.intent==='playing'?'暂停':'播放',()=>{if(state.intent==='playing')controller.pause();else void controller.play();},32)}
+          <View style={{flex:1,minWidth:0,gap:4}}><Text numberOfLines={1} style={{fontSize:22,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:14,color:'rgba(255,255,255,0.66)'}}>{track.artist}</Text></View>
+          {tool(state.intent==='playing'?'pause':'play',state.intent==='playing'?'暂停':'播放',()=>{if(state.intent==='playing')controller.pause();else void controller.play();},30)}
           {favoriteButton}{tool('ellipsis-horizontal','更多播放控制',onMore)}
         </View>
         {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={{color:'#FFFFFF'}}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
-        <View testID="photo-lyric-viewport" collapsable={false} style={{flex:1,minHeight:0,overflow:'hidden'}}><Lyrics services={services} track={lyricTrack} font={font} presentation="photo"/></View>
+        <View testID="photo-lyric-viewport" collapsable={false} style={{flex:1,minHeight:0,overflow:'hidden'}}><Lyrics services={services} track={lyricTrack} font={font} presentation="photo" chrome={columns}/></View>
       </View>
     </View>
     {shown&&<Animated.View testID="photo-quick-actions" onTouchStart={()=>presentation.touch(true)} onTouchEnd={()=>presentation.touch(false)} onTouchCancel={()=>presentation.touch(false)} style={{opacity,transform:[{scale}],borderRadius:24,backgroundColor:'rgba(15,19,26,.94)',paddingHorizontal:12}}>

@@ -1,11 +1,12 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {AccessibilityInfo,BackHandler,findNodeHandle,Keyboard,Pressable,ScrollView,View,useWindowDimensions,type Text as NativeText} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {SheetModal} from './AdaptiveModal.tsx';
-import {AppearanceSettings,type AppearanceSection} from './AppearanceSettings.tsx';
+import {AppearanceSettings,BackgroundThemeActions,type AppearanceSection} from './AppearanceSettings.tsx';
 import {AppearanceOverview} from './AppearanceOverview.tsx';
 import {AudioSettings} from './AudioSettings.tsx';
 import {EqualizerSettings} from './EqualizerSettings.tsx';
@@ -96,10 +97,15 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:32}}>{content(key)}</ScrollView>}
     </View>)}
     <SheetModal visible={appearanceSheet.visible} animationType="slide" allowSwipeDismissal onRequestClose={closeSheet}>
-      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:p.background[0],paddingHorizontal:22,paddingTop:18}}>
-        <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
+      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:p.background[0],paddingHorizontal:appearanceSheet.section==='background'?16:22,paddingTop:appearanceSheet.section==='background'?40:18}}>
+        {appearanceSheet.section==='background'&&<>
+          <LinearGradient testID="theme-sheet-gradient" pointerEvents="none" colors={[p.background[0],p.background[1],p.background[2]]} start={{x:0,y:0}} end={{x:0.55,y:1}} style={{position:'absolute',top:0,right:0,bottom:0,left:0}}/>
+          <View accessible={false} style={{alignItems:'center',paddingBottom:10}}><View style={{width:34,height:5,borderRadius:3,backgroundColor:p.secondary+'66'}}/></View>
+        </>}
+        <View style={{flexDirection:'row',alignItems:'center',gap:appearanceSheet.section==='background'?4:12}}>
           <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>{titles[appearanceSheet.section]}</Text>
-          <Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>
+          {appearanceSheet.section==='background'&&<BackgroundThemeActions services={services}/>}
+          <Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{minWidth:36,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>
         </View>
         <ScrollView key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
           // A completed write from an earlier presentation must not close a newly opened sheet.

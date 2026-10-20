@@ -2,14 +2,29 @@ import {MiniPlayerSettings} from './MiniPlayerSettings.tsx';
 import {VisualSettings} from './VisualSettings.tsx';
 import {Text} from './Typography.tsx';
 import {useRef,useState,useSyncExternalStore} from 'react';
-import {Pressable, StyleSheet, Switch, View} from 'react-native';
+import {Alert, Pressable, Share, StyleSheet, Switch, View} from 'react-native';
+import {File, Paths} from 'expo-file-system';
+import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
-import {accentColors,appearanceDefaults,appearancePalette,visualThemeLabels as themeLabels,visualThemes,type Accent,type VisualTheme} from '../domain/appearance.ts';
+import {accentColors,appearanceDefaults,themeBackground,visualThemeLabels as themeLabels,visualThemes,type Accent,type VisualTheme} from '../domain/appearance.ts';
 import {useTheme} from './theme.tsx';
 import {useVisualAssets} from './VisualBackground.tsx';
 const styleLabels:Record<'gradient'|'solid'|'image',string>={gradient:'渐变',solid:'纯色',image:'图片'};
 export type AppearanceSection='theme'|'background'|'skins'|'accent'|'navigation'|'mini';
+export function BackgroundThemeActions({services}:{services:Services}){
+  const value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),theme=useTheme();
+  const shuffleTheme=()=>{const next=visualThemes[(visualThemes.indexOf(value.visualTheme)+1)%visualThemes.length];if(next)void services.preferences.update({visualTheme:next}).catch(()=>Alert.alert('主题未保存','原主题保留，请重试。'));};
+  const shareTheme=()=>{void Share.share({message:`音枢主题 · ${themeLabels[value.visualTheme]} · ${styleLabels[value.backgroundStyle]}`}).catch(()=>{});};
+  const exportTheme=async()=>{const file=new File(Paths.cache,`nexus-theme-${Date.now()}.json`);try{file.write(JSON.stringify({visualTheme:value.visualTheme,accent:value.accent,backgroundStyle:value.backgroundStyle,cardOpacity:value.cardOpacity},null,2));await Share.share({url:file.uri,title:'音枢主题配置'});}catch{Alert.alert('主题配置导出失败','请重试。');}finally{if(file.exists)file.delete();}};
+  const icon=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{width:36,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={22} color={theme.palette.text}/></Pressable>;
+  return <View accessibilityLabel="主题操作" style={{flexDirection:'row',alignItems:'center'}}>
+    {icon('shuffle','随机切换主题',shuffleTheme)}
+    {icon('download-outline','导出主题配置',()=>{void exportTheme();})}
+    {icon('share-outline','分享当前主题',shareTheme)}
+    {icon('refresh','恢复默认外观',()=>{void services.preferences.update({...appearanceDefaults}).catch(()=>Alert.alert('外观未保存','之前的设置已保留，请重试。'));},'appearance-reset')}
+  </View>;
+}
 export function AppearanceSettings({services,section:page,onStyleSaved}:{services:Services;section:AppearanceSection;onStyleSaved?:()=>void}){
   const theme=useTheme(),value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),assets=useVisualAssets(services),[error,setError]=useState('');
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{setError('');void services.preferences.update(patch).catch(()=>setError('外观未保存，请重试；之前的设置已保留。'));};
@@ -26,40 +41,45 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
   // IMG_4855 keeps the sections on the sheet's own tinted surface; only the
   // summary card and control rows carry a fill.
   const flat=page==='background';
-  return <View style={{gap:8,marginVertical:flat?12:24,padding:flat?0:8,borderRadius:flat?0:22,backgroundColor:flat?'transparent':theme.palette.surface}}>
+  const darkMode=theme.mode==='dark',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)',glass=darkMode?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.45)';
+  // The reference order (Sollin, 脸红佳人, Pearl … 黄赤藕荷) first, then the two
+  // themes original to 音枢. 3 columns × 5 rows is the user-confirmed layout
+  // for 13 chips, so the lower page keeps its measured alignment.
+  const themeChips:readonly VisualTheme[]=['blush','blushpink','pearl','mint','sunset','azure','marigold','violet','khaki','plumtea','lotus','soft','classic'];
+  const outlined=(key:'accent'|'background',label:string,color:string,hex:string,action:()=>void)=><View key={key} style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,backgroundColor:glass,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12}}>
+    <View style={{position:'absolute',top:-8,left:12,paddingHorizontal:6,backgroundColor:theme.palette.background[1]}}><Text style={{color:theme.palette.secondary,fontSize:13}}>{label}</Text></View>
+    <View style={{width:26,height:26,borderRadius:13,backgroundColor:color,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.12)'}}/>
+    <Text testID={`${key}-hex`} style={{flex:1,color:theme.palette.text,fontSize:17,fontVariant:['tabular-nums']}}>{hex.toUpperCase()}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={key==='accent'?'选择强调色':'背景颜色说明'} onPress={action} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={22} color={theme.palette.secondary}/></Pressable>
+  </View>;
+  return <View style={{gap:8,marginVertical:flat?34:24,padding:flat?0:8,borderRadius:flat?0:22,backgroundColor:flat?'transparent':theme.palette.surface}}>
     {page==='theme'&&<View style={{gap:12}}><View>{(['system','light','dark']as const).map((mode,index)=>choice(`theme-${mode}`,['跟随系统','浅色','深色'][index]!,value.theme===mode,()=>update({theme:mode})))}</View><Text style={{color:theme.palette.secondary,fontSize:13,lineHeight:20,padding:14}}>选择后立即保存。</Text></View>}
-    {page==='background'&&<View style={{gap:16,paddingVertical:16}}>
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'flex-end',gap:12}}>
-        <Pressable testID="appearance-reset" accessibilityRole="button" accessibilityLabel="恢复默认外观" onPress={()=>update({...appearanceDefaults})} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="refresh" size={22} color={theme.palette.secondary}/></Pressable>
+    {page==='background'&&<View style={{gap:0,paddingBottom:16}}>
+      {/* IMG_4855 card: 114pt tall, a shadowed summary pill pinned to the lower-left. */}
+      <View testID="theme-preview-card" style={{borderRadius:16,backgroundColor:darkMode?theme.palette.surface:'#FFFFFF',paddingHorizontal:20,paddingBottom:16,minHeight:120,justifyContent:'flex-end'}}>
+        <View style={{alignSelf:'flex-start',maxWidth:'100%',minHeight:40,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:9,borderRadius:12,backgroundColor:darkMode?theme.palette.selected:'#FFFFFF',shadowColor:'#000000',shadowOpacity:.09,shadowRadius:10,shadowOffset:{width:0,height:3},elevation:2}}>
+          <Text style={{color:theme.palette.accent,fontSize:19}}>♪</Text>
+          <Text numberOfLines={1} style={{color:theme.palette.text,fontSize:17,fontWeight:'600'}}>音枢 · {themeLabels[value.visualTheme]} · {styleLabels[value.backgroundStyle]} · 卡片 {Math.round(value.cardOpacity*100)}%</Text>
+        </View>
       </View>
-      {/* IMG_4855: a tinted summary card, chips, a segmented type control and the colour rows. */}
-      {/* IMG_4855 card: 114pt tall, text pinned to the lower-left. */}
-      <View testID="theme-preview-card" style={{borderRadius:14,backgroundColor:theme.mode==='dark'?theme.palette.surface:'#FFFFFF',paddingHorizontal:20,paddingBottom:16,height:114,justifyContent:'flex-end'}}>
-        <Text numberOfLines={1} style={{color:theme.palette.text,fontSize:15,lineHeight:22}}>♪ 音枢 · {themeLabels[value.visualTheme]} · {styleLabels[value.backgroundStyle]}</Text>
+      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:8}}>一键主题</Text>
+      <View style={{borderRadius:18,backgroundColor:glass,padding:8}}><View style={{flexDirection:'row',flexWrap:'wrap',gap:8,justifyContent:'space-between'}}>{themeChips.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{width:'31%',flexDirection:'row',alignItems:'center',gap:7,minHeight:32,paddingHorizontal:8,paddingVertical:5,borderRadius:12,backgroundColor:value.visualTheme===id?'#151515':darkMode?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.72)'}}>
+        {value.visualTheme===id?<View style={{width:18,height:18,borderRadius:6,backgroundColor:'#FFFFFF'}}/>:<LinearGradient colors={[themeBackground(id,theme.mode)[0],themeBackground(id,theme.mode)[1],themeBackground(id,theme.mode)[2]]} start={{x:0,y:0}} end={{x:1,y:1}} style={{width:18,height:18,borderRadius:6,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.10)'}}/>}
+        <Text numberOfLines={1} style={{color:value.visualTheme===id?'#FFFFFF':theme.palette.text,fontSize:16,fontWeight:'600'}}>{themeLabels[id]}</Text>
+      </Pressable>)}</View></View>
+      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:8}}>背景类型</Text>
+      <View style={{padding:8,borderRadius:20,backgroundColor:glass}}>
+        <View style={{flexDirection:'row',height:44,borderRadius:22,borderWidth:1,borderColor:outline,overflow:'hidden'}}>
+          {([['solid','纯色','ellipse'],['gradient','渐变','layers-outline'],['image','图片','image-outline']] as const).map(([id,label,glyph],index)=>{
+            const selected=value.backgroundStyle===id,disabled=id==='image'&&!assets.background;
+            return <Pressable key={id} testID={`background-${id}`} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} onPress={()=>update({backgroundStyle:id})} style={{flex:1,minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,backgroundColor:selected?`${theme.palette.accent}2E`:'transparent',borderLeftWidth:index?1:0,borderLeftColor:outline,opacity:disabled?.4:1}}><Ionicons name={glyph} size={17} color={selected?theme.palette.text:theme.palette.secondary}/><Text style={{color:selected?theme.palette.text:theme.palette.secondary,fontSize:16,fontWeight:selected?'600':'400'}}>{label}</Text></Pressable>;
+          })}
+        </View>
       </View>
-      <Text style={{color:theme.palette.secondary,fontSize:13}}>一键主题</Text>
-      <View style={{borderRadius:16,backgroundColor:'rgba(255,255,255,0.55)',padding:10}}><View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{visualThemes.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{flexGrow:0,flexBasis:'31%',minWidth:96,minHeight:46,flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:9,borderRadius:12,borderWidth:1,borderColor:value.visualTheme===id?theme.palette.text:theme.palette.border,backgroundColor:value.visualTheme===id?theme.palette.text:theme.palette.surface}}><View style={{width:18,height:18,borderRadius:6,backgroundColor:appearancePalette(theme.mode,{...value,visualTheme:id}).background[0],borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.12)'}}/><Text numberOfLines={1} style={{flex:1,color:value.visualTheme===id?theme.palette.surface:theme.palette.text,fontSize:14,fontWeight:value.visualTheme===id?'700':'500'}}>{themeLabels[id]}</Text></Pressable>)}</View></View>
-      <Text style={{color:theme.palette.secondary,fontSize:13}}>背景类型</Text>
-      <View style={{flexDirection:'row',borderRadius:12,borderWidth:1,borderColor:theme.palette.border,overflow:'hidden',backgroundColor:theme.palette.surface}}>
-        {([['solid','纯色','ellipse'],['gradient','渐变','reorder-three-outline'],['image','图片','image-outline']] as const).map(([id,label,icon])=>{
-          const selected=value.backgroundStyle===id,disabled=id==='image'&&!assets.background;
-          return <Pressable key={id} testID={`background-${id}`} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} onPress={()=>update({backgroundStyle:id})} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,backgroundColor:selected?theme.palette.selected:'transparent',borderRightWidth:id==='image'?0:1,borderRightColor:theme.palette.border,opacity:disabled?.45:1}}><Ionicons name={icon} size={16} color={selected?theme.palette.accent:theme.palette.secondary}/><Text style={{color:selected?theme.palette.accent:theme.palette.text,fontSize:14,fontWeight:selected?'600':'400'}}>{label}</Text></Pressable>;
-        })}
-      </View>
-      {!assets.background&&<Text style={{color:theme.palette.secondary,fontSize:12}}>导入主题背景图片后可选择图片背景。</Text>}
-      <Text style={{color:theme.palette.secondary,fontSize:13}}>颜色</Text>
-      {/* IMG_4855 keeps 强调色 and 背景颜色 as two separate cards. */}
-      <View style={{borderRadius:14,backgroundColor:theme.palette.surface,paddingHorizontal:16,minHeight:56,flexDirection:'row',alignItems:'center',gap:12}}>
-        <View style={{width:24,height:24,borderRadius:12,backgroundColor:theme.palette.accent}}/>
-        <Text style={{color:theme.palette.text,fontSize:15,flex:1}}>强调色</Text>
-        <Text testID="accent-hex" style={{color:theme.palette.secondary,fontSize:14,fontVariant:['tabular-nums']}}>{theme.palette.accent.toUpperCase()}</Text>
-      </View>
-      <View style={{borderRadius:14,backgroundColor:theme.palette.surface,paddingHorizontal:16,minHeight:56,flexDirection:'row',alignItems:'center',gap:12}}>
-        <View style={{width:24,height:24,borderRadius:12,backgroundColor:theme.palette.background[0],borderWidth:1,borderColor:theme.palette.border}}/>
-        <Text style={{color:theme.palette.text,fontSize:15,flex:1}}>背景颜色</Text>
-        <Text testID="background-hex" style={{color:theme.palette.secondary,fontSize:14,fontVariant:['tabular-nums']}}>{theme.palette.background[0].toUpperCase()}</Text>
-      </View>
-      <View style={{flexDirection:'row',gap:12}}>{(Object.keys(accentColors) as Accent[]).map((id,index)=><Pressable key={id} testID={`accent-${id}`} accessibilityLabel={['玫瑰','珊瑚','紫色','蓝色','橙色'][index]} accessibilityRole="radio" accessibilityState={{selected:value.accent===id}} onPress={()=>update({accent:id})} style={{minWidth:44,minHeight:44,borderRadius:22,backgroundColor:accentColors[id][theme.mode==='dark'?1:0],alignItems:'center',justifyContent:'center',borderWidth:value.accent===id?3:0,borderColor:theme.palette.text}}><Text style={{color:'#FFFFFF',fontSize:18}}>{value.accent===id?'✓':''}</Text></Pressable>)}</View>
+      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:8}}>颜色</Text>
+      {outlined('accent','强调色',theme.palette.accent,theme.palette.accent,()=>Alert.alert('强调色','选择主题强调色。',[...(Object.keys(accentColors) as Accent[]).map((id,index)=>({text:['玫瑰','珊瑚','紫色','蓝色','橙色'][index]!,onPress:()=>update({accent:id})})),{text:'取消',style:'cancel' as const}]))}
+      <View style={{height:16}}/>
+      {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'))}
     </View>}
     {page==='skins'&&section('播放界面样式',<View accessibilityLabel="可选播放界面样式" style={{borderRadius:18,overflow:'hidden',borderWidth:1,borderColor:theme.palette.border}}>{([
       ['classic','经典','albums-outline','歌词、播放控制与队列'],

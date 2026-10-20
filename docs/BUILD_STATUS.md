@@ -1,6 +1,12 @@
+## 2026-10-20 AM/舞台/4855 3×5 本地批次
+
+组合回归 `SourceUITests-1792462187452`：2通过/0失败/0跳过，舞台125.930秒、两来源播放473.780秒。最终舞台复测 `SourceUITests-1792463600128`：1/0/0、121.352秒，包含面板芯片、背景开关、进度、主控制与四套舞台样式。`npm run check` 401/401；`npx tsc --noEmit -p .`通过（含把旧`neon`默认断言改为读取`defaults.stageStyle`）。截图已从xcresult导出：4866 **19.91%**/MAD39.99、4863 **16.18%**/45.37、4872 **37.78%**/24.06、4868 26.79%/29.40、4854 74.38%/31.96、4855 14.73%/25.49、4856 -5.52%/50.43。除4851黑胶90.62%外均未达90%。
+
+写真单像素夹具契约未修改。4855按用户要求落地13芯片3列5行；参考实际为11芯片四行，故整屏分数下降，不声明该页提升。舞台面板锚点/歌词行位已对齐到≤5pt。本批提交后按单队列检查新iOS27 run；`2cd956b`的39305209267失败诊断仍受CI日志401限制。真实服务、Apple签名和真机未验收。
+
 ## 2026-10-20 共享播放器/背景批次与云端状态
 
-播放器Release UI `SourceUITests-1792432689070` 416.640秒1/0/0，背景大字专项`1792432251070`148.083秒1/0/0；`npm run check` 401/401，reverse-skill strict review 43E/41F/41P、17WI/94 timeline、零错误/警告。默认主题4855/4856 SSIM为5.76%/-1.95%，未达到90%且仍实施中。最终 clean unsigned IPA留存`build/local-presentation-ui-2cd956b`，SHA256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef`；归档CRC/字节一致性及隐私排除检查通过。`2cd956b`对应[39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267)仍in_progress，API实核1运行/0排队，无需重派；真实服务、Apple签名和真机验收未完成。
+播放器Release UI `SourceUITests-1792432689070` 416.640秒1/0/0，背景大字专项`1792432251070`148.083秒1/0/0；`npm run check` 401/401，reverse-skill strict review 43E/41F/41P、17WI/94 timeline、零错误/警告。默认主题4855/4856 SSIM为5.76%/-1.95%，未达到90%且仍实施中。最终 clean unsigned IPA留存`build/local-presentation-ui-2cd956b`，SHA256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef`；归档CRC/字节一致性及隐私排除检查通过。`2cd956b`对应[39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267)已completed/failure：checks/native通过，首组App为28通过/3失败/0跳过，iPad/归档未执行。设置导航失败证据保留于`build/ci-39305209267`；完整CI日志artifact未能认证下载，精确根因/修复待定。当前没有运行或排队的iOS27任务；真实服务、Apple签名和真机验收未完成。
 
 ## 2026-10-20 共享播放器/背景批次本地结果（历史记录）
 

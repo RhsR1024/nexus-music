@@ -32,6 +32,17 @@ final class SourceSettingsTests: XCTestCase {
     enter(page=="typography" || page=="equalizer" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
     if page=="typography" || page=="equalizer"{enter(page)}else if appearancePages.contains(page){enter(page)}
   }
+  private func openPhotoLyricSource(_ app:XCUIApplication){
+    // IMG_4868 has no inline diagnostic row; the source entry lives in the
+    // shared lyric settings panel, which the ellipsis menu opens.
+    app.buttons["更多播放控制"].tap()
+    XCTAssertTrue(app.buttons["歌词显示设置"].firstMatch.waitForExistence(timeout:5))
+    app.buttons["歌词显示设置"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.waitForExistence(timeout:5),"Photo lyric selection must remain reachable from the lyrics settings panel")
+    app.buttons["收起歌词显示设置"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["收起播放选项"].firstMatch.waitForExistence(timeout:5))
+    app.buttons["收起播放选项"].firstMatch.tap()
+  }
   private func replaceText(_ field:XCUIElement,with value:String,in app:XCUIApplication){
     field.tap();field.press(forDuration:1.1)
     let selectAll=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
@@ -935,7 +946,7 @@ final class SourceSettingsTests: XCTestCase {
           XCTAssertEqual(XCTWaiter.wait(for:[rendered],timeout:12),.completed,"The actual raster circle must remain circular under cover cropping: \(kind), bounds \(String(describing:measured)), expected diameter \(expected)")
         } else {
           XCTAssertFalse(element("photo-hero-image").exists,"404 and corrupt bytes must not retain the preceding track image")
-          XCTAssertTrue(app.buttons["播放"].isHittable);XCTAssertTrue(app.buttons["选择歌词来源"].isHittable)
+          XCTAssertTrue(app.buttons["播放"].isHittable);openPhotoLyricSource(app)
         }
         let attachment=XCTAttachment(screenshot:XCUIScreen.main.screenshot());attachment.name="Photo artwork \(index) \(kind)";attachment.lifetime = .keepAlways;add(attachment)
         actions();let progress=element("播放进度");XCTAssertTrue(progress.isHittable);XCTAssertTrue(app.buttons["播放"].exists)
@@ -960,10 +971,13 @@ final class SourceSettingsTests: XCTestCase {
       selector.tap();let backdrop=app.switches["舞台背景"];XCTAssertTrue(backdrop.waitForExistence(timeout:5));reveal(backdrop)
       let beforeBackdrop=backdrop.value as? String == "1"
       let beforeStyle=["classic","neon","cyberpunk","aurora"].first{element("stage-style-"+$0).isSelected}!
-      if beforeBackdrop{backdrop.tap()}
-      // IMG_4872 shows the stage with its style panel open; capture the same state
-      // so the 4872 comparison is not made against a different screen.
+      // IMG_4872 captures the panel with 经典 selected and 动态背景 still on.
+      let classicOption=element("stage-style-classic")
+      if !classicOption.isSelected{classicOption.tap()}
+      if backdrop.value as? String != "1"{backdrop.tap()}
       let stageStyleShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());stageStyleShot.name="Stage style panel";stageStyleShot.lifetime = .keepAlways;add(stageStyleShot)
+      // The ink-difference loop below compares every backdrop with the switch off.
+      if backdrop.value as? String == "1"{backdrop.tap()}
       let initialClose=app.buttons["收起舞台样式"];reveal(initialClose);initialClose.tap()
       var rendered:[[UInt8]]=[]
       for (id,label) in [("classic","经典"),("neon","霓虹"),("cyberpunk","赛博"),("aurora","炫彩")] {
@@ -1001,7 +1015,7 @@ final class SourceSettingsTests: XCTestCase {
       let viewport=element("photo-lyric-viewport"),list=element("photo-lyrics-list"),info=element("photo-song-info")
       XCTAssertTrue(list.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].isHittable)
       XCTAssertGreaterThan(viewport.frame.height,100);XCTAssertTrue(app.frame.insetBy(dx:-1,dy:-1).contains(viewport.frame));XCTAssertTrue(app.frame.insetBy(dx:-1,dy:-1).contains(info.frame))
-      XCTAssertTrue(app.buttons["选择歌词来源"].isHittable)
+      openPhotoLyricSource(app)
       let portrait=XCTAttachment(screenshot:XCUIScreen.main.screenshot());portrait.name=largeText ? "Photo accessibility lyrics and song controls":"Photo portrait composition";portrait.lifetime = .keepAlways;add(portrait)
       if !largeText {
         XCUIDevice.shared.orientation = .landscapeLeft;app.activate()
@@ -1453,7 +1467,7 @@ final class SourceSettingsTests: XCTestCase {
         app.buttons["歌词与来源"].tap()
         XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.waitForExistence(timeout:5))
       }
-      XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"Lyric selection must fit in \(layout)")
+      if layout=="photo"{openPhotoLyricSource(app)}else{XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.isHittable,"Lyric selection must fit in \(layout)")}
       if layout=="vinyl" {
         XCTAssertTrue(app.buttons["Synthetic lyric two"].firstMatch.isHittable,"The original shared lyric content remains available")
         app.buttons["收起黑胶歌词"].tap()
