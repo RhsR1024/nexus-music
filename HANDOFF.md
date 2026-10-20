@@ -1,3 +1,9 @@
+## 2026-10-21 07f81a2 原生歌词手势清洁归档与云端队列
+
+原生手势修复提交 `07f81a28e1387f6e9ddcc052f2e559680742d52f` 已正常 push 到 `main`。当前干净 unsigned IPA：`build/local-lyric-gesture-07f81a2/NexusMusic-unsigned.ipa`，SHA-256 `a734eabb1b68528e346253183ac6b34f9755d80b95b0322a96ffe6f7b125e47c`；manifest commit 为 `07f81a2`、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/min15.1/设备族[1,2]、`signed=false`。ZIP CRC通过，IPA与xcarchive `main.jsbundle` SHA-256均为 `a0809efabff20ea7311a67e1887171402a73fa79e27038cc87aa90f220815988`，测试/签名私有资源扫描无命中。该本地包不替代 iOS 27、Apple 签名或真机。
+
+云端实核为 1 运行/1 排队：`39499931841`（`694db50`）in_progress，`39500726487`（`07f81a2`）pending；未取消运行中任务、未重派旧提交。待最新 pending 实际终态后记录步骤、产物和失败根因。
+
 ## 2026-10-21 Files 双用例与歌词双击原生手势批次
 
 iOS 27 `de0d820/39463281458` 已完成但失败：checks/native/创建模拟器通过，第10步 App UI失败，后续在线/离线/归档跳过；小日志与失败证据 artifact 可见，但公共 API 下载仍返回401，不能伪造云端日志结论。公开 jobs 证实失败层级，已保留 API 回执。
