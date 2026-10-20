@@ -26,8 +26,15 @@ final class NexusLyricGestureView: ExpoView, UIGestureRecognizerDelegate {
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     isUserInteractionEnabled = true
+    isAccessibilityElement = true
+    accessibilityTraits.insert(.button)
     addGestureRecognizer(doubleTap)
     addGestureRecognizer(longPress)
+  }
+
+  override func accessibilityActivate() -> Bool {
+    onDoubleTap()
+    return true
   }
 
   @objc private func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
