@@ -1,3 +1,11 @@
+## 2026-10-20 批次：4855/4856 字段几何与主题芯片复核
+
+**验证**：`testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792497763561`，508.126秒），导出`build/ui-screenshots-batch21`并亲看；`npm run check` 401/401、`git diff --check`通过。测试后的`simctl`诊断采集错误发生在测试Passed之后，不改写测试结果。
+
+**实现**：外观工具按钮48×44pt/25pt图标；主题芯片36pt高、15pt字、17.3pt色块；强调色/背景颜色/遮罩颜色统一18pt色块、19pt内部间距、44pt靠右操作；背景Sheet使用48pt顶部内距、32×4pt抓取条、48pt关闭按钮命中区。沿用既有设置、Sheet、持久化与无障碍语义。
+
+**分数（`--ignore-top 180`，7×7局部SSIM）**：IMG_4855 **84.53%/MAD22.41**（上轮82.89，仍低于90）；IMG_4856 **90.25%/MAD15.08**（首次该默认主题滚动状态达到门槛）。E-044绑定原始与候选截图、报告和diff哈希；strict review 44E/41F/41P、17WI/95 timeline、0错误/警告。4856只记该实测状态，其他滚动位置、动效、Sollin运行、真实服务、签名和真机仍开放。
+
 ## 2026-10-20 批次：SSIM 度量修正、经典页采集修复与 4856 收口
 
 **验证**：`testZNavidromePlaybackAndCredentials` Release 1/0/0（xcresult `SourceUITests-1792491019445`），导出 `build/ui-screenshots-batch20b`（默认 032、柔和/玫瑰 031、外观首页 033、经典 006）并亲看；`npm run check` 401/401。写真单像素夹具、歌词两行夹具、默认主题与默认 accent 未改；4856 归一附件仍为 `background-gradient maxY=135.999989827474pt`。

@@ -78,6 +78,10 @@ AM 传输键按参考放大并下移（前后键 52、主键 68、行距 38）�
 
 写真单像素夹具契约未修改。4855按用户要求落地13芯片3列5行；参考实际为11芯片四行，故整屏分数下降，不声明该页提升。舞台面板锚点/歌词行位已对齐到≤5pt。本批提交后按单队列检查新iOS27 run；`2cd956b`的39305209267失败诊断仍受CI日志401限制。真实服务、Apple签名和真机未验收。
 
+## 2026-10-20 外观设置 4855/4856 视觉复核
+
+`testZNavidromePlaybackAndCredentials` Release 1/0/0，`SourceUITests-1792497763561.xcresult`，508.126秒；`npm run check` 401/401、`git diff --check`通过。默认blush/rose截图经7×7局部SSIM：IMG_4855 84.53%/MAD22.41，IMG_4856 90.25%/MAD15.08；4856该状态达标，4855仍实施中。截图、参考和diff已亲看，哈希绑定在`work/sollin-ipa/evidence/nexus-ui-verification-b21.json`，Evidence E-044 strict review为44E/41F/41P、17WI/95 timeline、0错误/警告。测试后诊断采集缺少`simctl`，发生在1/0/0终态之后。清洁unsigned IPA、提交push及对应iOS27仍待；本机为iOS26.3.1模拟器和合成服务。
+
 ## 2026-10-20 共享播放器/背景批次与云端状态
 
 播放器Release UI `SourceUITests-1792432689070` 416.640秒1/0/0，背景大字专项`1792432251070`148.083秒1/0/0；`npm run check` 401/401，reverse-skill strict review 43E/41F/41P、17WI/94 timeline、零错误/警告。默认主题4855/4856 SSIM为5.76%/-1.95%，未达到90%且仍实施中。最终 clean unsigned IPA留存`build/local-presentation-ui-2cd956b`，SHA256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef`；归档CRC/字节一致性及隐私排除检查通过。`2cd956b`对应[39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267)已completed/failure：checks/native通过，首组App为28通过/3失败/0跳过，iPad/归档未执行。设置导航失败证据保留于`build/ci-39305209267`；完整CI日志artifact未能认证下载，精确根因/修复待定。当前没有运行或排队的iOS27任务；真实服务、Apple签名和真机验收未完成。

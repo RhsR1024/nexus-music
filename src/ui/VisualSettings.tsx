@@ -26,18 +26,22 @@ export function VisualSettings({services}:{services:Services}){
   const darkMode=theme.mode==='dark',cardAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.5,value.cardOpacity*0.5)),card=`rgba(255,255,255,${cardAlpha})`,outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.62)';
   const maskColors=[['#FFFFFF','白色'],['#000000','黑色'],['#2A241F','暖褐']] as const;
   const row=(key:string,index:number,children:React.ReactNode)=><View key={key} style={{paddingVertical:16,borderBottomWidth:index<4?StyleSheet.hairlineWidth:0,borderBottomColor:p.border}}>{children}</View>;
-  const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12}}>
+  // IMG_4856's 遮罩颜色 field repeats the 强调色 geometry: 18pt swatch at
+  // x 47.0..64.7pt, '#RRGGBB' ink from 84.3pt and the colour-filter glyph at
+  // 365.0..382.7pt; the first pass drew a 26pt disc and kept the glyph 14pt left.
+  const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingLeft:14,paddingRight:0,flexDirection:'row',alignItems:'center',gap:19}}>
     <View style={{position:'absolute',top:-8,left:12,paddingHorizontal:6,backgroundColor:card}}><Text style={{color:p.secondary,fontSize:13}}>遮罩颜色</Text></View>
-    <View style={{width:26,height:26,borderRadius:13,backgroundColor:value.maskColor,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.12)'}}/>
+    <View style={{width:18,height:18,borderRadius:9,backgroundColor:value.maskColor,borderWidth:1,borderColor:'rgba(0,0,0,0.22)'}}/>
     <Text testID="visual-value-maskColor" style={{flex:1,color:p.text,fontSize:17,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
-    <Pressable accessibilityRole="button" accessibilityLabel="选择遮罩颜色" disabled={busy} onPress={()=>Alert.alert('遮罩颜色','选择播放背景遮罩颜色。',[...maskColors.map(([color,label])=>({text:label,onPress:()=>update({maskColor:color})})),{text:'取消',style:'cancel' as const}])} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={22} color={p.secondary}/></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="选择遮罩颜色" disabled={busy} onPress={()=>Alert.alert('遮罩颜色','选择播放背景遮罩颜色。',[...maskColors.map(([color,label])=>({text:label,onPress:()=>update({maskColor:color})})),{text:'取消',style:'cancel' as const}])} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={21} color={p.secondary}/></Pressable>
   </View>;
   // IMG_4856 measures 40.3pt from the last colour field to 视觉参数 (13pt top),
   // 39pt from that header to the first label (4pt section gap) and 31.7pt from
   // each label to its track (handled by SliderControl).
-  // The colour block above moved 3pt down to sit on IMG_4856's 216.0pt border,
-  // so this section starts 3pt earlier to keep 视觉参数 at its measured 394.3pt.
-  return <View style={{gap:18,paddingTop:10,paddingBottom:18}}>
+  // The colour block above moved 3pt down to sit on IMG_4856's 216.0pt border
+  // and its spacer shrank 28→27 (84.0→83.0pt border pitch), so this section
+  // starts 4pt earlier to keep 视觉参数 at its measured 394.3pt.
+  return <View style={{gap:18,paddingTop:11,paddingBottom:18}}>
     {/* IMG_4856 order: 背景透明度 / 卡片透明度 / 背景遮罩 / 遮罩颜色 / 背景模糊. */}
     <View style={{paddingTop:2,gap:7.4}}>
       <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13}}>视觉参数</Text>

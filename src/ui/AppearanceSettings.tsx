@@ -17,7 +17,7 @@ export function BackgroundThemeActions({services}:{services:Services}){
   const shuffleTheme=()=>{const next=visualThemes[(visualThemes.indexOf(value.visualTheme)+1)%visualThemes.length];if(next)void services.preferences.update({visualTheme:next}).catch(()=>Alert.alert('主题未保存','原主题保留，请重试。'));};
   const shareTheme=()=>{void Share.share({message:`音枢主题 · ${themeLabels[value.visualTheme]} · ${styleLabels[value.backgroundStyle]}`}).catch(()=>{});};
   const exportTheme=async()=>{const file=new File(Paths.cache,`nexus-theme-${Date.now()}.json`);try{file.write(JSON.stringify({visualTheme:value.visualTheme,accent:value.accent,backgroundStyle:value.backgroundStyle,cardOpacity:value.cardOpacity},null,2));await Share.share({url:file.uri,title:'音枢主题配置'});}catch{Alert.alert('主题配置导出失败','请重试。');}finally{if(file.exists)file.delete();}};
-  const icon=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{width:36,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={22} color={theme.palette.text}/></Pressable>;
+  const icon=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{width:48,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={25} color={theme.palette.text}/></Pressable>;
   return <View accessibilityLabel="主题操作" style={{flexDirection:'row',alignItems:'center'}}>
     {icon('shuffle','随机切换主题',shuffleTheme)}
     {icon('download-outline','导出主题配置',()=>{void exportTheme();})}
@@ -48,14 +48,20 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
   // themes original to 音枢. 3 columns × 5 rows is the user-confirmed layout
   // for 13 chips, so the lower page keeps its measured alignment.
   const themeChips:readonly VisualTheme[]=['blush','blushpink','pearl','mint','sunset','azure','marigold','violet','khaki','plumtea','lotus','soft','classic'];
-  const outlined=(key:'accent'|'background',label:string,color:string,hex:string,action:()=>void)=><View key={key} style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,backgroundColor:glass,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12}}>
+  // IMG_4856 measures both outlined fields at a 32pt border, an 18pt swatch whose
+  // visible fill spans x 47.0..64.7pt, the '#RRGGBB' ink starting at 84.3pt and
+  // the colour-filter glyph at 365.0..382.7pt. Before this the swatch was 20pt,
+  // the value ink sat at 79.3pt (5pt left) and the glyph at 351.3..370.3pt
+  // (14pt left), which is why the colour-field grid cells scored lowest.
+  const outlined=(key:'accent'|'background',label:string,color:string,hex:string,action:()=>void)=><View key={key} style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,backgroundColor:glass,paddingLeft:14,paddingRight:0,flexDirection:'row',alignItems:'center',gap:19}}>
     <View style={{position:'absolute',top:-8,left:12,paddingHorizontal:6,backgroundColor:theme.palette.background[1]}}><Text style={{color:theme.palette.secondary,fontSize:13}}>{label}</Text></View>
-    {/* IMG_4856 samples the accent swatch at 20pt (x 46.0-65.7pt, y 234.0-253.7pt); 26pt read as a filled disc rather than a colour chip. */}
-    <View style={{width:20,height:20,borderRadius:10,backgroundColor:color,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.12)'}}/>
+    {/* IMG_4856 samples both swatches at 18pt (accent y 235.0-252.7pt with the field
+        spanning 216.0-271.0pt), not the 26pt disc the first pass drew. */}
+    <View style={{width:18,height:18,borderRadius:9,backgroundColor:color,borderWidth:1,borderColor:'rgba(0,0,0,0.22)'}}/>
     <Text testID={`${key}-hex`} style={{flex:1,color:theme.palette.text,fontSize:17,fontVariant:['tabular-nums']}}>{hex.toUpperCase()}</Text>
-    <Pressable accessibilityRole="button" accessibilityLabel={key==='accent'?'选择强调色':'背景颜色说明'} onPress={action} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={22} color={theme.palette.secondary}/></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={key==='accent'?'选择强调色':'背景颜色说明'} onPress={action} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={21} color={theme.palette.secondary}/></Pressable>
   </View>;
-  return <View style={{gap:8,marginVertical:flat?34:24,padding:flat?0:8,borderRadius:flat?0:22,backgroundColor:flat?'transparent':theme.palette.surface}}>
+  return <View style={{gap:8,marginVertical:flat?15.5:5.5,padding:flat?0:8,borderRadius:flat?0:22,backgroundColor:flat?'transparent':theme.palette.surface}}>
     {page==='theme'&&<View style={{gap:12}}><View>{(['system','light','dark']as const).map((mode,index)=>choice(`theme-${mode}`,['跟随系统','浅色','深色'][index]!,value.theme===mode,()=>update({theme:mode})))}</View><Text style={{color:theme.palette.secondary,fontSize:13,lineHeight:20,padding:14}}>选择后立即保存。</Text></View>}
     {page==='background'&&<View style={{gap:0,paddingBottom:16}}>
       {/* IMG_4855 card: 114pt tall, a shadowed summary pill pinned to the lower-left. */}
@@ -68,9 +74,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
       {/* IMG_4855 label ink is ~11pt tall (13pt type), not 16pt. The extra bottom
           margin absorbs the smaller line box so the cards below stay anchored. */}
       <Text style={{color:theme.palette.secondary,fontSize:13,marginTop:20.6,marginBottom:14}}>一键主题</Text>
-      <View style={{borderRadius:18,backgroundColor:glass,padding:8,paddingBottom:9}}><View style={{flexDirection:'row',flexWrap:'wrap',gap:9.5}}>{themeChips.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{width:'31.4%',flexDirection:'row',alignItems:'center',gap:6,minHeight:28,paddingHorizontal:8,paddingVertical:3,borderRadius:10,backgroundColor:value.visualTheme===id?'#151515':darkMode?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.72)'}}>
-        {value.visualTheme===id?<View style={{width:16,height:16,borderRadius:5,backgroundColor:'#FFFFFF'}}/>:<LinearGradient colors={[themeBackground(id,theme.mode)[0],themeBackground(id,theme.mode)[1],themeBackground(id,theme.mode)[2]]} start={{x:0,y:0}} end={{x:1,y:1}} style={{width:16,height:16,borderRadius:5,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.10)'}}/>}
-        <Text numberOfLines={1} style={{color:value.visualTheme===id?'#FFFFFF':theme.palette.text,fontSize:16,fontWeight:'600'}}>{themeLabels[id]}</Text>
+      <View style={{borderRadius:22,backgroundColor:glass,paddingHorizontal:16,paddingVertical:14.7}}><View style={{flexDirection:'row',flexWrap:'wrap',columnGap:7.6,rowGap:6}}>{themeChips.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{flexDirection:'row',alignItems:'center',gap:7.6,height:36,paddingHorizontal:10.5,borderRadius:10,backgroundColor:value.visualTheme===id?'#151515':darkMode?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.72)'}}>
+        {value.visualTheme===id?<View style={{width:17.3,height:17.3,borderRadius:5.5,backgroundColor:'#FFFFFF'}}/>:<LinearGradient colors={[themeBackground(id,theme.mode)[0],themeBackground(id,theme.mode)[1],themeBackground(id,theme.mode)[2]]} start={{x:0,y:0}} end={{x:1,y:1}} style={{width:17.3,height:17.3,borderRadius:5.5,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.10)'}}/>}
+        <Text numberOfLines={1} style={{color:value.visualTheme===id?'#FFFFFF':theme.palette.text,fontSize:15,fontWeight:'600'}}>{themeLabels[id]}</Text>
       </Pressable>)}</View></View>
       <Text style={{color:theme.palette.secondary,fontSize:13,marginTop:18.9,marginBottom:19.7}}>背景类型</Text>
       <View style={{padding:8,borderRadius:20,backgroundColor:glass}}>
@@ -87,7 +93,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
           border sits at 216.0pt; the 3pt offset below lands the same edge. */}
       <View style={{marginHorizontal:16,marginTop:3}}>
         {outlined('accent','强调色',theme.palette.accent,theme.palette.accent,()=>Alert.alert('强调色','选择主题强调色。',[...(Object.keys(accentColors) as Accent[]).map((id,index)=>({text:['玫瑰','珊瑚','紫色','蓝色','橙色'][index]!,onPress:()=>update({accent:id})})),{text:'取消',style:'cancel' as const}]))}
-        <View style={{height:28}}/>
+        {/* IMG_4856 border pitch is 83.0pt (field 55 + 28 gap); the 28pt spacer
+            rendered a 84.0pt pitch and pushed the second field's borders 1pt low. */}
+        <View style={{height:27}}/>
         {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'))}
       </View>
     </View>}
