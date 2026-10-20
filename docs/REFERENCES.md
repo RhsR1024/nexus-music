@@ -2,6 +2,13 @@
 
 日期：2026-10-14。固定提交用于复核，在线文档在正式实现时重新检查。此文件不代表第三方代码已导入或许可统一。
 
+## Mineradio / AMLL / Youmi（2026-10-20 补充）
+
+- [Mineradio-paused固定提交](https://github.com/XxHuberrr/Mineradio-paused/tree/d43de565acabfdc1a9c9820a27e81a98ccbebcef)：main/d43de565；GPL-3.0-only，README明确长期停更，NOTICE列出独立上游与汽水专有运行时边界。只研究账号/分页/评论及节拍行为，不复制Electron服务或专有资源。
+- [applemusic-like-lyrics固定提交](https://github.com/amll-dev/applemusic-like-lyrics/tree/ca0f41d67882d936c0365ffd99c16841ea2fa39d)：main/ca0f41d6；根及core/lyric/ttml/react/react-full/vue六包均声明AGPL-3.0-only。研究歌词语义、滚动、背景职责；DOM/Canvas/TTML环境依赖与许可均不能因TS/React而忽略。
+- [7DaysMax/Youmi-Music-IOS固定提交](https://github.com/7DaysMax/Youmi-Music-IOS/tree/152567b3c4a337c9c5bee06bb7f40ebaa49d40c2)：main/152567b3；无独立LICENSE，README仅学习研究声明。是此前Ryderwe/Youmi fork所指向的上游，不能混同固定提交；只作网易登录/FM/账号实体等行为对照。
+- 三仓均位于`Z:\Z-WorkSpace\`对应仓库名的独立浅克隆；与音枢e72827d的21项证据、适配/不采纳边界和Mac复核命令见[三项目比较](MINERADIO_AMLL_YOUMI_REFERENCE_REVIEW.md)。未运行参考工程、未联调账号、未移植实现或资源。
+
 ## Beans-Music（2026-10-19 补充）
 
 - 仓库：<https://github.com/XIaodou0416/Beans-Music>；main / `f9881318caf774129205c3160510ef0dfa318adc`；本地 `Z:\Z-WorkSpace\Beans-Music`，最新提交浅克隆。

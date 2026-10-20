@@ -1,3 +1,11 @@
+## 2026-10-20 Windows同步与Mineradio/AMLL/Youmi参考比较
+
+Windows音枢从35ddf58正常fast-forward至`e72827d91c6a3238c1ed0844b9befa61048d07f4`，同步前工作树干净。三个独立参考已浅克隆至`Z:\Z-WorkSpace\`：Mineradio-paused main/d43de565、applemusic-like-lyrics main/ca0f41d6、Youmi-Music-IOS main/152567b3；完整SHA、来源和Mac复核命令见[三项目比较](docs/MINERADIO_AMLL_YOUMI_REFERENCE_REVIEW.md)。Youmi首轮长路径失败后仅在该参考仓启用core.longpaths并补全检出/索引；不运行随仓build/IPA/签名产物、不复制到音枢。
+
+21项候选：Mineradio侧重账号发现/歌单分页/QQ权限与评论、节拍视觉仅扩展线索；AMLL侧重TTML/词级语义、背景/对唱/重叠、拖动与弹簧/背景生命周期；Youmi补网易QR/验证码、私人FM低水位供曲、账号实体与请求合并行为。当前音枢歌词共享/原生渲染/背景和下载保护已存在，按e72827d代码核对缺口，不重复开发。Youmi FM全重复仍追加、Timer停止不等于取消在途QR；AMLL的React为DOM且TTML依赖DOM环境，不直接进入RN。
+
+许可事实：Mineradio GPL-3.0-only且明确停更；AMLL已查六包均AGPL-3.0-only；Youmi无独立LICENSE，README仅学习研究声明。本轮仅行为/契约研究，不移植实现或资源、不改变音枢整体许可。没有识曲采样/匹配链的新证据，识曲仍本期不做；Widget/MusicKit/AutoMix/评论写入等不自动新增。既定Q-music/Beans账号参考和Sollin视觉目标/门禁保留。本轮只同步与文档比较，无新依赖、真实服务/账号、iOS构建、真机或完成度增长。
+
 ## 2026-10-20 共享播放器/背景回归最终本地结果
 
 阶段闭环补记：`npm run check` 401/401、reverse-skill strict review 43E/41F/41P、17WI/94 timeline通过；最终 clean unsigned IPA `build/local-presentation-ui-2cd956b/NexusMusic-unsigned.ipa` SHA-256 `363aed3b1d0d6191a7ef5d8ae1a354c1df05c919adb4fdd78a2810f13a5388ef` 已完成归档/字节一致性与隐私排除核验。提交`2cd956b`对应 [iOS27 run 39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267) 仍运行、0排队。上一条中“最终clean归档待重建”已过时；视觉分数仍未达90%，真实服务、签名及真机边界不变。

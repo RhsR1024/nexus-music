@@ -1,3 +1,7 @@
+## 2026-10-20 Mineradio / AMLL / Youmi 补充参考
+
+用户指定三仓已在Windows独立检出并固定：Mineradio-paused `d43de565acabfdc1a9c9820a27e81a98ccbebcef`、applemusic-like-lyrics `ca0f41d67882d936c0365ffd99c16841ea2fa39d`、7DaysMax/Youmi-Music-IOS `152567b3c4a337c9c5bee06bb7f40ebaa49d40c2`。与音枢e72827d的21项源码/符号/行号、现有能力、候选落点、Android与维护/许可/验收边界见[具体比较](MINERADIO_AMLL_YOUMI_REFERENCE_REVIEW.md)。仅行为与契约研究，未复制GPL/AGPL或未明许可的代码/资产；不因项目有能力就扩范围或改变既定视觉目标。
+
 ## 2026-10-19 Beans-Music 补充参考
 
 用户指定 Beans-Music 已同步至相邻 Windows 目录，固定 main / `f9881318caf774129205c3160510ef0dfa318adc`。与音枢 `d2d24e2` 的15项具体比较、双方源码/符号/行号、适配建议、许可和验收边界见 [BEANS_MUSIC_REFERENCE_REVIEW.md](BEANS_MUSIC_REFERENCE_REVIEW.md)。优先补账号provider行为，不替换现有播放/宿主/存储架构或Sollin视觉目标；报告不是产品采纳或完成记录。
