@@ -6,7 +6,7 @@
 
 用户明确指令：当前应用只面向 iPhone 常态字号和常态布局；大字/辅助功能字号模式与 iPad 专用布局暂不实现，也不要求对齐已提供的截图或承担视觉美观验收。参考图里的大字歌词是“歌词舞台”样式，不是辅助功能大字。后续只做一般 iPhone 常态适配，以及安全区域、不裁切、不重叠和核心控件可达的基础工程检查。已有大字/iPad 测试仅保留为兼容回归，不删除历史证据、不再以它们计算 UI 90% 完成度；iPad/大字视觉优化从当前分母暂缓，正式进度重估时统一调整。详见[0076](docs/decisions/0076-iphone-normal-layout-scope.md)。
 
-该范围已同步到 TASK_PLAN、IMPLEMENTATION_PLAN、FEATURE_STATUS、PRODUCT_SCOPE、PROGRESS_ESTIMATE 与 GitHub Actions：自动 CI 不再执行大字专项或独立 iPad 步骤，保留测试代码供手动兼容回归。完整播放器 Release 回归 `SourceUITests-1792511494373` 为 1/0/0、570.452 秒；IMG_4854 常态两行基线固定为整屏 78.48%、仅遮封面 88.94%、再遮不同文本内容后的 UI 控件可比区 93.12%/MAD12.47。E-049 绑定三口径报告与哈希；控件区达标不代表整屏 90%，页面与总目标继续 active。三行测试歌词候选仅 85.97%/76.20%，已撤回。`npm run check` 401/401，reverse-skill strict review 49E/41F/41P、17WI/100 timeline、0错误/警告；清洁 IPA 与新 iOS27 run 仍待。
+该范围已同步到 TASK_PLAN、IMPLEMENTATION_PLAN、FEATURE_STATUS、PRODUCT_SCOPE、PROGRESS_ESTIMATE 与 GitHub Actions：自动 CI 不再执行大字专项或独立 iPad 步骤，保留测试代码供手动兼容回归。完整播放器 Release 回归 `SourceUITests-1792511494373` 为 1/0/0、570.452 秒；IMG_4854 常态两行基线固定为整屏 78.48%、仅遮封面 88.94%、再遮不同文本内容后的 UI 控件可比区 93.12%/MAD12.47。E-049 绑定三口径报告与哈希；控件区达标不代表整屏 90%，页面与总目标继续 active。三行测试歌词候选仅 85.97%/76.20%，已撤回。`npm run check` 401/401，reverse-skill strict review 49E/41F/41P、17WI/100 timeline、0错误/警告；`0955e42`清洁unsigned IPA已通过manifest/CRC/JS/隐私检查，SHA-256 `2a80bfa60a92a527360ea37496bbd1b13996180bcdbc1b4f279c3e40ea7e2ebd`，对应iOS27 run `39457413268`运行中。
 
 ## 2026-10-21 iOS27 39427267903 两失败诊断与本地闭环
 

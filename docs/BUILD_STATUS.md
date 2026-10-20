@@ -12,7 +12,7 @@
 
 ## 2026-10-21 iPhone 常态范围、完整回归与控件可比区
 
-用户将当前视觉验收收缩为 iPhone 常态字号/常态布局，大字与 iPad 专用适配暂缓。`npm run check` 401/401；完整 `testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792511494373`，570.452秒）。三行测试歌词候选虽通过功能断言，但 IMG_4854 降至整屏76.20%、遮封面85.97%，已撤回。重新从未试验的`SourceUITests-1792507578198`导出两行基线（PNG SHA-256 `a06f5e40c280e6c3fe5f2c9e4834ef5e6f783bb0c7191c125eda256e6bcbeb23`），整屏78.48%/MAD30.79、仅遮封面88.94%/18.93、再遮不同文本内容后的UI控件可比区93.12%/12.47。E-049绑定三份报告和diff；93.12%不冒充整屏。CI YAML通过，自动门禁不再包含大字/iPad；reverse-skill IPA/APK strict review分别49E/41F/41P、17WI/100 timeline和3E/2F/2P，均0错误/警告。清洁归档、push与新iOS27终态待。
+用户将当前视觉验收收缩为 iPhone 常态字号/常态布局，大字与 iPad 专用适配暂缓。`npm run check` 401/401；完整 `testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792511494373`，570.452秒）。三行测试歌词候选虽通过功能断言，但 IMG_4854 降至整屏76.20%、遮封面85.97%，已撤回。重新从未试验的`SourceUITests-1792507578198`导出两行基线（PNG SHA-256 `a06f5e40c280e6c3fe5f2c9e4834ef5e6f783bb0c7191c125eda256e6bcbeb23`），整屏78.48%/MAD30.79、仅遮封面88.94%/18.93、再遮不同文本内容后的UI控件可比区93.12%/12.47。E-049绑定三份报告和diff；93.12%不冒充整屏。CI YAML通过，自动门禁不再包含大字/iPad；reverse-skill IPA/APK strict review分别49E/41F/41P、17WI/100 timeline和3E/2F/2P，均0错误/警告。`0955e42`清洁unsigned IPA归档成功：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、unsigned；IPA SHA-256 `2a80bfa60a92a527360ea37496bbd1b13996180bcdbc1b4f279c3e40ea7e2ebd`，IPA与xcarchive JS同为`50edcba62456db741c55ec66f6ec770794b173a60713940d439e07ee3045fdd2`，ZIP CRC、arm64入口与私人/测试/签名资源排除通过，产物留`build/local-iphone-normal-0955e42`。对应iOS27 run[39457413268](https://github.com/RhsR1024/nexus-music/actions/runs/39457413268)运行中，终态待。
 
 ## 2026-10-20 4855/4856 字号层级批次
 
