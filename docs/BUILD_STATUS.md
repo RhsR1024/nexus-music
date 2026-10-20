@@ -1,3 +1,11 @@
+## 2026-10-20 经典页 4854 锚点收口本地批次
+
+本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792473570664`），导出 `build/ui-screenshots-batch11-classic`（经典页 `A274FE8D`）并亲看；`npm run typecheck` 通过、`npm run check` 401/401。写真单像素夹具、歌词两行夹具与默认主题未改。
+
+经典页按 4854 实测收口：歌手 17pt、进度容器 18pt 内缩与 -4.5pt 补偿、传输行 gap 24.5、工具行 25.5pt 内缩且不再下沉、脚注 -9pt。锚点（pt）：歌手墨迹顶 493.7 vs 493.7、歌词 570.3/606.3 vs 参考后两行 570.3/606.7、进度 670.7 vs 669.7、工具中心 840.8 vs 840.8、脚注 873.3 vs 874.0。SSIM（`--ignore-top 180`）74.38→**76.09%/MAD 30.79**（31.96→）；仍未达 90%，主因合成 RGB 封面/英文长文本/两行歌词夹具/纸面底色，不增加已对齐页数；除 4851 90.62% 外无页面达标。
+
+云端单队列：39367954644（a39e8c1）in_progress、39372628064（4ffea70）pending，按序等待，不取消/不重派；39360042052 步骤 10 失败附件仍受权限限制。下一步按用户批次做 4866/4863 行距与字体层级、4872 行距、4855 卡间距；真实服务、Apple 签名、真机未验收。
+
 ## 2026-10-20 AM 队列/大封面锚点收口本地批次
 
 本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792471759953`），导出 `build/ui-screenshots-batch9-am`（队列 `4D576F33`、大封面 `E24C2222`、歌词 `F7736FEF`）并亲看；`npm run typecheck` 通过、`npm run check` 401/401。写真单像素夹具、歌词两行夹具与默认主题未改。

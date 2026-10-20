@@ -123,24 +123,29 @@ export function Player({ services }: { services: Services }) {
   // IMG_4854: 308pt square at 430pt width (61pt side margins), transport 70pt play.
   const artworkSide=Math.min(width-122,308);
   const classicHero=<>
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+    {/* IMG_4854 places the menu dots 5pt higher and 14pt further right than
+        the shared 24pt inset; the 35pt row lifts the cover to 124pt. */}
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:35}}>
       <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
-      {iconButton('ellipsis-horizontal','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);})}
+      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},22)}</View>
     </View>
     <View testID="classic-artwork" collapsable={false} style={{alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
     <View style={{alignItems:'center',gap:2}}>
       <Text numberOfLines={1} style={{fontSize:22,lineHeight:28,fontWeight:'700',color:theme.palette.text}}>{entry.track.title}</Text>
-      <Text numberOfLines={1} style={{fontSize:14,color:theme.palette.secondary}}>{entry.track.artist}</Text>
+      {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
+      <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.palette.secondary}}>{entry.track.artist}</Text>
     </View>
-    <View style={{marginTop:6}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
-    {/* Reference metrics: track centre 671pt, transport centre 766pt, tools 838pt. */}
-    <View style={{marginTop:8}}><PlaybackProgress services={services} variant={theme.mode==='dark'?'default':'paper'}/></View>
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:26,marginTop:2}}>
-      {iconButton('play-skip-back','上一首',()=>services.playback.next(-1),30)}
-      <Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{width:70,height:70,borderRadius:35,backgroundColor:theme.palette.accent,alignItems:'center',justifyContent:'center'}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={30} color="#FFFFFF" style={state.intent==='playing'?undefined:{marginLeft:4}}/></Pressable>
-      {iconButton('play-skip-forward','下一首',()=>services.playback.next(),30)}
+    <View style={{marginTop:13}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
+    {/* Reference metrics: track 42..388pt, centre 668pt; 17pt artist pushes the
+        stack down 3.6pt, so -4.5pt keeps the transport/tools on their anchors. */}
+    <View style={{marginHorizontal:18,marginTop:-4.5}}><PlaybackProgress services={services} variant={theme.mode==='dark'?'default':'paper'}/></View>
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:24.5,marginTop:2}}>
+      {iconButton('play-back','上一首',()=>services.playback.next(-1),30)}
+      <Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{width:70,height:70,borderRadius:35,backgroundColor:theme.mode==='dark'?theme.palette.accent:paper.accent,alignItems:'center',justifyContent:'center'}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={30} color="#FFFFFF" style={state.intent==='playing'?undefined:{marginLeft:4}}/></Pressable>
+      {iconButton('play-forward','下一首',()=>services.playback.next(),30)}
     </View>
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:2}}>
+    {/* IMG_4854 tool centres run 71.5..358.2pt, narrower than the 24pt page inset. */}
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:0,marginHorizontal:25.5}}>
       {iconButton('repeat',`循环：${preferences.repeat}`,cycleRepeat,22)}
       {iconButton('chatbubble-outline','歌曲评论',()=>setCommenting(entry.track),22)}
       {iconButton(services.library.isFavorite(entry.track)?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},22)}
@@ -149,7 +154,7 @@ export function Player({ services }: { services: Services }) {
     </View>
     {/* Kept above the safe-area fold (932pt screen, ~898pt viewport) so the
         reference's last line is not clipped by the scroll viewport. */}
-    <Text style={{textAlign:'center',fontSize:11,color:theme.palette.secondary}}>{preferences.quality} 档位 · {state.media?.quality??'待解析'} 实际请求</Text>
+    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{preferences.quality} 档位 · {state.media?.quality??'待解析'} 实际请求</Text>
     <ClassicLyricChrome services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
   </>;
   const classicTools=<View style={{gap:12,marginTop:12}}>
