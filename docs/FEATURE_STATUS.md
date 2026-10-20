@@ -1,3 +1,7 @@
+## 2026-10-20 iOS27 失败测试导航
+
+run 39305209267 的三项失败已收敛为 UITest 导航/陈旧元素竞态并完成本地修复，不改产品设置、播放或像素阈值。Release 样式+EQ 2/0/0、经典安全区 1/0/0；check 401/401。真实服务、签名、真机与新 iOS27 云端仍待。功能完成度不增加。
+
 ## 2026-10-18 新31图归档与首批构图本地通过
 
 31张用户原图已原字节归档到本机忽略目录resource/reference-ui/sollin-2026-10-18，132,113,191字节；原件/副本/manifest/迁移基线SHA全部复核。逐图差异与后续顺序见[截图矩阵](SOLLIN_SCREENSHOT_REVIEW_2026-10-18.md)。按reverse-skill R2路由215123、PRIMARY mobile-reverse、原offline scope和39E/38F/38P strict review零错误/警告，E039补充截图，E013/E037/E038保持主要IPA结构证据。

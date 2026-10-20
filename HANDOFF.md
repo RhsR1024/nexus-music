@@ -1772,3 +1772,10 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 ## 2026-10-18 授权清理异常修复回执
 
 `fd376cc` 已正常 push；授权状态机清理异常保护通过，`npm run check` 384/384，本地 clean unsigned archive/校验通过，IPA SHA256 `c74b8d5fb6377d4d50874e730f5bf58d57eadf9d511dd8fdada79327458cd180`。对应新 iOS27 运行以 API 实际队列为准；仍不能宣称真实平台授权或真机通过。
+## 2026-10-20 iOS27 三项失败测试导航闭环
+
+针对 run 39305209267 的三项失败完成测试层修复，未改产品导航、播放或像素契约：`openSettings` 先等待 Sheet 真正消失；若上一用例遗留全屏播放器，则通过实际“收起播放页”回到 tab shell。设置 tab 在 RN 临时发布 `{{inf, inf}, {0, 0}}` 时不再调用 `isHittable`，而是先等有限可见 frame，消除 iOS27 的 Activation point invalid。样式 Sheet 每次打开/关闭均等待 close 可点击与消失；经典安全区用例通过真实“查看播放队列”进入完整队列，关闭队列宿主后再检查 viewport。
+
+验证：`testPlayerStyleSheetWithLargeTextAndPersistence` + `testEQPresetCardsWithLargeText` Release 2/0/0（`build/SourceUITests-1792500633689.xcresult`，测试 259.199 秒）；`testClassicPlayerWindowSafeArea` 1/0/0（`build/SourceUITests-1792500411868.xcresult`，约 208.4 秒）。`npm run check` 401/401、`git diff --check` 与 Swift parse 通过。三项均为本地 iOS26.3.1 证据，新 iOS27 云端终态待 push 后实际运行；真实服务、Apple 签名和真机仍未完成。
+
+## 2026-10-20 4855/4856 视觉复核通过门禁

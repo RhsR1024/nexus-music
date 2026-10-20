@@ -1,5 +1,11 @@
 # iOS 27：2026-10-19 失败诊断
 
+## 2026-10-20 三项失败测试导航闭环
+
+本地已复现“隐藏 tab frame 无限值”的同类失败：直接查询 `tab-settings.isHittable` 会报 `Activation point invalid`。测试 helper 现先等待非空、有限、可见 frame，再查询可点击；若全屏播放器覆盖 shell，只点击实际的“收起播放页”。样式 Sheet 使用打开等待、关闭等待、消失等待三态屏障；经典安全区通过“查看播放队列”进入完整队列并关闭队列宿主后继续原 viewport 断言。
+
+最终本地：样式大字 + EQ 大字 2/0/0（`SourceUITests-1792500633689`），经典安全区 1/0/0（`SourceUITests-1792500411868`）。未改产品播放、设置持久化、UI 像素或安全区阈值。对应新 iOS27 run 必须由本次提交实际触发，旧 run 39305209267 仍保持 failure 结论。
+
 ## run 39305209267 / 2cd956b
 
 运行 [39305209267](https://github.com/RhsR1024/nexus-music/actions/runs/39305209267) 对应 `2cd956b3a143a114f4c8c11960d738c4777c2d7b`，于 2026-10-19 20:43Z completed/failure。checks、原生检查通过，首组App测试28通过/3失败/0跳过；后续测试、iPad、归档未执行。失败后模拟器诊断收集超时为次生现象。GitHub REST核对最新运行状态，无queued或in_progress任务；没有重派旧提交。

@@ -3,12 +3,42 @@ import Vision
 
 final class SourceSettingsTests: XCTestCase {
   override func setUpWithError() throws {continueAfterFailure=false}
+  private func waitForHittable(_ element:XCUIElement,timeout:TimeInterval)->Bool{
+    let deadline=Date().addingTimeInterval(timeout)
+    repeat{
+      if element.exists{
+        let frame=element.frame
+        // RN can temporarily publish hidden tabs as {{inf, inf}, {0, 0}}.
+        // Asking XCTest for hittability in that state raises a test failure
+        // instead of returning false, so wait for a finite frame first.
+        if !frame.isNull && !frame.isInfinite && !frame.isEmpty && frame.width>1 && frame.height>1 && element.isHittable{return true}
+      }
+      RunLoop.current.run(until:Date().addingTimeInterval(0.1))
+    }while Date()<deadline
+    return false
+  }
+  private func waitForGone(_ element:XCUIElement,timeout:TimeInterval)->Bool{
+    let gone=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:element)
+    return XCTWaiter.wait(for:[gone],timeout:timeout) == .completed
+  }
   private func openSettings(_ app:XCUIApplication,page:String){
-    for id in ["background-sheet-close","theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{let close=app.buttons[id];if close.exists{close.tap()}}
+    for id in ["background-sheet-close","theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{
+      let close=app.buttons[id]
+      if waitForHittable(close,timeout:0.2){close.tap();_ = waitForGone(close,timeout:5)}
+    }
     let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-settings").firstMatch
     let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch
-    XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
-    for _ in 0..<3 {let back=app.buttons["settings-back"];if !back.exists{break};back.tap()}
+    XCTAssertTrue(tab.waitForExistence(timeout:15))
+    if !waitForHittable(tab,timeout:1){
+      // A previous test can leave the full-screen player above the tab shell.
+      // Close only the actual player control, then require the shell to become
+      // reachable; this preserves the page under test and does not skip a step.
+      let closePlayer=app.buttons["收起播放页"].firstMatch
+      if waitForHittable(closePlayer,timeout:1){closePlayer.tap()}
+    }
+    XCTAssertTrue(waitForHittable(tab,timeout:10),"Settings tab must be reachable after closing any presented player")
+    tab.tap()
+    for _ in 0..<3 {let back=app.buttons["settings-back"];if !waitForHittable(back,timeout:0.2){break};back.tap()}
     var settingsPage="home"
     func enter(_ target:String){
       let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-"+settingsPage).firstMatch
@@ -1039,10 +1069,15 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(viewport.waitForExistence(timeout:10))
       XCTAssertGreaterThanOrEqual(viewport.frame.minY,app.frame.minY+20)
       XCTAssertLessThanOrEqual(viewport.frame.maxY,app.frame.maxY-10)
+      let openQueue=app.buttons["查看播放队列"].firstMatch
+      reveal(openQueue);openQueue.tap()
       let queue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
-      reveal(queue);queue.tap()
+      XCTAssertTrue(queue.waitForExistence(timeout:10));reveal(queue);queue.tap()
       let closeQueue=app.buttons["收起队列"];XCTAssertTrue(closeQueue.waitForExistence(timeout:10));closeQueue.tap()
       XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:closeQueue)],timeout:10),.completed)
+      let closeContent=app.buttons["收起播放选项"].firstMatch
+      XCTAssertTrue(closeContent.waitForExistence(timeout:10));closeContent.tap()
+      XCTAssertTrue(waitForGone(closeContent,timeout:10),"Closing the queue host must restore the classic viewport before safe-area checks")
       XCTAssertGreaterThanOrEqual(viewport.frame.minY,app.frame.minY+20)
       let portrait=XCTAttachment(screenshot:XCUIScreen.main.screenshot());portrait.name="Classic scrolled portrait safe viewport after queue";portrait.lifetime = .keepAlways;add(portrait)
       XCUIDevice.shared.orientation = .landscapeLeft;app.activate()
@@ -2138,28 +2173,30 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<20 {if entry.isHittable{break};app.descendants(matching:.any).matching(identifier:"settings-viewport-appearance").firstMatch.swipeUp()}
     XCTAssertTrue(entry.isHittable);let entryY=entry.frame.midY;entry.tap()
     let close=app.buttons["skins-sheet-close"]
-    XCTAssertTrue(close.waitForExistence(timeout:5));XCTAssertFalse(app.buttons["settings-open-background"].exists)
+    XCTAssertTrue(waitForHittable(close,timeout:5));XCTAssertFalse(app.buttons["settings-open-background"].exists)
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"player-style-sheet").firstMatch.exists)
     let wave=item("wave");reveal(wave);XCTAssertTrue((wave.value as? String)?.contains("实时音频频谱环") == true);wave.tap()
-    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertTrue(waitForGone(close,timeout:10),"Saving a style must dismiss the sheet before touching its previous controls")
     XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
     XCTAssertEqual(entry.frame.midY,entryY,accuracy:2,"Saving a style must retain the underlying category scroll")
-    entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected)
+    entry.tap();XCTAssertTrue(waitForHittable(close,timeout:10));reveal(wave);XCTAssertTrue(wave.isSelected)
     let image=XCTAttachment(screenshot:app.screenshot());image.name="Player style sheet at accessibility XXXL with persisted choice";image.lifetime = .keepAlways;add(image)
     let title=app.staticTexts["settings-title-skins"]
     title.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
-    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
-    XCTAssertEqual(entry.frame.midY,entryY,accuracy:2);entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected)
-    close.tap();entry.tap();reveal(wave);XCTAssertTrue(wave.isSelected,"Closing without a choice must preserve the style");close.tap()
+    XCTAssertTrue(waitForGone(close,timeout:10),"Swipe dismissal must remove the sheet before checking persisted state")
+    XCTAssertEqual(entry.frame.midY,entryY,accuracy:2);entry.tap();XCTAssertTrue(waitForHittable(close,timeout:10));reveal(wave);XCTAssertTrue(wave.isSelected)
+    close.tap();XCTAssertTrue(waitForGone(close,timeout:10))
+    entry.tap();XCTAssertTrue(waitForHittable(close,timeout:10));reveal(wave);XCTAssertTrue(wave.isSelected,"Closing without a choice must preserve the style")
+    close.tap();XCTAssertTrue(waitForGone(close,timeout:10))
     app.terminate();app.launch();openSettings(app,page:"skins");reveal(wave);XCTAssertTrue(wave.isSelected,"Restart must restore the saved layout")
     let stage=item("stage");reveal(stage);stage.tap()
-    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertTrue(waitForGone(close,timeout:10))
     app.terminate();app.launch();openSettings(app,page:"skins");reveal(stage);XCTAssertTrue(stage.isSelected,"Restart must restore the new stage layout too")
     let am2=item("am2");reveal(am2);am2.tap()
-    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertTrue(waitForGone(close,timeout:10))
     app.terminate();app.launch();openSettings(app,page:"skins");reveal(am2);XCTAssertTrue(am2.isSelected,"Restart must restore AM2 independently from AM")
     let classic=item("classic");reveal(classic);classic.tap()
-    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:close);waitForExpectations(timeout:10)
+    XCTAssertTrue(waitForGone(close,timeout:10))
   }
   func testBackgroundSheetWithLargeTextAndPersistence() throws {
     let app=XCUIApplication();app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"];app.launch()
@@ -2317,8 +2354,10 @@ final class SourceSettingsTests: XCTestCase {
     app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
     app.launch();openSettings(app,page:"equalizer")
     let flat=app.buttons["eq-builtin-0"],bass=app.buttons["eq-builtin-1"]
+    let viewportElement=app.descendants(matching:.any).matching(identifier:"settings-viewport-equalizer").firstMatch
+    XCTAssertTrue(viewportElement.waitForExistence(timeout:10),"EQ viewport must replace any restored full-screen player")
     for _ in 0..<60 {
-      let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-equalizer").firstMatch.frame
+      let viewport=viewportElement.frame
       if flat.exists && flat.isHittable && flat.frame.minY>=viewport.minY+8 && flat.frame.maxY<=viewport.maxY-8 {break}
       let above=flat.exists && flat.frame.minY<viewport.minY+8
       app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.94,dy:above ? 0.60 : 0.40)))

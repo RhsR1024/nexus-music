@@ -1,3 +1,7 @@
+## 2026-10-20 iOS27 三项失败测试导航本地闭环
+
+本轮不修改 Sollin UI 像素或交互契约，只修复 UITest 导航竞态：隐藏 tab 的无限 frame 不参与 hittability；残留全屏播放器由真实收起按钮清理；样式 Sheet 用打开/关闭/消失三态屏障；经典安全区经真实队列入口验证。Release 样式+EQ 2/0/0、经典安全区 1/0/0。4855 仍84.53%，4856 仅该默认主题滚动态90.25%，不新增已对齐页数；4854 可比区90.42%与整屏78.48%口径不变。
+
 ## 2026-10-20 批次：4855/4856 字段几何与主题芯片复核
 
 **验证**：`testZNavidromePlaybackAndCredentials` Release 1/0/0（`SourceUITests-1792497763561`，508.126秒），导出`build/ui-screenshots-batch21`并亲看；`npm run check` 401/401、`git diff --check`通过。测试后的`simctl`诊断采集错误发生在测试Passed之后，不改写测试结果。

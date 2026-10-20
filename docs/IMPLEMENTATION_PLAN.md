@@ -1048,3 +1048,10 @@ WebDAV 同步的自动触发已收口为安全的前台预览：服务初始化�
 ## 2026-10-18 平台授权状态机
 
 `src/providers/musicAuth.ts` 实现单实例授权生命周期，`createServices()` 暴露 `musicAuth.wy/tx/kg`。状态机以代次隔离迟到回调，统一处理 success/cancel/expired/error，并确保 native cleanup 只执行一次；测试覆盖四类竞态，383/383 通过。具体平台协议接入仍需严格按 Q-music 参考和 iOS WKWebView/二维码边界分别完成。
+## 2026-10-20 iOS27 三项失败测试导航实施状态
+
+`SourceSettingsTests` 增加有限 frame + 可点击的状态等待，避免 RN 隐藏 tab 的 `{{inf, inf}, {0,0}}` 触发 XCTest Activation point 失败；`openSettings` 在 tab shell 不可达时关闭实际全屏播放器。样式 Sheet 每次打开、关闭与消失均等待对应状态，经典安全区改由真实“查看播放队列”入口进入完整队列，关闭队列宿主后继续原横竖 viewport 检查。
+
+验证：样式 + EQ 2/0/0（`SourceUITests-1792500633689`，259.199秒），经典安全区 1/0/0（`SourceUITests-1792500411868`）；check 401/401、Swift parse、diff check通过。生产 UI/播放未改，像素与动效完成度不增加；clean IPA、新 iOS27 run、签名与真机待继续。
+
+## 2026-10-20 4855/4856 字号层级实施状态

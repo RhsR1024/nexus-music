@@ -1564,3 +1564,12 @@ push后API实核新iOS27运行39119277363/8aefb23为唯一pending，39115107158/
 [0065](decisions/0065-paused-background-pixel-baseline.md)最终完整专项1792320461405：467.221秒、1通过/0失败/0跳过。保留原PCM/活动恢复/异步挂起与迟到/失败回退/播放态三色；深色暂停重启14点RGBA与原基线完全相同，恢复浅色与浅色暂停基线相同，明暗差/暂停稳定/独立开关/实际移除成功后mini清理通过。16次合成鉴权/0失败、无新stream（复用缓存），视频59帧/7中间色，红阈值0.528333秒，不计FPS/功耗或真实服务。日志/summary/counts留ui-background-baseline-passed-*；四张关键PNG与独立Pillow14点opaque精确比较收据留build/background-baseline-passed，深浅截图已亲看；重复完整导出在finally删除。480.111秒的首轮最后清理失败仍保留，不改写为通过。
 
 387业务/类型、PNG往返/坏数据及几何native专项通过；独立失败导出成功/出错均删除自己的临时目录，原结果保留。34E/33F/33P严格review通过，下一黑胶控制器静态报告已补齐，标志/参数/手势与产品采纳仍待。本批尚待清洁归档、正常push及对应新iOS27，全部其余A/F/J和真实服务/签名/真机缺口保持。
+## 2026-10-20 iOS27 三项失败测试导航补修
+
+对应 run 39305209267 的 `testPlayerStyleSheetWithLargeTextAndPersistence`、`testEQPresetCardsWithLargeText`、`testClassicPlayerWindowSafeArea` 已完成测试层修复，产品代码和视觉断言未改。根因分别收敛为：样式 Sheet 已自动 dismiss 后仍点击陈旧 close；上一测试残留全屏经典播放器导致 EQ 设置导航落错；隐藏 `tab-settings` 的无限临时 frame 被直接查询 hittability。
+
+修复后先等待有限可见 frame，再判断可点击；`openSettings` 仅在真正需要时关闭残留播放页；样式 Sheet 打开/关闭使用存在、可点击、消失三段屏障；经典用例经真实“查看播放队列”入口打开并关闭队列宿主后再验 safe viewport。
+
+Release 结果：播放样式 + EQ 同批 2/0/0（`SourceUITests-1792500633689`，259.199 秒）；经典安全区 1/0/0（`SourceUITests-1792500411868`，约208.4秒）。两者均在 NexusMusic iPhone 15 Pro Max / iOS26.3.1 x86_64 模拟器。`npm run check` 401/401、Swift parse、diff check通过。iOS27 新 run、clean IPA 与真机仍待。
+
+## 2026-10-20 局部 SSIM 度量批次与干净 unsigned IPA
