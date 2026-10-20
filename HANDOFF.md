@@ -1,3 +1,17 @@
+## 2026-10-21 当前 UI 范围收缩：仅 iPhone 常态布局
+
+用户明确指令：当前应用只面向 iPhone 常态字号和常态布局；大字/辅助功能字号模式与 iPad 专用布局暂不实现，也不要求对齐已提供的截图或承担视觉美观验收。参考图里的大字歌词是“歌词舞台”样式，不是辅助功能大字。后续只做一般 iPhone 常态适配，以及安全区域、不裁切、不重叠和核心控件可达的基础工程检查。已有大字/iPad 测试仅保留为兼容回归，不删除历史证据、不再以它们计算 UI 90% 完成度；iPad/大字视觉优化从当前分母暂缓，正式进度重估时统一调整。详见[0076](docs/decisions/0076-iphone-normal-layout-scope.md)。
+
+## 2026-10-21 iOS27 39427267903 两失败诊断与本地闭环
+
+提交`1fd71e8`的[39427267903](https://github.com/RhsR1024/nexus-music/actions/runs/39427267903)已completed/failure：checks/native通过，iOS27手机App 29通过/2失败/0跳过，后续在线组、离线组、iPad及归档未执行；0运行/0排队，不重派旧任务。已下载并核验compact logs（615054字节，SHA-256 `bbb9000b96ef7f1515bfc3fa47eaecedf778798ee0f00edfcd3ea025a8bdbb05`）与失败证据（5749703字节，SHA-256 `06e01e2f570bb908ef9051ab95f20aa631c57f087fe5d03d98bb9467089e2982`），ZIP CRC通过。
+
+`testBackgroundSheetWithLargeTextAndPersistence`在论点后把已滚出可访问树的背景标题继续拖拽；已改为在固定的44pt背景Sheet抓手上执行真实下滑关闭。`testStageStylesWithLargeText`的第四个“炫彩”芯片在大字号单行中被裁切、不可达；`StagePlayer`现保持普通字号单行，XXXL时允许换行并收窄横向内距。生产改动只修复大字号可达性，未删除芯片、未放宽断言。
+
+本地专项：背景大字`SourceUITests-1792510252469` 1/0/0；舞台大字`1792510589729` 1/0/0；舞台普通字号`1792510859019` 1/0/0。三项均为iOS26.3.1模拟器；新iOS27、清洁IPA、签名与真机仍待本提交。
+
+外观设置状态匹配最终截图（真实设置设为纯色/卡片30%，保留默认blush+rose）：IMG_4855 **84.36%/MAD21.61**，仍实施中；IMG_4856 **90.26%/MAD15.06**，该默认主题滚动态达标。强制3/3/3/4芯片与31.4%固定卡片均降低SSIM，已撤回；13个真实主题比参考11个多出的结构差异保留。舞台正确展开面板为81.81%/MAD16.26，旧44.91%为误用收起页。本批`npm run check` 401/401、`git diff --check`通过，reverse-skill strict review 48E/41F/41P、17WI/99 timeline、0错误/警告。
+
 ## 2026-10-20 4855/4856 视觉复核通过门禁
 
 本轮基于现有 Sollin 设置页继续收口 `AppearanceSettings`、`SettingsScreen` 与 `VisualSettings`：外观工具按钮改为 48×44pt/25pt 图标；主题芯片改为 36pt 行高、15pt 字与 17.3pt 色块；强调色、背景颜色和遮罩颜色字段统一 18pt 色块、19pt 间距与靠右取色按钮；Sheet 顶部改为 48pt 内距、32×4pt 抓取条和 48pt 关闭按钮命中区。所有改动仍走既有设置页/Sheet 和持久化路径，没有增加伪入口。
@@ -9,6 +23,8 @@
 提交 `330ff9ddc18dcf2f8927a2ae0b1d55fd2029587a` 的清洁 unsigned archive 已成功：manifest `dirty=false`/`workingTreeChanges=[]`、arm64、iphoneos26.2、最低iOS15.1、设备族`[1,2]`、`signed=false`。ZIP CRC、arm64、包内可执行入口、IPA与xcarchive `main.jsbundle`字节SHA `c0a01a9154efbdb41df722e8af000b77084417ecdc24edd33e0c7fdf20e18941`一致、正式入口及私人/测试/签名材料排除通过。IPA SHA-256 `ccdd754b5eb1dca3a7ff06a1e23c235c4ee6a779ced99582b7f5afa3807785dd`，留存`build/local-appearance-330ff9d`。该包装不等于iOS27、Apple签名或真机通过；下一步正常push并核对单队列。
 
 在测试导航修复提交`1df056234c756ed3349067cb93aafb6096d50ce7`上又完成一次清洁归档；产品JS字节仍为`c0a01a9154efbdb41df722e8af000b77084417ecdc24edd33e0c7fdf20e18941`，manifest `dirty=false`、arm64/iphoneos26.2/min15.1/设备族[1,2]、unsigned，IPA SHA-256 `9b5fd83a23573fa91227114cbc3c72d17033f4721c9e1c60f58466a5b25cd9a0`，留`build/local-appearance-test-nav-1df0562`。ZIP CRC、包内JS字节一致与私人/测试/签名材料排除再次通过；下一步正常push。
+
+重新核对IMG_4872对应状态后确认：此前`44.91%`误用了收起的舞台运输页，实际展开的`Stage style panel`附件为**81.81%/MAD16.26**；应由后续doc-only提交携带，不改变产品字节或本轮IPA。差异主要是英文合成歌词换行与参考中文内容，面板结构已更接近。E-045及strict review通过45 Evidence/41 Finding/41 Path、17 WI/96 timeline、0错误/0警告；动效、目标运行、真实服务、签名和真机仍待。
 
 ## 2026-10-20 UI 度量修正、经典页采集修复与 4856 收口
 

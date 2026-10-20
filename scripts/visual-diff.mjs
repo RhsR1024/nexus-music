@@ -241,6 +241,13 @@ const a = gray(reference);
 const b = gray(candidate);
 const masked = (x, y) =>
   y < args.ignoreTop || args.masks.some(([mx, my, mw, mh]) => x >= mx && x < mx + mw && y >= my && y < my + mh);
+const countMasked = (options, width, height) => {
+  let count = 0;
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    if (y < options.ignoreTop || options.masks.some(([mx, my, mw, mh]) => x >= mx && x < mx + mw && y >= my && y < my + mh)) count++;
+  }
+  return count;
+};
 
 const map = ssimMap(a, b, width, height, Math.floor(args.window / 2));
 const madMap = new Float64Array(width * height);
@@ -262,7 +269,8 @@ for (let row = 0; row < rows; row++) {
   }
 }
 // Masked score: same local mean, over unmasked pixels only.
-const maskedScore = global.ssim;
+const maskedScore = global?.ssim ?? null;
+const remainingPixels = width * height - countMasked(args, width, height);
 // Legacy global-statistic value kept only for continuity with older records.
 let n = 0;
 let sa = 0;
@@ -277,14 +285,14 @@ for (let y = 0; y < height; y++) {
     sa += a[i]; sb += b[i]; saa += a[i] * a[i]; sbb += b[i] * b[i]; sab += a[i] * b[i]; n++;
   }
 }
-const ma = sa / n;
-const mb = sb / n;
-const va = saa / n - ma * ma;
-const vb = sbb / n - mb * mb;
-const cov = sab / n - ma * mb;
+const ma = n ? sa / n : null;
+const mb = n ? sb / n : null;
+const va = n ? saa / n - ma * ma : null;
+const vb = n ? sbb / n - mb * mb : null;
+const cov = n ? sab / n - ma * mb : null;
 const c1 = (0.01 * 255) ** 2;
 const c2 = (0.03 * 255) ** 2;
-const legacyScore = ((2 * ma * mb + c1) * (2 * cov + c2)) / ((ma * ma + mb * mb + c1) * (va + vb + c2));
+const legacyScore = n ? ((2 * ma * mb + c1) * (2 * cov + c2)) / ((ma * ma + mb * mb + c1) * (va + vb + c2)) : null;
 
 const outDir = resolve(args.out ?? `build/visual-diff/${basename(args.candidate, '.png')}`);
 mkdirSync(outDir, {recursive: true});
@@ -308,8 +316,8 @@ const report = {
   window: args.window,
   masks: args.masks,
   method: 'local-ssim',
-  global: {ssim: global.ssim, mad: global.mad},
-  masked: {ssim: maskedScore, mad: global.mad, pixels: height * width},
+  global: global == null ? null : {ssim: global.ssim, mad: global.mad},
+  masked: {ssim: maskedScore, mad: global?.mad ?? null, pixels: remainingPixels},
   legacyGlobalSsim: legacyScore,
   grid,
 };
@@ -318,12 +326,16 @@ writeFileSync(resolve(outDir, 'report.json'), `${JSON.stringify(report, null, 2)
 console.log(`参考: ${args.reference}`);
 console.log(`候选: ${args.candidate}`);
 console.log(`尺寸: ${width}x${height}  忽略顶部: ${args.ignoreTop}px  遮罩: ${args.masks.length} 块  窗口: ${args.window}x${args.window}`);
-console.log(`局部 SSIM: ${(global.ssim * 100).toFixed(2)}%  MAD: ${global.mad.toFixed(2)}  （旧全局统计值 ${(legacyScore * 100).toFixed(2)}%，仅作历史对照）`);
-console.log(`遮罩后局部 SSIM: ${(maskedScore * 100).toFixed(2)}%  MAD: ${global.mad.toFixed(2)}`);
+console.log(`局部 SSIM: ${global == null ? 'n/a' : `${(global.ssim * 100).toFixed(2)}%`}  MAD: ${global == null ? 'n/a' : global.mad.toFixed(2)}  （旧全局统计值 ${legacyScore == null ? 'n/a' : `${(legacyScore * 100).toFixed(2)}%`}，仅作历史对照）`);
+console.log(`遮罩后局部 SSIM: ${maskedScore == null ? 'n/a' : `${(maskedScore * 100).toFixed(2)}%`}  MAD: ${global == null ? 'n/a' : global.mad.toFixed(2)}`);
 console.log('区域（SSIM% / MAD）:');
 for (const cell of grid) {
+  if (cell.ssim == null) {
+    console.log(`  r${cell.row}c${cell.col} [${cell.x0},${cell.y0}-${cell.x1},${cell.y1}] masked`);
+    continue;
+  }
   const flag = cell.ssim < 0.8 ? '  <<<' : '';
   console.log(`  r${cell.row}c${cell.col} [${cell.x0},${cell.y0}-${cell.x1},${cell.y1}] ${(cell.ssim * 100).toFixed(1)}% / ${cell.mad.toFixed(1)}${flag}`);
 }
 console.log(`报告与 diff: ${outDir}`);
-if (maskedScore < 0.9) process.exitCode = 1;
+if ((maskedScore ?? 0) < 0.9) process.exitCode = 1;

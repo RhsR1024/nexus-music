@@ -28,9 +28,9 @@ export function StagePlayer({services,track,lyricTrack,font,controls,onMore,onSt
     <View style={{flexShrink:0,gap:2,paddingBottom:10}}>
       {choosing?<View testID="stage-style-panel" style={{gap:4}}>
         {/* IMG_4872: intrinsic pill chips sit in one row directly above the dynamic-background switch. */}
-        <View style={{flexDirection:'row',gap:8,overflow:'hidden'}}>{stageStyles.map(([id,title])=>{
+        <View style={{flexDirection:'row',flexWrap:largeText?'wrap':'nowrap',gap:8,overflow:largeText?'visible':'hidden'}}>{stageStyles.map(([id,title])=>{
           const selected=prefs.stageStyle===id;
-          return <Pressable key={id} testID={`stage-style-${id}`} accessibilityRole="radio" accessibilityState={{selected}} onPress={()=>save({stageStyle:id})} style={{paddingHorizontal:16,minHeight:largeText?48:36,borderRadius:largeText?24:18,alignItems:'center',justifyContent:'center',backgroundColor:selected?'#FFFFFF':'rgba(255,255,255,0.04)',borderWidth:1,borderColor:selected?'#FFFFFF':'rgba(255,255,255,0.22)'}}><Text numberOfLines={1} style={{color:selected?'#111111':'#FFFFFF',fontSize:largeText?15:14,fontWeight:selected?'600':'400'}}>{title}</Text></Pressable>;
+          return <Pressable key={id} testID={`stage-style-${id}`} accessibilityRole="radio" accessibilityState={{selected}} onPress={()=>save({stageStyle:id})} style={{paddingHorizontal:largeText?12:16,minWidth:largeText?0:undefined,minHeight:largeText?48:36,borderRadius:largeText?24:18,alignItems:'center',justifyContent:'center',backgroundColor:selected?'#FFFFFF':'rgba(255,255,255,0.04)',borderWidth:1,borderColor:selected?'#FFFFFF':'rgba(255,255,255,0.22)'}}><Text numberOfLines={1} style={{color:selected?'#111111':'#FFFFFF',fontSize:largeText?15:14,fontWeight:selected?'600':'400'}}>{title}</Text></Pressable>;
         })}</View>
         <View style={{flexDirection:'row',gap:12,alignItems:'center',minHeight:largeText?44:32}}><Text style={{color:'#FFFFFF',flex:1,fontSize:14}}>动态背景</Text><Switch accessibilityLabel="舞台背景" value={prefs.stageBackdrop} onValueChange={value=>save({stageBackdrop:value})} trackColor={{true:'#B9B9BD',false:'rgba(255,255,255,0.22)'}}/></View>
         {!!error&&<Text accessibilityRole="alert" style={{color:'#FFD7BA'}}>{error}</Text>}

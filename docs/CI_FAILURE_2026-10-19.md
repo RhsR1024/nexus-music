@@ -1,5 +1,11 @@
 # iOS 27：2026-10-19 失败诊断
 
+## run 39427267903 / 1fd71e8
+
+[39427267903](https://github.com/RhsR1024/nexus-music/actions/runs/39427267903) checks/native通过，iOS27手机App 29通过/2失败/0跳过；在线、离线、iPad与归档步骤跳过。已保留compact logs/失败证据，二者SHA-256分别为`bbb9000b96ef7f1515bfc3fa47eaecedf778798ee0f00edfcd3ea025a8bdbb05`与`06e01e2f570bb908ef9051ab95f20aa631c57f087fe5d03d98bb9467089e2982`，CRC通过。
+
+背景大字用例在向下拖动前已经把标题滚出可访问树，之后查询标题即失败；现改为使用固定`background-sheet-close` 44pt抓手完成原生下滑，保留测试的真实手势与持久化断言。舞台大字用例日志显示`stage-style-aurora`连续不可达；产品原先把四个48pt大字号芯片强制单行，现普通字号仍单行，XXXL允许换行。本地背景大字`1792510252469`、舞台大字`1792510589729`、普通舞台`1792510859019`均1/0/0。新iOS27终态待提交后的实际运行。
+
 ## 2026-10-20 三项失败测试导航闭环
 
 本地已复现“隐藏 tab frame 无限值”的同类失败：直接查询 `tab-settings.isHittable` 会报 `Activation point invalid`。测试 helper 现先等待非空、有限、可见 frame，再查询可点击；若全屏播放器覆盖 shell，只点击实际的“收起播放页”。样式 Sheet 使用打开等待、关闭等待、消失等待三态屏障；经典安全区通过“查看播放队列”进入完整队列并关闭队列宿主后继续原 viewport 断言。
@@ -7,6 +13,8 @@
 最终本地：样式大字 + EQ 大字 2/0/0（`SourceUITests-1792500633689`），经典安全区 1/0/0（`SourceUITests-1792500411868`）。未改产品播放、设置持久化、UI 像素或安全区阈值。对应新 iOS27 run 必须由本次提交实际触发，旧 run 39305209267 仍保持 failure 结论。
 
 测试提交`1df0562`已重新完成清洁unsigned归档：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、unsigned；产品JS哈希与上一产品提交相同，IPA SHA-256 `9b5fd83a23573fa91227114cbc3c72d17033f4721c9e1c60f58466a5b25cd9a0`，留存`build/local-appearance-test-nav-1df0562`。ZIP CRC、包内JS字节一致和私人/测试/签名材料排除通过；仍需推送后核对实际iOS27终态。
+
+相邻舞台状态复核中，正确的展开面板截图为`build/ui-screenshots-batch5-stage2/743B1534-938E-4BEC-94B1-F37DC8BB6C32.png`，IMG_4872局部SSIM为81.81%/MAD16.26；原44.91%是收起的运输页，不得继续用作面板分数。E-045 strict review通过45E/41F/41P、17WI/96 timeline，动效和目标运行仍未验证。
 
 ## run 39305209267 / 2cd956b
 

@@ -103,10 +103,10 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:32}}>{content(key)}</ScrollView>}
     </View>)}
     <SheetModal visible={appearanceSheet.visible} animationType="slide" allowSwipeDismissal onRequestClose={closeSheet}>
-      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:p.background[0],paddingHorizontal:appearanceSheet.section==='background'?16:22,paddingTop:appearanceSheet.section==='background'?48:18}}>
+      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:p.background[0],paddingHorizontal:appearanceSheet.section==='background'?16:22,paddingTop:appearanceSheet.section==='background'?32:18}}>
         {appearanceSheet.section==='background'&&<>
           <LinearGradient testID="theme-sheet-gradient" pointerEvents="none" colors={[p.background[0],p.background[1],p.background[2]]} start={{x:0,y:0}} end={{x:0.55,y:1}} style={{position:'absolute',top:0,right:0,bottom:0,left:0}}/>
-          <View accessible={false} style={{alignItems:'center',paddingBottom:24}}><View style={{width:32,height:4,borderRadius:2,backgroundColor:p.secondary+'66'}}/></View>
+          <Pressable testID="background-sheet-close" accessibilityRole="button" accessibilityLabel={titles.background} onPress={closeSheet} style={{width:44,height:44,alignSelf:'center',alignItems:'center',justifyContent:'center'}}><View style={{width:32,height:4,borderRadius:2,backgroundColor:p.secondary+'66'}}/></Pressable>
         </>}
         <View style={{flexDirection:'row',alignItems:'center',gap:appearanceSheet.section==='background'?0:12}}>
           <View
@@ -117,7 +117,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
             <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>{titles[appearanceSheet.section]}</Text>
             {appearanceSheet.section==='background'&&<BackgroundThemeActions services={services}/>}
           </View>
-          <Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{width:48,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>
+          {appearanceSheet.section!=='background'&&<Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{width:48,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>}
         </View>
         <ScrollView key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={appearanceSheet.section==='background'?64:undefined} onScroll={appearanceSheet.section==='background'?event=>setHeaderCollapsed(event.nativeEvent.contentOffset.y>90):undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
           // A completed write from an earlier presentation must not close a newly opened sheet.

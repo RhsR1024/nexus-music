@@ -45,8 +45,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
   // gradient through the theme grid and type capsule rather than white panels.
   const darkMode=theme.mode==='dark',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.62)',glassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.45,value.cardOpacity*0.45)),glass=`rgba(255,255,255,${glassAlpha})`;
   // The reference order (Sollin, 脸红佳人, Pearl … 黄赤藕荷) first, then the two
-  // themes original to 音枢. 3 columns × 5 rows is the user-confirmed layout
-  // for 13 chips, so the lower page keeps its measured alignment.
+  // These 13 themes include application-specific entries absent from the
+  // reference. Keep natural flex wrapping; forced row counts and fixed widths
+  // both moved the lower page farther from the measured layout.
   const themeChips:readonly VisualTheme[]=['blush','blushpink','pearl','mint','sunset','azure','marigold','violet','khaki','plumtea','lotus','soft','classic'];
   // IMG_4856 measures both outlined fields at a 32pt border, an 18pt swatch whose
   // visible fill spans x 47.0..64.7pt, the '#RRGGBB' ink starting at 84.3pt and

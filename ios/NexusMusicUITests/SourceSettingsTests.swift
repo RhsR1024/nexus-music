@@ -40,6 +40,20 @@ final class SourceSettingsTests: XCTestCase {
     tab.tap()
     for _ in 0..<3 {let back=app.buttons["settings-back"];if !waitForHittable(back,timeout:0.2){break};back.tap()}
     var settingsPage="home"
+    let sheetIDs=["background":"theme-background-sheet","theme":"theme-mode-sheet","skins":"player-style-sheet","mini":"mini-settings-sheet","navigation":"navigation-style-sheet","globalFont":"global-font-sheet","lyricFont":"lyric-font-sheet"]
+    func pageIsOpen(_ target:String)->Bool{
+      let deadline=Date().addingTimeInterval(5)
+      repeat{
+        if app.staticTexts["settings-title-"+target].exists{return true}
+        if let sheetID=sheetIDs[target]{
+          let sheet=app.descendants(matching:.any).matching(identifier:sheetID).firstMatch
+          let scroll=app.descendants(matching:.any).matching(identifier:target+"-sheet-scroll").firstMatch
+          if sheet.exists&&scroll.exists{return true}
+        }
+        RunLoop.current.run(until:Date().addingTimeInterval(0.1))
+      }while Date()<deadline
+      return false
+    }
     func enter(_ target:String){
       let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-"+settingsPage).firstMatch
       XCTAssertTrue(viewport.waitForExistence(timeout:5))
@@ -56,7 +70,7 @@ final class SourceSettingsTests: XCTestCase {
         let image=XCTAttachment(screenshot:app.screenshot());image.name="Settings row unreachable: "+target;image.lifetime = .keepAlways;add(image)
         let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Settings navigation failure hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
       }
-      XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(app.staticTexts["settings-title-"+target].waitForExistence(timeout:5));settingsPage=target
+      XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(pageIsOpen(target),"Settings page or presented sheet must become active: \(target)");settingsPage=target
     }
     let appearancePages=["theme","background","skins","accent","navigation","mini","globalFont","lyricFont"]
     enter(page=="typography" || page=="equalizer" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
@@ -1156,24 +1170,34 @@ final class SourceSettingsTests: XCTestCase {
     let gradient=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
     if gradient.exists && !gradient.isSelected {gradient.tap()}
     // Use the shipping theme for colour evidence, including settings captures.
-    let reset=app.buttons["appearance-reset"]
-    XCTAssertTrue(reset.waitForExistence(timeout:5));reset.tap()
-    let appearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());appearanceShot.name="Appearance background page";appearanceShot.lifetime = .keepAlways;add(appearanceShot)
     let backgroundScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
     func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
-    if backgroundScroll.exists {backgroundScroll.swipeUp()}
-    // IMG_4856 records 背景透明度 100% / 卡片透明度 30% / 背景遮罩 0% / 背景模糊 0; move
-    // the real sliders to those values so the comparison is not a default mismatch.
     func reachValue(_ identifier:String,_ target:String,_ up:Bool){
       let label=app.staticTexts["visual-value-"+identifier]
       for _ in 0..<18 {
         if label.exists && label.label==target {return}
         let step=app.buttons["visual-"+identifier+(up ? "-up":"-down")]
-        XCTAssertTrue(step.exists);if !step.exists {return}
-        for _ in 0..<4 where !step.isHittable {app.swipeUp()}
+        if !step.exists {reveal(label)}
+        XCTAssertTrue(step.waitForExistence(timeout:5));if !step.exists {return}
+        if !step.isHittable {reveal(step)}
         step.tap()
       }
     }
+    let reset=app.buttons["appearance-reset"]
+    XCTAssertTrue(reset.waitForExistence(timeout:5));reset.tap()
+    // IMG_4855 records 纯色 / 卡片 30%. Keep the required shipping blush+rose
+    // theme, but match the non-colour state through the real settings.
+    let solid=app.descendants(matching:.any).matching(identifier:"background-solid").firstMatch
+    reveal(solid);solid.tap();XCTAssertTrue(solid.isSelected)
+    reachValue("cardOpacity","30%",false)
+    openSettings(app,page:"background")
+    let preview=app.descendants(matching:.any).matching(identifier:"theme-preview-card").firstMatch
+    XCTAssertTrue(preview.waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","纯色 · 卡片 30%")).firstMatch.waitForExistence(timeout:5))
+    let appearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());appearanceShot.name="Appearance background page";appearanceShot.lifetime = .keepAlways;add(appearanceShot)
+    if backgroundScroll.exists {backgroundScroll.swipeUp()}
+    // IMG_4856 records 背景透明度 100% / 卡片透明度 30% / 背景遮罩 0% / 背景模糊 0; move
+    // the real sliders to those values so the comparison is not a default mismatch.
     reachValue("backgroundOpacity","100%",true)
     reachValue("cardOpacity","30%",false)
     reachValue("playerBlur","0",false)
@@ -2241,9 +2265,10 @@ final class SourceSettingsTests: XCTestCase {
     expectation(for:NSPredicate(format:"hittable == true"),evaluatedWith:app.buttons["settings-open-background"]);waitForExpectations(timeout:10)
     let entry=app.buttons["settings-open-background"],entryY=app.buttons["settings-open-background"].frame.midY
     XCTAssertTrue(entry.isHittable);entry.tap();reveal(soft);XCTAssertTrue(soft.isSelected)
-    let title=app.staticTexts["settings-title-background"]
-    title.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
-    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["background-sheet-close"]);waitForExpectations(timeout:10)
+    let handle=app.buttons["background-sheet-close"]
+    XCTAssertTrue(handle.waitForExistence(timeout:5))
+    handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.95)))
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:handle);waitForExpectations(timeout:10)
     XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists);XCTAssertEqual(entry.frame.midY,entryY,accuracy:2)
     app.terminate();app.launch();openSettings(app,page:"background");reveal(soft);XCTAssertTrue(soft.isSelected)
     let classic=element("visual-classic");reveal(classic);classic.tap();app.buttons["background-sheet-close"].tap()

@@ -78,6 +78,10 @@ AM 传输键按参考放大并下移（前后键 52、主键 68、行距 38）�
 
 写真单像素夹具契约未修改。4855按用户要求落地13芯片3列5行；参考实际为11芯片四行，故整屏分数下降，不声明该页提升。舞台面板锚点/歌词行位已对齐到≤5pt。本批提交后按单队列检查新iOS27 run；`2cd956b`的39305209267失败诊断仍受CI日志401限制。真实服务、Apple签名和真机未验收。
 
+## 2026-10-21 iOS27 39427267903 失败补修
+
+对应`1fd71e8`的iOS27 run`39427267903`为29通过/2失败/0跳过，后续测试、iPad和归档跳过。已核验日志ZIP SHA-256`bbb9000b96ef7f1515bfc3fa47eaecedf778798ee0f00edfcd3ea025a8bdbb05`与失败证据ZIP`06e01e2f570bb908ef9051ab95f20aa631c57f087fe5d03d98bb9467089e2982`及CRC。背景大字号失败是标题已滚出可访问树仍被拖拽，改为固定44pt抓手下滑；舞台大字号失败是单行四芯片裁切，XXXL改为换行。本地`1792510252469`、`1792510589729`、`1792510859019`均为1/0/0。最终状态匹配截图4855 84.36%、4856 90.26%；当前没有运行/排队任务，需push后以新iOS27为准。
+
 ## 2026-10-20 外观设置 4855/4856 视觉复核
 
 `testZNavidromePlaybackAndCredentials` Release 1/0/0，`SourceUITests-1792497763561.xcresult`，508.126秒；`npm run check` 401/401、`git diff --check`通过。默认blush/rose截图经7×7局部SSIM：IMG_4855 84.53%/MAD22.41，IMG_4856 90.25%/MAD15.08；4856该状态达标，4855仍实施中。截图、参考和diff已亲看，哈希绑定在`work/sollin-ipa/evidence/nexus-ui-verification-b21.json`，Evidence E-044 strict review为44E/41F/41P、17WI/95 timeline、0错误/警告。测试后诊断采集缺少`simctl`，发生在1/0/0终态之后。
@@ -1573,5 +1577,7 @@ push后API实核新iOS27运行39119277363/8aefb23为唯一pending，39115107158/
 Release 结果：播放样式 + EQ 同批 2/0/0（`SourceUITests-1792500633689`，259.199 秒）；经典安全区 1/0/0（`SourceUITests-1792500411868`，约208.4秒）。两者均在 NexusMusic iPhone 15 Pro Max / iOS26.3.1 x86_64 模拟器。`npm run check` 401/401、Swift parse、diff check通过。iOS27 新 run、clean IPA 与真机仍待。
 
 测试提交`1df056234c756ed3349067cb93aafb6096d50ce7`的清洁unsigned归档已完成：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC、产品JS字节、正式入口及私人/测试/签名排除通过。IPA SHA-256 `9b5fd83a23573fa91227114cbc3c72d17033f4721c9e1c60f58466a5b25cd9a0`，留`build/local-appearance-test-nav-1df0562`。推送后仍需实际iOS27终态；不能由本地归档代替。
+
+另复核舞台面板正确附件：IMG_4872与`Stage style panel`为局部SSIM81.81%/MAD16.26；此前44.91%是收起的运输页，不能当面板状态。E-045严格review通过45E/41F/41P、17WI/96 timeline。该测量不改变产品字节或IPA，动效及真机仍未验收。
 
 ## 2026-10-20 局部 SSIM 度量批次与干净 unsigned IPA
