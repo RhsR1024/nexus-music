@@ -8,6 +8,8 @@
 
 该范围已同步到 TASK_PLAN、IMPLEMENTATION_PLAN、FEATURE_STATUS、PRODUCT_SCOPE、PROGRESS_ESTIMATE 与 GitHub Actions：自动 CI 不再执行大字专项或独立 iPad 步骤，保留测试代码供手动兼容回归。完整播放器 Release 回归 `SourceUITests-1792511494373` 为 1/0/0、570.452 秒；IMG_4854 常态两行基线固定为整屏 78.48%、仅遮封面 88.94%、再遮不同文本内容后的 UI 控件可比区 93.12%/MAD12.47。E-049 绑定三口径报告与哈希；控件区达标不代表整屏 90%，页面与总目标继续 active。三行测试歌词候选仅 85.97%/76.20%，已撤回。`npm run check` 401/401，reverse-skill strict review 49E/41F/41P、17WI/100 timeline、0错误/警告；`0955e42`清洁unsigned IPA已通过manifest/CRC/JS/隐私检查，SHA-256 `2a80bfa60a92a527360ea37496bbd1b13996180bcdbc1b4f279c3e40ea7e2ebd`，对应iOS27 run `39457413268`运行中。
 
+账号新增功能：`src/providers/accountDaily.ts` 已实现账号隔离的网易日推协议客户端（保序去重/30首上限/换账号/取消/空响应/未鉴权 endpoint 隔离）；6项专项与全套 `npm run check` **407/407** 通过。它默认没有真实登录 endpoint，不计 F30 真日推完成。提交 `de0d820` 已正常 push；云端单队列实核 `0955e42/39457413268` in_progress、`de0d820/39463281458` pending，保持 1 running / 1 pending，不重派/不取消。
+
 ## 2026-10-21 iOS27 39427267903 两失败诊断与本地闭环
 
 提交`1fd71e8`的[39427267903](https://github.com/RhsR1024/nexus-music/actions/runs/39427267903)已completed/failure：checks/native通过，iOS27手机App 29通过/2失败/0跳过，后续在线组、离线组、iPad及归档未执行；0运行/0排队，不重派旧任务。已下载并核验compact logs（615054字节，SHA-256 `bbb9000b96ef7f1515bfc3fa47eaecedf778798ee0f00edfcd3ea025a8bdbb05`）与失败证据（5749703字节，SHA-256 `06e01e2f570bb908ef9051ab95f20aa631c57f087fe5d03d98bb9467089e2982`），ZIP CRC通过。
