@@ -1218,6 +1218,9 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     let playbackAccount=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch
     XCTAssertTrue(playbackAccount.waitForExistence(timeout:10));reveal(playbackAccount);playbackAccount.tap()
+    // Queue capture fixture: eight tracks expose the real row rhythm and the
+    // list beneath the header instead of a single-row screen.
+    XCTAssertNotNil(try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=1")!))
     let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
     XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
     let play=app.buttons["播放全部"];XCTAssertTrue(play.waitForExistence(timeout:10));play.tap()
@@ -1255,7 +1258,10 @@ final class SourceSettingsTests: XCTestCase {
     singleMode.tap();XCTAssertTrue(singleMode.isSelected)
     shuffleMode.tap();XCTAssertTrue(shuffleMode.isSelected);XCTAssertFalse(singleMode.isSelected)
     sequenceMode.tap();XCTAssertTrue(sequenceMode.isSelected)
+    XCTAssertTrue(app.staticTexts["· 8"].waitForExistence(timeout:5),"The long-queue fixture must publish all eight rows")
+    XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","2. Synthetic tone 2")).firstMatch.isHittable,"The second queue row must be on screen beneath the header")
     let amQueueImage=XCTAttachment(screenshot:XCUIScreen.main.screenshot());amQueueImage.name="AM exclusive authoritative queue body";amQueueImage.lifetime = .keepAlways;add(amQueueImage)
+    _ = try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=0")!)
     app.buttons["am-content-queue"].tap()
     XCTAssertTrue(amCover.waitForExistence(timeout:5),"Repeated body selection returns to the cover")
     XCTAssertFalse(app.staticTexts["播放队列"].exists)

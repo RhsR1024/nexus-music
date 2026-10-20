@@ -21,10 +21,10 @@ function QueueRow({entry,index,services,tone='auto'}:{entry:QueueEntry;index:num
   const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void)=><Pressable accessibilityRole="button" accessibilityLabel={`${label}：${entry.track.title}`} onPress={run} style={{width:34,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={19} color={ink('#D5D5DA')}/></Pressable>;
   const background=tone==='dark'?(dragging?'rgba(255,255,255,0.26)':current?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.10)'):(dragging?ink('#263329'):ink('#111318'));
   const source=entry.track.origin.kind==='online'||entry.track.origin.kind==='imported'?platformName[entry.track.origin.platform]:undefined;
-  return <Animated.View style={{minHeight:63,marginBottom:7,transform:[{translateY:translation}],zIndex:dragging?5:0,backgroundColor:background,borderRadius:14,paddingHorizontal:8,flexDirection:'row',alignItems:'center',gap:10}}>
-    <Cover services={services} track={entry.track} size={40}/>
-    <Pressable accessibilityRole="button" accessibilityLabel={`${index+1}. ${entry.track.title}`} onPress={()=>{const queue=services.playback.controller.getSnapshot().queue;void services.playback.controller.play({...queue,currentId:entry.id,priorityIds:[]});}} style={{flex:1,minWidth:0,justifyContent:'center',gap:2}}>
-      <Text numberOfLines={1} style={{fontSize:17,fontWeight:'600',color:ink(current?'#FFFFFF':'#F2EEF5')}}>{entry.track.title}</Text>
+  return <Animated.View style={{minHeight:63,marginBottom:7,transform:[{translateY:translation}],zIndex:dragging?5:0,backgroundColor:background,borderRadius:tone==='dark'?10:14,paddingLeft:9,paddingRight:0,flexDirection:'row',alignItems:'center',gap:7}}>
+    <Cover services={services} track={entry.track} size={45} radius={12}/>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${index+1}. ${entry.track.title}`} onPress={()=>{const queue=services.playback.controller.getSnapshot().queue;void services.playback.controller.play({...queue,currentId:entry.id,priorityIds:[]});}} style={{flex:1,minWidth:0,justifyContent:'center',gap:5}}>
+      <Text numberOfLines={1} style={{fontSize:14,fontWeight:'600',color:ink(current?'#FFFFFF':'#F2EEF5')}}>{entry.track.title}</Text>
       <Text numberOfLines={1} style={{fontSize:13,color:ink('#C9C1D4')}}>{entry.track.artist}{source?` · ${source}`:''}</Text>
     </Pressable>
     {current&&<Ionicons name="pulse" size={17} color={ink('#FFFFFF')}/>}
@@ -47,10 +47,10 @@ export function QueuePanel({services,onClose,tone='auto'}:{services:Services;onC
   const mode=preferences.shuffle?'shuffle':preferences.repeat==='one'?'one':'off';
   const modes=([['off','顺序','repeat'],['shuffle','随机','shuffle'],['one','单曲','repeat']] as const);
   const share=()=>{const list=state.queue.entries.slice(0,50).map((entry,index)=>`${index+1}. ${entry.track.title} · ${entry.track.artist}`).join('\n');void Share.share({message:`播放队列 · ${state.queue.entries.length}\n${list}`}).catch(()=>{});};
-  const heading=<View style={{flexDirection:'row',alignItems:'center',gap:4}}><Text style={{color:ink('#FFFFFF'),fontSize:22,fontWeight:'700'}}>播放队列</Text><Text style={{color:ink('#FFFFFF'),fontSize:22,fontWeight:'700'}}>· {state.queue.entries.length}</Text></View>;
+  const heading=<View style={{flexDirection:'row',alignItems:'center',gap:4}}><Text style={{color:ink('#FFFFFF'),fontSize:18,fontWeight:'700'}}>播放队列</Text><Text style={{color:ink('#FFFFFF'),fontSize:18,fontWeight:'700'}}>· {state.queue.entries.length}</Text></View>;
   const header=<View style={{paddingTop:onClose?65:0}}>
       {onClose&&<Pressable accessibilityRole="button" onPress={onClose} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:ink('#D5D5DA'),fontSize:15}}>收起队列</Text></Pressable>}
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:20}}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:14}}>
         {heading}
         <View style={{flexDirection:'row',alignItems:'center'}}>
           <Pressable accessibilityRole="button" accessibilityLabel="分享播放队列" onPress={share} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="paper-plane-outline" size={22} color={ink('#D5D5DA')}/></Pressable>
@@ -58,10 +58,12 @@ export function QueuePanel({services,onClose,tone='auto'}:{services:Services;onC
         </View>
       </View>
     </View>;
+  // IMG_4863 insets the whole queue panel 20pt from the screen edge (AMPlayer
+  // widens am-body for it) while the AM header above keeps its 24pt inset.
   return <View style={{flex:1,backgroundColor:tone==='dark'?'transparent':ink('#111318'),padding:onClose?24:tone==='dark'?0:12,paddingTop:onClose?0:8}}>
       {header}
-      <View testID="queue-mode" style={{flexDirection:'row',borderRadius:19,overflow:'hidden',backgroundColor:tone==='dark'?'rgba(255,255,255,0.10)':ink('#232833'),marginBottom:15}}>
-        {modes.map(([id,label,icon],index)=>{const selected=mode===id;return <Pressable key={id} testID={`queue-mode-${id}`} accessibilityRole="radio" accessibilityState={{selected}} onPress={()=>{void services.preferences.update(id==='off'?{repeat:'off',shuffle:false}:id==='shuffle'?{repeat:'off',shuffle:true}:{repeat:'one',shuffle:false}).catch(()=>Alert.alert('设置未保存','原播放模式保留，请重试。'));}} style={{flex:1,minHeight:38,borderLeftWidth:index?1:0,borderLeftColor:tone==='dark'?'rgba(255,255,255,0.12)':ink('#D8DEE8'),flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,backgroundColor:selected?'rgba(255,255,255,0.18)':'transparent'}}><Ionicons name={icon} size={17} color={ink(selected?'#FFFFFF':'#D5D5DA')}/><Text style={{color:ink(selected?'#FFFFFF':'#D5D5DA'),fontSize:15}}>{label}</Text></Pressable>;})}
+      <View testID="queue-mode" style={{flexDirection:'row',borderRadius:20,overflow:'hidden',backgroundColor:tone==='dark'?'rgba(255,255,255,0.10)':ink('#232833'),marginBottom:14}}>
+        {modes.map(([id,label,icon],index)=>{const selected=mode===id;return <Pressable key={id} testID={`queue-mode-${id}`} accessibilityRole="radio" accessibilityState={{selected}} onPress={()=>{void services.preferences.update(id==='off'?{repeat:'off',shuffle:false}:id==='shuffle'?{repeat:'off',shuffle:true}:{repeat:'one',shuffle:false}).catch(()=>Alert.alert('设置未保存','原播放模式保留，请重试。'));}} style={{flex:1,minHeight:40,borderLeftWidth:index?1:0,borderLeftColor:tone==='dark'?'rgba(255,255,255,0.12)':ink('#D8DEE8'),flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,backgroundColor:selected?'rgba(255,255,255,0.18)':'transparent'}}><Ionicons name={icon} size={17} color={ink(selected?'#FFFFFF':'#D5D5DA')}/><Text style={{color:ink(selected?'#FFFFFF':'#D5D5DA'),fontSize:15}}>{label}</Text></Pressable>;})}
       </View>
       <FlatList data={state.queue.entries} extraData={state.queue.currentId} keyExtractor={entry=>entry.id} initialNumToRender={10} windowSize={5} getItemLayout={onClose?(_,index)=>({length:rowHeight,offset:rowHeight*index,index}):undefined} renderItem={({item,index})=><QueueRow entry={item} index={index} services={services} tone={tone}/>}/>
     </View>;

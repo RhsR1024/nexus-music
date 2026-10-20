@@ -1,3 +1,11 @@
+## 2026-10-20 AM 队列/大封面锚点收口本地批次
+
+本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792471759953`），导出 `build/ui-screenshots-batch9-am`（队列 `4D576F33`、大封面 `E24C2222`、歌词 `F7736FEF`）并亲看；`npm run typecheck` 通过、`npm run check` 401/401。写真单像素夹具、歌词两行夹具与默认主题未改。
+
+修复 `am-body` 的 `overflow:'hidden'` 裁掉队列面板负边距问题后，4863 面板缩进 20pt（参考 20）、分段 204..244/40pt、行顶 258/321/328、行标题墨迹 81.7/273.3、副标题 82/296 与参考一致，行卡圆角 10、图标缘 400.7 对 400.7；新增 8 首长队列夹具并断言“· 8”与第二行可达。4866 封面态按参考改为无迷你头标题 20pt、内间距 7、marginTop 34，心形 576.3 vs 576.7、进度 644、传输 760、工具 850 对齐。分数（`--ignore-top 180`）：4863 **36.36%**/MAD 38.54（21.46/44.98→）、4866 **29.16%**/38.78（28.70/38.95→）、4861 **19.84%**/41.70（13.86/42.27→）。仍远低 90%，不增加已对齐页数；除 4851 90.62% 外无页面达标。
+
+云端单队列：39360042052（36f3f2d）已 completed/failure，checks 成功，ios 在步骤 10“Verify source management and Navidrome playback in the App”失败，后续组/归档跳过，失败截图与诊断附件已上传但本机取回仍受权限限制；39367954644（a39e8c1）in_progress，按序等待，不取消/不重派。下一步在权限内定位步骤 10 失败；UI 继续 4855/4856 底色与滚动可比区、4880+ 未覆盖页；真实服务、Apple 签名、真机未验收。
+
 ## 2026-10-20 AM 传输键/舞台进度色/4855 3×5 收口本地批次
 
 本地 Release UI 全部通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792468636419`），`testStageStylesAndWindow` 1/0/0（`SourceUITests-1792468410201`）；`npm run typecheck` 通过、`npm run check` 401/401。截图导出 `build/ui-screenshots-batch5-am3`（AM 封面/队列）与 `build/ui-screenshots-batch5-stage2`（舞台面板）并亲看。
