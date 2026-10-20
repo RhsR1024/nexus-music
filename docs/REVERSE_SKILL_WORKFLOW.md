@@ -135,6 +135,8 @@ node scripts/sollin-reverse-gate.mjs apk --review
 
 - `Skill("reverse-skill-router")` 成功加载，返回 base directory `~/.workbuddy/skills/reverse-skill-router`，内容为包内 `skills/SKILL.md`，路由契约完整。
 - `Skill("apk-reverse")` 成功加载，返回 base directory `~/.workbuddy/skills/sollin-apk-reverse`，内容为 `skills/apk-reverse/SKILL.md`（G1–G4、症状索引、doctor 说明完整）。
+- 副本内脚本可执行：`bash ~/.workbuddy/skills/reverse-skill-router/scripts/master-route.sh --hint "iOS IPA static analysis"` → `PRIMARY -> skills/mobile-reverse/SKILL.md`（exit 0）；APK hint → `PRIMARY -> skills/apk-reverse/SKILL.md`（exit 0），与项目既定 R2/R1 路由一致。
+- `python3 scripts/doctor.py --json`（apk 专项副本）返回 `status: blocked`、exit 3，缺口为 RASC 构建产物、capstone、frida-cli/设备 frida-server/root；这是能力矩阵的如实报告，与项目 2026-10-18 记录一致，不代表 skill 未安装。
 - 注意：以**目录名** `sollin-apk-reverse` 调用会报 `Can not find skill`；加载器按 frontmatter `name: apk-reverse` 注册。两个名字不要混用。
 - 门禁仍指向固定原件：`node scripts/sollin-reverse-gate.mjs ipa` 与 `apk` 均 PASS（pinned skill、tool index、样本 SHA256、离线 scope、case-guard）。副本本身不参与哈希门禁，**原件才是证据来源**；固定提交变化时需重新同步副本并在本节记录。
 
