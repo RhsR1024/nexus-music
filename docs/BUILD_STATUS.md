@@ -1,3 +1,11 @@
+## 2026-10-20 4855/4856 字号层级批次
+
+本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792485014622`），导出 `build/ui-screenshots-batch19c`（默认 032、柔和/玫瑰 031、外观首页 033）并亲看；`npm run check` 401/401；大字号/持久化回归 `testBackgroundSheetWithLargeTextAndPersistence` 1/0/0（`SourceUITests-1792484768700`）。写真单像素夹具、歌词两行夹具、默认主题与默认 accent 未改。
+
+参考分区标题约 13pt、滑轨行标签约 15pt：`AppearanceSettings` 三个分区标题 16→13pt（上/下距 20.6/14、18.9/19.7、33.8/20.8），`VisualSettings` 小标题 16→13pt（容器 `paddingTop:2`、`gap:7.4`），`SliderControl` 行标签 17→15pt（控制行 `marginTop:2.7`）。最终锚点（pt）：视觉参数 394.3..405.3 vs 394.3..406.0，四个行标签 433.3/528.3/623.3/801.7 vs 433.3/528.3/623.3/801.3，全部 ≤0.7pt；4855 顶部标题 268.3..283.3 vs 271.0..284.0。分数：4856 默认 **44.87%/MAD 16.14**（33.57/17.37→）、柔和/玫瑰 **45.08%/11.48**（33.90/12.76→）、4855 20.41/24.08 持平。结构项（sheet 顶 59 vs 92.7pt、参考无 X、44pt 表头带、多出的底部标题、± 字形、轨道跨度）未变；除 4851 90.62% 外无页面达 90%。
+
+云端单队列：39389962025（7492bf7）pending，不取消/不重派；真实服务、Apple 签名、真机未验收。
+
 ## 2026-10-20 4856 控件调色/卡片透明度批次
 
 本地 Release UI 通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792481796152`），导出 `build/ui-screenshots-batch18b`（默认 032、柔和/玫瑰 031、外观首页 033）并亲看；typecheck 通过。写真单像素夹具、歌词两行夹具、默认主题与默认 accent 未改。

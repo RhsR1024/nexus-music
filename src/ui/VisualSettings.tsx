@@ -37,8 +37,8 @@ export function VisualSettings({services}:{services:Services}){
   // each label to its track (handled by SliderControl).
   return <View style={{gap:18,paddingTop:13,paddingBottom:18}}>
     {/* IMG_4856 order: 背景透明度 / 卡片透明度 / 背景遮罩 / 遮罩颜色 / 背景模糊. */}
-    <View style={{gap:4}}>
-      <Text accessibilityRole="header" style={{color:p.secondary,fontSize:16}}>视觉参数</Text>
+    <View style={{paddingTop:2,gap:7.4}}>
+      <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13}}>视觉参数</Text>
       <View style={{borderRadius:18,backgroundColor:card,paddingHorizontal:16}}>
         {row('backgroundOpacity',0,adjust('backgroundOpacity','背景透明度',.1,0,1))}
         {row('cardOpacity',1,adjust('cardOpacity','卡片透明度',.1,0,1))}

@@ -40,10 +40,12 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
   // the 95pt row pitch that the lower sheet anchors were measured against.
   return <View style={{gap:0,paddingBottom:10,opacity:disabled?.5:1}}>
     <View style={{flexDirection:stacked?'column':'row',alignItems:stacked?'flex-start':'center',justifyContent:'space-between',gap:stacked?8:0}}>
-      <Text style={{color:theme.palette.text,fontSize:17,fontWeight:'600'}}>{label}</Text>
+      <Text style={{color:theme.palette.text,fontSize:15,fontWeight:'600'}}>{label}</Text>
       <Text testID={`visual-value-${testID}`} style={{color:theme.palette.secondary,fontSize:15,fontVariant:['tabular-nums']}}>{display}</Text>
     </View>
-    <View style={{flexDirection:stacked?'column':'row',alignItems:stacked?'stretch':'center',gap:stacked?10:4}}>
+    {/* The 15pt label shrinks the header line box ~2pt; this offset keeps the
+        6pt track on the same measured anchor as the 17pt version. */}
+    <View style={{marginTop:2.7,flexDirection:stacked?'column':'row',alignItems:stacked?'stretch':'center',gap:stacked?10:4}}>
       <Pressable testID={`visual-${testID}-down`} accessibilityRole="button" accessibilityLabel={`减少${label}`} disabled={disabled} onPress={()=>step_(-1)} hitSlop={stacked?undefined:10} style={{width:stacked?undefined:18,height:stacked?44:32,alignItems:'center',justifyContent:'center'}}><Ionicons name="remove" size={16} color={theme.palette.secondary}/></Pressable>
       <View
         accessible

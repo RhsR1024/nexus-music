@@ -64,12 +64,14 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
           <Text numberOfLines={1} style={{color:theme.palette.text,fontSize:17,fontWeight:'600'}}>音枢 · {themeLabels[value.visualTheme]} · {styleLabels[value.backgroundStyle]} · 卡片 {Math.round(value.cardOpacity*100)}%</Text>
         </View>
       </View>
-      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:13}}>一键主题</Text>
+      {/* IMG_4855 label ink is ~11pt tall (13pt type), not 16pt. The extra bottom
+          margin absorbs the smaller line box so the cards below stay anchored. */}
+      <Text style={{color:theme.palette.secondary,fontSize:13,marginTop:20.6,marginBottom:14}}>一键主题</Text>
       <View style={{borderRadius:18,backgroundColor:glass,padding:8,paddingBottom:9}}><View style={{flexDirection:'row',flexWrap:'wrap',gap:9.5}}>{themeChips.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{width:'31.4%',flexDirection:'row',alignItems:'center',gap:6,minHeight:28,paddingHorizontal:8,paddingVertical:3,borderRadius:10,backgroundColor:value.visualTheme===id?'#151515':darkMode?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.72)'}}>
         {value.visualTheme===id?<View style={{width:16,height:16,borderRadius:5,backgroundColor:'#FFFFFF'}}/>:<LinearGradient colors={[themeBackground(id,theme.mode)[0],themeBackground(id,theme.mode)[1],themeBackground(id,theme.mode)[2]]} start={{x:0,y:0}} end={{x:1,y:1}} style={{width:16,height:16,borderRadius:5,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.10)'}}/>}
         <Text numberOfLines={1} style={{color:value.visualTheme===id?'#FFFFFF':theme.palette.text,fontSize:16,fontWeight:'600'}}>{themeLabels[id]}</Text>
       </Pressable>)}</View></View>
-      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:17}}>背景类型</Text>
+      <Text style={{color:theme.palette.secondary,fontSize:13,marginTop:18.9,marginBottom:19.7}}>背景类型</Text>
       <View style={{padding:8,borderRadius:20,backgroundColor:glass}}>
         <View style={{flexDirection:'row',height:40,borderRadius:20,borderWidth:1,borderColor:outline,overflow:'hidden'}}>
           {([['solid','纯色','ellipse'],['gradient','渐变','layers-outline'],['image','图片','image-outline']] as const).map(([id,label,glyph],index)=>{
@@ -78,7 +80,7 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
           })}
         </View>
       </View>
-      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:31,marginBottom:20}}>颜色</Text>
+      <Text style={{color:theme.palette.secondary,fontSize:13,marginTop:33.8,marginBottom:20.8}}>颜色</Text>
       {/* IMG_4856 puts both outlined fields 32pt from the screen edge (16pt inside
           the sheet gutter) while the section label stays on the gutter. */}
       <View style={{marginHorizontal:16}}>
