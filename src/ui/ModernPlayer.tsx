@@ -54,7 +54,7 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
   if(layout==='am')return <AMPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onComments={onComments} controls={<>
     {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.small}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
     <PlaybackProgress services={services} adaptive variant="am"/>
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',marginTop:31}}>{icon('play-back','上一首',()=>services.playback.next(-1),42)}{transport}{icon('play-forward','下一首',()=>services.playback.next(),42)}</View>
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',marginTop:38}}>{icon('play-back','上一首',()=>services.playback.next(-1),52)}{icon(state.intent==='playing'?'pause':'play',state.intent==='playing'?'暂停':'播放',()=>{if(state.intent==='playing')controller.pause();else void controller.play();},68)}{icon('play-forward','下一首',()=>services.playback.next(),52)}</View>
   </>}/>;
   if(layout==='am2')return <AM2Player services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} identity={JSON.stringify([state.queue.currentId,lyricTrack.origin])} visible={visible} onMore={onMore} controls={<>
     {(state.error||state.buffering)&&<Text style={styles.small}>{state.error??'正在缓冲…'}</Text>}

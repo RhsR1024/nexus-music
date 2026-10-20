@@ -1,4 +1,12 @@
-## 2026-10-20 原生歌词 rgba 透明度修复本地批次
+## 2026-10-20 AM 传输键/舞台进度色/4855 3×5 收口本地批次
+
+本地 Release UI 全部通过：`testZNavidromePlaybackAndCredentials` 1/0/0（`SourceUITests-1792468636419`），`testStageStylesAndWindow` 1/0/0（`SourceUITests-1792468410201`）；`npm run typecheck` 通过、`npm run check` 401/401。截图导出 `build/ui-screenshots-batch5-am3`（AM 封面/队列）与 `build/ui-screenshots-batch5-stage2`（舞台面板）并亲看。
+
+AM 传输键按参考放大并下移（前后键 52、主键 68、行距 38）：前后键 734.7..763.3 vs 733.7..762.7，主键 724.7..773.0 vs 724.0..772.3；标题/进度轨/时间/质量胶囊/工具行 1–3.3pt 内。4866 **28.70%**/MAD 38.95（内容区 51.14/30.76），4863 **21.46%**/44.98。4872 **52.77%**/16.26。4855 **13.23%**/25.62（3×5 紧凑化，下半页上移约 35pt；分数受 13 vs 11 芯片行数差影响），4856 1.41%/24.19。除 4851 90.62% 外无页面达到 90%，不增加已对齐页数；写真单像素夹具与默认主题未改。
+
+云端单队列：39360042052（36f3f2d）in_progress、39364277386（586a48d）pending；39363484535（449df0e）已 completed/cancelled（并发取消，非本机重派）。本批 push 后按序排队，不取消/不重派。下一步 AM 真实长队列与同封面背景、舞台夹具换行、4855/4856 滚动与底色；真实服务、签名、真机未验收。
+
+## 2026-10-20 上一批：原生歌词 rgba 透明度修复本地批次
 
 `testStageStylesAndWindow` Release 1/0/0，`SourceUITests-1792466412273`；舞台面板截图导出 `build/ui-screenshots-batch5-stage` 并亲看。原生 `NexusLyricLineView` 此前仅解析 `#RRGGBB`，`rgba(...)` 透明度全部回退为不透明白色；已补 `rgb()/rgba()` 解析（0–255 通道、0–1 alpha）及 hex 兼容。4872 SSIM **37.78→52.70%**/MAD 24.06→16.30（`--ignore-top 180`），高亮/非高亮灰度层次恢复；未达 90%。云端单队列：39360042052（36f3f2d）in_progress、39363484535（449df0e）pending，无重派。下一步重跑 AM/写真确认灰度收益，继续 4856/4855/AM 队列；真实服务、签名、真机未验收。
 

@@ -22,23 +22,24 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
   // IMG_4861/4866 keep the tool row as four plain outline glyphs; the active
   // content is conveyed by the panel itself rather than a filled pill.
   const tool=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string,selected?:boolean)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={action} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={23} color={selected?'#FFFFFF':'rgba(255,255,255,0.72)'}/></Pressable>;
+  // IMG_4866 keeps the cover actions as 30pt quiet discs beside the title block.
+  const circle=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,value?:string,size=30)=><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} onPress={action} style={{width:size,height:size,borderRadius:size/2,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.10)'}}><Ionicons name={name} size={size===30?18:23} color="#FFFFFF"/></Pressable>;
   const coverInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:6,minHeight:56,marginTop:fontScale>1.4?16:28}}>
     <View style={{flex:1,minWidth:0,gap:3}}><Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:24,fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:15}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
-    <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:favorite?'已收藏':'未收藏'}} onPress={()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));}} style={{minWidth:44,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={favorite?'heart':'heart-outline'} size={23} color="#FFFFFF"/></Pressable>
-    {tool('ellipsis-horizontal','更多播放控制',onMore)}
+    {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏')}
+    {circle('ellipsis-horizontal','更多播放控制',onMore)}
   </View>;
-  const circle=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,value?:string)=><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} onPress={action} style={{width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.12)'}}><Ionicons name={name} size={23} color="#FFFFFF"/></Pressable>;
   const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:10,minHeight:64}}>
     <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')}><Cover services={services} track={track} size={56}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:2}}><Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:20,fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:14}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
-    {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏')}
-    {circle('ellipsis-horizontal','更多播放控制',onMore)}
+    {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏',44)}
+    {circle('ellipsis-horizontal','更多播放控制',onMore,undefined,44)}
   </View>;
   const tools=<View testID="am-tools" style={{flexDirection:'row',justifyContent:'space-around',paddingTop:6,paddingHorizontal:14,marginBottom:39,marginTop:content==='cover'?28:20}}>
     {tool('reader-outline','歌词',()=>select('lyrics'),'am-content-lyrics',content==='lyrics')}
     {tool('chatbubble-outline','评论',()=>onComments?.(),'am-content-comments')}
-    {tool('list','播放队列',()=>select('queue'),'am-content-queue',content==='queue')}
     {tool('options-outline','调整播放界面',onStyle)}
+    {tool('list','播放队列',()=>select('queue'),'am-content-queue',content==='queue')}
   </View>;
   return <View testID="am-player" style={{flex:1,minHeight:0}}>
     {content==='cover'?<View style={{flex:1,minHeight:0,gap:0}}>
