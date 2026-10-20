@@ -4,6 +4,8 @@
 
 `39499931841`失败证据已可取：checks、Pod安装、完整native和iOS27模拟器创建通过，Swift在`NexusLyricGestureView.swift:50`因`accessibilityActivate()`重复覆盖而编译失败，0项UI执行，后续UI/归档/上传跳过。compact logs 149401字节/SHA-256 `1e87593dbb8a8b2e2a1dfffd697e3a8a0406dd7490d2c4eac1a3b0a5a7eded96`，diagnostics 403894字节/SHA-256 `ba4f259fe845326c9e4d7a33e17dfa68f791fa94385930adf080289f0d4309be`，ZIP CRC通过；`07f81a2`已删除重复实现，最新pending待运行。
 
+`39500726487`（`07f81a2`）在iOS27 iPhone17执行21项，19通过/2失败/0跳过；唯一失败为`testAM2PlayerWindowRotation`与`testAMPlayerWindowRotation`双击后进度未变为`0:06 / 2:00`，其余在线/离线/Files及归档前置用例通过。compact logs 555651字节/SHA-256 `a6b24a666e5f9934dee9af1077e0757ecd7bf724253f3b9fe97464dd0d3ffd07`，failure evidence 1353451字节/SHA-256 `2c847a66a1398a2bef57ddfa2991c0e3462eb93d74349fc8d1f6529d0c2382a1`，ZIP CRC通过。`fa8ddd7`按tapCount=2增加UIKit触摸结束捕获后，最新run `39516000415`执行中。
+
 ## 2026-10-21 0b4052a 最终清洁归档
 
 提交`0b4052a04a3e08135c2cff3e6606dd29536ada29`的清洁unsigned归档成功：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC与包内JS字节一致，私人/测试/签名资源排除通过。IPA SHA-256 `d660acf22c94fe337c994f006a9483a9ff6b9fedd92e11f9d367b8ae6e1c3e7c`，留`build/local-ios27-recovery-0b4052a`。阶段清理约555MiB可重建IPA临时Payload；push及对应iOS27待。

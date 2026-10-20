@@ -6,6 +6,8 @@
 
 云端实核为1运行/1排队：`39499931841`（`694db50`）diagnostics完成后结束，`39500726487`（`07f81a2`）pending；未取消运行中任务、未重派旧提交。待最新 pending 实际终态后记录步骤、产物和失败根因。
 
+`07f81a2/39500726487`已completed/failure：iOS27 iPhone17为19通过/2失败/0跳过，只有AM2与AM双击后进度未到`0:06 / 2:00`；日志显示两行和进度控件均在，原生UIKit容器仍未捕获合成double-tap。compact logs 555651字节/SHA-256 `a6b24a666e5f9934dee9af1077e0757ecd7bf724253f3b9fe97464dd0d3ffd07`，failure evidence 1353451字节/SHA-256 `2c847a66a1398a2bef57ddfa2991c0e3462eb93d74349fc8d1f6529d0c2382a1`，ZIP CRC通过。`fa8ddd7`增加`touchesEnded`的tapCount=2捕获、150ms去重并让手势容器自行hitTest，最新`39516000415`已运行；不重派旧版本。
+
 ## 2026-10-21 Files 双用例与歌词双击原生手势批次
 
 iOS 27 `de0d820/39463281458` 已完成但失败：checks/native/创建模拟器通过，第10步 App UI失败，后续在线/离线/归档跳过；小日志与失败证据 artifact 可见，但公共 API 下载仍返回401，不能伪造云端日志结论。公开 jobs 证实失败层级，已保留 API 回执。
