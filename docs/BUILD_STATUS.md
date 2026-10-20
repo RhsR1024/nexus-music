@@ -1,4 +1,8 @@
-## 2026-10-20 4856 视觉参数卡与滚动锚点本地批次
+## 2026-10-20 原生歌词 rgba 透明度修复本地批次
+
+`testStageStylesAndWindow` Release 1/0/0，`SourceUITests-1792466412273`；舞台面板截图导出 `build/ui-screenshots-batch5-stage` 并亲看。原生 `NexusLyricLineView` 此前仅解析 `#RRGGBB`，`rgba(...)` 透明度全部回退为不透明白色；已补 `rgb()/rgba()` 解析（0–255 通道、0–1 alpha）及 hex 兼容。4872 SSIM **37.78→52.70%**/MAD 24.06→16.30（`--ignore-top 180`），高亮/非高亮灰度层次恢复；未达 90%。云端单队列：39360042052（36f3f2d）in_progress、39363484535（449df0e）pending，无重派。下一步重跑 AM/写真确认灰度收益，继续 4856/4855/AM 队列；真实服务、签名、真机未验收。
+
+## 2026-10-20 上一批：4856 视觉参数卡与滚动锚点本地批次
 
 `testZNavidromePlaybackAndCredentials` 连续三次 Release UI 1/0/0，最终 xcresult `SourceUITests-1792465509431.xcresult`；`npm run check` 401/401。4856 视觉参数整卡/分隔线/17级刻度/描边遮罩字段/步进按钮已实现，测试用 `background-gradient` 锚点把低区截图收到 110pt 并逐次沉降。SSIM（`--ignore-top 180`）：4855 14.73→**15.27%**/MAD 25.38；4856 -5.52→**1.41%**/24.19（内容区 2.38/23.10、卡面遮罩 1.28/15.44）。固定 Sheet 头、主题底色、步进按钮和 13 vs 11 芯片仍造成偏差，除 4851 黑胶 90.62% 外无页面达到 90%。写真单像素夹具与默认主题未改。提交后按单队列检查新 iOS27 run；真实服务、Apple 签名和真机验收未完成。
 

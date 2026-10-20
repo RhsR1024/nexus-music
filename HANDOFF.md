@@ -1,4 +1,10 @@
-## 2026-10-20 4856 视觉参数卡与滚动锚点本地批次
+## 2026-10-20 原生歌词 rgba 透明度修复本地批次
+
+发现并修复原生歌词颜色解析缺陷：`NexusLyricLineView` 仅支持 `#RRGGBB`，所有 `rgba(...)` 透明度都被回退成不透明白色；现支持 `rgb()/rgba()` 与 6 位 hex，舞台/AM/写真/经典页同步生效。`testStageStylesAndWindow` Release 1/0/0（`SourceUITests-1792466412273`），舞台面板截图 `build/ui-screenshots-batch5-stage` 已亲看；4872 SSIM **37.78→52.70%**（MAD 24.06→16.30），非高亮行恢复约 17% 白、高亮行 56% 白，与参考灰度层次一致。剩余为英文夹具换行、参考芯片“赞助专属”（不伪造）及布局细节，未达 90%。
+
+云端单队列：run 39360042052（36f3f2d）in_progress、39363484535（449df0e）pending，无重派。下一步重跑 AM/写真确认灰度收益，再处理 4856 固定头/底色、4855 下半页、AM 真实长列表；真实服务、Apple 签名和真机验收未完成。
+
+## 2026-10-20 上一批：4856 视觉参数卡与滚动锚点本地批次
 
 `testZNavidromePlaybackAndCredentials` 连续三次 Release UI 通过（1/0/0），最终 xcresult `SourceUITests-1792465509431.xcresult`；`npm run check` 401/401。4855/4856 最终截图已从 xcresult 导出并亲看。
 

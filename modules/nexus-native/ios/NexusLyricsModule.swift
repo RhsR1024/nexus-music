@@ -33,6 +33,20 @@ final class NexusLyricLineView: ExpoView {
   private var blurred: UIImage?
   private var blurredSize = CGSize.zero
   private static let imageContext = CIContext(options: [.cacheIntermediates: false])
+  private static func color(_ raw: String) -> UIColor {
+    let text = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    if text.hasPrefix("rgb(") || text.hasPrefix("rgba("),
+       let open = text.firstIndex(of: "("), let close = text.lastIndex(of: ")"), open < close {
+      let parts = text[text.index(after: open)..<close].split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+      if parts.count >= 3, let r = Double(parts[0]), let g = Double(parts[1]), let b = Double(parts[2]) {
+        let a = parts.count > 3 ? Double(parts[3]) ?? 1 : 1
+        return UIColor(red: CGFloat(min(255, max(0, r)) / 255), green: CGFloat(min(255, max(0, g)) / 255), blue: CGFloat(min(255, max(0, b)) / 255), alpha: CGFloat(min(1, max(0, a))))
+      }
+    }
+    let hex = text.hasPrefix("#") ? String(text.dropFirst()) : text
+    guard hex.count == 6, let value = UInt32(hex, radix: 16) else { return .white }
+    return UIColor(red: CGFloat((value >> 16) & 255) / 255, green: CGFloat((value >> 8) & 255) / 255, blue: CGFloat(value & 255) / 255, alpha: 1)
+  }
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
@@ -68,8 +82,7 @@ final class NexusLyricLineView: ExpoView {
     let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(height)|\(radius)|\(wordData.base64EncodedString())"
     if signature != layoutKey {
       signature = layoutKey; stageStyle = nextStyle; blur = radius; blurred = nil
-      let value = UInt32(hex.replacingOccurrences(of: "#", with: ""), radix: 16) ?? 0xFFFFFF
-      color = UIColor(red: CGFloat((value >> 16) & 255) / 255, green: CGFloat((value >> 8) & 255) / 255, blue: CGFloat(value & 255) / 255, alpha: 1)
+      color = Self.color(hex)
       var font = UIFont.systemFont(ofSize: size, weight: .semibold)
       if let url = URL(string: fontURI), url.isFileURL,
          url.standardizedFileURL.path.hasPrefix(NSHomeDirectory() + "/Documents/lyric-fonts/"),
