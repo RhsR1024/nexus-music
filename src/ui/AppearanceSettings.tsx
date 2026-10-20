@@ -62,23 +62,23 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
           <Text numberOfLines={1} style={{color:theme.palette.text,fontSize:17,fontWeight:'600'}}>音枢 · {themeLabels[value.visualTheme]} · {styleLabels[value.backgroundStyle]} · 卡片 {Math.round(value.cardOpacity*100)}%</Text>
         </View>
       </View>
-      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:8}}>一键主题</Text>
-      <View style={{borderRadius:18,backgroundColor:glass,padding:8}}><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{themeChips.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{width:'31.4%',flexDirection:'row',alignItems:'center',gap:6,minHeight:28,paddingHorizontal:8,paddingVertical:3,borderRadius:10,backgroundColor:value.visualTheme===id?'#151515':darkMode?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.72)'}}>
+      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:13}}>一键主题</Text>
+      <View style={{borderRadius:18,backgroundColor:glass,padding:8,paddingBottom:9}}><View style={{flexDirection:'row',flexWrap:'wrap',gap:9.5}}>{themeChips.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{width:'31.4%',flexDirection:'row',alignItems:'center',gap:6,minHeight:28,paddingHorizontal:8,paddingVertical:3,borderRadius:10,backgroundColor:value.visualTheme===id?'#151515':darkMode?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.72)'}}>
         {value.visualTheme===id?<View style={{width:16,height:16,borderRadius:5,backgroundColor:'#FFFFFF'}}/>:<LinearGradient colors={[themeBackground(id,theme.mode)[0],themeBackground(id,theme.mode)[1],themeBackground(id,theme.mode)[2]]} start={{x:0,y:0}} end={{x:1,y:1}} style={{width:16,height:16,borderRadius:5,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.10)'}}/>}
         <Text numberOfLines={1} style={{color:value.visualTheme===id?'#FFFFFF':theme.palette.text,fontSize:16,fontWeight:'600'}}>{themeLabels[id]}</Text>
       </Pressable>)}</View></View>
-      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:8}}>背景类型</Text>
+      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:17}}>背景类型</Text>
       <View style={{padding:8,borderRadius:20,backgroundColor:glass}}>
-        <View style={{flexDirection:'row',height:44,borderRadius:22,borderWidth:1,borderColor:outline,overflow:'hidden'}}>
+        <View style={{flexDirection:'row',height:40,borderRadius:20,borderWidth:1,borderColor:outline,overflow:'hidden'}}>
           {([['solid','纯色','ellipse'],['gradient','渐变','layers-outline'],['image','图片','image-outline']] as const).map(([id,label,glyph],index)=>{
             const selected=value.backgroundStyle===id,disabled=id==='image'&&!assets.background;
-            return <Pressable key={id} testID={`background-${id}`} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} onPress={()=>update({backgroundStyle:id})} style={{flex:1,minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,backgroundColor:selected?`${theme.palette.accent}2E`:'transparent',borderLeftWidth:index?1:0,borderLeftColor:outline,opacity:disabled?.4:1}}><Ionicons name={glyph} size={17} color={selected?theme.palette.text:theme.palette.secondary}/><Text style={{color:selected?theme.palette.text:theme.palette.secondary,fontSize:16,fontWeight:selected?'600':'400'}}>{label}</Text></Pressable>;
+            return <Pressable key={id} testID={`background-${id}`} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} onPress={()=>update({backgroundStyle:id})} style={{flex:1,minHeight:40,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,backgroundColor:selected?`${theme.palette.accent}2E`:'transparent',borderLeftWidth:index?1:0,borderLeftColor:outline,opacity:disabled?.4:1}}><Ionicons name={glyph} size={17} color={selected?theme.palette.text:theme.palette.secondary}/><Text style={{color:selected?theme.palette.text:theme.palette.secondary,fontSize:16,fontWeight:selected?'600':'400'}}>{label}</Text></Pressable>;
           })}
         </View>
       </View>
-      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:18,marginBottom:8}}>颜色</Text>
+      <Text style={{color:theme.palette.secondary,fontSize:16,marginTop:31,marginBottom:20}}>颜色</Text>
       {outlined('accent','强调色',theme.palette.accent,theme.palette.accent,()=>Alert.alert('强调色','选择主题强调色。',[...(Object.keys(accentColors) as Accent[]).map((id,index)=>({text:['玫瑰','珊瑚','紫色','蓝色','橙色'][index]!,onPress:()=>update({accent:id})})),{text:'取消',style:'cancel' as const}]))}
-      <View style={{height:16}}/>
+      <View style={{height:28}}/>
       {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'))}
     </View>}
     {page==='skins'&&section('播放界面样式',<View accessibilityLabel="可选播放界面样式" style={{borderRadius:18,overflow:'hidden',borderWidth:1,borderColor:theme.palette.border}}>{([

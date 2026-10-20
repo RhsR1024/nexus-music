@@ -1141,16 +1141,17 @@ final class SourceSettingsTests: XCTestCase {
     reachValue("backgroundOpacity","100%",true)
     reachValue("cardOpacity","30%",false)
     reachValue("playerBlur","0",false)
-    // IMG_4856 starts with the background-type control just under the status
-    // bar and 视觉参数 at about 257pt. Place the control's lower edge at 110pt so
-    // the sections below it land at the same height. Step taps leave momentum
-    // behind, so settle and re-measure after every drag.
+    // IMG_4856 starts with the background-type capsule just under the status
+    // bar (lower edge 136pt) and 视觉参数 at 394.3pt. The sheet header is
+    // pinned above the scroll view, so align the capsule to 142pt to put the
+    // colour fields and sliders at the reference heights. Step taps leave
+    // momentum behind, so settle and re-measure after every drag.
     Thread.sleep(forTimeInterval:1.2)
     let backgroundType=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
     for _ in 0..<10 {
       if !backgroundType.exists {break}
-      let delta=backgroundType.frame.maxY-110
-      if abs(delta)<10 {break}
+      let delta=backgroundType.frame.maxY-142
+      if abs(delta)<4 {break}
       let start=backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:0.35))
       let endY=min(0.9,max(0.05,0.35-delta/backgroundScroll.frame.height))
       start.press(forDuration:0.6,thenDragTo:backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:endY)),withVelocity:.slow,thenHoldForDuration:0.2)

@@ -24,10 +24,14 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
   const tool=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string,selected?:boolean)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={action} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={23} color={selected?'#FFFFFF':'rgba(255,255,255,0.72)'}/></Pressable>;
   // IMG_4866 keeps the cover actions as 30pt quiet discs beside the title block.
   const circle=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,value?:string,size=30)=><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} onPress={action} style={{width:size,height:size,borderRadius:size/2,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.10)'}}><Ionicons name={name} size={size===30?18:23} color="#FFFFFF"/></Pressable>;
-  const coverInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:6,minHeight:56,marginTop:fontScale>1.4?22:34}}>
-    <View style={{flex:1,minWidth:0,gap:7}}><Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:20,fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:15}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
-    {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏')}
-    {circle('ellipsis-horizontal','更多播放控制',onMore)}
+  const coverInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:6,minHeight:56,marginTop:fontScale>1.4?20:32}}>
+    <View style={{flex:1,minWidth:0,gap:5}}><Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:20,fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:17}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
+    {/* IMG_4866 heart/dots ink centre stays at 583pt while the text block
+        sits 2pt higher, so the icon pair keeps the old offset. */}
+    <View style={{flexDirection:'row',gap:6,marginTop:2}}>
+      {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏')}
+      {circle('ellipsis-horizontal','更多播放控制',onMore)}
+    </View>
   </View>;
   const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:14,minHeight:75}}>
     <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')}><Cover services={services} track={track} size={75} radius={18}/></Pressable>
@@ -50,7 +54,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
         <View testID="am-controls" style={{flexShrink:0,width:columns?Math.min(360,width*.42):undefined}}>
           {coverInfo}
           {!!error&&<Text accessibilityRole="alert" style={{color:'#FFD7BA'}}>{error}</Text>}
-          <View style={{marginTop:fontScale>1.4?2:3}}>{controls}</View>
+          <View style={{marginTop:fontScale>1.4?4:5}}>{controls}</View>
         </View>
       </View>
       {tools}
