@@ -74,7 +74,7 @@
 
 ## 2026-10-20 外观设置 4855/4856 视觉复核
 
-当前已有外观设置页按参考继续收敛，未新增页面：主题操作按钮、13个主题芯片、颜色字段和背景设置Sheet的抓取条/关闭命中区均复用既有交互与偏好。本地 `testZNavidromePlaybackAndCredentials` 1/0/0（508.126秒），`npm run check` 401/401；默认主题 IMG_4855 局部SSIM 84.53%/MAD22.41，IMG_4856 90.25%/MAD15.08。只把实测4856状态记入达标，4855其他位置和动效仍待。reverse-skill strict review 44E/41F/41P、17WI/95 timeline零错误；下一步清洁IPA、push并核对iOS27，真实服务/签名/真机保持独立。
+当前已有外观设置页按参考继续收敛，未新增页面：主题操作按钮、13个主题芯片、颜色字段和背景设置Sheet的抓取条/关闭命中区均复用既有交互与偏好。本地 `testZNavidromePlaybackAndCredentials` 1/0/0（508.126秒），`npm run check` 401/401；默认主题 IMG_4855 局部SSIM 84.53%/MAD22.41，IMG_4856 90.25%/MAD15.08。只把实测4856状态记入达标，4855其他位置和动效仍待。reverse-skill strict review 44E/41F/41P、17WI/95 timeline零错误；`330ff9d`清洁IPA及隐私/字节核验通过，下一步push并核对iOS27，真实服务/签名/真机保持独立。
 
 ## 2026-10-20 播放器与主题背景批次状态
 

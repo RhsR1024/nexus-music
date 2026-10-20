@@ -80,7 +80,9 @@ AM 传输键按参考放大并下移（前后键 52、主键 68、行距 38）�
 
 ## 2026-10-20 外观设置 4855/4856 视觉复核
 
-`testZNavidromePlaybackAndCredentials` Release 1/0/0，`SourceUITests-1792497763561.xcresult`，508.126秒；`npm run check` 401/401、`git diff --check`通过。默认blush/rose截图经7×7局部SSIM：IMG_4855 84.53%/MAD22.41，IMG_4856 90.25%/MAD15.08；4856该状态达标，4855仍实施中。截图、参考和diff已亲看，哈希绑定在`work/sollin-ipa/evidence/nexus-ui-verification-b21.json`，Evidence E-044 strict review为44E/41F/41P、17WI/95 timeline、0错误/警告。测试后诊断采集缺少`simctl`，发生在1/0/0终态之后。清洁unsigned IPA、提交push及对应iOS27仍待；本机为iOS26.3.1模拟器和合成服务。
+`testZNavidromePlaybackAndCredentials` Release 1/0/0，`SourceUITests-1792497763561.xcresult`，508.126秒；`npm run check` 401/401、`git diff --check`通过。默认blush/rose截图经7×7局部SSIM：IMG_4855 84.53%/MAD22.41，IMG_4856 90.25%/MAD15.08；4856该状态达标，4855仍实施中。截图、参考和diff已亲看，哈希绑定在`work/sollin-ipa/evidence/nexus-ui-verification-b21.json`，Evidence E-044 strict review为44E/41F/41P、17WI/95 timeline、0错误/警告。测试后诊断采集缺少`simctl`，发生在1/0/0终态之后。
+
+提交`330ff9ddc18dcf2f8927a2ae0b1d55fd2029587a`的清洁unsigned归档成功：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC、包内可执行入口、IPA与xcarchive `main.jsbundle`字节一致及私人/测试/签名资源排除通过。IPA SHA-256 `ccdd754b5eb1dca3a7ff06a1e23c235c4ee6a779ced99582b7f5afa3807785dd`，留`build/local-appearance-330ff9d`。push及对应iOS27仍待；本机结果仅为iOS26.3.1模拟器和合成服务，不替代真实服务/签名/真机。
 
 ## 2026-10-20 共享播放器/背景批次与云端状态
 

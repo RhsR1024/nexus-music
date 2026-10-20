@@ -4,7 +4,9 @@
 
 本地 Release `testZNavidromePlaybackAndCredentials` 通过：`build/SourceUITests-1792497763561.xcresult`，1通过/0失败/0跳过，508.126秒；`npm run check` 401/401，`git diff --check` 通过。测试结束后的模拟器诊断采集报了 `simctl` 工具缺失，但发生在测试已 Passed 之后，不是测试失败。
 
-默认 blush/rose 截图的 7×7 局部 SSIM：IMG_4855 为 **84.53%/MAD22.41**，较上一轮 82.89 提升但仍未达 90%；IMG_4856 为 **90.25%/MAD15.08**，首次整态达到门槛并亲看截图/diff。4856 只代表该默认主题滚动状态，其他滚动位置、动效、目标运行与真机仍开放。Sollin strict review 通过：44 Evidence/41 Finding/41 Path、17 WI/95 timeline、0错误/0警告；证据见忽略目录`work/sollin-ipa/evidence/E-044.md`与本轮截图。清洁 IPA、正常提交push及对应新iOS27仍待。
+默认 blush/rose 截图的 7×7 局部 SSIM：IMG_4855 为 **84.53%/MAD22.41**，较上一轮 82.89 提升但仍未达 90%；IMG_4856 为 **90.25%/MAD15.08**，首次整态达到门槛并亲看截图/diff。4856 只代表该默认主题滚动状态，其他滚动位置、动效、目标运行与真机仍开放。Sollin strict review 通过：44 Evidence/41 Finding/41 Path、17 WI/95 timeline、0错误/0警告；证据见忽略目录`work/sollin-ipa/evidence/E-044.md`与本轮截图。
+
+提交 `330ff9ddc18dcf2f8927a2ae0b1d55fd2029587a` 的清洁 unsigned archive 已成功：manifest `dirty=false`/`workingTreeChanges=[]`、arm64、iphoneos26.2、最低iOS15.1、设备族`[1,2]`、`signed=false`。ZIP CRC、arm64、包内可执行入口、IPA与xcarchive `main.jsbundle`字节SHA `c0a01a9154efbdb41df722e8af000b77084417ecdc24edd33e0c7fdf20e18941`一致、正式入口及私人/测试/签名材料排除通过。IPA SHA-256 `ccdd754b5eb1dca3a7ff06a1e23c235c4ee6a779ced99582b7f5afa3807785dd`，留存`build/local-appearance-330ff9d`。该包装不等于iOS27、Apple签名或真机通过；下一步正常push并核对单队列。
 
 ## 2026-10-20 UI 度量修正、经典页采集修复与 4856 收口
 
