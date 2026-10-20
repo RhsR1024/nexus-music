@@ -43,14 +43,15 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
   const flat=page==='background';
   // Follow 卡片透明度 for the glass fills; IMG_4856 at 30% shows the sheet
   // gradient through the theme grid and type capsule rather than white panels.
-  const darkMode=theme.mode==='dark',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)',glassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.45,value.cardOpacity*0.45)),glass=`rgba(255,255,255,${glassAlpha})`;
+  const darkMode=theme.mode==='dark',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.62)',glassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.45,value.cardOpacity*0.45)),glass=`rgba(255,255,255,${glassAlpha})`;
   // The reference order (Sollin, 脸红佳人, Pearl … 黄赤藕荷) first, then the two
   // themes original to 音枢. 3 columns × 5 rows is the user-confirmed layout
   // for 13 chips, so the lower page keeps its measured alignment.
   const themeChips:readonly VisualTheme[]=['blush','blushpink','pearl','mint','sunset','azure','marigold','violet','khaki','plumtea','lotus','soft','classic'];
   const outlined=(key:'accent'|'background',label:string,color:string,hex:string,action:()=>void)=><View key={key} style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,backgroundColor:glass,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12}}>
     <View style={{position:'absolute',top:-8,left:12,paddingHorizontal:6,backgroundColor:theme.palette.background[1]}}><Text style={{color:theme.palette.secondary,fontSize:13}}>{label}</Text></View>
-    <View style={{width:26,height:26,borderRadius:13,backgroundColor:color,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.12)'}}/>
+    {/* IMG_4856 samples the accent swatch at 20pt (x 46.0-65.7pt, y 234.0-253.7pt); 26pt read as a filled disc rather than a colour chip. */}
+    <View style={{width:20,height:20,borderRadius:10,backgroundColor:color,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.12)'}}/>
     <Text testID={`${key}-hex`} style={{flex:1,color:theme.palette.text,fontSize:17,fontVariant:['tabular-nums']}}>{hex.toUpperCase()}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={key==='accent'?'选择强调色':'背景颜色说明'} onPress={action} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={22} color={theme.palette.secondary}/></Pressable>
   </View>;
@@ -82,8 +83,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved}:{service
       </View>
       <Text style={{color:theme.palette.secondary,fontSize:13,marginTop:33.8,marginBottom:20.8}}>颜色</Text>
       {/* IMG_4856 puts both outlined fields 32pt from the screen edge (16pt inside
-          the sheet gutter) while the section label stays on the gutter. */}
-      <View style={{marginHorizontal:16}}>
+          the sheet gutter) while the section label stays on the gutter. Its first
+          border sits at 216.0pt; the 3pt offset below lands the same edge. */}
+      <View style={{marginHorizontal:16,marginTop:3}}>
         {outlined('accent','强调色',theme.palette.accent,theme.palette.accent,()=>Alert.alert('强调色','选择主题强调色。',[...(Object.keys(accentColors) as Accent[]).map((id,index)=>({text:['玫瑰','珊瑚','紫色','蓝色','橙色'][index]!,onPress:()=>update({accent:id})})),{text:'取消',style:'cancel' as const}]))}
         <View style={{height:28}}/>
         {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'))}

@@ -1559,6 +1559,21 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["更多播放控制"].tap()
     app.buttons["播放界面样式"].tap()
     app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch.tap()
+    // The sheet dismisses after the layout is persisted; capturing immediately
+    // caught its dismissal animation and covered the classic page (the score was
+    // then compared against IMG_4854 and reported the sheet, not the player).
+    // Wait for the sheet content to leave the hierarchy and for the classic
+    // anchors to settle before taking the reference capture.
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch.waitForNonExistence(timeout:10),"Style sheet must finish dismissing before the classic capture")
+    XCTAssertTrue(app.buttons["选择歌词来源"].firstMatch.waitForExistence(timeout:10),"Classic page must be on screen after the style sheet closes")
+    let classicProgress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    var classicFrame=CGRect.zero,classicStable=0
+    let classicSettled=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      let frame=classicProgress.exists ? classicProgress.frame : .zero
+      classicStable=frame==classicFrame ? classicStable+1:0;classicFrame=frame
+      return frame.height>0 && classicStable>=2
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[classicSettled],timeout:10),.completed,"Classic layout must stop moving before capture")
     let classicShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());classicShot.name="Classic reference composition";classicShot.lifetime = .keepAlways;add(classicShot)
     let lyricChoice=app.buttons["选择歌词来源"].firstMatch
     for _ in 0..<8 {if lyricChoice.isHittable{break};app.swipeUp()};XCTAssertTrue(lyricChoice.isHittable);lyricChoice.tap()

@@ -119,3 +119,30 @@ cp ../apk-reverse/LICENSE work/installed-skills/sollin-apk-reverse/LICENSE
 source scripts/environment.sh
 node scripts/sollin-reverse-gate.mjs apk --review
 ```
+
+## 2026-10-20 WorkBuddy 环境的独立 skill 安装（不改 Codex 配置）
+
+问题：项目入口 `.agents/skills/reverse-skill-router` 与 `.agents/skills/sollin-apk-reverse` 是给 Codex 用的符号链接，WorkBuddy 的技能加载器不读 `.agents/skills`，只读用户级 `~/.workbuddy/skills/<目录>/SKILL.md`，并按 frontmatter 的 `name` 注册。因此本轮开始时两个 skill 在当前环境**都不可调用**（Skill 工具查不到）。
+
+处置：只做增量副本，不改 Codex 正在使用的任何配置（未动 `~/.codex/skills`、未动项目 `.agents/skills` 链接、未改 `~/.codex/config.toml`）。
+
+| 项 | 安装位置 | 来源 | 版本/提交 | 大小 |
+| --- | --- | --- | --- | --- |
+| reverse-skill（路由入口） | `~/.workbuddy/skills/reverse-skill-router/` | `/Users/ningli/WorkSpace/reverse-skill/skills/`（整棵树，保留 `scripts/`、`config/` 相对结构） | `cab634bd855fc287f6e420c1f36fd1a6b9245960` / VERSION 1.0.1 | 6.4 MB |
+| APK 专项 | `~/.workbuddy/skills/sollin-apk-reverse/` | 项目 `work/installed-skills/sollin-apk-reverse`（同一固定提交的已核验安装） | `1b94651b1e3c4479336406b8b5c06d4c1fd7082e` / MIT | 2.4 MB |
+
+验证（2026-10-20 17:2x，本机）：
+
+- `Skill("reverse-skill-router")` 成功加载，返回 base directory `~/.workbuddy/skills/reverse-skill-router`，内容为包内 `skills/SKILL.md`，路由契约完整。
+- `Skill("apk-reverse")` 成功加载，返回 base directory `~/.workbuddy/skills/sollin-apk-reverse`，内容为 `skills/apk-reverse/SKILL.md`（G1–G4、症状索引、doctor 说明完整）。
+- 注意：以**目录名** `sollin-apk-reverse` 调用会报 `Can not find skill`；加载器按 frontmatter `name: apk-reverse` 注册。两个名字不要混用。
+- 门禁仍指向固定原件：`node scripts/sollin-reverse-gate.mjs ipa` 与 `apk` 均 PASS（pinned skill、tool index、样本 SHA256、离线 scope、case-guard）。副本本身不参与哈希门禁，**原件才是证据来源**；固定提交变化时需重新同步副本并在本节记录。
+
+复现：
+
+```bash
+rsync -a --exclude '.git' /Users/ningli/WorkSpace/reverse-skill/skills/ ~/.workbuddy/skills/reverse-skill-router/
+rsync -a --exclude '.git' /Users/ningli/WorkSpace/NexusMusic/work/installed-skills/sollin-apk-reverse/ ~/.workbuddy/skills/sollin-apk-reverse/
+```
+
+边界：安装只解决“当前环境可识别、可调用”，不增加功能完成度，也不替代 `case-init`/`case-guard`/Evidence→Finding→Path/strict review。样本、scope、Evidence 与原始分析输出仍只留本机忽略目录。

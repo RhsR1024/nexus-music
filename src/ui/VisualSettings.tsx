@@ -23,7 +23,7 @@ export function VisualSettings({services}:{services:Services}){
   const remove=(slot:VisualSlot)=>Alert.alert('移除此图片？','仅删除音枢保存的副本，系统文件中的原图保留。',[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void perform(()=>services.visualAssets.remove(slot));}}]);
   // IMG_4856's 30% card opacity leaves these cards almost invisible over the
   // blue-grey sheet, while a fixed 50% white washed them out to near-paper.
-  const darkMode=theme.mode==='dark',cardAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.5,value.cardOpacity*0.5)),card=`rgba(255,255,255,${cardAlpha})`,outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)';
+  const darkMode=theme.mode==='dark',cardAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.5,value.cardOpacity*0.5)),card=`rgba(255,255,255,${cardAlpha})`,outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.62)';
   const maskColors=[['#FFFFFF','白色'],['#000000','黑色'],['#2A241F','暖褐']] as const;
   const row=(key:string,index:number,children:React.ReactNode)=><View key={key} style={{paddingVertical:16,borderBottomWidth:index<4?StyleSheet.hairlineWidth:0,borderBottomColor:p.border}}>{children}</View>;
   const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12}}>
@@ -35,7 +35,9 @@ export function VisualSettings({services}:{services:Services}){
   // IMG_4856 measures 40.3pt from the last colour field to 视觉参数 (13pt top),
   // 39pt from that header to the first label (4pt section gap) and 31.7pt from
   // each label to its track (handled by SliderControl).
-  return <View style={{gap:18,paddingTop:13,paddingBottom:18}}>
+  // The colour block above moved 3pt down to sit on IMG_4856's 216.0pt border,
+  // so this section starts 3pt earlier to keep 视觉参数 at its measured 394.3pt.
+  return <View style={{gap:18,paddingTop:10,paddingBottom:18}}>
     {/* IMG_4856 order: 背景透明度 / 卡片透明度 / 背景遮罩 / 遮罩颜色 / 背景模糊. */}
     <View style={{paddingTop:2,gap:7.4}}>
       <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13}}>视觉参数</Text>
@@ -49,7 +51,10 @@ export function VisualSettings({services}:{services:Services}){
         <View style={{paddingTop:11,paddingBottom:16}}>{adjust('playerBlur','背景模糊',10,0,80)}</View>
       </View>
     </View>
-    <Text accessibilityRole="header" style={{color:p.text,fontSize:20,fontWeight:'600'}}>图片与播放背景</Text><Text style={{color:p.secondary,lineHeight:21,fontSize:12}}>图片仅保存在此设备，支持JPEG、PNG、HEIC等可读取格式，最大20MiB。导入后缩放并去除原图元数据；音乐库备份不包含图片。</Text>
+    {/* IMG_4856 shows an empty sheet band below 背景模糊 (last ink at 814.7pt, screen
+        ends at 932pt), so the next section starts below the fold. 18pt of the
+        existing stack gap plus 38pt here keeps 图片与播放背景 out of that state. */}
+    <Text accessibilityRole="header" style={{color:p.text,fontSize:20,fontWeight:'600',marginTop:38}}>图片与播放背景</Text><Text style={{color:p.secondary,lineHeight:21,fontSize:12}}>图片仅保存在此设备，支持JPEG、PNG、HEIC等可读取格式，最大20MiB。导入后缩放并去除原图元数据；音乐库备份不包含图片。</Text>
     <VisualPreview testID="visual-background-preview" uri={background} blur={0} opacity={value.backgroundOpacity}><Text style={{color:'#FFFFFF'}}>主题背景预览</Text><Text testID="visual-background-name" style={{color:'#FFFFFF',marginTop:8}}>{assets.background?.name??'尚未导入主题背景'}</Text></VisualPreview>
     <View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{button('visual-import-background','导入主题背景图片',()=>{void importImage('background');})}{assets.background&&button('visual-remove-background','移除主题背景图片',()=>remove('background'))}</View>
     <VisualPreview testID="visual-photo-preview" uri={photo} blur={value.playerBlur} opacity={1-value.playerDarkness}><Text style={{color:'#FFFFFF'}}>播放写真预览</Text><Text testID="visual-photo-name" style={{color:'#FFFFFF',marginTop:8}}>{assets.photo?.name??'尚未导入写真图片'}</Text></VisualPreview>

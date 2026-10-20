@@ -98,38 +98,84 @@ function gray(image) {
   return out;
 }
 
-function stats(a, b, width, height, x0, y0, x1, y1) {
+// Standard SSIM is the mean of a *local* similarity map; it is not a single
+// statistic over the whole image. The previous implementation compared global
+// variances, which collapses to near zero on flat backgrounds and made every
+// screen look far worse (and some screens look better) than it is. The score
+// below is the local map averaged over the region, using a uniform window
+// (7x7 is the scikit-image default). Edges use truncated windows rather than
+// dropping pixels so the whole screen stays covered.
+function integral(src, width, height) {
+  const stride = width + 1;
+  const out = new Float64Array(stride * (height + 1));
+  for (let y = 0; y < height; y++) {
+    let row = 0;
+    for (let x = 0; x < width; x++) {
+      row += src[y * width + x];
+      out[(y + 1) * stride + x + 1] = out[y * stride + x + 1] + row;
+    }
+  }
+  return out;
+}
+
+function boxMean(src, width, height, radius) {
+  const I = integral(src, width, height);
+  const stride = width + 1;
+  const out = new Float64Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const y0 = Math.max(0, y - radius);
+    const y1 = Math.min(height, y + radius + 1);
+    for (let x = 0; x < width; x++) {
+      const x0 = Math.max(0, x - radius);
+      const x1 = Math.min(width, x + radius + 1);
+      const sum = I[y1 * stride + x1] - I[y0 * stride + x1] - I[y1 * stride + x0] + I[y0 * stride + x0];
+      out[y * width + x] = sum / ((y1 - y0) * (x1 - x0));
+    }
+  }
+  return out;
+}
+
+function ssimMap(a, b, width, height, radius) {
+  const aa = new Float64Array(width * height);
+  const bb = new Float64Array(width * height);
+  const ab = new Float64Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    aa[i] = a[i] * a[i];
+    bb[i] = b[i] * b[i];
+    ab[i] = a[i] * b[i];
+  }
+  const ma = boxMean(a, width, height, radius);
+  const mb = boxMean(b, width, height, radius);
+  const maa = boxMean(aa, width, height, radius);
+  const mbb = boxMean(bb, width, height, radius);
+  const mab = boxMean(ab, width, height, radius);
+  const c1 = (0.01 * 255) ** 2;
+  const c2 = (0.03 * 255) ** 2;
+  const map = new Float64Array(width * height);
+  for (let i = 0; i < map.length; i++) {
+    const va = Math.max(0, maa[i] - ma[i] * ma[i]);
+    const vb = Math.max(0, mbb[i] - mb[i] * mb[i]);
+    const cov = mab[i] - ma[i] * mb[i];
+    map[i] = ((2 * ma[i] * mb[i] + c1) * (2 * cov + c2)) / ((ma[i] * ma[i] + mb[i] * mb[i] + c1) * (va + vb + c2));
+  }
+  return map;
+}
+
+function regionScore(map, madMap, width, x0, y0, x1, y1, isMasked) {
   let n = 0;
-  let sa = 0;
-  let sb = 0;
-  let saa = 0;
-  let sbb = 0;
-  let sab = 0;
+  let sum = 0;
   let mad = 0;
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
+      if (isMasked(x, y)) continue;
       const i = y * width + x;
-      const va = a[i];
-      const vb = b[i];
-      sa += va;
-      sb += vb;
-      saa += va * va;
-      sbb += vb * vb;
-      sab += va * vb;
-      mad += Math.abs(va - vb);
+      sum += map[i];
+      mad += madMap[i];
       n++;
     }
   }
   if (!n) return null;
-  const ma = sa / n;
-  const mb = sb / n;
-  const va = saa / n - ma * ma;
-  const vb = sbb / n - mb * mb;
-  const cov = sab / n - ma * mb;
-  const c1 = (0.01 * 255) ** 2;
-  const c2 = (0.03 * 255) ** 2;
-  const ssim = ((2 * ma * mb + c1) * (2 * cov + c2)) / ((ma * ma + mb * mb + c1) * (va + vb + c2));
-  return {ssim, mad: mad / n, meanReference: ma, meanCandidate: mb};
+  return {ssim: sum / n, mad: mad / n};
 }
 
 function chunk(type, data) {
@@ -162,7 +208,7 @@ function encodePng(width, height, rgb) {
 }
 
 function parseArgs(argv) {
-  const args = {grid: [6, 8], ignoreTop: 0, masks: [], gain: 3};
+  const args = {grid: [6, 8], ignoreTop: 0, masks: [], gain: 3, window: 7};
   const positional = [];
   for (let i = 2; i < argv.length; i++) {
     const token = argv[i];
@@ -171,10 +217,11 @@ function parseArgs(argv) {
     else if (token === '--ignore-top') args.ignoreTop = Number(argv[++i]);
     else if (token === '--mask') args.masks.push(argv[++i].split(',').map(Number));
     else if (token === '--gain') args.gain = Number(argv[++i]);
+    else if (token === '--window') args.window = Number(argv[++i]);
     else positional.push(token);
   }
   if (positional.length !== 2) {
-    console.error('用法: node scripts/visual-diff.mjs <reference.png> <candidate.png> [--out dir] [--grid 6x8] [--ignore-top 60] [--mask x,y,w,h]');
+    console.error('用法: node scripts/visual-diff.mjs <reference.png> <candidate.png> [--out dir] [--grid 6x8] [--ignore-top 60] [--mask x,y,w,h] [--window 7]');
     process.exit(2);
   }
   args.reference = positional[0];
@@ -195,7 +242,12 @@ const b = gray(candidate);
 const masked = (x, y) =>
   y < args.ignoreTop || args.masks.some(([mx, my, mw, mh]) => x >= mx && x < mx + mw && y >= my && y < my + mh);
 
-const global = stats(a, b, width, height, 0, Math.min(args.ignoreTop, height), width, height);
+const map = ssimMap(a, b, width, height, Math.floor(args.window / 2));
+const madMap = new Float64Array(width * height);
+for (let i = 0; i < madMap.length; i++) madMap[i] = Math.abs(a[i] - b[i]);
+
+// (map, mad, width, x0, y0, x1, y1): the status bar is already excluded by masked().
+const global = regionScore(map, madMap, width, 0, Math.min(args.ignoreTop, height), width, height, masked);
 const [cols, rows] = args.grid;
 const grid = [];
 for (let row = 0; row < rows; row++) {
@@ -205,23 +257,24 @@ for (let row = 0; row < rows; row++) {
     const y0 = Math.max(args.ignoreTop, Math.floor((row * height) / rows));
     const y1 = Math.floor(((row + 1) * height) / rows);
     if (y1 <= y0 || x1 <= x0) continue;
-    const s = stats(a, b, width, height, x0, y0, x1, y1);
+    const s = regionScore(map, madMap, width, x0, y0, x1, y1, masked);
     grid.push({row, col, x0, y0, x1, y1, ...s});
   }
 }
-// Honest masked score: recompute over unmasked pixels only.
+// Masked score: same local mean, over unmasked pixels only.
+const maskedScore = global.ssim;
+// Legacy global-statistic value kept only for continuity with older records.
 let n = 0;
 let sa = 0;
 let sb = 0;
 let saa = 0;
 let sbb = 0;
 let sab = 0;
-let mad = 0;
 for (let y = 0; y < height; y++) {
   for (let x = 0; x < width; x++) {
     if (masked(x, y)) continue;
     const i = y * width + x;
-    sa += a[i]; sb += b[i]; saa += a[i] * a[i]; sbb += b[i] * b[i]; sab += a[i] * b[i]; mad += Math.abs(a[i] - b[i]); n++;
+    sa += a[i]; sb += b[i]; saa += a[i] * a[i]; sbb += b[i] * b[i]; sab += a[i] * b[i]; n++;
   }
 }
 const ma = sa / n;
@@ -231,7 +284,7 @@ const vb = sbb / n - mb * mb;
 const cov = sab / n - ma * mb;
 const c1 = (0.01 * 255) ** 2;
 const c2 = (0.03 * 255) ** 2;
-const maskedScore = ((2 * ma * mb + c1) * (2 * cov + c2)) / ((ma * ma + mb * mb + c1) * (va + vb + c2));
+const legacyScore = ((2 * ma * mb + c1) * (2 * cov + c2)) / ((ma * ma + mb * mb + c1) * (va + vb + c2));
 
 const outDir = resolve(args.out ?? `build/visual-diff/${basename(args.candidate, '.png')}`);
 mkdirSync(outDir, {recursive: true});
@@ -252,18 +305,21 @@ const report = {
   candidate: args.candidate,
   size: [width, height],
   ignoreTop: args.ignoreTop,
+  window: args.window,
   masks: args.masks,
+  method: 'local-ssim',
   global: {ssim: global.ssim, mad: global.mad},
-  masked: {ssim: maskedScore, mad: mad / n, pixels: n},
+  masked: {ssim: maskedScore, mad: global.mad, pixels: height * width},
+  legacyGlobalSsim: legacyScore,
   grid,
 };
 writeFileSync(resolve(outDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
 
 console.log(`参考: ${args.reference}`);
 console.log(`候选: ${args.candidate}`);
-console.log(`尺寸: ${width}x${height}  忽略顶部: ${args.ignoreTop}px  遮罩: ${args.masks.length} 块`);
-console.log(`全局 SSIM: ${(global.ssim * 100).toFixed(2)}%  MAD: ${global.mad.toFixed(2)}`);
-console.log(`遮罩后 SSIM: ${(maskedScore * 100).toFixed(2)}%  MAD: ${(mad / n).toFixed(2)}`);
+console.log(`尺寸: ${width}x${height}  忽略顶部: ${args.ignoreTop}px  遮罩: ${args.masks.length} 块  窗口: ${args.window}x${args.window}`);
+console.log(`局部 SSIM: ${(global.ssim * 100).toFixed(2)}%  MAD: ${global.mad.toFixed(2)}  （旧全局统计值 ${(legacyScore * 100).toFixed(2)}%，仅作历史对照）`);
+console.log(`遮罩后局部 SSIM: ${(maskedScore * 100).toFixed(2)}%  MAD: ${global.mad.toFixed(2)}`);
 console.log('区域（SSIM% / MAD）:');
 for (const cell of grid) {
   const flag = cell.ssim < 0.8 ? '  <<<' : '';
