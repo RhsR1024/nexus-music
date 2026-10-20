@@ -1,3 +1,7 @@
+## 2026-10-21 Files helper与原生歌词双击实施
+
+真实Files双用例同批通过`SourceUITests-1792526082262`（2/0/0、253.378秒），helper按iOS27两种行表现分别进入目录和选择文件，未降低千首/导入/实音/删除断言。AM双击证据显示Fabric只交付一次JS touch，新增[0077](decisions/0077-native-lyric-double-tap.md) `NexusNative/LyricGesture` UIKit双击/长按容器，复用既有seek守卫。check 407/407、Swift parse及完整native通过；本机RN0.81 x86_64 Release预编译Hermes ABI故障使App在测试前退出，云端iOS27 Release待本批push。代码/完整交付范围重估约75.1%/53.0%。
+
 ## 2026-10-21 当前实施范围：iPhone 常态布局
 
 当前停止新增大字/辅助功能字号的视觉实现与对齐，也停止 iPad 专用 UI、窗口和分屏美化。仅保留 iPhone 常态字号、常态布局和基础横屏的工程可用性检查。既有大字与 iPad 用例不删除，但不计入当前 UI 90% 完成量；参考图中的大字号歌词属于“歌词舞台”样式。该范围覆盖历史对应计划，详见[0076](decisions/0076-iphone-normal-layout-scope.md)。

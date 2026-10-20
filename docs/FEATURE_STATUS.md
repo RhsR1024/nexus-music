@@ -1,3 +1,7 @@
+## 2026-10-21 Files回归与歌词双击交互状态
+
+真实Files双用例`SourceUITests-1792526082262`为2通过/0失败/0跳过（253.378秒），千首歌单搜索/排序/删除/重启和本地音频导入/频谱/在播保护/删除均通过。iOS27 `de0d820/39463281458`在第10步App UI失败，后续步骤未执行；小日志/失败证据下载401，未伪造日志。AM双击已查明为Fabric只向JS交付一次touch，按[0077](decisions/0077-native-lyric-double-tap.md)改由UIKit `NexusNative/LyricGesture`识别双击/长按并复用既有seek；check 407/407、Swift parse和完整native通过。本机x86_64 Release Hermes预编译ABI故障阻断App启动，交互实际运行待云端iOS27。当前UI仍只有IMG_4856一个默认主题滚动态达到90.25%，平台登录/日推/FM、签名与真机未完成。
+
 ## 2026-10-21 当前 UI 状态口径：仅 iPhone 常态布局
 
 大字/辅助功能字号与 iPad 专用布局暂不实现，不作为视觉完成度或截图对齐依据；已有大字/iPad测试只保留兼容回归。当前 UI 90% 目标仅计算 iPhone 常态字号和常态布局，参考图中的大字歌词按“歌词舞台”样式处理。详见[0076](decisions/0076-iphone-normal-layout-scope.md)。

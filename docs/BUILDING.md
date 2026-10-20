@@ -52,6 +52,8 @@ LX离线探针与进度见 [LX_HOST_PROGRESS.md](LX_HOST_PROGRESS.md)。
 
 **本机 WorkBuddy 终端注意事项（2026-10-20）**：该终端给每个 node 进程注入了 `NODE_OPTIONS=--require .../node-language-shim.cjs`，Metro 打包阶段会因 broker IPC 断开报 `write EPIPE`，`PhaseScriptExecution Bundle React Native code and images` 失败（App 未编译）。在本机跑 `test-ui.mjs`/归档前先 `export NODE_OPTIONS= PYTHONPATH=`；这不改产品代码，云端 CI 不受影响。
 
+**本机 RN 0.81 x86_64 预编译 Hermes 阻断（2026-10-21）**：Intel 模拟器 Release 的 `hermes-ios-0.81.5-release.tar.gz` 缺少 React 引用的 `facebook::hermes::inspector_modern::RuntimeAdapterD2Ev`，会在 App 启动前 dyld 失败；手工换成 Debug Hermes 虽含符号，但与预编译 Release React 组合出现 SIGBUS。不要据此判定业务代码或 UI 测试失败，也不要提交本机 Pods 替换。当前以云端 Xcode27 arm64 Release 验证；需另一台 ABI 正常的 Mac 或修复后的 RN 产物完成本机 Release UI 双击闭环。
+
 `node --experimental-strip-types scripts/probe-online.mjs`对五平台真实搜索做小样本探测，报告只包含数量/字段保留标记。`scripts/probe-lx-resolve.py`使用本机私密样本，报告仅留状态及音频头验证，不输出URL或曲目。
 
 实际脚本初始化（会执行脚本网络请求）：先运行test:native编译工具，再运行`python3 scripts/probe-lx-native.py`。仅在本机生成去除URL/原始异常的报告；resource、build和local-config保持Git排除。

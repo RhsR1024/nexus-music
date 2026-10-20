@@ -1589,3 +1589,11 @@ Release 结果：播放样式 + EQ 同批 2/0/0（`SourceUITests-1792500633689`�
 另复核舞台面板正确附件：IMG_4872与`Stage style panel`为局部SSIM81.81%/MAD16.26；此前44.91%是收起的运输页，不能当面板状态。E-045严格review通过45E/41F/41P、17WI/96 timeline。该测量不改变产品字节或IPA，动效及真机仍未验收。
 
 ## 2026-10-20 局部 SSIM 度量批次与干净 unsigned IPA
+## 2026-10-21 Files双用例通过、云端失败与本机Hermes ABI阻断
+
+- `SourceUITests-1792526082262.xcresult`：Files/千首/本地音频双用例2通过、0失败、0跳过，253.378秒。日志`build/logs/ui-catalog.log`；失败前的多次双击诊断结果另存`SourceUITests-1792526459346`、`1792526810680`等，不覆盖。
+- iOS27 `39463281458/de0d820`：checks、native、模拟器创建成功；第10步App UI失败，在线/离线/归档跳过。公开API实核完成，job step见上述；compact/failure artifact元数据分别为531052/26495308字节，但下载均401，未取得内容。
+- `npm run check` 407/407通过；Swift parse通过；`npm run test:native`完整通过（实际AVPlayer/PCM、睡眠、缓存、WebDAV、本地音频、系统媒体和视觉契约）。
+- 本机Release UI回归被RN0.81 x86_64预编译产物阻断：Release Hermes缺`RuntimeAdapterD2Ev`导致dyld启动失败；Debug Hermes含符号但与Release预编译React组合触发SIGBUS。crash reports留`~/Library/Logs/DiagnosticReports/app-2026-10-21-043735.ips`、`044324`、`045538`和`050059`。不据此判断产品UI失败。
+- 本机Pods/React缓存仅为验证环境，不属于仓库改动；提交前恢复lock/manifest，云端以实际iOS27 Release终态为准。
+- 清洁unsigned IPA待本批提交后重做；真实服务、Apple签名和真机无新增证据。

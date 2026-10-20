@@ -1,3 +1,13 @@
+## 2026-10-21 Files 双用例与歌词双击原生手势批次
+
+iOS 27 `de0d820/39463281458` 已完成但失败：checks/native/创建模拟器通过，第10步 App UI失败，后续在线/离线/归档跳过；小日志与失败证据 artifact 可见，但公共 API 下载仍返回401，不能伪造云端日志结论。公开 jobs 证实失败层级，已保留 API 回执。
+
+本地同批 `SourceUITests-1792526082262.xcresult` 中真实 Files 双用例 **2通过/0失败/0跳过（253.378秒）**：1000首歌单导入、搜索二条、排序后选择、删除一条、清空筛选、重启残留、左滑删除，以及本地音频导入、实际频谱、在播删除保护、队列移除后删除均通过。Files helper 统一覆盖 iOS 27 的 Cell 和带“操作菜单”的 Button 行，不对导入/1000首/播放/删除断言降级。
+
+AM 双击失败证据确认：合成事件含两次 pointer path，但 Fabric 只向 JS交付一次 `onTouchStart`，扩大时间窗无效。新增原始 `NexusNative/LyricGesture` UIKit 容器，以系统双击/长按/无障碍激活驱动既有 seek 守卫，保留唯一播放意图和歌词功能，见[0077](docs/decisions/0077-native-lyric-double-tap.md)。`npm run check` **407/407**、Swift parse和完整原生测试通过。本机 RN0.81 x86_64 Release预编译 Hermes存在符号缺失/SIGBUS，App在测试启动前退出；因此本次双击未取得本机Release UI通过，必须由云端iOS27或另一台正常ABI机器闭环。Files双用例运行于故障前同一测试环境，失败证据和 crash report 均保留。
+
+范围正式重估：当前代码口径约 **75.1%**（71%–77%），完整交付约 **53.0%**（49%–56%）；见[PROGRESS_ESTIMATE](docs/PROGRESS_ESTIMATE.md)。UI仍只有IMG_4856一个默认主题滚动态达到90.25%，总体未达90%。下一步：提交/push、触发并跟进iOS27 Release、新建清洁unsigned IPA；云端若仍失败，优先用job/step和可取得证据定位，不以本机ABI故障代替产品结论。真实账号登录/日推/FM、签名和真机继续开放。
+
 ## 2026-10-21 0b4052a 清洁归档与阶段清理
 
 提交`0b4052a04a3e08135c2cff3e6606dd29536ada29`的最终清洁unsigned归档成功：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC、IPA与xcarchive `main.jsbundle`字节SHA `50edcba62456db741c55ec66f6ec770794b173a60713940d439e07ee3045fdd2`一致，正式入口及私人/测试/签名资源排除通过。IPA SHA-256 `d660acf22c94fe337c994f006a9483a9ff6b9fedd92e11f9d367b8ae6e1c3e7c`，留`build/local-ios27-recovery-0b4052a`。阶段仅清理两个已核验可重建的IPA临时Payload目录，约555MiB，回执`build/logs/cleanup-ios27-recovery-2026-10-21.json`；未删有效阶段产物、失败证据、逆向样本或用户模拟器。下一步正常push并核对新iOS27实际队列。

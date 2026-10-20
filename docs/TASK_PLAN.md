@@ -1,3 +1,10 @@
+## 2026-10-21 Files回归与歌词双击原生手势状态
+
+- 真实Files双用例已同批通过：`SourceUITests-1792526082262`，2/0/0，253.378秒；覆盖千首歌单和本地音频原断言。
+- iOS27 `de0d820/39463281458` completed/failure，失败在第10步App UI；后续步骤跳过。artifact元数据可见但下载401，已保存API回执。
+- 新增[0077](decisions/0077-native-lyric-double-tap.md) UIKit歌词双击/长按容器；check 407/407、Swift parse和完整native通过。本机预编译Hermes x86_64 ABI故障阻断Release UI启动，双击实际运行待云端iOS27。
+- 进度按iPhone常态范围重估：代码约75.1%、完整交付约53.0%，见[PROGRESS_ESTIMATE](PROGRESS_ESTIMATE.md)。UI总体仍未达90%，真实登录/日推/FM/签名/真机继续开放。
+
 ## 2026-10-21 当前 UI 范围：仅 iPhone 常态布局
 
 用户明确取消当前阶段的大字模式和 iPad 专用视觉适配。后续 UI 实施、截图量测、90% diff 和美观验收只针对 iPhone 常态字号、常态纵屏/基础横屏；大字与 iPad 现有测试仅作为“不崩溃、不裁切核心操作”的兼容回归，不作为完成量或继续投入优化。参考图中的大字歌词按“歌词舞台”样式处理，不按辅助功能大字解释。该决定覆盖本文件中历史的大字/iPad视觉目标，详见[0076](decisions/0076-iphone-normal-layout-scope.md)。
