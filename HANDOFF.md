@@ -2,7 +2,9 @@
 
 原生手势修复提交 `07f81a28e1387f6e9ddcc052f2e559680742d52f` 已正常 push 到 `main`。当前干净 unsigned IPA：`build/local-lyric-gesture-07f81a2/NexusMusic-unsigned.ipa`，SHA-256 `a734eabb1b68528e346253183ac6b34f9755d80b95b0322a96ffe6f7b125e47c`；manifest commit 为 `07f81a2`、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/min15.1/设备族[1,2]、`signed=false`。ZIP CRC通过，IPA与xcarchive `main.jsbundle` SHA-256均为 `a0809efabff20ea7311a67e1887171402a73fa79e27038cc87aa90f220815988`，测试/签名私有资源扫描无命中。该本地包不替代 iOS 27、Apple 签名或真机。
 
-云端实核为 1 运行/1 排队：`39499931841`（`694db50`）in_progress，`39500726487`（`07f81a2`）pending；未取消运行中任务、未重派旧提交。待最新 pending 实际终态后记录步骤、产物和失败根因。
+已下载并核验云端 `39499931841`（`694db50`）诊断：compact logs 149401字节/SHA-256 `1e87593dbb8a8b2e2a1dfffd697e3a8a0406dd7490d2c4eac1a3b0a5a7eded96`，diagnostics 403894字节/SHA-256 `ba4f259fe845326c9e4d7a33e17dfa68f791fa94385930adf080289f0d4309be`，ZIP CRC通过。checks、pods、完整native和模拟器创建步骤通过；Swift 编译因`NexusLyricGestureView.swift:50`重复覆盖`accessibilityActivate()`失败，因此0项UI测试执行，后续UI/归档/上传跳过。公开界面未及时体现job终态，但制品中的编译错误与当前修复精确对应：`07f81a2`已删除第二个实现。
+
+云端实核为1运行/1排队：`39499931841`（`694db50`）diagnostics完成后结束，`39500726487`（`07f81a2`）pending；未取消运行中任务、未重派旧提交。待最新 pending 实际终态后记录步骤、产物和失败根因。
 
 ## 2026-10-21 Files 双用例与歌词双击原生手势批次
 

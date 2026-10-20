@@ -2,6 +2,8 @@
 
 提交`07f81a28e1387f6e9ddcc052f2e559680742d52f`的本地unsigned归档成功：manifest `dirty=false`/`workingTreeChanges=[]`、arm64、iphoneos26.2、最低iOS15.1、设备族`[1,2]`、`signed=false`；ZIP CRC、测试/签名私有资源排除通过。IPA SHA-256 `a734eabb1b68528e346253183ac6b34f9755d80b95b0322a96ffe6f7b125e47c`，留`build/local-lyric-gesture-07f81a2`；IPA与xcarchive `main.jsbundle` SHA-256同为`a0809efabff20ea7311a67e1887171402a73fa79e27038cc87aa90f220815988`。本机RN0.81/x86_64原Release运行受预编译Hermes ABI故障阻断；该归档和静态/原生检查不代表云端iOS27、签名或双击真机交互已通过。云端`39499931841`（694db50）运行中、`39500726487`（07f81a2）排队，保持1/1。
 
+`39499931841`失败证据已可取：checks、Pod安装、完整native和iOS27模拟器创建通过，Swift在`NexusLyricGestureView.swift:50`因`accessibilityActivate()`重复覆盖而编译失败，0项UI执行，后续UI/归档/上传跳过。compact logs 149401字节/SHA-256 `1e87593dbb8a8b2e2a1dfffd697e3a8a0406dd7490d2c4eac1a3b0a5a7eded96`，diagnostics 403894字节/SHA-256 `ba4f259fe845326c9e4d7a33e17dfa68f791fa94385930adf080289f0d4309be`，ZIP CRC通过；`07f81a2`已删除重复实现，最新pending待运行。
+
 ## 2026-10-21 0b4052a 最终清洁归档
 
 提交`0b4052a04a3e08135c2cff3e6606dd29536ada29`的清洁unsigned归档成功：manifest dirty=false/changes=[]、arm64/iphoneos26.2/min15.1/设备族[1,2]、signed=false；ZIP CRC与包内JS字节一致，私人/测试/签名资源排除通过。IPA SHA-256 `d660acf22c94fe337c994f006a9483a9ff6b9fedd92e11f9d367b8ae6e1c3e7c`，留`build/local-ios27-recovery-0b4052a`。阶段清理约555MiB可重建IPA临时Payload；push及对应iOS27待。

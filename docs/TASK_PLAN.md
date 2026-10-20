@@ -1,7 +1,8 @@
 ## 2026-10-21 原生歌词手势清洁归档与云端队列
 
 - [x] `07f81a2`正常push；清洁unsigned IPA SHA-256 `a734eabb1b68528e346253183ac6b34f9755d80b95b0322a96ffe6f7b125e47c`，manifest commit/dirty合法，ZIP CRC、IPA/archive JS字节和私有资源排除通过。
-- [ ] iOS27 `07f81a2/39500726487`实际终态、双击/长按/VoiceOver App步骤、归档上传与产物；当前保持`694db50/39499931841`运行中、`07f81a2/39500726487`排队，1/1，不取消/不重派。
+- [x] iOS27 `694db50/39499931841`诊断：前置检查、Pods、完整native和模拟器通过；Swift重复覆盖`accessibilityActivate()`导致编译失败，0项UI执行；compact/diagnostics已下载并CRC/SHA核验。该错误已由`07f81a2`修复。
+- [ ] iOS27 `07f81a2/39500726487`实际终态、双击/长按/VoiceOver App步骤、归档上传与产物；当前排队，保持1运行或0运行/1排队，不取消/不重派。
 - [ ] Apple签名与真机双击/长按/无障碍及实际音源播放仍待，不能用本地unsigned包替代。
 
 ## 2026-10-21 Files回归与歌词双击原生手势状态
