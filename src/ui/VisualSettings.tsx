@@ -1,7 +1,8 @@
 import {useRef,useState,useSyncExternalStore} from 'react';
-import {Alert,Pressable,Switch,View,useWindowDimensions} from 'react-native';
+import {Alert,Pressable,StyleSheet,Switch,View,useWindowDimensions} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
+import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {VisualImportError,type VisualSlot} from '../storage/visualAssets.ts';
 import {Text} from './Typography.tsx';
@@ -10,7 +11,7 @@ import {useVisualAssets,useVisualImage,VisualPreview} from './VisualBackground.t
 import {SliderControl} from './SliderControl.tsx';
 export function VisualSettings({services}:{services:Services}){
   const {width,fontScale}=useWindowDimensions(),stacked=width<390||fontScale>1.4;
-  const {palette:p}=useTheme(),value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),assets=useVisualAssets(services);
+  const theme=useTheme(),p=theme.palette,value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),assets=useVisualAssets(services);
   const background=useVisualImage(services,assets.background),photo=useVisualImage(services,assets.photo),[busy,setBusy]=useState(false),[message,setMessage]=useState('');const working=useRef(false);
   async function perform(action:()=>Promise<void>,fallback='图片或设置未保存，请重试；之前的数据保留。'){if(working.current)return;working.current=true;setBusy(true);setMessage('');try{await action();}catch(error){setMessage(error instanceof VisualImportError?({read:'图片读取或处理失败，请检查格式与大小后重新选择。[V02]',validate:'图片处理结果无效，请重新选择。[V03]',save:'图片信息未保存，请重试。[V04]'}[error.stage]+' 之前的数据保留。'):fallback);}finally{working.current=false;setBusy(false);}}
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{void perform(()=>services.preferences.update(patch));};
@@ -20,23 +21,26 @@ export function VisualSettings({services}:{services:Services}){
   const percent=(next:number)=>`${Math.round(next*100)}%`;
   const adjust=(field:'backgroundOpacity'|'cardOpacity'|'backgroundMask'|'playerBlur'|'playerDarkness'|'coverRadius',label:string,step:number,min:number,max:number)=><SliderControl testID={field} label={label} value={value[field]} min={min} max={max} step={step} disabled={busy} stacked={stacked} format={field==='playerBlur'||field==='coverRadius'?undefined:percent} onChange={next=>update({[field]:next})}/>;
   const remove=(slot:VisualSlot)=>Alert.alert('移除此图片？','仅删除音枢保存的副本，系统文件中的原图保留。',[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void perform(()=>services.visualAssets.remove(slot));}}]);
+  const darkMode=theme.mode==='dark',card=darkMode?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.5)',outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.42)';
+  const maskColors=[['#FFFFFF','白色'],['#000000','黑色'],['#2A241F','暖褐']] as const;
+  const row=(key:string,index:number,children:React.ReactNode)=><View key={key} style={{paddingVertical:16,borderBottomWidth:index<4?StyleSheet.hairlineWidth:0,borderBottomColor:p.border}}>{children}</View>;
+  const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12}}>
+    <View style={{position:'absolute',top:-8,left:12,paddingHorizontal:6,backgroundColor:card}}><Text style={{color:p.secondary,fontSize:13}}>遮罩颜色</Text></View>
+    <View style={{width:26,height:26,borderRadius:13,backgroundColor:value.maskColor,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.12)'}}/>
+    <Text testID="visual-value-maskColor" style={{flex:1,color:p.text,fontSize:17,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="选择遮罩颜色" disabled={busy} onPress={()=>Alert.alert('遮罩颜色','选择播放背景遮罩颜色。',[...maskColors.map(([color,label])=>({text:label,onPress:()=>update({maskColor:color})})),{text:'取消',style:'cancel' as const}])} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={22} color={p.secondary}/></Pressable>
+  </View>;
   return <View style={{gap:18,paddingVertical:18}}>
     {/* IMG_4856 order: 背景透明度 / 卡片透明度 / 背景遮罩 / 遮罩颜色 / 背景模糊. */}
-    <Text accessibilityRole="header" style={{color:p.text,fontSize:17,fontWeight:'600'}}>视觉参数</Text>
-    <View style={{gap:24}}>
-    {adjust('backgroundOpacity','背景透明度',.1,0,1)}
-    {adjust('cardOpacity','卡片透明度',.1,0,1)}
-    {adjust('backgroundMask','背景遮罩',.1,0,1)}
-    <View style={{gap:10}}>
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-        <Text style={{color:p.text,fontSize:15}}>遮罩颜色</Text>
-        <Text testID="visual-value-maskColor" style={{color:p.secondary,fontSize:14,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
+    <View style={{gap:12}}>
+      <Text accessibilityRole="header" style={{color:p.secondary,fontSize:16}}>视觉参数</Text>
+      <View style={{borderRadius:18,backgroundColor:card,paddingHorizontal:16}}>
+        {row('backgroundOpacity',0,adjust('backgroundOpacity','背景透明度',.1,0,1))}
+        {row('cardOpacity',1,adjust('cardOpacity','卡片透明度',.1,0,1))}
+        {row('backgroundMask',2,adjust('backgroundMask','背景遮罩',.1,0,1))}
+        {row('maskColor',3,maskField)}
+        {row('playerBlur',4,adjust('playerBlur','背景模糊',10,0,80))}
       </View>
-      <View style={{flexDirection:'row',gap:12}}>
-        {([['#FFFFFF','白色'],['#000000','黑色'],['#2A241F','暖褐']] as const).map(([color,label],index)=><Pressable key={color} testID={`visual-maskColor-${index}`} accessibilityRole="radio" accessibilityLabel={`遮罩颜色 ${label}`} accessibilityState={{selected:value.maskColor.toLowerCase()===color.toLowerCase()}} disabled={busy} onPress={()=>update({maskColor:color})} style={{width:36,height:36,borderRadius:18,backgroundColor:color,borderWidth:value.maskColor.toLowerCase()===color.toLowerCase()?3:1,borderColor:value.maskColor.toLowerCase()===color.toLowerCase()?p.accent:p.border}}/>)}
-      </View>
-    </View>
-    {adjust('playerBlur','背景模糊',10,0,80)}
     </View>
     <Text accessibilityRole="header" style={{color:p.text,fontSize:20,fontWeight:'600'}}>图片与播放背景</Text><Text style={{color:p.secondary,lineHeight:21,fontSize:12}}>图片仅保存在此设备，支持JPEG、PNG、HEIC等可读取格式，最大20MiB。导入后缩放并去除原图元数据；音乐库备份不包含图片。</Text>
     <VisualPreview testID="visual-background-preview" uri={background} blur={0} opacity={value.backgroundOpacity}><Text style={{color:'#FFFFFF'}}>主题背景预览</Text><Text testID="visual-background-name" style={{color:'#FFFFFF',marginTop:8}}>{assets.background?.name??'尚未导入主题背景'}</Text></VisualPreview>

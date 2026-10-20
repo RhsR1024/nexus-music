@@ -1141,6 +1141,22 @@ final class SourceSettingsTests: XCTestCase {
     reachValue("backgroundOpacity","100%",true)
     reachValue("cardOpacity","30%",false)
     reachValue("playerBlur","0",false)
+    // IMG_4856 starts with the background-type control just under the status
+    // bar and 视觉参数 at about 257pt. Place the control's lower edge at 110pt so
+    // the sections below it land at the same height. Step taps leave momentum
+    // behind, so settle and re-measure after every drag.
+    Thread.sleep(forTimeInterval:1.2)
+    let backgroundType=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
+    for _ in 0..<10 {
+      if !backgroundType.exists {break}
+      let delta=backgroundType.frame.maxY-110
+      if abs(delta)<10 {break}
+      let start=backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:0.35))
+      let endY=min(0.9,max(0.05,0.35-delta/backgroundScroll.frame.height))
+      start.press(forDuration:0.6,thenDragTo:backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:endY)),withVelocity:.slow,thenHoldForDuration:0.2)
+      Thread.sleep(forTimeInterval:0.5)
+    }
+    Thread.sleep(forTimeInterval:0.8)
     let lowerAppearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());lowerAppearanceShot.name="Appearance background page scrolled";lowerAppearanceShot.lifetime = .keepAlways;add(lowerAppearanceShot)
     // 25% and 55 are deliberately not on the slider step lattice. Restore via
     // the real reset action, rather than attempting unreachable stepping loops.

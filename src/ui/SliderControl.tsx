@@ -28,13 +28,14 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
   })).current;
   const display=format?format(value):String(value);
   const step_=(direction:1|-1)=>onChange(Number(clamp(value+direction*step).toFixed(4)));
-  return <View style={{gap:8,opacity:disabled?.5:1}}>
+  const ticks=Array.from({length:17},(_,index)=>index/16);
+  return <View style={{gap:10,opacity:disabled?.5:1}}>
     <View style={{flexDirection:stacked?'column':'row',alignItems:stacked?'flex-start':'center',justifyContent:'space-between',gap:stacked?8:0}}>
-      <Text style={{color:theme.palette.text,fontSize:15}}>{label}</Text>
-      <Text testID={`visual-value-${testID}`} style={{color:theme.palette.secondary,fontSize:14,fontVariant:['tabular-nums']}}>{display}</Text>
+      <Text style={{color:theme.palette.text,fontSize:17,fontWeight:'600'}}>{label}</Text>
+      <Text testID={`visual-value-${testID}`} style={{color:theme.palette.secondary,fontSize:15,fontVariant:['tabular-nums']}}>{display}</Text>
     </View>
-    <View style={{flexDirection:stacked?'column':'row',alignItems:stacked?'stretch':'center',gap:10}}>
-      <Pressable testID={`visual-${testID}-down`} accessibilityRole="button" accessibilityLabel={`减少${label}`} disabled={disabled} onPress={()=>step_(-1)} hitSlop={stacked?undefined:8} style={{width:stacked?undefined:28,height:stacked?44:32,alignItems:'center',justifyContent:'center'}}><Ionicons name="remove" size={16} color={theme.palette.secondary}/></Pressable>
+    <View style={{flexDirection:stacked?'column':'row',alignItems:stacked?'stretch':'center',gap:stacked?10:4}}>
+      <Pressable testID={`visual-${testID}-down`} accessibilityRole="button" accessibilityLabel={`减少${label}`} disabled={disabled} onPress={()=>step_(-1)} hitSlop={stacked?undefined:10} style={{width:stacked?undefined:18,height:stacked?44:32,alignItems:'center',justifyContent:'center'}}><Ionicons name="remove" size={16} color={theme.palette.secondary}/></Pressable>
       <View
         accessible
         accessibilityRole="adjustable"
@@ -48,9 +49,10 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
         {...responder.panHandlers}>
         <View style={{height:3,borderRadius:2,backgroundColor:theme.palette.border}}/>
         <View style={{position:'absolute',left:0,top:14.5,height:3,borderRadius:2,width:Math.max(0,position*width),backgroundColor:theme.palette.accent}}/>
+        {ticks.map(tick=><View key={tick} pointerEvents="none" style={{position:'absolute',top:14.5,left:`${tick*100}%`,width:3,height:3,borderRadius:2,marginLeft:-1.5,backgroundColor:tick<=position+0.001?'rgba(255,255,255,0.5)':theme.palette.secondary+'55'}}/>)}
         <View style={{position:'absolute',top:9,left:Math.max(0,Math.min(width-14,position*width-7)),width:14,height:14,borderRadius:7,backgroundColor:theme.palette.accent,transform:[{scale:dragging?1.15:1}]}}/>
       </View>
-      <Pressable testID={`visual-${testID}-up`} accessibilityRole="button" accessibilityLabel={`增加${label}`} disabled={disabled} onPress={()=>step_(1)} hitSlop={stacked?undefined:8} style={{width:stacked?undefined:28,height:stacked?44:32,alignItems:'center',justifyContent:'center'}}><Ionicons name="add" size={16} color={theme.palette.secondary}/></Pressable>
+      <Pressable testID={`visual-${testID}-up`} accessibilityRole="button" accessibilityLabel={`增加${label}`} disabled={disabled} onPress={()=>step_(1)} hitSlop={stacked?undefined:10} style={{width:stacked?undefined:18,height:stacked?44:32,alignItems:'center',justifyContent:'center'}}><Ionicons name="add" size={16} color={theme.palette.secondary}/></Pressable>
     </View>
   </View>;
 }
