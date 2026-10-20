@@ -47,11 +47,6 @@ final class NexusLyricGestureView: ExpoView, UIGestureRecognizerDelegate {
     onLongPress()
   }
 
-  override func accessibilityActivate() -> Bool {
-    onDoubleTap()
-    return true
-  }
-
   func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
     true
   }
