@@ -277,7 +277,11 @@ final class NativePlaybackEngine {
   func seek(_ seconds: Double, _ id: String, _ newGeneration: Int) {
     guard seconds.isFinite, seconds >= 0, id == entryID, newGeneration == generation else { return }
     let duration = player.currentItem?.duration.seconds ?? .infinity
-    player.seek(to: CMTime(seconds: min(seconds, duration.isFinite ? duration : seconds), preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+    let target = CMTime(seconds: min(seconds, duration.isFinite ? duration : seconds), preferredTimescale: 600)
+    player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
+      guard finished, let self, self.player.currentItem?.status == .readyToPlay, self.entryID == id, self.generation == newGeneration else { return }
+      self.report("seek")
+    }
   }
   func configureRate(_ value: Double) {
     guard value.isFinite else { return }

@@ -1,6 +1,7 @@
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
+import {requireNativeView} from 'expo';
 import {memo,useCallback,useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,FlatList,Pressable,ScrollView,Text as LyricText,View,useWindowDimensions,type GestureResponderEvent,type PressableProps} from 'react-native';
+import {AccessibilityInfo,FlatList,Pressable,ScrollView,Text as LyricText,View,useWindowDimensions,type PressableProps,type ViewProps} from 'react-native';
 import {SheetModal} from './AdaptiveModal.tsx';
 import {Text} from './Typography.tsx';
 import type {Services} from '../app/services.ts';
@@ -79,12 +80,14 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     {presentation==='stage'&&document?.synced&&!expanded&&<View testID="lyric-stage" style={{flex:1}}>
       <StageLyricRows services={services} lines={document.lines} group={stageGroup} font={font} offset={offset} size={size} activeColor={activeColor} inactiveColor="rgba(255,255,255,0.17)" seek={seek} openSettings={openAllLyrics} playing={state.intent==='playing'&&!state.buffering} position={state.position*1000-offset} stageStyle={preferences.stageStyle}/>
     </View>}
-    {presentation!=='stage'&&!fullPage&&document?.synced&&!expanded&&document.lines.slice(firstVisible,firstVisible+count).map((item,index)=>{
+        {presentation!=='stage'&&!fullPage&&document?.synced&&!expanded&&document.lines.slice(firstVisible,firstVisible+count).map((item,index)=>{
       const actual=firstVisible+index,time=state.position*1000-offset,singing=time>=item.startMs&&(item.endMs===undefined||time<item.endMs);
-      return <Pressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} onPress={event=>seek(item.startMs,actual,event.nativeEvent.timestamp)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:item.background?4:count===1?0:style.spacing,opacity:item.background?.65:1}}>
+      // Give every row a stable Pressable owner. Replacing an inline onPress
+      // while the first seek realigns a FlatList can cancel the second tap.
+      return <AM2LyricPressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} onTap={now=>seek(item.startMs,actual,now)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:item.background?4:count===1?0:style.spacing,opacity:item.background?.65:1}}>
         <NativeLyricLine line={actual===active||item.background&&singing?item:{...item,words:undefined}} position={actual===active||item.background&&singing?state.position*1000-offset:0} playing={(actual===active||!!item.background&&singing)&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={actual===active||item.background&&singing?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={actual===active||item.background&&singing?0:style.blur} emphasis={style.emphasis}/>
         {item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:13,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
-      </Pressable>;
+      </AM2LyricPressable>;
     })}
     {!document?.synced&&(fullPage||presentation==='stage')&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
     {!document?.synced&&!fullPage&&presentation!=='stage'&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
@@ -144,22 +147,12 @@ function AM2ActiveLyric({services,line,center,offset,size,font,color,style}:{ser
   return <NativeLyricLine line={line} position={playback.position*1000-offset} playing={playback.intent==='playing'&&!playback.buffering} center={center} size={size} font={font} fontURI={services.fonts.selectedURI()} color={color} lineHeight={style.lineHeight} emphasis={style.emphasis}/>;
 }
 
-// Observe bounded taps without claiming the list's scroll responder. A native
-// cancellation, movement, multiple fingers or long press cannot seek a lyric.
-function AM2LyricPressable({onTap,onLongPress,...props}:PressableProps&{onTap:(time:number)=>void}){
-  const touch=useRef<{x:number;y:number;time:number}|undefined>(undefined),handled=useRef<number|undefined>(undefined);
-  const end=(event:GestureResponderEvent)=>{
-    const point=event.nativeEvent;handled.current=point.timestamp;
-    const start=touch.current;touch.current=undefined;if(!start)return;
-    const elapsed=point.timestamp-start.time;
-    if(point.touches.length||elapsed<0||elapsed>350||Math.hypot(point.pageX-start.x,point.pageY-start.y)>10)return;
-    onTap(point.timestamp);
-  };
-  return <Pressable {...props} onTouchStart={event=>{const point=event.nativeEvent;touch.current=point.touches.length===1?{x:point.pageX,y:point.pageY,time:point.timestamp}:undefined;}}
-    onTouchMove={event=>{const start=touch.current,point=event.nativeEvent;if(start&&(point.touches.length!==1||Math.hypot(point.pageX-start.x,point.pageY-start.y)>10))touch.current=undefined;}}
-    onTouchEnd={end} onTouchCancel={event=>{touch.current=undefined;handled.current=event.nativeEvent.timestamp;}}
-    onLongPress={event=>{touch.current=undefined;onLongPress?.(event);}}
-    onPress={event=>{if(event.nativeEvent.timestamp!==handled.current)onTap(event.nativeEvent.timestamp);}}/>;
+const NativeLyricGesture=requireNativeView<ViewProps&{onDoubleTap?:()=>void;onLongPress?:()=>void}>('NexusNative','LyricGesture');
+
+// UIKit owns double-tap detection because Fabric can expose only one JS touch
+// sequence for a synthesized double tap. The existing two-tap seek guard stays.
+function AM2LyricPressable({onTap,onLongPress,...props}:ViewProps&{onTap:(time:number)=>void;onLongPress?:()=>void}){
+  return <NativeLyricGesture {...props} onDoubleTap={()=>{const now=Date.now();onTap(now);onTap(now);}} onLongPress={onLongPress}/>;
 }
 
 // The classic page renders the lyric lines above the transport and the source,

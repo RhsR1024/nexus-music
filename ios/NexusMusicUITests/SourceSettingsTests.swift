@@ -130,15 +130,37 @@ final class SourceSettingsTests: XCTestCase {
     // Query the complete tree: iOS 27 Files is a remote accessibility subtree.
     let file=app.descendants(matching:.any).matching(NSPredicate(format:"elementType == %d AND label BEGINSWITH %@",XCUIElement.ElementType.cell.rawValue,prefix)).firstMatch
     let folder=app.descendants(matching:.any).matching(NSPredicate(format:"elementType == %d AND label BEGINSWITH %@",XCUIElement.ElementType.cell.rawValue,"Nexus UITest Fixtures")).firstMatch
-    for _ in 0..<6 {
-      if file.waitForExistence(timeout:3) && file.isHittable{break}
-      if folder.exists && folder.isHittable{folder.tap();continue}
-      let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch
-      if phone.exists && phone.isHittable{phone.tap();continue}
-      let browse=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
-      if browse.exists && browse.isHittable{browse.tap()}
+    let fileRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
+    let folderRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+    func openRow(_ row:XCUIElement){
+      let frame=row.frame
+      XCTAssertFalse(frame.isNull||frame.isInfinite||frame.isEmpty,"A Files row needs a finite frame")
+      app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:min(96,frame.maxX-app.frame.minX-1),dy:frame.midY-app.frame.minY)).tap()
     }
-    XCTAssertTrue(file.waitForExistence(timeout:10));XCTAssertTrue(file.isHittable,"The actual Files cell must be visible before selection");file.tap()
+    let locations=NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])
+    for _ in 0..<12 {
+      if waitForHittable(file,timeout:0.5){break}
+      if waitForHittable(folder,timeout:0.5){folder.tap();continue}
+      // Files can expose the folder itself only as a button ending in
+      // “操作菜单”. Its content action is a top-level Files button; the centre
+      // of the host coordinate space opens the directory. A file must instead
+      // be selected without invoking its trailing menu affordance.
+      if waitForHittable(fileRow,timeout:0.5){fileRow.tap();return}
+      if waitForHittable(folderRow,timeout:0.5){app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap();continue}
+      // Files labels its back button with the previous location. Never accept
+      // a Button here or navigation moves backwards instead of to On My iPhone.
+      let phone=(app.cells.matching(locations).allElementsBoundByIndex+app.staticTexts.matching(locations).allElementsBoundByIndex).first{waitForHittable($0,timeout:0.2)}
+      if let phone{phone.tap();continue}
+      let browse=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+      if waitForHittable(browse,timeout:0.5){browse.tap()}
+    }
+    let selected=waitForHittable(file,timeout:10) ? file : fileRow
+    if !waitForHittable(selected,timeout:2) {
+      let image=XCTAttachment(screenshot:app.screenshot());image.name="Files fixture row unreachable";image.lifetime = .keepAlways;add(image)
+      let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Files fixture hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+    }
+    XCTAssertTrue(waitForHittable(selected,timeout:10),"The actual Files cell/row must be visible before selection")
+    selected.tap()
     let open=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
     if open.waitForExistence(timeout:3) && open.isHittable{open.tap()}
   }
@@ -785,16 +807,7 @@ final class SourceSettingsTests: XCTestCase {
     let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
     let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
     XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
-    let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
-    let file=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus Playlist Fixture")).firstMatch
-    // Files remembers the previous font/image folder. A navigation title is not
-    // a directory cell; tapping it opens a menu rather than entering the folder.
-    if !file.waitForExistence(timeout:2){
-      if !folder.waitForExistence(timeout:2){let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch;XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()}
-      XCTAssertTrue(folder.waitForExistence(timeout:10));folder.tap()
-    }
-    XCTAssertTrue(file.waitForExistence(timeout:10));file.tap()
-    let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch;if open.waitForExistence(timeout:3){open.tap()}
+    selectLocalFixture("Nexus Playlist Fixture",in:app)
     XCTAssertTrue(app.alerts["导入LX歌单"].waitForExistence(timeout:15));app.alerts.buttons["追加导入"].tap()
     XCTAssertTrue(app.staticTexts["已导入 1 个歌单、1000 首歌曲"].waitForExistence(timeout:15))
     let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
@@ -836,14 +849,7 @@ final class SourceSettingsTests: XCTestCase {
     let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
     XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
     let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
-    let fixture=app.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
-    if !fixture.waitForExistence(timeout:3) {
-      let phone=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).firstMatch
-      XCTAssertTrue(phone.waitForExistence(timeout:10));phone.tap()
-    }
-    XCTAssertTrue(fixture.waitForExistence(timeout:10));fixture.tap()
-    let file=app.descendants(matching:.any).matching(NSPredicate(format:"label CONTAINS %@","Synthetic Tagged Tone")).firstMatch;XCTAssertTrue(file.waitForExistence(timeout:5));file.tap()
-    let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch;if open.waitForExistence(timeout:3){open.tap()}
+    selectLocalFixture("Synthetic Tagged Tone",in:app)
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:15))
     app.buttons["专辑"].tap();let albumGroup=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Fixture album")).firstMatch;XCTAssertTrue(albumGroup.waitForExistence(timeout:5));albumGroup.tap()
     app.buttons["艺术家"].tap();let artistGroup=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Fixture artist")).firstMatch;XCTAssertTrue(artistGroup.waitForExistence(timeout:5));artistGroup.tap()
@@ -1121,7 +1127,9 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<5 {if line.isHittable{break};lyricList.swipeUp()}
     XCTAssertEqual(progress.value as? String,beforeScroll,"Scrolling lyrics must keep the paused playback position")
     let beforeTap=XCTAttachment(screenshot:app.screenshot());beforeTap.name=am ? "AM actual lyric before double tap":"AM2 actual lyric before double tap";beforeTap.lifetime = .keepAlways;add(beforeTap)
-    XCTAssertTrue(line.isHittable);line.doubleTap()
+    // XCUI can collapse doubleTap on an embedded list row into one activation.
+    // Two real tap sequences still verify the product's bounded double-tap path.
+    XCTAssertTrue(line.isHittable);line.tap();line.tap()
     expectation(for:NSPredicate(format:"value == %@","0:06 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:5)
     XCTAssertEqual(progress.value as? String,"0:06 / 2:00")
     if am && largeText {

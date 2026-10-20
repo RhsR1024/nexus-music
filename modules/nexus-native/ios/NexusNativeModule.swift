@@ -21,6 +21,10 @@ public final class NexusNativeModule: Module {
       ViewName("PhotoMask")
       OnViewDidUpdateProps { (view: NexusPhotoMaskView) in view.applyMask() }
     }
+    View(NexusLyricGestureView.self) {
+      ViewName("LyricGesture")
+      Events("onDoubleTap", "onLongPress")
+    }
     View(NexusAmbientView.self) {
       ViewName("Ambient")
       Prop("colors") { (view: NexusAmbientView, colors: [String]) in view.setColors(colors) }

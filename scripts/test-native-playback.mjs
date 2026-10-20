@@ -38,7 +38,7 @@ async function play(url,start=0,key,sleepMode) {
   assert.ok(result.readyDuration>1.9&&result.readyDuration<2.3,`Ready must expose the decoded duration, including paused/cached media: ${JSON.stringify(result)}`);
   assert.ok(result.maximumDuration>1.9&&result.maximumDuration<2.3,'Duration must stay consistent through progress, seek and stop');
   assert.ok(result.listenedMs>0,'Real playback must accumulate native listening time');assert.equal(result.sessionCount,1);
-  if(sleepMode==='statistics'){assert.equal(result.pauseStarted,true);assert.equal(result.pauseStable,true);assert.ok(result.listenedMs>400&&result.listenedMs<result.elapsedMs-250,`Pause must be excluded and seek cannot add more than active wall time: ${JSON.stringify(result)}`);}
+  if(sleepMode==='statistics'){assert.equal(result.pauseStarted,true);assert.equal(result.pauseStable,true);assert.equal(typeof result.seekPosition,'number');assert.ok(result.seekPosition>1.1&&result.seekPosition<1.3,'Completed seek must publish its exact new position to the shared player state');assert.ok(result.listenedMs>400&&result.listenedMs<result.elapsedMs-250,`Pause must be excluded and seek cannot add more than active wall time: ${JSON.stringify(result)}`);}
 }
 try {
   await play(pathToFileURL(resolve('build/tests/tone.wav')).href);
