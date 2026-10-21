@@ -1,5 +1,6 @@
 import type {MusicAccount, MusicAccounts, MusicSession} from './musicAccounts.ts';
 import {MusicAuthError,type MusicAuthEvent,type MusicAuthFlow} from './musicAuth.ts';
+import type {NeteaseAccountProfileClient} from './neteaseAccountProfile.ts';
 
 export type MusicWebLoginProvider='wy';
 export const MUSIC_WEB_LOGIN_URLS:{readonly [P in MusicWebLoginProvider]:string}={
@@ -62,10 +63,11 @@ export class MusicWebLoginCoordinator {
   private readonly native:MusicWebAuthNative;
   private readonly flow:Pick<MusicAuthFlow<Record<string,unknown>>,'start'|'cancel'|'subscribe'|'getSnapshot'>;
   private readonly accounts:Pick<MusicAccounts,'save'>;
+  private readonly profile:NeteaseAccountProfileClient;
   private readonly hash:(value:string)=>Promise<string>;
   private readonly uuid:()=>string;
-  constructor(dependencies:{native:MusicWebAuthNative;flow:Pick<MusicAuthFlow<Record<string,unknown>>,'start'|'cancel'|'subscribe'|'getSnapshot'>;accounts:Pick<MusicAccounts,'save'>;hash:(value:string)=>Promise<string>;uuid:()=>string}){
-    this.native=dependencies.native;this.flow=dependencies.flow;this.accounts=dependencies.accounts;this.hash=dependencies.hash;this.uuid=dependencies.uuid;
+  constructor(dependencies:{native:MusicWebAuthNative;flow:Pick<MusicAuthFlow<Record<string,unknown>>,'start'|'cancel'|'subscribe'|'getSnapshot'>;accounts:Pick<MusicAccounts,'save'>;profile:NeteaseAccountProfileClient;hash:(value:string)=>Promise<string>;uuid:()=>string}){
+    this.native=dependencies.native;this.flow=dependencies.flow;this.accounts=dependencies.accounts;this.profile=dependencies.profile;this.hash=dependencies.hash;this.uuid=dependencies.uuid;
   }
   getSnapshot=()=>this.flow.getSnapshot();
   subscribe=(listener:()=>void)=>this.flow.subscribe(listener);
@@ -76,19 +78,24 @@ export class MusicWebLoginCoordinator {
     const attempt=this.uuid(),url=MUSIC_WEB_LOGIN_URLS[provider];
     const raw=await this.flow.start(emit=>{
       let active=true;
-      void this.native.open(attempt,provider,url).then(result=>{
+      const controller=new AbortController();
+      void this.native.open(attempt,provider,url).then(async result=>{
         if(!active)return;
-        try{emit({type:'success',value:parseNeteaseCookiePayload(result)});}
+        try{
+          const cookies=parseNeteaseCookiePayload(result);
+          const profile=await this.profile.fetch({platform:provider,cookies},controller.signal);
+          if(active)emit({type:'success',value:{cookies,profile}});
+        }
         catch(error){emit({type:'error',error});}
       },error=>{if(active)emit(eventFromNativeError(error));});
-      return()=>{active=false;void this.native.cancel(attempt).catch(()=>{});};
+      return()=>{active=false;controller.abort();void this.native.cancel(attempt).catch(()=>{});};
     });
-    const cookies=parseNeteaseCookiePayload(JSON.stringify(raw));
-    const identity=await this.hash(JSON.stringify(['wy',cookies.MUSIC_U]));
-    const username=`netease:${identity.slice(0,24)}`;
+    const cookies=parseNeteaseCookiePayload(JSON.stringify(raw.cookies));
+    const profile=raw.profile as {readonly userId:string;readonly nickname:string};
+    const username=`netease:${profile.userId}`;
     const accountId=await this.hash(JSON.stringify(['wy',username]));
-    const session:MusicWebSession=Object.freeze({version:1,platform:provider,accountId,cookies});
-    const account=await this.accounts.save({platform:provider,label:'网易云音乐',username,capabilities:[]},session);
+    const session:MusicWebSession=Object.freeze({version:1,platform:provider,accountId,userId:profile.userId,cookies});
+    const account=await this.accounts.save({platform:provider,label:'网易云音乐',username,displayName:profile.nickname,capabilities:[]},session);
     return{account,session};
   }
 }

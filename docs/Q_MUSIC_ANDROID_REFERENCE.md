@@ -49,6 +49,10 @@
 
 验证：业务/类型 **417/417**、完整 native 套件和登录窗口打开/关闭 App 专项 **1/0/0** 通过。首次 WebKit 实现从 Expo 异步队列创建 data store 导致 `EXC_BREAKPOINT`，已定位并改为主线程执行。真实账号登录、昵称资料、重启会话、官方鉴权日推 endpoint、QQ/酷狗、FM 与真机仍未完成。
 
+继续补齐 Login→session lifecycle 的已可独立验证部分：网页登录取得 Cookie 后，按固定参考的 `w/nuser/account/get` 账户校验语义，适配为 iOS 端只读官方 `/api/nuser/account/get`；严格解析数字 `userId` 和 1–120 字符昵称，会话无效或空资料不保存账号。账号 stable identity 为 `netease:<userId>`，昵称以 `displayName` 元数据保留，Cookie 不进入可恢复元数据。设置页新增“验证”，从 Keychain 恢复该账号会话后实际请求官方资料接口，失败显示固定提示且不删除原会话。
+
+验证：`npm run check` **421/421**、完整 native 通过；无凭据合成 Cookie 对真实官方端点探针返回 `login_required`，证明生产路径可拒绝无效会话，但不证明真实账号。真实 WebView 登录、重启后有效账号、官方鉴权日推、QQ/酷狗、FM 与真机仍待。
+
 
 ## 评论后端参考与UI边界
 

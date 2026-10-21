@@ -4,7 +4,8 @@
 - [x] 新增 `NexusMusicAuth` WKWebView 会话：官方 HTTPS allowlist、隔离 Cookie store、主线程 UI、10 分钟过期、取消和原生日志脱敏。
 - [x] Cookie 白名单/控制字符校验、账号派生身份、Keychain 会话隔离与登录不成功不落库；`npm run check` 417/417。
 - [x] 原生完整检查和登录窗口打开/关闭 UI 专项通过；首次异步队列 WebKit 崩溃已由主线程修复和复验闭环。
-- [ ] 真实网易云账号登录、昵称资料与重启会话；官方鉴权日推 endpoint、个人歌单/收藏。
+- [x] 登录完成后通过官方账号资料接口验证会话，以稳定 userId 派生账号身份并保存昵称显示元数据；设置页支持重启后按 Keychain 会话重新验证。`npm run check` 421/421，完整 native 通过。
+- [ ] 真实网易云账号登录与重启会话联调；官方鉴权日推 endpoint、个人歌单/收藏。
 - [ ] QQ/酷狗登录、平台FM、真实服务和真机/Apple签名。
 
 ## 2026-10-22 Step 11 测试隔离与 iOS 27 完整通过

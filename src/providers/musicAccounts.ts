@@ -8,6 +8,7 @@ export interface MusicAccount {
   platform:MusicPlatform;
   label:string;
   username:string;
+  displayName?:string;
   capabilities:readonly MusicAccountCapability[];
   updatedAt:number;
 }
@@ -21,11 +22,12 @@ const validAccount=(value:unknown):value is MusicAccount=>{
   const item=value as Record<string,unknown>;
   return typeof item.id==='string'&&/^[a-f0-9]{64}$/.test(item.id)&&platforms.has(item.platform as MusicPlatform)&&
     typeof item.label==='string'&&item.label.length>0&&item.label.length<=120&&typeof item.username==='string'&&
-    item.username.length<=256&&Array.isArray(item.capabilities)&&item.capabilities.every(value=>capabilities.has(value as MusicAccountCapability))&&
+    item.username.length>0&&item.username.length<=256&&(item.displayName===undefined||typeof item.displayName==='string'&&item.displayName.length>0&&item.displayName.length<=120)&&
+    Array.isArray(item.capabilities)&&item.capabilities.every(value=>capabilities.has(value as MusicAccountCapability))&&
     Number.isSafeInteger(item.updatedAt)&&Number(item.updatedAt)>=0;
 };
 const safeSession=(value:unknown):value is MusicSession=>!!value&&typeof value==='object'&&!Array.isArray(value);
-const accountFields=(item:MusicAccount):MusicAccount=>({id:item.id,platform:item.platform,label:item.label,username:item.username,capabilities:[...item.capabilities],updatedAt:item.updatedAt});
+const accountFields=(item:MusicAccount):MusicAccount=>({id:item.id,platform:item.platform,label:item.label,username:item.username,...(item.displayName?{displayName:item.displayName}:{}),capabilities:[...item.capabilities],updatedAt:item.updatedAt});
 
 /** Account metadata is recoverable; session material is always kept in the platform keychain entry. */
 export class MusicAccounts {
@@ -49,7 +51,8 @@ export class MusicAccounts {
     return this.mutate(async()=>{
       if(!platforms.has(account.platform)||!account.label.trim()||!account.username.trim()||!safeSession(session))throw new Error('平台账号资料无效');
       const now=Date.now(),id=await this.hash(JSON.stringify([account.platform,account.username.trim()]));
-      const record:MusicAccount={id,platform:account.platform,label:account.label.trim(),username:account.username.trim(),capabilities:[...account.capabilities],updatedAt:now};
+      const displayName=account.displayName?.trim();
+      const record:MusicAccount={id,platform:account.platform,label:account.label.trim(),username:account.username.trim(),...(displayName?{displayName}:{}),capabilities:[...account.capabilities],updatedAt:now};
       if(!validAccount(record))throw new Error('平台账号资料无效');
       const key=`nexus.music.${record.id}`,old=await this.secrets.get(key),next=[...this.value.filter(item=>item.id!==id),record];
       await this.secrets.set(key,JSON.stringify(session));

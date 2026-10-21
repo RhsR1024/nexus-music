@@ -6,7 +6,9 @@ TS 侧只白名单保留 `MUSIC_U`、`__csrf`、`NMTID`、`_ntes_nuid` 等账号
 
 验证：`npm run check` **417/417**；新增 5 项登录解析/取消/隔离测试通过。`npm run test:native` 通过完整 utility/JSC/lifecycle/DSP/AVPlayer/system media/cache/ambient/local audio/WebDAV/probe/visual 套件；新 Swift 模块被原生构建编译。真实 App `SourceUITests-1792613267120.xcresult` 为 **1通过/0失败/0跳过**，确认设置→音乐账号→真实官方登录窗口可达、可关闭，并恢复“登录已取消”。首次实现因在 Expo 异步队列创建 WebKit data store 触发 `EXC_BREAKPOINT`，崩溃报告 `app-2026-10-22-040242.ips` 定位到 `NexusMusicAuthModule.swift:59`；改为主线程执行后复验通过。
 
-未完成：真实网易云账号登录/回跳/重启会话联调、账号昵称资料、实际鉴权日推 endpoint、个人歌单/收藏、QQ/酷狗登录与 FM；Apple 签名和真机仍独立验收。不能把合成 Cookie、网页可达或编译成功写成真实账号完成。
+随后补齐账号资料与会话复核：登录窗口取得 `MUSIC_U` 后不会直接落库，而是带 Cookie 只读官方 `https://music.163.com/api/nuser/account/get`。响应仅在 `code=200` 且包含数字 `userId`、边界内昵称时通过；账号稳定身份改为 `netease:<userId>`，昵称只作为脱敏元数据 `displayName`，Cookie 仍只进 Keychain。设置页显示昵称并提供“验证”，重启后可从 Keychain 读取该账号会话并重新校验；失败不会删除旧会话或伪造成功。合成凭据探针实际到达官方端点并正确返回 `login_required`，不冒充真实账号。`npm run check` **421/421**，完整 native 套件通过；新增账号资料解析、Cookie 请求边界、未验证会话不落库及昵称持久化测试。
+
+未完成：真实网易云账号登录/回跳/重启会话联调、实际鉴权日推 endpoint、个人歌单/收藏、QQ/酷狗登录与 FM；Apple 签名和真机仍独立验收。不能把合成 Cookie、网页可达或编译成功写成真实账号完成。
 
 ## 2026-10-22 Step 11 测试隔离修复与完整 iOS 27 通过
 
