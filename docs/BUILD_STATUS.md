@@ -1,3 +1,7 @@
+## 2026-10-21 942105c 原生双击测试语义修正
+
+`fa8ddd7/39516000415`与`2bc2a63/39531808260`的iOS27 iPhone17均执行21项，结果19通过/2失败/0跳过，失败仍仅为AM2/AM歌词双击定位。原生手势代码正常编译；测试用两次独立`tap()`的间隔超过系统双击窗口，UIKit按两个单击处理。`942105c`仅改回`line.doubleTap()`，在独立worktree提交以免混入当时未提交的UI批次。两次失败证据ZIP CRC通过：fa8ddd7 logs/evidence SHA-256 `24722c9c8ff4c294c3e1266d652a975c395218478f175825e147b6548abc84da`/`0586f2682e9e8cd5cef8d4feebc18c971a1a2d92fc01aefcefd01e86d025adfb`；2bc2a63 `1f40554bee8c7a221d7c7f45403ce21b49492fa7012fe2f74d095a1267ab7cbc`/`56535eaec4757f57007b5c4d43420a9e3fdeb3ad09b671186646a8093e8ca101`。最新run `39590937799`执行中。
+
 ## 2026-10-21 07f81a2 原生歌词手势清洁归档
 
 提交`07f81a28e1387f6e9ddcc052f2e559680742d52f`的本地unsigned归档成功：manifest `dirty=false`/`workingTreeChanges=[]`、arm64、iphoneos26.2、最低iOS15.1、设备族`[1,2]`、`signed=false`；ZIP CRC、测试/签名私有资源排除通过。IPA SHA-256 `a734eabb1b68528e346253183ac6b34f9755d80b95b0322a96ffe6f7b125e47c`，留`build/local-lyric-gesture-07f81a2`；IPA与xcarchive `main.jsbundle` SHA-256同为`a0809efabff20ea7311a67e1887171402a73fa79e27038cc87aa90f220815988`。本机RN0.81/x86_64原Release运行受预编译Hermes ABI故障阻断；该归档和静态/原生检查不代表云端iOS27、签名或双击真机交互已通过。云端`39499931841`（694db50）运行中、`39500726487`（07f81a2）排队，保持1/1。
