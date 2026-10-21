@@ -17,12 +17,13 @@ import {DownloadSettings,DownloadTasks} from './DownloadSettings.tsx';
 import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {NavidromeSettings} from './NavidromeSettings.tsx';
 import {SourceSettings} from './SourceSettings.tsx';
+import {MusicAccountSettings} from './MusicAccountSettings.tsx';
 
-export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|AppearanceSection;
+export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|'accounts'|AppearanceSection;
 type AppearanceSheetSection='background'|'theme'|'skins'|'mini'|'navigation'|'typography'|'globalFont'|'lyricFont';
 const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='background'||page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='typography'||page==='globalFont'||page==='lyricFont';
 const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-background-sheet',theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',typography:'lyric-display-sheet',globalFont:'global-font-sheet',lyricFont:'lyric-font-sheet'};
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
   const {palette:p}=useTheme();
@@ -82,8 +83,10 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
         </View>
         <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13,marginTop:12}}>曲库与播放来源</Text>
         {row('sources','LX 音源与 Navidrome 私人曲库','server-outline')}
+        {row('accounts','网易云等平台登录与本机会话','person-circle-outline')}
       </View>;
       case 'sources':return <><NavidromeSettings services={services}/><SourceSettings catalog={services.catalog} health={services.sourceHealth}/></>;
+      case 'accounts':return <MusicAccountSettings services={services}/>;
       case 'playback':return <><View style={{gap:12}}>{row('equalizer','10 段曲线、前级、预设与实时音效','options-outline')}{row('typography','歌词字体、颜色、对齐与逐字效果','text-outline')}</View><AudioSettings services={services}/><PlaybackSettings services={services}/></>;
       case 'equalizer':return <EqualizerSettings services={services}/>;
       case 'appearance':return <AppearanceOverview services={services} open={open}/>;

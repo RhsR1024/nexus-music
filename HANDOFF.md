@@ -1,3 +1,13 @@
+## 2026-10-22 网易云 WKWebView 登录与安全会话底座
+
+按固定 Q-music `5db858f32695d10c5e9ef0f7037d586aef6a8c4b` 的官方网页登录和 Cookie 语义，接入首个平台登录闭环：设置新增“音乐账号”页，只提供真实“登录网易云账号”入口；`NexusMusicAuth` 在 App 内用隔离的 `WKWebsiteDataStore.nonPersistent()` 打开 `https://music.163.com/m/login`，限制导航为网易云官方 HTTPS 页面，检测 `MUSIC_U` 后返回 Cookie。关闭、超时和取消均走 `MusicAuthFlow` 的取消/过期/失败状态，迟到回调不能发布成功。
+
+TS 侧只白名单保留 `MUSIC_U`、`__csrf`、`NMTID`、`_ntes_nuid` 等账号接口所需 Cookie，拒绝空值、控制字符和超长值；账号资料只保存由会话派生的不可逆标识，原始会话仅进入 Expo SecureStore/Keychain。登录 UI 明示登录不等于日推/歌单/FM 已完成，账号仍以空 capability 保存，避免 `accountDaily` 把已登录误作官方日推授权。
+
+验证：`npm run check` **417/417**；新增 5 项登录解析/取消/隔离测试通过。`npm run test:native` 通过完整 utility/JSC/lifecycle/DSP/AVPlayer/system media/cache/ambient/local audio/WebDAV/probe/visual 套件；新 Swift 模块被原生构建编译。真实 App `SourceUITests-1792613267120.xcresult` 为 **1通过/0失败/0跳过**，确认设置→音乐账号→真实官方登录窗口可达、可关闭，并恢复“登录已取消”。首次实现因在 Expo 异步队列创建 WebKit data store 触发 `EXC_BREAKPOINT`，崩溃报告 `app-2026-10-22-040242.ips` 定位到 `NexusMusicAuthModule.swift:59`；改为主线程执行后复验通过。
+
+未完成：真实网易云账号登录/回跳/重启会话联调、账号昵称资料、实际鉴权日推 endpoint、个人歌单/收藏、QQ/酷狗登录与 FM；Apple 签名和真机仍独立验收。不能把合成 Cookie、网页可达或编译成功写成真实账号完成。
+
 ## 2026-10-22 Step 11 测试隔离修复与完整 iOS 27 通过
 
 iOS 27 `39590937799`（`942105c`）在 Step 10 通过后暴露 Step 11 两项旧测试状态问题：`testCrossPlatformLyrics` 在歌词来源 Sheet 已关闭后直接查找舞台样式，未重新打开现有样式 Sheet；`testOnlineMatching` 依赖持久模拟器里的自动匹配/手动匹配状态，并在经典播放器页直接查找仅在“队列与播放选项”Sheet 内显示的状态。失败日志、failure evidence、CRC/SHA 与诊断见 `build/ci-39590937799/FINDINGS.txt`，不是播放器或真实网络失败。

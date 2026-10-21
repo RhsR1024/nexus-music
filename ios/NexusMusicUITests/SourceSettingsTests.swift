@@ -531,6 +531,18 @@ final class SourceSettingsTests: XCTestCase {
     let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Health Fixture").firstMatch
     for _ in 0..<6 {if selected.isHittable{break};app.swipeUp()};XCTAssertTrue(selected.exists);app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
+  func testNeteaseLoginLauncherCancellation() throws {
+    let app=XCUIApplication();app.launch()
+    openSettings(app,page:"accounts")
+    let login=app.buttons["login-music-account-wy"]
+    XCTAssertTrue(login.waitForExistence(timeout:10));XCTAssertTrue(login.isHittable);login.tap()
+    let navigation=app.navigationBars["网易云登录"]
+    XCTAssertTrue(navigation.waitForExistence(timeout:10),"The official NetEase login page must open in the native WebKit sheet")
+    let close=navigation.buttons["关闭"]
+    XCTAssertTrue(close.waitForExistence(timeout:5));close.tap()
+    XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
+    XCTAssertFalse(navigation.exists)
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.

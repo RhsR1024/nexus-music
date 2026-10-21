@@ -43,6 +43,12 @@
 
 **未完成**：真实 WKWebView/Cookie session、QQ 日推授权 key、酷狗/FM 客户端、日推 UI 展示及真实账号联调。该模块不提高 F30 完成度，也不把候选 endpoint 与合成夹具计为真实平台成功。固定来源许可/归属仍按本页上方记录。
 
+## 2026-10-22 网易云 WKWebView 登录适配
+
+已按固定提交的官方网页与 Cookie 语义完成首个平台登录闭环：原生 `NexusMusicAuth` 使用隔离的非持久 WebKit store 打开网易云官方登录页，只允许网易云 HTTPS 导航，并在检测到 `MUSIC_U` 后返回白名单 Cookie。TS 账号协调器拒绝空值、控制字符和超长 Cookie，账号元数据只保留派生身份，原始会话仅进入 SecureStore/Keychain。设置页提供登录、取消、退出和固定错误状态，没有把登录与日推、歌单或 FM capability 绑定。
+
+验证：业务/类型 **417/417**、完整 native 套件和登录窗口打开/关闭 App 专项 **1/0/0** 通过。首次 WebKit 实现从 Expo 异步队列创建 data store 导致 `EXC_BREAKPOINT`，已定位并改为主线程执行。真实账号登录、昵称资料、重启会话、官方鉴权日推 endpoint、QQ/酷狗、FM 与真机仍未完成。
+
 
 ## 评论后端参考与UI边界
 
