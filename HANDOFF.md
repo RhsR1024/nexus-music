@@ -1,3 +1,15 @@
+## 2026-10-22 Step 11 测试隔离修复与完整 iOS 27 通过
+
+iOS 27 `39590937799`（`942105c`）在 Step 10 通过后暴露 Step 11 两项旧测试状态问题：`testCrossPlatformLyrics` 在歌词来源 Sheet 已关闭后直接查找舞台样式，未重新打开现有样式 Sheet；`testOnlineMatching` 依赖持久模拟器里的自动匹配/手动匹配状态，并在经典播放器页直接查找仅在“队列与播放选项”Sheet 内显示的状态。失败日志、failure evidence、CRC/SHA 与诊断见 `build/ci-39590937799/FINDINGS.txt`，不是播放器或真实网络失败。
+
+修复 `40173afc311d020c9786c3d996753ebbc559d737` 让测试先走真实样式导航、通过真实 UI 归零自动匹配与旧手动匹配状态，并从现有播放选项 Sheet 验证自动、原曲、手动和 Live 匹配状态。本地按 CI 顺序运行 `testCrossPlatformLyrics` 后 `testOnlineMatching`，`SourceUITests-1792600644489.xcresult` 为 **2通过/0失败/0跳过**；`npm run check` **412/412**、Swift parse 与 `git diff --check` 通过。证据保存在 `build/local-step11-isolation-3963c89`。
+
+云端 `39637673505`（`40173af`）已 **completed/success**：checks、Pods、native、iOS 27 模拟器、Step 10 首组 App、Step 11 在线/歌词/健康/发现、Step 12 离线播放、Step 13 unsigned archive、Step 14 IPA 上传、Step 15 日志与 Step 17 diagnostics 全部成功；Step 16 失败附件因无失败按设计跳过。完成后队列 0运行/0排队，不重派旧提交。
+
+本地清洁 unsigned IPA 已归档到 `build/local-step11-isolation-40173af`：manifest commit `40173af`、`dirty=false`、changes 为空；arm64、iphoneos26.2、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`。IPA SHA-256 `a46f1382847e68291e4f74cfcaf058a870fd624c2e9f7321b97a27671e87adc7`；IPA 与 xcarchive 的 `main.jsbundle` SHA-256 均为 `01e966d1e516f974ac371181cafb7e9da845b56477b5f059e21d54f2f1d1dd02`；ZIP CRC 与正式入口/测试适配器排除通过。该包不替代 Apple 签名或真机。
+
+阶段清理移除已完成诊断的临时 worktree 构建缓存与重复本地 xcresult 共 2,169,060 KiB，回执 `build/logs/cleanup-step11-isolation-2026-10-22.json`；保留云端失败证据、最新有效本地结果、完整 IPA 与 manifest。清理后磁盘约 19 GiB，低于 30 GiB 阈值，仍有其他未提交 UI 批次在并行推进。真实账号/日推/FM、Apple 签名、真机歌词双击/长按/无障碍及实际音源验收继续开放。
+
 ## 2026-10-21 当前接续：UI方法规范已更新
 
 用户要求复核方法并写入项目供其他AI执行。当前方法唯一入口为 [UI_ALIGNMENT_WORKFLOW](docs/UI_ALIGNMENT_WORKFLOW.md)，决策 [0078](docs/decisions/0078-ui-alignment-workflow.md)。顺序为4855/4856外观样板→4854经典→单平台登录/日推/FM等纵向批次伴随UI→其余静态与动效；覆盖下方历史“全UI完成后新增”要求。
