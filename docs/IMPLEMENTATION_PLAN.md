@@ -1,3 +1,11 @@
+## 2026-10-21 当前实施方法
+
+阶段顺序是主线优先级；无依赖的协议/账号/后端可并行，素材、原版环境、采集或录屏缺口不阻塞独立工作，但不得将缺证UI标完成。
+
+执行 [UI_ALIGNMENT_WORKFLOW](UI_ALIGNMENT_WORKFLOW.md) 与 [0078](decisions/0078-ui-alignment-workflow.md)。先同态场景与来源校验，按容器/安全区→主体布局→字体/图标→颜色材质→微调实施；先4855/4856样板再4854经典，随后功能与对应UI纵向批次，不再要求全量UI精修结束才能新增。
+
+快速场景必须使用正式组件/渲染链路，正常导航与相关业务回归在阶段出口验证；日常迭代跑目标/受影响状态，阶段再做本地归档和云端iOS27。遮罩/包含区须预先声明并报告整页覆盖，局部三轴通过不能代替整页/交互；未知动效待录屏，不推断一致。本次未实现快速入口或自动锚点/视觉CI，后续以实际代码与证据为准。下方历史实施日志不再决定当前方法。
+
 ## 2026-10-21 Files helper与原生歌词双击实施
 
 真实Files双用例同批通过`SourceUITests-1792526082262`（2/0/0、253.378秒），helper按iOS27两种行表现分别进入目录和选择文件，未降低千首/导入/实音/删除断言。AM双击证据显示Fabric只交付一次JS touch，新增[0077](decisions/0077-native-lyric-double-tap.md) `NexusNative/LyricGesture` UIKit双击/长按容器，复用既有seek守卫。check 407/407、Swift parse及完整native通过；本机RN0.81 x86_64 Release预编译Hermes ABI故障使App在测试前退出，云端iOS27 Release待本批push。代码/完整交付范围重估约75.1%/53.0%。
@@ -290,7 +298,7 @@ reverse-skill新R2/mobile-reverse路由、既有离线scope/case-guard后，E033
 
 ## 2026-10-18 平台登录与每日推荐参考调整（用户明确补充）
 
-QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；先已有UI/交互、后新增功能顺序不变。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](Q_MUSIC_ANDROID_REFERENCE.md)。
+QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；当前顺序由 [UI_ALIGNMENT_WORKFLOW](UI_ALIGNMENT_WORKFLOW.md) 的样板与纵向批次规则覆盖。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](Q_MUSIC_ANDROID_REFERENCE.md)。
 
 ## 2026-10-18 全屏业务层背景拥有关系（验收中）
 

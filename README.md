@@ -4,7 +4,9 @@
 
 仓库：<https://github.com/RhsR1024/nexus-music>
 
-**当前状态：已有单一播放器、LX/私人曲库、歌词/PCM/EQ及本地/云端unsigned IPA证据；正在按Sollin IPA优先对齐已有UI和交互，真机/签名及其余计划继续验收。最新状态以HANDOFF和任务文档为准。**
+**当前状态：已有单一播放器、LX/私人曲库、歌词/PCM/EQ及分批本地/云端unsigned IPA证据；UI按同态样板方法收敛，平台登录/日推/FM、真机/签名等继续验收。最新状态以HANDOFF为准。**
+
+接手UI工作先读[实施与验收规范](docs/UI_ALIGNMENT_WORKFLOW.md)：4855/4856样板→4854经典→功能与对应UI分批推进。截图负责视觉度量、IPA/APK负责实现证据、录屏负责连续交互；控件区高分不等于整页完成。Phase 0工具说明见[视觉实验室](docs/ui-spec/README.md)。
 
 云端构建同工作流/分支**保留运行中，只保留最新一个排队提交**（`queue: single`、`cancel-in-progress: false`）；push后核对队列，不再保留每个中间提交的独立构建。详细规则见[双构建与队列](docs/GITHUB_ACTIONS.md)。
 
