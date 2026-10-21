@@ -1,3 +1,16 @@
+## 2026-10-21 当前执行入口
+
+阶段顺序是主线优先级；无依赖的协议/账号/后端可并行，素材、原版环境、采集或录屏缺口不阻塞独立工作，但不得将缺证UI标完成。
+
+当前UI方法与阶段出口统一见 [UI_ALIGNMENT_WORKFLOW](UI_ALIGNMENT_WORKFLOW.md)（[0078](decisions/0078-ui-alignment-workflow.md)）。按以下工作项接续；本次是文档调整，未将实施任务标完成。
+
+- 场景/度量：建立正式组件直接采集、状态与构建来源清单、关键区/锚点和反例校准；保留Phase 0历史证据。
+- 样板：先4855/4856容器/滚动与全部关键区，再4854封面/歌词/背景/控制区；五态作为受影响回归集。
+- 纵向功能：样板与经典静态/基本交互通过后，单平台登录→会话生命周期→日推→平台FM→评论扩展，每批同时完成对应UI状态；不等全后端，也不以全UI/未知动效无限阻塞。
+- 全量：固定状态清单，逐态推进剩余皮肤/页面、录屏、真实服务和设备验收。iPad/辅助功能大字视觉仍暂缓。
+
+下方历史批次保留原始结果；冲突的顺序、单一SSIM完成判定及逐微调全归档要求由新规范覆盖。
+
 ## 2026-10-21 原生歌词手势清洁归档与云端队列
 
 - [x] `07f81a2`正常push；清洁unsigned IPA SHA-256 `a734eabb1b68528e346253183ac6b34f9755d80b95b0322a96ffe6f7b125e47c`，manifest commit/dirty合法，ZIP CRC、IPA/archive JS字节和私有资源排除通过。
@@ -299,7 +312,7 @@ reverse-skill新R2/mobile-reverse路由、既有离线scope/case-guard后，E033
 
 ## 2026-10-18 平台登录与每日推荐参考调整（用户明确补充）
 
-QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；先已有UI/交互、后新增功能顺序不变。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](Q_MUSIC_ANDROID_REFERENCE.md)。
+QQ、酷狗、网易云三平台登录与每日推荐改以 [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music) 的 **android 分支**为实现参考，不再要求先逆向 Sollin 的这部分后端。酷我、咪咕的登录与每日推荐不进入该批范围，既有五平台搜索/公开数据能力继续保留。参考源码必须固定提交、核对文件级许可与认证/日推调用链，再适配音枢 provider、iOS 网络/登录呈现及 Keychain；不整包复制 Android 工程或凭据存储。登录、日推、个人歌单/收藏及 FM 分别验收，不因找到源码即记完成。其他 Sollin IPA/APK 分析、UI/交互对齐仍完整执行 reverse-skill 门禁；当前顺序由 [UI_ALIGNMENT_WORKFLOW](UI_ALIGNMENT_WORKFLOW.md) 的样板与纵向批次规则覆盖。评论请求、分页与数据解析也可参考该安卓源码；评论UI、弹层、层级和交互继续按Sollin IPA优先/截图补充并执行reverse-skill，不照搬Q-music界面。源码核对与后续接入证据见 [Q-music安卓接入记录](Q_MUSIC_ANDROID_REFERENCE.md)。
 
 ## 2026-10-18 全屏业务层背景拥有关系（验收中）
 

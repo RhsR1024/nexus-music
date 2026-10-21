@@ -1,3 +1,7 @@
+## 2026-10-21 UI方法衔接
+
+逆向硬门禁不变；UI实施按 [UI_ALIGNMENT_WORKFLOW](UI_ALIGNMENT_WORKFLOW.md)。先提出具体差异/待核机制，再按需复用或新增已review的Evidence→Finding→Path；门禁通过不证明像素、交互或服务完成。本轮指导文档调整不是新的二进制分析证据，不增加功能E/F/P或完成量。
+
 # Sollin reverse-skill 强制工作流
 
 2026-10-17 用户明确要求：先克隆、项目安装、完整阅读 README_AI.md 并检查当前环境；后续 Sollin IPA/APK 逆向和功能/UI/交互对齐全部使用此 skill，作为硬门禁。本文件与根 AGENTS.md 共同约束后续批次，不缩减 F01–F37/J01–J59。
@@ -21,7 +25,7 @@
 
 4. 工具路径和状态以当前机器新生成的 `skills/tool-index.md/json` 为准；路径存在、CLI可执行、MCP注册/服务可用分别记录。不能照抄 APK SKILL.md 中作者机器的工具版本。
 5. 先通过项目门禁，再执行 PRIMARY 的适用工作流。每个功能新建或追加工作项、不可变 Evidence、Finding、Path 和 timeline；原始字符串仅是静态线索，不等于数据关系或函数调用。
-6. 采纳/提交前严格 review 当前案例，逐项核对该批功能的证据，而非复用本次安装检查。截图补充视觉，音枢本地回归/本地IPA/云端iOS27/真实服务/签名/真机分别记录。
+6. 采纳/提交前严格 review 当前案例，逐项核对该批功能的证据，而非复用本次安装检查。截图用于视觉量测（不能证明机制或连续交互），音枢本地回归/本地IPA/云端iOS27/真实服务/签名/真机分别记录。
 
 ```bash
 source scripts/environment.sh
@@ -49,7 +53,7 @@ node scripts/sollin-reverse-gate.mjs apk --review
 | 严格review | 两案例均0错误/0警告，2条Evidence、1条candidate Finding、1条setup Path | 仅安装/路由/容器证据，功能分析工作项继续pending |
 | 拒绝路径 | pending scope返回2；未知平台返回1 | 没有用force绕过 |
 
-实际索引在外部包 `skills/tool-index.md/json`；路由在本机 `build/reverse-skill/routes/{ipa,apk}`；案例在 `work/sollin-{ipa,apk}`。这些均不提交、不打包。正式功能结论沿 [IPA分析](SOLLIN_IPA_ANALYSIS.md)、[对齐清单](SOLLIN_ALIGNMENT_PLAN.md)、[逐页矩阵](SOLLIN_UI_ALIGNMENT.md) 记录，保持 IPA首要、APK互补、截图辅助。
+实际索引在外部包 `skills/tool-index.md/json`；路由在本机 `build/reverse-skill/routes/{ipa,apk}`；案例在 `work/sollin-{ipa,apk}`。这些均不提交、不打包。正式功能结论沿 [IPA分析](SOLLIN_IPA_ANALYSIS.md)、[对齐清单](SOLLIN_ALIGNMENT_PLAN.md)、[逐页矩阵](SOLLIN_UI_ALIGNMENT.md) 记录，保持 机制以IPA为主要逆向证据、APK互补，视觉以截图度量、连续交互以录屏核验。
 
 ```mermaid
 flowchart LR
