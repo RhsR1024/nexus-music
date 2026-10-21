@@ -1,3 +1,17 @@
+## 2026-10-21 Phase 0 四轴视觉实验室与五态基线冻结
+
+**范围**：本轮不改产品像素与交互，只建立可复现的 UI 对齐测量。五个黄金态固定为 4854 经典、4851 黑胶、4855/4856 外观、4861 AM 歌词；规格、SHA256、状态与遮罩在 `docs/ui-spec/`，基线清单 `docs/ui-spec/baseline-2026-10-21.json`。
+
+**实验室**：新增 `scripts/visual-lab.mjs` 与共享库 `scripts/lib/{png,metrics}.mjs`。参考 P3/16bit 与候选统一经 `sips` ICC → sRGB 8bit；门禁只评控件区（SSIM ≥ 90%、ΔE00 ≤ 4、Sobel 墨迹 r ≥ 0.35），整屏 SSIM 降为报告项，并输出内容占比与理论上限。`scripts/visual-diff.mjs` 保留历史灰度口径，旧 16bit 截断不再作颜色证据。
+
+**基线**：4854 93.10%/ΔE7.97/r0.41、4851 90.05%/9.72/0.06、4855 84.60%/13.03/0.20、4856 90.26%/12.53/0.44、4861 59.00%/24.78/0.08。**0 个状态通过全部三轴**；4856 只有几何过线，原“一个整态达标”在严格口径下撤回。
+
+**复现**：同一冻结输入重跑 `--all` 与基线清单逐字段一致；`scripts/visual-repro.mjs` 对 batch20b/batch25 两次独立运行的 4851/4854 截图测得可比区 **0 个不同像素、SSIM 100.00%、ΔE00 0**，文件哈希差只来自状态栏时钟。`tests/visual-metrics.test.mjs` 覆盖 CIEDE2000 公开校验对、掩码与 PNG 往返；`npm run check` **412/412**，`git diff --check` 通过。
+
+**提交**：实验室、规格、基线与测试在 `da0a793`；本轮文档随其后正常 push，不 force push。
+
+**结论**：Phase 0 的“可测量、可复现、证据带哈希”门禁已满足；UI 已对齐页数仍为 **0**。本轮不产生功能或 UI 完成度增量，`docs/PROGRESS_ESTIMATE.md` 同时保留 75.1%/53.0% 记账口径与约 67%/47% 的严格下限。下一步 Phase 1 先收设计令牌与五个黄金页控件层，每次改动用实验室复测；动效仍需真机录屏，真实服务、签名和真机验收未完成。
+
 ## 2026-10-21 07f81a2 原生歌词手势清洁归档与云端队列
 
 原生手势修复提交 `07f81a28e1387f6e9ddcc052f2e559680742d52f` 已正常 push 到 `main`。当前干净 unsigned IPA：`build/local-lyric-gesture-07f81a2/NexusMusic-unsigned.ipa`，SHA-256 `a734eabb1b68528e346253183ac6b34f9755d80b95b0322a96ffe6f7b125e47c`；manifest commit 为 `07f81a2`、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/min15.1/设备族[1,2]、`signed=false`。ZIP CRC通过，IPA与xcarchive `main.jsbundle` SHA-256均为 `a0809efabff20ea7311a67e1887171402a73fa79e27038cc87aa90f220815988`，测试/签名私有资源扫描无命中。该本地包不替代 iOS 27、Apple 签名或真机。
