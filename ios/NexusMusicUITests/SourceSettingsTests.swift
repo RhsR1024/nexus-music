@@ -1127,9 +1127,7 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<5 {if line.isHittable{break};lyricList.swipeUp()}
     XCTAssertEqual(progress.value as? String,beforeScroll,"Scrolling lyrics must keep the paused playback position")
     let beforeTap=XCTAttachment(screenshot:app.screenshot());beforeTap.name=am ? "AM actual lyric before double tap":"AM2 actual lyric before double tap";beforeTap.lifetime = .keepAlways;add(beforeTap)
-    // XCUI can collapse doubleTap on an embedded list row into one activation.
-    // Two real tap sequences still verify the product's bounded double-tap path.
-    XCTAssertTrue(line.isHittable);line.tap();line.tap()
+    XCTAssertTrue(line.isHittable);line.doubleTap()
     expectation(for:NSPredicate(format:"value == %@","0:06 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:5)
     XCTAssertEqual(progress.value as? String,"0:06 / 2:00")
     if am && largeText {
