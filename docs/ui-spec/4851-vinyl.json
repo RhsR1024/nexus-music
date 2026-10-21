@@ -1,0 +1,34 @@
+{
+  "id": "4851-vinyl",
+  "title": "黑胶播放页 — 唱盘、唱臂与运输区",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4851.PNG",
+  "referenceSha256": "6b241210bc815be92d0a931aac9c2867e6e82cfaaab5ec8c114325809e0e92f8",
+  "candidate": "build/ui-screenshots-batch20b/017-Vinyl-reference-composition.png",
+  "candidateSha256": "334a427bdd9be366f6eeb2baa32706d5667bb4108632e2b449ef06ba3b676e70",
+  "candidateCapture": {
+    "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
+    "attachment": "Vinyl reference composition",
+    "export": "node scripts/export-ui-screenshots.mjs --match \"Vinyl reference composition\" --output <dir>"
+  },
+  "state": {
+    "screen": "vinyl player",
+    "theme": "blush + rose",
+    "background": "cover gradient",
+    "playback": "fixture",
+    "scroll": "top",
+    "notes": "参考为播放中；候选为合成封面夹具。唱盘几何是主验收对象，封面纹理不计入控件区。"
+  },
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [[80, 420, 1140, 1100]],
+  "controlMasks": [[80, 420, 1140, 1100], [0, 1560, 1290, 250]],
+  "colorPatches": [
+    {"label": "paper top-left", "rect": [10, 190, 100, 70]},
+    {"label": "paper top-right", "rect": [1180, 190, 100, 70]},
+    {"label": "deck black", "rect": [500, 700, 100, 100]},
+    {"label": "transport fill", "rect": [680, 2330, 30, 30]}
+  ],
+  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+}

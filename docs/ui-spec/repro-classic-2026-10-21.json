@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-10-21T02:10:42.226Z",
+  "method": "capture reproducibility: same state, two independent runs; no reference image involved",
+  "ignoreTop": 180,
+  "a": {
+    "path": "build/ui-screenshots-batch20b/006-Classic-reference-composition.png",
+    "sha256": "0deb63ea078daa0bc28d826fd372b73c646bdf1fbdcd24aa2e1789c5a7b8a934"
+  },
+  "b": {
+    "path": "build/ui-screenshots-batch25/006-Classic-reference-composition.png",
+    "sha256": "55171c92c14e0b085f343e46af67b69d25b7b2478cff8cd5349d185b2c0f66b0"
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "comparablePixels": 3374640,
+  "ssim": 1,
+  "mad": 0,
+  "differingPixels": 0,
+  "differingFraction": 0,
+  "maxChannelDelta": 0,
+  "deltaE00": {
+    "mean": 0,
+    "p90": 0,
+    "max": 0
+  },
+  "gate": {
+    "minSsim": 0.999,
+    "maxDeltaE00Mean": 0.5
+  },
+  "pass": true
+}

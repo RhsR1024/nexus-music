@@ -1,0 +1,35 @@
+{
+  "id": "4856-appearance-scrolled",
+  "title": "外观设置下半页 — 视觉参数四条滑轨",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4856.PNG",
+  "referenceSha256": "3f20471be6455e401951da85d01b6fc18a4fbfc4114f4f5e356f4fee65572bbc",
+  "candidate": "build/ui-screenshots-batch28/002-Appearance-background-page-scrolled.png",
+  "candidateSha256": "72d01e0ff5fd2382517b7b68aa2fa49706771f5fd1a89cb8114366e1137a812a",
+  "candidateCapture": {
+    "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
+    "attachment": "Appearance background page scrolled",
+    "export": "node scripts/export-ui-screenshots.mjs --match \"Appearance background page scrolled\" --output <dir>"
+  },
+  "state": {
+    "screen": "settings / appearance / background scrolled",
+    "theme": "blush + rose",
+    "backgroundOpacity": "100%",
+    "cardOpacity": "30%",
+    "playerBlur": "0",
+    "mask": "0%",
+    "scroll": "gradient capsule maxY 136pt",
+    "notes": "参考与候选状态已归一；固定 Sheet 头与参考可滚走的头仍是结构差异。"
+  },
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [],
+  "controlMasks": [],
+  "colorPatches": [
+    {"label": "field wash", "rect": [300, 1000, 200, 60]},
+    {"label": "accent swatch", "rect": [145, 710, 40, 40]},
+    {"label": "mask swatch", "rect": [145, 2210, 40, 40]}
+  ],
+  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+}

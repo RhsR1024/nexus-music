@@ -1,0 +1,33 @@
+{
+  "id": "4855-appearance",
+  "title": "外观设置上半页 — 主题与背景、纯色卡片 30%",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4855.PNG",
+  "referenceSha256": "2236fae7a4b343e39833d933dd443c5a2551e077518a751aa9f8ebc1f7da34b1",
+  "candidate": "build/ui-screenshots-batch28/003-Appearance-background-page.png",
+  "candidateSha256": "56d5fc706d1889ac8e1e74eaa695e16c5f71ffddc471a2be8f52460491e443de",
+  "candidateCapture": {
+    "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
+    "attachment": "Appearance background page",
+    "export": "node scripts/export-ui-screenshots.mjs --match \"Appearance background page\" --output <dir>"
+  },
+  "state": {
+    "screen": "settings / appearance / background",
+    "theme": "blush + rose",
+    "backgroundType": "solid",
+    "cardOpacity": "30%",
+    "scroll": "title and preview visible",
+    "notes": "参考与候选均为纯色、卡片 30%；候选保留 13 个真实主题，参考为 11 个。"
+  },
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [],
+  "controlMasks": [],
+  "colorPatches": [
+    {"label": "preview card", "rect": [60, 600, 300, 60]},
+    {"label": "sheet wash", "rect": [20, 900, 60, 80]},
+    {"label": "accent swatch", "rect": [145, 2270, 40, 40]}
+  ],
+  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+}

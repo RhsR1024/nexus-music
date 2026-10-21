@@ -1,0 +1,31 @@
+{
+  "id": "4861-am-lyrics",
+  "title": "AM 歌词页 — 头部、滚动歌词与运输区",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4861.PNG",
+  "referenceSha256": "45b4324d37ee26c2e2929be8030639d75b5977055f1b9e89b3ccc8e4626d494a",
+  "candidate": "build/ui-screenshots-batch20b/027-AM-full-scrolling-lyrics-body.png",
+  "candidateSha256": "310a42326b1dd03c24cdeb6045c184d849ba5de3ba51251e43af87521be6decd",
+  "candidateCapture": {
+    "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
+    "attachment": "AM full scrolling lyrics body",
+    "export": "node scripts/export-ui-screenshots.mjs --match \"AM full scrolling lyrics body\" --output <dir>"
+  },
+  "state": {
+    "screen": "AM lyrics",
+    "theme": "blush + rose",
+    "background": "cover-derived gradient",
+    "playback": "paused fixture",
+    "scroll": "lyrics body",
+    "notes": "歌词文本、封面和背景均来自不同内容；控件区只保留进度、运输键与底部工具。"
+  },
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [[0, 170, 1290, 320], [0, 390, 1290, 900]],
+  "controlMasks": [[0, 170, 1290, 320], [0, 390, 1290, 900]],
+  "colorPatches": [
+    {"label": "foundation lower-left", "rect": [20, 2200, 100, 50]}
+  ],
+  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+}

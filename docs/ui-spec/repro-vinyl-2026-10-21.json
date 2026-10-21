@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-10-21T02:10:39.893Z",
+  "method": "capture reproducibility: same state, two independent runs; no reference image involved",
+  "ignoreTop": 180,
+  "a": {
+    "path": "build/ui-screenshots-batch20b/017-Vinyl-reference-composition.png",
+    "sha256": "334a427bdd9be366f6eeb2baa32706d5667bb4108632e2b449ef06ba3b676e70"
+  },
+  "b": {
+    "path": "build/ui-screenshots-batch25/017-Vinyl-reference-composition.png",
+    "sha256": "4564f1f764cda4bc27e0c6eeacc101febede26a92283cfc194bd3db191ed6e72"
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "comparablePixels": 3374640,
+  "ssim": 1,
+  "mad": 0,
+  "differingPixels": 0,
+  "differingFraction": 0,
+  "maxChannelDelta": 0,
+  "deltaE00": {
+    "mean": 0,
+    "p90": 0,
+    "max": 0
+  },
+  "gate": {
+    "minSsim": 0.999,
+    "maxDeltaE00Mean": 0.5
+  },
+  "pass": true
+}

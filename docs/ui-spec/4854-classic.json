@@ -1,0 +1,33 @@
+{
+  "id": "4854-classic",
+  "title": "经典播放页 — 默认 blush/rose、封面取色渐变",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+  "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+  "candidate": "build/ui-screenshots-classic-baseline-20261021/001-Classic-reference-composition.png",
+  "candidateSha256": "a06f5e40c280e6c3fe5f2c9e4834ef5e6f783bb0c7191c125eda256e6bcbeb23",
+  "candidateCapture": {
+    "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
+    "attachment": "Classic reference composition",
+    "export": "node scripts/export-ui-screenshots.mjs --match \"Classic reference composition\" --output <dir>"
+  },
+  "state": {
+    "screen": "classic player",
+    "theme": "blush + rose",
+    "background": "cover gradient",
+    "playback": "paused fixture",
+    "scroll": "top",
+    "notes": "参考为 Sollin 中文曲目播放态；候选为 120s 合成音频与英文夹具，封面/文案/进度时刻不同。"
+  },
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [[183, 408, 924, 840]],
+  "controlMasks": [[183, 408, 924, 840], [0, 1248, 1290, 700]],
+  "colorPatches": [
+    {"label": "paper top-left", "rect": [10, 190, 100, 70]},
+    {"label": "paper mid-left", "rect": [100, 1400, 100, 60]},
+    {"label": "play fill", "rect": [680, 2250, 30, 30]}
+  ],
+  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+}

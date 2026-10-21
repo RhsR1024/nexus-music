@@ -1,0 +1,1494 @@
+{
+  "generatedAt": "2026-10-21T02:06:55.744Z",
+  "gate": "Control region only. Whole-screen SSIM is recorded as a ceiling/report value and is not a pass criterion.",
+  "states": [
+    {
+      "id": "4851-vinyl",
+      "title": "黑胶播放页 — 唱盘、唱臂与运输区",
+      "spec": "docs/ui-spec/4851-vinyl.json",
+      "state": {
+        "screen": "vinyl player",
+        "theme": "blush + rose",
+        "background": "cover gradient",
+        "playback": "fixture",
+        "scroll": "top",
+        "notes": "参考为播放中；候选为合成封面夹具。唱盘几何是主验收对象，封面纹理不计入控件区。"
+      },
+      "reference": {
+        "path": "resource/reference-ui/sollin-2026-10-18/IMG_4851.PNG",
+        "sha256": "6b241210bc815be92d0a931aac9c2867e6e82cfaaab5ec8c114325809e0e92f8",
+        "source": {
+          "profile": "Display P3",
+          "bitDepth": 16,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "3445f0ce51c63c086f4706f7378c225eaada0aad4ed3efc7d9f9e8975c4db466"
+      },
+      "candidate": {
+        "path": "build/ui-screenshots-batch20b/017-Vinyl-reference-composition.png",
+        "sha256": "334a427bdd9be366f6eeb2baa32706d5667bb4108632e2b449ef06ba3b676e70",
+        "source": {
+          "profile": "sRGB IEC61966-2.1",
+          "bitDepth": 8,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "044b1b9cc3e705ff35e8638f8b8b2a70e12e00259f4796f3aeb79ad81137768f"
+      },
+      "size": [
+        1290,
+        2796
+      ],
+      "contentAreaFraction": 0.3715951923760757,
+      "whole": {
+        "ssim": 0.78523,
+        "mad": 21.15,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 11.035,
+          "deltaE00P50": 8.006,
+          "deltaE00P90": 20.208,
+          "deltaE00P99": 83.313,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.0362,
+          "densityReference": 12.789,
+          "densityCandidate": 10.317,
+          "ratio": 0.8067
+        },
+        "patches": [
+          {
+            "label": "paper top-left",
+            "rect": [
+              10,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              246,
+              240,
+              236
+            ],
+            "candidate": [
+              246,
+              239,
+              230
+            ],
+            "referenceStd": 1.32,
+            "candidateStd": 0.46,
+            "deltaE00": 2.049
+          },
+          {
+            "label": "paper top-right",
+            "rect": [
+              1180,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              244,
+              227,
+              217
+            ],
+            "candidate": [
+              245,
+              236,
+              226
+            ],
+            "referenceStd": 1.36,
+            "candidateStd": 0.42,
+            "deltaE00": 3.896
+          },
+          {
+            "label": "deck black",
+            "rect": [
+              500,
+              700,
+              100,
+              100
+            ],
+            "reference": [
+              13,
+              13,
+              13
+            ],
+            "candidate": [
+              16,
+              21,
+              13
+            ],
+            "referenceStd": 6,
+            "candidateStd": 26.34,
+            "deltaE00": 5.689
+          },
+          {
+            "label": "transport fill",
+            "rect": [
+              680,
+              2330,
+              30,
+              30
+            ],
+            "reference": [
+              34,
+              25,
+              25
+            ],
+            "candidate": [
+              82,
+              75,
+              70
+            ],
+            "referenceStd": 0,
+            "candidateStd": 77.41,
+            "deltaE00": 16.572
+          }
+        ]
+      },
+      "comparable": {
+        "ssim": 0.89593,
+        "mad": 18.529,
+        "pixels": 2120640,
+        "coveredFraction": 0.3716,
+        "color": {
+          "deltaE00Mean": 10.181,
+          "deltaE00P50": 8.408,
+          "deltaE00P90": 10.644,
+          "deltaE00P99": 83.142,
+          "sampledPixels": 530160
+        },
+        "ink": {
+          "correlation": 0.0469,
+          "densityReference": 8.304,
+          "densityCandidate": 8.823,
+          "ratio": 1.0625
+        },
+        "patches": [
+          {
+            "label": "paper top-left",
+            "rect": [
+              10,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              246,
+              240,
+              236
+            ],
+            "candidate": [
+              246,
+              239,
+              230
+            ],
+            "referenceStd": 1.32,
+            "candidateStd": 0.46,
+            "deltaE00": 2.049
+          },
+          {
+            "label": "paper top-right",
+            "rect": [
+              1180,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              244,
+              227,
+              217
+            ],
+            "candidate": [
+              245,
+              236,
+              226
+            ],
+            "referenceStd": 1.36,
+            "candidateStd": 0.42,
+            "deltaE00": 3.896
+          },
+          {
+            "label": "deck black",
+            "rect": [
+              500,
+              700,
+              100,
+              100
+            ],
+            "reference": [
+              13,
+              13,
+              13
+            ],
+            "candidate": [
+              16,
+              21,
+              13
+            ],
+            "referenceStd": 6,
+            "candidateStd": 26.34,
+            "deltaE00": 5.689
+          },
+          {
+            "label": "transport fill",
+            "rect": [
+              680,
+              2330,
+              30,
+              30
+            ],
+            "reference": [
+              34,
+              25,
+              25
+            ],
+            "candidate": [
+              82,
+              75,
+              70
+            ],
+            "referenceStd": 0,
+            "candidateStd": 77.41,
+            "deltaE00": 16.572
+          }
+        ]
+      },
+      "control": {
+        "ssim": 0.90053,
+        "mad": 16.824,
+        "pixels": 1798140,
+        "coveredFraction": 0.46716,
+        "color": {
+          "deltaE00Mean": 9.717,
+          "deltaE00P50": 8.198,
+          "deltaE00P90": 10.107,
+          "deltaE00P99": 83.142,
+          "sampledPixels": 449535
+        },
+        "ink": {
+          "correlation": 0.0552,
+          "densityReference": 8.055,
+          "densityCandidate": 7.515,
+          "ratio": 0.9329
+        },
+        "patches": [
+          {
+            "label": "paper top-left",
+            "rect": [
+              10,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              246,
+              240,
+              236
+            ],
+            "candidate": [
+              246,
+              239,
+              230
+            ],
+            "referenceStd": 1.32,
+            "candidateStd": 0.46,
+            "deltaE00": 2.049
+          },
+          {
+            "label": "paper top-right",
+            "rect": [
+              1180,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              244,
+              227,
+              217
+            ],
+            "candidate": [
+              245,
+              236,
+              226
+            ],
+            "referenceStd": 1.36,
+            "candidateStd": 0.42,
+            "deltaE00": 3.896
+          },
+          {
+            "label": "deck black",
+            "rect": [
+              500,
+              700,
+              100,
+              100
+            ],
+            "reference": [
+              13,
+              13,
+              13
+            ],
+            "candidate": [
+              16,
+              21,
+              13
+            ],
+            "referenceStd": 6,
+            "candidateStd": 26.34,
+            "deltaE00": 5.689
+          },
+          {
+            "label": "transport fill",
+            "rect": [
+              680,
+              2330,
+              30,
+              30
+            ],
+            "reference": [
+              34,
+              25,
+              25
+            ],
+            "candidate": [
+              82,
+              75,
+              70
+            ],
+            "referenceStd": 0,
+            "candidateStd": 77.41,
+            "deltaE00": 16.572
+          }
+        ]
+      },
+      "contentRegion": {
+        "ssim": 0.5980360387013204,
+        "mad": 25.58233447618662,
+        "pixels": 1254000
+      },
+      "ceilingIfContentMatched": 0.9346004225379982,
+      "pass": false,
+      "failures": [
+        "control ΔE00 9.72 > 4",
+        "control ink r 0.06 < 0.35"
+      ]
+    },
+    {
+      "id": "4854-classic",
+      "title": "经典播放页 — 默认 blush/rose、封面取色渐变",
+      "spec": "docs/ui-spec/4854-classic.json",
+      "state": {
+        "screen": "classic player",
+        "theme": "blush + rose",
+        "background": "cover gradient",
+        "playback": "paused fixture",
+        "scroll": "top",
+        "notes": "参考为 Sollin 中文曲目播放态；候选为 120s 合成音频与英文夹具，封面/文案/进度时刻不同。"
+      },
+      "reference": {
+        "path": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+        "sha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+        "source": {
+          "profile": "Display P3",
+          "bitDepth": 16,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "b463389b3b1d54ceaef670d3db602011610ba7914fb84533e028938a6e9fdd33"
+      },
+      "candidate": {
+        "path": "build/ui-screenshots-classic-baseline-20261021/001-Classic-reference-composition.png",
+        "sha256": "a06f5e40c280e6c3fe5f2c9e4834ef5e6f783bb0c7191c125eda256e6bcbeb23",
+        "source": {
+          "profile": "sRGB IEC61966-2.1",
+          "bitDepth": 8,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "c2712a2eb222d8f214343fbd4f68f44014976ff5388bba4c4f03f19288bf6258"
+      },
+      "size": [
+        1290,
+        2796
+      ],
+      "contentAreaFraction": 0.22999786643908685,
+      "whole": {
+        "ssim": 0.78502,
+        "mad": 30.487,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 18.85,
+          "deltaE00P50": 8.615,
+          "deltaE00P90": 49.237,
+          "deltaE00P99": 87.635,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.2419,
+          "densityReference": 20.044,
+          "densityCandidate": 7.44,
+          "ratio": 0.3712
+        },
+        "patches": [
+          {
+            "label": "paper top-left",
+            "rect": [
+              10,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              246,
+              240,
+              236
+            ],
+            "candidate": [
+              250,
+              241,
+              236
+            ],
+            "referenceStd": 1.32,
+            "candidateStd": 9.91,
+            "deltaE00": 1.243
+          },
+          {
+            "label": "paper mid-left",
+            "rect": [
+              100,
+              1400,
+              100,
+              60
+            ],
+            "reference": [
+              241,
+              209,
+              193
+            ],
+            "candidate": [
+              247,
+              234,
+              224
+            ],
+            "referenceStd": 1.27,
+            "candidateStd": 0.46,
+            "deltaE00": 8.512
+          },
+          {
+            "label": "play fill",
+            "rect": [
+              680,
+              2250,
+              30,
+              30
+            ],
+            "reference": [
+              143,
+              74,
+              78
+            ],
+            "candidate": [
+              142,
+              74,
+              78
+            ],
+            "referenceStd": 0,
+            "candidateStd": 0,
+            "deltaE00": 0.236
+          }
+        ]
+      },
+      "comparable": {
+        "ssim": 0.88944,
+        "mad": 18.58,
+        "pixels": 2598480,
+        "coveredFraction": 0.23,
+        "color": {
+          "deltaE00Mean": 10.23,
+          "deltaE00P50": 8.086,
+          "deltaE00P90": 9.889,
+          "deltaE00P99": 82.153,
+          "sampledPixels": 649620
+        },
+        "ink": {
+          "correlation": 0.2415,
+          "densityReference": 13.858,
+          "densityCandidate": 8.623,
+          "ratio": 0.6223
+        },
+        "patches": [
+          {
+            "label": "paper top-left",
+            "rect": [
+              10,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              246,
+              240,
+              236
+            ],
+            "candidate": [
+              250,
+              241,
+              236
+            ],
+            "referenceStd": 1.32,
+            "candidateStd": 9.91,
+            "deltaE00": 1.243
+          },
+          {
+            "label": "paper mid-left",
+            "rect": [
+              100,
+              1400,
+              100,
+              60
+            ],
+            "reference": [
+              241,
+              209,
+              193
+            ],
+            "candidate": [
+              247,
+              234,
+              224
+            ],
+            "referenceStd": 1.27,
+            "candidateStd": 0.46,
+            "deltaE00": 8.512
+          },
+          {
+            "label": "play fill",
+            "rect": [
+              680,
+              2250,
+              30,
+              30
+            ],
+            "reference": [
+              143,
+              74,
+              78
+            ],
+            "candidate": [
+              142,
+              74,
+              78
+            ],
+            "referenceStd": 0,
+            "candidateStd": 0,
+            "deltaE00": 0.236
+          }
+        ]
+      },
+      "control": {
+        "ssim": 0.93102,
+        "mad": 12.175,
+        "pixels": 1695480,
+        "coveredFraction": 0.49758,
+        "color": {
+          "deltaE00Mean": 7.972,
+          "deltaE00P50": 7.647,
+          "deltaE00P90": 8.738,
+          "deltaE00P99": 48.317,
+          "sampledPixels": 423870
+        },
+        "ink": {
+          "correlation": 0.4067,
+          "densityReference": 8.593,
+          "densityCandidate": 7.35,
+          "ratio": 0.8554
+        },
+        "patches": [
+          {
+            "label": "paper top-left",
+            "rect": [
+              10,
+              190,
+              100,
+              70
+            ],
+            "reference": [
+              246,
+              240,
+              236
+            ],
+            "candidate": [
+              250,
+              241,
+              236
+            ],
+            "referenceStd": 1.32,
+            "candidateStd": 9.91,
+            "deltaE00": 1.243
+          },
+          {
+            "label": "paper mid-left",
+            "rect": [
+              100,
+              1400,
+              100,
+              60
+            ],
+            "reference": [
+              241,
+              209,
+              193
+            ],
+            "candidate": [
+              247,
+              234,
+              224
+            ],
+            "referenceStd": 1.27,
+            "candidateStd": 0.46,
+            "deltaE00": 8.512
+          },
+          {
+            "label": "play fill",
+            "rect": [
+              680,
+              2250,
+              30,
+              30
+            ],
+            "reference": [
+              143,
+              74,
+              78
+            ],
+            "candidate": [
+              142,
+              74,
+              78
+            ],
+            "referenceStd": 0,
+            "candidateStd": 0,
+            "deltaE00": 0.236
+          }
+        ]
+      },
+      "contentRegion": {
+        "ssim": 0.43541812996383816,
+        "mad": 70.35005597465894,
+        "pixels": 776160
+      },
+      "ceilingIfContentMatched": 0.9148684756574645,
+      "pass": false,
+      "failures": [
+        "control ΔE00 7.97 > 4"
+      ]
+    },
+    {
+      "id": "4855-appearance",
+      "title": "外观设置上半页 — 主题与背景、纯色卡片 30%",
+      "spec": "docs/ui-spec/4855-appearance.json",
+      "state": {
+        "screen": "settings / appearance / background",
+        "theme": "blush + rose",
+        "backgroundType": "solid",
+        "cardOpacity": "30%",
+        "scroll": "title and preview visible",
+        "notes": "参考与候选均为纯色、卡片 30%；候选保留 13 个真实主题，参考为 11 个。"
+      },
+      "reference": {
+        "path": "resource/reference-ui/sollin-2026-10-18/IMG_4855.PNG",
+        "sha256": "2236fae7a4b343e39833d933dd443c5a2551e077518a751aa9f8ebc1f7da34b1",
+        "source": {
+          "profile": "Display P3",
+          "bitDepth": 16,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "0f6e4b6c068fdbf2d4d91825d77a35f502342be028073e4e5b1d2cb21cce59ba"
+      },
+      "candidate": {
+        "path": "build/ui-screenshots-batch28/003-Appearance-background-page.png",
+        "sha256": "56d5fc706d1889ac8e1e74eaa695e16c5f71ffddc471a2be8f52460491e443de",
+        "source": {
+          "profile": "sRGB IEC61966-2.1",
+          "bitDepth": 8,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "2ec7de885d117c5b1fc2421942a7f3ead78c678f85b3cd5ce73096e021ee5757"
+      },
+      "size": [
+        1290,
+        2796
+      ],
+      "contentAreaFraction": 0,
+      "whole": {
+        "ssim": 0.84596,
+        "mad": 21.362,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 13.032,
+          "deltaE00P50": 10.837,
+          "deltaE00P90": 19.284,
+          "deltaE00P99": 85.156,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.2032,
+          "densityReference": 19.174,
+          "densityCandidate": 20.671,
+          "ratio": 1.0781
+        },
+        "patches": [
+          {
+            "label": "preview card",
+            "rect": [
+              60,
+              600,
+              300,
+              60
+            ],
+            "reference": [
+              247,
+              247,
+              244
+            ],
+            "candidate": [
+              255,
+              255,
+              255
+            ],
+            "referenceStd": 0,
+            "candidateStd": 0.02,
+            "deltaE00": 2.283
+          },
+          {
+            "label": "sheet wash",
+            "rect": [
+              20,
+              900,
+              60,
+              80
+            ],
+            "reference": [
+              226,
+              237,
+              243
+            ],
+            "candidate": [
+              250,
+              241,
+              234
+            ],
+            "referenceStd": 7.11,
+            "candidateStd": 6.93,
+            "deltaE00": 9.859
+          },
+          {
+            "label": "accent swatch",
+            "rect": [
+              145,
+              2270,
+              40,
+              40
+            ],
+            "reference": [
+              231,
+              62,
+              87
+            ],
+            "candidate": [
+              231,
+              104,
+              120
+            ],
+            "referenceStd": 11.7,
+            "candidateStd": 57.49,
+            "deltaE00": 8.323
+          }
+        ]
+      },
+      "comparable": {
+        "ssim": 0.84596,
+        "mad": 21.362,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 13.032,
+          "deltaE00P50": 10.837,
+          "deltaE00P90": 19.284,
+          "deltaE00P99": 85.156,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.2032,
+          "densityReference": 19.174,
+          "densityCandidate": 20.671,
+          "ratio": 1.0781
+        },
+        "patches": [
+          {
+            "label": "preview card",
+            "rect": [
+              60,
+              600,
+              300,
+              60
+            ],
+            "reference": [
+              247,
+              247,
+              244
+            ],
+            "candidate": [
+              255,
+              255,
+              255
+            ],
+            "referenceStd": 0,
+            "candidateStd": 0.02,
+            "deltaE00": 2.283
+          },
+          {
+            "label": "sheet wash",
+            "rect": [
+              20,
+              900,
+              60,
+              80
+            ],
+            "reference": [
+              226,
+              237,
+              243
+            ],
+            "candidate": [
+              250,
+              241,
+              234
+            ],
+            "referenceStd": 7.11,
+            "candidateStd": 6.93,
+            "deltaE00": 9.859
+          },
+          {
+            "label": "accent swatch",
+            "rect": [
+              145,
+              2270,
+              40,
+              40
+            ],
+            "reference": [
+              231,
+              62,
+              87
+            ],
+            "candidate": [
+              231,
+              104,
+              120
+            ],
+            "referenceStd": 11.7,
+            "candidateStd": 57.49,
+            "deltaE00": 8.323
+          }
+        ]
+      },
+      "control": {
+        "ssim": 0.84596,
+        "mad": 21.362,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 13.032,
+          "deltaE00P50": 10.837,
+          "deltaE00P90": 19.284,
+          "deltaE00P99": 85.156,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.2032,
+          "densityReference": 19.174,
+          "densityCandidate": 20.671,
+          "ratio": 1.0781
+        },
+        "patches": [
+          {
+            "label": "preview card",
+            "rect": [
+              60,
+              600,
+              300,
+              60
+            ],
+            "reference": [
+              247,
+              247,
+              244
+            ],
+            "candidate": [
+              255,
+              255,
+              255
+            ],
+            "referenceStd": 0,
+            "candidateStd": 0.02,
+            "deltaE00": 2.283
+          },
+          {
+            "label": "sheet wash",
+            "rect": [
+              20,
+              900,
+              60,
+              80
+            ],
+            "reference": [
+              226,
+              237,
+              243
+            ],
+            "candidate": [
+              250,
+              241,
+              234
+            ],
+            "referenceStd": 7.11,
+            "candidateStd": 6.93,
+            "deltaE00": 9.859
+          },
+          {
+            "label": "accent swatch",
+            "rect": [
+              145,
+              2270,
+              40,
+              40
+            ],
+            "reference": [
+              231,
+              62,
+              87
+            ],
+            "candidate": [
+              231,
+              104,
+              120
+            ],
+            "referenceStd": 11.7,
+            "candidateStd": 57.49,
+            "deltaE00": 8.323
+          }
+        ]
+      },
+      "contentRegion": null,
+      "ceilingIfContentMatched": 0.8459568069309901,
+      "pass": false,
+      "failures": [
+        "control SSIM 84.60% < 90.00%",
+        "control ΔE00 13.03 > 4",
+        "control ink r 0.20 < 0.35"
+      ]
+    },
+    {
+      "id": "4856-appearance-scrolled",
+      "title": "外观设置下半页 — 视觉参数四条滑轨",
+      "spec": "docs/ui-spec/4856-appearance-scrolled.json",
+      "state": {
+        "screen": "settings / appearance / background scrolled",
+        "theme": "blush + rose",
+        "backgroundOpacity": "100%",
+        "cardOpacity": "30%",
+        "playerBlur": "0",
+        "mask": "0%",
+        "scroll": "gradient capsule maxY 136pt",
+        "notes": "参考与候选状态已归一；固定 Sheet 头与参考可滚走的头仍是结构差异。"
+      },
+      "reference": {
+        "path": "resource/reference-ui/sollin-2026-10-18/IMG_4856.PNG",
+        "sha256": "3f20471be6455e401951da85d01b6fc18a4fbfc4114f4f5e356f4fee65572bbc",
+        "source": {
+          "profile": "Display P3",
+          "bitDepth": 16,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "c24a9fc5bc8ce5ef7f330acd2eb72bc636006749a7474c01737cc8e543350497"
+      },
+      "candidate": {
+        "path": "build/ui-screenshots-batch28/002-Appearance-background-page-scrolled.png",
+        "sha256": "72d01e0ff5fd2382517b7b68aa2fa49706771f5fd1a89cb8114366e1137a812a",
+        "source": {
+          "profile": "sRGB IEC61966-2.1",
+          "bitDepth": 8,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "5aa599a8cafe8ac2b041eaa8d68860900306928715e8f208bb9c55230e0ce73e"
+      },
+      "size": [
+        1290,
+        2796
+      ],
+      "contentAreaFraction": 0,
+      "whole": {
+        "ssim": 0.90258,
+        "mad": 15.536,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 12.527,
+          "deltaE00P50": 11.624,
+          "deltaE00P90": 17.079,
+          "deltaE00P99": 34.964,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.4427,
+          "densityReference": 14.952,
+          "densityCandidate": 13.899,
+          "ratio": 0.9296
+        },
+        "patches": [
+          {
+            "label": "field wash",
+            "rect": [
+              300,
+              1000,
+              200,
+              60
+            ],
+            "reference": [
+              220,
+              234,
+              242
+            ],
+            "candidate": [
+              249,
+              239,
+              231
+            ],
+            "referenceStd": 0.96,
+            "candidateStd": 0.39,
+            "deltaE00": 11.623
+          },
+          {
+            "label": "accent swatch",
+            "rect": [
+              145,
+              710,
+              40,
+              40
+            ],
+            "reference": [
+              231,
+              61,
+              86
+            ],
+            "candidate": [
+              229,
+              64,
+              88
+            ],
+            "referenceStd": 6.53,
+            "candidateStd": 20.65,
+            "deltaE00": 0.582
+          },
+          {
+            "label": "mask swatch",
+            "rect": [
+              145,
+              2210,
+              40,
+              40
+            ],
+            "reference": [
+              254,
+              254,
+              254
+            ],
+            "candidate": [
+              251,
+              251,
+              251
+            ],
+            "referenceStd": 6.07,
+            "candidateStd": 12.8,
+            "deltaE00": 0.594
+          }
+        ]
+      },
+      "comparable": {
+        "ssim": 0.90258,
+        "mad": 15.536,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 12.527,
+          "deltaE00P50": 11.624,
+          "deltaE00P90": 17.079,
+          "deltaE00P99": 34.964,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.4427,
+          "densityReference": 14.952,
+          "densityCandidate": 13.899,
+          "ratio": 0.9296
+        },
+        "patches": [
+          {
+            "label": "field wash",
+            "rect": [
+              300,
+              1000,
+              200,
+              60
+            ],
+            "reference": [
+              220,
+              234,
+              242
+            ],
+            "candidate": [
+              249,
+              239,
+              231
+            ],
+            "referenceStd": 0.96,
+            "candidateStd": 0.39,
+            "deltaE00": 11.623
+          },
+          {
+            "label": "accent swatch",
+            "rect": [
+              145,
+              710,
+              40,
+              40
+            ],
+            "reference": [
+              231,
+              61,
+              86
+            ],
+            "candidate": [
+              229,
+              64,
+              88
+            ],
+            "referenceStd": 6.53,
+            "candidateStd": 20.65,
+            "deltaE00": 0.582
+          },
+          {
+            "label": "mask swatch",
+            "rect": [
+              145,
+              2210,
+              40,
+              40
+            ],
+            "reference": [
+              254,
+              254,
+              254
+            ],
+            "candidate": [
+              251,
+              251,
+              251
+            ],
+            "referenceStd": 6.07,
+            "candidateStd": 12.8,
+            "deltaE00": 0.594
+          }
+        ]
+      },
+      "control": {
+        "ssim": 0.90258,
+        "mad": 15.536,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 12.527,
+          "deltaE00P50": 11.624,
+          "deltaE00P90": 17.079,
+          "deltaE00P99": 34.964,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.4427,
+          "densityReference": 14.952,
+          "densityCandidate": 13.899,
+          "ratio": 0.9296
+        },
+        "patches": [
+          {
+            "label": "field wash",
+            "rect": [
+              300,
+              1000,
+              200,
+              60
+            ],
+            "reference": [
+              220,
+              234,
+              242
+            ],
+            "candidate": [
+              249,
+              239,
+              231
+            ],
+            "referenceStd": 0.96,
+            "candidateStd": 0.39,
+            "deltaE00": 11.623
+          },
+          {
+            "label": "accent swatch",
+            "rect": [
+              145,
+              710,
+              40,
+              40
+            ],
+            "reference": [
+              231,
+              61,
+              86
+            ],
+            "candidate": [
+              229,
+              64,
+              88
+            ],
+            "referenceStd": 6.53,
+            "candidateStd": 20.65,
+            "deltaE00": 0.582
+          },
+          {
+            "label": "mask swatch",
+            "rect": [
+              145,
+              2210,
+              40,
+              40
+            ],
+            "reference": [
+              254,
+              254,
+              254
+            ],
+            "candidate": [
+              251,
+              251,
+              251
+            ],
+            "referenceStd": 6.07,
+            "candidateStd": 12.8,
+            "deltaE00": 0.594
+          }
+        ]
+      },
+      "contentRegion": null,
+      "ceilingIfContentMatched": 0.9025845927884324,
+      "pass": false,
+      "failures": [
+        "control ΔE00 12.53 > 4"
+      ]
+    },
+    {
+      "id": "4861-am-lyrics",
+      "title": "AM 歌词页 — 头部、滚动歌词与运输区",
+      "spec": "docs/ui-spec/4861-am-lyrics.json",
+      "state": {
+        "screen": "AM lyrics",
+        "theme": "blush + rose",
+        "background": "cover-derived gradient",
+        "playback": "paused fixture",
+        "scroll": "lyrics body",
+        "notes": "歌词文本、封面和背景均来自不同内容；控件区只保留进度、运输键与底部工具。"
+      },
+      "reference": {
+        "path": "resource/reference-ui/sollin-2026-10-18/IMG_4861.PNG",
+        "sha256": "45b4324d37ee26c2e2929be8030639d75b5977055f1b9e89b3ccc8e4626d494a",
+        "source": {
+          "profile": "sRGB IEC61966-2.1",
+          "bitDepth": 8,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "348ab775d623dfd15b44a0b68816a944f5869bdf1faae1097322e2d22bd02abb"
+      },
+      "candidate": {
+        "path": "build/ui-screenshots-batch20b/027-AM-full-scrolling-lyrics-body.png",
+        "sha256": "310a42326b1dd03c24cdeb6045c184d849ba5de3ba51251e43af87521be6decd",
+        "source": {
+          "profile": "sRGB IEC61966-2.1",
+          "bitDepth": 8,
+          "width": 1290,
+          "height": 2796
+        },
+        "normalizedSha256": "664e855db10e90b673177e3eb8a9827a9d25c7b1a1c597174f4fffa2dbd6a590"
+      },
+      "size": [
+        1290,
+        2796
+      ],
+      "contentAreaFraction": 0.4625382262996942,
+      "whole": {
+        "ssim": 0.58753,
+        "mad": 41.706,
+        "pixels": 3374640,
+        "coveredFraction": 0,
+        "color": {
+          "deltaE00Mean": 23.808,
+          "deltaE00P50": 22.428,
+          "deltaE00P90": 31.631,
+          "deltaE00P99": 81.417,
+          "sampledPixels": 843660
+        },
+        "ink": {
+          "correlation": 0.099,
+          "densityReference": 9.754,
+          "densityCandidate": 7.562,
+          "ratio": 0.7753
+        },
+        "patches": [
+          {
+            "label": "foundation lower-left",
+            "rect": [
+              20,
+              2200,
+              100,
+              50
+            ],
+            "reference": [
+              43,
+              61,
+              58
+            ],
+            "candidate": [
+              25,
+              14,
+              39
+            ],
+            "referenceStd": 2.48,
+            "candidateStd": 0.45,
+            "deltaE00": 25.753
+          }
+        ]
+      },
+      "comparable": {
+        "ssim": 0.59004,
+        "mad": 38.662,
+        "pixels": 1942740,
+        "coveredFraction": 0.42431,
+        "color": {
+          "deltaE00Mean": 24.78,
+          "deltaE00P50": 22.653,
+          "deltaE00P90": 32.335,
+          "deltaE00P99": 72.743,
+          "sampledPixels": 485685
+        },
+        "ink": {
+          "correlation": 0.0793,
+          "densityReference": 6.939,
+          "densityCandidate": 5.842,
+          "ratio": 0.842
+        },
+        "patches": [
+          {
+            "label": "foundation lower-left",
+            "rect": [
+              20,
+              2200,
+              100,
+              50
+            ],
+            "reference": [
+              43,
+              61,
+              58
+            ],
+            "candidate": [
+              25,
+              14,
+              39
+            ],
+            "referenceStd": 2.48,
+            "candidateStd": 0.45,
+            "deltaE00": 25.753
+          }
+        ]
+      },
+      "control": {
+        "ssim": 0.59004,
+        "mad": 38.662,
+        "pixels": 1942740,
+        "coveredFraction": 0.42431,
+        "color": {
+          "deltaE00Mean": 24.78,
+          "deltaE00P50": 22.653,
+          "deltaE00P90": 32.335,
+          "deltaE00P99": 72.743,
+          "sampledPixels": 485685
+        },
+        "ink": {
+          "correlation": 0.0793,
+          "densityReference": 6.939,
+          "densityCandidate": 5.842,
+          "ratio": 0.842
+        },
+        "patches": [
+          {
+            "label": "foundation lower-left",
+            "rect": [
+              20,
+              2200,
+              100,
+              50
+            ],
+            "reference": [
+              43,
+              61,
+              58
+            ],
+            "candidate": [
+              25,
+              14,
+              39
+            ],
+            "referenceStd": 2.48,
+            "candidateStd": 0.45,
+            "deltaE00": 25.753
+          }
+        ]
+      },
+      "contentRegion": {
+        "ssim": 0.5841273772070376,
+        "mad": 45.836724204107306,
+        "pixels": 1431900
+      },
+      "ceilingIfContentMatched": 0.7796632995223703,
+      "pass": false,
+      "failures": [
+        "control SSIM 59.00% < 90.00%",
+        "control ΔE00 24.78 > 4",
+        "control ink r 0.08 < 0.35"
+      ]
+    }
+  ]
+}
