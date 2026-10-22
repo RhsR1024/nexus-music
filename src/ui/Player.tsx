@@ -8,12 +8,13 @@ import {Ionicons,MaterialIcons} from '@expo/vector-icons';
 import {AmbientBackground,GlassSurface} from './Materials.tsx';
 import {ArtworkBackdrop,ModernPlayer} from './ModernPlayer.tsx';
 import {Cover} from './Cover.tsx';
+import {CupertinoGlyph} from './CupertinoGlyph.tsx';
 import {MatchModal} from './MatchModal.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
-import {classicArtworkLayout,classicBlushBackground,classicLyricLayout,classicMetadataLayout,paper} from './tokens.ts';
+import {classicArtworkLayout,classicBlushBackground,classicLyricLayout,classicMetadataLayout,classicSkipIcon,paper} from './tokens.ts';
 import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
@@ -132,11 +133,8 @@ export function Player({ services }: { services: Services }) {
       <View style={{width:12.9,height:1.2,backgroundColor:classicToolInk,marginTop:1.4}}/>
       <View style={{width:17.5,height:17.1,borderWidth:1.4,borderColor:classicToolInk,borderRadius:4,marginTop:2.5,alignItems:'center',justifyContent:'center'}}><Ionicons name="musical-note" size={10} color={classicToolInk}/></View>
     </View>);
-  // IMG_4854 skip icons are two filled triangles with a 1.65pt gap, not bar+triangle.
-  const skipGlyph=(dir:'back'|'forward')=>(
-    <View style={{flexDirection:'row',gap:1.65}}>
-      {[0,1].map(index=><View key={index} style={{width:0,height:0,borderTopWidth:8.25,borderBottomWidth:8.25,borderTopColor:'transparent',borderBottomColor:'transparent',...(dir==='back'?{borderRightWidth:13.1,borderRightColor:classicInk}:{borderLeftWidth:13.1,borderLeftColor:classicInk})}}/>)}
-    </View>);
+  // Rounded double-triangle ink from the existing official font.
+  const skipGlyph=(dir:'back'|'forward')=><View style={{flexDirection:'row',gap:classicSkipIcon.gap}}>{[0,1].map(index=><View key={index} style={{width:classicSkipIcon.triangleWidth,height:classicSkipIcon.lineHeight,alignItems:'center'}}><CupertinoGlyph name="playFill" size={classicSkipIcon.size} color={classicInk} style={{width:24,lineHeight:classicSkipIcon.lineHeight,textAlign:'center',transform:[{scaleX:dir==='back'?-classicSkipIcon.scaleX:classicSkipIcon.scaleX}]}}/></View>)}</View>;
   const cycleRepeat=()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));};
   // IMG_4854: 308pt square at 430pt width (61pt side margins), transport 70pt play.
   const artworkSide=Math.min(width-122,308);

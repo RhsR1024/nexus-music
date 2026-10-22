@@ -86,3 +86,9 @@ export const classicArtworkLayout = {before: 3, titleBefore: -3} as const;
 
 // Same-text 4854 probes: 24pt title, native text optical baselines.
 export const classicMetadataLayout = {titleSize:24,titleLineHeight:28,titleOffset:2.67,artistOffset:1} as const;
+
+// Cupertino backward/forward fill: 28x16.67pt reference ink.
+export const classicSkipIcon = {size:23.58,lineHeight:28,triangleWidth:13,gap:2,scaleX:.872} as const;
+
+// Paper progress thumb: compact downward shadow; the 12pt entity is unchanged.
+export const paperProgressShadow = {shadowColor:'#4A2325',shadowOpacity:.25,shadowRadius:1,shadowOffset:{width:0,height:1}} as const;

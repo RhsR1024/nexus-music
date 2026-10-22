@@ -3,7 +3,7 @@ import {View,StyleSheet,useWindowDimensions,type GestureResponderEvent} from 're
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
-import {paper} from './tokens.ts';
+import {paper,paperProgressShadow} from './tokens.ts';
 const time=(value:number)=>`${Math.floor(Math.max(0,value)/60)}:${String(Math.floor(Math.max(0,value)%60)).padStart(2,'0')}`;
 const paddedTime=(value:number)=>{const total=Math.floor(Math.max(0,value));return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;};
 export function PlaybackProgress({services,adaptive=false,variant='default'}:{services:Services;adaptive?:boolean;variant?:'default'|'paper'|'stage'|'am'}){
@@ -23,7 +23,7 @@ export function PlaybackProgress({services,adaptive=false,variant='default'}:{se
       onResponderGrant={event=>{gestureToken.current=JSON.stringify(state.token);setPreview(fraction(event)*state.duration);}} onResponderMove={event=>setPreview(fraction(event)*state.duration)} onResponderRelease={event=>{if(gestureToken.current===JSON.stringify(controller.getSnapshot().token))controller.seek(fraction(event)*state.duration);gestureToken.current=undefined;setPreview(undefined);}} onResponderTerminate={()=>{gestureToken.current=undefined;setPreview(undefined);}} style={{height:44,justifyContent:'center',...(amTone?{marginTop:4}:{})}}>
       {/* IMG_4866 AM: 8pt track at 14% white with a 50% white fill and no knob; IMG_4872 stage: 5pt rose track with a 12pt knob. */}
       <View pointerEvents="none" style={{height:trackHeight,borderRadius:trackHeight/2,backgroundColor:paperTone?paper.track:stageTone?'rgba(255,255,255,0.02)':amTone?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.25)'}}><View style={{height:trackHeight,width:`${percent}%`,borderRadius:trackHeight/2,backgroundColor:paperTone?paper.accent:stageTone?'#8F4A4E':amTone?'rgba(255,255,255,0.50)':'#FFFFFF'}}/></View>
-      {(paperTone||stageTone||preview!==undefined)&&<View pointerEvents="none" style={{position:'absolute',left:`${percent}%`,marginLeft:-6,width:12,height:12,borderRadius:6,backgroundColor:paperTone?paper.accent:stageTone?'#8F4A4E':'#FFFFFF',...(paperTone?{shadowColor:'#4A2325',shadowOpacity:.35,shadowRadius:2.5,shadowOffset:{width:0,height:1}}:{})}}/>}
+      {(paperTone||stageTone||preview!==undefined)&&<View pointerEvents="none" style={{position:'absolute',left:`${percent}%`,marginLeft:-6,width:12,height:12,borderRadius:6,backgroundColor:paperTone?paper.accent:stageTone?'#8F4A4E':'#FFFFFF',...(paperTone?paperProgressShadow:{})}}/>}
     </View>
     <View style={{flexDirection:largeText&&!paperTone?'column':'row',justifyContent:'space-between',alignItems:largeText&&!paperTone?'stretch':'center',gap:largeText&&!paperTone?6:0,...(stageTimes?{marginTop:-8,marginLeft:-8}:{}),...(amTone?{marginTop:-5.3}:{}),...(paperTone?{marginTop:-5,marginHorizontal:-13.5}:{})}}>
       {largeText&&!paperTone?<View style={{flexDirection:'row',justifyContent:'space-between',gap:12}}><Text numberOfLines={1} style={[styles.small,{flexShrink:1}]}>{time(position)}</Text><Text numberOfLines={1} style={[styles.small,{flexShrink:1}]}>−{time(state.duration-position)}</Text></View>:<Text numberOfLines={1} style={timeStyle}>{paperTone?paddedTime(position):time(position)}</Text>}

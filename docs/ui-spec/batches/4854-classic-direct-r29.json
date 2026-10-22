@@ -1,0 +1,138 @@
+{
+  "id": "4854-classic-direct-r29",
+  "title": "4854 Cupertino跳曲字形r29",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+  "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+  "candidate": "build/classic-direct-r29-20261023/screenshots/001-Classic-direct-three-lines.png",
+  "candidateSha256": "a128d6aa3ac94081091b20a2c32189717a1bb505ba40132e86d0e0ea2fcb2a27",
+  "captureEvidence": {
+    "manifest": "build/classic-direct-r29-20261023/run-manifest.json",
+    "exportIndex": "build/classic-direct-r29-20261023/screenshots/index.json"
+  },
+  "state": {
+    "screen": "classic player",
+    "theme": "blush + rose",
+    "mode": "light",
+    "background": "gradient",
+    "playback": "playing near 93.6% (fixture seek 1:52/2:00; paused restored after capture)",
+    "scroll": "top",
+    "fontScale": 1,
+    "language": "zh UI / zh synthetic content",
+    "notes": "默认blush/rose；仅夹具固定coverRadius20，标题嗜好/歌手颜人中与参考同文字，歌词与封面为合成内容；本组未改产品代码。 r28b标题24pt/28行盒/下移2.67，歌手下移1；其余布局不变。v2补充完整几何，局部门禁通过仍不是整页完成。 r29只替换跳曲为Cupertino字体28pt/scaleY1.044。"
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [
+    6,
+    8
+  ],
+  "contentMasks": [
+    [
+      183,
+      408,
+      924,
+      840
+    ],
+    [
+      140,
+      1260,
+      1010,
+      560
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      70,
+      1975,
+      1150,
+      75
+    ],
+    [
+      330,
+      2170,
+      630,
+      265
+    ],
+    [
+      150,
+      2475,
+      990,
+      100
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      616,
+      2264,
+      19,
+      68
+    ],
+    [
+      655,
+      2264,
+      19,
+      68
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "play fill",
+      "rect": [
+        700,
+        2240,
+        20,
+        20
+      ]
+    },
+    {
+      "label": "pause bar",
+      "rect": [
+        620,
+        2290,
+        8,
+        20
+      ]
+    }
+  ],
+  "criticalRegions": [
+    {
+      "label": "progress",
+      "rect": [
+        70,
+        1975,
+        1150,
+        75
+      ]
+    },
+    {
+      "label": "transport",
+      "rect": [
+        330,
+        2170,
+        630,
+        265
+      ]
+    },
+    {
+      "label": "tools",
+      "rect": [
+        150,
+        2475,
+        990,
+        100
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  },
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "frozenAnchors": "docs/ui-spec/anchor-list-4854-v2-2026-10-23.md"
+}
