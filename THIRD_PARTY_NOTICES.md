@@ -17,3 +17,7 @@ The reference repository includes the Apache License 2.0, reproduced at `license
 ## QRC wire decoding
 
 `modules/nexus-native/ios/ScriptUtilities.swift` contains an original Swift bit-permutation implementation of the QRC DES-EDE variant. The wire permutations, S-box values, key layout and fixed protocol key were checked against [wtfdelphia qrcDecode.js](https://github.com/wtfdelphia/lx-music-mobile/blob/6624ab58cbd2f5bda52ab8006912d3c60dc1f847/src/utils/musicSdk/tx/qrcDecode.js) and Q-1515 commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/tx/qrc/`. The Apache 2.0 license above is retained for the referenced tables. The implementation does not import either JavaScript decoder, its dependencies, or reference music/lyric assets. The native utility test uses a synthetic text vector independently encoded with the pinned reference algorithm.
+
+## Cupertino Icons font
+
+`assets/fonts/CupertinoIcons.ttf` is the official `cupertino_icons` 2.0.0 package font, used to draw three appearance-segment glyphs (`circle_fill`, `layers_alt_fill`, `photo_fill`). The package declares the MIT license reproduced at `licenses/cupertino-icons-mit.txt`.

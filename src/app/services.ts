@@ -22,6 +22,7 @@ import { FontStore } from '../storage/fonts.ts';
 import { LyricService } from '../lyrics/service.ts';
 import {LyricSelection} from '../lyrics/selection.ts';
 import * as Crypto from 'expo-crypto';
+import * as Font from 'expo-font';
 import { openRepository } from '../storage/nativeDatabase.ts';
 import {CoverService} from '../providers/covers.ts';
 import { decodeKRC, decodeQRC, loadNativeCovers, loadNativeLX } from '../providers/nativeLX.ts';
@@ -80,6 +81,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const musicAuth={wy:new MusicAuthFlow<Record<string,unknown>>(),tx:new MusicAuthFlow<Record<string,unknown>>(),kg:new MusicAuthFlow<Record<string,unknown>>()};
   const musicWebLogin=new MusicWebLoginCoordinator({native:loadNativeMusicAuth(),flow:musicAuth.wy,accounts:musicAccounts,profile:neteaseProfile,hash,uuid:Crypto.randomUUID});
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
+  await Font.loadAsync({CupertinoIcons:require('../../assets/fonts/CupertinoIcons.ttf')});
   const libraryMutations=new MutationQueue();
   const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations);await restore('library.v1','音乐库',()=>library.restore());
   const playbackStats=new PlaybackStatsStore(repository,Date.now,libraryMutations);await restore('playbackStats.v1','播放统计',()=>playbackStats.restore());
