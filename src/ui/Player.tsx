@@ -13,7 +13,7 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
-import {classicArtworkLayout,classicBlushBackground,classicLyricLayout,paper} from './tokens.ts';
+import {classicArtworkLayout,classicBlushBackground,classicLyricLayout,classicMetadataLayout,paper} from './tokens.ts';
 import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
@@ -149,9 +149,9 @@ export function Player({ services }: { services: Services }) {
     </View>
     <View testID="classic-artwork" collapsable={false} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
     <View style={{marginTop:classicArtworkLayout.titleBefore,alignItems:'center',gap:2}}>
-      <Text numberOfLines={1} style={{fontSize:22,lineHeight:28,fontWeight:'700',color:theme.palette.text}}>{entry.track.title}</Text>
+      <Text numberOfLines={1} style={{fontSize:classicMetadataLayout.titleSize,lineHeight:classicMetadataLayout.titleLineHeight,fontWeight:'700',color:theme.palette.text,transform:[{translateY:classicMetadataLayout.titleOffset}]}}>{entry.track.title}</Text>
       {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
-      <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.palette.secondary}}>{entry.track.artist}</Text>
+      <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.palette.secondary,transform:[{translateY:classicMetadataLayout.artistOffset}]}}>{entry.track.artist}</Text>
     </View>
     <View style={{marginTop:classicLyricLayout.before,marginBottom:classicLyricLayout.after}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
     {/* Reference metrics: track 42..388pt, centre 668pt; 17pt artist pushes the

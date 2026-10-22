@@ -86,7 +86,7 @@ const navidromeAudio=matchingAudio,navidromeDuration=120;
 const photoArtworkVersion=String(Date.now()),photoArtworkKinds=['portrait','landscape','missing','corrupt'];
 const photoCoverRequests=counts.photoCoverRequests={};
 const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
-const song=()=>({id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'经典布局':'Synthetic tone',artist:classicUI?'测试歌手':'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+const song=()=>({id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
   if(req.url.startsWith('/am-fixture-control')){const control=new URL(req.url,'http://127.0.0.1');amLongQueue=control.searchParams.get('longQueue')==='1';res.setHeader('Content-Type','application/json');res.end(JSON.stringify({longQueue:amLongQueue}));return;}

@@ -1,3 +1,11 @@
+## 2026-10-23 ab91c63 iOS27完整成功与产物核验
+
+run39800510821/ab91c63已completed/success；checks、iOS27工具链、Pods、native、第10步核心App、第11步匹配/歌词/健康/发现、第12步断服务离线、第13步unsigned设备归档及上传全部success，失败附件上传按条件skipped。不包含后续99cf969起UI改动，不外推新代码。
+
+IPA artifact12442029450已实际下载。外层ZIP11,557,779字节，SHA256 `2757143470035d116a31c706165043d6a607024fb51072a9286553c2571c5994`与GitHub声明一致，CRC通过；内部IPA83条目CRC、附带SHA、arm64 Mach-O、bundle ID、JS非空、三个测试入口标记排除和私人资源名称检查通过。IPA SHA256 `28ded12f27e9681f7adeccfe351c496f7bd97008597de6f13b8029eeef27bae3`。
+
+manifest为Xcode27.0/27A266a、iphoneos27.0、arm64、min15.1、设备族[1,2]、signed=false；dirty=true包含Podfile.lock和project.pbxproj，不能称清洁归档。核验包/清单/收据位于build/ci-39800510821，未下载653MB全诊断重复包。Apple签名、真机与真实私人服务仍未验收。后续26f69df/39811557009已运行，终态另验。
+
 ## 2026-10-23 产物可用性校正与定点清理
 
 本机原xcresult 1792307572879、1792268779844、1792132828517、1792319723943当前均不存在，无法由现有回执确认何时移除。历史“原始结果保留”描述不再代表当前可取；对应classic-modal/offline-hittability/fonts-sixth/failure-exports附件目录继续保留，不整目录删除。

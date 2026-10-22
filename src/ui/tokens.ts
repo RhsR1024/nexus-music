@@ -83,3 +83,6 @@ export const classicLyricLayout = {before: -10, after: 11} as const;
 
 // 4854: cover top 127pt; keep the following title/lyrics/control anchors.
 export const classicArtworkLayout = {before: 3, titleBefore: -3} as const;
+
+// Same-text 4854 probes: 24pt title, native text optical baselines.
+export const classicMetadataLayout = {titleSize:24,titleLineHeight:28,titleOffset:2.67,artistOffset:1} as const;
