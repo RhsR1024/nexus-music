@@ -1,3 +1,11 @@
+## 2026-10-23 30f1874 经典细节清洁归档
+
+提交30f18740bfe219f14189e4d2a508ae12a4ed2053本地unsigned归档成功：dirty=false/changes=[]、arm64、Xcode26.3/iphoneos26.2、min15.1、设备族[1,2]。IPA SHA256 `1517c29108c436a337963c0e50c064097a8a65e75b1158705c04467d58bd95fd`，12,271,810字节；83 ZIP条目CRC、附带SHA、arm64入口、正式JS与xcarchive字节一致及所列测试标记/私人资源路径排除通过。JS SHA256 `b1c1d203e72fb977d410df5f1fd54bf786fdc80409f6eb0fd7a479826a6a47aa`。包/manifest/verification留build/local-classic-30f1874-20261023；旧distribution按4640a5提交完整保留至build/preserved-distribution-4640a5-20261023，无删除。
+
+本地r29/r30/r31快速场景各1/0/0，r30正式导航综合1/0/0且五个主要画面已亲看；439检查通过。该导航的不同内容/滚动/进度截图不作固定主题颜色评分；完整主题遮罩专项、整页素材/量表与动效仍待。证据详见[字形回执](ui-spec/classic-4854-r31-2026-10-23.md)。
+
+正常push后实核：39811557009/26f69df运行，39829873074/30f1874最新pending，41ecbd1旧pending自动取消；保持1运行/1排队，无手动取消或重派。本地不是iOS27；新云端终态、真实平台服务/Apple签名/真机仍未通过。工程估算和静态完成态本轮不加分。
+
 ## 2026-10-23 ab91c63 iOS27完整成功与产物核验
 
 run39800510821/ab91c63已completed/success；checks、iOS27工具链、Pods、native、第10步核心App、第11步匹配/歌词/健康/发现、第12步断服务离线、第13步unsigned设备归档及上传全部success，失败附件上传按条件skipped。不包含后续99cf969起UI改动，不外推新代码。
