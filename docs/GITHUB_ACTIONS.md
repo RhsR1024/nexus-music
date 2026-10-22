@@ -1,3 +1,7 @@
+## 2026-10-23 26f69df终态与新运行
+
+39811557009/26f69df已完整success，核心22+在线等5+离线1项App测试通过，IPA/compact logs已下载核验；云端manifest有两项原生文件dirty，详情见[BUILD_STATUS](BUILD_STATUS.md)。最新39837345526/6f2e413已运行、0pending；旧成功只覆盖26f69df，不外推后续UI与P1/P2。未取消或重派运行。
+
 ## 2026-10-23 P2专项接入与队列
 
 step11增加单独testStructuredNavidromeLyrics，使用正式组件/独立fixture entry，日志和请求计数复制到compact logs；生产入口及single/cancel-in-progress:false未改。实核新39837345526/6f2e413 pending、39811557009/26f69df运行，旧2987f1f pending自动取消，1运行/1排队；新终态待，不将旧构建成功外推。

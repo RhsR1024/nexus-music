@@ -23,4 +23,4 @@ sourceUnchanged=true，源码digest c76e5d986d945c88726d17ed0cc9e76269e0ff02e0a9
 
 截图验证词高亮、坏词行级回退及Guest先入/Lead后入切换，不是同参考状态的UI对齐证据。r3后仅收紧agent.role为真正字符串，拒绝数组隐式转字符串；该末次类型保护经新增子场景和463/463全检查覆盖，不将r3冒称该类型分支的App测试。CI YAML/脚本语法通过。
 
-6f2e413已正常push，清洁本地unsigned归档和包校验通过，见[BUILD_STATUS](BUILD_STATUS.md)；iOS27新任务仍pending，真实服务/签名/真机仍待。
+6f2e413已正常push，清洁本地unsigned归档和包校验通过，见[BUILD_STATUS](BUILD_STATUS.md)；iOS27新任务现已运行、终态待，真实服务/签名/真机仍待。

@@ -1,3 +1,11 @@
+## 2026-10-23 26f69df云端iOS27完整成功
+
+[39811557009](https://github.com/RhsR1024/nexus-music/actions/runs/39811557009)/26f69df completed/success：checks、Pods、native、第10步核心22项、第11步在线/歌词/健康/发现等5项、第12步断服务离线1项均通过，共28项App测试；归档/上传成功，失败附件按条件skipped。compact logs原ZIP SHA256 a0ea197e8eae37a507043f25a08b83fbeb1841786c5ea88897c9220ee5f98788，已CRC核验并逐组读取终态，不重复统计ui-catalog与ui-downloads同一用例。
+
+IPA artifact12450714454外层ZIP SHA256 35318cb81a798d55c2575c4fb1ccabc49716feba66da747d36e3d5509a62cd23，与GitHub一致。IPA SHA256 3e80ea47d46f7e24d56bdb3003a94be741a3560abd4556f441df48bdc9cb46fb，11,633,900字节；83条目CRC/附带SHA、arm64入口、com.nexusmusic.app与非空生产JS、所列测试标记/私人资源路径排除通过。产物/日志ZIP/verification留build/ci-39811557009；未下载623MB全诊断重复包。
+
+manifest为Xcode27.0/27A266a、macOS27.0.1、arm64/iphoneos27.0、min15.1、设备族[1,2]、signed=false。dirty=true有Podfile.lock与project.pbxproj两项，不能称云端清洁归档；JS SHA256 6ecf32d81b31d685f11725a732783d3b62a13d4fd44dabcd78473f6625a0edd6。仅覆盖26f69df（含早先经典封面顶边等改动），不覆盖后续标题/跳曲或parse P1/P2，也不代表真实私人服务、签名/真机。最新6f2e413/39837345526现in_progress，0排队，继续跟进。
+
 ## 2026-10-23 P2结构化歌词阶段归档
 
 6f2e413正常push，check463/463；增强时间/坏词回退/Guest先入后切主唱专项App r3 Release1/0/0，三图已亲看，末次agent.role类型保护单独业务验证。精确来源与未完成边界见[P2回执](parse-structured-p2-2026-10-23.md)。CI step11已增加该独立正式组件场景；新iOS27运行39837345526/6f2e413 pending，39811557009/26f69df仍运行，保持1/1，未手动取消或重派。
