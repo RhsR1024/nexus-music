@@ -13,7 +13,7 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
-import {classicBlushBackground,paper} from './tokens.ts';
+import {classicBlushBackground,classicLyricLayout,paper} from './tokens.ts';
 import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
@@ -153,7 +153,7 @@ export function Player({ services }: { services: Services }) {
       {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
       <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.palette.secondary}}>{entry.track.artist}</Text>
     </View>
-    <View style={{marginTop:13}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
+    <View style={{marginTop:classicLyricLayout.before,marginBottom:classicLyricLayout.after}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
     {/* Reference metrics: track 42..388pt, centre 668pt; 17pt artist pushes the
         stack down 3.6pt, so -4.5pt keeps the transport/tools on their anchors. */}
     <View style={{marginHorizontal:18,marginTop:-4.5}}><PlaybackProgress services={services} variant={theme.mode==='dark'?'default':'paper'}/></View>

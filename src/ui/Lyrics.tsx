@@ -206,7 +206,7 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
     if(screenReader||lastTap.current.key===key&&lastTap.current.index===index&&elapsed>=0&&elapsed<350){services.playback.controller.seek(Math.max(0,(startMs+offset)/1000));lastTap.current={index:-1,time:0,key:''};}
     else lastTap.current={index,time:now,key};
   };
-  return <View style={{gap:2,minHeight:Math.max(lineHeight,lineHeight*visibleLines-8),justifyContent:'center'}}>
+  return <View style={{gap:2,minHeight:lineHeight*visibleLines+Math.max(0,visibleLines-1)*2,justifyContent:'center'}}>
     {!!error&&<Pressable accessibilityRole="button" accessibilityLabel="重试歌词" onPress={retry} style={{minHeight:44,justifyContent:'center'}}><Text style={{textAlign:'center',color:theme.palette.accent,fontSize:13}}>{error}</Text></Pressable>}
     {!error&&!value&&<Text style={{textAlign:'center',color:theme.palette.secondary,fontSize:13}}>正在获取歌词…</Text>}
     {!error&&value&&!document?.lines.length&&!document?.plain.length&&<Text style={{textAlign:'center',color:theme.palette.secondary,fontSize:13}}>暂无歌词</Text>}

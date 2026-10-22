@@ -14,7 +14,7 @@ const initialize=()=>pending??=getServices().then(async services=>{
   await services.fonts.followGlobal();
   const {account}=await services.accounts.connect('http://127.0.0.1:18439','fixture-user','fixture-password');
   const result=await(await services.accounts.client(account.id)).songs('classic visual fixture');
-  const track=result.items.find(item=>item.origin.kind==='navidrome'&&item.origin.id==='fixture-classic-three-lines-v1');
+  const track=result.items.find(item=>item.origin.kind==='navidrome'&&item.origin.id.startsWith('fixture-classic-'));
   if(!track)throw new Error('Classic capture fixture identity missing');
   services.playback.controller.setQueue(makeQueue([{id:'classic-capture-entry',track}]));
   return services;

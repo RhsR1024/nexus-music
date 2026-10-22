@@ -2601,7 +2601,9 @@ final class SourceSettingsTests: XCTestCase {
   func testVisualLabAppearanceSheet(){
     captureAppearanceSheet(direct:false)
   }
-  func testVisualLabClassicDirect(){
+  func testVisualLabClassicDirect(){captureClassicDirect(lines:3)}
+  func testVisualLabClassicShortDirect(){captureClassicDirect(lines:2)}
+  private func captureClassicDirect(lines:Int){
     let app=XCUIApplication();app.launch()
     let open=app.buttons["打开播放页"].firstMatch
     XCTAssertTrue(open.waitForExistence(timeout:30));open.tap()
@@ -2610,7 +2612,7 @@ final class SourceSettingsTests: XCTestCase {
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
     expectation(for:NSPredicate(format:"value CONTAINS %@","2:00"),evaluatedWith:progress);waitForExpectations(timeout:20)
     XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:10))
-    for line in ["这是一行合成歌词文字","音枢经典播放器三行布局测试","下一行用于验证歌词排版"] {
+    for line in ["这是一行合成歌词文字","音枢经典播放器三行布局测试","下一行用于验证歌词排版"].prefix(lines) {
       XCTAssertTrue(app.buttons[line].firstMatch.waitForExistence(timeout:15),"All three fixture lines must render before capture")
     }
     var previous=CGRect.zero,stable=0
@@ -2619,10 +2621,11 @@ final class SourceSettingsTests: XCTestCase {
       return frame.height>0 && stable>=2
     },object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[settled],timeout:10),.completed)
+    if abs(app.frame.width-430)<1 && abs(app.frame.height-932)<1 {XCTAssertEqual(progress.frame.midY,671.17,accuracy:1,"Lyric line count must not shift the control stack")}
     progress.coordinate(withNormalizedOffset:CGVector(dx:0.93,dy:0.5)).tap()
     expectation(for:NSPredicate(format:"value CONTAINS %@","1:52"),evaluatedWith:progress);waitForExpectations(timeout:5)
     Thread.sleep(forTimeInterval:0.2)
-    let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name="Classic direct three lines";shot.lifetime = .keepAlways;add(shot)
+    let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=lines==3 ? "Classic direct three lines" : "Classic direct two lines";shot.lifetime = .keepAlways;add(shot)
     app.buttons["暂停"].firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5))
     app.buttons["收起播放页"].firstMatch.tap()

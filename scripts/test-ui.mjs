@@ -48,7 +48,8 @@ const counts={requests:{},authFailures:0,authSuccesses:0};
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const fixtureOnlineUI=matchingUI||discoveryUI;
-const classicUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicDirect'));
+const classicShortUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicShortDirect'));
+const classicUI=classicShortUI||process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicDirect'));
 const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabAppearanceDirect'));
 if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
 const entryFile=classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
@@ -85,7 +86,7 @@ const navidromeAudio=matchingAudio,navidromeDuration=120;
 const photoArtworkVersion=String(Date.now()),photoArtworkKinds=['portrait','landscape','missing','corrupt'];
 const photoCoverRequests=counts.photoCoverRequests={};
 const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
-const song=()=>({id:classicUI?'fixture-classic-three-lines-v1':'fixture-song-120s-v2',title:classicUI?'经典布局':'Synthetic tone',artist:classicUI?'测试歌手':'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+const song=()=>({id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'经典布局':'Synthetic tone',artist:classicUI?'测试歌手':'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
   if(req.url.startsWith('/am-fixture-control')){const control=new URL(req.url,'http://127.0.0.1');amLongQueue=control.searchParams.get('longQueue')==='1';res.setHeader('Content-Type','application/json');res.end(JSON.stringify({longQueue:amLongQueue}));return;}
@@ -292,7 +293,7 @@ const server = createServer(async (req, res) => {
   else if(method==='getAlbumList2')respond({albumList2:{album:[{id:'fixture-album',name:'Synthetic album',artist:'Fixture artist',coverArt:'fixture-cover',songCount:params.get('u')==='fixture-photo'?4:coverThemeUI&&params.get('u')==='fixture-theme'?3:params.get('u')==='fixture-user'&&amLongQueue?8:1}]}});
   else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:params.get('u')==='fixture-photo'?photoSongs():coverThemeUI&&params.get('u')==='fixture-theme'?[...['red','blue','multi'].map(color=>({...song(),id:color,title:`${color} cover tone`,coverArt:color})),...(transitionFixture?['red','blue','missing'].map(color=>({...song(),id:`transition-${color}`,title:`transition ${color} tone`,coverArt:`transition-${color}-${transitionVersion}`})):[])]:params.get('u')==='fixture-user'&&amLongQueue?amQueueSongs():[song()]}});
   else if(method==='search3')respond({searchResult3:{song:[song()]}});
-  else if(method==='getLyricsBySongId'&&classicUI)respond({lyricsList:{structuredLyrics:[{lang:'zh',synced:true,line:[{start:0,value:'这是一行合成歌词文字'},{start:100000,value:'音枢经典播放器三行布局测试'},{start:116000,value:'下一行用于验证歌词排版'}]}]}});
+  else if(method==='getLyricsBySongId'&&classicUI)respond({lyricsList:{structuredLyrics:[{lang:'zh',synced:true,line:[{start:0,value:'这是一行合成歌词文字'},{start:100000,value:'音枢经典播放器三行布局测试'},...(classicShortUI?[]:[{start:116000,value:'下一行用于验证歌词排版'}])]}]}});
   else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:navidromeDuration*1000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:navidromeDuration*1000,value:'two'}]}]}]}});
   else if(method==='star'||method==='unstar'){starred=method==='star';respond({});}
   else if(method==='getArtists')respond({artists:{index:[]}});
@@ -319,7 +320,7 @@ try {
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
   if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
-  if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect');
+  if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');
   if(!appearanceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabAppearanceDirect');
   runManifest.buildArguments=args;
   runManifest.toolchain={node:process.version,xcode:execFileSync('xcodebuild',['-version'],{encoding:'utf8'}).trim()};

@@ -76,3 +76,7 @@ export const classicBlushBackground = {
   colors: ['#F6F2EE', '#F2D4C6', '#F6D8CE', '#FCE7E6'],
   locations: [0, .39, .74, 1],
 } as const;
+
+// 4854 three-line block: reclaim 23pt before the lyrics and return 11pt after
+// them, keeping the control stack anchored without moving its children.
+export const classicLyricLayout = {before: -10, after: 11} as const;
