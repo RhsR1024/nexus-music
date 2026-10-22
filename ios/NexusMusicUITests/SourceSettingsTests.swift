@@ -1495,15 +1495,26 @@ final class SourceSettingsTests: XCTestCase {
         let element: (String)->XCUIElement = { app.descendants(matching:.any).matching(identifier:$0).firstMatch }
         let viewport=element("photo-lyric-viewport"),list=element("photo-lyrics-list"),mask=element("photo-hero-mask")
         XCTAssertTrue(list.waitForExistence(timeout:10));XCTAssertTrue(mask.waitForExistence(timeout:10))
+        let hero=element("photo-hero-image")
+        XCTAssertTrue(hero.waitForExistence(timeout:10),"The actual fullbleed image must enter the accessibility tree before pixel validation")
         XCTAssertGreaterThan(viewport.frame.height,150);XCTAssertTrue(app.frame.insetBy(dx:-1,dy:-1).contains(viewport.frame))
         let activeLine=app.buttons["定位歌词：Synthetic lyric two"].firstMatch
         XCTAssertTrue(activeLine.isHittable);XCTAssertTrue(viewport.frame.insetBy(dx:-1,dy:-1).contains(activeLine.frame))
         XCTAssertFalse(element("photo-quick-actions").exists,"Hidden photo controls must be absent from AX and touch")
+        var observedTop=0,observedBottom=0
+        let artworkRendered=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+          guard let image=BackgroundPixels.decode(XCUIScreen.main.screenshot().pngRepresentation) else{return false}
+          observedTop=Int(BackgroundPixels.rgba(image,at:CGPoint(x:CGFloat(image.width)*0.5,y:CGFloat(image.height)*0.2)).prefix(3).max() ?? 0)
+          observedBottom=Int(BackgroundPixels.rgba(image,at:CGPoint(x:CGFloat(image.width)*0.5,y:CGFloat(image.height)*0.86)).prefix(3).max() ?? 0)
+          return observedTop>observedBottom+40
+        },object:nil)
+        let rendered=XCTWaiter.wait(for:[artworkRendered],timeout:15)
         let shot=XCUIScreen.main.screenshot()
         let attachment=XCTAttachment(screenshot:shot);attachment.name="Photo clear masked hero and virtual lyrics";attachment.lifetime = .keepAlways;add(attachment)
         if let image=BackgroundPixels.decode(shot.pngRepresentation) {
           let top=BackgroundPixels.rgba(image,at:CGPoint(x:CGFloat(image.width)*0.5,y:CGFloat(image.height)*0.2))
           let bottom=BackgroundPixels.rgba(image,at:CGPoint(x:CGFloat(image.width)*0.5,y:CGFloat(image.height)*0.86))
+          XCTAssertEqual(rendered,.completed,"Actual fullbleed artwork must finish rendering before capture; observed top \(observedTop), bottom \(observedBottom)")
           XCTAssertGreaterThan(Int(top.prefix(3).max() ?? 0),Int(bottom.prefix(3).max() ?? 0)+40,"Actual fullbleed artwork must fade into the dark lyric foundation")
         } else { XCTFail("Photo screenshot must decode") }
         app.buttons["photo-actions-toggle"].tap();XCTAssertTrue(element("photo-quick-actions").waitForExistence(timeout:5));XCTAssertTrue(progress.isHittable)
@@ -2491,8 +2502,18 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testVisualImagesAndPlayerBackgroundPersistence() throws {
     let app=XCUIApplication();app.launch()
-    func reveal(_ element:XCUIElement){for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))};XCTAssertTrue(element.isHittable,"Visual control must be visible: \(element.identifier)")}
-    func choose(_ id:String){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;reveal(control);control.tap()}
+    func reveal(_ element:XCUIElement,expectAbove:Bool?=nil){
+      for _ in 0..<45 {
+        if element.isHittable{break}
+        // RN virtualizes off-screen descendants. After importing a lower card,
+        // an absent target is usually above the viewport; forcing the downward
+        // gesture in that case searched farther away from it until timeout.
+        let above=expectAbove ?? (element.exists && element.frame.midY<app.frame.midY)
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))
+      }
+      XCTAssertTrue(element.isHittable,"Visual control must be visible: \(element.identifier)")
+    }
+    func choose(_ id:String,expectAbove:Bool?=nil){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;reveal(control,expectAbove:expectAbove);control.tap()}
     func importFixture(_ id:String){
       choose(id)
       selectLocalFixture("Nexus Visual Fixture",in:app)
@@ -2515,7 +2536,7 @@ final class SourceSettingsTests: XCTestCase {
     let photo=app.buttons["visual-import-photo"];reveal(photo);importFixture("visual-import-photo")
     expectImported("visual-photo-name")
     let importedImage=XCTAttachment(screenshot:app.screenshot());importedImage.name="Imported background and photo previews";importedImage.lifetime = .keepAlways;add(importedImage)
-    choose("background-image");choose("player-background-photo");choose("visual-backgroundOpacity-up");choose("visual-playerBlur-up");choose("visual-coverRadius-up");for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()}}
+    choose("background-image",expectAbove:true);choose("player-background-photo");choose("visual-backgroundOpacity-up");choose("visual-playerBlur-up");choose("visual-coverRadius-up");for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()}}
     let savedValues=["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label}
     app.terminate();app.launch();openSettings(app,page:"background")
     let restoredPhoto=app.staticTexts["visual-photo-name"];reveal(restoredPhoto);XCTAssertTrue(restoredPhoto.label.contains("Nexus Visual Fixture.png"));let motion=app.switches["visual-motion"];reveal(motion);XCTAssertEqual(motion.value as? String,"1");XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"player-background-photo").firstMatch.isSelected);XCTAssertEqual(["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label},savedValues)

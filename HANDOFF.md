@@ -7,7 +7,13 @@
 证据：manifest `5fe9145a…`、候选 PNG `108bb6d6…`/`3ef35da3…`、源码 digest `507b9023…`、安装包内字体 `67c44fe9…`、报告 `a1cebc16…`/`a27fc63d…`，详见 [r12 回执](docs/ui-spec/appearance-glyph-r12-2026-10-22.md) 与更新后的[锚点清单](docs/ui-spec/anchor-list-2026-10-22.md)。失败采集 run j 为夹具启动滚动竞态（exit 65），未产生候选图，不作证据；中间采集 run i 仅用于定位 1.5pt 偏移，同样不作验收。
 
 下一组（单一归因）：4856 滚动段行几何——B2a–B2d 上缘 +1.00/+1.00/+1.00/+1.34pt、B4a 图例 +3.00pt、B4b 十六进制 +2.00pt，目标 D1≥90、D3≥75 使 4856 S≥90。随后处理 4855 颜色区后间距/底部裁切（D5）。未改遮罩、阈值、参考图；G5/G8、真实服务、签名与真机仍开放。
+## 2026-10-22 iOS 27 408b93a 两失败闭环
 
+`408b93a/39708918316` 已取得并校验 compact logs 与 failure evidence：ZIP CRC、SHA-256分别为`f815dfe8…`、`b6f49af0…`。第 10 步实际执行 22 项，20通过/2失败/0跳过；lock、native、模拟器和其余 20 项均通过。
+
+`testVisualImagesAndPlayerBackgroundPersistence` 在导入两个下方图片资产后找不到`background-image`。RN 已把滚出视口的控件移出可访问树，测试 helper 又把“不存在”默认解释为位于视口下方，持续向错误方向滚动。`testZNavidromePlaybackAndCredentials` 的 photo 页只等到`photo-hero-mask`存在便截图，实际图片尚未绘制，保留图顶部 RGB max仅8，原40点明暗差断言真实失败。
+
+修复只调整测试时序：对导入后已知位于上方的图片背景控件显式向上搜索；photo 页等待`photo-hero-image`存在且同一点位满足原40点阈值后再抓正式截图。没有降低像素门槛、修改产品布局或隐藏失败。完整证据与原始截图留在忽略目录`build/ci-39708918316/`。本机 Intel Debug 运行仍受已记录的预编译 Hermes ABI 问题阻断，需由 iOS27 arm64 和新提交实际闭环。
 ## 2026-10-22 4855/4856 r11 页头几何通过，静态仍未对齐
 
 本轮只改一组：设置页底层页头垂直几何。`App.tsx` 让设置页从安全区顶部排布、`SettingsScreen` 页头 64→54pt 且返回按钮左移到 `left:6`，标题中心由约 103pt 移到 81.83pt（参考 82.00），箭头中心 81.50pt（参考 81.67）。Release 同源码采集 `SourceUITests-1792637662196` 1/0/0；A2/A2b 不再被遮挡，六个 4855/四个 4856 冻结关键区全部通过三轴与人工结构复核，D2 由 0 升到 100。
