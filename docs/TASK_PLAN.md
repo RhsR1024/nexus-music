@@ -1,3 +1,10 @@
+## 2026-10-22 iOS 27 Pod lock 失败修复
+
+- [x] `4640a5f/39700088647` 定位为第 7 步 CocoaPods lock 校验失败，后续 native/App/归档均跳过；公开日志 403、artifact 401，未伪造内容。
+- [x] `6e14c4a` 撤回本机生成的 `React-Core-prebuilt` checksum 与 PBX 顺序变化，iOS 依赖文件字节级恢复到成功运行 `c5912d0` 所验证的状态。
+- [x] 合并源码 `npm run check` 439/439、diff 检查通过；产品源码与本地 UI 证据不改。
+- [ ] 新提交需 iOS 27 实际验证 Pods、native、全部 App 测试、unsigned archive 与上传。
+
 ## 2026-10-22 单平台登录：网易云官方网页与安全会话
 
 - [x] 新增设置“音乐账号”页与真实网易云登录入口，复用既有设置导航和主题。

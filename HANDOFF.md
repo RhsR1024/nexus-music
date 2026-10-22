@@ -6,6 +6,14 @@
 
 下一步单组修正底层页头垂直几何，Release 重采后按 A2/B1h 实测复评；随后用 SF Symbols 替换三枚分段图标并收敛字距/尺寸；再处理 4856 行偏移（+1.0pt）、图例（+3.0pt）与 4855 颜色区后间距/裁切。未改遮罩、阈值、参考图；真实服务、签名、真机与 G5/G8 仍开放。
 
+## 2026-10-22 iOS 27 Pod lock 失败与机器无关修复
+
+`4640a5f` 的 iOS 27 run `39700088647` 在 `checks` 成功后，于第 7 步 `npm run ios:pods` / CocoaPods lock 校验失败；第 8 步起的 native、App UI、测试、归档和上传均被跳过。公开 job 只提供失败步骤，日志 API 返回 403、artifact API 返回 401，不能伪造日志内容。
+
+根因可由提交与已验证运行精确对照：`4640a5f` 把 `React-Core-prebuilt` checksum 从 `8f4cca...` 改为本机生成的 `60a93b...`，并写入 PBX 文件顺序变更；此前 `c5912d0` 的 CI 运行已成功执行同一 `pod install` 步骤，而两提交之间没有任何 Podspec、Podfile、Expo 模块配置或依赖清单变化。`6e14c4a` 仅撤回这两处机器相关变化，使 `Podfile.lock` 与 `project.pbxproj` 在字节级恢复为成功运行 `c5912d0` 所验证的状态；合并后的产品源码不变。`npm run check` **439/439**、`git diff --check` 通过。
+
+新提交需由 iOS 27 实际重跑确认 lock、native、全部 App 测试、unsigned archive 与上传；本次修复不计产品/UI/真实服务进度，Apple 签名和真机仍待。
+
 ## 2026-10-22 4855/4856 r7f 静态样板通过
 
 用户最新优先级仍是先对齐 Sollin UI。本批把 4855/4856 全部声明关键区收敛到最低门槛以上：默认iPhone常态、`blush + rose`、纯色/卡片30%同态下，4855 整屏 **92.43% / ΔE00 2.62 / 边缘0.58**，4856 整屏 **92.42% / 2.15 / 0.55**；最小关键区为4856视觉参数 **90.14% / 2.31 / 0.42**。精确证据为 `SourceUITests-1792626911881.xcresult`（1/0/0）；前一次冻结源码采集 `SourceUITests-1792626523837` 分数逐项一致。完整数据见 [r7f回执](docs/ui-spec/appearance-grid-r7f-2026-10-22.md)。
