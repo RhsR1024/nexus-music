@@ -2602,6 +2602,35 @@ final class SourceSettingsTests: XCTestCase {
   func testVisualLabAppearanceSheet(){
     captureAppearanceSheet(direct:false)
   }
+  func testStructuredNavidromeLyrics(){
+    let app=XCUIApplication();app.launch()
+    let open=app.buttons["打开播放页"].firstMatch
+    XCTAssertTrue(open.waitForExistence(timeout:30));open.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));app.buttons["播放"].firstMatch.tap()
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    expectation(for:NSPredicate(format:"value CONTAINS %@","2:00"),evaluatedWith:progress);waitForExpectations(timeout:20)
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:10));app.buttons["暂停"].firstMatch.tap()
+    progress.coordinate(withNormalizedOffset:CGVector(dx:0.01,dy:0.5)).tap()
+    app.buttons["更多播放控制"].tap();app.buttons["播放界面样式"].tap()
+    let stage=app.descendants(matching:.any).matching(identifier:"play-skin-stage").firstMatch
+    XCTAssertTrue(stage.waitForExistence(timeout:10));stage.tap()
+    XCTAssertTrue(waitForGone(stage,timeout:10))
+    let group=app.descendants(matching:.any).matching(identifier:"lyric-stage-group").firstMatch
+    XCTAssertTrue(group.waitForExistence(timeout:15));XCTAssertEqual(group.value as? String,"逐字歌词","Start-only OpenSubsonic cues must reach the real native lyric view")
+    XCTAssertTrue(["Synthetic ","lyric ","one"].contains(group.label))
+    let words=XCTAttachment(screenshot:app.screenshot());words.name="Structured start-only timed group";words.lifetime = .keepAlways;add(words)
+    let stageProgress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    stageProgress.coordinate(withNormalizedOffset:CGVector(dx:0.06,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"label == %@ AND value == %@","Synthetic lyric two","行级歌词"),evaluatedWith:group);waitForExpectations(timeout:10)
+    XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Seeking a bad cue fallback must preserve paused intent")
+    let fallback=XCTAttachment(screenshot:app.screenshot());fallback.name="Structured invalid words readable fallback";fallback.lifetime = .keepAlways;add(fallback)
+    stageProgress.coordinate(withNormalizedOffset:CGVector(dx:0.101,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"label == %@","Guest"),evaluatedWith:group);waitForExpectations(timeout:10)
+    stageProgress.coordinate(withNormalizedOffset:CGVector(dx:0.115,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"label == %@ AND value == %@","Lead","逐字歌词"),evaluatedWith:group);waitForExpectations(timeout:10)
+    let lead=XCTAttachment(screenshot:app.screenshot());lead.name="Structured later main replaces guest";lead.lifetime = .keepAlways;add(lead)
+    app.buttons["收起播放页"].firstMatch.tap();XCTAssertTrue(open.waitForExistence(timeout:5))
+  }
   func testVisualLabClassicDirect(){captureClassicDirect(lines:3)}
   func testVisualLabClassicShortDirect(){captureClassicDirect(lines:2)}
   private func captureClassicDirect(lines:Int){

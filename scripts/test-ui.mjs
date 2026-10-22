@@ -48,8 +48,9 @@ const counts={requests:{},authFailures:0,authSuccesses:0};
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const fixtureOnlineUI=matchingUI||discoveryUI;
+const structuredLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testStructuredNavidromeLyrics'));
 const classicShortUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicShortDirect'));
-const classicUI=classicShortUI||process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicDirect'));
+const classicUI=structuredLyricsUI||classicShortUI||process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicDirect'));
 const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabAppearanceDirect'));
 if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
 const entryFile=classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
@@ -293,6 +294,16 @@ const server = createServer(async (req, res) => {
   else if(method==='getAlbumList2')respond({albumList2:{album:[{id:'fixture-album',name:'Synthetic album',artist:'Fixture artist',coverArt:'fixture-cover',songCount:params.get('u')==='fixture-photo'?4:coverThemeUI&&params.get('u')==='fixture-theme'?3:params.get('u')==='fixture-user'&&amLongQueue?8:1}]}});
   else if(method==='getAlbum')respond({album:{id:'fixture-album',name:'Synthetic album',song:params.get('u')==='fixture-photo'?photoSongs():coverThemeUI&&params.get('u')==='fixture-theme'?[...['red','blue','multi'].map(color=>({...song(),id:color,title:`${color} cover tone`,coverArt:color})),...(transitionFixture?['red','blue','missing'].map(color=>({...song(),id:`transition-${color}`,title:`transition ${color} tone`,coverArt:`transition-${color}-${transitionVersion}`})):[])]:params.get('u')==='fixture-user'&&amLongQueue?amQueueSongs():[song()]}});
   else if(method==='search3')respond({searchResult3:{song:[song()]}});
+  else if(method==='getLyricsBySongId'&&structuredLyricsUI)respond({lyricsList:{structuredLyrics:params.get('enhanced')==='true'?[{
+    lang:'en',synced:true,agents:[{id:'lead',role:'main'},{id:'guest',role:'voice'}],
+    line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'},{start:12000,value:'Guest Lead'},{start:18000,value:'Final structured lyric'}],
+    cueLine:[
+      {index:0,agentId:'lead',value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,value:'one'}]},
+      {index:1,agentId:'lead',start:6000,end:12000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:8000,end:9000},{byteStart:10,byteEnd:18,start:7000,end:10000}]},
+      {index:2,agentId:'guest',start:12000,end:18000,value:'Guest',cue:[{byteStart:0,byteEnd:4,start:12000,end:18000}]},
+      {index:2,agentId:'lead',start:13000,end:18000,value:'Lead',cue:[{byteStart:0,byteEnd:3,start:13000,end:18000}]},
+    ],
+  }]:[]}});
   else if(method==='getLyricsBySongId'&&classicUI)respond({lyricsList:{structuredLyrics:[{lang:'zh',synced:true,line:[{start:0,value:'这是一行合成歌词文字'},{start:100000,value:'音枢经典播放器三行布局测试'},...(classicShortUI?[]:[{start:116000,value:'下一行用于验证歌词排版'}])]}]}});
   else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:navidromeDuration*1000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:navidromeDuration*1000,value:'two'}]}]}]}});
   else if(method==='star'||method==='unstar'){starred=method==='star';respond({});}
@@ -320,6 +331,7 @@ try {
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
   if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
+  if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');
   if(!appearanceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabAppearanceDirect');
   runManifest.buildArguments=args;

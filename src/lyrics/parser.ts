@@ -1,6 +1,7 @@
 import {parseTTML} from './ttml.ts';
 export interface LyricWord {startMs:number;endMs:number;text:string}
-export interface LyricLine {background?:boolean;agent?:string;startMs:number;endMs?:number;text:string;words?:readonly LyricWord[];translation?:string;romanization?:string}
+export interface LyricCue extends LyricWord {byteStart:number;byteEnd:number}
+export interface LyricLine {layerGroup?:number;primary?:boolean;timedCues?:readonly LyricCue[];timingFallback?:'untimed_text'|'invalid_cues';background?:boolean;agent?:string;startMs:number;endMs?:number;text:string;words?:readonly LyricWord[];translation?:string;romanization?:string}
 export interface LyricDocument {lines:readonly LyricLine[];plain:readonly string[];synced:boolean}
 const maxTime=86400000;
 function timestamp(minutes:string,seconds:string,fraction='') {
@@ -61,5 +62,16 @@ export function mergeLyrics(base:LyricDocument,translation?:string,romanization?
 export function activeLyric(lines:readonly LyricLine[],positionMs:number,userOffsetMs=0):number {
   const time=positionMs-userOffsetMs;let low=0,high=lines.length-1,result=-1;
   while(low<=high){const middle=(low+high)>>>1;if(lines[middle]!.startMs<=time){result=middle;low=middle+1;}else high=middle-1;}
-  for(let i=result;i>=0;i--){const line=lines[i]!;if(!line.background&&(line.endMs===undefined||time<line.endMs))return i;}return -1;
+  for(let i=result;i>=0;i--){
+    const line=lines[i]!;
+    if(line.background||line.endMs!==undefined&&time>=line.endMs)continue;
+    // Structured agent layers share a parent group. Prefer its still-active
+    // main layer even when a guest enters later; other formats retain their
+    // existing last-onset selection.
+    if(line.layerGroup!==undefined){
+      for(let j=i;j>=0;j--){const lead=lines[j]!;if(lead.primary&&lead.layerGroup===line.layerGroup&&!lead.background&&(lead.endMs===undefined||time<lead.endMs))return j;}
+    }
+    return i;
+  }
+  return -1;
 }

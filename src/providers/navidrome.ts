@@ -118,7 +118,7 @@ export class NavidromeClient {
     return {url:await this.mediaURL('stream',{id:track.origin.id,format:'raw'},signal),quality:'original'};
   }
   async lyrics(id:string,artist:string,title:string,signal?:AbortSignal):Promise<unknown> {
-    try {return (await this.request('getLyricsBySongId',{id},signal)).lyricsList;}
+    try {return (await this.request('getLyricsBySongId',{id,enhanced:true},signal)).lyricsList;}
     catch(error) {if(error instanceof NavidromeError&&['authentication','permission','network'].includes(error.kind)) throw error;}
     return (await this.request('getLyrics',{artist,title},signal)).lyrics;
   }

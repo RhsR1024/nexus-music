@@ -84,3 +84,13 @@ test('failed profile commit rolls back the new Keychain material',async()=>{
   await assert.rejects(store.connect(account.url,'user','fixture-password'));
   assert.equal(secrets.size,0);assert.deepEqual(store.getSnapshot(),[]);
 });
+
+test('Navidrome requests enhanced structured lyrics and retains legacy fallback without swallowing auth errors',async()=>{
+  const structured={structuredLyrics:[{synced:true,line:[{start:0,value:'Synthetic'}]}]},calls:string[]=[];
+  const enhanced=client((method,params)=>{calls.push(method);assert.equal(params.get('enhanced'),'true');assert.equal(params.get('id'),'song');return ok({lyricsList:structured});});
+  assert.deepEqual(await enhanced.lyrics('song','Fixture','Synthetic'),structured);assert.deepEqual(calls,['getLyricsBySongId']);
+  const old=client((method,params)=>method==='getLyricsBySongId'?{'subsonic-response':{status:'failed',error:{code:70}}}:ok({lyrics:{value:'Legacy'}}));
+  assert.deepEqual(await old.lyrics('song','Fixture','Synthetic'),{value:'Legacy'});
+  const denied=client(()=>({'subsonic-response':{status:'failed',error:{code:40}}}));
+  await assert.rejects(denied.lyrics('song','Fixture','Synthetic'),error=>error instanceof NavidromeError&&error.kind==='authentication');
+});

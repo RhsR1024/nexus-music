@@ -57,8 +57,11 @@ export function buildStageTimeline(document:LyricDocument,durationMs=0):readonly
 export function activeStageGroup(lines:readonly StageLine[],positionMs:number,offsetMs=0):StageGroup|undefined {
   const time=positionMs-offsetMs;
   if(!Number.isFinite(time))return;
-  const line=lines.find(line=>line.startMs<=time&&time<line.endMs);
-  if(!line)return;
+  const active=(line:StageLine)=>line.startMs<=time&&time<line.endMs;
+  const first=lines.find(active);
+  if(!first)return;
+  const parent=first.groups[0]?.line.layerGroup;
+  const line=parent===undefined?first:lines.find(item=>active(item)&&item.groups[0]?.line.primary&&item.groups[0]?.line.layerGroup===parent)??first;
   let selected:StageGroup|undefined;
   for(const group of line.groups)if(group.onsetMs<=time)selected=group;
   return selected;
