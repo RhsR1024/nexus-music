@@ -117,8 +117,19 @@ export function Player({ services }: { services: Services }) {
           })}
         </View>)}
   </>);
-  const iconButton=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24)=>(
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color={theme.palette.text}/></Pressable>);
+  const iconButton=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24,color:string=theme.palette.text)=>(
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color={color}/></Pressable>);
+  // IMG_4854: header dots are #423E3C, back/next #403A39, tool glyphs lighter
+  // still at #5E514F; dark layouts keep the theme text ink.
+  const classicInk=theme.mode==='dark'?theme.palette.text:paper.iconStrong;
+  const classicToolInk=theme.mode==='dark'?theme.palette.text:paper.toolInk;
+  const queueJar=(
+    <View style={{width:18,height:24,alignItems:'center'}}>
+      <View style={{width:9,height:1.2,backgroundColor:classicToolInk}}/>
+      <View style={{width:12,height:1.2,backgroundColor:classicToolInk,marginTop:1.6}}/>
+      <View style={{width:15,height:1.2,backgroundColor:classicToolInk,marginTop:1.6}}/>
+      <View style={{width:18,height:16,borderWidth:1.4,borderColor:classicToolInk,borderRadius:4,marginTop:1.6,alignItems:'center',justifyContent:'center'}}><Ionicons name="musical-note" size={9} color={classicToolInk}/></View>
+    </View>);
   const cycleRepeat=()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));};
   // IMG_4854: 308pt square at 430pt width (61pt side margins), transport 70pt play.
   const artworkSide=Math.min(width-122,308);
@@ -127,7 +138,7 @@ export function Player({ services }: { services: Services }) {
         the shared 24pt inset; the 35pt row lifts the cover to 124pt. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:35}}>
       <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
-      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},22)}</View>
+      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicInk)}</View>
     </View>
     <View testID="classic-artwork" collapsable={false} style={{alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
     <View style={{alignItems:'center',gap:2}}>
@@ -140,17 +151,18 @@ export function Player({ services }: { services: Services }) {
         stack down 3.6pt, so -4.5pt keeps the transport/tools on their anchors. */}
     <View style={{marginHorizontal:18,marginTop:-4.5}}><PlaybackProgress services={services} variant={theme.mode==='dark'?'default':'paper'}/></View>
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:24.5,marginTop:2}}>
-      {iconButton('play-back','上一首',()=>services.playback.next(-1),30)}
-      <Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{width:70,height:70,borderRadius:35,backgroundColor:theme.mode==='dark'?theme.palette.accent:paper.accent,alignItems:'center',justifyContent:'center'}}><Ionicons name={state.intent==='playing'?'pause':'play'} size={30} color="#FFFFFF" style={state.intent==='playing'?undefined:{marginLeft:4}}/></Pressable>
-      {iconButton('play-forward','下一首',()=>services.playback.next(),30)}
+      {iconButton('play-back','上一首',()=>services.playback.next(-1),30,classicInk)}
+      {/* IMG_4854 pause is two 6.3x22.7pt bars 6.6pt apart, not the Ionicons glyph. */}
+      <Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{width:70,height:70,borderRadius:35,backgroundColor:theme.mode==='dark'?theme.palette.accent:paper.accent,alignItems:'center',justifyContent:'center'}}>{state.intent==='playing'?<View style={{flexDirection:'row',gap:6.6}}><View style={{width:6.3,height:22.7,borderRadius:1.6,backgroundColor:'#FFFFFF'}}/><View style={{width:6.3,height:22.7,borderRadius:1.6,backgroundColor:'#FFFFFF'}}/></View>:<Ionicons name="play" size={30} color="#FFFFFF" style={{marginLeft:4}}/>}</Pressable>
+      {iconButton('play-forward','下一首',()=>services.playback.next(),30,classicInk)}
     </View>
     {/* IMG_4854 tool centres run 71.5..358.2pt, narrower than the 24pt page inset. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:0,marginHorizontal:25.5}}>
-      {iconButton('repeat',`循环：${preferences.repeat}`,cycleRepeat,22)}
-      {iconButton('chatbubble-outline','歌曲评论',()=>setCommenting(entry.track),22)}
-      {iconButton(services.library.isFavorite(entry.track)?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},22)}
-      {iconButton('albums-outline','查看播放队列',()=>{setDetailPanel('content');setDetails(true);},22)}
-      {iconButton('list','播放队列',()=>{setDetailPanel('content');setDetails(true);},22)}
+      {iconButton('repeat',`循环：${preferences.repeat}`,cycleRepeat,26,classicToolInk)}
+      {iconButton('chatbubbles-outline','歌曲评论',()=>setCommenting(entry.track),21,classicToolInk)}
+      {iconButton(services.library.isFavorite(entry.track)?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},24,classicToolInk)}
+      <Pressable accessibilityRole="button" accessibilityLabel="查看播放队列" onPress={()=>{setDetailPanel('content');setDetails(true);}} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{queueJar}</Pressable>
+      {iconButton('list','播放队列',()=>{setDetailPanel('content');setDetails(true);},24,classicToolInk)}
     </View>
     {/* Kept above the safe-area fold (932pt screen, ~898pt viewport) so the
         reference's last line is not clipped by the scroll viewport. */}
@@ -181,7 +193,7 @@ export function Player({ services }: { services: Services }) {
       {open&&<StatusBar style={preferences.playerLayout==='vinyl'?'dark':preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
       <View style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:preferences.playerLayout==='vinyl'?paper.background:preferences.playerLayout==='stage'?'#060607':'#183647'}}>
       {open&&(preferences.playerLayout==='classic'?<AmbientBackground services={services}/>:preferences.playerLayout==='vinyl'||preferences.playerLayout==='stage'?null:<ArtworkBackdrop services={services} track={actualMatch??entry.track} photo={preferences.playerLayout==='photo'}/>)}
-      {(preferences.playerLayout==='vinyl'||preferences.playerLayout==='am2'||preferences.playerLayout==='am'||preferences.playerLayout==='photo'||preferences.playerLayout==='stage')?<View style={{flex:1,paddingHorizontal:preferences.playerLayout==='vinyl'?0:landscape?60:24,paddingTop:preferences.playerLayout==='vinyl'?0:landscape?12:55,paddingBottom:preferences.playerLayout==='vinyl'?0:20}}><Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{position:'absolute',top:preferences.playerLayout==='vinyl'?4:52,left:6,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:2}}>{(preferences.playerLayout!=='am'&&preferences.playerLayout!=='photo')&&<Ionicons name="chevron-down" color={preferences.playerLayout==='vinyl'?paper.icon:'#FFFFFF'} size={28}/>}</Pressable>{open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onQueue={()=>{setDetailPanel('content');setDetails(true);}} onComments={()=>setCommenting(actualMatch??entry.track)}/>}</View>:<PlayerScroll classic={preferences.playerLayout==='classic'}>
+      {(preferences.playerLayout==='vinyl'||preferences.playerLayout==='am2'||preferences.playerLayout==='am'||preferences.playerLayout==='photo'||preferences.playerLayout==='stage')?<View style={{flex:1,paddingHorizontal:preferences.playerLayout==='vinyl'?0:landscape?60:24,paddingTop:preferences.playerLayout==='vinyl'?0:landscape?12:55,paddingBottom:preferences.playerLayout==='vinyl'?0:20}}><Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{position:'absolute',top:preferences.playerLayout==='vinyl'?4:52,left:6,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:2}}>{(preferences.playerLayout!=='am'&&preferences.playerLayout!=='photo')&&<Ionicons name="chevron-down" color={preferences.playerLayout==='vinyl'?paper.icon:'#FFFFFF'} size={28}/>}</Pressable>{open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onQueue={()=>{setDetailPanel('content');setDetails(true);}} onComments={()=>setCommenting(actualMatch??entry.track)} onSleep={()=>{setPanelReturnsToMenu(false);setPanel('sleep');}}/>}</View>:<PlayerScroll classic={preferences.playerLayout==='classic'}>
         {preferences.playerLayout!=='classic'&&<Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:48,minHeight:44,alignSelf:'flex-start',justifyContent:'center'}}><Ionicons name="chevron-down" size={28} color="#FFFFFF"/></Pressable>}
         {preferences.playerLayout==='classic'&&classicHero}
         {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onQueue={()=>{setDetailPanel('content');setDetails(true);}} onComments={()=>setCommenting(actualMatch??entry.track)}/>}
@@ -204,7 +216,7 @@ export function Player({ services }: { services: Services }) {
         </ScrollView>
       </SheetModal>
       {open&&panel&&<View style={{position:'absolute',left:0,right:0,top:0,bottom:0}}>
-        <Pressable accessibilityRole="button" accessibilityLabel="关闭面板" onPress={()=>setPanel(null)} style={{flex:1,backgroundColor:'rgba(24,18,16,0.28)'}}/>
+        <Pressable accessibilityRole="button" accessibilityLabel="关闭面板" onPress={()=>{setPanelReturnsToMenu(false);setPanel(null);}} style={{flex:1,backgroundColor:'rgba(24,18,16,0.28)'}}/>
         <SafeAreaView edges={['bottom']} style={{maxHeight:'78%',backgroundColor:theme.palette.background[0],borderTopLeftRadius:28,borderTopRightRadius:28}}>
           <View style={{alignSelf:'center',width:40,height:5,borderRadius:3,backgroundColor:theme.palette.border,marginTop:8}}/>
           <ScrollView contentContainerStyle={{paddingBottom:20}}>

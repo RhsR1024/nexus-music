@@ -1,0 +1,41 @@
+{
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [],
+  "controlMasks": [],
+  "controlColorMasks": [],
+  "state": {
+    "theme": "blush + rose",
+    "mode": "light",
+    "backgroundStyle": "solid",
+    "backgroundOpacity": "100%",
+    "cardOpacity": "30%",
+    "mask": "0%",
+    "playerBlur": "0",
+    "fontScale": 1,
+    "language": "zh",
+    "notes": "Nexus-branded theme label retained. The deterministic capture fixture drives the real ScrollView; the fixed-width theme rows and measured preview token positions match IMG_4855. Geometry, manual review and motion remain separate."
+  },
+  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35},
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "id": "4855-top-whole-v2-r5",
+  "title": "4855-top-whole-v2-r5",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4855.PNG",
+  "referenceSha256": "2236fae7a4b343e39833d933dd443c5a2551e077518a751aa9f8ebc1f7da34b1",
+  "candidate": "build/appearance-grid-r7f-20261022/screenshots/002-Visual-lab-4855-appearance-top.png",
+  "candidateSha256": "1257cc6beb3f21686737f76569575c29dc8135e505b9705dd03445994d12b68b",
+  "captureEvidence": {
+    "manifest": "build/appearance-grid-r7f-20261022/run-manifest.json",
+    "exportIndex": "build/appearance-grid-r7f-20261022/screenshots/index.json"
+  },
+  "criticalRegions": [
+    {"label": "container", "rect": [0, 180, 1290, 402]},
+    {"label": "title-actions", "rect": [36, 420, 1218, 115]},
+    {"label": "preview", "rect": [36, 570, 1218, 375]},
+    {"label": "themes", "rect": [36, 975, 1218, 695]},
+    {"label": "background-type", "rect": [36, 1690, 1218, 350]},
+    {"label": "colors", "rect": [36, 2070, 1218, 580]}
+  ]
+}

@@ -3,11 +3,14 @@ import {fixtureFont} from './fixtures/font.mjs';
 import {silentMP3} from './fixtures/silent-mp3.mjs';
 import { createServer } from 'node:http';
 import { spawn,execFileSync } from 'node:child_process';
-import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync } from 'node:fs';
+import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync,existsSync } from 'node:fs';
 import {resolve,sep} from 'node:path';
 import { createHash } from 'node:crypto';
+import {fileSha256,sourceSnapshot,installedBundleSnapshot} from './lib/ui-provenance.mjs';
 import {exportFailureEvidence} from './export-failure-evidence.mjs';
 
+const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
+if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.json')))throw new Error('Refusing to overwrite a capture run manifest');
 let localFixtureDirectory;
 function seedLocalAudio() {
   if(localFixtureDirectory)return;
@@ -40,6 +43,9 @@ const counts={requests:{},authFailures:0,authSuccesses:0};
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const fixtureOnlineUI=matchingUI||discoveryUI;
+const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabAppearanceDirect'));
+if(appearanceUI&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
+const entryFile=appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
 const offlineUI=process.argv.slice(2).some(target=>target.endsWith('/testDownloadSettingsAndOfflinePlayback'));
 let blockOfflineStream=false;
@@ -286,31 +292,48 @@ const server = createServer(async (req, res) => {
   else respond({});
 });
 await new Promise((resolve, reject) => { server.once('error', reject); server.listen(18439, '127.0.0.1', resolve); });
-const log = openSync('build/logs/ui-catalog.log', 'w+');
-const logWatcher=watch('build/logs/ui-catalog.log',()=>{if(localFixtureDirectory)return;const size=statSync('build/logs/ui-catalog.log').size,tail=Buffer.alloc(Math.min(4096,size));readSync(log,tail,0,tail.length,Math.max(0,size-tail.length));if(tail.toString().includes('Test Case')||tail.toString().includes('Running tests'))seedLocalAudio();});
+mkdirSync(runDirectory,{recursive:true});
+const logPath=resolve(runDirectory,'ui-catalog.log');
+const sourceBefore=sourceSnapshot();
+const log = openSync(logPath, 'w+');
+const logWatcher=watch(logPath,()=>{if(localFixtureDirectory)return;const size=statSync(logPath).size,tail=Buffer.alloc(Math.min(4096,size));readSync(log,tail,0,tail.length,Math.max(0,size-tail.length));if(tail.toString().includes('Test Case')||tail.toString().includes('Running tests'))seedLocalAudio();});
 try {
   const resultPath = `build/SourceUITests-${Date.now()}.xcresult`;
+  console.log(`UI capture result: ${resultPath}; log: ${logPath}`);
+  const fixturePath=entryFile??'scripts/test-ui.mjs';
+  const runManifest={schemaVersion:1,startedAt:new Date().toISOString(),resultBundle:resolve(resultPath),sourceBefore,configuration:'Release',fixture:{path:fixturePath,sha256:sourceBefore.files[fixturePath]},simulator:process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'};
+  writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', 'Release',
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
-  if(fixtureOnlineUI)args.push(`ENTRY_FILE=${resolve('tests/e2e/entry.tsx')}`);
-  else args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
+  // Always spell out the entry: a previous fixture build must not leak into a
+  // later normal-navigation or distribution build via incremental settings.
+  args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
+  if(!appearanceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabAppearanceDirect');
+  runManifest.buildArguments=args;
+  runManifest.toolchain={node:process.version,xcode:execFileSync('xcodebuild',['-version'],{encoding:'utf8'}).trim()};
+  runManifest.buildEnvironmentSha256=createHash('sha256').update(JSON.stringify(Object.fromEntries(['NODE_BINARY','NODE_OPTIONS','PYTHONPATH','DEVELOPER_DIR','ENTRY_FILE','RCT_NEW_ARCH_ENABLED','USE_HERMES','USE_PREBUILT_RNCORE','USE_RN_DEP'].map(key=>[key,process.env[key]??null])))).digest('hex');
+  writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const child = spawn('xcodebuild', args, { stdio: ['ignore', log, log] });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;
+  Object.assign(runManifest,{finishedAt:new Date().toISOString(),exitCode:code,sourceAfter:sourceSnapshot(),installedBundle:installedBundleSnapshot(runManifest.simulator),resultInfoSha256:existsSync(resolve(resultPath,'Info.plist'))?fileSha256(resolve(resultPath,'Info.plist')):null});
+  runManifest.sourceUnchanged=runManifest.sourceBefore.digest===runManifest.sourceAfter.digest;
+  writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   if(code===0&&counts.transitionVideo){
     try{
       const verification=execFileSync('xcrun',['swift',resolve('scripts/verify-ambient-transition-video.swift'),counts.transitionVideo],{encoding:'utf8',timeout:60000,maxBuffer:1024*1024});
       writeFileSync(counts.transitionVideo+'.verification.txt',verification);console.log(verification.trim());
     }catch(error){process.exitCode=1;console.error('Production transition video verification failed:',error.message);}
   }
-  console.log(`iOS source UI test exit: ${code}; log: build/logs/ui-catalog.log`);
+  console.log(`iOS source UI test exit: ${code}; log: ${logPath}`);
   // Keep individual failure messages visible even when the failed test is far
   // above the workflow's final 100 log lines. Never change the xcodebuild status.
   try {
     const summaryJSON=execFileSync('xcrun',['xcresulttool','get','test-results','summary','--path',resultPath],{encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024});
-    writeFileSync('build/logs/ui-summary.json',summaryJSON);
+    writeFileSync(resolve(runDirectory,'ui-summary.json'),summaryJSON);
     const summary=JSON.parse(summaryJSON);
     console.log(`UI results: ${summary.passedTests} passed, ${summary.failedTests} failed, ${summary.skippedTests} skipped; ${resultPath}`);
     for(const failure of summary.testFailures??[])console.error(`${failure.testIdentifierString}: ${failure.failureText}`);
@@ -319,4 +342,4 @@ try {
       catch(error){console.error(`Failure attachment export unavailable: ${error.message}; original result: ${resultPath}`);}
     }
   } catch { console.error(`UI summary unavailable; inspect ${resultPath} and build/logs/ui-catalog.log`); }
-} finally { if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync('build/logs/ui-server-counts.json',JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }
+} finally { if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync(resolve(runDirectory,'ui-server-counts.json'),JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }

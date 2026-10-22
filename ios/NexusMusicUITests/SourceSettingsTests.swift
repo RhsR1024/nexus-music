@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 import Vision
 
 final class SourceSettingsTests: XCTestCase {
@@ -1188,7 +1189,12 @@ final class SourceSettingsTests: XCTestCase {
         if !step.exists {reveal(label)}
         XCTAssertTrue(step.waitForExistence(timeout:5));if !step.exists {return}
         if !step.isHittable {reveal(step)}
+        let before=label.exists ? label.label : ""
         step.tap()
+        for _ in 0..<20 {
+          if label.exists && label.label != before {break}
+          RunLoop.current.run(until:Date().addingTimeInterval(0.05))
+        }
       }
     }
     let reset=app.buttons["appearance-reset"]
@@ -1201,7 +1207,8 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"background")
     let preview=app.descendants(matching:.any).matching(identifier:"theme-preview-card").firstMatch
     XCTAssertTrue(preview.waitForExistence(timeout:10))
-    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","纯色 · 卡片 30%")).firstMatch.waitForExistence(timeout:5))
+    let previewSummary=app.descendants(matching:.any).matching(identifier:"theme-preview-summary").firstMatch
+    XCTAssertTrue(previewSummary.waitForExistence(timeout:5));XCTAssertTrue(previewSummary.label.contains("纯色 · 卡片 30%"))
     let appearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());appearanceShot.name="Appearance background page";appearanceShot.lifetime = .keepAlways;add(appearanceShot)
     if backgroundScroll.exists {backgroundScroll.swipeUp()}
     // IMG_4856 records 背景透明度 100% / 卡片透明度 30% / 背景遮罩 0% / 背景模糊 0; move
@@ -1210,26 +1217,11 @@ final class SourceSettingsTests: XCTestCase {
     reachValue("cardOpacity","30%",false)
     reachValue("playerBlur","0",false)
     // IMG_4856 shows the background-type capsule at a 136.7pt lower edge and
-    // 视觉参数 at 394.3pt while the title/actions have scrolled away. Normalise
-    // to that measured edge. The 0.6s press swallows about 10pt before the
-    // scroll view starts panning, so each correction adds that distance back;
-    // without it a 10pt residual never moves and the page stays ~9pt low. The
-    // final frame is attached as evidence instead of assuming an exact landing.
-    Thread.sleep(forTimeInterval:1.2)
-    let backgroundType=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
-    for _ in 0..<10 {
-      if !backgroundType.exists {break}
-      let delta=backgroundType.frame.maxY-136
-      if abs(delta)<4 {break}
-      let correction=delta+(delta>0 ? 10:-10)
-      let start=backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:0.35))
-      let endY=min(0.9,max(0.05,0.35-correction/backgroundScroll.frame.height))
-      start.press(forDuration:0.6,thenDragTo:backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:endY)),withVelocity:.slow,thenHoldForDuration:0.2)
-      Thread.sleep(forTimeInterval:0.5)
-    }
-    Thread.sleep(forTimeInterval:0.8)
-    let capsuleEvidence=XCTAttachment(string:"background-gradient maxY=\(backgroundType.frame.maxY)pt; target 136pt, reference 136.7pt")
-    capsuleEvidence.name="4856 capsule normalization evidence";capsuleEvidence.lifetime = .keepAlways;add(capsuleEvidence)
+    // Exact 4855/4856 normalization now lives in the deterministic Visual Lab
+    // fixture. This broad playback regression only needs the real lower sheet
+    // state, so reach the final slider and capture without legacy gesture math.
+    let blurValue=app.staticTexts["visual-value-playerBlur"]
+    reveal(blurValue)
     let lowerAppearanceShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());lowerAppearanceShot.name="Appearance background page scrolled";lowerAppearanceShot.lifetime = .keepAlways;add(lowerAppearanceShot)
     // Supplementary same-state capture: IMG_4856 sits on a blue-grey surface while
     // the shipping default is warm paper. Capture the same measured layout under
@@ -1241,21 +1233,7 @@ final class SourceSettingsTests: XCTestCase {
     let softTone=app.descendants(matching:.any).matching(identifier:"visual-soft").firstMatch
     XCTAssertTrue(softTone.waitForExistence(timeout:10));reveal(softTone);softTone.tap()
     openSettings(app,page:"background")
-    let softScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
-    let softType=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
-    for _ in 0..<10 {
-      if !softType.exists {break}
-      let delta=softType.frame.maxY-136
-      if abs(delta)<4 {break}
-      let correction=delta+(delta>0 ? 10:-10)
-      let start=softScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:0.35))
-      let endY=min(0.9,max(0.05,0.35-correction/softScroll.frame.height))
-      start.press(forDuration:0.6,thenDragTo:softScroll.coordinate(withNormalizedOffset:CGVector(dx:0.02,dy:endY)),withVelocity:.slow,thenHoldForDuration:0.2)
-      Thread.sleep(forTimeInterval:0.5)
-    }
-    Thread.sleep(forTimeInterval:0.8)
-    let softEvidence=XCTAttachment(string:"soft/rose background-gradient maxY=\(softType.frame.maxY)pt; target 136pt (supplementary, not the shipping default)")
-    softEvidence.name="4856 supplementary soft rose normalization evidence";softEvidence.lifetime = .keepAlways;add(softEvidence)
+    reveal(blurValue)
     let softShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());softShot.name="Appearance background supplementary soft rose";softShot.lifetime = .keepAlways;add(softShot)
     // 25% and 55 are deliberately not on the slider step lattice. Restore via
     // the real reset action, rather than attempting unreachable stepping loops.
@@ -1367,6 +1345,19 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["播放"].isHittable,"Body switching must preserve paused intent")
     app.buttons["am-content-lyrics"].tap()
     let amLyricImage=XCTAttachment(screenshot:XCUIScreen.main.screenshot());amLyricImage.name="AM full scrolling lyrics body";amLyricImage.lifetime = .keepAlways;add(amLyricImage)
+    // IMG_4861 is a mid-song frame whose fill spans 41% of the track. Tap the
+    // progress bar at that fraction so the capture matches the reference state.
+    let amProgress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    amProgress.coordinate(withNormalizedOffset:CGVector(dx:0.41,dy:0.5)).tap()
+    Thread.sleep(forTimeInterval:0.3)
+    // IMG_4861 is a playing frame: the play control shows pause bars and the
+    // clock keeps running. Capture that exact state, then restore paused intent.
+    app.buttons["播放"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:5),"AM capture must run while playback is active")
+    Thread.sleep(forTimeInterval:0.8)
+    let amPlayingImage=XCTAttachment(screenshot:XCUIScreen.main.screenshot());amPlayingImage.name="AM full scrolling lyrics body playing";amPlayingImage.lifetime = .keepAlways;add(amPlayingImage)
+    app.buttons["暂停"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5),"AM capture must restore paused intent")
     // IMG_4861 has no inline diagnostic row: the lyric-source entry now lives in
     // the playback options menu, so assert that path instead of the old inline one.
     let amMore=app.buttons["更多播放控制"].firstMatch
@@ -1501,6 +1492,7 @@ final class SourceSettingsTests: XCTestCase {
         let counterweight=app.descendants(matching:.any).matching(identifier:"vinyl-counterweight").firstMatch
         XCTAssertTrue(cartridge.exists && counterweight.exists)
         XCTAssertTrue(canvas.frame.contains(cartridge.frame) && canvas.frame.contains(counterweight.frame),"Parked head and rear weight must fit the visible canvas")
+        XCTAssertTrue(app.buttons["睡眠定时"].isHittable,"IMG_4851 keeps a real sleep-timer tool beside the queue tool")
         let parkedNeedle=needle.frame,parkedHead=cartridge.frame,parkedPivot=pivot.frame
         XCTAssertGreaterThan(counterweight.frame.midX,platter.frame.midX);XCTAssertLessThan(counterweight.frame.midY,pivot.frame.midY,"Rear weight belongs behind the pivot")
         let composition=XCTAttachment(screenshot:XCUIScreen.main.screenshot());composition.name="Vinyl reference composition";composition.lifetime = .keepAlways;add(composition)
@@ -1641,7 +1633,14 @@ final class SourceSettingsTests: XCTestCase {
       return frame.height>0 && classicStable>=2
     },object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[classicSettled],timeout:10),.completed,"Classic layout must stop moving before capture")
+    // IMG_4854 is playing: capture the pause bars in the same intent, then
+    // restore the paused fixture the remaining assertions rely on.
+    app.buttons["播放"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:5),"Classic capture must run while playback is active")
+    Thread.sleep(forTimeInterval:0.8)
     let classicShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());classicShot.name="Classic reference composition";classicShot.lifetime = .keepAlways;add(classicShot)
+    app.buttons["暂停"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5),"Classic capture must restore paused intent")
     let lyricChoice=app.buttons["选择歌词来源"].firstMatch
     for _ in 0..<8 {if lyricChoice.isHittable{break};app.swipeUp()};XCTAssertTrue(lyricChoice.isHittable);lyricChoice.tap()
     XCTAssertFalse(app.buttons["自动优选跨平台歌词"].exists,"Private library metadata must not enter automatic public searches")
@@ -1727,7 +1726,7 @@ final class SourceSettingsTests: XCTestCase {
       }
       XCTAssertEqual(result,.completed,"Background preference must reach the requested state: \(element.identifier)")
     }
-    openSettings(app,page:"background");app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch.tap()
+    openSettings(app,page:"background");let classicTheme=app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch;reveal(classicTheme);classicTheme.tap()
     // Other appearance tests import an image and persist its selection. Choose
     // an explicit neutral base before asserting restoration after flow stops.
     openSettings(app,page:"background")
@@ -2412,7 +2411,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(blue.isHittable);blue.tap()
     openSettings(app,page:"background")
     let classic=app.descendants(matching:.any).matching(identifier:"visual-classic").firstMatch
-    for _ in 0..<3 {if classic.isHittable{break};app.swipeDown()};classic.tap()
+    for _ in 0..<20 {if classic.isHittable{break};app.swipeUp()};XCTAssertTrue(classic.isHittable);classic.tap()
     openSettings(app,page:"theme")
     let light=app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch
     for _ in 0..<3 {if light.isHittable{break};app.swipeDown()};light.tap()
@@ -2513,6 +2512,125 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"playback")
     let preferred=app.descendants(matching:.any).matching(identifier:"flac").firstMatch
     for _ in 0..<14 {if preferred.isHittable{break};app.swipeUp()};XCTAssertTrue(preferred.isHittable);preferred.tap()
+  }
+
+  // Focused capture for the visual lab: the two settings-sheet golden states
+  // without the ~9 minute playback script. Keep the state steps identical to
+  // testZNavidromePlaybackAndCredentials so the lab compares the same pixels.
+  func testVisualLabAppearanceSheet(){
+    captureAppearanceSheet(direct:false)
+  }
+  func testVisualLabAppearanceDirect(){
+    captureAppearanceSheet(direct:true)
+  }
+  private func captureAppearanceSheet(direct:Bool){
+    let app=XCUIApplication();app.launchEnvironment["NEXUS_UI_APPEARANCE_SCROLL_ANCHOR"]="1";app.launch()
+    if !direct {openSettings(app,page:"background")}
+    let scroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
+    func reachValue(_ identifier:String,_ target:String,_ up:Bool){
+      let label=app.staticTexts["visual-value-"+identifier]
+      for _ in 0..<18 {
+        if label.exists && label.label==target {return}
+        let step=app.buttons["visual-"+identifier+(up ? "-up":"-down")]
+        if !step.exists {reveal(label)}
+        XCTAssertTrue(step.waitForExistence(timeout:5));if !step.exists {return}
+        if !step.isHittable {reveal(step)}
+        let before=label.exists ? label.label : ""
+        step.tap()
+        for _ in 0..<20 {
+          if label.exists && label.label != before {break}
+          RunLoop.current.run(until:Date().addingTimeInterval(0.05))
+        }
+      }
+    }
+    func setPlayerBlurZero(){
+      let label=app.staticTexts["visual-value-playerBlur"]
+      if !label.exists{reveal(label)}
+      let zero=NSPredicate(format:"label == %@","0")
+      expectation(for:zero,evaluatedWith:label);waitForExpectations(timeout:5)
+    }
+    if !direct {
+    let reset=app.buttons["appearance-reset"]
+    XCTAssertTrue(reset.waitForExistence(timeout:10));reset.tap()
+    let solid=app.descendants(matching:.any).matching(identifier:"background-solid").firstMatch
+    reveal(solid);solid.tap();XCTAssertTrue(solid.isSelected)
+    reachValue("cardOpacity","30%",false)
+    reachValue("backgroundOpacity","100%",true)
+    setPlayerBlurZero()
+    Thread.sleep(forTimeInterval:0.6)
+    let preview=app.descendants(matching:.any).matching(identifier:"theme-preview-card").firstMatch
+    XCTAssertTrue(preview.waitForExistence(timeout:10))
+    // Reset and slider taps leave the sheet mid-page; reopening starts it at the
+    // title so the 4855 capture matches the reference's scroll position.
+    openSettings(app,page:"background")
+    }
+    let reopenedPreview=app.descendants(matching:.any).matching(identifier:"theme-preview-card").firstMatch
+    XCTAssertTrue(reopenedPreview.waitForExistence(timeout:10))
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"background-solid").firstMatch.isSelected)
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch.isSelected)
+    XCTAssertEqual(app.staticTexts["accent-hex"].label,"#E83D56")
+    XCTAssertEqual(app.staticTexts["visual-value-cardOpacity"].label,"30%")
+    let container=app.descendants(matching:.any).matching(identifier:"appearance-sheet-container").firstMatch
+    XCTAssertTrue(container.exists)
+    if abs(app.frame.width-430)<1 && abs(app.frame.height-932)<1 {XCTAssertEqual(container.frame.minY,86,accuracy:1,"Sheet container must own the reference top instead of compensating with child padding")}
+    let primaryThemes=["blush","blushpink","pearl","mint","sunset","azure","marigold","violet","khaki","plumtea","lotus"]
+    for identifier in primaryThemes {
+      let element=app.descendants(matching:.any).matching(identifier:"visual-"+identifier).firstMatch
+      XCTAssertTrue(element.exists,"Primary theme \(identifier) must remain reachable")
+    }
+    let themeRows=Dictionary(grouping:primaryThemes){identifier in Int(app.descendants(matching:.any).matching(identifier:"visual-"+identifier).firstMatch.frame.minY.rounded())}
+      .values.map(\.count).sorted(by: { $0 > $1 })
+    XCTAssertEqual(themeRows,[3,3,3,2],"IMG_4855 primary themes must keep the reference 3/3/3/2 rows")
+    let favorite=app.buttons["appearance-favorite-theme"]
+    XCTAssertTrue(favorite.waitForExistence(timeout:5))
+    if favorite.isSelected {favorite.tap();XCTAssertFalse(favorite.isSelected,"Capture starts from the reference's unselected bookmark")}
+    Thread.sleep(forTimeInterval:0.3)
+    let top=XCTAttachment(screenshot:XCUIScreen.main.screenshot());top.name="Visual lab 4855 appearance top";top.lifetime = .keepAlways;add(top)
+    favorite.tap();XCTAssertTrue(favorite.isSelected,"Bookmark must persist the current appearance theme")
+    reachValue("backgroundOpacity","100%",true)
+    reachValue("cardOpacity","30%",false)
+    setPlayerBlurZero()
+    Thread.sleep(forTimeInterval:0.6)
+    // Slider accessibility steps may scroll the sheet while reaching the lower
+    // rows. Reopen the same persisted state so the launch-only anchor can place
+    // the color field without gesture momentum or screenshot-only pages.
+    openSettings(app,page:"background")
+    Thread.sleep(forTimeInterval:1.2)
+    let colorField=app.descendants(matching:.any).matching(identifier:"accent-color-field").firstMatch
+    XCTAssertTrue(colorField.waitForExistence(timeout:5))
+    // The reference's first painted field edge and accessibility frame both
+    // normalize to216pt. The launch-only fixture uses the real ScrollView to
+    // measure and land the field; no synthetic page or gesture momentum is used.
+    let referenceFieldTop:CGFloat=216, fieldFrameTarget:CGFloat=216
+    for _ in 0..<20 {
+      if abs(colorField.frame.minY-fieldFrameTarget)<0.6 {break}
+      RunLoop.current.run(until:Date().addingTimeInterval(0.1))
+    }
+    Thread.sleep(forTimeInterval:0.8)
+    XCTAssertEqual(colorField.frame.minY,fieldFrameTarget,accuracy:4,"Scrolled capture must meet its declared field anchor")
+    let title=app.staticTexts["settings-title-background"]
+    if title.exists {XCTAssertFalse(title.isHittable,"Title must scroll away with its content")}
+    let evidence=XCTAttachment(string:"accent-color-field minY=\(colorField.frame.minY)pt; frame target\(fieldFrameTarget)pt; reference painted edge\(referenceFieldTop)pt; container top=\(container.frame.minY)pt")
+    evidence.name="Visual lab 4856 field evidence";evidence.lifetime = .keepAlways;add(evidence)
+    let scrolled=XCTAttachment(screenshot:XCUIScreen.main.screenshot());scrolled.name="Visual lab 4856 appearance scrolled";scrolled.lifetime = .keepAlways;add(scrolled)
+    let extraTheme=app.descendants(matching:.any).matching(identifier:"visual-soft").firstMatch
+    reveal(extraTheme);extraTheme.tap()
+    for _ in 0..<20 {if extraTheme.isSelected{break};RunLoop.current.run(until:Date().addingTimeInterval(0.05))}
+    XCTAssertTrue(extraTheme.isSelected,"Extra Nexus themes remain selectable through the real scroll view")
+    let close=app.buttons["background-sheet-close"]
+    XCTAssertTrue(close.isHittable)
+    close.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.1,thenDragTo:close.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:4.5)))
+    XCTAssertTrue(waitForGone(close,timeout:5),"Handle swipe must dismiss after scrolling")
+    openSettings(app,page:"background")
+    reveal(extraTheme);XCTAssertTrue(extraTheme.isSelected,"Extra theme choice survives closing and normal navigation")
+    XCTAssertTrue(close.isHittable);close.tap();XCTAssertTrue(waitForGone(close,timeout:5))
+    openSettings(app,page:"background")
+    let favoriteTheme=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
+    XCTAssertTrue(favoriteTheme.isHittable);favoriteTheme.tap();XCTAssertTrue(favoriteTheme.isSelected)
+    let favoriteButton=app.buttons["appearance-favorite-theme"]
+    XCTAssertTrue(favoriteButton.isHittable);XCTAssertTrue(favoriteButton.isSelected,"Favorite appearance theme survives normal navigation")
+    XCTAssertTrue(close.isHittable);close.tap();XCTAssertTrue(waitForGone(close,timeout:5),"Fixed close handle remains reachable after reopening")
   }
 
 }

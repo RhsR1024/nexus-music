@@ -17,13 +17,47 @@ export const typography = {
 
 export const controls = {hit: 44, icon: 23, transport: 24, play: 46} as const;
 
+// 4855/4856 @3x: top86pt with a59pt safe area; handle centre110pt.
+export const appearanceSheetLayout = {topGap:27,radius:24,topPadding:2,handleHeight:44,titleGap:3} as const;
+export const themeChoiceLayout = {radius:22,inset:16,verticalInset:11,columnGap:7.6,rowGap:8,height:36,chipInset:10.5,chipRadius:10,primaryMinWidth:85.3,swatch:17.3} as const;
+
+// Settings sheets use their own cool chrome rather than the warm player theme.
+// Stops sampled from the reference sheet's centre column (x=645) in IMG_4855/
+// IMG_4856, from the 86pt sheet top to the screen bottom. The left and right
+// edges drift ±12 RGB from this wash, which a vertical gradient cannot carry.
+// The appearance sheet is cool-neutral in IMG_4855/4856: title and slider ink
+// sample #171717, not the warm player text #2A241F.
+export const settingsInk = {light: '#171717', dark: '#F2F2F7'} as const;
+// Sheet section labels and slider values use a cool grey (#7B848E) in
+// IMG_4855/4856; the field legends and colour-filter glyphs use #524343.
+export const settingsMuted = {light: '#7B848E', dark: '#B9BBC4'} as const;
+export const settingsLegend = {light: '#524343', dark: '#C9BFC0'} as const;
+
+export const settingsSheet = {
+  // The reference wash is a blurred blue backdrop, identical in IMG_4855 and
+  // IMG_4856 at the same screen y: near-white at the sheet top, deepest blue
+  // around 50-65%, then warming to pink at the bottom. The earlier stops came
+  // from the top band only and faded to paper by 77%, which washed the slider
+  // card out against the reference.
+  lightGradient: ['#F2F4F3', '#ECF1F2', '#E1ECF2', '#D8E7F1', '#D0E4F0', '#C9E0F0', '#C6DFF0', '#BCDAEF', '#BFDBEF', '#C5DCEF', '#CEDEEF', '#D6E2F0', '#DDE4F0', '#E4E6F1'] as const,
+  locations: [0, 0.10, 0.20, 0.30, 0.38, 0.45, 0.50, 0.58, 0.65, 0.72, 0.80, 0.88, 0.95, 1] as const,
+  card: '#F7F7F4',
+  themeChip: 'rgba(229,234,240,0.58)',
+  // Backdrops behind the floating outlined-field labels, sampled at the
+  // reference's 216pt/299pt border positions so the border gap stays seamless.
+  fieldBackdrop: ['#E3E9F2', '#EAEBF2'] as const,
+} as const;
+
 // Vinyl page paper surface, sampled from IMG_4851. Text/icon colors are fixed
 // because the tinted gradient is always mixed toward white in light mode.
 export const paper = {
   background: '#F7F0E8',
-  text: '#2A241F',
+  text: '#221919',
   secondary: '#8C7F75',
   icon: '#4A423C',
+  iconStrong: '#403A39',
+  toolInk: '#5E514F',
+  toolMuted: '#BEABAA',
   track: 'rgba(74,66,60,0.20)',
   accent: '#8E4A4E',
   deck: '#141416',

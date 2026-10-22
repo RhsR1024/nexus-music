@@ -1,6 +1,7 @@
 import {execFileSync} from 'node:child_process';
 import {copyFileSync,mkdirSync,mkdtempSync,readdirSync,readFileSync,rmSync,statSync,writeFileSync,existsSync} from 'node:fs';
 import {basename,extname,join,resolve,sep} from 'node:path';
+import {fileSha256} from './lib/ui-provenance.mjs';
 
 // Export XCTest attachments through a private staging directory. Cleanup is
 // limited to that directory and output files recorded in its own index.json.
@@ -120,9 +121,9 @@ try {
       while(used.has(name))name=name.replace(extension,`-${index}${extension}`);
       used.add(name);
       copyFileSync(attachment.source,join(outputDirectory,name));
-      files.push({exported:name,attachment:attachment.file,readable:attachment.readable,test:attachment.test,bytes:statSync(join(outputDirectory,name)).size});
+      files.push({exported:name,attachment:attachment.file,readable:attachment.readable,test:attachment.test,bytes:statSync(join(outputDirectory,name)).size,sha256:fileSha256(join(outputDirectory,name))});
     }
-    writeFileSync(join(outputDirectory,'index.json'),JSON.stringify({resultBundle,files},null,2)+'\n');
+    writeFileSync(join(outputDirectory,'index.json'),JSON.stringify({resultBundle,resultInfoSha256:fileSha256(join(resultBundle,'Info.plist')),selection:options.xcresult,files},null,2)+'\n');
     console.log(`导出 ${files.length} 张截图 -> ${outputDirectory}`);
     if(removed)console.log(`清理旧产物 ${removed} 个`);
     for(const file of files)console.log(`  ${file.exported}`);

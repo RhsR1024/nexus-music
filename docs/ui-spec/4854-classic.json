@@ -3,8 +3,8 @@
   "title": "经典播放页 — 默认 blush/rose、封面取色渐变",
   "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
   "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
-  "candidate": "build/ui-screenshots-classic-baseline-20261021/001-Classic-reference-composition.png",
-  "candidateSha256": "a06f5e40c280e6c3fe5f2c9e4834ef5e6f783bb0c7191c125eda256e6bcbeb23",
+  "candidate": "build/ui-round2-20261021/003-Classic-reference-composition.png",
+  "candidateSha256": "ae3e65ff35368f5764788989123f98492f724cf94eb004dfb584ec6963e62cb7",
   "candidateCapture": {
     "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
     "attachment": "Classic reference composition",
@@ -14,20 +14,92 @@
     "screen": "classic player",
     "theme": "blush + rose",
     "background": "cover gradient",
-    "playback": "paused fixture",
+    "playback": "playing fixture (paused restored after capture)",
     "scroll": "top",
-    "notes": "参考为 Sollin 中文曲目播放态；候选为 120s 合成音频与英文夹具，封面/文案/进度时刻不同。"
+    "notes": "参考为 Sollin 中文曲目播放态；候选为 120s 合成音频与英文夹具，封面/文案/进度时刻不同。控件遮罩只含省略号、上一首/播放/下一首与工具行。"
   },
-  "size": [1290, 2796],
+  "size": [
+    1290,
+    2796
+  ],
   "ignoreTop": 180,
   "window": 7,
-  "grid": [6, 8],
-  "contentMasks": [[183, 408, 924, 840]],
-  "controlMasks": [[183, 408, 924, 840], [0, 1248, 1290, 700]],
-  "colorPatches": [
-    {"label": "paper top-left", "rect": [10, 190, 100, 70]},
-    {"label": "paper mid-left", "rect": [100, 1400, 100, 60]},
-    {"label": "play fill", "rect": [680, 2250, 30, 30]}
+  "grid": [
+    6,
+    8
   ],
-  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+  "contentMasks": [
+    [
+      183,
+      408,
+      924,
+      840
+    ],
+    [
+      140,
+      1260,
+      1010,
+      560
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      70,
+      1975,
+      1150,
+      75
+    ],
+    [
+      330,
+      2170,
+      630,
+      265
+    ],
+    [
+      150,
+      2475,
+      990,
+      100
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      616,
+      2264,
+      19,
+      68
+    ],
+    [
+      655,
+      2264,
+      19,
+      68
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "play fill",
+      "rect": [
+        700,
+        2240,
+        20,
+        20
+      ]
+    },
+    {
+      "label": "pause bar",
+      "rect": [
+        620,
+        2290,
+        8,
+        20
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  }
 }

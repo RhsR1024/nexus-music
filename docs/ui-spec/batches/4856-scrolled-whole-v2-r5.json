@@ -1,0 +1,39 @@
+{
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [],
+  "controlMasks": [],
+  "controlColorMasks": [],
+  "state": {
+    "theme": "blush + rose",
+    "mode": "light",
+    "backgroundStyle": "solid",
+    "backgroundOpacity": "100%",
+    "cardOpacity": "30%",
+    "mask": "0%",
+    "playerBlur": "0",
+    "fontScale": 1,
+    "language": "zh",
+    "notes": "The capture fixture measures accent-color-field in the real ScrollView and normalizes its painted edge to216pt. The five measured controls use persisted values and the production slider layer. Geometry, manual review and motion remain separate."
+  },
+  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35},
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "id": "4856-scrolled-whole-v2-r5",
+  "title": "4856-scrolled-whole-v2-r5",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4856.PNG",
+  "referenceSha256": "3f20471be6455e401951da85d01b6fc18a4fbfc4114f4f5e356f4fee65572bbc",
+  "candidate": "build/appearance-grid-r7f-20261022/screenshots/001-Visual-lab-4856-appearance-scrolled.png",
+  "candidateSha256": "91717d7d432033ce595900924c74ed421268b58da0b493efdf694aa2767a42ee",
+  "captureEvidence": {
+    "manifest": "build/appearance-grid-r7f-20261022/run-manifest.json",
+    "exportIndex": "build/appearance-grid-r7f-20261022/screenshots/index.json"
+  },
+  "criticalRegions": [
+    {"label": "container", "rect": [0, 180, 1290, 280]},
+    {"label": "type-tail", "rect": [36, 395, 1218, 80]},
+    {"label": "colors", "rect": [36, 530, 1218, 590]},
+    {"label": "visual-parameters", "rect": [36, 1175, 1218, 1470]}
+  ]
+}

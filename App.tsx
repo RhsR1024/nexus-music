@@ -18,11 +18,12 @@ import {SafeAreaProvider,useSafeAreaInsets} from 'react-native-safe-area-context
 import {Linking, Pressable, ScrollView, View, useWindowDimensions} from 'react-native';
 type Tab='discover'|'library'|'search'|'settings';
 export default function App(){return <MusicApplication initialize={getServices}/>;}
-export function MusicApplication({initialize}:{initialize:()=>Promise<Services>}){return <PresentationProvider><SafeAreaProvider><MusicApp initialize={initialize}/></SafeAreaProvider></PresentationProvider>;}
-function MusicApp({initialize}:{initialize:()=>Promise<Services>}){
-  const [tab,setTab]=useState<Tab>('discover'),[privateLibrary,setPrivateLibrary]=useState(false);
+type ApplicationProps={initialize:()=>Promise<Services>;initialSettingsPage?:SettingsPage};
+export function MusicApplication(props:ApplicationProps){return <PresentationProvider><SafeAreaProvider><MusicApp {...props}/></SafeAreaProvider></PresentationProvider>;}
+function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
+  const [tab,setTab]=useState<Tab>(initialSettingsPage?'settings':'discover'),[privateLibrary,setPrivateLibrary]=useState(false);
   const [chromeHeight,setChromeHeight]=useState(80);
-  const [settingsEntry,setSettingsEntry]=useState<SettingsPage>('home'),[settingsRevision,setSettingsRevision]=useState(0);
+  const [settingsEntry,setSettingsEntry]=useState<SettingsPage>(initialSettingsPage??'home'),[settingsRevision,setSettingsRevision]=useState(0);
   const navigateTab=(next:Tab)=>{if(next==='settings'){setSettingsEntry('home');setSettingsRevision(value=>value+1);}setTab(next);};
   const openSources=()=>{setSettingsEntry('sources');setTab('settings');};
   const [services,setServices]=useState<Services>(),[startupError,setStartupError]=useState<string>();

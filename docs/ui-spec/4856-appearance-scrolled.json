@@ -3,12 +3,12 @@
   "title": "外观设置下半页 — 视觉参数四条滑轨",
   "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4856.PNG",
   "referenceSha256": "3f20471be6455e401951da85d01b6fc18a4fbfc4114f4f5e356f4fee65572bbc",
-  "candidate": "build/ui-screenshots-batch28/002-Appearance-background-page-scrolled.png",
-  "candidateSha256": "72d01e0ff5fd2382517b7b68aa2fa49706771f5fd1a89cb8114366e1137a812a",
+  "candidate": "build/ui-round6-20261021/001-Visual-lab-4856-appearance-scrolled.png",
+  "candidateSha256": "0782f4f7637a806e2b2d4e0e0fc1944991e3543ce054af4fed2265fd66b84af9",
   "candidateCapture": {
-    "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
-    "attachment": "Appearance background page scrolled",
-    "export": "node scripts/export-ui-screenshots.mjs --match \"Appearance background page scrolled\" --output <dir>"
+    "test": "NexusMusicUITests/SourceSettingsTests/testVisualLabAppearanceSheet",
+    "attachment": "Visual lab 4856 appearance scrolled",
+    "export": "node scripts/export-ui-screenshots.mjs --xcresult latest --match \"Visual lab\" --output <dir>"
   },
   "state": {
     "screen": "settings / appearance / background scrolled",
@@ -20,16 +20,102 @@
     "scroll": "gradient capsule maxY 136pt",
     "notes": "参考与候选状态已归一；固定 Sheet 头与参考可滚走的头仍是结构差异。"
   },
-  "size": [1290, 2796],
+  "size": [
+    1290,
+    2796
+  ],
   "ignoreTop": 180,
   "window": 7,
-  "grid": [6, 8],
+  "grid": [
+    6,
+    8
+  ],
   "contentMasks": [],
   "controlMasks": [],
-  "colorPatches": [
-    {"label": "field wash", "rect": [300, 1000, 200, 60]},
-    {"label": "accent swatch", "rect": [145, 710, 40, 40]},
-    {"label": "mask swatch", "rect": [145, 2210, 40, 40]}
+  "controlRegions": [
+    [
+      80,
+      1235,
+      1120,
+      205
+    ],
+    [
+      80,
+      1520,
+      1120,
+      205
+    ],
+    [
+      80,
+      1805,
+      1120,
+      205
+    ],
+    [
+      80,
+      2335,
+      1120,
+      210
+    ]
   ],
-  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+  "controlColorRegions": [
+    [
+      1110,
+      1387,
+      45,
+      36
+    ],
+    [
+      425,
+      1673,
+      45,
+      34
+    ],
+    [
+      200,
+      1398,
+      400,
+      10
+    ],
+    [
+      200,
+      1682,
+      150,
+      10
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "field wash",
+      "rect": [
+        300,
+        1000,
+        200,
+        60
+      ]
+    },
+    {
+      "label": "accent swatch",
+      "rect": [
+        145,
+        710,
+        40,
+        40
+      ]
+    },
+    {
+      "label": "mask swatch",
+      "rect": [
+        145,
+        2210,
+        40,
+        40
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  }
 }

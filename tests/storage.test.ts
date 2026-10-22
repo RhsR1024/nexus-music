@@ -151,6 +151,17 @@ test('new visual controls migrate, round-trip and reject invalid values atomical
   repository.put=put;db.close();
 });
 
+test('favorite appearance theme is optional, validated and persisted',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');
+  const {favoriteVisualTheme,...legacy}=defaults;await repository.put('preferences.v1',legacy);
+  const preferences=new PreferenceStore(repository);await preferences.restore();
+  assert.equal(preferences.getSnapshot().favoriteVisualTheme,null);
+  await preferences.update({favoriteVisualTheme:'lotus'});
+  const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().favoriteVisualTheme,'lotus');
+  await assert.rejects(restored.update({favoriteVisualTheme:'unknown' as never}));assert.equal(restored.getSnapshot().favoriteVisualTheme,'lotus');
+  await restored.update({favoriteVisualTheme:null});assert.equal(restored.getSnapshot().favoriteVisualTheme,null);db.close();
+});
+
 test('appearance failed writes and invalid fields preserve the last valid settings',async()=>{
   const {db,repository}=store();await repository.migrate();const {PreferenceStore}=await import('../src/app/preferences.ts');
   const preferences=new PreferenceStore(repository);await preferences.update({accent:'purple'});const before=preferences.getSnapshot();

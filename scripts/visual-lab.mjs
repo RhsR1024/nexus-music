@@ -15,6 +15,8 @@ import {
   formatPercent,
   gray,
   gridStats,
+  coverageStats,
+  validCenterMask,
   maskArea,
   maskedAt,
   patchStats,
@@ -23,9 +25,12 @@ import {
   ssimMap,
 } from './lib/metrics.mjs';
 
+import {evaluateVisualGate} from './lib/visual-gate.mjs';
+import {verifyCaptureEvidence} from './lib/ui-provenance.mjs';
+
 const SRGB_PROFILE = '/System/Library/ColorSync/Profiles/sRGB Profile.icc';
 const ROOT = resolve('.');
-const NORMALIZED = resolve('build/visual-lab/normalized');
+
 
 function usage() {
   console.log(`用法: node scripts/visual-lab.mjs --spec <docs/ui-spec/xxx.json> [选项]
@@ -35,7 +40,9 @@ function usage() {
   --all               运行 docs/ui-spec/*.json 中的全部规格
   --candidate <path>  临时覆盖规格中的候选截图
   --out <dir>         输出目录，默认 build/visual-lab/<spec-id>
-  --baseline <path>   将本次结果写成基线清单
+  --evidence <path>   精确采集run-manifest.json
+  --export-index <path> 精确截图导出index.json
+  --baseline <path>   将本次结果写成新基线清单（禁止覆盖）
   --skip-hash         只用于探索；正式证据禁止跳过 SHA256`);
 }
 
@@ -47,6 +54,8 @@ function parseArgs(argv) {
     else if (token === '--all') args.all = true;
     else if (token === '--candidate') args.candidate = argv[++i];
     else if (token === '--out') args.out = argv[++i];
+    else if (token === '--evidence') args.evidence = argv[++i];
+    else if (token === '--export-index') args.exportIndex = argv[++i];
     else if (token === '--baseline') args.baseline = argv[++i];
     else if (token === '--skip-hash') args.skipHash = true;
     else if (token === '--help' || token === '-h') { usage(); process.exit(0); }
@@ -56,10 +65,17 @@ function parseArgs(argv) {
     args.specs.push(...readdirSync('docs/ui-spec')
       .filter(name => name.endsWith('.json') && name !== 'baseline.json' && !name.startsWith('baseline-'))
       .map(name => join('docs/ui-spec', name))
+      .filter(path => {
+        const spec = JSON.parse(readFileSync(path, 'utf8'));
+        return typeof spec.id === 'string' && typeof spec.reference === 'string';
+      })
       .sort());
   }
   if (!args.specs.length) { usage(); process.exit(2); }
   if (args.candidate && args.specs.length !== 1) throw new Error('--candidate 只能配合单个 --spec');
+  args.specs=[...new Set(args.specs)];
+  args.out ??= `build/visual-lab/run-${Date.now()}`;
+  if(args.baseline && existsSync(args.baseline))throw new Error(`拒绝覆盖基线: ${args.baseline}`);
   return args;
 }
 
@@ -73,7 +89,8 @@ function sipsInfo(path) {
   return {profile: value('profile'), bitDepth: Number(value('bitsPerSample')), width: Number(value('pixelWidth')), height: Number(value('pixelHeight'))};
 }
 
-function normalize(path, label) {
+function normalize(path, label, outDir) {
+  const NORMALIZED=join(outDir,'normalized');
   const hash = sha256(path);
   mkdirSync(NORMALIZED, {recursive: true});
   const destination = join(NORMALIZED, `${label}-${hash.slice(0, 16)}.png`);
@@ -86,8 +103,8 @@ function normalize(path, label) {
   return {path: destination, sha256: createHash('sha256').update(readFileSync(destination)).digest('hex'), sourceInfo, info};
 }
 
-function rectScore(map, madMap, width, height, ignoreTop, rects) {
-  return regionScore(map, madMap, width, height, 0, Math.max(0, ignoreTop), width, height, ignoreTop, rects);
+function rectScore(map, madMap, width, height, ignoreTop, rects, include = null, centers = null) {
+  return regionScore(map, madMap, width, height, 0, Math.max(0, ignoreTop), width, height, ignoreTop, rects, include, centers);
 }
 
 function insideRectStats(map, madMap, width, height, ignoreTop, rects) {
@@ -106,16 +123,21 @@ function insideRectStats(map, madMap, width, height, ignoreTop, rects) {
   return n ? {ssim: sum / n, mad: mad / n, pixels: n} : null;
 }
 
-function scoreSet({map, madMap, edgeA, edgeB, imageA, imageB, width, height, ignoreTop, masks, colorMasks, patches, step = 2}) {
-  const scored = rectScore(map, madMap, width, height, ignoreTop, masks);
-  const area = maskArea(width, height, ignoreTop, masks);
+function scoreSet({map, madMap, edgeA, edgeB, imageA, imageB, width, height, ignoreTop, masks, colorMasks, patches, include = null, colorInclude = null, step = 2, radius = 3}) {
+  const centers=validCenterMask(width,height,ignoreTop,masks,include,radius);
+  const edgeCenters=validCenterMask(width,height,ignoreTop,masks,include,1);
+  const scored = rectScore(map, madMap, width, height, ignoreTop, masks, include, centers);
+  const coverage=coverageStats(width,height,ignoreTop,masks,include);
+  const colorCoverage=coverageStats(width,height,ignoreTop,colorMasks??masks,colorInclude??include);
   const score = scored == null ? null : {
     ssim: scored.ssim,
     mad: scored.mad,
     pixels: scored.pixels,
-    coveredFraction: 1 - scored.pixels / area.total,
-    color: colorStats(imageA, imageB, width, height, ignoreTop, colorMasks ?? masks, step),
-    ink: edgeStats(edgeA, edgeB, width, height, ignoreTop, masks, 1),
+    coverage,
+    colorCoverage,
+    boundaryExcludedPixels:coverage.scoredPixels-scored.pixels,
+    color: colorStats(imageA, imageB, width, height, ignoreTop, colorMasks ?? masks, step, colorInclude ?? include),
+    ink: edgeStats(edgeA, edgeB, width, height, ignoreTop, masks, 1, include, edgeCenters),
   };
   if (score && patches?.length) {
     score.patches = patches.map(patch => {
@@ -150,8 +172,11 @@ function runSpec(specPath, overrides) {
     if (!overrides.candidate && spec.candidateSha256 && spec.candidateSha256 !== candidateSha) throw new Error(`${spec.id}: 候选图 SHA256 不匹配\n  spec ${spec.candidateSha256}\n  file ${candidateSha}`);
   }
 
-  const reference = normalize(referencePath, `${spec.id}-reference`);
-  const candidate = normalize(candidatePath, `${spec.id}-candidate`);
+  const outDir=resolve(overrides.out);
+  if(existsSync(outDir))throw new Error(`拒绝覆盖输出目录: ${outDir}`);
+  mkdirSync(outDir,{recursive:true});
+  const reference = normalize(referencePath, `${spec.id}-reference`,outDir);
+  const candidate = normalize(candidatePath, `${spec.id}-candidate`,outDir);
   const a = parsePng(readFileSync(reference.path));
   const b = parsePng(readFileSync(candidate.path));
   const [expectedWidth, expectedHeight] = spec.size ?? [1290, 2796];
@@ -162,19 +187,24 @@ function runSpec(specPath, overrides) {
   const ignoreTop = spec.ignoreTop ?? 180;
   const contentMasks = spec.contentMasks ?? [];
   const controlMasks = spec.controlMasks ?? contentMasks;
+  const controlColorMasks = spec.controlColorMasks ?? controlMasks;
+  const controlRegions = spec.controlRegions ?? null;
+  const controlColorRegions = spec.controlColorRegions ?? null;
   const gridMasks = spec.gridMasks ?? controlMasks;
   const patches = spec.colorPatches ?? [];
   const grayA = gray(a);
   const grayB = gray(b);
-  const map = ssimMap(grayA, grayB, width, height, Math.floor((spec.window ?? 7) / 2));
+  if(!Number.isInteger(spec.window??7)||(spec.window??7)<1||(spec.window??7)%2!==1)throw new Error('window must be a positive odd integer');
+  const radius=Math.floor((spec.window??7)/2);
+  const map = ssimMap(grayA, grayB, width, height, radius);
   const madMap = new Float64Array(width * height);
   for (let i = 0; i < madMap.length; i++) madMap[i] = Math.abs(grayA[i] - grayB[i]);
   const edgeA = edgeMap(grayA, width, height);
   const edgeB = edgeMap(grayB, width, height);
 
-  const whole = scoreSet({map, madMap, edgeA, edgeB, imageA: a, imageB: b, width, height, ignoreTop, masks: [], colorMasks: [], patches});
-  const comparable = scoreSet({map, madMap, edgeA, edgeB, imageA: a, imageB: b, width, height, ignoreTop, masks: contentMasks, colorMasks: contentMasks, patches});
-  const control = scoreSet({map, madMap, edgeA, edgeB, imageA: a, imageB: b, width, height, ignoreTop, masks: controlMasks, colorMasks: controlMasks, patches});
+  const whole = scoreSet({map, madMap, edgeA, edgeB, imageA: a, imageB: b, width, height, ignoreTop, masks: [], colorMasks: [], patches,radius});
+  const comparable = scoreSet({map, madMap, edgeA, edgeB, imageA: a, imageB: b, width, height, ignoreTop, masks: contentMasks, colorMasks: contentMasks, patches,radius});
+  const control = scoreSet({map, madMap, edgeA, edgeB, imageA: a, imageB: b, width, height, ignoreTop, masks: controlMasks, colorMasks: controlColorMasks, patches, include: controlRegions, colorInclude: controlColorRegions,radius});
   const content = insideRectStats(map, madMap, width, height, ignoreTop, contentMasks);
   const totalArea = width * Math.max(0, height - ignoreTop);
   const contentArea = maskArea(width, height, ignoreTop, contentMasks);
@@ -186,24 +216,32 @@ function runSpec(specPath, overrides) {
     masks: gridMasks, colorMasks: gridMasks, cols: spec.grid?.[0] ?? 6, rows: spec.grid?.[1] ?? 8,
   });
 
-  const outDir = resolve(overrides.out ?? join('build/visual-lab', spec.id));
-  mkdirSync(outDir, {recursive: true});
   writeDiff(outDir, a, b, width, height, ignoreTop, controlMasks);
   writeSideBySide(outDir, a, b, width, height);
+  const overlay=Buffer.alloc(width*height*3);
+  for(let i=0;i<width*height;i++)for(let channel=0;channel<3;channel++)overlay[i*3+channel]=Math.round((a.pixels[i*a.channels+channel]+b.pixels[i*b.channels+channel])/2);
+  writeFileSync(join(outDir,'overlay.png'),encodePng(width,height,overlay));
 
   const targets = {controlSsim: 0.9, controlDeltaE: 4, controlEdge: 0.35, ...(spec.targets ?? {})};
-  const failures = [];
-  if (!control) failures.push('control region is empty');
-  else {
-    if (control.ssim < targets.controlSsim) failures.push(`control SSIM ${formatPercent(control.ssim)} < ${formatPercent(targets.controlSsim)}`);
-    if (control.color && control.color.mean > targets.controlDeltaE) failures.push(`control ΔE00 ${control.color.mean.toFixed(2)} > ${targets.controlDeltaE}`);
-    if (control.ink?.correlation != null && control.ink.correlation < targets.controlEdge) failures.push(`control ink r ${control.ink.correlation.toFixed(2)} < ${targets.controlEdge}`);
-  }
+  const critical=(spec.criticalRegions??[]).map(region=>{
+    const metrics=scoreSet({map,madMap,edgeA,edgeB,imageA:a,imageB:b,width,height,ignoreTop,masks:controlMasks,colorMasks:controlColorMasks,include:[region.rect],colorInclude:[region.rect],radius:Math.floor((spec.window??7)/2)});
+    return {...region,...evaluateVisualGate(metrics,targets),metrics:summarize(metrics)};
+  });
+  const failures=evaluateVisualGate(control,targets).failures;
+  for(const region of critical)for(const failure of region.failures)failures.push(region.label+': '+failure);
+  const evidence=verifyCaptureEvidence(overrides.evidence??spec.captureEvidence?.manifest,overrides.exportIndex??spec.captureEvidence?.exportIndex,candidatePath);
+  const provenanceReady=evidence.ready&&!overrides.skipHash&&Boolean(spec.referenceSha256)&&(Boolean(spec.candidateSha256)||Boolean(overrides.evidence));
 
   const report = {
     id: spec.id,
     title: spec.title,
     spec: relative(ROOT, resolve(specPath)),
+    specSha256:sha256(specPath),
+    toolHashes:Object.fromEntries(['scripts/visual-lab.mjs','scripts/lib/metrics.mjs','scripts/lib/visual-gate.mjs','scripts/lib/png.mjs','scripts/lib/ui-provenance.mjs',SRGB_PROFILE].map(path=>[path,sha256(path)])),
+    evidence,provenanceReady,
+    pageAccepted:false,
+    acceptanceNote:'Metric gates and provenance do not establish state, geometry, manual, normal-navigation or motion acceptance.',
+    criticalRegions:critical,
     generatedAt: new Date().toISOString(),
     state: spec.state,
     reference: {path: referencePath, sha256: referenceSha, source: reference.sourceInfo, normalizedSha256: reference.sha256},
@@ -212,12 +250,15 @@ function runSpec(specPath, overrides) {
     ignoreTop,
     contentMasks,
     controlMasks,
+    controlColorMasks,
+    controlRegions,
+    controlColorRegions,
     contentAreaFraction: contentFraction,
     method: {
       color: 'sips ICC → sRGB 8-bit; CIEDE2000 in CIE Lab D65',
-      geometry: '7×7 local SSIM mean',
+      structure: 'local uniform-window SSIM, population covariance, 255 data range; only complete valid neighborhoods',
       ink: 'Sobel gradient correlation (glyph/icon alignment proxy)',
-      passGate: 'control region only; whole-screen is reported, not gated',
+      passGate: 'declared control and each critical region; missing/non-finite metrics fail; page acceptance remains separate',
     },
     whole: summarize(whole),
     comparable: summarize(comparable),
@@ -244,7 +285,8 @@ function runSpec(specPath, overrides) {
   console.log(`  整屏     ${metricLine(whole)}  （报告用，不设门禁）`);
   console.log(`  可比区   ${metricLine(comparable)}  ${contentFraction == null ? '' : `内容占 ${(contentFraction * 100).toFixed(1)}%`}`);
   console.log(`  控件区   ${metricLine(control)}`);
-  if (content) console.log(`  内容本身 ${formatPercent(content.ssim)} / MAD ${content.mad.toFixed(1)}；内容若完全一致的理论上限 ${formatPercent(ceiling)}`);
+  console.log(`  应用区覆盖 控件${formatPercent(control?.coverage.applicationCoverageFraction)} / 颜色${formatPercent(control?.colorCoverage.applicationCoverageFraction)}；来源${provenanceReady?'已绑定':'未就绪'}；整页验收仍待人工/几何/正常操作`);
+  if (content) console.log(`  内容本身 ${formatPercent(content.ssim)} / MAD ${content.mad.toFixed(1)}；内容一致条件估算 ${formatPercent(ceiling)}`);
   if (control?.patches?.length) {
     console.log('  色块:');
     for (const patch of control.patches) console.log(`    ${patch.label ?? patch.rect.join(',')}  ΔE00 ${patch.deltaE00?.toFixed(2) ?? 'n/a'}  ref ${patch.reference?.join(',') ?? 'n/a'}  cur ${patch.candidate?.join(',') ?? 'n/a'}  std ${patch.referenceStd?.toFixed(1) ?? 'n/a'}/${patch.candidateStd?.toFixed(1) ?? 'n/a'}`);
@@ -262,7 +304,9 @@ function summarize(score) {
     ssim: Number(score.ssim.toFixed(5)),
     mad: Number(score.mad.toFixed(3)),
     pixels: score.pixels,
-    coveredFraction: score.coveredFraction == null ? null : Number(score.coveredFraction.toFixed(5)),
+    coverage:score.coverage,
+    colorCoverage:score.colorCoverage,
+    boundaryExcludedPixels:score.boundaryExcludedPixels,
     color: score.color == null ? null : {
       deltaE00Mean: Number(score.color.mean.toFixed(3)),
       deltaE00P50: Number(score.color.p50.toFixed(3)),
@@ -271,6 +315,7 @@ function summarize(score) {
       sampledPixels: score.color.sampledPixels,
     },
     ink: score.ink == null ? null : {
+      pixels:score.ink.pixels,
       correlation: score.ink.correlation == null ? null : Number(score.ink.correlation.toFixed(4)),
       densityReference: Number(score.ink.densityReference.toFixed(3)),
       densityCandidate: Number(score.ink.densityCandidate.toFixed(3)),
@@ -305,9 +350,9 @@ function writeDiff(outDir, a, b, width, height, ignoreTop, masks) {
         rgbToLab(b.pixels[q], b.pixels[q + 1] ?? b.pixels[q], b.pixels[q + 2] ?? b.pixels[q]),
       );
       const value = Math.min(255, Math.round((d / 20) * 255));
-      rgb[p] = value;
-      rgb[p + 1] = value > 120 ? Math.round(value * 0.35) : 0;
-      rgb[p + 2] = 0;
+      rgb[i*3] = value;
+      rgb[i*3 + 1] = value > 120 ? Math.round(value * 0.35) : 0;
+      rgb[i*3 + 2] = 0;
     }
   }
   writeFileSync(join(outDir, 'diff-deltae.png'), encodePng(width, height, rgb));
@@ -331,29 +376,13 @@ function writeSideBySide(outDir, a, b, width, height) {
 
 const args = parseArgs(process.argv);
 const reports = [];
-for (const spec of args.specs) reports.push(runSpec(spec, {candidate: args.candidate, out: args.specs.length === 1 ? args.out : undefined, skipHash: args.skipHash}));
+for (const spec of args.specs) reports.push(runSpec(spec, {...args, out:args.specs.length===1?args.out:join(args.out,basename(spec,'.json'))}));
 
 if (args.baseline) {
   const baseline = {
     generatedAt: new Date().toISOString(),
-    gate: 'Control region only. Whole-screen SSIM is recorded as a ceiling/report value and is not a pass criterion.',
-    states: reports.map(report => ({
-      id: report.id,
-      title: report.title,
-      spec: report.spec,
-      state: report.state,
-      reference: report.reference,
-      candidate: report.candidate,
-      size: report.size,
-      contentAreaFraction: report.contentAreaFraction,
-      whole: report.whole,
-      comparable: report.comparable,
-      control: report.control,
-      contentRegion: report.contentRegion,
-      ceilingIfContentMatched: report.ceilingIfContentMatched,
-      pass: report.pass,
-      failures: report.failures,
-    })),
+    gate: 'Control region only. Whole-screen SSIM is recorded as a report value and is not a pass criterion.',
+    states: reports,
   };
   mkdirSync(dirname(resolve(args.baseline)), {recursive: true});
   writeFileSync(resolve(args.baseline), `${JSON.stringify(baseline, null, 2)}\n`);

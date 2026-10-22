@@ -1,11 +1,12 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,BackHandler,findNodeHandle,Keyboard,Pressable,ScrollView,View,useWindowDimensions,type Text as NativeText} from 'react-native';
+import {AccessibilityInfo,BackHandler,findNodeHandle,Image,Keyboard,Pressable,ScrollView,UIManager,View,useWindowDimensions,type Text as NativeText} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {SheetModal} from './AdaptiveModal.tsx';
+import {AppearanceSheetModal,SheetModal} from './AdaptiveModal.tsx';
+import {appearanceSheetLayout,settingsInk,settingsSheet} from './tokens.ts';
 import {AppearanceSettings,BackgroundThemeActions,type AppearanceSection} from './AppearanceSettings.tsx';
 import {AppearanceOverview} from './AppearanceOverview.tsx';
 import {AudioSettings} from './AudioSettings.tsx';
@@ -17,6 +18,7 @@ import {DownloadSettings,DownloadTasks} from './DownloadSettings.tsx';
 import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {NavidromeSettings} from './NavidromeSettings.tsx';
 import {SourceSettings} from './SourceSettings.tsx';
+import {appearanceCaptureFixture} from './captureFixtures.ts';
 
 export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|AppearanceSection;
 type AppearanceSheetSection='background'|'theme'|'skins'|'mini'|'navigation'|'typography'|'globalFont'|'lyricFont';
@@ -25,20 +27,15 @@ const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-backgrou
 const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
-  const {palette:p}=useTheme();
+  const theme=useTheme(),p=theme.palette,sheetDark=theme.mode==='dark';
   const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const firstPage=isAppearanceSheet(initialPage)?initialPage==='typography'?'playback':'appearance':initialPage;
   const [history,setHistory]=useState<SettingsPage[]>([firstPage]);
   const [visited,setVisited]=useState<SettingsPage[]>([firstPage]);
   const [appearanceSheet,setAppearanceSheet]=useState<{section:AppearanceSheetSection;visible:boolean;session:number}>({section:isAppearanceSheet(initialPage)?initialPage:'theme',visible:isAppearanceSheet(initialPage),session:0});
+  const appearanceScroll=useRef<ScrollView|null>(null),appearanceOffset=useRef(0),appearanceOffsetSession=useRef(-1),appearanceAnchorUses=useRef(0),accentField=useRef<View|null>(null),accentAnchorSession=useRef(-1);
   const closeSheet=()=>setAppearanceSheet(value=>({...value,visible:false,session:value.session+1}));
-  // IMG_4856 is scrolled past the sheet title and actions, so the background
-  // sheet retires that row while its content moves instead of pinning it over
-  // the reference's blank top band. The close button stays pinned for testing
-  // and for users who prefer a tap target over swipe dismissal.
-  const [headerCollapsed,setHeaderCollapsed]=useState(false);
-  useEffect(()=>{if(appearanceSheet.visible)setHeaderCollapsed(false);},[appearanceSheet.visible,appearanceSheet.section]);
   const heading=useRef<NativeText>(null),page=history[history.length-1]!;
   const scrolls=useRef<Partial<Record<SettingsPage,ScrollView|null>>>({}),offsets=useRef<Partial<Record<SettingsPage,number>>>({});
   const restoring=useRef<SettingsPage|null>(null);
@@ -94,6 +91,30 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       case 'storage':return <><CacheSettings services={services}/><LibraryDataTools services={services}/></>;
     }
   };
+  const Sheet=appearanceSheet.section==='background'?AppearanceSheetModal:SheetModal;
+  const anchorAccentField=()=>{
+    if(!appearanceCaptureFixture()||appearanceSheet.section!=='background'||accentAnchorSession.current===appearanceSheet.session)return;
+    const field=accentField.current,scroller=appearanceScroll.current,fieldNode=field?findNodeHandle(field):null;
+    if(!field||!scroller||!fieldNode)return;
+    if(appearanceOffsetSession.current!==appearanceSheet.session){appearanceOffset.current=0;appearanceOffsetSession.current=appearanceSheet.session;}
+    accentAnchorSession.current=appearanceSheet.session;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      UIManager.measureInWindow(fieldNode,(_x,top)=>{
+        scroller.scrollTo({y:Math.max(0,appearanceOffset.current+top-216),animated:false});
+      });
+    }));
+  };
+  useEffect(()=>{
+    if(!appearanceSheet.visible||appearanceSheet.section!=='background'||!appearanceCaptureFixture())return;
+    if(appearanceAnchorUses.current>=3)return;
+    appearanceAnchorUses.current+=1;
+    const timer=setTimeout(()=>{appearanceOffset.current=0;accentAnchorSession.current=-1;anchorAccentField();},250);
+    return()=>clearTimeout(timer);
+  },[appearanceSheet.visible,appearanceSheet.section,appearanceSheet.session]);
+  const sheetHeader=<View style={{flexDirection:'row',alignItems:'center',gap:appearanceSheet.section==='background'?0:12,marginTop:appearanceSheet.section==='background'?appearanceSheetLayout.titleGap:0}}>
+    <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:23.6,fontWeight:'800',color:settingsInk[sheetDark?'dark':'light'],transform:[{translateY:1.1}]}}>{titles[appearanceSheet.section]}</Text>
+    {appearanceSheet.section==='background'?<BackgroundThemeActions services={services}/>:<Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{width:48,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>}
+  </View>;
   return <View style={{flex:1}} onAccessibilityEscape={page==='home'?undefined:back}>
     <View style={{paddingHorizontal:22,paddingVertical:12,minHeight:64,flexDirection:'row',alignItems:'center',justifyContent:'center'}}>
       {page!=='home'&&<Pressable testID="settings-back" accessibilityRole="button" accessibilityLabel={history.length>1?`返回${titles[history[history.length-2]!]}`:'返回音乐库'} onPress={back} style={{position:'absolute',left:12,top:8,bottom:8,width:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-back" size={27} color={p.text}/></Pressable>}
@@ -102,29 +123,19 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
     {visited.map(key=><View key={key} testID={`settings-viewport-${key}`} style={{flex:1,display:key===page?'flex':'none'}} accessibilityElementsHidden={key!==page||appearanceSheet.visible} importantForAccessibility={key===page&&!appearanceSheet.visible?'auto':'no-hide-descendants'} pointerEvents={key===page&&!appearanceSheet.visible?'auto':'none'}>
       {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:32}}>{content(key)}</ScrollView>}
     </View>)}
-    <SheetModal visible={appearanceSheet.visible} animationType="slide" allowSwipeDismissal onRequestClose={closeSheet}>
-      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:p.background[0],paddingHorizontal:appearanceSheet.section==='background'?16:22,paddingTop:appearanceSheet.section==='background'?32:18}}>
+    <Sheet visible={appearanceSheet.visible} animationType="slide" allowSwipeDismissal onRequestClose={closeSheet}>
+      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:sheetDark?p.background[0]:settingsSheet.lightGradient[0],paddingHorizontal:appearanceSheet.section==='background'?16:22,paddingTop:appearanceSheet.section==='background'?appearanceSheetLayout.topPadding:18}}>
         {appearanceSheet.section==='background'&&<>
-          <LinearGradient testID="theme-sheet-gradient" pointerEvents="none" colors={[p.background[0],p.background[1],p.background[2]]} start={{x:0,y:0}} end={{x:0.55,y:1}} style={{position:'absolute',top:0,right:0,bottom:0,left:0}}/>
+          {sheetDark?<LinearGradient testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" colors={[p.background[0],p.background[1],p.background[2]]} start={{x:0,y:0}} end={{x:0.55,y:1}} style={{position:'absolute',top:0,right:0,bottom:0,left:0}}/>:<View testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" style={{position:'absolute',top:0,right:0,bottom:0,left:0}}><Image source={require('../../assets/appearance-sheet-light.png')} resizeMode="stretch" style={{width:'100%',height:'100%'}}/></View>}
           <Pressable testID="background-sheet-close" accessibilityRole="button" accessibilityLabel={titles.background} onPress={closeSheet} style={{width:44,height:44,alignSelf:'center',alignItems:'center',justifyContent:'center'}}><View style={{width:32,height:4,borderRadius:2,backgroundColor:p.secondary+'66'}}/></Pressable>
         </>}
-        <View style={{flexDirection:'row',alignItems:'center',gap:appearanceSheet.section==='background'?0:12}}>
-          <View
-            style={{flex:1,flexDirection:'row',alignItems:'center',gap:4,opacity:appearanceSheet.section==='background'&&headerCollapsed?0:1}}
-            pointerEvents={appearanceSheet.section==='background'&&headerCollapsed?'none':'auto'}
-            accessibilityElementsHidden={appearanceSheet.section==='background'&&headerCollapsed}
-            importantForAccessibility={appearanceSheet.section==='background'&&headerCollapsed?'no-hide-descendants':'auto'}>
-            <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:24,fontWeight:'700',color:p.text}}>{titles[appearanceSheet.section]}</Text>
-            {appearanceSheet.section==='background'&&<BackgroundThemeActions services={services}/>}
-          </View>
-          {appearanceSheet.section!=='background'&&<Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{width:48,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>}
-        </View>
-        <ScrollView key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={appearanceSheet.section==='background'?64:undefined} onScroll={appearanceSheet.section==='background'?event=>setHeaderCollapsed(event.nativeEvent.contentOffset.y>90):undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} onStyleSaved={()=>{
+        {appearanceSheet.section!=='background'&&sheetHeader}
+        <ScrollView ref={node=>{if(appearanceSheet.section==='background')appearanceScroll.current=node;}} key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={appearanceSheet.section==='background'?event=>{appearanceOffset.current=event.nativeEvent.contentOffset.y;}:undefined} scrollEventThrottle={appearanceSheet.section==='background'?32:undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='background'&&sheetHeader}{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} accentFieldRef={appearanceSheet.section==='background'?accentField:undefined} onStyleSaved={()=>{
           // A completed write from an earlier presentation must not close a newly opened sheet.
           const session=appearanceSheet.session;
           setAppearanceSheet(value=>value.session===session?{...value,visible:false,session:value.session+1}:value);
         }}/>}</ScrollView>
       </View>
-    </SheetModal>
+    </Sheet>
   </View>;
 }

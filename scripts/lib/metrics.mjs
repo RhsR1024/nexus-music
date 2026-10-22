@@ -39,6 +39,9 @@ function boxMean(src, width, height, radius) {
 }
 
 export function ssimMap(a, b, width, height, radius) {
+  validateFrame(width, height, 0);
+  if (!Number.isInteger(radius) || radius < 0) throw new Error('SSIM radius must be a non-negative integer');
+  if (a.length !== width * height || b.length !== width * height) throw new Error('SSIM input length does not match frame');
   const aa = new Float64Array(width * height);
   const bb = new Float64Array(width * height);
   const ab = new Float64Array(width * height);
@@ -68,29 +71,93 @@ export function rectContains(rect, x, y) {
   return x >= rect[0] && x < rect[0] + rect[2] && y >= rect[1] && y < rect[1] + rect[3];
 }
 
-export function maskedAt(x, y, ignoreTop, rects) {
+export function maskedAt(x, y, ignoreTop, rects, include = null) {
   if (y < ignoreTop) return true;
+  if (include?.length && !include.some(rect => rectContains(rect, x, y))) return true;
   for (const rect of rects) if (rectContains(rect, x, y)) return true;
   return false;
 }
 
-export function maskArea(width, height, ignoreTop, rects) {
-  let inside = 0;
-  for (const [x, y, w, h] of rects) {
-    const x0 = Math.max(0, x), x1 = Math.min(width, x + w);
-    const y0 = Math.max(ignoreTop, y), y1 = Math.min(height, y + h);
-    if (x1 > x0 && y1 > y0) inside += (x1 - x0) * (y1 - y0);
-  }
-  // Rects in the specs are disjoint; overlap is reported rather than guessed.
-  return {inside, total: width * Math.max(0, height - ignoreTop)};
+function validateFrame(width, height, ignoreTop) {
+  if (![width, height].every(value => Number.isSafeInteger(value) && value > 0)
+      || !Number.isSafeInteger(ignoreTop) || ignoreTop < 0) throw new Error('Frame dimensions and ignoreTop must be non-negative integer pixels');
 }
 
-export function regionScore(map, madMap, width, height, x0, y0, x1, y1, ignoreTop, rects) {
+function rectUnionMask(width, height, ignoreTop, rects) {
+  validateFrame(width, height, ignoreTop);
+  const mask = new Uint8Array(width * height);
+  for (const rect of rects) {
+    if (!Array.isArray(rect) || rect.length !== 4 || !rect.every(Number.isSafeInteger) || rect[2] < 0 || rect[3] < 0) {
+      throw new Error('Rectangles must contain integer [x, y, width, height] with non-negative dimensions');
+    }
+    const [x, y, w, h] = rect;
+    const x0 = Math.max(0, x), x1 = Math.min(width, x + w);
+    const y0 = Math.max(ignoreTop, y), y1 = Math.min(height, y + h);
+    if (x1 <= x0) continue;
+    for (let row = y0; row < y1; row++) mask.fill(1, row * width + x0, row * width + x1);
+  }
+  return mask;
+}
+
+export function maskArea(width, height, ignoreTop, rects) {
+  const mask = rectUnionMask(width, height, ignoreTop, rects);
+  return {inside: mask.reduce((sum, value) => sum + value, 0), total: width * Math.max(0, height - ignoreTop)};
+}
+
+// Coverage uses the same integer pixel membership as scoring. Overlap is a union,
+// exclusions only count inside the ROI, and both full-frame and app denominators
+// remain explicit. An absent/empty include list retains the legacy full-app ROI.
+export function coverageStats(width, height, ignoreTop, rects = [], include = null) {
+  const roi = include?.length ? include : [[0, ignoreTop, width, Math.max(0, height - ignoreTop)]];
+  const included = rectUnionMask(width, height, ignoreTop, roi);
+  const excluded = rectUnionMask(width, height, ignoreTop, rects);
+  let includedPixels = 0, excludedPixels = 0;
+  for (let i = 0; i < included.length; i++) {
+    includedPixels += included[i];
+    excludedPixels += included[i] && excluded[i] ? 1 : 0;
+  }
+  const fullFramePixels = width * height;
+  const applicationPixels = width * Math.max(0, height - ignoreTop);
+  const scoredPixels = includedPixels - excludedPixels;
+  return {
+    fullFramePixels, applicationPixels, includedPixels, excludedPixels, scoredPixels,
+    frameCoverageFraction: scoredPixels / fullFramePixels,
+    applicationCoverageFraction: applicationPixels ? scoredPixels / applicationPixels : null,
+    roiExcludedFraction: includedPixels ? excludedPixels / includedPixels : null,
+  };
+}
+
+// A center is eligible only when its entire square neighborhood is in the image
+// and in the selected, unmasked region. Use radius=3 for a 7x7 SSIM and radius=1
+// for Sobel. The map itself may still be computed once for the complete frame.
+export function validCenterMask(width, height, ignoreTop, rects = [], include = null, radius = 0) {
+  if (!Number.isInteger(radius) || radius < 0) throw new Error('Neighborhood radius must be a non-negative integer');
+  const roi = include?.length ? include : [[0, ignoreTop, width, Math.max(0, height - ignoreTop)]];
+  const included = rectUnionMask(width, height, ignoreTop, roi);
+  const excluded = rectUnionMask(width, height, ignoreTop, rects);
+  for (let i = 0; i < included.length; i++) if (excluded[i]) included[i] = 0;
+  if (!radius) return included;
+  const I = integral(included, width, height), stride = width + 1;
+  const centers = new Uint8Array(width * height);
+  const side = 2 * radius + 1, expected = side * side;
+  for (let y = radius; y < height - radius; y++) {
+    for (let x = radius; x < width - radius; x++) {
+      const x0 = x - radius, x1 = x + radius + 1, y0 = y - radius, y1 = y + radius + 1;
+      const count = I[y1 * stride + x1] - I[y0 * stride + x1] - I[y1 * stride + x0] + I[y0 * stride + x0];
+      if (count === expected) centers[y * width + x] = 1;
+    }
+  }
+  return centers;
+}
+
+export function regionScore(map, madMap, width, height, x0, y0, x1, y1, ignoreTop, rects, include = null, validCenters = null) {
+  if (validCenters && validCenters.length !== width * height) throw new Error('Valid-center mask length does not match frame');
   let n = 0, sum = 0, mad = 0;
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
-      if (maskedAt(x, y, ignoreTop, rects)) continue;
+      if (maskedAt(x, y, ignoreTop, rects, include)) continue;
       const i = y * width + x;
+      if (validCenters && !validCenters[i]) continue;
       sum += map[i];
       mad += madMap[i];
       n++;
@@ -183,12 +250,15 @@ export function edgeMap(source, width, height) {
   return out;
 }
 
-export function edgeStats(edgeA, edgeB, width, height, ignoreTop, rects, step = 1) {
+export function edgeStats(edgeA, edgeB, width, height, ignoreTop, rects, step = 1, include = null, validCenters = null) {
+  if (!Number.isInteger(step) || step < 1) throw new Error('Sampling step must be a positive integer');
+  if (validCenters && validCenters.length !== width * height) throw new Error('Valid-center mask length does not match frame');
   let n = 0, sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0;
   for (let y = ignoreTop; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
-      if (maskedAt(x, y, ignoreTop, rects)) continue;
+      if (maskedAt(x, y, ignoreTop, rects, include)) continue;
       const i = y * width + x;
+      if (validCenters && !validCenters[i]) continue;
       const a = edgeA[i], b = edgeB[i];
       sa += a; sb += b; saa += a * a; sbb += b * b; sab += a * b; n++;
     }
@@ -206,12 +276,13 @@ export function edgeStats(edgeA, edgeB, width, height, ignoreTop, rects, step = 
   };
 }
 
-export function colorStats(a, b, width, height, ignoreTop, rects, step = 2) {
+export function colorStats(a, b, width, height, ignoreTop, rects, step = 2, include = null) {
+  if (!Number.isInteger(step) || step < 1) throw new Error('Sampling step must be a positive integer');
   const values = [];
   let sum = 0;
   for (let y = ignoreTop; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
-      if (maskedAt(x, y, ignoreTop, rects)) continue;
+      if (maskedAt(x, y, ignoreTop, rects, include)) continue;
       const i = (y * width + x) * Math.max(1, a.channels);
       const j = (y * width + x) * Math.max(1, b.channels);
       const d = deltaE00(

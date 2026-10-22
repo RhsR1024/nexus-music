@@ -3,32 +3,130 @@
   "title": "黑胶播放页 — 唱盘、唱臂与运输区",
   "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4851.PNG",
   "referenceSha256": "6b241210bc815be92d0a931aac9c2867e6e82cfaaab5ec8c114325809e0e92f8",
-  "candidate": "build/ui-screenshots-batch20b/017-Vinyl-reference-composition.png",
-  "candidateSha256": "334a427bdd9be366f6eeb2baa32706d5667bb4108632e2b449ef06ba3b676e70",
+  "candidate": "build/ui-round2-20261021/004-Vinyl-engaged-needle-and-rotating-asymmetric-cover.png",
+  "candidateSha256": "9a38c00da78d502f80afcc19d673e9abb50e95abe484363be6f47c01a6629431",
   "candidateCapture": {
     "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
-    "attachment": "Vinyl reference composition",
-    "export": "node scripts/export-ui-screenshots.mjs --match \"Vinyl reference composition\" --output <dir>"
+    "attachment": "Vinyl engaged needle and rotating asymmetric cover",
+    "export": "node scripts/export-ui-screenshots.mjs --match \"Vinyl engaged needle\" --output <dir>"
   },
   "state": {
     "screen": "vinyl player",
     "theme": "blush + rose",
     "background": "cover gradient",
-    "playback": "fixture",
+    "playback": "playing fixture",
     "scroll": "top",
-    "notes": "参考为播放中；候选为合成封面夹具。唱盘几何是主验收对象，封面纹理不计入控件区。"
+    "notes": "参考与候选均在播放态，唱针落在唱片上；候选为合成封面夹具，封面/唱片纹理不计入控件门禁。控件遮罩只评进度、运输区（64pt 播放键、16pt 暂停条）与六个工具位。"
   },
-  "size": [1290, 2796],
+  "size": [
+    1290,
+    2796
+  ],
   "ignoreTop": 180,
   "window": 7,
-  "grid": [6, 8],
-  "contentMasks": [[80, 420, 1140, 1100]],
-  "controlMasks": [[80, 420, 1140, 1100], [0, 1560, 1290, 250]],
-  "colorPatches": [
-    {"label": "paper top-left", "rect": [10, 190, 100, 70]},
-    {"label": "paper top-right", "rect": [1180, 190, 100, 70]},
-    {"label": "deck black", "rect": [500, 700, 100, 100]},
-    {"label": "transport fill", "rect": [680, 2330, 30, 30]}
+  "grid": [
+    6,
+    8
   ],
-  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+  "contentMasks": [
+    [
+      80,
+      400,
+      1140,
+      1120
+    ],
+    [
+      60,
+      1530,
+      1170,
+      440
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      60,
+      2030,
+      1170,
+      90
+    ],
+    [
+      140,
+      2240,
+      1000,
+      240
+    ],
+    [
+      120,
+      2510,
+      1050,
+      110
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      627,
+      2334,
+      14,
+      48
+    ],
+    [
+      649,
+      2334,
+      14,
+      48
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "paper top-left",
+      "rect": [
+        10,
+        190,
+        100,
+        70
+      ]
+    },
+    {
+      "label": "paper top-right",
+      "rect": [
+        1180,
+        190,
+        100,
+        70
+      ]
+    },
+    {
+      "label": "deck black",
+      "rect": [
+        200,
+        560,
+        60,
+        60
+      ]
+    },
+    {
+      "label": "transport fill",
+      "rect": [
+        680,
+        2330,
+        30,
+        30
+      ]
+    },
+    {
+      "label": "pause fill",
+      "rect": [
+        630,
+        2338,
+        20,
+        40
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  }
 }

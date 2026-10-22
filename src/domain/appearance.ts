@@ -1,6 +1,6 @@
 export type VisualTheme = 'classic' | 'blush' | 'soft' | 'blushpink' | 'pearl' | 'mint' | 'sunset' | 'azure' | 'marigold' | 'violet' | 'khaki' | 'plumtea' | 'lotus';
 export const visualThemes: readonly VisualTheme[] = ['classic','blush','soft','blushpink','pearl','mint','sunset','azure','marigold','violet','khaki','plumtea','lotus'];
-export const visualThemeLabels: Record<VisualTheme,string> = {classic:'经典',blush:'粉雾',soft:'柔和',blushpink:'脸红佳人',pearl:'Pearl',mint:'Mint',sunset:'Sunset',azure:'琉璃鸢蓝',marigold:'向日朱栗',violet:'黛紫蒲霞',khaki:'卡其浅缥',plumtea:'藤紫金茶',lotus:'黄赤藕荷'};
+export const visualThemeLabels: Record<VisualTheme,string> = {classic:'经典',blush:'Nexus',soft:'柔和',blushpink:'脸红佳人',pearl:'Pearl',mint:'Mint',sunset:'Sunset',azure:'琉璃鸢蓝',marigold:'向日朱栗',violet:'黛紫蒲霞',khaki:'卡其浅缥',plumtea:'藤紫金茶',lotus:'黄赤藕荷'};
 export type Accent = 'rose' | 'coral' | 'purple' | 'blue' | 'orange';
 export type FlowPalette=readonly[string,string,string];
 export function isFlowPalette(value:unknown):value is FlowPalette {return Array.isArray(value)&&value.length===3&&[0,1,2].every(index=>typeof value[index]==='string'&&/^#[0-9a-f]{6}$/i.test(value[index]));}
@@ -20,7 +20,10 @@ export function controlColor(accent:string,dark:boolean){
   const max=Math.max(red,green,blue),min=Math.min(red,green,blue),delta=max-min;
   let hue=0;
   if(delta){hue=max===red?((green-blue)/delta)%6:max===green?(blue-red)/delta+2:(red-green)/delta+4;hue*=60;if(hue<0)hue+=360;}
-  const saturation=.27,lightness=dark?.62:.41,chroma=(1-Math.abs(2*lightness-1))*saturation;
+  // IMG_4856's fill/thumb sample #8F4A4E (hue 356.5°) while the rose accent
+  // itself is 351.2°, so the muted control tone sits 5.3° clockwise.
+  hue=(hue+5.3)%360;
+  const saturation=.318,lightness=dark?.62:.4255,chroma=(1-Math.abs(2*lightness-1))*saturation;
   const second=chroma*(1-Math.abs((hue/60)%2-1)),offset=lightness-chroma/2;
   const rgb=hue<60?[chroma,second,0]:hue<120?[second,chroma,0]:hue<180?[0,chroma,second]:hue<240?[0,second,chroma]:hue<300?[second,0,chroma]:[chroma,0,second];
   return '#'+rgb.map(value=>Math.round((value+offset)*255).toString(16).padStart(2,'0')).join('');
@@ -33,7 +36,7 @@ export function controlColor(accent:string,dark:boolean){
 const themeHues:Record<VisualTheme,readonly[string,string,string]>={
   classic:['#F5F6FA','#E1EAF5','#F7F1F4'],
   // Light stops sampled from IMG_4851/4854/4855 (warm paper, not cool lavender).
-  blush:['#FBF4EF','#F7E9DE','#F3EDE6'],
+  blush:['#F7F7F5','#F7E9DE','#F3EDE6'],
   soft:['#EEF3F7','#DAE6EF','#ECE7F0'],
   blushpink:['#EDEBEA','#F0DCDD','#F1BAC0'],
   pearl:['#F2F4F8','#F5F8FE','#F1F6FE'],
@@ -64,6 +67,9 @@ export function themeBackground(theme:VisualTheme,mode:'light'|'dark'):readonly[
   }
   const amounts:[number,number,number]=mode==='dark'?[.86,.82,.78]:[.6,.42,.3];
   return themeHues[theme].map((hue,index)=>blend(hue,mode==='dark'?ink:paper,amounts[index]!)) as unknown as readonly[string,string,string];
+}
+export function themeSwatchBackground(theme:VisualTheme):readonly[string,string,string]{
+  return themeHues[theme];
 }
 function withAlpha(color:string,alpha:number){
   if(alpha>=.999)return color;

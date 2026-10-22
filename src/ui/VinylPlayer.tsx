@@ -9,6 +9,7 @@ import {SheetModal} from './AdaptiveModal.tsx';
 import {Cover} from './Cover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {PlaybackProgress} from './PlaybackProgress.tsx';
+import {SkipGlyph} from './SkipGlyph.tsx';
 import {Vinyl} from './PlayerVisuals.tsx';
 import {Text} from './Typography.tsx';
 import {paper,space,typography} from './tokens.ts';
@@ -28,9 +29,9 @@ function PaperBackdrop({services,track}:{services:Services;track:Track}){
   </View>;
 }
 
-export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue}:{
+export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue,onSleep}:{
   services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;
-  onMore:()=>void;onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;
+  onMore:()=>void;onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onSleep:()=>void;
 }){
   const {width,height}=useWindowDimensions();
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
@@ -63,21 +64,44 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
       </View>
       <View style={{flex:1,minHeight:space.lg}}/>
       {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.status}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
-      <PlaybackProgress services={services} variant="paper"/>
+      <View style={styles.progress}><PlaybackProgress services={services} variant="paper"/></View>
+      {/* IMG_4851 transport: 64pt play at screen centre, outer tools 68pt from
+          the screen edges, 9.5x12.7pt triangles with a 2pt gap. */}
       <View style={styles.transport}>
         {icon('repeat',`循环：${preferences.repeat}`,()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));})}
-        {icon('play-skip-back-outline','上一首',()=>services.playback.next(-1),25)}
+        <Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={[styles.hit,{width:space.section}]}><SkipGlyph direction="back" width={9.5} height={12.7} gap={2} color={paper.icon}/></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={playing?'暂停':'播放'} onPress={()=>{if(playing)controller.pause();else void controller.play();}} style={styles.play}>
-          <Ionicons name={playing?'pause':'play'} size={22} color="#FFFFFF" style={playing?undefined:{marginLeft:2}}/>
+          {playing?<View style={{flexDirection:'row',gap:2.7}}><View style={{width:4.7,height:16,borderRadius:1,backgroundColor:'#FFFFFF'}}/><View style={{width:4.7,height:16,borderRadius:1,backgroundColor:'#FFFFFF'}}/></View>:<Ionicons name="play" size={26} color="#FFFFFF" style={{marginLeft:3}}/>}
         </Pressable>
-        {icon('play-skip-forward-outline','下一首',()=>services.playback.next(),25)}
-        {icon('list-outline','播放队列',()=>{onQueue();},24)}
+        <Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={[styles.hit,{width:space.section}]}><SkipGlyph direction="forward" width={9.5} height={12.7} gap={2} color={paper.icon}/></Pressable>
+        {icon('list','播放队列',()=>{onQueue();},24)}
       </View>
       <View style={styles.tools}>
-        {icon('chatbubble-ellipses-outline','歌词与来源',()=>setLyricsOpen(true),22)}
+        {icon('chatbubbles-outline','歌词与来源',()=>setLyricsOpen(true),22)}
         {icon('image-outline','调整播放界面',onStyle,22)}
-        {icon('text-outline','歌词显示设置',onLyricsSettings,22)}
-        {icon('albums-outline','查看播放队列',onQueue,22)}
+        <Pressable accessibilityRole="button" accessibilityLabel="睡眠定时" onPress={onSleep} style={[styles.hit,{width:space.section}]}>
+          <View style={styles.moon}>
+            <Ionicons name="moon-outline" size={19} color={paper.icon}/>
+            <View style={styles.zzz}>
+              <Text style={styles.zLarge}>z</Text>
+              <Text style={styles.zSmall}>z</Text>
+            </View>
+          </View>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="歌词显示设置" onPress={onLyricsSettings} style={[styles.hit,{width:space.section}]}>
+          <View style={styles.aa}>
+            <Text style={styles.aaSmall}>A</Text>
+            <Text style={styles.aaLarge}>A</Text>
+          </View>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="查看播放队列" onPress={onQueue} style={[styles.hit,{width:space.section}]}>
+          <View style={styles.queue}>
+            <View style={[styles.queueLine,{width:18.7}]}/>
+            <View style={[styles.queueLine,{width:11.7}]}/>
+            <View style={[styles.queueLine,{width:18.7}]}/>
+            <View style={[styles.queueLine,{width:11.7}]}/>
+          </View>
+        </Pressable>
         {icon('ellipsis-horizontal','更多播放控制',onMore,22)}
       </View>
       <Text numberOfLines={1} style={styles.caption}>{state.media?.quality?`${state.media.quality.toUpperCase()} 音源`:'等待音源'}</Text>
@@ -93,14 +117,24 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
 
 const styles=StyleSheet.create({
   root:{flex:1},
-  content:{flex:1,paddingHorizontal:space.page,paddingBottom:space.xxl},
+  content:{flex:1,paddingHorizontal:space.page,paddingBottom:26.7},
   hit:{minWidth:space.section,minHeight:space.section,alignItems:'center',justifyContent:'center'},
-  titleRow:{flexDirection:'row',alignItems:'center',gap:space.sm,marginTop:space.section},
+  titleRow:{flexDirection:'row',alignItems:'center',gap:space.sm,marginTop:25},
   title:{...typography.title,color:paper.text},
   artist:{...typography.body,fontSize:14,color:paper.secondary},
   status:{...typography.micro,color:paper.secondary,marginBottom:space.sm},
-  transport:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:space.md},
-  play:{width:46,height:46,borderRadius:23,backgroundColor:paper.text,alignItems:'center',justifyContent:'center'},
-  tools:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:space.xl},
-  caption:{...typography.micro,color:paper.secondary,textAlign:'center',marginTop:space.md},
+  progress:{marginHorizontal:11},
+  transport:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:23.7,marginHorizontal:15},
+  play:{width:64,height:64,borderRadius:32,backgroundColor:paper.text,alignItems:'center',justifyContent:'center'},
+  tools:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:13.7,marginHorizontal:10},
+  moon:{width:25,height:23,justifyContent:'flex-end'},
+  zzz:{position:'absolute',right:-1,top:-1,alignItems:'center'},
+  zLarge:{fontSize:8,lineHeight:9,fontWeight:'700',color:paper.icon},
+  zSmall:{fontSize:6.5,lineHeight:7,fontWeight:'700',color:paper.icon},
+  aa:{flexDirection:'row',alignItems:'baseline',gap:1.5},
+  aaSmall:{fontSize:13,lineHeight:20,fontWeight:'300',color:paper.toolMuted},
+  aaLarge:{fontSize:19,lineHeight:20,fontWeight:'300',color:paper.toolMuted},
+  queue:{gap:3.5},
+  queueLine:{height:1.5,borderRadius:0.75,backgroundColor:paper.icon},
+  caption:{...typography.micro,color:paper.secondary,textAlign:'center',marginTop:13.7},
 });

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "source": "https://scikit-image.org/docs/0.26.x/api/skimage.metrics.html#skimage.metrics.structural_similarity",
+  "versions": {
+    "skimage": "0.26.0",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "trustedSourceSha256": "9781d34ee98d3f4bc30012add3a4740eafbb66952dba9c6a5b3eb87bd0b4b0a0",
+  "inputSha256": "de2f5449abcf0fef0f112685eeebb943f58b30a658b9b47263f1b96befe2b13b",
+  "parameters": {
+    "data_range": 255,
+    "K1": 0.01,
+    "K2": 0.03,
+    "gaussian_weights": false,
+    "use_sample_covariance": false,
+    "boundary": "compare complete interior windows only"
+  },
+  "results": [
+    {
+      "kind": "identical",
+      "window": 3,
+      "trustedMean": 1.0,
+      "localMean": 1.0,
+      "maxAbsDifference": 0.0,
+      "validCenters": 255
+    },
+    {
+      "kind": "identical",
+      "window": 7,
+      "trustedMean": 1.0,
+      "localMean": 1.0,
+      "maxAbsDifference": 0.0,
+      "validCenters": 143
+    },
+    {
+      "kind": "offset",
+      "window": 3,
+      "trustedMean": 0.9764692679790862,
+      "localMean": 0.9764692679790861,
+      "maxAbsDifference": 3.219646771412954e-15,
+      "validCenters": 255
+    },
+    {
+      "kind": "offset",
+      "window": 7,
+      "trustedMean": 0.9772907901890104,
+      "localMean": 0.9772907901890107,
+      "maxAbsDifference": 2.9976021664879227e-15,
+      "validCenters": 143
+    },
+    {
+      "kind": "shift",
+      "window": 3,
+      "trustedMean": -0.24062039690433065,
+      "localMean": -0.2406203969043301,
+      "maxAbsDifference": 3.2751579226442118e-15,
+      "validCenters": 255
+    },
+    {
+      "kind": "shift",
+      "window": 7,
+      "trustedMean": -0.22109030374448185,
+      "localMean": -0.22109030374448174,
+      "maxAbsDifference": 1.942890293094024e-15,
+      "validCenters": 143
+    },
+    {
+      "kind": "missing",
+      "window": 3,
+      "trustedMean": 0.8369391097397942,
+      "localMean": 0.8369391097397941,
+      "maxAbsDifference": 9.159339953157541e-16,
+      "validCenters": 255
+    },
+    {
+      "kind": "missing",
+      "window": 7,
+      "trustedMean": 0.650298761901108,
+      "localMean": 0.6502987619011079,
+      "maxAbsDifference": 1.2212453270876722e-15,
+      "validCenters": 143
+    }
+  ]
+}

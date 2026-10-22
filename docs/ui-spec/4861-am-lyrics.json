@@ -3,29 +3,88 @@
   "title": "AM 歌词页 — 头部、滚动歌词与运输区",
   "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4861.PNG",
   "referenceSha256": "45b4324d37ee26c2e2929be8030639d75b5977055f1b9e89b3ccc8e4626d494a",
-  "candidate": "build/ui-screenshots-batch20b/027-AM-full-scrolling-lyrics-body.png",
-  "candidateSha256": "310a42326b1dd03c24cdeb6045c184d849ba5de3ba51251e43af87521be6decd",
+  "candidate": "build/ui-round3-20261021/001-AM-full-scrolling-lyrics-body-playing.png",
+  "candidateSha256": "9aa14b9ed09add3b7f42e3738eff09b145af2b1cadcfc62204f830fc5cdea149",
   "candidateCapture": {
     "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
-    "attachment": "AM full scrolling lyrics body",
-    "export": "node scripts/export-ui-screenshots.mjs --match \"AM full scrolling lyrics body\" --output <dir>"
+    "attachment": "AM full scrolling lyrics body playing",
+    "export": "node scripts/export-ui-screenshots.mjs --match \"AM full scrolling lyrics body playing\" --output <dir>"
   },
   "state": {
     "screen": "AM lyrics",
     "theme": "blush + rose",
     "background": "cover-derived gradient",
-    "playback": "paused fixture",
+    "playback": "playing fixture (paused restored after capture)",
     "scroll": "lyrics body",
-    "notes": "歌词文本、封面和背景均来自不同内容；控件区只保留进度、运输键与底部工具。"
+    "notes": "歌词文本、封面和背景均来自不同内容；控件区只评进度、时间/音质徽标、运输键与底部工具。捕获前点按进度条 41% 处定位到参考帧的播放位置；暂停条按参考 14×48.7pt、7pt 圆角、间距 14.4pt 绘制。"
   },
-  "size": [1290, 2796],
+  "size": [
+    1290,
+    2796
+  ],
   "ignoreTop": 180,
   "window": 7,
-  "grid": [6, 8],
-  "contentMasks": [[0, 170, 1290, 320], [0, 390, 1290, 900]],
-  "controlMasks": [[0, 170, 1290, 320], [0, 390, 1290, 900]],
-  "colorPatches": [
-    {"label": "foundation lower-left", "rect": [20, 2200, 100, 50]}
+  "grid": [
+    6,
+    8
   ],
-  "targets": {"controlSsim": 0.9, "controlDeltaE": 4, "controlEdge": 0.35}
+  "contentMasks": [
+    [
+      0,
+      100,
+      1290,
+      1820
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      70,
+      1895,
+      1150,
+      55
+    ],
+    [
+      170,
+      2150,
+      950,
+      200
+    ],
+    [
+      200,
+      2500,
+      890,
+      100
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      582,
+      2174,
+      42,
+      144
+    ],
+    [
+      666,
+      2174,
+      42,
+      144
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "pause fill",
+      "rect": [
+        590,
+        2200,
+        20,
+        80
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  }
 }
