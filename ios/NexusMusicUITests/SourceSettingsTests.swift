@@ -1778,7 +1778,7 @@ final class SourceSettingsTests: XCTestCase {
     func themeControl(_ query:String="") throws -> Int {
       (try themeState(query))["held"] as? Int ?? -1
     }
-    func waitForHeldCover(_ color:String) -> XCTWaiterResult {
+    func waitForHeldCover(_ color:String) -> XCTWaiter.Result {
       let expectation=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
         let colors=(try? themeState())?["heldColors"] as? [String] ?? []
         return colors.contains(color)
