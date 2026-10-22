@@ -387,6 +387,9 @@ final class SourceSettingsTests: XCTestCase {
     let automatic=NSPredicate(format:"label CONTAINS %@","自动优选 · 网易云")
     expectation(for:automatic,evaluatedWith:lyricSource);waitForExpectations(timeout:30)
     XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.exists);XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Changing lyrics must preserve paused audio")
+    app.buttons["更多播放控制"].tap()
+    XCTAssertTrue(app.buttons["播放界面样式"].waitForExistence(timeout:5))
+    app.buttons["播放界面样式"].tap()
     let stageSkin=app.descendants(matching:.any).matching(identifier:"play-skin-stage").firstMatch
     reach(stageSkin,up:false);stageSkin.tap()
     let stageGroup=app.descendants(matching:.any).matching(identifier:"lyric-stage-group").firstMatch
@@ -529,10 +532,48 @@ final class SourceSettingsTests: XCTestCase {
     let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Health Fixture").firstMatch
     for _ in 0..<6 {if selected.isHittable{break};app.swipeUp()};XCTAssertTrue(selected.exists);app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
+  func testNeteaseLoginLauncherCancellation() throws {
+    let app=XCUIApplication();app.launch()
+    openSettings(app,page:"accounts")
+    let login=app.buttons["login-music-account-wy"]
+    XCTAssertTrue(login.waitForExistence(timeout:10));XCTAssertTrue(login.isHittable);login.tap()
+    let navigation=app.navigationBars["网易云登录"]
+    XCTAssertTrue(navigation.waitForExistence(timeout:10),"The official NetEase login page must open in the native WebKit sheet")
+    let close=navigation.buttons["关闭"]
+    XCTAssertTrue(close.waitForExistence(timeout:5));close.tap()
+    XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
+    XCTAssertFalse(navigation.exists)
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.
     let app=XCUIApplication();app.launch()
+    // This test verifies both automatic matching and the preference lifecycle.
+    // Start from a known enabled state because the persistent simulator can
+    // retain an earlier interrupted run that stopped after turning it off.
+    openSettings(app,page:"playback")
+    let initialAutomatic=app.buttons["automatic-online-matching"]
+    for _ in 0..<40 {if initialAutomatic.isHittable{break};app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.72)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)))}
+    XCTAssertTrue(initialAutomatic.isHittable)
+    if initialAutomatic.label=="普通在线歌曲自动匹配：关闭"{
+      initialAutomatic.tap()
+      expectation(for:NSPredicate(format:"label == %@","普通在线歌曲自动匹配：开启"),evaluatedWith:initialAutomatic);waitForExpectations(timeout:5)
+    }
+    XCTAssertEqual(initialAutomatic.label,"普通在线歌曲自动匹配：开启")
+    func openMatchDetails(){
+      for _ in 0..<8 {if app.buttons["更多播放控制"].isHittable{break};app.swipeDown()}
+      let more=app.buttons["更多播放控制"];XCTAssertTrue(more.isHittable);more.tap()
+      let details=app.buttons["队列与播放选项"];XCTAssertTrue(details.waitForExistence(timeout:5));details.tap()
+    }
+    func closeMatchDetails(){
+      let close=app.buttons["收起播放选项"];XCTAssertTrue(close.waitForExistence(timeout:5));close.tap()
+      XCTAssertTrue(waitForGone(close,timeout:5))
+    }
+    func assertMatchStatus(_ text:String,timeout:TimeInterval=30){
+      openMatchDetails()
+      XCTAssertTrue(app.staticTexts[text].waitForExistence(timeout:timeout))
+      closeMatchDetails()
+    }
     openSettings(app,page:"sources")
     let source=app.textFields["音源订阅地址"]
     for _ in 0..<8 {if source.isHittable{break};app.swipeUp()}
@@ -545,24 +586,34 @@ final class SourceSettingsTests: XCTestCase {
     let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10));app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
     query.tap();query.typeText("Synthetic match tone\n")
     let first=app.buttons["search-track-wy-0"];XCTAssertTrue(first.waitForExistence(timeout:20));first.tap();app.buttons["打开播放页"].tap()
-    let actual=app.staticTexts["正在通过 tx · Synthetic match tone 播放"]
-    XCTAssertTrue(actual.waitForExistence(timeout:30));XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
+    openMatchDetails()
+    let priorLive=app.staticTexts["正在通过 tx · Synthetic match tone (Live) 播放"]
+    if priorLive.waitForExistence(timeout:2){
+      closeMatchDetails()
+      let matchButton=app.buttons["匹配歌曲"];for _ in 0..<8 {if matchButton.isHittable{break};app.swipeUp()};XCTAssertTrue(matchButton.isHittable);matchButton.tap()
+      let clear=app.buttons["取消指定版本，恢复自动"];XCTAssertTrue(clear.waitForExistence(timeout:5));clear.tap()
+      for _ in 0..<4 {if app.buttons["播放"].firstMatch.isHittable{break};app.swipeUp()};app.buttons["播放"].firstMatch.tap()
+      assertMatchStatus("正在通过 tx · Synthetic match tone 播放")
+    }else{
+      XCTAssertTrue(app.staticTexts["正在通过 tx · Synthetic match tone 播放"].waitForExistence(timeout:30))
+      closeMatchDetails()
+    }
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
     XCTAssertTrue(app.staticTexts["偏好 flac · 成功请求档位 flac（非实际文件格式证明）"].exists)
-    app.buttons["匹配歌曲"].tap();app.buttons["取消指定版本，恢复自动"].tap()
-    XCTAssertTrue(app.staticTexts["保留原曲，可选择其他录音版本"].waitForExistence(timeout:10))
+    let matchButton=app.buttons["匹配歌曲"];for _ in 0..<8 {if matchButton.isHittable{break};app.swipeUp()};XCTAssertTrue(matchButton.isHittable);matchButton.tap();app.buttons["取消指定版本，恢复自动"].tap()
+    assertMatchStatus("保留原曲，可选择其他录音版本",timeout:10)
     for _ in 0..<4 {if app.buttons["播放"].firstMatch.isHittable{break};app.swipeUp()};app.buttons["播放"].firstMatch.tap()
-    XCTAssertTrue(actual.waitForExistence(timeout:20));for _ in 0..<4 {if app.buttons["匹配歌曲"].isHittable{break};app.swipeDown()}
+    assertMatchStatus("正在通过 tx · Synthetic match tone 播放",timeout:20);for _ in 0..<4 {if app.buttons["匹配歌曲"].isHittable{break};app.swipeUp()}
     app.buttons["匹配歌曲"].tap()
     let live=app.buttons["match-candidate-tx-fixture-live"]
     XCTAssertTrue(live.waitForExistence(timeout:20));for _ in 0..<4 {if live.isHittable{break};app.swipeUp()};live.tap();app.alerts.buttons["保存匹配"].tap()
-    XCTAssertTrue(app.staticTexts["已指定版本，重新播放后使用"].waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.exists)
+    assertMatchStatus("已指定版本，重新播放后使用",timeout:10);XCTAssertTrue(app.buttons["播放"].firstMatch.exists)
     for _ in 0..<4 {if app.buttons["播放"].firstMatch.isHittable{break};app.swipeUp()};app.buttons["播放"].firstMatch.tap()
-    let liveActual=app.staticTexts["正在通过 tx · Synthetic match tone (Live) 播放"]
-    XCTAssertTrue(liveActual.waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
+    assertMatchStatus("正在通过 tx · Synthetic match tone (Live) 播放",timeout:15);XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     for _ in 0..<4 {if app.buttons["匹配歌曲"].isHittable{break};app.swipeDown()};app.buttons["匹配歌曲"].tap();app.buttons["取消指定版本，恢复自动"].tap()
-    XCTAssertTrue(app.staticTexts["保留原曲，可选择其他录音版本"].waitForExistence(timeout:10))
-    app.terminate();app.launch();app.buttons["打开播放页"].tap();XCTAssertTrue(app.staticTexts["保留原曲，可选择其他录音版本"].waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["Synthetic match tone"].firstMatch.exists)
+    assertMatchStatus("保留原曲，可选择其他录音版本",timeout:10)
+    app.terminate();app.launch();app.buttons["打开播放页"].tap();assertMatchStatus("保留原曲，可选择其他录音版本",timeout:10);XCTAssertTrue(app.staticTexts["Synthetic match tone"].firstMatch.exists)
     app.buttons["收起播放页"].tap();openSettings(app,page:"playback")
     let automatic=app.buttons["automatic-online-matching"]
     // Short content swipes avoid skipping this button between large settings cards.
@@ -1128,9 +1179,7 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<5 {if line.isHittable{break};lyricList.swipeUp()}
     XCTAssertEqual(progress.value as? String,beforeScroll,"Scrolling lyrics must keep the paused playback position")
     let beforeTap=XCTAttachment(screenshot:app.screenshot());beforeTap.name=am ? "AM actual lyric before double tap":"AM2 actual lyric before double tap";beforeTap.lifetime = .keepAlways;add(beforeTap)
-    // XCUI can collapse doubleTap on an embedded list row into one activation.
-    // Two real tap sequences still verify the product's bounded double-tap path.
-    XCTAssertTrue(line.isHittable);line.tap();line.tap()
+    XCTAssertTrue(line.isHittable);line.doubleTap()
     expectation(for:NSPredicate(format:"value == %@","0:06 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:5)
     XCTAssertEqual(progress.value as? String,"0:06 / 2:00")
     if am && largeText {

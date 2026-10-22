@@ -1,3 +1,9 @@
+## 2026-10-22 网易云网页登录实施
+
+固定 Q-music `5db858f32695d10c5e9ef0f7037d586aef6a8c4b` 的官方登录语义已在音枢边界内实现：React 设置页提供网易云登录状态、登录/取消和退出；原生 `NexusMusicAuth` 用非持久 `WKWebsiteDataStore` 承载官方网页，只允许网易云 HTTPS 导航，按 Cookie 完成状态结束且在主线程创建/展示 WebKit。TS 仅保留鉴权所需 Cookie 白名单并交由 `MusicAccounts` 写入 Keychain，元数据不含原始会话。
+
+登录取得 Cookie 后先请求官方账号资料接口验证会话；只有数字 userId 与边界内昵称同时有效才保存账号，稳定 identity 使用 `netease:<userId>`，昵称仅作为 `displayName` 元数据，原始 Cookie 仍只进 Keychain。设置页显示昵称并可从恢复的 Keychain 会话重新验证；验证失败保留原会话并显示固定错误，不制造账号成功。登录能力保存为空 capability，日推仍受独立鉴权 endpoint 门槛约束。`npm run check` 421/421、完整 native 检查及真实 App 登录窗口/取消专项 1/0/0 通过；真实账号重启联调、日推、个人歌单/收藏、其他平台与真机签名继续开放。
+
 ## 2026-10-21 当前实施方法
 
 阶段顺序是主线优先级；无依赖的协议/账号/后端可并行，素材、原版环境、采集或录屏缺口不阻塞独立工作，但不得将缺证UI标完成。

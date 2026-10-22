@@ -2,9 +2,32 @@
 
 用户最新优先级仍是先对齐 Sollin UI。本批把 4855/4856 全部声明关键区收敛到最低门槛以上：默认iPhone常态、`blush + rose`、纯色/卡片30%同态下，4855 整屏 **92.43% / ΔE00 2.62 / 边缘0.58**，4856 整屏 **92.42% / 2.15 / 0.55**；最小关键区为4856视觉参数 **90.14% / 2.31 / 0.42**。精确证据为 `SourceUITests-1792626911881.xcresult`（1/0/0）；前一次冻结源码采集 `SourceUITests-1792626523837` 分数逐项一致。完整数据见 [r7f回执](docs/ui-spec/appearance-grid-r7f-2026-10-22.md)。
 
-实现包括二维Sheet材质（17×33、参考低梯度采样）、主题3/3/3/2固定测量宽度与参考色值、预览摘要字宽/基线、4856正式ScrollView 216pt确定性锚定；`柔和`/`经典`仍在真实滚动扩展区。正常入口关闭/重开、收藏持久化、扩展主题可达、图片导入/播放背景持久化、`testZNavidromePlaybackAndCredentials` 均通过；`npm run check` **430/430**。采集源码 digest `fcc4cdf0…` 前后一致，r7e/r7f差异平均仅0.0335通道值。
+实现包括二维Sheet材质（17×33、参考低梯度采样）、主题3/3/3/2固定测量宽度与参考色值、预览摘要字宽/基线、4856正式ScrollView 216pt确定性锚定；`柔和`/`经典`仍在真实滚动扩展区。正常入口关闭/重开、收藏持久化、扩展主题可达、图片导入/播放背景持久化、`testZNavidromePlaybackAndCredentials` 均通过；合并远端账号批次后 `npm run check` **439/439**，完整native套件通过。采集源码 digest `fcc4cdf0…` 前后一致，r7e/r7f差异平均仅0.0335通道值。
 
 4855/4856现可记“静态样板已对齐”，不能记动效/全站/真机完成。真实账号与音源、Apple签名、真机和录屏仍未验收。后续按主规范进入4854经典播放器，然后继续其余页面；解析 worktree 继续暂缓，用户要求先完成UI。
+## 2026-10-22 网易云 WKWebView 登录与安全会话底座
+
+按固定 Q-music `5db858f32695d10c5e9ef0f7037d586aef6a8c4b` 的官方网页登录和 Cookie 语义，接入首个平台登录闭环：设置新增“音乐账号”页，只提供真实“登录网易云账号”入口；`NexusMusicAuth` 在 App 内用隔离的 `WKWebsiteDataStore.nonPersistent()` 打开 `https://music.163.com/m/login`，限制导航为网易云官方 HTTPS 页面，检测 `MUSIC_U` 后返回 Cookie。关闭、超时和取消均走 `MusicAuthFlow` 的取消/过期/失败状态，迟到回调不能发布成功。
+
+TS 侧只白名单保留 `MUSIC_U`、`__csrf`、`NMTID`、`_ntes_nuid` 等账号接口所需 Cookie，拒绝空值、控制字符和超长值；账号资料只保存由会话派生的不可逆标识，原始会话仅进入 Expo SecureStore/Keychain。登录 UI 明示登录不等于日推/歌单/FM 已完成，账号仍以空 capability 保存，避免 `accountDaily` 把已登录误作官方日推授权。
+
+验证：`npm run check` **417/417**；新增 5 项登录解析/取消/隔离测试通过。`npm run test:native` 通过完整 utility/JSC/lifecycle/DSP/AVPlayer/system media/cache/ambient/local audio/WebDAV/probe/visual 套件；新 Swift 模块被原生构建编译。真实 App `SourceUITests-1792613267120.xcresult` 为 **1通过/0失败/0跳过**，确认设置→音乐账号→真实官方登录窗口可达、可关闭，并恢复“登录已取消”。首次实现因在 Expo 异步队列创建 WebKit data store 触发 `EXC_BREAKPOINT`，崩溃报告 `app-2026-10-22-040242.ips` 定位到 `NexusMusicAuthModule.swift:59`；改为主线程执行后复验通过。
+
+随后补齐账号资料与会话复核：登录窗口取得 `MUSIC_U` 后不会直接落库，而是带 Cookie 只读官方 `https://music.163.com/api/nuser/account/get`。响应仅在 `code=200` 且包含数字 `userId`、边界内昵称时通过；账号稳定身份改为 `netease:<userId>`，昵称只作为脱敏元数据 `displayName`，Cookie 仍只进 Keychain。设置页显示昵称并提供“验证”，重启后可从 Keychain 读取该账号会话并重新校验；失败不会删除旧会话或伪造成功。合成凭据探针实际到达官方端点并正确返回 `login_required`，不冒充真实账号。`npm run check` **421/421**，完整 native 套件通过；新增账号资料解析、Cookie 请求边界、未验证会话不落库及昵称持久化测试。
+
+未完成：真实网易云账号登录/回跳/重启会话联调、实际鉴权日推 endpoint、个人歌单/收藏、QQ/酷狗登录与 FM；Apple 签名和真机仍独立验收。不能把合成 Cookie、网页可达或编译成功写成真实账号完成。
+
+## 2026-10-22 Step 11 测试隔离修复与完整 iOS 27 通过
+
+iOS 27 `39590937799`（`942105c`）在 Step 10 通过后暴露 Step 11 两项旧测试状态问题：`testCrossPlatformLyrics` 在歌词来源 Sheet 已关闭后直接查找舞台样式，未重新打开现有样式 Sheet；`testOnlineMatching` 依赖持久模拟器里的自动匹配/手动匹配状态，并在经典播放器页直接查找仅在“队列与播放选项”Sheet 内显示的状态。失败日志、failure evidence、CRC/SHA 与诊断见 `build/ci-39590937799/FINDINGS.txt`，不是播放器或真实网络失败。
+
+修复 `40173afc311d020c9786c3d996753ebbc559d737` 让测试先走真实样式导航、通过真实 UI 归零自动匹配与旧手动匹配状态，并从现有播放选项 Sheet 验证自动、原曲、手动和 Live 匹配状态。本地按 CI 顺序运行 `testCrossPlatformLyrics` 后 `testOnlineMatching`，`SourceUITests-1792600644489.xcresult` 为 **2通过/0失败/0跳过**；`npm run check` **412/412**、Swift parse 与 `git diff --check` 通过。证据保存在 `build/local-step11-isolation-3963c89`。
+
+云端 `39637673505`（`40173af`）已 **completed/success**：checks、Pods、native、iOS 27 模拟器、Step 10 首组 App、Step 11 在线/歌词/健康/发现、Step 12 离线播放、Step 13 unsigned archive、Step 14 IPA 上传、Step 15 日志与 Step 17 diagnostics 全部成功；Step 16 失败附件因无失败按设计跳过。完成后队列 0运行/0排队，不重派旧提交。
+
+本地清洁 unsigned IPA 已归档到 `build/local-step11-isolation-40173af`：manifest commit `40173af`、`dirty=false`、changes 为空；arm64、iphoneos26.2、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`。IPA SHA-256 `a46f1382847e68291e4f74cfcaf058a870fd624c2e9f7321b97a27671e87adc7`；IPA 与 xcarchive 的 `main.jsbundle` SHA-256 均为 `01e966d1e516f974ac371181cafb7e9da845b56477b5f059e21d54f2f1d1dd02`；ZIP CRC 与正式入口/测试适配器排除通过。该包不替代 Apple 签名或真机。
+
+阶段清理移除已完成诊断的临时 worktree 构建缓存与重复本地 xcresult 共 2,169,060 KiB，回执 `build/logs/cleanup-step11-isolation-2026-10-22.json`；保留云端失败证据、最新有效本地结果、完整 IPA 与 manifest。清理后磁盘约 19 GiB，低于 30 GiB 阈值，仍有其他未提交 UI 批次在并行推进。真实账号/日推/FM、Apple 签名、真机歌词双击/长按/无障碍及实际音源验收继续开放。
 
 ## 2026-10-21 当前接续：UI方法规范已更新
 
@@ -15,6 +38,12 @@
 下一实施动作：按新规范补场景采集/来源清单和度量反例校准，先修外观Sheet容器与滚动归属，再做字体、图标、颜色和局部几何。新工具能力须逐项验证，不能由规范写入视为已实现；局部ROI高分不代表整页，条件估算不代表还原上限。
 
 本次开始磁盘约31GiB可用，build约19G/work约246M；有其他工作进行中，未删除缓存或引用证据。文档批次只做链接/一致性及diff检查；未新增App构建、云端通过、真实服务、签名或真机结论。以下为历史阶段证据，执行方法冲突以新规范为准。
+
+## 2026-10-21 942105c 歌词双击测试语义修正
+
+`fa8ddd7/39516000415`与`2bc2a63/39531808260`均为iOS27 iPhone17 **19通过/2失败/0跳过**，失败仍只落在AM2/AM双击定位。证据显示fa8ddd7的原生手势已编译且其余21项中的19项通过，但测试用两次独立`tap()`，间隔超过系统双击窗口，UIKit按两个单击处理。为保持真实产品交互语义，`942105c`仅把测试改回`line.doubleTap()`；工作区有另一批未提交UI改动，因此该修复在独立worktree中提交，未混入或覆盖其他修改。最新run `39590937799`执行中。
+
+两次失败日志与证据均保留：fa8ddd7 logs SHA-256 `24722c9c8ff4c294c3e1266d652a975c395218478f175825e147b6548abc84da`、evidence `0586f2682e9e8cd5cef8d4feebc18c971a1a2d92fc01aefcefd01e86d025adfb`；2bc2a63 logs `1f40554bee8c7a221d7c7f45403ce21b49492fa7012fe2f74d095a1267ab7cbc`、evidence `56535eaec4757f57007b5c4d43420a9e3fdeb3ad09b671186646a8093e8ca101`，ZIP CRC均通过。
 
 ## 2026-10-21 Phase 0 四轴视觉实验室与五态基线冻结
 

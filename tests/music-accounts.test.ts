@@ -11,8 +11,9 @@ function fixture(){
 }
 
 test('music account metadata and session material are stored separately',async()=>{
-  const f=fixture(),account=await f.accounts.save({platform:'tx',label:'QQ Music',username:'u',capabilities:['playlist','daily']},{token:'secret',cookies:{sid:'private'}});
+  const f=fixture(),account=await f.accounts.save({platform:'tx',label:'QQ Music',username:'u',displayName:'Fixture listener',capabilities:['playlist','daily']},{token:'secret',cookies:{sid:'private'}});
   assert.equal(f.records.get('music.accounts.v1') instanceof Array,true);
+  assert.equal(account.displayName,'Fixture listener');
   assert.doesNotMatch(JSON.stringify(f.records.get('music.accounts.v1')),/secret|private/);
   assert.deepEqual(await f.accounts.session(account.id),{token:'secret',cookies:{sid:'private'}});
 });
