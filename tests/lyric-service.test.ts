@@ -73,3 +73,12 @@ test('raw private lyric cache includes device recording signature as well as acc
  assert.equal((await service.load(song,new AbortController().signal)).document.lines[0]!.text,'Revision 1');
  assert.equal((await service.load({...song,metadata:{deviceSignature:'b'.repeat(64)}},new AbortController().signal)).document.lines[0]!.text,'Revision 2');assert.equal(calls,2);
 });
+
+test('a mixed-format LX response stays on its capable source and caches the usable fallback',async()=>{
+  const registry=new SourceRegistry({initialize:async()=>[{platform:'wy',name:'Fixture',actions:['lyric'],qualities:[]}],destroy(){}});
+  registry.register({id:'mixed',name:'Mixed fixture',script:'fixture'});await registry.setEnabled('mixed',true);let calls=0;
+  const service=new LyricService(registry,{request:async()=>{calls++;return{ttml:'<tt>',lyric:' ',lrc:'[00:01]<0,500>A<500,500>B',tlyric:'',tlrc:'[00:01]Translated'};}},async()=>'',async()=>{throw Error('must not skip a valid source response');});
+  const result=await service.load(track,new AbortController().signal);
+  assert.equal(result.document.lines[0]!.text,'AB');assert.equal(result.document.lines[0]!.translation,'Translated');assert.equal(result.document.lines[0]!.words?.length,2);
+  assert.equal(await service.load(track,new AbortController().signal),result);assert.equal(calls,1);
+});

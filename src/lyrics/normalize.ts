@@ -55,8 +55,29 @@ export function normalizeLyrics(raw:unknown):LyricResult {
   const sets=array(value.structuredLyrics??object(value.lyricsList).structuredLyrics).slice(0,16).map(object);
   if(sets.length){const variants=sets.map((value,index)=>({label:[string(value.lang),string(value.kind)||`版本${index+1}`].filter(Boolean).join(' · '),document:structured(value)}));
     const selected=Math.max(0,sets.findIndex(value=>!value.kind||value.kind==='main'));return{document:variants[selected]!.document,variants};}
-  const text=(input:unknown)=>lyricText(typeof input==='string'?input:string(object(input).lyric));
-  const rich=text(value.ttml??value.lxlyric??value.yrc??value.krc??value.qrc),plain=text(value.lyric??value.lrc??value.value);
-  const richDocument=parseLyrics(rich),base=richDocument.synced?richDocument:parseLyrics(plain);
-  return{document:mergeLyrics(base,text(value.tlyric??value.tlrc),text(value.rlyric??value.romalrc)),variants:[]};
+  // Providers can return several representations, including empty/failed
+  // preferred fields. Prefer the first usable timed document, then readable
+  // plain fields; a broken optional variant must not discard the main lyric.
+  const select=(inputs:readonly {value:unknown;rich?:boolean}[],required=false)=>{
+    let plain:{document:LyricDocument;text:string}|undefined,richPlain:typeof plain,failure:unknown;
+    for(const input of inputs){
+      const raw=typeof input.value==='string'?input.value:string(object(input.value).lyric);
+      if(!raw.trim())continue;
+      try{
+        const text=lyricText(raw),document=parseLyrics(text),candidate={document,text};
+        if(document.synced&&document.lines.some(line=>line.text.trim()))return candidate;
+        if(document.plain.some(line=>line.trim())){
+          if(input.rich)richPlain??=candidate;else plain??=candidate;
+        }
+      }catch(error){failure??=error;}
+    }
+    const fallback=plain??richPlain;
+    if(!fallback&&required&&failure)throw failure;
+    return fallback;
+  };
+  const main=select([...['ttml','lxlyric','yrc','krc','qrc'].map(key=>({value:value[key],rich:true})),...['lyric','lrc','value'].map(key=>({value:value[key]}))],true);
+  const base=main?.document??{lines:[],plain:[],synced:false};
+  const translation=select([{value:value.tlyric},{value:value.tlrc}]);
+  const romanization=select([{value:value.rlyric},{value:value.romalrc}]);
+  return{document:mergeLyrics(base,translation?.text,romanization?.text),variants:[]};
 }

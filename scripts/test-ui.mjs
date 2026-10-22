@@ -179,7 +179,7 @@ const server = createServer(async (req, res) => {
       if(offset===0){counts.comments.first++;res.end(JSON.stringify({code:200,hotComments:[{...comment('9'),content:'Synthetic hot comment'}],comments:[comment('1'),comment('2')],total:3,more:true}));}
       else {counts.comments.next++;res.end(JSON.stringify(counts.comments.next===1?{code:503}:{code:200,comments:[comment('3')],total:3,more:false}));}return;
     }
-    if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/song/lyric'){counts.lyrics??={wy:0,tx:0};counts.lyrics.wy++;res.end(JSON.stringify({lyric:'[00:00.000]<0,500>Synthetic <500,500>rich lyric\n[00:30.000]<0,1000>Second rich line'}));return;}
+    if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/song/lyric'){counts.lyrics??={wy:0,tx:0};counts.lyrics.wy++;res.end(JSON.stringify({ttml:'<tt>',lxlyric:' ',lyric:'',lrc:'[00:00.000]<0,500>Synthetic <500,500>rich lyric\n[00:30.000]<0,1000>Second rich line'}));return;}
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;}
     if(parsed.hostname==='u.y.qq.com'){

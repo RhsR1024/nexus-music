@@ -343,6 +343,7 @@ final class SourceSettingsTests: XCTestCase {
     reach(waveSkin)
     XCTAssertTrue((waveSkin.value as? String)?.contains("实时音频频谱环") == true)
     waveSkin.tap()
+    XCTAssertTrue(waitForGone(app.buttons["skins-sheet-close"],timeout:10),"Wave selection must finish dismissing before source navigation")
     openSettings(app,page:"sources")
     let source=app.textFields["音源订阅地址"];reach(source);source.tap();for character in "http://127.0.0.1:18439/matching-source.js"{source.typeText(String(character))};source.typeText("\n");app.buttons["从地址导入"].tap()
     let enable=app.buttons["启用音源：Nexus Matching Fixture"],enabled=app.buttons["停用音源：Nexus Matching Fixture"]
