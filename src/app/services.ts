@@ -88,7 +88,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   // Recommendations are derived from local library/statistics only. No Sollin
   // account, private endpoint, or remote recommendation protocol is involved.
   const recommendations=new LocalRecommendationStore(library,playbackStats,Date.now);
-  const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON});
+  const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
   musicAccounts.subscribe(()=>accountDaily.clear());
   const nativeLX = loadNativeLX();
   const registry = new SourceRegistry(nativeLX);

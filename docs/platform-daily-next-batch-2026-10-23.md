@@ -9,3 +9,9 @@
 5. 测试覆盖固定加密向量、Cookie/CSRF/表单、HTTP/业务码、详情乱序缺项/去重/30首、真实仓储替换与clear迟到/并发逆序，以及App正式导航和队列动作；真实账号/日推/实际音源播放/FM/签名/真机分别验收。平台FM、QQ/酷狗及全部parse任务仍在总范围。
 
 当前主线仍先收经典阶段出口；本计划允许无依赖的生命周期修复随后推进，不等待全UI或未知动效。
+
+## 2026-10-23 生命周期修复回执
+
+已将AccountDailyClient生产实例绑定MusicAccounts.getSnapshot，缓存前/响应后核对当前账号对象与身份、session accountId/platform；真实save替换同ID对象和remove均能淘汰旧请求，不能只原地改updatedAt测试。clear按账号精确失效generation，迟到成功/失败均不回填；同账号新请求淘汰旧请求并归cancelled，跨日请求亦不发布。合法空数组现在成功缓存；缺失/坏数组、全坏行、错误业务码即使带data也拒绝，301/401/403映射过期。
+
+新增6项测试（含循环子场景）验证真实仓储替换/删除、缓存前身份校验、定向/全局clear与其他账号保留、并发强刷逆序、空列表/业务码、TTL与跨日；原6项保留并修正空态约定。npm run check445/445通过，日志build/logs/check-daily-lifecycle-20261023.log。未配置真实endpoint、未传Cookie到网络、未开启capability/UI，正式协议接通和真实账号仍待；不增加F30完成度。
