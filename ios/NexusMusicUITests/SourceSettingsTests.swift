@@ -2601,6 +2601,33 @@ final class SourceSettingsTests: XCTestCase {
   func testVisualLabAppearanceSheet(){
     captureAppearanceSheet(direct:false)
   }
+  func testVisualLabClassicDirect(){
+    let app=XCUIApplication();app.launch()
+    let open=app.buttons["打开播放页"].firstMatch
+    XCTAssertTrue(open.waitForExistence(timeout:30));open.tap()
+    let play=app.buttons["播放"].firstMatch
+    XCTAssertTrue(play.waitForExistence(timeout:10));play.tap()
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    expectation(for:NSPredicate(format:"value CONTAINS %@","2:00"),evaluatedWith:progress);waitForExpectations(timeout:20)
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:10))
+    for line in ["这是一行合成歌词文字","音枢经典播放器三行布局测试","下一行用于验证歌词排版"] {
+      XCTAssertTrue(app.buttons[line].firstMatch.waitForExistence(timeout:15),"All three fixture lines must render before capture")
+    }
+    var previous=CGRect.zero,stable=0
+    let settled=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      let frame=progress.frame;stable=frame==previous ? stable+1:0;previous=frame
+      return frame.height>0 && stable>=2
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[settled],timeout:10),.completed)
+    progress.coordinate(withNormalizedOffset:CGVector(dx:0.93,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"value CONTAINS %@","1:52"),evaluatedWith:progress);waitForExpectations(timeout:5)
+    Thread.sleep(forTimeInterval:0.2)
+    let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name="Classic direct three lines";shot.lifetime = .keepAlways;add(shot)
+    app.buttons["暂停"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5))
+    app.buttons["收起播放页"].firstMatch.tap()
+    XCTAssertTrue(open.waitForExistence(timeout:5))
+  }
   func testVisualLabAppearanceDirect(){
     captureAppearanceSheet(direct:true)
   }

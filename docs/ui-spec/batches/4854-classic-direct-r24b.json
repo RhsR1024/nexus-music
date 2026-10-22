@@ -1,0 +1,138 @@
+{
+  "id": "4854-classic-direct-r24b",
+  "title": "4854 正式组件三行场景基线",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+  "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+  "candidate": "build/classic-direct-r24b-20261022/screenshots/001-Classic-direct-three-lines.png",
+  "candidateSha256": "ae498cf1b78dd30bccb332f9670a41dfbb84796fdef617c40e473c324902fbf6",
+  "captureEvidence": {
+    "manifest": "build/classic-direct-r24b-20261022/run-manifest.json",
+    "exportIndex": "build/classic-direct-r24b-20261022/screenshots/index.json"
+  },
+  "state": {
+    "screen": "classic player",
+    "theme": "blush + rose",
+    "mode": "light",
+    "background": "gradient",
+    "playback": "playing near 93.6% (fixture seek 1:52/2:00; paused restored after capture)",
+    "scroll": "top",
+    "fontScale": 1,
+    "language": "zh UI / zh synthetic content",
+    "notes": "独立测试entry，正式mini打开；三行中文合成歌词0/100/116s，112s中行高亮。产品代码与r23相同，但内容不同，不作产品改善归因。歌词块及控制区下移待修。"
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [
+    6,
+    8
+  ],
+  "contentMasks": [
+    [
+      183,
+      408,
+      924,
+      840
+    ],
+    [
+      140,
+      1260,
+      1010,
+      560
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      70,
+      1975,
+      1150,
+      75
+    ],
+    [
+      330,
+      2170,
+      630,
+      265
+    ],
+    [
+      150,
+      2475,
+      990,
+      100
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      616,
+      2264,
+      19,
+      68
+    ],
+    [
+      655,
+      2264,
+      19,
+      68
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "play fill",
+      "rect": [
+        700,
+        2240,
+        20,
+        20
+      ]
+    },
+    {
+      "label": "pause bar",
+      "rect": [
+        620,
+        2290,
+        8,
+        20
+      ]
+    }
+  ],
+  "criticalRegions": [
+    {
+      "label": "progress",
+      "rect": [
+        70,
+        1975,
+        1150,
+        75
+      ]
+    },
+    {
+      "label": "transport",
+      "rect": [
+        330,
+        2170,
+        630,
+        265
+      ]
+    },
+    {
+      "label": "tools",
+      "rect": [
+        150,
+        2475,
+        990,
+        100
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  },
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "frozenAnchors": "docs/ui-spec/anchor-list-4854-2026-10-22.md"
+}
