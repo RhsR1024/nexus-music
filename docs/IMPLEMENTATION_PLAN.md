@@ -1,3 +1,7 @@
+## 2026-10-22 iOS 27 Pod lock 失败修复
+
+`4640a5f` 在 iOS 27 第 7 步 CocoaPods lock 校验失败，后续原生、App 测试与归档均未执行。失败提交只额外写入了本机生成的 `React-Core-prebuilt` checksum 和 PBX 文件排序；两处均非产品源码。`6e14c4a` 撤回这两处机器相关变化，使 iOS 依赖文件与已成功完成同一步骤的 `c5912d0` 字节一致。合并源码 check 439/439；新提交仍须由 iOS 27 从 clean checkout 完整验证，不能用本地配置推断云端通过。
+
 ## 2026-10-22 网易云网页登录实施
 
 固定 Q-music `5db858f32695d10c5e9ef0f7037d586aef6a8c4b` 的官方登录语义已在音枢边界内实现：React 设置页提供网易云登录状态、登录/取消和退出；原生 `NexusMusicAuth` 用非持久 `WKWebsiteDataStore` 承载官方网页，只允许网易云 HTTPS 导航，按 Cookie 完成状态结束且在主线程创建/展示 WebKit。TS 仅保留鉴权所需 Cookie 白名单并交由 `MusicAccounts` 写入 Keychain，元数据不含原始会话。
