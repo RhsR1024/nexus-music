@@ -36,7 +36,7 @@ export function VisualSettings({services}:{services:Services}){
   // (18pt white fill) with '#RRGGBB' ink from 84.67pt; the colour-filter
   // glyph sits at 365.0..382.7pt.
   const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingLeft:13,paddingRight:0,flexDirection:'row',alignItems:'center',gap:19}}>
-    <View style={{position:'absolute',top:-8,left:9.3,paddingHorizontal:6,backgroundColor:card}}><Text style={{color:legend,fontSize:13}}>遮罩颜色</Text></View>
+    <View style={{position:'absolute',top:-8,left:9.3,paddingHorizontal:6,backgroundColor:card}}><Text style={{color:legend,fontSize:12}}>遮罩颜色</Text></View>
     <View style={{width:20,height:20,borderRadius:10,backgroundColor:value.maskColor,borderWidth:1,borderColor:'rgba(0,0,0,0.22)'}}/>
     <Text testID="visual-value-maskColor" style={{flex:1,color:ink,fontSize:16,letterSpacing:0.9,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel="选择遮罩颜色" disabled={busy} onPress={()=>Alert.alert('遮罩颜色','选择播放背景遮罩颜色。',[...maskColors.map(([color,label])=>({text:label,onPress:()=>update({maskColor:color})})),{text:'取消',style:'cancel' as const}])} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={21} color={legend}/></Pressable>
@@ -47,7 +47,9 @@ export function VisualSettings({services}:{services:Services}){
   return <View style={{gap:18,paddingTop:11.5,paddingBottom:18}}>
     {/* IMG_4856 order: 背景透明度 / 卡片透明度 / 背景遮罩 / 遮罩颜色 / 背景模糊. */}
     <View style={{paddingTop:2,gap:7.4}}>
-      <Text accessibilityRole="header" style={{color:muted,fontSize:13}}>视觉参数</Text>
+      {/* IMG_4856 indents this header 4pt further than the row labels and
+          spaces its four glyphs 1.2pt wider than the default tracking. */}
+      <Text accessibilityRole="header" style={{color:muted,fontSize:13,marginLeft:4,letterSpacing:0.4}}>视觉参数</Text>
       <View style={{borderRadius:18,backgroundColor:card,paddingHorizontal:16}}>
         {row('backgroundOpacity',0,adjust('backgroundOpacity','背景透明度',.1,0,1))}
         {row('cardOpacity',1,adjust('cardOpacity','卡片透明度',.1,0,1))}
