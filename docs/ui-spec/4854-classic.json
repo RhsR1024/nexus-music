@@ -3,8 +3,8 @@
   "title": "经典播放页 — 默认 blush/rose、封面取色渐变",
   "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
   "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
-  "candidate": "build/ui-round2-20261021/003-Classic-reference-composition.png",
-  "candidateSha256": "ae3e65ff35368f5764788989123f98492f724cf94eb004dfb584ec6963e62cb7",
+  "candidate": "build/classic-4854-r8-20261022/screenshots/001-Classic-reference-composition.png",
+  "candidateSha256": "5af744e2932b3da026b4d17141748d853706681cef7e422a74cdff056e70d604",
   "candidateCapture": {
     "test": "NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials",
     "attachment": "Classic reference composition",
@@ -13,10 +13,10 @@
   "state": {
     "screen": "classic player",
     "theme": "blush + rose",
-    "background": "cover gradient",
-    "playback": "playing fixture (paused restored after capture)",
+    "background": "solid",
+    "playback": "playing at ~93.6% (fixture seek 1:52/2:00; paused restored after capture)",
     "scroll": "top",
-    "notes": "参考为 Sollin 中文曲目播放态；候选为 120s 合成音频与英文夹具，封面/文案/进度时刻不同。控件遮罩只含省略号、上一首/播放/下一首与工具行。"
+    "notes": "参考为 Sollin 中文曲目播放态，进度 04:26/04:44=93.66%，三行歌词；候选为 120s 合成音频与英文两行夹具，封面/标题/歌词/文案不同，进度按同一比例对位。控件遮罩只含进度轨、上一首/播放/下一首与工具行；时间文字、脚注和封面内容不纳入控件门禁。"
   },
   "size": [
     1290,

@@ -5,13 +5,14 @@ import {useRef,useState,useSyncExternalStore} from 'react';
 import {Alert, Pressable, Share, StyleSheet, Switch, View} from 'react-native';
 import {File, Paths} from 'expo-file-system';
 import {LinearGradient} from 'expo-linear-gradient';
-import {Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
+import {FontAwesome5,Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {accentColors,appearanceDefaults,themeBackground,themeSwatchBackground,visualThemeLabels as themeLabels,visualThemes,type Accent,type VisualTheme} from '../domain/appearance.ts';
 import {useTheme} from './theme.tsx';
 import {useVisualAssets} from './VisualBackground.tsx';
 import {settingsInk,settingsLegend,settingsMuted,settingsSheet,themeChoiceLayout as chips} from './tokens.ts';
 const styleLabels:Record<'gradient'|'solid'|'image',string>={gradient:'渐变',solid:'纯色',image:'图片'};
+const segmentGlyph=(id:'gradient'|'solid'|'image',color:string)=>id==='solid'?<MaterialCommunityIcons name="circle" size={16.5} color={color}/>:id==='gradient'?<Ionicons name="layers" size={16} color={color}/>:<FontAwesome5 name="image" size={15} color={color}/>;
 export type AppearanceSection='theme'|'background'|'skins'|'accent'|'navigation'|'mini';
 export function BackgroundThemeActions({services}:{services:Services}){
   const value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),theme=useTheme();
@@ -103,10 +104,10 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
       <Text style={{color:muted,fontSize:13,marginLeft:4,marginTop:18.9,marginBottom:19.7}}>背景类型</Text>
       <View style={{marginHorizontal:8,padding:8,borderRadius:20,backgroundColor:glass}}>
         <View style={{flexDirection:'row',height:40,borderRadius:20,borderWidth:1,borderColor:outline,overflow:'hidden'}}>
-          {([['solid','纯色','circle',16.5],['gradient','渐变','layers',18],['image','图片','image',20.5]] as const).map(([id,label,glyph,size],index)=>{
+          {([['solid','纯色'],['gradient','渐变'],['image','图片']] as const).map(([id,label],index)=>{
             const selected=value.backgroundStyle===id,disabled=id==='image'&&!assets.background;
             const segmentLabelInk=selected?segmentInkSelected:segmentInk;
-            return <Pressable key={id} testID={`background-${id}`} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} accessibilityHint={disabled?'请先在下方导入主题背景图片':undefined} onPress={()=>update({backgroundStyle:id})} style={{flex:1,minHeight:40,paddingBottom:5,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8.3,backgroundColor:selected?segmentTint:'transparent',borderLeftWidth:index?1:0,borderLeftColor:outline}}><MaterialCommunityIcons name={glyph} size={size} color={segmentLabelInk}/><Text style={{color:segmentLabelInk,fontSize:14,fontWeight:'600'}}>{label}</Text></Pressable>;
+            return <Pressable key={id} testID={`background-${id}`} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} accessibilityHint={disabled?'请先在下方导入主题背景图片':undefined} onPress={()=>update({backgroundStyle:id})} style={{flex:1,minHeight:40,paddingBottom:5,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8.3,backgroundColor:selected?segmentTint:'transparent',borderLeftWidth:index?1:0,borderLeftColor:outline}}>{segmentGlyph(id,segmentLabelInk)}<Text style={{color:segmentLabelInk,fontSize:14,fontWeight:'600'}}>{label}</Text></Pressable>;
           })}
         </View>
       </View>

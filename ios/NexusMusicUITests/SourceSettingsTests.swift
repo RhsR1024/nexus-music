@@ -1682,11 +1682,16 @@ final class SourceSettingsTests: XCTestCase {
       return frame.height>0 && classicStable>=2
     },object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[classicSettled],timeout:10),.completed,"Classic layout must stop moving before capture")
+    // IMG_4854 is playing at 04:26/04:44 (93.66%). The fixture is 120s, so seek
+    // to the same fraction through the real progress responder before capture;
+    // otherwise the filled track and knob are compared at a different moment.
+    classicProgress.coordinate(withNormalizedOffset:CGVector(dx:0.934,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"value CONTAINS %@","1:52"),evaluatedWith:classicProgress);waitForExpectations(timeout:5)
     // IMG_4854 is playing: capture the pause bars in the same intent, then
     // restore the paused fixture the remaining assertions rely on.
     app.buttons["播放"].firstMatch.tap()
     XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:5),"Classic capture must run while playback is active")
-    Thread.sleep(forTimeInterval:0.8)
+    Thread.sleep(forTimeInterval:0.2)
     let classicShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());classicShot.name="Classic reference composition";classicShot.lifetime = .keepAlways;add(classicShot)
     app.buttons["暂停"].firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5),"Classic capture must restore paused intent")
@@ -2631,12 +2636,23 @@ final class SourceSettingsTests: XCTestCase {
     let themeRows=Dictionary(grouping:primaryThemes){identifier in Int(app.descendants(matching:.any).matching(identifier:"visual-"+identifier).firstMatch.frame.minY.rounded())}
       .values.map(\.count).sorted(by: { $0 > $1 })
     XCTAssertEqual(themeRows,[3,3,3,2],"IMG_4855 primary themes must keep the reference 3/3/3/2 rows")
+    // The launch-only 4856 anchor can win the race against services loading and
+    // land the sheet scrolled before this shot. IMG_4855 is the unscrolled top
+    // state, so normalize through the real ScrollView; its title only returns
+    // at the content origin.
+    let sheetTitle=app.staticTexts["settings-title-background"]
+    reveal(sheetTitle)
+    XCTAssertTrue(sheetTitle.isHittable,"4855 capture must start at the sheet top")
     let favorite=app.buttons["appearance-favorite-theme"]
     XCTAssertTrue(favorite.waitForExistence(timeout:5))
-    if favorite.isSelected {favorite.tap();XCTAssertFalse(favorite.isSelected,"Capture starts from the reference's unselected bookmark")}
+    if favorite.isSelected {
+      favorite.tap()
+      expectation(for:NSPredicate(format:"selected == false"),evaluatedWith:favorite);waitForExpectations(timeout:5)
+    }
     Thread.sleep(forTimeInterval:0.3)
     let top=XCTAttachment(screenshot:XCUIScreen.main.screenshot());top.name="Visual lab 4855 appearance top";top.lifetime = .keepAlways;add(top)
-    favorite.tap();XCTAssertTrue(favorite.isSelected,"Bookmark must persist the current appearance theme")
+    favorite.tap()
+    expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:favorite);waitForExpectations(timeout:5)
     reachValue("backgroundOpacity","100%",true)
     reachValue("cardOpacity","30%",false)
     setPlayerBlurZero()
@@ -2676,9 +2692,16 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(close.isHittable);close.tap();XCTAssertTrue(waitForGone(close,timeout:5))
     openSettings(app,page:"background")
     let favoriteTheme=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
-    XCTAssertTrue(favoriteTheme.isHittable);favoriteTheme.tap();XCTAssertTrue(favoriteTheme.isSelected)
+    reveal(favoriteTheme)
+    favoriteTheme.tap()
+    expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:favoriteTheme);waitForExpectations(timeout:5)
     let favoriteButton=app.buttons["appearance-favorite-theme"]
-    XCTAssertTrue(favoriteButton.isHittable);XCTAssertTrue(favoriteButton.isSelected,"Favorite appearance theme survives normal navigation")
+    // The header row scrolls with the sheet content (settings-title-background
+    // is asserted offscreen above), so returning to the first theme leaves the
+    // bookmark action above the viewport. Reveal the real control before
+    // asserting its persisted selection; no fixed-header contract exists.
+    reveal(favoriteButton)
+    XCTAssertTrue(favoriteButton.isSelected,"Favorite appearance theme survives normal navigation")
     XCTAssertTrue(close.isHittable);close.tap();XCTAssertTrue(waitForGone(close,timeout:5),"Fixed close handle remains reachable after reopening")
   }
 

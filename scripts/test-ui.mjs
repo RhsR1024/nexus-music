@@ -11,6 +11,11 @@ import {exportFailureEvidence} from './export-failure-evidence.mjs';
 
 const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
 if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.json')))throw new Error('Refusing to overwrite a capture run manifest');
+// Intel simulators cannot link the prebuilt Release Hermes (missing inspector
+// symbols); Debug links the debug framework and is for local visual iteration
+// only. Formal evidence stays Release.
+const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
+if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
 let localFixtureDirectory;
 function seedLocalAudio() {
   if(localFixtureDirectory)return;
@@ -301,11 +306,11 @@ try {
   const resultPath = `build/SourceUITests-${Date.now()}.xcresult`;
   console.log(`UI capture result: ${resultPath}; log: ${logPath}`);
   const fixturePath=entryFile??'scripts/test-ui.mjs';
-  const runManifest={schemaVersion:1,startedAt:new Date().toISOString(),resultBundle:resolve(resultPath),sourceBefore,configuration:'Release',fixture:{path:fixturePath,sha256:sourceBefore.files[fixturePath]},simulator:process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'};
+  const runManifest={schemaVersion:1,startedAt:new Date().toISOString(),resultBundle:resolve(resultPath),sourceBefore,configuration,fixture:{path:fixturePath,sha256:sourceBefore.files[fixturePath]},simulator:process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'};
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
-  const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', 'Release',
+  const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', configuration,
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
-    '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'];
+    '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
@@ -314,7 +319,7 @@ try {
   if(!appearanceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabAppearanceDirect');
   runManifest.buildArguments=args;
   runManifest.toolchain={node:process.version,xcode:execFileSync('xcodebuild',['-version'],{encoding:'utf8'}).trim()};
-  runManifest.buildEnvironmentSha256=createHash('sha256').update(JSON.stringify(Object.fromEntries(['NODE_BINARY','NODE_OPTIONS','PYTHONPATH','DEVELOPER_DIR','ENTRY_FILE','RCT_NEW_ARCH_ENABLED','USE_HERMES','USE_PREBUILT_RNCORE','USE_RN_DEP'].map(key=>[key,process.env[key]??null])))).digest('hex');
+  runManifest.buildEnvironmentSha256=createHash('sha256').update(JSON.stringify(Object.fromEntries(['NODE_BINARY','NODE_OPTIONS','PYTHONPATH','DEVELOPER_DIR','ENTRY_FILE','RCT_NEW_ARCH_ENABLED','USE_HERMES','USE_PREBUILT_RNCORE','USE_RN_DEP','NEXUS_UI_CONFIGURATION'].map(key=>[key,process.env[key]??null])))).digest('hex');
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const child = spawn('xcodebuild', args, { stdio: ['ignore', log, log] });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
