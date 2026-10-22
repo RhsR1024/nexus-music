@@ -1,3 +1,11 @@
+## 2026-10-22 iOS 27 3a79238 覆盖取色失败修复
+
+`3a79238/39723528844` 已取得并校验 compact logs/failure evidence：ZIP CRC、SHA-256分别为`fb0dcdb3…`、`c998a58f…`。第 10 步 22 项中21通过/1失败/0跳过；Pods、native、其余 App 项均通过，唯一失败为`testGlobalCoverThemeChangesAcrossPages`。
+
+失败点是测试夹具把“任一封面请求被挂起”当作目标请求已到达。选择 missing 后，旧 blue 请求仍让 held 数量为1，测试提前断言 red 背景；随后才真正进入 missing identity。生产缓存持有/迟到结果隔离没有由该失败证明有问题。
+
+修复让测试夹具同时返回准确的`heldColors`，三个边界分别等待 red、blue、missing 自身进入 held 状态，再执行原有红蓝像素阈值与旧场景保留断言。没有降低阈值、改变缓存行为或跳过失败。`node --check`、`npm run check` 439/439和diff检查通过；本机Intel Debug仍受已记录Hermes ABI限制，最终以iOS27 arm64新运行验证。
+
 ## 2026-10-22 4855/4856 r16 页标题字距：4855 S=96.00
 
 本轮只改一组：设置页非首页标题增加 `letterSpacing:-1`，字号 20/700、页头 54pt、返回箭头与 Sheet 全部未动。Release 同源码 run r `SourceUITests-1792643588623` 1/0/0、exit 0；源码 digest `5011c4aa…` 前后一致，采集于 commit `cf38d4a` + 未提交 diff `554624e4…`，`sourceUnchanged=true`。A2 标题墨迹由 167.67..261.67（宽 94.00）收敛到 **170.00..260.00（宽 90.00）**，左右缘与宽度和参考精确重合，中心 x 214.67→**215.00**；4856 B1h 同源同步收敛。逐字列投影证明第 2–5 字墨迹宽与参考差 ≤0.33pt，差异是字距而非字号，故未改字号。

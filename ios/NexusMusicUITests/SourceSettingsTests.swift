@@ -1771,9 +1771,19 @@ final class SourceSettingsTests: XCTestCase {
     XCUIDevice.shared.orientation = .portrait
     defer{XCUIDevice.shared.orientation = .portrait}
     let app=XCUIApplication();app.launch();app.activate()
-    func themeControl(_ query:String="") throws -> Int {
+    func themeState(_ query:String="") throws -> [String:Any] {
       let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/theme-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
-      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Int])?["held"] ?? -1
+      return try JSONSerialization.jsonObject(with:bytes) as? [String:Any] ?? [:]
+    }
+    func themeControl(_ query:String="") throws -> Int {
+      (try themeState(query))["held"] as? Int ?? -1
+    }
+    func waitForHeldCover(_ color:String) -> XCTWaiterResult {
+      let expectation=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+        let colors=(try? themeState())?["heldColors"] as? [String] ?? []
+        return colors.contains(color)
+      },object:nil)
+      return XCTWaiter.wait(for:[expectation],timeout:30)
     }
     _=try themeControl("transition=1")
     defer{_=try? themeControl("release=red&stop=1");_=try? themeControl("release=blue");_=try? themeControl("release=missing")}
@@ -1931,16 +1941,14 @@ final class SourceSettingsTests: XCTestCase {
     // independently so a final screenshot cannot masquerade as a crossfade.
     let transitionRed=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition red tone")).firstMatch
     XCTAssertTrue(transitionRed.waitForExistence(timeout:15));reveal(transitionRed);transitionRed.tap()
-    var lastHeldRed:Int?
-    let heldRed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in lastHeldRed=try? themeControl();return lastHeldRed==1},object:nil)
     // Cover extraction is bounded by the native cache queue and can follow
     // the preceding blue request; give that queue its documented headroom.
-    let heldRedResult=XCTWaiter.wait(for:[heldRed],timeout:30)
+    let heldRedResult=waitForHeldCover("red")
     if heldRedResult != .completed {
       let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name="Red cover request observation failure";shot.lifetime = .keepAlways;add(shot)
       let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Red cover request failure hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
     }
-    XCTAssertEqual(heldRedResult,.completed,"The new red cover must reach the held HTTP fixture; last observed held count: \(String(describing:lastHeldRed))")
+    XCTAssertEqual(heldRedResult,.completed,"The new red cover must reach the held HTTP fixture")
     expectTint(false,"Previous blue scene retained while red cover HTTP is held")
     // Theme changes are verified below with multi-point scene samples; keep
     // this held-request checkpoint focused on the async owner identity.
@@ -1950,14 +1958,12 @@ final class SourceSettingsTests: XCTestCase {
     _=try themeControl("stop=1")
     let transitionBlue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition blue tone")).firstMatch
     reveal(transitionBlue);transitionBlue.tap()
-    let heldBlue=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
-    XCTAssertEqual(XCTWaiter.wait(for:[heldBlue],timeout:30),.completed)
+    XCTAssertEqual(waitForHeldCover("blue"),.completed,"The blue identity itself must reach the held HTTP fixture")
     expectTint(true,"Previous red scene retained while blue cover HTTP is held")
     let missing=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition missing tone")).firstMatch
     reveal(missing);missing.tap()
     _=try themeControl("release=blue")
-    let heldMissing=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? themeControl())==1},object:nil)
-    XCTAssertEqual(XCTWaiter.wait(for:[heldMissing],timeout:30),.completed)
+    XCTAssertEqual(waitForHeldCover("missing"),.completed,"The missing identity itself must supersede the held blue request before tint validation")
     expectTint(true,"Late blue artwork cannot replace the retained red scene for a newer identity")
     _=try themeControl("release=missing")
     let failedFallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app)

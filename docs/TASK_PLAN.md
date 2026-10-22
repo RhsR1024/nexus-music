@@ -1,3 +1,11 @@
+## 2026-10-22 iOS27 3a79238 覆盖取色失败修复
+
+- [x] 获取并校验 run `39723528844` 的 compact logs/failure evidence；第10步 21通过/1失败，唯一失败为 `testGlobalCoverThemeChangesAcrossPages`。
+- [x] 根因定位为夹具只等待 held 数量，旧 blue 请求使 missing 分支提前通过；产品缓存隔离不是首因。
+- [x] 夹具返回 `heldColors`，red/blue/missing 分别等待自身被挂起后再执行原像素阈值与迟到结果断言。
+- [x] `node --check`、`npm run check` 439/439、diff 通过；本机 Intel Debug 仍受既有 Hermes ABI 阻断。
+- [ ] 新提交需 iOS27 arm64 完整验证，签名与真机独立验收。
+
 ## 2026-10-22 iOS27 408b93a 两失败修复
 
 - [x] 下载并校验 compact logs/failure evidence；第10步 22 项中 20通过/2失败/0跳过，失败用例与源码行已定位。

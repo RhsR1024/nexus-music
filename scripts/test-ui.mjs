@@ -117,7 +117,8 @@ const server = createServer(async (req, res) => {
       counts.transitionVideo=file;
     }
     if(control.searchParams.has('stop')&&themeRecorder){const recorder=themeRecorder;themeRecorder=undefined;recorder.kill('SIGINT');await new Promise(resolve=>recorder.once('exit',resolve));}
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:new Set(heldThemeResponses.map(item=>item.color)).size}));return;
+    const heldColors=[...new Set(heldThemeResponses.map(item=>item.color))];
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldColors.length,heldColors}));return;
   }
   if(discoveryUI&&req.url.startsWith('/discovery-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
