@@ -1,3 +1,11 @@
+## 2026-10-23 P2结构化歌词阶段归档
+
+6f2e413正常push，check463/463；增强时间/坏词回退/Guest先入后切主唱专项App r3 Release1/0/0，三图已亲看，末次agent.role类型保护单独业务验证。精确来源与未完成边界见[P2回执](parse-structured-p2-2026-10-23.md)。CI step11已增加该独立正式组件场景；新iOS27运行39837345526/6f2e413 pending，39811557009/26f69df仍运行，保持1/1，未手动取消或重派。
+
+清洁本地unsigned归档成功：6f2e4138b239f9861e804a22e30cb70792ec9356，dirty=false/changes=[]、arm64、Xcode26.3/iphoneos26.2、min15.1、设备族[1,2]。IPA SHA256 babad1a8145e50b9476e100d6cec9188ceb251a1cb4a9d94634e9f80d5c31965，12,275,434字节，83 ZIP条目CRC/附带SHA、正式JS与xcarchive字节一致、arm64入口及所列测试标记/私人资源路径排除通过。JS SHA256 9ad06ca239ac8ccaba67815dafdc6964b9e714ae6325ce267605b29b67b16f40。包/manifest/verification留build/local-p2-6f2e413-20261023；前一2987f1f分发完整保留至build/preserved-distribution-2987f1f-20261023，无删除。
+
+阶段检查磁盘约14GiB余量，build23G/work246M；本轮无Xcode运行时清理，必要逆向和失败原始证据保留。上述本机SDK26.2不冒充iOS27；真实服务器、稀疏cue逐字动画、通用格式统一预算、P3–P5、UI整页/主题遮罩与签名/真机仍待，不增加项目百分比。
+
 ## 2026-10-23 日推隔离与Parse P1清洁归档
 
 7bad024补日推真实仓储/缓存/clear/逆序请求隔离，2987f1f补歌词多格式回退与合成App验证。check450/450；App初采0/1/0因皮肤自动关闭竞态，明确等待后复验144.889秒1/0/0，未降低歌词/逐字/设置断言。完整parse清单P1–P5见[执行清单](parse-completion-checklist-2026-10-23.md)，P2–P5仍待，日推正式鉴权协议/UI/真实账号未完成，不增加工程或UI完成量。

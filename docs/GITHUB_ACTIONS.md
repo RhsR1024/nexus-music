@@ -1,3 +1,7 @@
+## 2026-10-23 P2专项接入与队列
+
+step11增加单独testStructuredNavidromeLyrics，使用正式组件/独立fixture entry，日志和请求计数复制到compact logs；生产入口及single/cancel-in-progress:false未改。实核新39837345526/6f2e413 pending、39811557009/26f69df运行，旧2987f1f pending自动取消，1运行/1排队；新终态待，不将旧构建成功外推。
+
 ## 2026-10-23 2987f1f队列回执
 
 正常push后实核：39833088582/2987f1f唯一最新pending，39811557009/26f69df运行；旧30f1874 pending自动取消，仍1运行/1排队。无手动取消运行或重派旧提交，新日推生命周期/parse代码的iOS27终态仍待。

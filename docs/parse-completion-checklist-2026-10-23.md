@@ -5,7 +5,7 @@
 |编号|实现与验收|代码/测试|当前状态|
 |---|---|---|---|
 |P1|空字段/坏rich格式逐级回退至另一rich或plain，保留可读文本；翻译/罗马音同样处理|lyrics/normalize.ts normalizeLyrics；lyrics/service.ts消费；lyric-normalize-fallback/lyric-service测试|代码/业务测试及合成服务App通过；真实来源/真机待，不计全部parse完成|
-|P2|结构化offset/行词时间有限且合理；词间单调与所属行窗口、坏数据降级；最终展开行/总词预算、同起点行结束语义|normalize.ts structured；structured-lyrics.test.ts|待实施|
+|P2|结构化offset/行词时间有限且合理；词间单调与所属行窗口、坏数据降级；最终展开行/总词预算、同起点行结束语义|structured.ts/normalize.ts；structured-lyrics/navidrome与activeLyric/stage测试|时序预算/声部与合成App通过；稀疏cue仍行级降级，真实服务/设备待|
 |P3|LX能力声明name/quality长度数量预算，已知动作授权/未知音质兼容、坏源隔离与宿主初始化|providers/lx.ts readLXCapabilities；nativeLXAdapter.ts；lx-adapter.test.ts|待实施|
 |P4|LX v2五平台身份/元数据一致、KG复合ID、MID/数值ID区分、长整数/有限duration/质量预算、预览与入库同验证|storage/playlistJSON.ts lxTrack/decodePlaylistJSON；playlist-json.test.ts|待实施|
 |P5|正式Files/LXMC→同parser→准确预览→取消零写入/确认原子导入→重启保身份顺序与重复项；失败原库保留|LibraryDataTools.tsx；library.importCollections；导入App测试|待实施|
@@ -23,3 +23,7 @@ App首采SourceUITests-1792693708921为0/1/0：约22秒在选择wave皮肤后，
 P1修复后App终态：SourceUITests-1792693943621，Release1通过/0失败/0跳过，sourceUnchanged=true。真实导航经过搜索/播放、舞台逐字组、歌词偏移/来源切换，保留原断言；Stage real timed group截图已导出亲看，字组可读，无本批新增布局问题。候选SHA256 9754f7478d013270fe81d8ec27f2cef6341252ea5ae059edcb68f5c284fc8e66，源码digest dc2a43647c9e6b18522d08bdba05a20fca50aae1390708a322211284455e1c7a，安装包digest cc918d3c23ddd474217c73edfeaf2048c8d8d99675ff36d21c2838b24b52eb17；manifest/导出索引在build/lyric-fallback-app-r2-20261023。P1合成入口通过，真实来源/设备仍待，P2–P5不因该通过完成。
 
 P1代码2987f1f已正常push，清洁本地unsigned归档与包校验通过，详见[BUILD_STATUS](BUILD_STATUS.md)。云端iOS27最新pending，合成服务/本地构建不代替真实来源和设备。
+
+## P2 2026-10-23
+
+有限时序、可选end推导、UTF8边界、错误增强回退、声部优先及10000/20000展开/全局预算已接线；Navidrome显式enhanced及legacy回退通过。check463/463，正式组件App r3 1/0/0，清洁归档已验证。精确来源、独立复核修复与末次类型保护见[P2回执](parse-structured-p2-2026-10-23.md)。稀疏cue虽保留时间，词动画未完成；一般LRC/TTML统一展开预算、P3–P5和真实设备仍待，不宣布全部parse完成。
