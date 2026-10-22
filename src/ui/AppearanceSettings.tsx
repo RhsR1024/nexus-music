@@ -13,7 +13,8 @@ import {useVisualAssets} from './VisualBackground.tsx';
 import {settingsInk,settingsLegend,settingsMuted,settingsSheet,themeChoiceLayout as chips} from './tokens.ts';
 const styleLabels:Record<'gradient'|'solid'|'image',string>={gradient:'渐变',solid:'纯色',image:'图片'};
 const segmentIconSize={solid:16.4,gradient:15.1,image:16.4} as const;
-const segmentGlyph=(id:'gradient'|'solid'|'image',color:string)=>{const size=segmentIconSize[id];return <View style={{width:size,height:size,alignItems:'center',justifyContent:'center'}}><NativeText allowFontScaling={false} style={{fontFamily:'CupertinoIcons',fontSize:size,color}}>{id==='solid'?'\u{f400}':id==='gradient'?'\u{f8e7}':'\u{f768}'}</NativeText></View>;};
+const segmentGlyphFontSize=16.4;
+const segmentGlyph=(id:'gradient'|'solid'|'image',color:string)=>{const size=segmentIconSize[id];return <View style={{width:size,height:size,alignItems:'center',justifyContent:'center'}}><NativeText allowFontScaling={false} style={{fontFamily:'CupertinoIcons',fontSize:segmentGlyphFontSize,color,transform:id==='gradient'?[{translateY:-0.67}]:undefined}}>{id==='solid'?'\u{f400}':id==='gradient'?'\u{f8e7}':'\u{f768}'}</NativeText></View>;};
 export type AppearanceSection='theme'|'background'|'skins'|'accent'|'navigation'|'mini';
 export function BackgroundThemeActions({services}:{services:Services}){
   const value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),theme=useTheme();
