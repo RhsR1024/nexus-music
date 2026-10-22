@@ -1,3 +1,9 @@
+## 2026-10-23 产物可用性校正与定点清理
+
+本机原xcresult 1792307572879、1792268779844、1792132828517、1792319723943当前均不存在，无法由现有回执确认何时移除。历史“原始结果保留”描述不再代表当前可取；对应classic-modal/offline-hittability/fonts-sixth/failure-exports附件目录继续保留，不整目录删除。
+
+已在xcodebuild结束后逐项重算SHA256，仅删除failure-exports/SourceUITests-1792319723943/0-fS3rsz中28个与failure-evidence/SourceUITests-1792319723943/0保留副本完全相同、且export-index标included的文件，共55,494,574逻辑字节；保留副本在删除后再次重算一致。目录/其他视频/快照/索引/日志未删除。详细路径、字节、理由、SHA与保留位置见build/logs/cleanup-20261023-verified-duplicates-{plan,receipt}.json。原包缺失的其余证据不可继续清理，reverse case与最新阶段产物未动。磁盘仍约14–15GiB，本次小规模去重不称已解决空间不足。
+
 ## 2026-10-21 942105c 原生双击测试语义修正
 
 `fa8ddd7/39516000415`与`2bc2a63/39531808260`的iOS27 iPhone17均执行21项，结果19通过/2失败/0跳过，失败仍仅为AM2/AM歌词双击定位。原生手势代码正常编译；测试用两次独立`tap()`的间隔超过系统双击窗口，UIKit按两个单击处理。`942105c`仅改回`line.doubleTap()`，在独立worktree提交以免混入当时未提交的UI批次。两次失败证据ZIP CRC通过：fa8ddd7 logs/evidence SHA-256 `24722c9c8ff4c294c3e1266d652a975c395218478f175825e147b6548abc84da`/`0586f2682e9e8cd5cef8d4feebc18c971a1a2d92fc01aefcefd01e86d025adfb`；2bc2a63 `1f40554bee8c7a221d7c7f45403ce21b49492fa7012fe2f74d095a1267ab7cbc`/`56535eaec4757f57007b5c4d43420a9e3fdeb3ad09b671186646a8093e8ca101`。最新run `39590937799`执行中。

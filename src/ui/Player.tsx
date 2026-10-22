@@ -13,7 +13,7 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
-import {classicBlushBackground,classicLyricLayout,paper} from './tokens.ts';
+import {classicArtworkLayout,classicBlushBackground,classicLyricLayout,paper} from './tokens.ts';
 import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
@@ -142,13 +142,13 @@ export function Player({ services }: { services: Services }) {
   const artworkSide=Math.min(width-122,308);
   const classicHero=<>
     {/* IMG_4854 places the menu dots 5pt higher and 14pt further right than
-        the shared 24pt inset; the 35pt row lifts the cover to 124pt. */}
+        the shared 24pt inset; the 35pt row preserves the menu anchor. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:35}}>
       <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
       <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicInk,{transform:[{translateY:-1.83}]})}</View>
     </View>
-    <View testID="classic-artwork" collapsable={false} style={{alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
-    <View style={{alignItems:'center',gap:2}}>
+    <View testID="classic-artwork" collapsable={false} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
+    <View style={{marginTop:classicArtworkLayout.titleBefore,alignItems:'center',gap:2}}>
       <Text numberOfLines={1} style={{fontSize:22,lineHeight:28,fontWeight:'700',color:theme.palette.text}}>{entry.track.title}</Text>
       {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
       <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.palette.secondary}}>{entry.track.artist}</Text>

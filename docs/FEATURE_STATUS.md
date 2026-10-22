@@ -1,3 +1,9 @@
+## 2026-10-23 产物可用性校正与定点清理
+
+本机原xcresult 1792307572879、1792268779844、1792132828517、1792319723943当前均不存在，无法由现有回执确认何时移除。历史“原始结果保留”描述不再代表当前可取；对应classic-modal/offline-hittability/fonts-sixth/failure-exports附件目录继续保留，不整目录删除。
+
+已在xcodebuild结束后逐项重算SHA256，仅删除failure-exports/SourceUITests-1792319723943/0-fS3rsz中28个与failure-evidence/SourceUITests-1792319723943/0保留副本完全相同、且export-index标included的文件，共55,494,574逻辑字节；保留副本在删除后再次重算一致。目录/其他视频/快照/索引/日志未删除。详细路径、字节、理由、SHA与保留位置见build/logs/cleanup-20261023-verified-duplicates-{plan,receipt}.json。原包缺失的其余证据不可继续清理，reverse case与最新阶段产物未动。磁盘仍约14–15GiB，本次小规模去重不称已解决空间不足。
+
 ## 2026-10-22 接续审计（当前口径）
 
 代码约75.1%、完整交付约53.0%；4855/4856仅两个固定静态态达到冻结量表门槛，正常入口与动效待验，4854尚未通过。两逆向skill已识别，离线严格门禁实跑通过；APK完整动态工具链仍有缺口。远端deda55a测试修正已接入，既有UI实验保留。详见[本轮证据与下一批](ui-spec/checkpoint-2026-10-22-audit.md)。本轮未新增产品/构建/真机通过结论；下方带日期记录按历史理解。
