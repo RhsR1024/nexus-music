@@ -69,3 +69,10 @@ export const paper = {
   armEdge: '#E4E7EB',
   armDark: '#5C6167',
 } as const;
+
+// Screenshot-driven classic blush skin approximation (4854 r21); not a recovered
+// cover-color algorithm. Applied below user masks, only to the default theme.
+export const classicBlushBackground = {
+  colors: ['#F6F2EE', '#F2D4C6', '#F6D8CE', '#FCE7E6'],
+  locations: [0, .39, .74, 1],
+} as const;

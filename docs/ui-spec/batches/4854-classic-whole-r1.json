@@ -1,0 +1,57 @@
+{
+  "id": "4854-classic-whole-r1",
+  "title": "4854 经典播放态 — 冻结关键区与 D1–D5",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+  "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+  "candidate": "build/classic-4854-r17-20261022/screenshots/001-Classic-reference-composition.png",
+  "candidateSha256": "0ce366c023ebba21c12df75cbbb0c96bc41541ff483161a6acb73d956ffc74b3",
+  "captureEvidence": {
+    "manifest": "build/classic-4854-r17-20261022/run-manifest.json",
+    "exportIndex": "build/classic-4854-r17-20261022/screenshots/index.json"
+  },
+  "state": {
+    "screen": "classic player",
+    "theme": "blush + rose",
+    "mode": "light",
+    "background": "solid",
+    "playback": "playing at 93.6% (fixture seek 1:52/2:00; paused restored after capture)",
+    "scroll": "top",
+    "fontScale": 1,
+    "language": "zh UI / fixture en content",
+    "notes": "同状态、同主题；封面/标题/歌手/歌词/时间数字/音质脚注为内容差异，D5=75。控件区与关键区只含进度、播放/切歌与工具行；时间文字、脚注、封面、歌词不纳入控件门禁。"
+  },
+  "size": [1290, 2796],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [6, 8],
+  "contentMasks": [
+    [183, 408, 924, 840],
+    [140, 1260, 1010, 560]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [70, 1975, 1150, 75],
+    [330, 2170, 630, 265],
+    [150, 2475, 990, 100]
+  ],
+  "controlColorRegions": [
+    [616, 2264, 19, 68],
+    [655, 2264, 19, 68]
+  ],
+  "colorPatches": [
+    {"label": "play fill", "rect": [700, 2240, 20, 20]},
+    {"label": "pause bar", "rect": [620, 2290, 8, 20]}
+  ],
+  "criticalRegions": [
+    {"label": "progress", "rect": [70, 1975, 1150, 75]},
+    {"label": "transport", "rect": [330, 2170, 630, 265]},
+    {"label": "tools", "rect": [150, 2475, 990, 100]}
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  },
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "frozenAnchors": "docs/ui-spec/anchor-list-4854-2026-10-22.md"
+}

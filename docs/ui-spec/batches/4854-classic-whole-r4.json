@@ -1,0 +1,138 @@
+{
+  "id": "4854-classic-whole-r4",
+  "title": "4854 经典播放态 — 冻结关键区与 D1–D5（r20 图标收口）",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+  "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+  "candidate": "build/classic-4854-r20-20261022/screenshots/001-Classic-reference-composition.png",
+  "candidateSha256": "b9e55579643909fbf3d3eead69631d887da0bd92ee3fc9135e3665c7265b6147",
+  "captureEvidence": {
+    "manifest": "build/classic-4854-r20-20261022/run-manifest.json",
+    "exportIndex": "build/classic-4854-r20-20261022/screenshots/index.json"
+  },
+  "state": {
+    "screen": "classic player",
+    "theme": "blush + rose",
+    "mode": "light",
+    "background": "solid",
+    "playback": "playing near 93.6% (fixture seek 1:52/2:00; paused restored after capture)",
+    "scroll": "top",
+    "fontScale": 1,
+    "language": "zh UI / fixture en content",
+    "notes": "同状态、同主题；封面/标题/歌手/歌词/时间数字/音质脚注为内容差异，D5=75。本组只改经典图标字形/盖线/双三角/端帽。"
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [
+    6,
+    8
+  ],
+  "contentMasks": [
+    [
+      183,
+      408,
+      924,
+      840
+    ],
+    [
+      140,
+      1260,
+      1010,
+      560
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      70,
+      1975,
+      1150,
+      75
+    ],
+    [
+      330,
+      2170,
+      630,
+      265
+    ],
+    [
+      150,
+      2475,
+      990,
+      100
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      616,
+      2264,
+      19,
+      68
+    ],
+    [
+      655,
+      2264,
+      19,
+      68
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "play fill",
+      "rect": [
+        700,
+        2240,
+        20,
+        20
+      ]
+    },
+    {
+      "label": "pause bar",
+      "rect": [
+        620,
+        2290,
+        8,
+        20
+      ]
+    }
+  ],
+  "criticalRegions": [
+    {
+      "label": "progress",
+      "rect": [
+        70,
+        1975,
+        1150,
+        75
+      ]
+    },
+    {
+      "label": "transport",
+      "rect": [
+        330,
+        2170,
+        630,
+        265
+      ]
+    },
+    {
+      "label": "tools",
+      "rect": [
+        150,
+        2475,
+        990,
+        100
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  },
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "frozenAnchors": "docs/ui-spec/anchor-list-4854-2026-10-22.md"
+}

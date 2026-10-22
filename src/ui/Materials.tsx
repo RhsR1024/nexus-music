@@ -11,7 +11,7 @@ import {useTheme} from './theme.tsx';
 import {usePresentationVisible} from './AdaptiveModal.tsx';
 const NativeMaterial=requireNativeView<ViewProps&{dark:boolean}>('NexusNative');
 const noSubscribe=()=>()=>{},noCover:CoverTheme={},noCoverSnapshot=()=>noCover;
-export function AmbientBackground({services,visible=true}:{services?:Services;visible?:boolean}){
+export function AmbientBackground({services,visible=true,gradient}:{services?:Services;visible?:boolean;gradient?:{colors:readonly [string,string,...string[]];locations:readonly [number,number,...number[]]}}){
   const presented=usePresentationVisible(),shown=visible&&presented;
   const theme=useTheme(),assets=useVisualAssets(services),uri=useVisualImage(services,assets.background);
   const cover=useSyncExternalStore(services?.coverTheme.subscribe??noSubscribe,services?.coverTheme.getSnapshot??noCoverSnapshot);
@@ -31,7 +31,7 @@ export function AmbientBackground({services,visible=true}:{services?:Services;vi
   const hasCover=!!((theme.appearance.globalBackgroundMotion&&cover.uri)||(theme.appearance.coverColor&&cover.color));
   const base=hasCover?<LinearGradient colors={fallback} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
     :theme.appearance.backgroundStyle==='image'&&uri?<View style={StyleSheet.absoluteFill}><Image source={{uri}} resizeMode="cover" style={[StyleSheet.absoluteFill,{opacity:theme.appearance.backgroundOpacity}]}/><View style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0],opacity:.78}]}/></View>
-    :theme.appearance.backgroundStyle==='gradient'?<LinearGradient colors={theme.palette.background} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>:null;
+    :theme.appearance.backgroundStyle==='gradient'?<LinearGradient colors={gradient?.colors??theme.palette.background} locations={gradient?.locations} start={gradient?{x:.5,y:0}:{x:0,y:0}} end={gradient?{x:.5,y:1}:{x:1,y:1}} style={StyleSheet.absoluteFill}/>:null;
   const maskOpacity=Math.max(0,Math.min(1,theme.appearance.backgroundMask));
   return <View testID={hasCover?'ambient-cover-background':undefined} pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}>
     {base}
