@@ -1,6 +1,6 @@
 # 黄金态规格与视觉实验室
 
-**操作与验收以 [UI_ALIGNMENT_WORKFLOW](../UI_ALIGNMENT_WORKFLOW.md) 为准。** 本目录保存场景规格与测量摘要，工具通过只代表声明区域达到初始门槛，不代表整页或交互达到90%。先4855/4856样板，再4854经典；默认blush/rose与iPhone常态范围不变。
+**操作与验收以 [UI_ALIGNMENT_WORKFLOW](../UI_ALIGNMENT_WORKFLOW.md) 为准。** 本目录保存场景规格与测量摘要，工具通过只代表声明区域达到初始门槛，不代表整页或交互达到90%。先4855/4856样板，再4854经典；默认blush/rose与iPhone常态范围不变。任何“相似度 90%”结论必须按 [页面相似度评分量表](page-similarity-rubric-2026-10-22.md) 计算并附门禁状态。
 
 ## 工具做了什么
 
