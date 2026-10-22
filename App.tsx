@@ -38,7 +38,7 @@ function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
   const text={color:p.text},caption={color:p.secondary};
   return <ThemeContext.Provider value={theme}><TypographyProvider store={services?.fonts}><View style={{flex:1,backgroundColor:p.background[0]}}>
     <AmbientBackground services={services}/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
-    <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+12,paddingLeft:insets.left,paddingRight:insets.right,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
+    <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+(tab==='settings'?0:12),paddingLeft:insets.left,paddingRight:insets.right,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
       <View style={{width:railWidth,display:expanded?'flex':'none',paddingHorizontal:16}}>
         <Text accessibilityRole="header" style={[text,{fontSize:24,fontWeight:'700',padding:12,marginBottom:20}]}>音枢</Text>
         <View style={{gap:12}}>{navigation.map(([key,icon,title])=><Pressable key={key} testID={`rail-tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected:tab===key}} onPress={()=>navigateTab(key)} style={{minHeight:52,padding:12,borderRadius:16,backgroundColor:tab===key?p.selected:p.surface,flexDirection:'row',alignItems:'center',gap:12}}><Ionicons name={icon} size={24} color={tab===key?p.accent:p.secondary}/><Text style={{color:tab===key?p.accent:p.text,fontSize:16,flexShrink:1}}>{title}</Text></Pressable>)}</View>
