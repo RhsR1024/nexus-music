@@ -4,6 +4,8 @@
 
 实现包括二维Sheet材质（17×33、参考低梯度采样）、主题3/3/3/2固定测量宽度与参考色值、预览摘要字宽/基线、4856正式ScrollView 216pt确定性锚定；`柔和`/`经典`仍在真实滚动扩展区。正常入口关闭/重开、收藏持久化、扩展主题可达、图片导入/播放背景持久化、`testZNavidromePlaybackAndCredentials` 均通过；合并远端账号批次后 `npm run check` **439/439**，完整native套件通过。采集源码 digest `fcc4cdf0…` 前后一致，r7e/r7f差异平均仅0.0335通道值。
 
+合并远端时保留了网易云网页登录、账号验证和 Step 11 修复；合并后按既有流程运行 `pod install`，本机 x86_64 Release 命中了项目已记录的预编译 Hermes ABI 符号缺失（`inspector_modern::RuntimeAdapter`），已撤回机器相关 lock/project checksum 变更，不改 UI 结论。合并源码的完整验证交给 iOS 27 云端与签名设备；r7f 截图继续绑定 UI 批次提交 `ed63c9d`。
+
 4855/4856现可记“静态样板已对齐”，不能记动效/全站/真机完成。真实账号与音源、Apple签名、真机和录屏仍未验收。后续按主规范进入4854经典播放器，然后继续其余页面；解析 worktree 继续暂缓，用户要求先完成UI。
 ## 2026-10-22 网易云 WKWebView 登录与安全会话底座
 
