@@ -45,12 +45,13 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
   // the 95pt row pitch that the lower sheet anchors were measured against.
   return <View style={{gap:0,paddingBottom:10,opacity:disabled?.5:1}}>
     <View style={{flexDirection:stacked?'column':'row',alignItems:stacked?'flex-start':'center',justifyContent:'space-between',gap:stacked?8:0}}>
-      {/* IMG_4856 label ink measures 40x210px at 3x against 42x220px at 15pt;
-          the reference slider labels sit at 14.3pt. */}
-      <Text style={{color:textInk,fontSize:14.3,fontWeight:'600',lineHeight:18,transform:[{translateY:-1.3}]}}>{label}</Text>
-      {/* SF Pro digits sit ~1.5pt lower than the PingFang label in the same
-          18pt line box; IMG_4856 aligns both caps at the same top. */}
-      <Text testID={`visual-value-${testID}`} style={{color:valueInk,fontSize:15,fontWeight:'600',fontVariant:['tabular-nums'],lineHeight:18,transform:[{translateY:-1.5}]}}>{display}</Text>
+      {/* IMG_4856's label ink measures 70.67×13.67pt; 14.5pt reproduces that
+          width within 0.4pt where 14.3pt came up 1.34pt short. */}
+      <Text style={{color:textInk,fontSize:14.5,fontWeight:'600',lineHeight:18,transform:[{translateY:-1.3}]}}>{label}</Text>
+      {/* IMG_4856's value ink sits 1.67pt below the label ink rather than
+          cap-aligned; proportional digits reproduce its 38.67pt '100%' width,
+          where tabular digits ran 2.00pt wide. */}
+      <Text testID={`visual-value-${testID}`} style={{color:valueInk,fontSize:15,fontWeight:'600',lineHeight:18,transform:[{translateY:-0.3}]}}>{display}</Text>
     </View>
     {/* The 15pt label shrinks the header line box ~2pt; this offset keeps the
         6pt track on the same measured anchor as the 17pt version. */}

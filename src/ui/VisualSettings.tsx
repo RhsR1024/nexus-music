@@ -31,23 +31,20 @@ export function VisualSettings({services}:{services:Services}){
   // blue-grey sheet, while a fixed 50% white washed them out to near-paper.
   const darkMode=theme.mode==='dark',ink=settingsInk[theme.mode],muted=settingsMuted[theme.mode],legend=settingsLegend[theme.mode],cardAlpha=darkMode?0.07:Math.max(0.04,Math.min(0.3,value.cardOpacity*0.3)),card=`rgba(255,255,255,${cardAlpha})`,outline=darkMode?'rgba(255,255,255,0.35)':'rgba(60,60,67,0.62)';
   const maskColors=[['#FFFFFF','白色'],['#000000','黑色'],['#2A241F','暖褐']] as const;
-  const row=(key:string,index:number,children:React.ReactNode)=><View key={key} style={{paddingVertical:16,borderBottomWidth:index<4?StyleSheet.hairlineWidth:0,borderBottomColor:p.border}}>{children}</View>;
-  // IMG_4856's 遮罩颜色 field repeats the 强调色 geometry: 18pt swatch at
-  // x 47.0..64.7pt, '#RRGGBB' ink from 84.3pt and the colour-filter glyph at
-  // 365.0..382.7pt; the first pass drew a 26pt disc and kept the glyph 14pt left.
-  const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingLeft:14,paddingRight:0,flexDirection:'row',alignItems:'center',gap:19}}>
+  const row=(key:string,index:number,children:React.ReactNode,style?:{paddingTop:number;paddingBottom:number})=><View key={key} style={[{paddingVertical:16,borderBottomWidth:index<4?StyleSheet.hairlineWidth:0,borderBottomColor:p.border},style]}>{children}</View>;
+  // IMG_4856 draws a 20pt white circle with a 1pt border at x 46.0..66.0
+  // (18pt white fill) with '#RRGGBB' ink from 84.67pt; the colour-filter
+  // glyph sits at 365.0..382.7pt.
+  const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingLeft:13,paddingRight:0,flexDirection:'row',alignItems:'center',gap:19}}>
     <View style={{position:'absolute',top:-8,left:9.3,paddingHorizontal:6,backgroundColor:card}}><Text style={{color:legend,fontSize:13}}>遮罩颜色</Text></View>
     <View style={{width:20,height:20,borderRadius:10,backgroundColor:value.maskColor,borderWidth:1,borderColor:'rgba(0,0,0,0.22)'}}/>
-    <Text testID="visual-value-maskColor" style={{flex:1,color:ink,fontSize:17,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
+    <Text testID="visual-value-maskColor" style={{flex:1,color:ink,fontSize:16,letterSpacing:0.9,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel="选择遮罩颜色" disabled={busy} onPress={()=>Alert.alert('遮罩颜色','选择播放背景遮罩颜色。',[...maskColors.map(([color,label])=>({text:label,onPress:()=>update({maskColor:color})})),{text:'取消',style:'cancel' as const}])} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={21} color={legend}/></Pressable>
   </View>;
-  // IMG_4856 measures 40.3pt from the last colour field to 视觉参数 (13pt top),
-  // 39pt from that header to the first label (4pt section gap) and 31.7pt from
-  // each label to its track (handled by SliderControl).
-  // The colour block above moved 3pt down to sit on IMG_4856's 216.0pt border
-  // and its spacer shrank 28→27 (84.0→83.0pt border pitch), so this section
-  // starts 4pt earlier to keep 视觉参数 at its measured 394.3pt.
-  return <View style={{gap:18,paddingTop:12.7,paddingBottom:18}}>
+  // IMG_4856 puts 视觉参数 ink at 394.33pt and the first label ink at
+  // 433.33pt (39.0pt pitch); a 12.7→11.5 top brings the header to +0.47pt
+  // and the rows to −0.20pt without touching the lower section.
+  return <View style={{gap:18,paddingTop:11.5,paddingBottom:18}}>
     {/* IMG_4856 order: 背景透明度 / 卡片透明度 / 背景遮罩 / 遮罩颜色 / 背景模糊. */}
     <View style={{paddingTop:2,gap:7.4}}>
       <Text accessibilityRole="header" style={{color:muted,fontSize:13}}>视觉参数</Text>
@@ -55,7 +52,7 @@ export function VisualSettings({services}:{services:Services}){
         {row('backgroundOpacity',0,adjust('backgroundOpacity','背景透明度',.1,0,1))}
         {row('cardOpacity',1,adjust('cardOpacity','卡片透明度',.1,0,1))}
         {row('backgroundMask',2,adjust('backgroundMask','背景遮罩',.1,0,1))}
-        {row('maskColor',3,maskField)}
+        {row('maskColor',3,maskField,{paddingTop:14.5,paddingBottom:17.5})}
         {/* IMG_4856 leaves 31.1pt from the mask field bottom to the 背景模糊 label,
             while the standard 16+16 row padding measures 35.7pt. */}
         <View style={{paddingTop:11,paddingBottom:16}}>{adjust('playerBlur','背景模糊',10,0,80)}</View>
