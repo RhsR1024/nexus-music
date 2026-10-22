@@ -1,3 +1,11 @@
+## 2026-10-23 日推隔离与Parse P1清洁归档
+
+7bad024补日推真实仓储/缓存/clear/逆序请求隔离，2987f1f补歌词多格式回退与合成App验证。check450/450；App初采0/1/0因皮肤自动关闭竞态，明确等待后复验144.889秒1/0/0，未降低歌词/逐字/设置断言。完整parse清单P1–P5见[执行清单](parse-completion-checklist-2026-10-23.md)，P2–P5仍待，日推正式鉴权协议/UI/真实账号未完成，不增加工程或UI完成量。
+
+2987f1f清洁本地unsigned归档成功：manifest dirty=false/changes=[]、arm64、Xcode26.3/iphoneos26.2、min15.1、设备族[1,2]。IPA SHA256 `5747e348adb9ef18e8a25792a2ebd2273e71fdb517e7784ddff67f5fd60db381`，12,272,623字节；83条目ZIP CRC/附带SHA、arm64入口、正式JS与xcarchive字节一致、所列测试标记与私人资源路径排除通过。JS SHA256 `a2b42c17fac331627e0665ad47db1cc3e13e04319df90280e0d5541fbf1b2198`；包/manifest/verification留build/local-parse-2987f1f-20261023。旧30f1874分发完整保留至build/preserved-distribution-30f1874-20261023，无删除。
+
+正常push后39833088582/2987f1f最新pending、39811557009/26f69df运行，1/1；旧30f1874 pending由队列自动取消，不算通过。新代码iOS27终态、真实服务、签名与真机仍待。本地SDK26.2不冒充iOS27。
+
 ## 2026-10-23 30f1874 经典细节清洁归档
 
 提交30f18740bfe219f14189e4d2a508ae12a4ed2053本地unsigned归档成功：dirty=false/changes=[]、arm64、Xcode26.3/iphoneos26.2、min15.1、设备族[1,2]。IPA SHA256 `1517c29108c436a337963c0e50c064097a8a65e75b1158705c04467d58bd95fd`，12,271,810字节；83 ZIP条目CRC、附带SHA、arm64入口、正式JS与xcarchive字节一致及所列测试标记/私人资源路径排除通过。JS SHA256 `b1c1d203e72fb977d410df5f1fd54bf786fdc80409f6eb0fd7a479826a6a47aa`。包/manifest/verification留build/local-classic-30f1874-20261023；旧distribution按4640a5提交完整保留至build/preserved-distribution-4640a5-20261023，无删除。

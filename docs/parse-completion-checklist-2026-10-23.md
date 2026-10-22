@@ -21,3 +21,5 @@ normalizeLyrics逐级尝试非空格式，优先首个可用同步文档，再�
 App首采SourceUITests-1792693708921为0/1/0：约22秒在选择wave皮肤后，openSettings调用waitForHittable读取正在消失的skins-sheet-close.frame失败；尚未执行歌词请求与断言。已参照既有样式切换用例增加明确waitForGone，保持后续断言不变，原xcresult/日志及failure-evidence保留；新采集另目录。
 
 P1修复后App终态：SourceUITests-1792693943621，Release1通过/0失败/0跳过，sourceUnchanged=true。真实导航经过搜索/播放、舞台逐字组、歌词偏移/来源切换，保留原断言；Stage real timed group截图已导出亲看，字组可读，无本批新增布局问题。候选SHA256 9754f7478d013270fe81d8ec27f2cef6341252ea5ae059edcb68f5c284fc8e66，源码digest dc2a43647c9e6b18522d08bdba05a20fca50aae1390708a322211284455e1c7a，安装包digest cc918d3c23ddd474217c73edfeaf2048c8d8d99675ff36d21c2838b24b52eb17；manifest/导出索引在build/lyric-fallback-app-r2-20261023。P1合成入口通过，真实来源/设备仍待，P2–P5不因该通过完成。
+
+P1代码2987f1f已正常push，清洁本地unsigned归档与包校验通过，详见[BUILD_STATUS](BUILD_STATUS.md)。云端iOS27最新pending，合成服务/本地构建不代替真实来源和设备。
