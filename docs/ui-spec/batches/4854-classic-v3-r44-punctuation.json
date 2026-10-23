@@ -1,0 +1,213 @@
+{
+  "id": "4854-classic-v3-r44-punctuation",
+  "title": "4854本地ASCII标点可比性r44",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+  "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+  "candidate": "build/classic-reference-r44-20261023/screenshots/001-Classic-reference-content.png",
+  "candidateSha256": "76ee0f3ac768f63fd9877a551d387d1ff52857b2dbffcd7a1e9fe8974ff31c1a",
+  "captureEvidence": {
+    "manifest": "build/classic-reference-r44-20261023/run-manifest.json",
+    "exportIndex": "build/classic-reference-r44-20261023/screenshots/index.json"
+  },
+  "state": {
+    "screen": "classic player",
+    "theme": "blush + rose",
+    "mode": "light",
+    "background": "gradient",
+    "playback": "real native playback; PNG manually confirmed 04:26 / 04:44",
+    "scroll": "top",
+    "fontScale": 1,
+    "language": "zh UI / local user-provided reference content",
+    "notes": "r32 only test content changes. Local screenshot crop has baked rounded corners; not original album image or color-extraction evidence. External JSON/cover hashes bound in capture manifest. Nexus source footnote and close control retained. r34 only classic active line weight700, all other lines600, size17 unchanged; same r32 external inputs. r35 only local quote direction correction, no product change. r36 only active weight800/.heavy; other lines600, same r35 scene. r37 only weight group active900/inactive700. Same r35 scene. r38 restores original r32 local scene. Quote direction trial rejected; weight900/700 retained, not claimed as screenshot selected settings. r39 independent same-source same-input repeat. r41c only capture: seek266.5s, no pre-shot AX query, .2s wait; actual PNG same second. r42 only classic size17.5/default lineHeight34, weights900/700; parent/control layout unchanged. r44 same R42 product typography; only local scene double quotes ASCII; original reference Unicode unknown."
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [
+    6,
+    8
+  ],
+  "contentMasks": [
+    [
+      0,
+      180,
+      90,
+      150
+    ],
+    [
+      150,
+      2580,
+      990,
+      100
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      90,
+      180,
+      1130,
+      150
+    ],
+    [
+      180,
+      375,
+      930,
+      945
+    ],
+    [
+      300,
+      1330,
+      690,
+      220
+    ],
+    [
+      100,
+      1570,
+      1090,
+      310
+    ],
+    [
+      70,
+      1975,
+      1150,
+      150
+    ],
+    [
+      330,
+      2170,
+      630,
+      265
+    ],
+    [
+      150,
+      2475,
+      990,
+      100
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      90,
+      350,
+      1110,
+      20
+    ],
+    [
+      90,
+      1900,
+      1110,
+      30
+    ],
+    [
+      90,
+      2660,
+      1110,
+      30
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "upper background",
+      "rect": [
+        600,
+        340,
+        90,
+        20
+      ]
+    },
+    {
+      "label": "lyric background",
+      "rect": [
+        600,
+        1900,
+        90,
+        20
+      ]
+    },
+    {
+      "label": "lower background",
+      "rect": [
+        600,
+        2660,
+        90,
+        20
+      ]
+    }
+  ],
+  "criticalRegions": [
+    {
+      "label": "header",
+      "rect": [
+        90,
+        180,
+        1130,
+        150
+      ]
+    },
+    {
+      "label": "cover",
+      "rect": [
+        180,
+        375,
+        930,
+        945
+      ]
+    },
+    {
+      "label": "title-artist",
+      "rect": [
+        300,
+        1330,
+        690,
+        220
+      ]
+    },
+    {
+      "label": "lyrics",
+      "rect": [
+        100,
+        1570,
+        1090,
+        310
+      ]
+    },
+    {
+      "label": "progress-time",
+      "rect": [
+        70,
+        1975,
+        1150,
+        150
+      ]
+    },
+    {
+      "label": "transport",
+      "rect": [
+        330,
+        2170,
+        630,
+        265
+      ]
+    },
+    {
+      "label": "tools",
+      "rect": [
+        150,
+        2475,
+        990,
+        100
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  },
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "frozenAnchors": "docs/ui-spec/anchor-list-4854-v2-2026-10-23.md"
+}
