@@ -128,42 +128,43 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed,"WebDAV control must be reachable after dismissing the system password sheet")
   }
   private func selectLocalFixture(_ prefix:String,in app:XCUIApplication){
-    // Query the complete tree: iOS 27 Files is a remote accessibility subtree.
-    let file=app.descendants(matching:.any).matching(NSPredicate(format:"elementType == %d AND label BEGINSWITH %@",XCUIElement.ElementType.cell.rawValue,prefix)).firstMatch
-    let folder=app.descendants(matching:.any).matching(NSPredicate(format:"elementType == %d AND label BEGINSWITH %@",XCUIElement.ElementType.cell.rawValue,"Nexus UITest Fixtures")).firstMatch
+    // iOS 27 Files is a remote accessibility subtree. Reading `.frame` on an
+    // element that the provider refreshes between `exists` and the frame query
+    // raises kAXErrorInvalidUIElement and aborts the test, so navigate by
+    // existence and tap the cells directly.
+    let fileCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
+    let folderCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
     let fileRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
     let folderRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
-    func openRow(_ row:XCUIElement){
-      let frame=row.frame
-      XCTAssertFalse(frame.isNull||frame.isInfinite||frame.isEmpty,"A Files row needs a finite frame")
-      app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:min(96,frame.maxX-app.frame.minX-1),dy:frame.midY-app.frame.minY)).tap()
-    }
     let locations=NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])
-    for _ in 0..<12 {
-      if waitForHittable(file,timeout:0.5){break}
-      if waitForHittable(folder,timeout:0.5){folder.tap();continue}
+    func settle(){RunLoop.current.run(until:Date().addingTimeInterval(1))}
+    for _ in 0..<18 {
+      if fileCell.exists{fileCell.tap();return}
+      if folderCell.exists{folderCell.tap();settle();continue}
       // Files can expose the folder itself only as a button ending in
-      // “操作菜单”. Its content action is a top-level Files button; the centre
-      // of the host coordinate space opens the directory. A file must instead
-      // be selected without invoking its trailing menu affordance.
-      if waitForHittable(fileRow,timeout:0.5){fileRow.tap();return}
-      if waitForHittable(folderRow,timeout:0.5){app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap();continue}
+      // “操作菜单”. Tapping the button opens the directory on this OS.
+      if fileRow.exists{fileRow.tap();return}
+      if folderRow.exists{folderRow.tap();settle();continue}
       // Files labels its back button with the previous location. Never accept
       // a Button here or navigation moves backwards instead of to On My iPhone.
-      let phone=(app.cells.matching(locations).allElementsBoundByIndex+app.staticTexts.matching(locations).allElementsBoundByIndex).first{waitForHittable($0,timeout:0.2)}
-      if let phone{phone.tap();continue}
+      let phone=(app.cells.matching(locations).allElementsBoundByIndex+app.staticTexts.matching(locations).allElementsBoundByIndex).first{$0.exists}
+      if let phone{phone.tap();settle();continue}
       let browse=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
-      if waitForHittable(browse,timeout:0.5){browse.tap()}
+      if browse.exists{browse.tap()}
+      settle()
     }
-    let selected=waitForHittable(file,timeout:10) ? file : fileRow
-    if !waitForHittable(selected,timeout:2) {
+    // The local FileProvider can take tens of seconds to enumerate a directory
+    // that was recreated by the test harness.
+    if fileCell.waitForExistence(timeout:30){fileCell.tap()}
+    else if fileRow.waitForExistence(timeout:5){fileRow.tap()}
+    else {
       let image=XCTAttachment(screenshot:app.screenshot());image.name="Files fixture row unreachable";image.lifetime = .keepAlways;add(image)
       let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Files fixture hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+      XCTFail("The actual Files cell/row must be visible before selection")
+      return
     }
-    XCTAssertTrue(waitForHittable(selected,timeout:10),"The actual Files cell/row must be visible before selection")
-    selected.tap()
     let open=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
-    if open.waitForExistence(timeout:3) && open.isHittable{open.tap()}
+    if open.waitForExistence(timeout:3){open.tap()}
   }
   func testAppIconOnHomeScreen() throws {
     let app=XCUIApplication();app.launch();XCUIDevice.shared.press(.home)
@@ -894,6 +895,53 @@ final class SourceSettingsTests: XCTestCase {
     expectCount("显示 0 / 998 首 · 已选 0 条")
     app.buttons["收起歌曲列表"].tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
     XCTAssertFalse(playlist.exists)
+  }
+  func testLXMCImportCancelAndRestart() throws {
+    let app=XCUIApplication();app.launch()
+    func reach(_ element:XCUIElement){
+      for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()}
+    func lxmcPlaylist()->XCUIElement{app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus LXMC fixture")).firstMatch}
+    library()
+    let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
+    while lxmcPlaylist().exists {reach(lxmcPlaylist());lxmcPlaylist().tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()}
+    func trackRows()->XCUIElementQuery{app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ OR label BEGINSWITH %@","KG fixture,","TX fixture,"))}
+    func expectTracks(_ context:String){
+      XCTAssertTrue(trackRows().firstMatch.waitForExistence(timeout:10),context)
+      // The playlist detail exposes each track as a button whose label starts
+      // with the title; identities/order/duplicates must survive import.
+      let order=trackRows().allElementsBoundByIndex.map{$0.label.hasPrefix("KG fixture") ? "KG" : "TX"}
+      XCTAssertEqual(order,["KG","TX","KG"],context)
+    }
+    let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
+    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+    XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+    selectLocalFixture("Nexus LXMC Fixture",in:app)
+    let alert=app.alerts["导入LX歌单"];XCTAssertTrue(alert.waitForExistence(timeout:15))
+    XCTAssertTrue(alert.staticTexts.element(matching:NSPredicate(format:"label CONTAINS %@","3 首支持的歌曲")).exists)
+    alert.buttons["取消"].tap()
+    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:alert);waitForExpectations(timeout:5)
+    XCTAssertFalse(app.staticTexts["已导入 1 个歌单、3 首歌曲"].exists)
+    reach(importer);importer.tap()
+    XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+    selectLocalFixture("Nexus LXMC Fixture",in:app)
+    XCTAssertTrue(alert.waitForExistence(timeout:15));alert.buttons["追加导入"].tap()
+    XCTAssertTrue(app.staticTexts["已导入 1 个歌单、3 首歌曲"].waitForExistence(timeout:15))
+    reach(playlists);playlists.tap()
+    XCTAssertEqual(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus LXMC fixture")).count,1)
+    let playlist=lxmcPlaylist();reach(playlist);playlist.tap()
+    expectTracks("Imported playlist must keep the LX v2 track identity and order")
+    let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
+    app.terminate();app.launch();library()
+    reach(playlists);playlists.tap()
+    XCTAssertEqual(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus LXMC fixture")).count,1)
+    let restored=lxmcPlaylist();reach(restored);restored.tap()
+    expectTracks("Playlist must keep its tracks after relaunch")
+    let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertFalse(lxmcPlaylist().exists)
   }
   func testYLocalAudioFileImport() throws {
     let app=XCUIApplication();app.launch()

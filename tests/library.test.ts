@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {LibraryStore} from '../src/storage/library.ts';
+import {decodePlaylistJSON} from '../src/storage/playlistJSON.ts';
 import {decodeBackup,encodeBackup} from '../src/storage/backup.ts';
 import {decodeQueue} from '../src/storage/queuePersistence.ts';
 import {makeQueue,enqueueNext} from '../src/domain/queue.ts';
@@ -43,4 +44,23 @@ test('bulk removal is one atomic library update and preserves duplicate entries 
   const {library}=setup();const id=await library.createPlaylist('Fixture',[track,track,{...track,origin:{...track.origin,id:'2'}}]);
   const first=library.getSnapshot().playlists[0]!.entries[0]!.id;
   await library.removeEntries(id,[first]);assert.equal(library.getSnapshot().playlists[0]!.entries.length,2);assert.equal(library.getSnapshot().playlists[0]!.entries[0]!.track.origin.id,track.origin.id);
+});
+
+test('LX preview writes nothing and a confirmed import preserves identity, order and duplicates across restart',async()=>{
+  let value:string|undefined,writes=0,counter=0;
+  const repository:Pick<Repository,'get'|'put'>={get:async<T>()=>value?JSON.parse(value)as T:undefined,put:async(_,data)=>{writes++;value=JSON.stringify(data);}};
+  const library=new LibraryStore(repository,()=>String(++counter),()=>1000);await library.restore();
+  const kg={id:'2829_abcdef',name:'KG fixture',singer:'Synthetic artist',source:'kg',interval:'4:00',meta:{songId:'2829',hash:'abcdef'}};
+  const tx={id:'tx_MID',name:'TX fixture',singer:'Synthetic artist',source:'tx',interval:'3:02',meta:{songId:'MID',id:'9007199254740993123'}};
+  const preview=decodePlaylistJSON(JSON.stringify({type:'playList_v2',data:[{name:'LX import',list:[kg,tx,kg]}]}));
+  assert.equal(preview.collections[0]!.tracks.length,3);assert.equal(writes,0);
+  await library.importCollections(preview.collections);assert.equal(writes,1);
+  const restored=new LibraryStore(repository,()=> 'unused');await restored.restore();
+  assert.deepEqual(restored.getSnapshot().playlists[0]!.entries.map(entry=>entry.track.origin.id),['2829_abcdef','MID','2829_abcdef']);
+});
+test('a failed LX import leaves the existing library and stored snapshot unchanged',async()=>{
+  const {library,fail}=setup();await library.restore();
+  const preview=decodePlaylistJSON(JSON.stringify({type:'playListPart_v2',data:{name:'LX import',list:[{id:'wy_1',name:'WY fixture',singer:'Synthetic artist',source:'wy',interval:'1:00',meta:{songId:'1'}}]}}));
+  await library.importCollections([{title:'Keep',tracks:preview.collections[0]!.tracks}]);const before=library.getSnapshot();fail();
+  await assert.rejects(library.importCollections(preview.collections));assert.equal(library.getSnapshot(),before);
 });

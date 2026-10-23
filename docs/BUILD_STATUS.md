@@ -1675,3 +1675,9 @@ Release 结果：播放样式 + EQ 同批 2/0/0（`SourceUITests-1792500633689`�
 27e19b7清洁unsigned设备归档通过：arm64/SDK26.2/min15.1/families1,2，dirty=false/changes=[]；IPA SHA256 7fd6184c1f451f5fe13d00aa8ee6ab9a11d86fe4dc78727b317eda8980fec772，12,276,065字节/83项CRC通过，生产JS SHA cd0b5e98a646c42c9c985738aaed1e5d64fc865025774165dff36826ddee5fd0与归档一致，测试标记和私人资源路径排除通过。版本产物留build/local-classic-27e19b7-20261023。已正常push，云端39879388063/27e19b7运行，0排队；不计iOS27成功、签名或真机。
 
 阶段磁盘复核17GiB余量，新版本产物12MiB、案例原始核验44KiB；当前构建及全部哈希引用证据保留，无删除动作。前两有效本地阶段6f2e413与27e19b7均有版本IPA/manifest/verification；不把build/distribution旧6f内容继续标成当前版本。
+
+## 2026-10-23 LX P4/P5 本地 App 验证
+
+`npm run check` 480/480（日志 `build/logs/check-parse-p4-p5-20261023.log`，SHA256 `3a9c8c0c97e5cf648872a295a31995bfd060d439f425c1988264a958bca453d4`）。P4/P5 业务专项 14/14（`build/parse-p4-p5-20261023/p4-p5-tests.log`）。
+
+`testLXMCImportCancelAndRestart` 在 `NexusMusic English Files`（iPhone 17 模拟器，iOS 26.3.1，x86_64）Release 1通过/0失败/0跳过（`SourceUITests-1792724009293.xcresult`），manifest `build/parse-p5-lxmc-r4-20261023/run-manifest.json`：exitCode 0、sourceUnchanged true、resultInfoSha256 `0fa4dbbc41b763fe92cbf6e7d4b77255293286a486cd5790511eb0ed9f33df99`、安装包 digest `926ba0e107a2e44be0297a29b7d9d88773f22f3ab990d9e68f642c693a959119`。这是模拟器+合成 LXMC 证据，不是真实 LX 导出、云端 iOS 27、签名或真机验收；本批清洁 unsigned 归档与新云端运行在提交后执行并另记。

@@ -6,6 +6,7 @@ import { spawn,execFileSync } from 'node:child_process';
 import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync,existsSync } from 'node:fs';
 import {resolve,sep} from 'node:path';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import {fileSha256,sourceSnapshot,installedBundleSnapshot,externalInputSnapshot} from './lib/ui-provenance.mjs';
 import {loadReferenceScene} from './lib/reference-scene.mjs';
 import {exportFailureEvidence} from './export-failure-evidence.mjs';
@@ -29,7 +30,20 @@ function seedLocalAudio() {
     writeFileSync(resolve(localFixtureDirectory,'Nexus Visual Fixture.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64'));
     const list=Array.from({length:1000},(_,i)=>({id:`wy_${i<2?'90071992547409931234':i}`,name:i<2?'Duplicate fixture':`Fixture song ${i}`,singer:'Synthetic artist',source:'wy',interval:i<2?'03:00':'01:00',meta:{songId:i<2?'90071992547409931234':String(i),albumName:i<2?'Repeated album':'Bulk album'}}));
     writeFileSync(resolve(localFixtureDirectory,'Nexus Playlist Fixture.json'),JSON.stringify({type:'playListPart_v2',data:{name:'Nexus list fixture',list}}));
-  } catch { /* Fresh CI simulator: install happens after this process starts. */ }
+    const lxmc={type:'playListPart_v2',data:{name:'Nexus LXMC fixture',list:[
+      {id:'2829_abcdef',name:'KG fixture',singer:'Synthetic artist',source:'kg',interval:'4:00',meta:{songId:'2829',hash:'abcdef',qualitys:[{type:'128k',size:'3.56M',hash:'h1'}],_qualitys:{'128k':{size:'3.56M',hash:'h1'}}}},
+      {id:'tx_MID',name:'TX fixture',singer:'Synthetic artist',source:'tx',interval:'3:02',meta:{songId:'MID',id:'9007199254740993123',strMediaMid:'MID_HI',qualitys:[{type:'320k',size:'9.99M'}]}},
+      {id:'kg_2829_abcdef',name:'KG fixture',singer:'Synthetic artist',source:'kg',interval:'4:00',meta:{songId:'2829',hash:'abcdef'}},
+    ]}};
+    writeFileSync(resolve(localFixtureDirectory,'Nexus LXMC Fixture.lxmc'),gzipSync(Buffer.from(JSON.stringify(lxmc))));
+    for(const name of ['Synthetic Tagged Tone.mp3','Nexus Fixture.ttf','Nexus Visual Fixture.png','Nexus Playlist Fixture.json','Nexus LXMC Fixture.lxmc']){
+      const path=resolve(localFixtureDirectory,name);if(!existsSync(path)||statSync(path).size===0)throw new Error(`Fixture not written: ${name}`);
+    }
+    console.log(`[ui-fixtures] ${localFixtureDirectory}`);
+  } catch (error) {
+    // Fresh CI simulator: the Files app container may not exist yet.
+    console.warn(`[ui-fixtures] ${error instanceof Error?error.message:String(error)}`);
+  }
 }
 seedLocalAudio();
 let fixture = `/**\n * @name Nexus UI Test Source\n * @version 1.0-test\n */\nlx.on('request', async()=>{throw new Error('test only')});\nlx.send('inited',{sources:{wy:{name:'Fixture',actions:['musicUrl'],qualitys:['128k']}}});`;

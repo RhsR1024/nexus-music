@@ -1,3 +1,10 @@
+## 2026-10-23 LX P4/P5阶段
+
+- P4：`lxTrack` 统一五平台身份；kg 归一 `${songmid}_${hash}`（含 `kg_` 前缀与仅 songmid+hash 两形态），tx 去 `tx_` 前缀并区分 MID 与长整数 `meta.id`；duration 有限且 ≤24h；qualities 64×128 先限后去重、原始 metadata 保留。4项新增业务测试。
+- P5：正式 Files 入口消费同一 `decodePlaylistJSON`；业务测试证明预览零写入、确认导入原子、重启保留身份/顺序/重复、失败保留旧库；正式 App `testLXMCImportCancelAndRestart` 在模拟器 Files+合成 gzip LXMC 上 1/0/0（取消→追加导入→重启→删除）。全量 check 480/480。
+- 证据：[P4/P5回执](docs/parse-p4-p5-2026-10-23.md)、`build/parse-p5-lxmc-r4-20261023/run-manifest.json`（exitCode 0、sourceUnchanged true）。
+- 未完成：真实 LX 导出/平台服务、云端 iOS 27 终态、真机 Files 与重启验收；不宣布全部 parse 完成。下一批 P5 之后转平台登录/日推/FM 纵向链路与经典歌词整页 90%。
+
 ## 2026-10-23 高清封面r47与LX P3阶段
 
 - LX P3已实施：初始化响应1MiB UTF-8上限（Hermes安全计数，JSON.parse前）、名称≤256、动作/音质声明≤64项且每项≤128；未知动作过滤、未知音质保留、已知平台坏声明使整脚本失败；注册表按版本隔离坏源。8项lx专项、474/474检查、原生CoverCache套件通过。[P3回执](docs/parse-lx-p3-2026-10-23.md)
