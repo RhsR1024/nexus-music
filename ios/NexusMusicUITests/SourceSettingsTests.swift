@@ -135,22 +135,33 @@ final class SourceSettingsTests: XCTestCase {
     let fileCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
     let folderCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
     let fileRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
-    let folderRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+    // The navigation title also begins with the folder name; its Actions
+    // Menu opens a context menu, not the directory (cloud failure evidence).
+    let folderRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ AND NOT (label CONTAINS[c] %@) AND NOT (label CONTAINS %@)","Nexus UITest Fixtures","Actions Menu","操作菜单")).firstMatch
+    let fixtureRoot=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.browsingRoot Source: com.apple.FileProvider.LocalStorage, Title: Nexus UITest Fixtures")).firstMatch
     let locations=NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])
-    func settle(){RunLoop.current.run(until:Date().addingTimeInterval(1))}
+    func settle(){RunLoop.current.run(until:Date().addingTimeInterval(2))}
+    let cancel=app.buttons.matching(NSPredicate(format:"label IN %@",["取消","Cancel","取消選取"])).firstMatch
+    guard cancel.waitForExistence(timeout:30) else{XCTFail("Files picker must be presented before navigation");return}
+    settle()
+    func confirmSelection(){
+      let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
+      if open.waitForExistence(timeout:3){open.tap()}
+    }
     for _ in 0..<18 {
-      if fileCell.exists{fileCell.tap();return}
+      if fileCell.exists{fileCell.tap();confirmSelection();return}
       if folderCell.exists{folderCell.tap();settle();continue}
-      // Files can expose the folder itself only as a button ending in
-      // “操作菜单”. Tapping the button opens the directory on this OS.
-      if fileRow.exists{fileRow.tap();return}
+      if fileRow.exists{fileRow.tap();confirmSelection();return}
+      // Once inside, allow provider enumeration without reopening the title
+      // menu or navigating back out to the location list.
+      if fixtureRoot.exists{settle();continue}
       if folderRow.exists{folderRow.tap();settle();continue}
       // Files labels its back button with the previous location. Never accept
       // a Button here or navigation moves backwards instead of to On My iPhone.
-      let phone=(app.cells.matching(locations).allElementsBoundByIndex+app.staticTexts.matching(locations).allElementsBoundByIndex).first{$0.exists}
+      let phone=app.cells.matching(locations).allElementsBoundByIndex.first{$0.exists}
       if let phone{phone.tap();settle();continue}
-      let browse=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
-      if browse.exists{browse.tap()}
+      let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+      if browse.exists && browse.isHittable{browse.tap()}
       settle()
     }
     // The local FileProvider can take tens of seconds to enumerate a directory
@@ -163,8 +174,7 @@ final class SourceSettingsTests: XCTestCase {
       XCTFail("The actual Files cell/row must be visible before selection")
       return
     }
-    let open=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
-    if open.waitForExistence(timeout:3){open.tap()}
+    confirmSelection()
   }
   func testAppIconOnHomeScreen() throws {
     let app=XCUIApplication();app.launch();XCUIDevice.shared.press(.home)
@@ -967,7 +977,8 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
     XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
-    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+    // The picker may restore the previous directory without a Browse button.
+    // Use the same real-row navigation as the image/font import paths.
     selectLocalFixture("Synthetic Tagged Tone",in:app)
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:15))
     app.buttons["专辑"].tap();let albumGroup=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Fixture album")).firstMatch;XCTAssertTrue(albumGroup.waitForExistence(timeout:5));albumGroup.tap()
@@ -2606,8 +2617,18 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertEqual(result,.completed,"Image name must update after import; status: \(app.staticTexts["visual-status"].exists ? app.staticTexts["visual-status"].label : "no status")")
     }
     openSettings(app,page:"background")
+    // A prior failed run can leave an imported slot. Reset through the real
+    // removal UI before asserting the empty-state contract.
+    for slot in ["background","photo"] {
+      let remove=app.buttons["visual-remove-"+slot]
+      if remove.exists {
+        reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+        let empty=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","尚未导入"),object:app.staticTexts["visual-"+slot+"-name"])
+        XCTAssertEqual(XCTWaiter.wait(for:[empty],timeout:10),.completed)
+      }
+    }
     let imageBackground=app.descendants(matching:.any).matching(identifier:"background-image").firstMatch
-    reveal(imageBackground);XCTAssertFalse(imageBackground.isEnabled,"Image background must stay unavailable until a theme image is imported")
+    reveal(imageBackground,expectAbove:true);XCTAssertFalse(imageBackground.isEnabled,"Image background must stay unavailable until a theme image is imported")
     let background=app.buttons["visual-import-background"];reveal(background);importFixture("visual-import-background")
     expectImported("visual-background-name")
     let photo=app.buttons["visual-import-photo"];reveal(photo);importFixture("visual-import-photo")

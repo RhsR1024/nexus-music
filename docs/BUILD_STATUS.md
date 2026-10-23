@@ -1,3 +1,7 @@
+## 2026-10-23 Files云端失败修复本地通过
+
+两次云端首组均20/22，Files目录操作菜单误点与恢复目录/Browse、Open确认已在测试层修正。r3 Release2/0/0、sourceUnchanged=true，499检查及Swift parse通过。见[修复与证据](ci-files-navigation-2026-10-23.md)。本批待正常push/新iOS27；黑胶实验仍未提交，UI静态仍2/5，真实服务/签名/真机继续。
+
 ## 2026-10-23 私人FM低水位续批与经典r53负证据
 
 `npm run check` **499/499**（typecheck+业务测试，0失败/0取消，exitCode 0），日志`build/logs/check-fm-station-20261023.log`，SHA-256 `5580e324764923df93f440c42f16ef6e59865d98546d5a2510b8774c5ff08ea6`。新增`AccountFmStation`与7项测试：FM剩余`<2`时单在途预取、按歌曲身份去重、只追加权威队列、同当前曲目最多成功追加一次、失败60秒退避、空/全重复耗尽；账号revision/会话/队列归属变化或用户改队列取消迟到批次。正式FM主按钮与行播放已接入，面板布局/文案未改，不重跑UI截图，不声明UI整页90%或工程百分比提升。
