@@ -2224,3 +2224,12 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 - 多次尝试暂停、切换网络/代理和提交后 force-stop，真实下载均在暂停控件可操作前完成，未留下可续接任务；下载管理器的完成态及删除后的空态已采集（E-747、E-748），暂停/恢复、进程重启续传和后台调度仍未验证。
 
 设备收尾要求保持：手机无 NexusSort/NexusTie/NexusAddTime 测试文件、`/sdcard/Music/SollinV2` 下载目录已清空；Sollin 保持前台并暂停；屏幕熄灭超时 600000ms，`stay_on_while_plugged_in=0`，`MANAGE_EXTERNAL_STORAGE=allow`，`READ_MEDIA_AUDIO=allow`。剩余边界仍包括系统媒体输出成功态、同一文件时间相等时的稳定次序、更复杂跨字段标签冲突、新建歌单远端写入、密码锁屏、后台任务续接和录屏逐帧人工验收。
+
+
+## 2026-10-24 Sollin Android 音乐动态采集：本地搜索、索引移除与在播保护
+
+外置案例继续按 `reverse-skill` 证据链更新，新增 E-752/E-754/E-756/E-758/E-760/E-762/E-768/E-770；当前 strict review 为 **79 Evidence、17 Findings、15 Paths、3 Work Items、19 timeline events，0 errors / 0 warnings**。
+
+本轮确认：本地搜索会显示 `1/3` 过滤结果并可清除；本地歌曲更多抽屉的“从本地列表移除”只改变索引可见性，设备文件保留，重新扫描会恢复；移除正在播放的本地文件后 mini 与 media-session 仍保留该播放意图。扫描设置中的2秒时长阈值和屏蔽路径字段能够保存，但本轮重扫后样本仍全部出现，因此实际过滤效果暂不纳入已验证功能。
+
+设备已收尾：`/sdcard/Download/NexusFilter` 与 `/sdcard/Music/SollinV2` 均为空，本地扫描根已移除，最终空态截图为 E-770，Sollin 前台且媒体会话暂停；其余既有权限、超时和 T7 原始证据约束保持不变。剩余边界仍包括下载暂停/恢复与重启续传、系统媒体输出成功、队列锁定外部替换语义、扫描过滤实际效果、远端歌单写入、密码锁屏和录屏逐帧验收。
