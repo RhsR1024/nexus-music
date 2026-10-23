@@ -58,8 +58,17 @@ export const paper = {
   iconStrong: '#403A39',
   toolInk: '#5E514F',
   toolMuted: '#BEABAA',
-  track: 'rgba(74,66,60,0.20)',
+  track: 'rgba(74,66,60,0.18)',
   accent: '#8E4A4E',
+  // IMG_4851 ink samples: title #171717, artist #8E776F, heart #8E7A74,
+  // time #A58E88, tool/skip strokes #221919/#3F3A39, caption #938382.
+  titleInk: '#171717',
+  artistInk: '#8E776F',
+  heartInk: '#8E7A74',
+  timeInk: '#A58E88',
+  vinylIcon: '#221919',
+  skipInk: '#3F3A39',
+  captionInk: '#938382',
   deck: '#141416',
   deckEdge: '#2A2A2D',
   record: '#0B0B0C',
@@ -103,4 +112,4 @@ export const classicMetadataLayout = {titleSize:24,titleLineHeight:28,titleOffse
 export const classicSkipIcon = {size:23.58,lineHeight:28,triangleWidth:13,gap:2,scaleX:.872} as const;
 
 // Paper progress thumb: compact downward shadow; the 12pt entity is unchanged.
-export const paperProgressShadow = {shadowColor:'#4A2325',shadowOpacity:.25,shadowRadius:1,shadowOffset:{width:0,height:1}} as const;
+export const paperProgressShadow = {shadowColor:'#4A2325',shadowOpacity:.28,shadowRadius:2.5,shadowOffset:{width:0,height:1.5}} as const;

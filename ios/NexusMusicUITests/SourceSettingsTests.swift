@@ -1631,7 +1631,7 @@ final class SourceSettingsTests: XCTestCase {
         XCTAssertTrue(cartridge.exists && counterweight.exists)
         XCTAssertTrue(canvas.frame.contains(cartridge.frame) && canvas.frame.contains(counterweight.frame),"Parked head and rear weight must fit the visible canvas")
         XCTAssertTrue(app.buttons["睡眠定时"].isHittable,"IMG_4851 keeps a real sleep-timer tool beside the queue tool")
-        let parkedNeedle=needle.frame,parkedHead=cartridge.frame,parkedPivot=pivot.frame
+        let parkedHead=cartridge.frame,parkedPivot=pivot.frame
         XCTAssertGreaterThan(counterweight.frame.midX,platter.frame.midX);XCTAssertLessThan(counterweight.frame.midY,pivot.frame.midY,"Rear weight belongs behind the pivot")
         let composition=XCTAttachment(screenshot:XCUIScreen.main.screenshot());composition.name="Vinyl reference composition";composition.lifetime = .keepAlways;add(composition)
         func discPixels()->[UInt8]{
@@ -1644,11 +1644,15 @@ final class SourceSettingsTests: XCTestCase {
         let pausedDisc=discPixels();XCTAssertEqual(pausedDisc.count,324,"Read actual asymmetric cover pixels, never an empty stability baseline")
         XCTAssertEqual(pausedDisc,discPixels(),"Paused disc must retain its native phase")
         app.buttons["播放"].tap()
-        let engaged=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in needle.frame.width>parkedNeedle.width+15},object:nil)
+        let engaged=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in cartridge.frame.midX<parkedHead.midX-20},object:nil)
         XCTAssertEqual(XCTWaiter.wait(for:[engaged],timeout:10),.completed,"Playing must move the actual needle onto the disc")
         XCTAssertLessThan(cartridge.frame.midX,parkedHead.midX-20,"Engagement must carry the actual head left onto the record")
         XCTAssertTrue(platter.frame.contains(cartridge.frame),"The engaged head must remain on the actual platter")
-        XCTAssertTrue(canvas.frame.contains(counterweight.frame),"The rear weight remains within the canvas during engagement")
+        // IMG_4851 clips the engaged rear weight at the deck's upper edge.
+        // Check the actual visible body instead of moving it away from the reference.
+        let visibleRear=canvas.frame.intersection(counterweight.frame)
+        XCTAssertFalse(visibleRear.isNull,"The engaged rear weight must remain visible")
+        XCTAssertGreaterThanOrEqual(visibleRear.height,counterweight.frame.height*0.5,"At least half of the rear weight stays visible at the reference crop")
         XCTAssertEqual(pivot.frame.midX,parkedPivot.midX,accuracy:0.5);XCTAssertEqual(pivot.frame.midY,parkedPivot.midY,accuracy:0.5)
         let spinning=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
           let next=discPixels();return next.count==324 && zip(pausedDisc,next).reduce(0){$0+abs(Int($1.0)-Int($1.1))}>100
@@ -1660,7 +1664,7 @@ final class SourceSettingsTests: XCTestCase {
         let beforeResume=discPixels()
         XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in let next=discPixels();return next.count==324 && next != beforeResume},object:nil)],timeout:10),.completed,"Actual disc resumes after foreground restoration")
         app.buttons["暂停"].tap()
-        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(needle.frame.width-parkedNeedle.width)<1},object:nil)],timeout:10),.completed,"Pause returns the actual needle to its parked angle")
+        XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(cartridge.frame.midX-parkedHead.midX)<1 && abs(cartridge.frame.midY-parkedHead.midY)<1},object:nil)],timeout:10),.completed,"Pause returns the actual needle to its parked angle")
         XCTAssertEqual(cartridge.frame.midX,parkedHead.midX,accuracy:1);XCTAssertEqual(cartridge.frame.midY,parkedHead.midY,accuracy:1)
         // AX needle geometry and the screenshot compositor settle separately.
         // Require three consecutive byte-identical, nonempty disc samples;
@@ -2725,6 +2729,34 @@ final class SourceSettingsTests: XCTestCase {
   func testVisualLabClassicDirect(){captureClassicDirect(lines:3)}
   func testVisualLabClassicShortDirect(){captureClassicDirect(lines:2)}
   func testVisualLabClassicReferenceDirect(){captureClassicDirect(lines:3,reference:true)}
+  func testVisualLabVinylReferenceDirect(){
+    let app=XCUIApplication();app.launch()
+    let open=app.buttons["打开播放页"].firstMatch
+    XCTAssertTrue(open.waitForExistence(timeout:30));open.tap()
+    let play=app.buttons["播放"].firstMatch
+    XCTAssertTrue(play.waitForExistence(timeout:10));play.tap()
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    expectation(for:NSPredicate(format:"value CONTAINS %@","4:44"),evaluatedWith:progress);waitForExpectations(timeout:20)
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:10))
+    app.buttons["暂停"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))
+    var previous=CGRect.zero,stable=0
+    let settled=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      let frame=progress.frame;stable=frame==previous ? stable+1:0;previous=frame
+      return frame.height>0 && stable>=2
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[settled],timeout:10),.completed)
+    print("Vinyl progress frame \(progress.frame) app \(app.frame)")
+    // Seek while paused so the clock is deterministic: a 92.2s seed plus the
+    // ~1.1s of tap/AX/screenshot latency lands inside 01:33 at capture.
+    progress.coordinate(withNormalizedOffset:CGVector(dx:92.2/284.0,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"value CONTAINS %@","1:32"),evaluatedWith:progress);waitForExpectations(timeout:5)
+    app.buttons["播放"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:5))
+    Thread.sleep(forTimeInterval:0.6)
+    let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name="Vinyl reference content";shot.lifetime = .keepAlways;add(shot)
+    if app.buttons["暂停"].firstMatch.exists {app.buttons["暂停"].firstMatch.tap()}
+  }
   private func captureClassicDirect(lines:Int,reference:Bool=false){
     let app=XCUIApplication();app.launch()
     let open=app.buttons["打开播放页"].firstMatch

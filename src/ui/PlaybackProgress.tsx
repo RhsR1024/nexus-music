@@ -10,7 +10,7 @@ export function PlaybackProgress({services,adaptive=false,variant='default'}:{se
   const controller=services.playback.controller,state=useSyncExternalStore(controller.subscribe,controller.getSnapshot);
   const largeText=useWindowDimensions().fontScale>1.4&&adaptive;
   const paperTone=variant==='paper',stageTone=variant==='stage',amTone=variant==='am';
-  const trackHeight=amTone?8:stageTone?5:paperTone?5:4;
+  const trackHeight=amTone?8:stageTone?5:paperTone?4.3:4;
   const stageTimes=stageTone&&!largeText;
   const timeStyle=amTone&&!largeText?styles.amTime:stageTone?styles.stageTime:paperTone?styles.paper:styles.small;
   const gestureToken=useRef<string|undefined>(undefined);
@@ -32,4 +32,4 @@ export function PlaybackProgress({services,adaptive=false,variant='default'}:{se
     </View>
   </View>;
 }
-const styles=StyleSheet.create({small:{color:'rgba(255,255,255,0.64)',fontSize:13,lineHeight:20},stageTime:{color:'rgba(255,255,255,0.62)',fontSize:13,lineHeight:16},amTime:{color:'rgba(255,255,255,0.72)',fontSize:12,lineHeight:15},paper:{color:paper.secondary,fontSize:14,lineHeight:18}});
+const styles=StyleSheet.create({small:{color:'rgba(255,255,255,0.64)',fontSize:13,lineHeight:20},stageTime:{color:'rgba(255,255,255,0.62)',fontSize:13,lineHeight:16},amTime:{color:'rgba(255,255,255,0.72)',fontSize:12,lineHeight:15},paper:{color:paper.timeInk,fontSize:14,lineHeight:18}});

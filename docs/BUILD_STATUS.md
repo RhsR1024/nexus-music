@@ -1,3 +1,7 @@
+## 2026-10-23 黑胶集成验证
+
+Release模拟器正式导航 `SourceUITests-1792741979250.xcresult` 1/0/0、sourceUnchanged=true；507业务/类型和native通过，详见[回执](ui-spec/vinyl-r8-conic-2026-10-23.md)。清洁设备归档与本提交新云端待；不替代静态90%、签名/真机或真实服务。
+
 ## 2026-10-23 Files云端失败修复本地通过
 
 两次云端首组均20/22，Files目录操作菜单误点与恢复目录/Browse、Open确认已在测试层修正。r3 Release2/0/0、sourceUnchanged=true，499检查及Swift parse通过。见[修复与证据](ci-files-navigation-2026-10-23.md)。本批待正常push/新iOS27；黑胶实验仍未提交，UI静态仍2/5，真实服务/签名/真机继续。
