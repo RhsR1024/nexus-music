@@ -1,3 +1,7 @@
+## 2026-10-23 黑胶r15前管材质
+
+实测横截面重建前唱臂灰面/窄高光，Release1/0/0、shaft ΔE10.92→0.39，盘面SSIM77.75%、全屏88.72%，区域外零变化。507检查通过；[回执](docs/ui-spec/vinyl-arm-r15-2026-10-23.md)。仍未静态验收，下一基座/沟槽/锚点；全部parse稀疏cue、云端/真实服务/签名/真机继续。
+
 ## 2026-10-23 Files完整管理器就绪修复
 
 4a21c8e云端21/22，仅背景图片就绪误报：目标文件已可见但系统无Cancel。就绪检查改为真实FileProvider根/目标行或Cancel；本地Release1/0/0、sourceUnchanged=true、507检查通过。见[回执](docs/ci-files-navigation-2026-10-23.md)。新云端仍待，不把本地26.3.1记iOS27通过；全部UI/parse/真实服务/设备继续。

@@ -83,7 +83,7 @@ export function Vinyl({services,track,width,playing}:{services:Services;track:Tr
           <View style={{position:'absolute',left:12.365*s,top:12.365*s,width:35.27*s,height:35.27*s,borderRadius:17.635*s,backgroundColor:'#181918',borderWidth:1.6*s,borderColor:'rgba(0,0,0,0.62)'}}/>
         </View>
         <Animated.View testID="vinyl-tonearm" collapsable={false} style={{position:'absolute',left:jointX,top:jointY,width:1,height:1,transform:[{rotate:resting}],transformOrigin:'left top'}}>
-          <LinearGradient colors={['#555854','#A9ACA7','#D2D5D0','#B4B7B2','#8A8D88','#4A4D49']} locations={[0,.18,.45,.7,.88,1]} start={{x:0,y:.4}} end={{x:1,y:.4}} style={{position:'absolute',left:-6.15*s,top:0,width:12.3*s,height:130*s,borderRadius:6.15*s,borderWidth:.4,borderColor:'#333633'}}/>
+          <LinearGradient colors={['#8F9290','#8B8F8B','#7F837F','#7F837F','#AFB1AF','#ADB0AD','#787C79','#797D7A']} locations={[0,.10,.54,.58,.60,.77,.80,1]} start={{x:0,y:.4}} end={{x:1,y:.4}} style={{position:'absolute',left:-6.15*s,top:0,width:12.3*s,height:130*s,borderRadius:6.15*s,borderWidth:.4,borderColor:'#333633'}}/>
           <View style={{position:'absolute',left:-7.5*s,top:126*s,width:15*s,height:3.5*s,borderRadius:1.75*s,backgroundColor:'#6E716D',borderWidth:.4,borderColor:'#3A3D3A'}}/>
           <View testID="vinyl-cartridge" collapsable={false} style={{position:'absolute',left:-12.5*s,top:128.7*s,width:25*s,height:34*s,borderRadius:1.5*s,backgroundColor:'#1C1F1D',borderWidth:.4,borderColor:'#3A3D3A'}}>
             <View style={{position:'absolute',left:-5*s,top:30*s,width:13*s,height:10*s,borderRadius:2*s,backgroundColor:'#151715'}}/>
