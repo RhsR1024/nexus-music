@@ -11,3 +11,5 @@ r1本地0/2，DocumentManager在转场中SIGSEGV（objc_msgSend→_runAlongsideC
 最终r3：`build/SourceUITests-1792738743849.xcresult`，Release/SDK26.2/iOS26.3.1模拟器，**2通过/0失败/0跳过**。manifest `build/ci-files-fix-20261023-r3/run-manifest.json` exitCode0、sourceUnchanged=true，SHA256 `4a90d042daff411e066ea02e900fc342a4e27795ff9757ff8606bd46b6b2568c`，resultInfo SHA `ab0482db6687719f5cb75dae3dcaaa4718b2470379c82495446ee656b16db9cd`。已亲看导出的“Persisted visual image settings and fallback”：两图片槽已移除、按钮恢复可用；不是新UI配色评分。完整日志/fixture/源码及安装包哈希见manifest。
 
 `npm run check`499/499（含typecheck），日志`build/logs/check-files-fix-20261023.log`；Swift parse与diff检查通过。最终App来源包含未提交黑胶实验，当前提交只纳入Files测试修复；该两项不使用黑胶布局。未重复设备归档，无产品/原生后端修改。云端最新39904225211/8a96dc7仍在运行，不包含本修复，不取消/重派；正常push后的新云端仍待。真机、签名、真实音频服务及90%UI/全部parse不由本批证明。
+
+交付回执：`4a21c8e101f28946808985c32ac932548172ae3a`已正常push并核对远端main一致。连接器实核39915726008/4a21c8e pending、39904225211/8a96dc7 in_progress，1运行/1排队；未取消/重派，新云端终态仍待。
