@@ -1,3 +1,27 @@
+## 2026-10-24 Android Sollin 音乐功能规格动态批次
+
+已通过 ADB 在小米10/Android13 上完成发现、榜单、歌单、每日推荐、心动模式、搜索、听歌识曲权限态、播放器、歌词、队列、解析链路、相似歌曲、音乐库、本地扫描、Home后台恢复等音乐能力采集。原始截图/控件树/日志只在 T7 Touch 外部案例 `/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023`；图文报告为 `report/ANDROID_MUSIC_FUNCTION_SPEC.md`，仓库脱敏摘要为 [Sollin Android 音乐功能规格](docs/SOLLIN_ANDROID_MUSIC_FUNCTION_SPEC.md)。案例 strict review：12条Evidence、6个Finding、3条Path，0 warning/error。
+
+范围排除了Sollin自有登录、用户中心、服务与反馈；音乐平台账号仅记录推荐/歌单作用。用户授权的 `MANAGE_EXTERNAL_STORAGE` 保持 `allow`；临时 `stay_on_while_plugged_in` 已恢复原值0。麦克风成功态、系统媒体输出成功态、真实本地音频扫描成功态、锁屏/通知/重启和连续手势录屏仍未验，不得写成已完成。
+
+## 2026-10-23 首批实机导航采集
+
+用户解锁后已自动从发现mini展开播放器并打开队列，003/005/007截图已亲看，素材与哈希清单保存在外盘新case。仅确认导航和可见入口，未操作真实播放、排序、删除/清空；完整功能规格与Evidence图审查待后续批次。充电保持唤醒原值0，临时3验证后已恢复0。后续采集可临时保持亮屏，无需用户持续触屏，但重启/手动锁定后需用户解锁。
+
+## 2026-10-23 Android已连接与外置采集目录
+
+ADB已识别Mi10/Android13，Sollin包`com.leguandev.sollin.v2`版本2.0.0(2060)，屏幕1080×2340。T7 Touch挂载、约736GiB空余；新case位于`/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023`，项目忽略work同名链接指向该位置。新case-guard与既有apk前置gate通过；截图已在外盘落地并亲看，初始黑屏原因是Dozing，唤醒后是锁屏。等待用户解锁打开Sollin，没有功能采集/播放结论。原始锁屏截图含个人环境，仅留本机外盘，不上传。后续素材按用户要求全部写外盘，挂载丢失不得静默回退内盘。
+
+## 2026-10-23 Android连接预检
+
+Google官方Platform Tools 37.0.1已安装至本机Tools/Android/20261023，ADB服务成功启动，设备列表为空；USB清单亦未显示Android。等待用户检查解锁/USB调试/文件传输及数据线连接。独立连接预检scope已通过case-guard，证据在忽略目录work/sollin-device-preflight-20261023-2328；没有操作Sollin或产生功能采集结论。Homebrew索引路径受阻后改用官方ZIP，未改全局客户端配置。磁盘约16GiB可用，build约26G/work约246M，保留在用证据与构建，未盲删。
+
+## 2026-10-23 当前规则：功能规格优先，UI按质量验收
+
+用户已明确认可[决策0079](docs/decisions/0079-functional-spec-and-ui-quality.md)的四点：功能逐项严格验收；UI按体验与质量验收，允许布局/材质差异；重点页面单独精修；取消全局90%像素相似度门槛及其对功能推进的阻塞。此规则覆盖下方历史90%硬门槛、全量逐像素验收和样板达标前置顺序。保留iPhone常态范围、reverse-skill证据门禁、音枢特有能力与许可/隐私边界。
+
+历史指标与失败记录保留，不自动转换为新标准通过；方法调整本身不增加完成度。下一步先验证Android连接，按播放器/队列/歌词/设置采集功能状态与截图/录屏，再按纵向批次实施；iOS差异需独立核验。
+
 ## 2026-10-23 当前代码与文档快照提交
 
 按用户“先提交并push当前项目所有文档代码”保存当前稀疏cue实现、测试与[阶段记录](docs/parse-sparse-cues-2026-10-23.md)。本批仍实施中：r6功能测试通过不代表Emoji显示正确，r7离屏诊断新增但尚未取得运行结果；不增加UI静态2/5或全部parse完成量。此次仅保存当前进度，不新增视觉/真机验收声明，归档仍待。
@@ -2152,3 +2176,12 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 验证：`testPlayerStyleSheetWithLargeTextAndPersistence` + `testEQPresetCardsWithLargeText` Release 2/0/0（`build/SourceUITests-1792500633689.xcresult`，测试 259.199 秒）；`testClassicPlayerWindowSafeArea` 1/0/0（`build/SourceUITests-1792500411868.xcresult`，约 208.4 秒）。`npm run check` 401/401、`git diff --check` 与 Swift parse 通过。三项均为本地 iOS26.3.1 证据，新 iOS27 云端终态待 push 后实际运行；真实服务、Apple 签名和真机仍未完成。
 
 ## 2026-10-20 4855/4856 视觉复核通过门禁
+
+
+## 2026-10-24 Sollin Android 动态音乐功能采集续批
+
+在小米 Mi 10（Android 13，Sollin 2.0.0）上继续完成音乐范围动态采集，原始截图、控件树、操作日志和哈希均留在 T7 外置盘案例 `sollin-android-ui-20261023`；Sollin 自有登录、用户中心、服务与反馈仍排除。新增证据覆盖：LX 音源可用性检测与固定曲目返回链接、歌曲下载音质未检测→入队→降级/失败→删除清理；隔离 WAV 的目录授权、媒体音频权限、本地扫描 `0→1→0` 和扫描目录移除；熄屏唤醒滑动返回、Home 后媒体会话与 Android 媒体通知卡。
+
+外部案例 strict review 当前为 22 Evidence、9 Findings、6 Paths、3 Work Items，0 errors/0 warnings；APK reverse gate 与 `--review` 均 PASS。设备最终状态：屏幕熄灭超时 600000ms、`stay_on_while_plugged_in=0`、Sollin `MANAGE_EXTERNAL_STORAGE=allow`、`READ_MEDIA_AUDIO=allow`，隔离 WAV 已从手机删除，Sollin 前台且播放暂停。
+
+仍需后续补证：真实下载成功文件及元数据、本地文件实际播放、麦克风授权成功态、系统媒体输出成功态，以及连续手势/转场录屏；本批不把这些写成完成。
