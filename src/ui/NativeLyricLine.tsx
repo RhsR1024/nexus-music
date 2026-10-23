@@ -10,6 +10,6 @@ export const NativeLyricLine=memo(function NativeLyricLine({line,position,playin
   // of scaling only the invisible RN placeholder at accessibility text sizes.
   const points=Math.min(100,Math.max(10,size*useWindowDimensions().fontScale));
   return <View pointerEvents="none"><Text accessible={false} allowFontScaling={false} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight),fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{line.text}</Text>
-    <NativeLine testID={line.words?'native-word-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden})}/>
+    <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden})}/>
   </View>;
 });

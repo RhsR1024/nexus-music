@@ -2708,6 +2708,27 @@ final class SourceSettingsTests: XCTestCase {
     captureAppearanceSheet(direct:false)
   }
   func testStructuredNavidromeLyrics(){
+    // Offscreen UIKit controls diagnose fonts only; these are not App or
+    // reference-alignment screenshots and never enter the shipping bundle.
+    for explicitEmoji in [false,true] {
+      let text="前👩‍💻中é后",font=UIFont.systemFont(ofSize:80,weight:.semibold)
+      let paragraph=NSMutableParagraphStyle();paragraph.alignment = .center;paragraph.minimumLineHeight=100;paragraph.maximumLineHeight=100
+      let attributes=NSMutableAttributedString(string:text,attributes:[.font:font,.foregroundColor:UIColor.white.withAlphaComponent(0.56),.paragraphStyle:paragraph])
+      if explicitEmoji,let emoji=UIFont(name:"AppleColorEmoji",size:80){attributes.addAttribute(.font,value:emoji,range:NSRange(location:1,length:5))}
+      let size=CGSize(width:382,height:300)
+      let label=UILabel(frame:CGRect(origin:.zero,size:size));label.numberOfLines=0;label.attributedText=attributes
+      let labelImage=UIGraphicsImageRenderer(size:size).image { renderer in
+        UIColor.black.setFill();renderer.fill(CGRect(origin:.zero,size:size));label.layer.render(in:renderer.cgContext)
+      }
+      let storage=NSTextStorage(attributedString:attributes),manager=NSLayoutManager(),container=NSTextContainer(size:size)
+      container.lineFragmentPadding=0;storage.addLayoutManager(manager);manager.addTextContainer(container);manager.ensureLayout(for:container)
+      let textImage=UIGraphicsImageRenderer(size:size).image { renderer in
+        UIColor.black.setFill();renderer.fill(CGRect(origin:.zero,size:size));manager.drawGlyphs(forGlyphRange:manager.glyphRange(for:container),at:.zero)
+      }
+      for (kind,image) in [("UILabel",labelImage),("TextKit",textImage)] {
+        let attachment=XCTAttachment(image:image);attachment.name="Emoji control \(kind) explicit \(explicitEmoji)";attachment.lifetime = .keepAlways;add(attachment)
+      }
+    }
     let app=XCUIApplication();app.launch()
     let open=app.buttons["打开播放页"].firstMatch
     XCTAssertTrue(open.waitForExistence(timeout:30));open.tap()
@@ -2734,6 +2755,114 @@ final class SourceSettingsTests: XCTestCase {
     stageProgress.coordinate(withNormalizedOffset:CGVector(dx:0.115,dy:0.5)).tap()
     expectation(for:NSPredicate(format:"label == %@ AND value == %@","Lead","逐字歌词"),evaluatedWith:group);waitForExpectations(timeout:10)
     let lead=XCTAttachment(screenshot:app.screenshot());lead.name="Structured later main replaces guest";lead.lifetime = .keepAlways;add(lead)
+    stageProgress.coordinate(withNormalizedOffset:CGVector(dx:0.151,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"label == %@ AND value == %@","前👩‍💻中é后","部分逐字歌词"),evaluatedWith:group);waitForExpectations(timeout:10)
+    let sparseFrame=group.frame,scale=UIScreen.main.scale
+    let pixelFrame=CGRect(x:floor(sparseFrame.minX*scale),y:floor(sparseFrame.minY*scale),width:floor(sparseFrame.width*scale),height:floor(sparseFrame.height*scale))
+    let width=Int(pixelFrame.width),height=Int(pixelFrame.height)
+    func sparsePixels(_ name:String?=nil)->[UInt8]{
+      let shot=XCUIScreen.main.screenshot()
+      if let name {let attachment=XCTAttachment(screenshot:shot);attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)}
+      guard width>0,height>0,width*height<2_000_000,let image=BackgroundPixels.decode(shot.pngRepresentation),let crop=image.cropping(to:pixelFrame) else{return []}
+      var bytes=[UInt8](repeating:0,count:width*height*4)
+      let ok=bytes.withUnsafeMutableBytes { memory -> Bool in
+        guard let context=CGContext(data:memory.baseAddress,width:width,height:height,bitsPerComponent:8,bytesPerRow:width*4,space:CGColorSpace(name:CGColorSpace.sRGB)!,bitmapInfo:CGBitmapInfo.byteOrder32Big.rawValue|CGImageAlphaInfo.premultipliedLast.rawValue) else{return false}
+        context.draw(crop,in:CGRect(x:0,y:0,width:width,height:height));return true
+      }
+      return ok ? bytes:[]
+    }
+    let before=sparsePixels("Structured sparse before cues");XCTAssertEqual(before.count,width*height*4)
+    guard before.count==width*height*4 else{return}
+    var left=width,right = -1
+    for x in 0..<width {for y in 0..<height {let i=(y*width+x)*4;if before[i...i+2].max()!>80 {left=min(left,x);right=max(right,x)}}}
+    XCTAssertGreaterThan(right-left,60,"The full sparse line must contain visible ink")
+    guard right>left else{return}
+    // The 80pt stage can wrap. Find the first and last static-ink row bands,
+    // rather than treating a horizontal strip through every row as one glyph.
+    let brightRows=(0..<height).filter { y in (0..<width).contains { x in let i=(y*width+x)*4;return before[i]>120 && before[i+1]>120 && before[i+2]>120 } }
+    guard let first=brightRows.first,let last=brightRows.last else {XCTFail("Static sparse text must have full active ink");return}
+    var firstEnd=first,lastStart=last
+    while firstEnd+1<height && brightRows.contains(firstEnd+1){firstEnd+=1}
+    while lastStart>0 && brightRows.contains(lastStart-1){lastStart-=1}
+    func inkColumns(_ rows:ClosedRange<Int>)->[Int]{
+      (0..<width).filter { x in rows.contains { y in let i=(y*width+x)*4;return before[i]>120 && before[i+1]>120 && before[i+2]>120 } }
+    }
+    let firstColumns=inkColumns(first...firstEnd),lastColumns=inkColumns(lastStart...last)
+    guard let prefixX=firstColumns.first,let suffixX=lastColumns.last else {XCTFail("Static edge glyphs must have visible ink");return}
+    let prefix=CGRect(x:prefixX,y:first,width:min(8,width-prefixX),height:firstEnd-first+1)
+    let suffix=CGRect(x:max(0,suffixX-7),y:lastStart,width:min(8,suffixX+1),height:last-lastStart+1)
+    print("Sparse frame \(sparseFrame), pixels \(pixelFrame), ink \(left)..\(right), static prefix \(prefix), suffix \(suffix)")
+    func peak(_ region:CGRect)->UInt8 {
+      var value:UInt8=0
+      for y in Int(region.minY)..<Int(region.maxY) {for x in Int(region.minX)..<Int(region.maxX) {let i=(y*width+x)*4;value=max(value,before[i],before[i+1],before[i+2])}}
+      return value
+    }
+    // The classic stage intentionally uses 56% white (143/255), not opaque white.
+    XCTAssertGreaterThan(peak(prefix),120,"Untimed prefix must use full active ink, not the 32% timed base")
+    XCTAssertGreaterThan(peak(suffix),120,"Untimed suffix must use full active ink, not the 32% timed base")
+    func regionChange(_ other:[UInt8],_ region:CGRect)->Int {
+      guard other.count==before.count else{return Int.max}
+      var sum=0
+      for y in Int(region.minY)..<Int(region.maxY) {for x in Int(region.minX)..<Int(region.maxX) {let i=(y*width+x)*4;for c in 0..<3 {sum+=abs(Int(before[i+c])-Int(other[i+c]))}}}
+      return sum
+    }
+    func staticChange(_ other:[UInt8])->Int {
+      guard other.count==before.count else{return Int.max}
+      var sum=0
+      for i in stride(from:0,to:before.count,by:4) {
+        if before[i]>120 && before[i+1]>120 && before[i+2]>120 {
+          for c in 0..<3 {sum+=abs(Int(before[i+c])-Int(other[i+c]))}
+        }
+      }
+      return sum
+    }
+    func maxChange(_ other:[UInt8],_ region:CGRect)->Int {
+      guard other.count==before.count else{return Int.max}
+      var result=0
+      for y in Int(region.minY)..<Int(region.maxY) {for x in Int(region.minX)..<Int(region.maxX) {let i=(y*width+x)*4;for c in 0..<3 {result=max(result,abs(Int(before[i+c])-Int(other[i+c])))}}}
+      return result
+    }
+    func change(_ other:[UInt8],_ range:Range<Int>)->Int {
+      guard other.count==before.count else{return Int.max}
+      var sum=0
+      for y in 0..<height {for x in range {let i=(y*width+x)*4;for c in 0..<3 {sum+=abs(Int(before[i+c])-Int(other[i+c]))}}}
+      return sum
+    }
+    stageProgress.coordinate(withNormalizedOffset:CGVector(dx:0.207,dy:0.5)).tap()
+    XCTAssertEqual(group.label,"前👩‍💻中é后");XCTAssertEqual(group.frame.minY,sparseFrame.minY,accuracy:1)
+    let filled=sparsePixels("Structured sparse filled cues")
+    XCTAssertGreaterThan(change(filled,left..<right),500,"Only real supplied cue spans must visibly fill after their end times")
+    XCTAssertGreaterThan(maxChange(filled,CGRect(x:0,y:0,width:width,height:height)),16,"Timed fill must exceed one-step rendering quantization")
+    XCTAssertEqual(regionChange(filled,prefix),0,"Untimed prefix must stay fully visible without invented timing")
+    XCTAssertEqual(regionChange(filled,suffix),0,"Untimed suffix must stay fully visible without invented timing")
+    XCTAssertEqual(staticChange(filled),0,"Every bright untimed ink pixel must remain stable across wrapped rows")
+    let sparse=XCTAttachment(screenshot:app.screenshot());sparse.name="Structured sparse cues with static holes";sparse.lifetime = .keepAlways;add(sparse)
+    stageProgress.coordinate(withNormalizedOffset:CGVector(dx:0.151,dy:0.5)).tap()
+    XCTAssertEqual(change(sparsePixels(),left..<right),0,"Seeking backward while paused must restore source-timed ink exactly")
+    XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Sparse seek must preserve paused intent")
+    app.buttons["播放"].firstMatch.tap()
+    let sparseMotion=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in maxChange(sparsePixels(),CGRect(x:0,y:0,width:width,height:height))>16},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[sparseMotion],timeout:5),.completed,"Real playback must advance the native sparse cue ink")
+    let running=sparsePixels("Structured sparse running cues")
+    var staticChanged=0,staticMax=0,staticTotal=0
+    if running.count==before.count {
+      for i in stride(from:0,to:before.count,by:4) {
+        if before[i]>120 && before[i+1]>120 && before[i+2]>120 {
+          staticTotal+=1
+          let delta=(0..<3).map {abs(Int(before[i+$0])-Int(running[i+$0]))}.max() ?? 0
+          if delta>0 {staticChanged+=1;staticMax=max(staticMax,delta)}
+        }
+      }
+    }
+    print("Sparse running static pixels: changed \(staticChanged)/\(staticTotal), max channel delta \(staticMax), prefix sum \(regionChange(running,prefix)), suffix sum \(regionChange(running,suffix)), total sum \(staticChange(running))")
+    let emojiFamilies=UIFont.familyNames.filter{$0.localizedCaseInsensitiveContains("emoji")}
+    print("Emoji font availability: \(UIFont(name:"AppleColorEmoji",size:80)?.fontName ?? "missing"), families \(emojiFamilies)")
+    // Two independent captures measured a single 8-bit step during live
+    // compositing. Paused/seek checks above still require exact equality.
+    XCTAssertLessThanOrEqual(maxChange(running,prefix),1)
+    XCTAssertLessThanOrEqual(maxChange(running,suffix),1)
+    XCTAssertLessThanOrEqual(staticMax,1,"Static ink may quantize by one step, never dim or follow a cue")
+    app.buttons["暂停"].firstMatch.tap()
     app.buttons["收起播放页"].firstMatch.tap();XCTAssertTrue(open.waitForExistence(timeout:5))
   }
   func testVisualLabClassicDirect(){captureClassicDirect(lines:3)}

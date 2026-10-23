@@ -112,7 +112,7 @@ if(referenceScene){
 const photoArtworkVersion=String(Date.now()),photoArtworkKinds=['portrait','landscape','missing','corrupt'];
 const photoCoverRequests=counts.photoCoverRequests={};
 const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
-const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScene.id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-v2-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScene.id:structuredLyricsUI?'fixture-classic-structured-sparse-v1':classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-v2-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
   if(referenceScene&&req.url==='/classic-reference-scene'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({lyrics:referenceScene.lyrics}));return;}
@@ -329,12 +329,13 @@ const server = createServer(async (req, res) => {
   else if(method==='search3')respond({searchResult3:{song:[song()]}});
   else if(method==='getLyricsBySongId'&&structuredLyricsUI)respond({lyricsList:{structuredLyrics:params.get('enhanced')==='true'?[{
     lang:'en',synced:true,agents:[{id:'lead',role:'main'},{id:'guest',role:'voice'}],
-    line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'},{start:12000,value:'Guest Lead'},{start:18000,value:'Final structured lyric'}],
+    line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'},{start:12000,value:'Guest Lead'},{start:18000,value:'前👩‍💻中é后'}],
     cueLine:[
       {index:0,agentId:'lead',value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,value:'one'}]},
       {index:1,agentId:'lead',start:6000,end:12000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:8000,end:9000},{byteStart:10,byteEnd:18,start:7000,end:10000}]},
       {index:2,agentId:'guest',start:12000,end:18000,value:'Guest',cue:[{byteStart:0,byteEnd:4,start:12000,end:18000}]},
       {index:2,agentId:'lead',start:13000,end:18000,value:'Lead',cue:[{byteStart:0,byteEnd:3,start:13000,end:18000}]},
+      {index:3,agentId:'lead',start:18000,end:30000,value:'前👩‍💻中é后',cue:[{byteStart:3,byteEnd:13,start:19000,end:21000,value:'👩‍💻'},{byteStart:17,byteEnd:18,start:22000,end:24000,value:'é'}]},
     ],
   }]:[]}});
   else if(method==='getLyricsBySongId'&&referenceScene)respond({lyricsList:{structuredLyrics:[{lang:'zh',synced:true,line:referenceScene.lyrics.map((value,index)=>({start:[0,260000,280000][index],value}))}]}});

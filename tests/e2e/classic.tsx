@@ -9,7 +9,7 @@ import {makeQueue} from '../../src/domain/queue.ts';
 let pending:Promise<Services>|undefined;
 const initialize=()=>pending??=getServices().then(async services=>{
   services.playback.controller.pause();
-  await services.preferences.update({...appearanceDefaults,coverRadius:20,theme:'light',fontScale:1,playerLayout:'classic',lyricOffsetMs:0,lyricOffsets:{},lyricStyle:defaults.lyricStyle,rate:1,repeat:'off',shuffle:false,miniLyrics:false});
+  await services.preferences.update({...appearanceDefaults,coverRadius:20,theme:'light',fontScale:1,playerLayout:'classic',lyricOffsetMs:0,lyricOffsets:{},lyricStyle:defaults.lyricStyle,stageStyle:defaults.stageStyle,stageBackdrop:defaults.stageBackdrop,rate:1,repeat:'off',shuffle:false,miniLyrics:false});
   await services.fonts.selectGlobal(null);
   await services.fonts.followGlobal();
   const {account}=await services.accounts.connect('http://127.0.0.1:18439','fixture-user','fixture-password');

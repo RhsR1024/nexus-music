@@ -25,6 +25,8 @@ final class NexusLyricLineView: ExpoView {
   private let clockTarget = LyricClockTarget()
   private var clock: CADisplayLink?
   private var words: [(range: NSRange, start: Double, end: Double)] = []
+  private var untimedRanges: [NSRange] = []
+  private var sparseCues: [LyricCueRange]?
   private var position = 0.0, anchor = 0.0, playing = false
   private var signature = "", color = UIColor.white
   private var observers: [NSObjectProtocol] = []
@@ -61,10 +63,31 @@ final class NexusLyricLineView: ExpoView {
   deinit { clock?.invalidate(); for observer in observers { NotificationCenter.default.removeObserver(observer) } }
   override func didMoveToWindow() { super.didMoveToWindow(); updateClock() }
   override func layoutSubviews() {
-    super.layoutSubviews(); if container.size != bounds.size { blurred = nil }; container.size = bounds.size; setNeedsDisplay()
+    super.layoutSubviews()
+    if container.size != bounds.size {
+      blurred = nil; container.size = bounds.size
+      if sparseCues != nil { updateSparseRanges(); updateClock() }
+    }
+    setNeedsDisplay()
+  }
+  private func updateSparseRanges() {
+    guard let cues = sparseCues else { return }
+    words.removeAll(keepingCapacity: true); untimedRanges.removeAll(keepingCapacity: true)
+    if container.size.width > 0 && container.size.height > 0 { manager.ensureLayout(for: container) }
+    // Recheck after reflow: a font can join cue and untimed characters into
+    // one glyph. Never animate an unsupplied neighbour through that glyph.
+    let exactGlyphs = cues.allSatisfy { cue in
+      var actual = NSRange()
+      _ = manager.glyphRange(forCharacterRange: cue.range, actualCharacterRange: &actual)
+      return NSEqualRanges(actual, cue.range)
+    }
+    if exactGlyphs {
+      words = cues.map { (range: $0.range, start: $0.start, end: $0.end) }
+      untimedRanges = LyricCueRanges.untimed(text: storage.string, cues: cues)
+    }
   }
   func configure(_ json: String) {
-    guard json.utf8.count < 262144, let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
+    guard json.utf8.count < LyricCueRanges.configurationByteLimit, let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
           let text = object["text"] as? String, text.utf16.count <= 20000 else { return }
     position = (object["position"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0
     anchor = CACurrentMediaTime(); playing = object["playing"] as? Bool == true
@@ -81,8 +104,10 @@ final class NexusLyricLineView: ExpoView {
     let requestedStyle = object["stageStyle"] as? String ?? "classic"
     let nextStyle = ["classic", "neon", "cyberpunk", "aurora"].contains(requestedStyle) ? requestedStyle : "classic"
     let rawWords = object["words"] as? [[String: Any]] ?? []
-    let wordData = (try? JSONSerialization.data(withJSONObject: rawWords)) ?? Data()
-    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(weight)|\(height)|\(radius)|\(embolden)|\(wordData.base64EncodedString())"
+    let rawCues = object["timedCues"] as? [[String: Any]] ?? []
+    // Dictionary order must not rebuild glyph layout on a clock-only update.
+    let timingData = (try? JSONSerialization.data(withJSONObject: [rawWords, rawCues], options: [.sortedKeys])) ?? Data()
+    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(weight)|\(height)|\(radius)|\(embolden)|\(timingData.base64EncodedString())"
     if signature != layoutKey {
       signature = layoutKey; stageStyle = nextStyle; blur = radius; blurred = nil
       color = Self.color(hex)
@@ -103,7 +128,7 @@ final class NexusLyricLineView: ExpoView {
           self.storage.addAttribute(.foregroundColor, value: palette[index % palette.count], range: NSRange(range, in: text)); index += 1
         }
       }
-      words.removeAll(keepingCapacity: true); var offset = 0
+      words.removeAll(keepingCapacity: true); untimedRanges.removeAll(keepingCapacity: true); sparseCues = nil; var offset = 0
       if rawWords.count <= 2000 {
         for word in rawWords {
           guard let part = word["text"] as? String, let start = word["startMs"] as? Double, let end = word["endMs"] as? Double,
@@ -112,6 +137,9 @@ final class NexusLyricLineView: ExpoView {
         }
       }
       if offset != text.utf16.count || rawWords.compactMap({ $0["text"] as? String }).joined() != text { words.removeAll() }
+      if words.isEmpty, let cues = LyricCueRanges.decode(text: text, cues: rawCues) {
+        sparseCues = cues; updateSparseRanges()
+      }
     }
     updateClock(); setNeedsDisplay()
   }
@@ -163,7 +191,16 @@ final class NexusLyricLineView: ExpoView {
       }
       if let image = blurred { image.draw(in: bounds); return }
     }
-    context.saveGState(); context.setAlpha(words.isEmpty ? 1 : 0.32); drawInk(all, in: context); context.restoreGState()
+    if untimedRanges.isEmpty {
+      context.saveGState(); context.setAlpha(words.isEmpty ? 1 : 0.32); drawInk(all, in: context); context.restoreGState()
+    } else {
+      // Draw holes once at the configured active colour; a dim full-line
+      // underlay would otherwise brighten translucent ink through overdraw.
+      context.saveGState(); context.setAlpha(0.32)
+      for word in words { drawInk(manager.glyphRange(forCharacterRange: word.range, actualCharacterRange: nil), in: context) }
+      context.restoreGState()
+      for range in untimedRanges { drawInk(manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil), in: context) }
+    }
     let time = position + (playing && clock != nil ? min(1000, (CACurrentMediaTime() - anchor) * 1000) : 0)
     for word in words {
       let fraction = word.end > word.start ? min(1, max(0, (time - word.start) / (word.end - word.start))) : (time >= word.start ? 1.0 : 0.0)

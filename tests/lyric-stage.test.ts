@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import {parseLyrics,type LyricDocument} from '../src/lyrics/parser.ts';
 import {buildStageTimeline,activeStageGroup} from '../src/lyrics/stage.ts';
 const fixture=parseLyrics('[1000,6000](1000,1000,0)春(2000,1000,0)天(3000,1000,0)的(4000,1000,0)风(6000,1000,0)来了\n[9000,1000](9000,1000,0)结束');
+test('stage keeps sparse cue text, holes and supplied timestamps as one row',()=>{
+  const cues=[{byteStart:3,byteEnd:13,text:'👩‍💻',startMs:19000,endMs:21000},{byteStart:17,byteEnd:18,text:'é',startMs:22000,endMs:24000}];
+  const line={text:'前👩‍💻中é后',startMs:18000,endMs:30000,timedCues:cues,timingFallback:'untimed_text' as const};
+  const timeline=buildStageTimeline({synced:true,plain:[],lines:[line]},30000);
+  assert.equal(timeline[0]!.groups.length,1);
+  for(const position of [18000,20000,21500,25000]){
+    const group=activeStageGroup(timeline,position)!;
+    assert.equal(group.line.text,line.text);assert.equal(group.line.words,undefined);
+    assert.deepEqual(group.line.timedCues,cues);assert.equal(group.line.startMs,18000);
+  }
+  assert.equal(activeStageGroup(timeline,30000),undefined);
+});
 test('stage preserves actual words, short-group budget and original document',()=>{
   const before=JSON.stringify(fixture),timeline=buildStageTimeline(fixture);
   assert.deepEqual(timeline[0]!.groups.map(group=>group.line.text),['春天的风','来了']);
