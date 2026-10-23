@@ -2211,3 +2211,16 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 ## 2026-10-24 设备重启冷启动补证
 
 新增 E-642：ADB 重启小米10，等待系统完成启动后自动唤醒、上滑并启动 Sollin，应用回到发现精选首页，media-session state=0、无活动曲目；与Home后台返回和force-stop边界保持区分。外部案例 strict review 当前为34 Evidence（含录屏）、12 Findings、9 Paths、0 errors/0 warnings。
+
+
+## 2026-10-24 Sollin Android 音乐动态采集：队列锁定、排序边界与下载管理器
+
+本轮继续使用小米 Mi 10（Android 13，Sollin 2.0.0）和 ADB 自动操作，原始截图、控件树、动作日志、视频和哈希仍保存在 T7 外置盘案例 `sollin-android-ui-20261023`；Sollin 自有登录、用户中心、服务与反馈继续排除。外部案例 strict review 当前为 **71 Evidence、16 Findings、14 Paths、3 Work Items、17 timeline events，0 errors / 0 warnings**；APK reverse gate 与 `--review` 均 PASS。
+
+新增边界已写入 `docs/SOLLIN_ANDROID_MUSIC_FUNCTION_SPEC.md` 和外置报告：
+
+- 队列锁定在当前队列页会隐藏逐行上移/下移/删除控件；离开并重入每日推荐后锁定未跨页面保持，点击第二首从1/33变为2/33，故只记录为当前页作用域证据，不宣称绝对阻止外部替换（E-738、E-739、E-741）。
+- 四份同秒长、混合缺失艺术家/标题的 MP3 验证了时长同值时名称次级键会随正/倒序反转，未知艺术家在艺术家排序中参与首尾位置，缺失标题行仍保留（E-742、E-744、E-745、E-746）。
+- 多次尝试暂停、切换网络/代理和提交后 force-stop，真实下载均在暂停控件可操作前完成，未留下可续接任务；下载管理器的完成态及删除后的空态已采集（E-747、E-748），暂停/恢复、进程重启续传和后台调度仍未验证。
+
+设备收尾要求保持：手机无 NexusSort/NexusTie/NexusAddTime 测试文件、`/sdcard/Music/SollinV2` 下载目录已清空；Sollin 保持前台并暂停；屏幕熄灭超时 600000ms，`stay_on_while_plugged_in=0`，`MANAGE_EXTERNAL_STORAGE=allow`，`READ_MEDIA_AUDIO=allow`。剩余边界仍包括系统媒体输出成功态、同一文件时间相等时的稳定次序、更复杂跨字段标签冲突、新建歌单远端写入、密码锁屏、后台任务续接和录屏逐帧人工验收。
