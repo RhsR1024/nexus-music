@@ -1,9 +1,17 @@
+## 2026-10-23 私人FM低水位续批与经典r53负证据
+
+- 实现：新增`AccountFmStation`只向权威队列供曲；FM批次剩余`<2`时单在途预取、按`trackKey`去重、只追加不替换，同一当前曲目最多成功追加一次，失败60秒退避，空/全重复批次耗尽；账号revision、会话、队列归属变化或用户改队列即取消迟到批次。正式FM主按钮与行播放入口已接入，列表/刷新/空错态/“不喜欢”不变。
+- 验证：`npm run check` **499/499**（含typecheck），日志`build/logs/check-fm-station-20261023.log`（SHA `5580e324…`）；新增7项协调器测试。此改动无可见布局/文案变化，未重跑UI截图，不增加UI相似度或工程百分比。
+- 经典r53（active line embolden `.26`）为负证据：歌词区SSIM **79.4218%**/ΔE **5.3467**，略低于r49的79.52%/5.34；产品恢复`.1`，只留注释与[回执](docs/ui-spec/classic-4854-r53-active-embolden-2026-10-23.md)，不把参数试验计入完成。
+- 交付：本批本地提交与文档待推送；推送前须等云端`39895020303/e0b61c1`由pending转入running，保持1运行+1排队，不取消`39892842558/cf31064`。云端iOS 27、真实账号/音频、签名与真机仍待。
+- 下一步：UI Phase 0仍 **2/5**；先做4851黑胶冻结锚点/关键区，再做4861 AM歌词；经典歌词等待Sollin常量级证据，不以多变量猜参继续。
+
 ## 2026-10-23 平台登录/日推/FM纵向批次
 
 - 实现：纯TS WEAPI双AES+裸RSA与白名单Cookie会话；日推默认官方`/weapi/v3/discovery/recommend/songs`；私人FM取批（≤30、30分钟TTL、账号revision隔离）与“不喜欢”`/weapi/radio/trash/add`；services同时订阅清理两客户端；网页登录记录`['daily','fm']`，旧`capabilities=[]`账号按平台`wy`兼容且不强制重登。
 - 正式入口：曲库页“平台推荐”含未登录CTA、多账号显式选择、加载/成功/空态/登录失效/失败重试/刷新保留旧列表；播放只走`services.playTracks`；登录CTA经`openAccounts`路由设置-音乐账号。两态截图已亲看。
 - 证据：`npm run check` 492/492（含typecheck），`build/logs/check-platform-ui-20261023.log`。Release UI `build/logs/account-recommendations-20261023-r3b`，xcresult `build/SourceUITests-1792725802476.xcresult`，1/0/0、`exitCode:0`、`sourceUnchanged:true`、前后diff同为`6c812c53…`，resultInfo `ee9cbab1…`，JS `f3289f0c…`；截图`build/ui-screenshots-account-recommendations-20261023-r3b`（`e0e1c677…`/`89affe3b…`）。r3工具链未加载在构建前失败，保留负证据；r2因采集中文档diff变化由r3b取代。
-- 未完成：未用真实账号验证Cookie/CSRF到官方服务的日推/FM返回与实际音频播放；FM低水位自动续批未实现（UI展示前5首，播放全部覆盖整批）；QQ/酷狗未接入；本提交云端iOS 27、签名与真机待验。本批不增加UI整页相似度或项目百分比，90%阶段继续。
+- 未完成：未用真实账号验证Cookie/CSRF到官方服务的日推/FM返回与实际音频播放；FM低水位自动续批在本条目时未实现（UI展示前5首，播放全部覆盖整批），已由顶部“私人FM低水位续批”批次补齐；QQ/酷狗未接入；本提交云端iOS 27、签名与真机待验。本批不增加UI整页相似度或项目百分比，90%阶段继续。
 - 详细回执见[平台纵向批次](docs/platform-daily-next-batch-2026-10-23.md)。
 
 ## 2026-10-23 LX P4/P5阶段

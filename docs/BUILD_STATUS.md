@@ -1,8 +1,16 @@
+## 2026-10-23 私人FM低水位续批与经典r53负证据
+
+`npm run check` **499/499**（typecheck+业务测试，0失败/0取消，exitCode 0），日志`build/logs/check-fm-station-20261023.log`，SHA-256 `5580e324764923df93f440c42f16ef6e59865d98546d5a2510b8774c5ff08ea6`。新增`AccountFmStation`与7项测试：FM剩余`<2`时单在途预取、按歌曲身份去重、只追加权威队列、同当前曲目最多成功追加一次、失败60秒退避、空/全重复耗尽；账号revision/会话/队列归属变化或用户改队列取消迟到批次。正式FM主按钮与行播放已接入，面板布局/文案未改，不重跑UI截图，不声明UI整页90%或工程百分比提升。
+
+经典r53将active line合成加粗扩散从`.1`提高到`.26`后，歌词区SSIM **79.4218%**/ΔE **5.3467**，低于r49的79.52%/5.34；产品恢复`.1`，只保留注释和[负证据回执](ui-spec/classic-4854-r53-active-embolden-2026-10-23.md)。Phase 0仍 **2/5**（4855/4856），下一批转4851黑胶与4861 AM歌词冻结锚点/关键区。
+
+FM回执见[platform-fm-station-2026-10-23](platform-fm-station-2026-10-23.md)。云端仍以API为准：`39892842558/cf31064`运行、`39895020303/e0b61c1`排队（1/1）；本批不取消运行中任务，推送前等pending转入running。真实账号网络/音频、本批云端iOS 27、签名与真机仍待。
+
 ## 2026-10-23 平台登录/日推/FM纵向批次
 
 本地`npm run check` 492/492（typecheck+492业务测试），日志`build/logs/check-platform-ui-20261023.log`。正式入口Release模拟器UI `build/logs/account-recommendations-20261023-r3b`：xcresult `build/SourceUITests-1792725802476.xcresult`，1通过/0失败/0跳过、71.079秒、`exitCode:0`、`sourceUnchanged:true`、运行前后`diffSha256`一致`6c812c53…`（基线9f40879＋运行时代码/测试diff，回执文档写于运行后）、源码digest `ac653e50…`、fixture `2a3f82c2…`、resultInfo `ee9cbab1f0241486563beccd00d439fef15a6d5d0634fd4ce9f01feb54779853`、安装包digest `240955de…`、JS `f3289f0c…`；Xcode 26.3/17C529、模拟器iOS 26.3.1，不是iOS 27。截图`build/ui-screenshots-account-recommendations-20261023-r3b`两张已亲看并记录SHA-256。r3因shell未加载Xcode工具链在构建前失败，目录保留为负证据；r2通过但运行期间文档变化导致diff哈希不等，由r3b取代。
 
-实现范围与未完成边界见[平台回执](platform-daily-next-batch-2026-10-23.md)：鉴权传输、日推官方endpoint、私人FM取批/不喜欢、旧账号兼容、正式UI入口已完成本地验证；真实账号网络验收、实际音频播放、FM低水位续批、云端iOS 27终态、Apple签名与真机仍未通过。本批不声明UI整页90%或项目百分比提升。提交/push后按single队列跟进云端，不取消运行中任务；旧`cf31064/39892842558`运行状态以push时API为准。
+实现范围与未完成边界见[平台回执](platform-daily-next-batch-2026-10-23.md)：鉴权传输、日推官方endpoint、私人FM取批/不喜欢、旧账号兼容、正式UI入口已完成本地验证；真实账号网络验收、实际音频播放、云端iOS 27终态、Apple签名与真机仍未通过；FM低水位续批已由顶部2026-10-23批次补齐。本批不声明UI整页90%或项目百分比提升。提交/push后按single队列跟进云端，不取消运行中任务；旧`cf31064/39892842558`运行状态以push时API为准。
 
 ## 2026-10-23 高清封面r47与P3阶段回执
 

@@ -64,12 +64,26 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
       if(op!==fmOp.current||controller.signal.aborted)return;
       if(!tracks.length){setFm({phase:'empty',tracks:[],message:'私人FM暂时没有返回歌曲，请稍后重试',login:false});return;}
       setFm({phase:'ready',tracks,message:'',login:false});
-      if(play)services.playTracks(tracks,0);
+      if(play)await services.accountFmStation.start(target,session,tracks,0,controller.signal);
     }catch(error){
       if(op!==fmOp.current||controller.signal.aborted)return;
       const message=failure(error,'私人FM暂时不可用，请稍后重试');
       if(!message)return;
       setFm(previous=>({phase:'error',tracks:message===LOGIN?[]:previous.tracks,message,login:message===LOGIN}));
+    }
+  }
+
+  async function playFm(target:MusicAccount,index:number){
+    const op=++fmOp.current,controller=new AbortController();
+    fmAbort.current?.abort();fmAbort.current=controller;
+    try{
+      const session=await services.musicAccounts.session(target.id);
+      if(op!==fmOp.current||controller.signal.aborted)return;
+      await services.accountFmStation.start(target,session,fm.tracks,index,controller.signal);
+    }catch(error){
+      if(op!==fmOp.current||controller.signal.aborted)return;
+      const message=failure(error,'私人FM暂时不可用，请稍后重试');
+      if(message)setFm(previous=>({...previous,message,login:message===LOGIN}));
     }
   }
 
@@ -135,7 +149,7 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     </View>}
     {account&&<View style={{gap:4,marginTop:10,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>私人FM</Text><Text style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>按账号偏好取一批歌曲；不喜欢会提交到网易云。</Text></View>{fm.phase==='ready'&&refresh('account-fm-refresh','换一批私人FM',()=>{void loadFm(account!,true,false);},false)}</View>
-      {fm.tracks.slice(0,5).map((track,index)=>row('account-fm',index,track,()=>services.playTracks(fm.tracks,index),<Pressable key={`${track.origin.id}-discard`} testID={`account-fm-discard-${index}`} accessibilityRole="button" accessibilityLabel={`不喜欢：${track.title}`} onPress={()=>{void discardFm(account!,track);}} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="thumbs-down-outline" size={20} color={p.secondary}/></Pressable>))}
+      {fm.tracks.slice(0,5).map((track,index)=>row('account-fm',index,track,()=>{void playFm(account!,index);},<Pressable key={`${track.origin.id}-discard`} testID={`account-fm-discard-${index}`} accessibilityRole="button" accessibilityLabel={`不喜欢：${track.title}`} onPress={()=>{void discardFm(account!,track);}} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="thumbs-down-outline" size={20} color={p.secondary}/></Pressable>))}
       {status(fm,'account-fm')}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:4}}>
         <Pressable testID="account-fm-start" accessibilityRole="button" accessibilityLabel="播放私人FM" onPress={()=>{void loadFm(account!,false,true);}} disabled={fm.phase==='loading'} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:fm.phase==='loading'?.65:1}}>{fm.phase==='loading'?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="radio-outline" size={20} color="#FFFFFF"/>}<Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>{fm.tracks.length?'播放本批私人FM':'播放私人FM'}</Text></Pressable>
