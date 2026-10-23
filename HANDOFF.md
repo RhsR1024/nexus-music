@@ -1,10 +1,10 @@
 ## 2026-10-24 Android Sollin 音乐功能规格动态批次
 
-已通过 ADB 在小米10/Android13 上完成发现、榜单、歌单、每日推荐、心动模式、搜索、听歌识曲、播放器、歌词、队列、解析链路、相似歌曲、音乐库、本地扫描、下载、锁屏/通知、Home后台恢复和冷启动等音乐能力采集。多文件本地批次覆盖根目录/子目录扫描、文件夹、艺术家、专辑聚合及清理闭环，并用两份真实 ID3 v2.3 标签验证了艺术家合并和专辑拆分。原始截图/控件树/日志只在 T7 Touch 外部案例 `/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023`；图文报告为 `report/ANDROID_MUSIC_FUNCTION_SPEC.md`，仓库脱敏摘要为 [Sollin Android 音乐功能规格](docs/SOLLIN_ANDROID_MUSIC_FUNCTION_SPEC.md)。案例 strict review：44 条 Evidence（含录屏）、13 个 Finding、10 条 Path，0 warning/error。
+已通过 ADB 在小米10/Android13 上完成发现、榜单、歌单、每日推荐、心动模式、搜索、听歌识曲、播放器、歌词、队列、解析链路、相似歌曲、音乐库、本地扫描、下载、锁屏/通知、Home后台恢复和冷启动等音乐能力采集。多文件本地批次覆盖根目录/子目录扫描、文件夹、艺术家、专辑聚合及清理闭环，并用两份真实 ID3 v2.3 标签验证了艺术家合并和专辑拆分。原始截图/控件树/日志只在 T7 Touch 外部案例 `/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023`；图文报告为 `report/ANDROID_MUSIC_FUNCTION_SPEC.md`，仓库脱敏摘要为 [Sollin Android 音乐功能规格](docs/SOLLIN_ANDROID_MUSIC_FUNCTION_SPEC.md)。案例 strict review：48 条 Evidence（含录屏）、14 个 Finding、11 条 Path，0 warning/error。
 
 范围排除了 Sollin 自有登录、用户中心、服务与反馈；音乐平台账号仅记录推荐/歌单作用。用户授权的 `MANAGE_EXTERNAL_STORAGE` 保持 `allow`；临时 `stay_on_while_plugged_in` 已恢复原值 0。系统媒体输出成功态仍不可用；下载暂停/恢复与进程重启续传、排序规则及混合缺失标签冲突、密码锁屏、后台任务续接以及录屏逐帧人工复核仍待补充，不能写成已完成。
 
-本轮新增本地库证据：无标签 WAV 的根/子目录聚合见 E649/E651/E653/E655/E661；随后两份真实 ID3 v2.3 MP3 的歌曲、艺术家、专辑、物理文件夹聚合和清理见 E665/E667/E669/E671/E676。正式报告已更新为 44E/13F/10P。
+本轮新增本地库证据：无标签 WAV 的根/子目录聚合见 E649/E651/E653/E655/E661；随后两份真实 ID3 v2.3 MP3 的歌曲、艺术家、专辑、物理文件夹聚合和清理见 E665/E667/E669/E671/E676；睡眠定时器自定义32分钟提交/倒计时/取消见 E700/E702/E704，创建歌单入口见 E698。正式报告已更新为 48E/14F/11P。
 
 ## 2026-10-23 首批实机导航采集
 
