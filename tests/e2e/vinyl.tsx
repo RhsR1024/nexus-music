@@ -17,6 +17,8 @@ const initialize=()=>pending??=getServices().then(async services=>{
   const result=await(await services.accounts.client(account.id)).songs('vinyl visual fixture');
   const track=result.items.find(item=>item.origin.kind==='navidrome'&&item.origin.id.startsWith('fixture-classic-'));
   if(!track)throw new Error('Vinyl capture fixture identity missing');
+  // Resolve the real private cover before exposing the fixed capture queue.
+  await services.covers.loadTrack(track,new AbortController().signal,512);
   services.playback.controller.setQueue(makeQueue([{id:'vinyl-capture-entry',track}]));
   return services;
 }).catch(error=>{pending=undefined;throw error;});

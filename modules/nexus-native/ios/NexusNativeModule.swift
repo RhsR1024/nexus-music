@@ -17,6 +17,9 @@ public final class NexusNativeModule: Module {
     View(NexusMaterialView.self) {
       Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }
     }
+    View(NexusVinylPivotView.self) {
+      ViewName("VinylPivot")
+    }
     View(NexusVinylReflectionView.self) {
       ViewName("VinylReflection")
     }

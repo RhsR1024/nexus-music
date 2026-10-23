@@ -86,3 +86,32 @@ final class NexusVinylReflectionView: ExpoView {
     CATransaction.commit()
   }
 }
+
+// Static metallic pivot: radial falloff plus directional shade. No animation clock.
+final class NexusVinylPivotView: ExpoView {
+  private let metal = CAGradientLayer()
+  private let shade = CAGradientLayer()
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
+    isUserInteractionEnabled = false
+    clipsToBounds = true
+    metal.type = .radial
+    metal.startPoint = CGPoint(x: 0.5, y: 0.5)
+    metal.endPoint = CGPoint(x: 1, y: 1)
+    metal.colors = [UIColor(red: 242.0/255, green: 242.0/255, blue: 235.0/255, alpha: 1).cgColor,
+                    UIColor(red: 242.0/255, green: 242.0/255, blue: 235.0/255, alpha: 1).cgColor,
+                    UIColor(red: 124.0/255, green: 124.0/255, blue: 120.0/255, alpha: 1).cgColor]
+    metal.locations = [0, 0.58, 1]
+    shade.startPoint = CGPoint(x: 0.1, y: 0.1)
+    shade.endPoint = CGPoint(x: 0.9, y: 0.9)
+    shade.colors = [UIColor.clear.cgColor, UIColor.black.withAlphaComponent(0.93).cgColor]
+    layer.addSublayer(metal); layer.addSublayer(shade)
+  }
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    CATransaction.begin(); CATransaction.setDisableActions(true)
+    layer.cornerRadius = min(bounds.width, bounds.height)/2
+    metal.frame = bounds; shade.frame = bounds
+    CATransaction.commit()
+  }
+}

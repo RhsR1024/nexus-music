@@ -112,7 +112,7 @@ if(referenceScene){
 const photoArtworkVersion=String(Date.now()),photoArtworkKinds=['portrait','landscape','missing','corrupt'];
 const photoCoverRequests=counts.photoCoverRequests={};
 const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
-const song=()=>({id:referenceScene?'fixture-classic-reference-'+referenceScene.id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScene.id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-v2-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
   if(referenceScene&&req.url==='/classic-reference-scene'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({lyrics:referenceScene.lyrics}));return;}
@@ -301,6 +301,8 @@ const server = createServer(async (req, res) => {
   }
   if(method==='getCoverArt'){
     if(referenceScene&&params.get('id')===song().coverArt){res.setHeader('Content-Type','image/png');res.end(referenceScene.cover);return;}
+    // Restored tracks from another capture must never poison its private cover cache.
+    if(params.get('id')?.startsWith('fixture-cover-reference-')){res.writeHead(404);res.end();return;}
     if(params.get('u')==='fixture-photo'){
       const kind=photoArtworkKinds.find(kind=>params.get('id')===`photo-${kind}-${photoArtworkVersion}`);
       if(kind){photoCoverRequests[kind]=(photoCoverRequests[kind]??0)+1;

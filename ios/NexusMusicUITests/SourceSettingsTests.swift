@@ -1637,7 +1637,11 @@ final class SourceSettingsTests: XCTestCase {
         let cartridge=app.descendants(matching:.any).matching(identifier:"vinyl-cartridge").firstMatch
         let counterweight=app.descendants(matching:.any).matching(identifier:"vinyl-counterweight").firstMatch
         XCTAssertTrue(cartridge.exists && counterweight.exists)
-        XCTAssertTrue(canvas.frame.contains(cartridge.frame) && canvas.frame.contains(counterweight.frame),"Parked head and rear weight must fit the visible canvas")
+        let parkedVisible=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+          let bounds=canvas.frame.insetBy(dx:-1,dy:-1)
+          return !cartridge.frame.isEmpty && !counterweight.frame.isEmpty && bounds.contains(cartridge.frame) && bounds.contains(counterweight.frame)
+        },object:nil)
+        XCTAssertEqual(XCTWaiter.wait(for:[parkedVisible],timeout:5),.completed,"Parked head and rear weight must fit within the 1pt geometry budget; canvas \(canvas.frame), head \(cartridge.frame), weight \(counterweight.frame)")
         XCTAssertTrue(app.buttons["睡眠定时"].isHittable,"IMG_4851 keeps a real sleep-timer tool beside the queue tool")
         let parkedHead=cartridge.frame,parkedPivot=pivot.frame
         XCTAssertGreaterThan(counterweight.frame.midX,platter.frame.midX);XCTAssertLessThan(counterweight.frame.midY,pivot.frame.midY,"Rear weight belongs behind the pivot")
@@ -1656,11 +1660,9 @@ final class SourceSettingsTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for:[engaged],timeout:10),.completed,"Playing must move the actual needle onto the disc")
         XCTAssertLessThan(cartridge.frame.midX,parkedHead.midX-20,"Engagement must carry the actual head left onto the record")
         XCTAssertTrue(platter.frame.contains(cartridge.frame),"The engaged head must remain on the actual platter")
-        // IMG_4851 clips the engaged rear weight at the deck's upper edge.
-        // Check the actual visible body instead of moving it away from the reference.
-        let visibleRear=canvas.frame.intersection(counterweight.frame)
-        XCTAssertFalse(visibleRear.isNull,"The engaged rear weight must remain visible")
-        XCTAssertGreaterThanOrEqual(visibleRear.height,counterweight.frame.height*0.5,"At least half of the rear weight stays visible at the reference crop")
+        // IMG_4851 shows the complete rear weight projecting above the deck.
+        XCTAssertTrue(app.frame.contains(counterweight.frame),"The engaged rear weight must remain complete on screen")
+        XCTAssertLessThan(counterweight.frame.minY,deck.frame.minY-2,"The rear weight must project above the deck rather than being cropped at its upper edge")
         XCTAssertEqual(pivot.frame.midX,parkedPivot.midX,accuracy:0.5);XCTAssertEqual(pivot.frame.midY,parkedPivot.midY,accuracy:0.5)
         let spinning=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
           let next=discPixels();return next.count==324 && zip(pausedDisc,next).reduce(0){$0+abs(Int($1.0)-Int($1.1))}>100

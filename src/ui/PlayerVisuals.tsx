@@ -10,10 +10,11 @@ import {usePresentationVisible} from './AdaptiveModal.tsx';
 import {paper} from './tokens.ts';
 import {VisualSamplingContext} from './VisualSampling.ts';
 const NativeVinylReflection=requireNativeView<ViewProps>('NexusNative','VinylReflection');
+const NativeVinylPivot=requireNativeView<ViewProps>('NexusNative','VinylPivot');
 // IMG_4851 deck local units: 370.33x351pt deck, 300pt record at (10.33,33),
 // 66.67pt base ring at (280.33,12.67), black arm-rest at (293.83,127.33).
 // The current 12.3pt tonearm engages at 21.6deg; material reconstruction
-// and the 60pt base remain approximate pending the frozen visual gates.
+// remains approximate; the 66.67pt base uses the measured radial material.
 export function Vinyl({services,track,width,playing}:{services:Services;track:Track;width:number;playing:boolean}){
   const visible=usePresentationVisible(),sampling=useContext(VisualSamplingContext);
   const sampledPhase=sampling&&Number.isFinite(sampling.recordPhase)?((sampling.recordPhase%1)+1)%1:undefined;
@@ -48,14 +49,17 @@ export function Vinyl({services,track,width,playing}:{services:Services;track:Tr
   // Record and arm use deck-local coordinates (design 370.33x351), so the
   // narrow left band and the arm's right bay keep their measured proportions.
   const s=width/370.33,h=351*s,record=300*s,label=139.33*s,photo=128*s,labelBorder=(label-photo)/2;
-  const baseD=60*s,baseX=315*s,baseY=45*s,jointD=21.67*s,jointX=309*s,jointY=56*s;
+  const baseD=66.67*s,baseX=313.66*s,baseY=46*s,jointD=21.67*s,jointX=309*s,jointY=56*s;
   const resting=tonearm.interpolate({inputRange:[0,1],outputRange:['0deg','21.6deg']});
   return <View testID="vinyl-turntable" collapsable={false} accessible={false} pointerEvents="none" style={{height:h,alignItems:'center'}}>
     <View testID="vinyl-canvas" collapsable={false} style={{width,height:h}}>
-      <LinearGradient testID="vinyl-deck" collapsable={false} colors={['#3B302A','#2A2521','#1B1918','#13171B']} locations={[0,.18,.58,1]} start={{x:0,y:0}} end={{x:1,y:1}} style={{position:'absolute',left:0,top:0,width,height:h,borderRadius:17*s,boxShadow:'0px 16px 36px rgba(52,36,26,0.42)'}}>
-        <View style={{position:'absolute',left:0,right:0,top:0,bottom:0,borderRadius:17*s,borderWidth:1,borderColor:'rgba(255,255,255,0.05)'}}/>
-      </LinearGradient>
-      <View style={{position:'absolute',left:0,top:0,width,height:h,borderRadius:17*s,overflow:'hidden'}}>
+      <View testID="vinyl-deck" collapsable={false} style={{position:'absolute',left:0,top:0,width,height:h,borderRadius:17*s,backgroundColor:'#1B1918',shadowColor:'#34241A',shadowOpacity:.55,shadowOffset:{width:0,height:16*s},shadowRadius:18*s}}>
+        <LinearGradient colors={['#3B302A','#2A2521','#1B1918','#13171B']} locations={[0,.18,.58,1]} start={{x:0,y:0}} end={{x:1,y:1}} style={{position:'absolute',left:0,top:0,width,height:h,borderRadius:17*s}}>
+          <View style={{position:'absolute',left:0,right:0,top:0,bottom:0,borderRadius:17*s,borderWidth:1,borderColor:'rgba(255,255,255,0.05)'}}/>
+        </LinearGradient>
+      </View>
+      {/* The rear weight projects above the deck in IMG_4851; keep mechanical overflow visible. */}
+      <View style={{position:'absolute',left:0,top:0,width,height:h}}>
         <View testID="vinyl-platter" collapsable={false} style={{position:'absolute',left:10.33*s,top:33*s,width:record,height:record,borderRadius:record/2,backgroundColor:'#0A0A0A',alignItems:'center',justifyContent:'center'}}>
           <NativeVinylReflection style={{position:'absolute',left:0,top:0,width:record,height:record}}/>
           <Animated.View testID="vinyl-record" collapsable={false} style={{width:record,height:record,borderRadius:record/2,backgroundColor:'transparent',alignItems:'center',justifyContent:'center',transform:[{rotate:rotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}>
@@ -79,8 +83,8 @@ export function Vinyl({services,track,width,playing}:{services:Services;track:Tr
         </Animated.View>
         <View testID="vinyl-pivot" collapsable={false} style={{position:'absolute',left:baseX-baseD/2,top:baseY-baseD/2,width:baseD,height:baseD,borderRadius:baseD/2}}>
           <View style={{position:'absolute',left:-5*s,top:-3*s,width:baseD+10*s,height:baseD+10*s,borderRadius:(baseD+10*s)/2,backgroundColor:'rgba(0,0,0,0.30)'}}/>
-          <LinearGradient colors={['#C4C7C2','#7E817C','#454845','#262826','#171817']} locations={[0,.14,.36,.68,1]} start={{x:.18,y:.03}} end={{x:.86,y:.97}} style={{position:'absolute',left:0,top:0,width:baseD,height:baseD,borderRadius:baseD/2,boxShadow:'0px 8px 22px rgba(0,0,0,0.60)'}}/>
-          <View style={{position:'absolute',left:12.365*s,top:12.365*s,width:35.27*s,height:35.27*s,borderRadius:17.635*s,backgroundColor:'#181918',borderWidth:1.6*s,borderColor:'rgba(0,0,0,0.62)'}}/>
+          <NativeVinylPivot style={{position:'absolute',left:0,top:0,width:baseD,height:baseD,borderRadius:baseD/2,boxShadow:'0px 8px 22px rgba(0,0,0,0.60)'}}/>
+          <View style={{position:'absolute',left:14*s,top:14*s,width:38.67*s,height:38.67*s,borderRadius:19.335*s,backgroundColor:'#181918',borderWidth:1.6*s,borderColor:'rgba(0,0,0,0.62)'}}/>
         </View>
         <Animated.View testID="vinyl-tonearm" collapsable={false} style={{position:'absolute',left:jointX,top:jointY,width:1,height:1,transform:[{rotate:resting}],transformOrigin:'left top'}}>
           <LinearGradient colors={['#8F9290','#8B8F8B','#7F837F','#7F837F','#AFB1AF','#ADB0AD','#787C79','#797D7A']} locations={[0,.10,.54,.58,.60,.77,.80,1]} start={{x:0,y:.4}} end={{x:1,y:.4}} style={{position:'absolute',left:-6.15*s,top:0,width:12.3*s,height:130*s,borderRadius:6.15*s,borderWidth:.4,borderColor:'#333633'}}/>

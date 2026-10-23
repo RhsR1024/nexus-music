@@ -48,3 +48,7 @@ r10 `build/SourceUITests-1792741332798.xcresult` 388.306秒失败，已通过原
 `build/logs/archive-vinyl-increment-20261023.log` ARCHIVE SUCCEEDED；manifest commit=`2c07e9092b43067526a5b3a296991a5ecf5f352d`、dirty=false、arm64/iphoneos26.2/unsigned。manifest SHA `8caaed381561ce8d69f23e11ec2c86733a4922a45e09801b798b09698d3662fa`；IPA SHA `6ad37083de79cfc42d50d32a4f4724e9c033e96eb4a26c74363989403964c6fa`，ZIP CRC通过。verify-archive通过，正式JS bundle不含vinyl-capture-entry/捕获夹具错误/online-adapter标记。此为本地SDK26.2证据，不是iOS27/Apple签名/真机。
 
 旧distribution完整迁至`build/pre-vinyl-distribution-20261023`（74575872字节，旧IPA SHA13488c09…），没有删除；迁移回执`build/logs/archive-rotation-vinyl-20261023.json`。当前使用中的DerivedData/样本/scope/Evidence未清理。
+
+## r18更正参考误读
+
+上文r10/r11关于“参考播放配重被盘面裁切”的判断已被原图放大否定；参考确实突出底座上方。该段只保留历史，不再作为验收契约。以[配重r18](vinyl-counterweight-r18-2026-10-23.md)为当前规格，恢复父容器溢出可见，并检查完整配重的屏内范围。
