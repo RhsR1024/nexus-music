@@ -74,3 +74,5 @@ node scripts/visual-lab.mjs --spec docs/ui-spec/batches/4854-classic-v3-r39-repe
 本批E-051 content_hash：0ff7c48010b58e5d10af9ef5af42d1509a2bf5cc066c00494bb2b2068ec643e2；source_ref/artifact_path均为本机case下evidence/classic-font-ui-batch-20261023.json。strict review：IPA51E/43F/43P、APK3E/2F/2P，均0错误/0警告；工作项和时间线已回写。
 
 r40两行邻态SourceUITests-1792715330819，Release1/0/0，671.17pt控制栈断言通过；这是字号/行盒未改变的回归，不是参考图片颜色评分。
+
+阶段归档与提交：27e19b7清洁unsigned设备归档通过：arm64/SDK26.2/min15.1/families1,2，dirty=false/changes=[]；IPA SHA256 7fd6184c1f451f5fe13d00aa8ee6ab9a11d86fe4dc78727b317eda8980fec772，12,276,065字节/83项CRC通过，生产JS SHA cd0b5e98a646c42c9c985738aaed1e5d64fc865025774165dff36826ddee5fd0与归档一致，测试标记和私人资源路径排除通过。版本产物留build/local-classic-27e19b7-20261023。已正常push，云端39879388063/27e19b7运行，0排队；不计iOS27成功、签名或真机。

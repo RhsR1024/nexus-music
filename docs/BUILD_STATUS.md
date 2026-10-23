@@ -1,6 +1,6 @@
 ## 2026-10-23 经典字重与录制时序阶段
 
-经典900/700字重与外部输入摘要接线完成；465检查、同输入独立r38/r39各1/0/0且状态栏下零差异，r40两行邻态1/0/0。全v3七区6过/歌词失败，Phase0仍2/5，代码75.1%/交付53.0%不变。[报告](2026-10-23_reverse-sollin-classic-font-report.md)。云端6f2e413失败保留；录制屏障改序经11秒延迟App1/0/0+录屏10中间帧通过，[失败与修复证据](ci-recorder-timeout-2026-10-23.md)。本阶段清洁归档及新云端待验；随后继续字体度量/同秒、封面高清分层和P2余项/P3–P5、平台登录日推FM。
+经典900/700字重与外部输入摘要接线完成；465检查、同输入独立r38/r39各1/0/0且状态栏下零差异，r40两行邻态1/0/0。全v3七区6过/歌词失败，Phase0仍2/5，代码75.1%/交付53.0%不变。[报告](2026-10-23_reverse-sollin-classic-font-report.md)。云端6f2e413失败保留；录制屏障改序经11秒延迟App1/0/0+录屏10中间帧通过，[失败与修复证据](ci-recorder-timeout-2026-10-23.md)。27e19b7清洁本地归档/包校验已过并正常push；云端39879388063运行、0排队，终态待验；随后继续字体度量/同秒、封面高清分层和P2余项/P3–P5、平台登录日推FM。
 
 ## 2026-10-23 26f69df云端iOS27完整成功
 
@@ -1659,3 +1659,9 @@ Release 结果：播放样式 + EQ 同批 2/0/0（`SourceUITests-1792500633689`�
 - 本机Release UI回归被RN0.81 x86_64预编译产物阻断：Release Hermes缺`RuntimeAdapterD2Ev`导致dyld启动失败；Debug Hermes含符号但与Release预编译React组合触发SIGBUS。crash reports留`~/Library/Logs/DiagnosticReports/app-2026-10-21-043735.ips`、`044324`、`045538`和`050059`。不据此判断产品UI失败。
 - 本机Pods/React缓存仅为验证环境，不属于仓库改动；提交前恢复lock/manifest，云端以实际iOS27 Release终态为准。
 - 清洁unsigned IPA待本批提交后重做；真实服务、Apple签名和真机无新增证据。
+
+## 2026-10-23 27e19b7本地归档与云端启动
+
+27e19b7清洁unsigned设备归档通过：arm64/SDK26.2/min15.1/families1,2，dirty=false/changes=[]；IPA SHA256 7fd6184c1f451f5fe13d00aa8ee6ab9a11d86fe4dc78727b317eda8980fec772，12,276,065字节/83项CRC通过，生产JS SHA cd0b5e98a646c42c9c985738aaed1e5d64fc865025774165dff36826ddee5fd0与归档一致，测试标记和私人资源路径排除通过。版本产物留build/local-classic-27e19b7-20261023。已正常push，云端39879388063/27e19b7运行，0排队；不计iOS27成功、签名或真机。
+
+阶段磁盘复核17GiB余量，新版本产物12MiB、案例原始核验44KiB；当前构建及全部哈希引用证据保留，无删除动作。前两有效本地阶段6f2e413与27e19b7均有版本IPA/manifest/verification；不把build/distribution旧6f内容继续标成当前版本。
