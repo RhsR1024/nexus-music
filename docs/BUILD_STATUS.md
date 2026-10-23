@@ -1,4 +1,10 @@
-## 2026-10-23 黑胶阶段准备清洁归档
+## 2026-10-23 黑胶阶段清洁归档及push回执
+
+2326f4e已正常push到RhsR1024/nexus-music。`build/logs/archive-vinyl-pivot-20261023.log` ARCHIVE SUCCEEDED、verify-archive通过；manifest commit2326f4e9810d585119e0b082e54da086281ddfb3、dirty=false、arm64/SDK26.2/unsigned，SHA157187638b29ff70303d72e5db43179189db512aa604674208736ff777759d18。IPA SHA5813f8fe0c981df15ba84635ecb79da8f136134a311d33a9fe43d3ebadee160a，ZIP CRC通过，正式bundle不含vinyl-capture-entry/夹具初始化错误/online-adapter-fixture标记。本机不冒称iOS27、签名或真机。
+
+新运行39943967819/2326f4e pending，39936859121/4206985仍in_progress；实际1运行/1排队，不取消或重派。前一有效distribution完整迁至build/pre-vinyl-pivot-distribution-20261023，73641040字节，IPA 6ad37083…保留；回执build/logs/archive-rotation-vinyl-pivot-20261023.json。使用中的缓存、样本、scope/Evidence未清理。磁盘约20GiB，仍需按既定保留策略轮换；没有为腾空间盲删证据。
+
+下条为归档前历史记录。
 
 代码447fe25已本地提交。r18正常入口Release1/0/0（SourceUITests-1792751971665）；r19b同内容采集1/0/0（1792753078367）和507检查通过，见[回执](ui-spec/vinyl-shadow-r19-2026-10-23.md)。完成本条文档提交后做清洁unsigned归档，再正常push。本机SDK26.2，云端iOS27、签名与真机独立待验。云端39926166155/e3f4b9c终态19/3/0，4206985运行，不取消运行中任务。
 
