@@ -2662,8 +2662,11 @@ final class SourceSettingsTests: XCTestCase {
     },object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[settled],timeout:10),.completed)
     if abs(app.frame.width-430)<1 && abs(app.frame.height-932)<1 {XCTAssertEqual(progress.frame.midY,671.17,accuracy:1,"Lyric line count must not shift the control stack")}
-    progress.coordinate(withNormalizedOffset:CGVector(dx:reference ? 266.0/284.0 : 0.93,dy:0.5)).tap()
-    expectation(for:NSPredicate(format:"value CONTAINS %@",reference ? "4:26" : "1:52"),evaluatedWith:progress);waitForExpectations(timeout:5)
+    // Aim inside the reference second so coordinate rounding does not floor
+    // a seek on its boundary to 4:25. Querying AX before capture also advances
+    // playback; judge the actual clock in the PNG rather than an earlier value.
+    progress.coordinate(withNormalizedOffset:CGVector(dx:reference ? 266.5/284.0 : 0.93,dy:0.5)).tap()
+    if !reference {expectation(for:NSPredicate(format:"value CONTAINS %@","1:52"),evaluatedWith:progress);waitForExpectations(timeout:5)}
     Thread.sleep(forTimeInterval:0.2)
     let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=reference ? "Classic reference content" : lines==3 ? "Classic direct three lines" : "Classic direct two lines";shot.lifetime = .keepAlways;add(shot)
     app.buttons["暂停"].firstMatch.tap()

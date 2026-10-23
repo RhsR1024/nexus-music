@@ -35,3 +35,5 @@ P1代码2987f1f已正常push，清洁本地unsigned归档与包校验通过，�
 下一批固定：五平台之外继续忽略；未知合法动作不授予，未知quality保留原值但不等于自动路由已支持；空quality数组仍允许lyric/pic源。预算先按原始数组数量检查再去重，名称缺省与显式坏类型分开；不截断/改写标识。声明坏平台使当前脚本整条声明失败，其他脚本由Registry隔离，不发布部分坏能力。建议以name256/action及quality128/数组64为待核定策略，不能称LX协议标准。TS初始化返回在parse前与原生1MiB UTF8边界一致，需兼容Hermes而非依赖Node Buffer。
 
 验证须补真实adapter→parser→Registry组合：坏声明/超限源failed且匹配revision销毁，有效源ready并能request；多字节边界、重复洪泛、未知quality roundtrip和运行时未知action拒绝；诊断也不能绕过。上述仅审计/计划，P3仍未实施、不增加工程完成比例。
+
+P3预算兼容性只读复核：本地V261008共24份脚本中，能静态识别的33处actions字面量数组最大4项/最长11个UTF16单元，20处qualitys最大4项/最长9单元；仍有变量数组和运行时拼装，不能外推24份动态兼容。Q1515固定547ccfe6的user-api-preload.js:153–168/319–327支持未知动作过滤，但其quality白名单不移植；CyMusic固定bf0d4694的脚本头name24是元信息策略，不是能力name标准。主代理已亲读Q1515这些行及本项目ScriptRuntime.swift:84–85的1MiB UTF8限制。因此256/128/64拟作为音枢本地预算，保持未知quality原值/顺序、缺省name回退平台、合法未知动作不授权、原数组先限后去重；尚未实施或执行新预算动态验证。
