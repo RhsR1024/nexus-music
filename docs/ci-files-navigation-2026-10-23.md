@@ -13,3 +13,11 @@ r1本地0/2，DocumentManager在转场中SIGSEGV（objc_msgSend→_runAlongsideC
 `npm run check`499/499（含typecheck），日志`build/logs/check-files-fix-20261023.log`；Swift parse与diff检查通过。最终App来源包含未提交黑胶实验，当前提交只纳入Files测试修复；该两项不使用黑胶布局。未重复设备归档，无产品/原生后端修改。云端最新39904225211/8a96dc7仍在运行，不包含本修复，不取消/重派；正常push后的新云端仍待。真机、签名、真实音频服务及90%UI/全部parse不由本批证明。
 
 交付回执：`4a21c8e101f28946808985c32ac932548172ae3a`已正常push并核对远端main一致。连接器实核39915726008/4a21c8e pending、39904225211/8a96dc7 in_progress，1运行/1排队；未取消/重派，新云端终态仍待。
+
+## iOS27完整文档管理器就绪（后续修复前）
+
+39915726008/4a21c8e首组21/22，音频导入通过，仅背景图在“Files picker must be presented”失败。job120302602703日志与失败artifact12491681448已核对；`build/ci-39915726008/failure.zip` CRC/SHA通过，SHA `da556f10e4f3fde3905721e8049e3c0dfdd871107428f60c63e305fc84f5ab2b`。层级实际有DOC.browsingRoot与Nexus Visual Fixture cell（393.7pt处）且非Disabled，但无Cancel；是仅认Cancel的就绪检查误报，不证明产品未呈现。
+
+修复就绪条件为Cancel、真实FileProvider根节点或目标文件cell/button之一存在，仍需后续真实行选择与导入/持久化断言；未呈现时新增screen+hierarchy附件。不改变产品或放宽导入成功断言。最新e3f4b9c云端已运行但不含本修复，保留执行，不取消/重派；新修复需本地/新云端分别验证。
+
+后续本地复验：`build/SourceUITests-1792749562000.xcresult` Release1通过/0失败/0跳过，exitCode0/sourceUnchanged=true；manifest SHA `5d07d39810707c8ae3872476a6e164b5ee212e68299bf412197222602b82356a`，日志与来源在`build/files-presentation-fix-20261023-r1/`。保留真实导入/两图槽/设置/重启/移除断言。本机26.3.1不能替代iOS27无Cancel分支实跑；云端该分支的可用FileProvider/目标cell证据由原失败层级直接支持，新云端终态继续待。507检查通过，日志`build/logs/check-arm-files-presentation-20261023.log`。

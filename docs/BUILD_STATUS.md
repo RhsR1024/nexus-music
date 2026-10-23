@@ -1,3 +1,7 @@
+## 2026-10-23 iOS27 Files无Cancel分支
+
+39915726008/4a21c8e首组21/22，音频已过，仅背景图片在仅认Cancel的就绪断言误报；失败层级实际已有可用目标cell。修复后本地Release1/0/0、sourceUnchanged=true、507检查；[证据](ci-files-navigation-2026-10-23.md)。e3f4b9c云端运行不含本修复，保持执行；新对应终态待。
+
 ## 2026-10-23 黑胶清洁本地归档
 
 2c07e90清洁unsigned归档成功，arm64/SDK26.2、IPA SHA6ad37083…、CRC及正式入口标记检查通过；r11正常导航1/0/0，507检查/native通过。详见[证据](ui-spec/vinyl-r8-conic-2026-10-23.md)。新云端/签名/真机与静态90%仍待，不作替代。

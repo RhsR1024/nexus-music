@@ -142,7 +142,15 @@ final class SourceSettingsTests: XCTestCase {
     let locations=NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])
     func settle(){RunLoop.current.run(until:Date().addingTimeInterval(2))}
     let cancel=app.buttons.matching(NSPredicate(format:"label IN %@",["取消","Cancel","取消選取"])).firstMatch
-    guard cancel.waitForExistence(timeout:30) else{XCTFail("Files picker must be presented before navigation");return}
+    // iOS 27 can present the full document manager without a Cancel button.
+    // Readiness still requires the actual Files subtree or the target file row.
+    let filesRoot=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.browsingRoot Source: com.apple.FileProvider")).firstMatch
+    let presented=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in cancel.exists || filesRoot.exists || fileCell.exists || fileRow.exists},object:nil)
+    guard XCTWaiter.wait(for:[presented],timeout:30) == .completed else{
+      let image=XCTAttachment(screenshot:XCUIScreen.main.screenshot());image.name="Files presentation unavailable";image.lifetime = .keepAlways;add(image)
+      let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Files presentation hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
+      XCTFail("Files picker must be presented before navigation");return
+    }
     settle()
     func confirmSelection(){
       let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","開啟"])).firstMatch
