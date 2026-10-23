@@ -50,6 +50,6 @@
 
 ## 证据与未完成项
 
-动态案例已通过 strict case-review：33 条 Evidence（含录屏）已计算哈希，12 个 Finding、9 条调用路径均有引用，0 errors / 0 warnings。已补齐 LX 检测与下载成功/失败清理、本地隔离音频扫描与实际播放、麦克风及内置音频识曲成功态、熄屏返回、Android 媒体通知和播放器/队列录屏。仍待：系统媒体输出成功态、下载暂停/恢复与进程重启续传、多文件夹/标签边界、密码锁屏、系统重启冷启动，以及录屏逐帧人工亲看；这些不能用单张静态截图代替。
+动态案例已通过 strict case-review：34 条 Evidence（含录屏）已计算哈希，12 个 Finding、9 条调用路径均有引用，0 errors / 0 warnings。已补齐 LX 检测与下载成功/失败清理、本地隔离音频扫描与实际播放、麦克风及内置音频识曲成功态、熄屏返回、Android 媒体通知和播放器/队列录屏。仍待：系统媒体输出成功态、下载暂停/恢复与进程重启续传、多文件夹/标签边界、密码锁屏、系统重启冷启动，系统重启后的后台任务续接，以及录屏逐帧人工亲看；这些不能用单张静态截图代替。
 
 完整证据索引位于外部案例的 `report/ANDROID_MUSIC_FUNCTION_SPEC.md`；其 `notes/observations.md`、`notes/actions.jsonl`、`notes/timeline.md` 和 `evidence/E-*.md` 保存可复现细节。

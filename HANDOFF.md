@@ -2204,3 +2204,8 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 ## 2026-10-24 强制停止重启边界补证
 
 新增 E-638：`am force-stop` 后重启 Sollin 回到发现精选首页，media-session 为 state=0、无活动曲目；这与Home后台返回保留页面和媒体会话的 E-318 明确不同。外部案例当前 strict review 为33 Evidence、12 Findings、9 Paths、0 errors/0 warnings。
+
+
+## 2026-10-24 设备重启冷启动补证
+
+新增 E-642：ADB 重启小米10，等待系统完成启动后自动唤醒、上滑并启动 Sollin，应用回到发现精选首页，media-session state=0、无活动曲目；与Home后台返回和force-stop边界保持区分。外部案例 strict review 当前为34 Evidence（含录屏）、12 Findings、9 Paths、0 errors/0 warnings。
