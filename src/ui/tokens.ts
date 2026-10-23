@@ -80,7 +80,16 @@ export const classicBlushBackground = {
 // 4854 three-line block: reclaim 23pt before the lyrics and return 11pt after
 // them, keeping the control stack anchored without moving its children.
 export const classicLyricLayout = {before: -10, after: 11} as const;
-export const classicLyricTypography = {size:17,activeWeight:'900',inactiveWeight:'700'} as const;
+// 4854 r49: inactive 17.5pt restores the reference advance; the active row
+// keeps 17pt so its measured width (781px) stays exact. The 17pt box preserves
+// the baseline rhythm for both rows.
+export const classicLyricTypography = {size:17,inactiveSize:17.5,activeWeight:'900',inactiveWeight:'600',activeEmbolden:.1} as const;
+export const classicInk = {text:'#201919',secondary:'#5C4E4A',lyricInactive:'rgba(32,25,25,0.545)'} as const;
+export function classicLyricRow(live:boolean,fontScale:number,styleLineHeight:number){
+  const size=(live?classicLyricTypography.size:classicLyricTypography.inactiveSize)*fontScale;
+  const height=Math.ceil(classicLyricTypography.size*fontScale*Math.max(styleLineHeight,2));
+  return {size,height,lineHeight:height/size,weight:live?classicLyricTypography.activeWeight:classicLyricTypography.inactiveWeight,embolden:live?classicLyricTypography.activeEmbolden:0};
+}
 
 // 4854: cover top 127pt; keep the following title/lyrics/control anchors.
 export const classicArtworkLayout = {before: 3, titleBefore: -3} as const;

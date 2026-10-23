@@ -1,0 +1,213 @@
+{
+  "id": "4854-classic-v3-r49-inactive-semibold",
+  "title": "4854歌词字重r49",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4854.PNG",
+  "referenceSha256": "d2e52a0f93d20fee320a3876cf8a5b0fdbd74430c55a71d73eb93c84e4b23c19",
+  "candidate": "build/classic-reference-r49-20261023/screenshots/001-Classic-reference-content.png",
+  "candidateSha256": "5844906c7a41ed9fce686ecd8bdc690ba752046705b680bec3f9e7b59c3703bf",
+  "captureEvidence": {
+    "manifest": "build/classic-reference-r49-20261023/run-manifest.json",
+    "exportIndex": "build/classic-reference-r49-20261023/screenshots/index.json"
+  },
+  "state": {
+    "screen": "classic player",
+    "theme": "blush + rose",
+    "mode": "light",
+    "background": "gradient",
+    "playback": "real native playback near266s /284s; screenshot clock inspected separately",
+    "scroll": "top",
+    "fontScale": 1,
+    "language": "zh UI / local user-provided reference content",
+    "notes": "r49 formal: same scene as r48, single variable inactiveWeight 500->600 (17.5pt Semibold); active 17pt Semibold + 0.1pt symmetrical dilation; title #201919; artist #5C4E4A; inactive lyrics rgba(32,25,25,0.545). Source unchanged across capture; resultInfoSha256 a6e8feac... bound in export index."
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [
+    6,
+    8
+  ],
+  "contentMasks": [
+    [
+      0,
+      180,
+      90,
+      150
+    ],
+    [
+      150,
+      2580,
+      990,
+      100
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      90,
+      180,
+      1130,
+      150
+    ],
+    [
+      180,
+      375,
+      930,
+      945
+    ],
+    [
+      300,
+      1330,
+      690,
+      220
+    ],
+    [
+      100,
+      1570,
+      1090,
+      310
+    ],
+    [
+      70,
+      1975,
+      1150,
+      150
+    ],
+    [
+      330,
+      2170,
+      630,
+      265
+    ],
+    [
+      150,
+      2475,
+      990,
+      100
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      90,
+      350,
+      1110,
+      20
+    ],
+    [
+      90,
+      1900,
+      1110,
+      30
+    ],
+    [
+      90,
+      2660,
+      1110,
+      30
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "upper background",
+      "rect": [
+        600,
+        340,
+        90,
+        20
+      ]
+    },
+    {
+      "label": "lyric background",
+      "rect": [
+        600,
+        1900,
+        90,
+        20
+      ]
+    },
+    {
+      "label": "lower background",
+      "rect": [
+        600,
+        2660,
+        90,
+        20
+      ]
+    }
+  ],
+  "criticalRegions": [
+    {
+      "label": "header",
+      "rect": [
+        90,
+        180,
+        1130,
+        150
+      ]
+    },
+    {
+      "label": "cover",
+      "rect": [
+        180,
+        375,
+        930,
+        945
+      ]
+    },
+    {
+      "label": "title-artist",
+      "rect": [
+        300,
+        1330,
+        690,
+        220
+      ]
+    },
+    {
+      "label": "lyrics",
+      "rect": [
+        100,
+        1570,
+        1090,
+        310
+      ]
+    },
+    {
+      "label": "progress-time",
+      "rect": [
+        70,
+        1975,
+        1150,
+        150
+      ]
+    },
+    {
+      "label": "transport",
+      "rect": [
+        330,
+        2170,
+        630,
+        265
+      ]
+    },
+    {
+      "label": "tools",
+      "rect": [
+        150,
+        2475,
+        990,
+        100
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  },
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "frozenAnchors": "docs/ui-spec/anchor-list-4854-v2-2026-10-23.md"
+}

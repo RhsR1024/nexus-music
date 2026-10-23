@@ -14,7 +14,7 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 import type {Track} from '../domain/track.ts';
 import {QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
-import {classicArtworkLayout,classicBlushBackground,classicLyricLayout,classicMetadataLayout,classicSkipIcon,paper} from './tokens.ts';
+import {classicArtworkLayout,classicBlushBackground,classicInk,classicLyricLayout,classicMetadataLayout,classicSkipIcon,paper} from './tokens.ts';
 import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
@@ -124,7 +124,7 @@ export function Player({ services }: { services: Services }) {
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{glyph}</Pressable>);
   // IMG_4854: header dots are #423E3C, back/next #403A39, tool glyphs lighter
   // still at #5E514F; dark layouts keep the theme text ink.
-  const classicInk=theme.mode==='dark'?theme.palette.text:paper.iconStrong;
+  const classicHeaderInk=theme.mode==='dark'?theme.palette.text:paper.iconStrong;
   const classicToolInk=theme.mode==='dark'?theme.palette.text:paper.toolInk;
   // IMG_4854 queue jar: 17.33x23.33pt, two lid rules (9.5/12.9) over a 17.5pt body.
   const queueJar=(
@@ -134,7 +134,7 @@ export function Player({ services }: { services: Services }) {
       <View style={{width:17.5,height:17.1,borderWidth:1.4,borderColor:classicToolInk,borderRadius:4,marginTop:2.5,alignItems:'center',justifyContent:'center'}}><Ionicons name="musical-note" size={10} color={classicToolInk}/></View>
     </View>);
   // Rounded double-triangle ink from the existing official font.
-  const skipGlyph=(dir:'back'|'forward')=><View style={{flexDirection:'row',gap:classicSkipIcon.gap}}>{[0,1].map(index=><View key={index} style={{width:classicSkipIcon.triangleWidth,height:classicSkipIcon.lineHeight,alignItems:'center'}}><CupertinoGlyph name="playFill" size={classicSkipIcon.size} color={classicInk} style={{width:24,lineHeight:classicSkipIcon.lineHeight,textAlign:'center',transform:[{scaleX:dir==='back'?-classicSkipIcon.scaleX:classicSkipIcon.scaleX}]}}/></View>)}</View>;
+  const skipGlyph=(dir:'back'|'forward')=><View style={{flexDirection:'row',gap:classicSkipIcon.gap}}>{[0,1].map(index=><View key={index} style={{width:classicSkipIcon.triangleWidth,height:classicSkipIcon.lineHeight,alignItems:'center'}}><CupertinoGlyph name="playFill" size={classicSkipIcon.size} color={classicHeaderInk} style={{width:24,lineHeight:classicSkipIcon.lineHeight,textAlign:'center',transform:[{scaleX:dir==='back'?-classicSkipIcon.scaleX:classicSkipIcon.scaleX}]}}/></View>)}</View>;
   const cycleRepeat=()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));};
   // IMG_4854: 308pt square at 430pt width (61pt side margins), transport 70pt play.
   const artworkSide=Math.min(width-122,308);
@@ -143,13 +143,13 @@ export function Player({ services }: { services: Services }) {
         the shared 24pt inset; the 35pt row preserves the menu anchor. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:35}}>
       <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
-      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicInk,{transform:[{translateY:-1.83}]})}</View>
+      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicHeaderInk,{transform:[{translateY:-1.83}]})}</View>
     </View>
     <View testID="classic-artwork" collapsable={false} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
     <View style={{marginTop:classicArtworkLayout.titleBefore,alignItems:'center',gap:2}}>
-      <Text numberOfLines={1} style={{fontSize:classicMetadataLayout.titleSize,lineHeight:classicMetadataLayout.titleLineHeight,fontWeight:'700',color:theme.palette.text,transform:[{translateY:classicMetadataLayout.titleOffset}]}}>{entry.track.title}</Text>
+      <Text numberOfLines={1} style={{fontSize:classicMetadataLayout.titleSize,lineHeight:classicMetadataLayout.titleLineHeight,fontWeight:'700',color:classicInk.text,transform:[{translateY:classicMetadataLayout.titleOffset}]}}>{entry.track.title}</Text>
       {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
-      <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.palette.secondary,transform:[{translateY:classicMetadataLayout.artistOffset}]}}>{entry.track.artist}</Text>
+      <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:classicInk.secondary,transform:[{translateY:classicMetadataLayout.artistOffset}]}}>{entry.track.artist}</Text>
     </View>
     <View style={{marginTop:classicLyricLayout.before,marginBottom:classicLyricLayout.after}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
     {/* Reference metrics: track 42..388pt, centre 668pt; 17pt artist pushes the
