@@ -1,7 +1,10 @@
-import type {HTTPClient, HTTPRequest} from './http.ts';
+import type {HTTPClient} from './http.ts';
 import {onlineTrack} from './online.ts';
 import type {MusicAccount,MusicAccounts} from './musicAccounts.ts';
 import type {Track} from '../domain/track.ts';
+import {neteaseSessionAuth,neteaseWeapiRequest} from './neteaseSession.ts';
+
+const DAILY_ENDPOINT='https://music.163.com/weapi/v3/discovery/recommend/songs';
 
 export type DailyRecommendationKind='netease_daily'|'kugou_daily'|'tx_official_daily'|'tx_radar'|'local';
 export type DailyRecommendationReason=''|'login_required'|'official_unavailable'|'unavailable';
@@ -43,11 +46,11 @@ export interface AccountDailyClientOptions {
   readonly accounts?:Pick<MusicAccounts,'getSnapshot'>;
 }
 
-/** Account-scoped reader. Production binds the authoritative repository; the
- * injected endpoint remains unavailable until authenticated transport is wired. */
+/** Account-scoped reader. Production binds the authoritative repository and
+ * the authenticated web API; all requests stay inside the saved session. */
 export class AccountDailyClient {
   private readonly http:HTTPClient;
-  private readonly endpoint?:string;
+  private readonly endpoint:string;
   private readonly now:()=>number;
   private readonly day:()=>string;
   private readonly accounts?:Pick<MusicAccounts,'getSnapshot'>;
@@ -55,7 +58,7 @@ export class AccountDailyClient {
   private readonly generations=new Map<string,{request:number}>();
   constructor(options:AccountDailyClientOptions={}) {
     this.http=options.http??(async()=>{throw new AccountDailyError('unavailable');});
-    this.endpoint=options.endpoint;
+    this.endpoint=options.endpoint??DAILY_ENDPOINT;
     this.now=options.now??Date.now;
     this.day=options.day??(()=>new Date(this.now()).toLocaleDateString('en-CA'));
     this.accounts=options.accounts;
@@ -69,19 +72,20 @@ export class AccountDailyClient {
 
   async fetch(account:MusicAccount,session:Readonly<Record<string,unknown>>,signal:AbortSignal,force=false):Promise<DailyRecommendation> {
     const snapshot={id:account.id,platform:account.platform,updatedAt:account.updatedAt};
+    const auth=neteaseSessionAuth(session);
     const assertAccount=()=>{
       if(signal.aborted)throw new AccountDailyError('cancelled');
       if(account.id!==snapshot.id||account.platform!==snapshot.platform||account.updatedAt!==snapshot.updatedAt||
         this.accounts&&this.accounts.getSnapshot().find(item=>item.id===snapshot.id)!==account)throw new AccountDailyError('account_changed');
       if(session.accountId===undefined||session.platform===undefined)throw new AccountDailyError('login_required');
       if(session.accountId!==snapshot.id||session.platform!==snapshot.platform)throw new AccountDailyError('account_changed');
-      if(account.platform!=='wy'||!account.capabilities.includes('daily'))throw new AccountDailyError('unavailable');
+      if(!auth)throw new AccountDailyError('login_required');
+      if(account.platform!=='wy')throw new AccountDailyError('unavailable');
     };
     // A cached list must never bypass the current account/session boundary.
     assertAccount();
     const day=this.day(),key=this.key(account,day),cached=this.cache.get(key);
     if(!force&&cached&&cached.expires>this.now())return cached.value;
-    if(!this.endpoint)throw new AccountDailyError('unavailable');
     let generation=this.generations.get(snapshot.id);
     if(!generation){generation={request:0};this.generations.set(snapshot.id,generation);}
     const requestId=++generation.request;
@@ -90,7 +94,7 @@ export class AccountDailyClient {
       if(this.generations.get(snapshot.id)!==generation)throw new AccountDailyError('account_changed');
       if(generation.request!==requestId||this.day()!==day)throw new AccountDailyError('cancelled');
     };
-    const request:HTTPRequest={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offset:0,total:true,limit:30})};
+    const request=neteaseWeapiRequest({offset:0,total:true,limit:30},auth!);
     let raw:unknown;
     try{raw=await this.http(this.endpoint,request,signal);}
     catch(error){

@@ -1,3 +1,11 @@
+## 2026-10-23 平台登录/日推/FM纵向批次
+
+- 实现：纯TS WEAPI双AES+裸RSA与白名单Cookie会话；日推默认官方`/weapi/v3/discovery/recommend/songs`；私人FM取批（≤30、30分钟TTL、账号revision隔离）与“不喜欢”`/weapi/radio/trash/add`；services同时订阅清理两客户端；网页登录记录`['daily','fm']`，旧`capabilities=[]`账号按平台`wy`兼容且不强制重登。
+- 正式入口：曲库页“平台推荐”含未登录CTA、多账号显式选择、加载/成功/空态/登录失效/失败重试/刷新保留旧列表；播放只走`services.playTracks`；登录CTA经`openAccounts`路由设置-音乐账号。两态截图已亲看。
+- 证据：`npm run check` 492/492（含typecheck），`build/logs/check-platform-ui-20261023.log`。Release UI `build/logs/account-recommendations-20261023-r3b`，xcresult `build/SourceUITests-1792725802476.xcresult`，1/0/0、`exitCode:0`、`sourceUnchanged:true`、前后diff同为`6c812c53…`，resultInfo `ee9cbab1…`，JS `f3289f0c…`；截图`build/ui-screenshots-account-recommendations-20261023-r3b`（`e0e1c677…`/`89affe3b…`）。r3工具链未加载在构建前失败，保留负证据；r2因采集中文档diff变化由r3b取代。
+- 未完成：未用真实账号验证Cookie/CSRF到官方服务的日推/FM返回与实际音频播放；FM低水位自动续批未实现（UI展示前5首，播放全部覆盖整批）；QQ/酷狗未接入；本提交云端iOS 27、签名与真机待验。本批不增加UI整页相似度或项目百分比，90%阶段继续。
+- 详细回执见[平台纵向批次](docs/platform-daily-next-batch-2026-10-23.md)。
+
 ## 2026-10-23 LX P4/P5阶段
 
 - P4：`lxTrack` 统一五平台身份；kg 归一 `${songmid}_${hash}`（含 `kg_` 前缀与仅 songmid+hash 两形态），tx 去 `tx_` 前缀并区分 MID 与长整数 `meta.id`；duration 有限且 ≤24h；qualities 64×128 先限后去重、原始 metadata 保留。4项新增业务测试。

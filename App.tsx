@@ -26,6 +26,7 @@ function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
   const [settingsEntry,setSettingsEntry]=useState<SettingsPage>(initialSettingsPage??'home'),[settingsRevision,setSettingsRevision]=useState(0);
   const navigateTab=(next:Tab)=>{if(next==='settings'){setSettingsEntry('home');setSettingsRevision(value=>value+1);}setTab(next);};
   const openSources=()=>{setSettingsEntry('sources');setTab('settings');};
+  const openAccounts=()=>{setSettingsEntry('accounts');setTab('settings');};
   const [services,setServices]=useState<Services>(),[startupError,setStartupError]=useState<string>();
   const insets=useSafeAreaInsets(),{width,height,fontScale}=useWindowDimensions();
   const expanded=width>=768&&height>=500&&width/Math.max(1,fontScale)>=620;
@@ -48,7 +49,7 @@ function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
         <Text style={[caption,{fontSize:11,letterSpacing:3,marginBottom:12}]}>音枢 · NEXUS MUSIC</Text>
         {startupError?<View><Text style={caption}>{startupError}</Text><Pressable accessibilityRole="button" onPress={startup} style={{padding:16}}><Text style={{color:p.accent}}>重试打开</Text></Pressable></View>:!services?<Text style={caption}>正在打开音乐数据…</Text>:tab==='library'?<>
           <View style={{flexDirection:'row',gap:12,marginBottom:22}}>{([false,true]as const).map(value=><Pressable key={String(value)} testID={value?'tab-private':'library-local'} accessibilityRole="tab" accessibilityState={{selected:privateLibrary===value}} onPress={()=>setPrivateLibrary(value)} style={{paddingHorizontal:18,paddingVertical:12,borderRadius:22,backgroundColor:privateLibrary===value?p.selected:p.surface}}><Text style={{color:privateLibrary===value?p.accent:p.secondary,fontWeight:'600'}}>{value?'私人曲库':'我的音乐'}</Text></Pressable>)}</View>
-          {privateLibrary?<NavidromeLibrary services={services} openSettings={openSources}/>:<LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={openSources}/>}
+          {privateLibrary?<NavidromeLibrary services={services} openSettings={openSources}/>:<LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={openSources} openAccounts={openAccounts}/>}
         </>:<Search services={services}/>}
       </ScrollView>}
       </View>

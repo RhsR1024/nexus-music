@@ -10,6 +10,10 @@ Source: https://github.com/wtfdelphia/lx-music-mobile/blob/6624ab58cbd2f5bda52ab
 
 The reference repository includes the Apache License 2.0, reproduced at `licenses/lx-apache-2.0.txt`. Its README usage statements remain applicable to that reference; this notice does not replace them. This adaptation uses an injected SHA1 implementation and its own Base64 routine rather than the original native crypto/Buffer dependencies. Other source files are original contract implementations unless noted separately.
 
+## NetEase weapi encryption
+
+`src/providers/neteaseCrypto.ts` adapts the weapi AES-CBC and raw-RSA scheme from Sollin-Music-Desktop at commit `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8`, file `src/services/neteaseCrypto.ts` (SHA-256 `5abc7db3853a0457124ed0cc74de1080f82d723fc42fe4e06ca9558f06d28bad`). The preset key, IV, base62 alphabet and NetEase public modulus were checked file-to-file; the RSA modulus was independently decoded from that reference PEM and compared with the native BigInt constant. The implementation here is a dependency-free TypeScript reimplementation cross-checked against `node:crypto`, not a copy of the reference's crypto-js/node-forge code. The reference repository's MIT license is reproduced at `licenses/sollin-mit.txt`.
+
 ## Temporary application icon
 
 `assets/app-icon.png` and its copy in the iOS AppIcon asset catalog are size adaptations of the user-authorized Wayferar-Music icon at commit `8e47cdc701cdbb772577b2bf7abb699e285b0fa6`, `app/src/main/res/drawable-nodpi/ic_launcher.png`. This temporary reuse does not relicense the reference project or its other assets. See `docs/decisions/0022-temporary-app-icon.md`.

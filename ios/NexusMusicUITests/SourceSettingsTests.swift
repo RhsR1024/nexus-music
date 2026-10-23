@@ -546,6 +546,24 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
     XCTAssertFalse(navigation.exists)
   }
+  func testAccountRecommendationsEntryAndLoginRouting() throws {
+    let app=XCUIApplication();app.launch()
+    let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch
+    let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch
+    XCTAssertTrue(tab.waitForExistence(timeout:15))
+    XCTAssertTrue(waitForHittable(tab,timeout:10),"The library tab must be reachable")
+    tab.tap()
+    let login=app.buttons["account-recommendations-login"]
+    for _ in 0..<6 {if waitForHittable(login,timeout:0.5){break};app.swipeUp()}
+    XCTAssertTrue(login.exists,"The logged-out account recommendation entry must be on the library page")
+    XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"account-daily-track-0").firstMatch.exists,"No daily row may be fabricated without an account")
+    XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"account-fm-track-0").firstMatch.exists,"No FM row may be fabricated without an account")
+    let entry=XCTAttachment(screenshot:app.screenshot());entry.name="Account recommendations logged out";entry.lifetime = .keepAlways;add(entry)
+    XCTAssertTrue(waitForHittable(login,timeout:5));login.tap()
+    let settingsLogin=app.buttons["login-music-account-wy"]
+    XCTAssertTrue(settingsLogin.waitForExistence(timeout:15),"The account card CTA must open the existing NetEase login entry")
+    let routed=XCTAttachment(screenshot:app.screenshot());routed.name="Account recommendations login route";routed.lifetime = .keepAlways;add(routed)
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.

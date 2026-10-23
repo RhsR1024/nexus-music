@@ -53,6 +53,7 @@ import {LocalRecommendationStore} from '../providers/recommendations.ts';
 import {MusicAccounts} from '../providers/musicAccounts.ts';
 import {MusicAuthFlow} from '../providers/musicAuth.ts';
 import {AccountDailyClient} from '../providers/accountDaily.ts';
+import {AccountFmClient} from '../providers/accountFm.ts';
 import {MusicWebLoginCoordinator} from '../providers/musicWebLogin.ts';
 import {loadNativeMusicAuth} from '../providers/nativeMusicAuth.ts';
 import {NeteaseAccountProfileClient} from '../providers/neteaseAccountProfile.ts';
@@ -89,7 +90,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   // account, private endpoint, or remote recommendation protocol is involved.
   const recommendations=new LocalRecommendationStore(library,playbackStats,Date.now);
   const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
-  musicAccounts.subscribe(()=>accountDaily.clear());
+  const accountFm=new AccountFmClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
+  musicAccounts.subscribe(()=>{accountDaily.clear();accountFm.clear();});
   const nativeLX = loadNativeLX();
   const registry = new SourceRegistry(nativeLX);
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
@@ -185,7 +187,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
-  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, accountDaily, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
+  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

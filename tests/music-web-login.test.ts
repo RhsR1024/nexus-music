@@ -42,7 +42,7 @@ test('login coordinator stores account metadata separately from secret cookies',
   assert.equal(result.account.platform,'wy');
   assert.equal(result.account.username,'netease:42');
   assert.equal(result.account.displayName,'Fixture listener');
-  assert.deepEqual(result.account.capabilities,[]);
+  assert.deepEqual(result.account.capabilities,['daily','fm']);
   assert.doesNotMatch(JSON.stringify(f.records.get('music.accounts.v1')),/synthetic-auth|synthetic-csrf/);
   assert.match([...f.secrets.values()][0]!,/synthetic-auth/);
   assert.equal(result.session.accountId,result.account.id);

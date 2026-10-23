@@ -5,7 +5,7 @@ import {MusicAccounts,type MusicAccount} from '../src/providers/musicAccounts.ts
 import type {Track} from '../src/domain/track.ts';
 
 const account=(overrides:Partial<MusicAccount>={}):MusicAccount=>({id:'a'.repeat(64),platform:'wy',label:'网易云',username:'u',capabilities:['daily'],updatedAt:1,...overrides});
-const session=(a:MusicAccount)=>({accountId:a.id,platform:a.platform});
+const session=(a:MusicAccount)=>({accountId:a.id,platform:a.platform,cookies:{MUSIC_U:'synthetic'}});
 const song=(id:string)=>({id,name:`Synthetic daily ${id}`,ar:[{name:'Fixture'}],al:{name:'Fixture album'},dt:1000});
 const response=(rows:unknown[])=>({code:200,data:{dailySongs:rows}});
 
@@ -17,10 +17,10 @@ test('daily parser keeps valid account tracks, drops duplicate/malformed rows an
 
 test('daily result is account-scoped and cached only for the same account revision',async()=>{
   let calls=0;const client=new AccountDailyClient({http:async()=>{calls++;return response([song('1')]);},endpoint:'https://fixture.test/daily',now:()=>1_000_000,day:()=> '2026-10-21'});
-  const a=account(),first=await client.fetch(a,{accountId:a.id,platform:'wy'},new AbortController().signal);
-  const second=await client.fetch(a,{accountId:a.id,platform:'wy'},new AbortController().signal);
+  const a=account(),first=await client.fetch(a,session(a),new AbortController().signal);
+  const second=await client.fetch(a,session(a),new AbortController().signal);
   assert.equal(calls,1);assert.equal(second,first);assert.equal(first.kind,'netease_daily');
-  const changed=account({updatedAt:2});await client.fetch(changed,{accountId:changed.id,platform:'wy'},new AbortController().signal);
+  const changed=account({updatedAt:2});await client.fetch(changed,session(changed),new AbortController().signal);
   assert.equal(calls,2);
 });
 
@@ -40,9 +40,25 @@ test('daily login/error and malformed responses are not represented as successfu
   }
 });
 
-test('a client without an authenticated endpoint cannot issue an unauthenticated daily request',async()=>{
+test('a client without a transport cannot issue an unauthenticated daily request',async()=>{
   const client=new AccountDailyClient({now:()=>1,day:()=> '2026-10-21'});
   await assert.rejects(client.fetch(account(),session(account()),new AbortController().signal),(error)=>error instanceof AccountDailyError&&error.kind==='unavailable');
+  let calls=0;const guarded=new AccountDailyClient({endpoint:'https://fixture.test/daily',http:async()=>{calls++;return response([song('1')]);}});
+  await rejectsKind(guarded.fetch(account(),{accountId:'a'.repeat(64),platform:'wy'},new AbortController().signal),'login_required');
+  assert.equal(calls,0);
+});
+
+test('daily transport sends an authenticated weapi form to the official endpoint',async()=>{
+  let seen:{url:string;request:import('../src/providers/http.ts').HTTPRequest}|undefined;
+  const client=new AccountDailyClient({http:async(url,request)=>{seen={url,request};return response([song('1')]);}});
+  await client.fetch(account(),session(account()),new AbortController().signal);
+  assert.equal(seen?.url,'https://music.163.com/weapi/v3/discovery/recommend/songs');
+  assert.equal(seen?.request.method,'POST');
+  assert.match(seen?.request.headers?.Cookie??'',/MUSIC_U=synthetic/);
+  assert.equal(seen?.request.headers?.['Content-Type'],'application/x-www-form-urlencoded; charset=UTF-8');
+  const body=seen?.request.body??'';
+  assert.match(body,/^params=[^&]+&encSecKey=[a-f0-9]{256}$/);
+  assert.doesNotMatch(body,/"offset"|dailySongs/);
 });
 
 test('local daily fallback remains explicitly tagged local',()=>{
@@ -113,6 +129,16 @@ test('empty daily lists are successful and cached; malformed lists and error cod
     const client=new AccountDailyClient({endpoint:'https://fixture.test/daily',http:async()=>({code,data:{dailySongs:[song('1')]}})});
     await rejectsKind(client.fetch(a,session(a),signal()),code!==undefined&&[301,401,403].includes(code)?'login_required':'unavailable');
   }
+});
+
+test('legacy accounts saved without capabilities still load daily while other platforms stay unavailable',async()=>{
+  const legacy=account({capabilities:[]});let calls=0;
+  const client=new AccountDailyClient({endpoint:'https://fixture.test/daily',http:async()=>{calls++;return response([song('1')]);}});
+  const result=await client.fetch(legacy,session(legacy),signal());
+  assert.equal(result.tracks[0]!.origin.id,'1');assert.equal(calls,1);
+  const other=account({platform:'tx',capabilities:[]});
+  await rejectsKind(client.fetch(other,session(other),signal()),'unavailable');
+  assert.equal(calls,1);
 });
 
 test('cache expiry and a changed day fetch fresh data; yesterday in-flight cannot publish',async()=>{

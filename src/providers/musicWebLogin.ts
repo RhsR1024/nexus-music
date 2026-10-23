@@ -95,7 +95,7 @@ export class MusicWebLoginCoordinator {
     const username=`netease:${profile.userId}`;
     const accountId=await this.hash(JSON.stringify(['wy',username]));
     const session:MusicWebSession=Object.freeze({version:1,platform:provider,accountId,userId:profile.userId,cookies});
-    const account=await this.accounts.save({platform:provider,label:'网易云音乐',username,displayName:profile.nickname,capabilities:[]},session);
+    const account=await this.accounts.save({platform:provider,label:'网易云音乐',username,displayName:profile.nickname,capabilities:['daily','fm']},session);
     return{account,session};
   }
 }

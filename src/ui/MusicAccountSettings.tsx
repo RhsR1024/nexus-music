@@ -48,7 +48,7 @@ export function MusicAccountSettings({services}:{services:Services}){
         <Text style={{fontSize:13,lineHeight:20,color:p.secondary}}>在官方网页完成登录。会话凭据只写入本机 Keychain，不进入备份、同步或日志。</Text>
       </View>
       {netease.map((account,index)=><View key={account.id} style={{minHeight:62,paddingHorizontal:18,flexDirection:'row',alignItems:'center',gap:12,borderTopWidth:index===0?1:0,borderTopColor:p.border,borderBottomWidth:1,borderBottomColor:p.border}}>
-        <View style={{flex:1,gap:3}}><Text style={{fontSize:15,color:p.text}}>{account.displayName??account.label}</Text><Text numberOfLines={1} style={{fontSize:12,color:p.secondary}}>官方网页会话已验证</Text></View>
+        <View style={{flex:1,gap:3}}><Text style={{fontSize:15,color:p.text}}>{account.displayName??account.label}</Text><Text numberOfLines={1} style={{fontSize:12,color:p.secondary}}>会话凭据已保存到本机</Text></View>
         <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel="验证网易云会话" disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:64,minHeight:44,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:13,color:p.secondary}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
         <Pressable testID={`remove-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel="退出网易云账号" onPress={()=>remove(account.id)} style={{minWidth:64,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13,color:p.accent}}>退出</Text></Pressable>
       </View>)}
@@ -64,6 +64,6 @@ export function MusicAccountSettings({services}:{services:Services}){
     {auth.status==='cancelled'&&<Text testID="music-account-cancelled" style={{fontSize:13,color:p.secondary}}>登录已取消</Text>}
     {auth.status==='expired'&&<Text testID="music-account-expired" accessibilityRole="alert" style={{fontSize:13,color:p.accent}}>登录已过期，请重新打开官方网页。</Text>}
     {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:p.secondary}}>{verified}</Text>}
-    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>登录成功只代表网页会话已保存。每日推荐、个人歌单、收藏与 FM 会分别验收，不会因登录成功自动标记完成。</Text>
+    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>登录成功只代表网页会话已保存。每日推荐与私人FM已接入，但仍需真实账号联调验收；个人歌单、收藏与播放授权尚未接入。</Text>
   </View>;
 }
