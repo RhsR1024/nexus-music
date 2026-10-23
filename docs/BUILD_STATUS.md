@@ -1,3 +1,7 @@
+## 2026-10-23 黑胶清洁本地归档
+
+2c07e90清洁unsigned归档成功，arm64/SDK26.2、IPA SHA6ad37083…、CRC及正式入口标记检查通过；r11正常导航1/0/0，507检查/native通过。详见[证据](ui-spec/vinyl-r8-conic-2026-10-23.md)。新云端/签名/真机与静态90%仍待，不作替代。
+
 ## 2026-10-23 黑胶集成验证
 
 Release模拟器正式导航 `SourceUITests-1792741979250.xcresult` 1/0/0、sourceUnchanged=true；507业务/类型和native通过，详见[回执](ui-spec/vinyl-r8-conic-2026-10-23.md)。清洁设备归档与本提交新云端待；不替代静态90%、签名/真机或真实服务。

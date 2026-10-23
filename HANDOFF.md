@@ -1,6 +1,6 @@
 ## 2026-10-23 黑胶r11正常导航通过
 
-Release正式入口1/0/0、sourceUnchanged=true，八皮肤/队列/歌词/真实合成PCM/唱头与唱片变化/前后台恢复通过。见[本批证据](docs/ui-spec/vinyl-r8-conic-2026-10-23.md)。507检查、native通过，准备固化黑胶增量并做清洁归档；4851像素仍失败、静态2/5不变。全部parse的稀疏cue仍仅原型、真实服务/云端/签名/真机待。
+Release正式入口1/0/0、sourceUnchanged=true，八皮肤/队列/歌词/真实合成PCM/唱头与唱片变化/前后台恢复通过。见[本批证据](docs/ui-spec/vinyl-r8-conic-2026-10-23.md)。507检查、native通过，2c07e90已固化且清洁unsigned归档通过（IPA6ad37083…），待正常push及新云端；4851像素仍失败、静态2/5不变。全部parse的稀疏cue仍仅原型、真实服务/云端/签名/真机待。
 
 ## 2026-10-23 通用歌词预算实施
 

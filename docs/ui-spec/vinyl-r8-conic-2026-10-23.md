@@ -42,3 +42,9 @@ r10 `build/SourceUITests-1792741332798.xcresult` 388.306秒失败，已通过原
 正常入口经过八皮肤、队列、歌词、暂停/播放、唱头实际位移、旋转像素变化、前后台恢复、设置恢复与合成PCM播放，保留上述状态契约修订及负证据。该测试也包含已提交通用歌词预算，但不等于超限歌词真实服务或真机验收。507全量检查与此前native完整通过。固定静态仍2/5，当前增量可交付但不声明4851静态完成；剩余为封面相位复现/规格口径、候选锚点、沟槽/唱臂材质和录屏/设备。
 
 本轮准备提交当前黑胶布局/字体/图标/纸面色与原生静态反光增量及正式组件场景；没有复制样本代码、图片或私人内容。提交后做清洁unsigned设备归档与production entry验证，再正常push；构建和云端结果独立回写。
+
+## 2c07e90清洁归档回执
+
+`build/logs/archive-vinyl-increment-20261023.log` ARCHIVE SUCCEEDED；manifest commit=`2c07e9092b43067526a5b3a296991a5ecf5f352d`、dirty=false、arm64/iphoneos26.2/unsigned。manifest SHA `8caaed381561ce8d69f23e11ec2c86733a4922a45e09801b798b09698d3662fa`；IPA SHA `6ad37083de79cfc42d50d32a4f4724e9c033e96eb4a26c74363989403964c6fa`，ZIP CRC通过。verify-archive通过，正式JS bundle不含vinyl-capture-entry/捕获夹具错误/online-adapter标记。此为本地SDK26.2证据，不是iOS27/Apple签名/真机。
+
+旧distribution完整迁至`build/pre-vinyl-distribution-20261023`（74575872字节，旧IPA SHA13488c09…），没有删除；迁移回执`build/logs/archive-rotation-vinyl-20261023.json`。当前使用中的DerivedData/样本/scope/Evidence未清理。
