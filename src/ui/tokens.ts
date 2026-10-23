@@ -80,6 +80,7 @@ export const classicBlushBackground = {
 // 4854 three-line block: reclaim 23pt before the lyrics and return 11pt after
 // them, keeping the control stack anchored without moving its children.
 export const classicLyricLayout = {before: -10, after: 11} as const;
+export const classicLyricTypography = {size:17,activeWeight:'900',inactiveWeight:'700'} as const;
 
 // 4854: cover top 127pt; keep the following title/lyrics/control anchors.
 export const classicArtworkLayout = {before: 3, titleBefore: -3} as const;

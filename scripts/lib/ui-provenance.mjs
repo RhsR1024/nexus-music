@@ -5,6 +5,10 @@ import {join,relative,resolve} from 'node:path';
 
 export const fileSha256=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+export function externalInputSnapshot(paths){
+  const files=Object.fromEntries([...new Set(paths.map(path=>resolve(path)))].sort().map(path=>[path,fileSha256(path)]));
+  return {files,digest:digest(files)};
+}
 export function sourceSnapshot(){
   const paths=execFileSync('git',['ls-files','-z','--cached','--others','--exclude-standard'],{encoding:'utf8'}).split('\0').filter(path=>/^(src|ios|modules|native|scripts|tests)\//.test(path)||(!path.includes('/')&&/\.(json|[cm]?[jt]sx?)$/.test(path))).concat(['ios/.xcode.env','ios/.xcode.env.local']).sort();
   const files={};for(const path of paths){try{if(lstatSync(path).isFile())files[path]=fileSha256(path);}catch{files[path]='missing';}}
@@ -29,6 +33,15 @@ export function verifyCaptureEvidence(manifestPath,indexPath,candidatePath){
     if(!snapshot?.files||!Object.keys(snapshot.files).length||!Object.values(snapshot.files).every(value=>isHash(value)||value==='missing')||!isHash(snapshot.digest)||digest(snapshot.files)!==snapshot.digest)failures.push(`${name} digest is missing or inconsistent`);
   };
   checkSnapshot('sourceBefore',manifest.sourceBefore);checkSnapshot('sourceAfter',manifest.sourceAfter);checkSnapshot('installedBundle',manifest.installedBundle);
+  if(manifest.buildArguments?.some(argument=>argument.endsWith('/testVisualLabClassicReferenceDirect'))&&!manifest.externalInputs)failures.push('reference capture requires external input provenance');
+  if(manifest.externalInputs){
+    checkSnapshot('externalBefore',manifest.externalInputs.before);checkSnapshot('externalAfter',manifest.externalInputs.after);
+    const {before,after,unchanged,requiredPaths}=manifest.externalInputs;
+    if(!unchanged||before?.digest!==after?.digest||!Array.isArray(requiredPaths)||requiredPaths.length===0||!requiredPaths.every(path=>isHash(before?.files?.[path])))failures.push('external capture inputs changed or are incomplete');
+    for(const [path,sha] of Object.entries(before?.files??{})){
+      try{if(fileSha256(path)!==sha)failures.push('external capture input no longer matches: '+path);}catch{failures.push('external capture input is unavailable: '+path);}
+    }
+  }
   if(manifest.schemaVersion!==1||manifest.configuration!=='Release'||manifest.installedBundle?.identifier!=='com.nexusmusic.app')failures.push('capture schema/configuration/bundle identifier is invalid');
   if(manifest.exitCode!==0)failures.push('XCTest did not succeed');
   if(!manifest.sourceUnchanged||!isHash(manifest.sourceBefore?.digest)||manifest.sourceBefore?.digest!==manifest.sourceAfter?.digest)failures.push('source changed during capture');

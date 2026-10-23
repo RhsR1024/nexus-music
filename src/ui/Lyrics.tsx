@@ -16,6 +16,7 @@ import {lyricSignature} from '../domain/matching.ts';
 import {LyricChoiceModal,lyricPlatformLabel} from './LyricChoiceModal.tsx';
 import {lyricOffset} from '../lyrics/settings.ts';
 import {NativeLyricLine} from './NativeLyricLine.tsx';
+import {classicLyricTypography} from './tokens.ts';
 import type {StageStyle} from '../app/preferences.ts';
 import {SharedRequests} from '../lyrics/sharedRequests.ts';
 export function Lyrics({services,track,font,presentation,visibleLines,chrome=true,chromeOnly=false,openRequest=0}:{services:Services;track:Track;font?:string;presentation?:'am'|'immersive'|'photo'|'stage'|'am2';visibleLines?:number;chrome?:boolean;chromeOnly?:boolean;openRequest?:number}){
@@ -196,7 +197,7 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
   const active=document?activeLyric(document.lines,state.position*1000,offset):-1;
   // IMG_4854 keeps ~35pt between classic lyric baselines; the shared lyric style
   // default (1.5) is too tight for that composition.
-  const size=17*preferences.fontScale,style=preferences.lyricStyle,lineHeight=Math.ceil(size*Math.max(style.lineHeight,2));
+  const size=classicLyricTypography.size*preferences.fontScale,style=preferences.lyricStyle,lineHeight=Math.ceil(size*Math.max(style.lineHeight,2));
   const first=Math.max(0,active-(visibleLines===1?0:1));
   const lastTap=useRef({index:-1,time:0,key:''});
   const [screenReader,setScreenReader]=useState(false);
@@ -214,7 +215,7 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
       const actual=first+index,now=state.position*1000-offset,singing=now>=item.startMs&&(item.endMs===undefined||now<item.endMs);
       const live=actual===active||!!item.background&&singing;
       return <Pressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} accessibilityHint="双击歌词定位，长按打开歌词设置" onPress={event=>tap(item.startMs,actual,event.nativeEvent.timestamp)} onLongPress={onOpenSettings} style={{minHeight:lineHeight,justifyContent:'center'}}>
-        <NativeLyricLine line={live?item:{...item,words:undefined}} position={live?now:0} playing={live&&state.intent==='playing'&&!state.buffering} center size={size} font={font} fontURI={services.fonts.selectedURI()} color={live?theme.palette.text:theme.palette.secondary} lineHeight={Math.max(style.lineHeight,2)} emphasis={style.emphasis}/>
+        <NativeLyricLine line={live?item:{...item,words:undefined}} position={live?now:0} playing={live&&state.intent==='playing'&&!state.buffering} center size={size} font={font} fontURI={services.fonts.selectedURI()} color={live?theme.palette.text:theme.palette.secondary} lineHeight={Math.max(style.lineHeight,2)} emphasis={style.emphasis} weight={live?classicLyricTypography.activeWeight:classicLyricTypography.inactiveWeight}/>
       </Pressable>;
     })}
     {!document?.synced&&!!document?.plain.length&&<Text numberOfLines={2} style={{textAlign:'center',color:theme.palette.secondary,fontSize:15}}>{document.plain[0]}</Text>}

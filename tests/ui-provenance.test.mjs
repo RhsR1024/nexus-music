@@ -4,7 +4,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {fileSha256,verifyCaptureEvidence,sourceSnapshot} from '../scripts/lib/ui-provenance.mjs';
+import {fileSha256,verifyCaptureEvidence,sourceSnapshot,externalInputSnapshot} from '../scripts/lib/ui-provenance.mjs';
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function capture(t){
   const root=mkdtempSync(join(tmpdir(),'nexus-provenance-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
@@ -23,3 +23,15 @@ test('changed sources, mismatched export, latest selection and forged file maps 
   for(const mutate of [c=>{c.manifest.sourceAfter.files['metro.config.js']='5'.repeat(64);},c=>{c.index.resultBundle+='.other';},c=>{c.index.selection='latest';},c=>{c.manifest.installedBundle.files.app='present';},c=>{c.manifest.resultInfoSha256='6'.repeat(64);},c=>{c.manifest.exitCode=65;}]){const c=capture(t);mutate(c);assert.equal(c.check().ready,false);}
 });
 test('source identity includes Metro and local Xcode environment inputs',()=>{const snapshot=sourceSnapshot();assert.ok(snapshot.files['metro.config.js']);assert.ok('ios/.xcode.env.local' in snapshot.files);assert.equal(snapshot.digest,digest(snapshot.files));});
+test('external scene inputs bind actual files, both snapshots and required asset membership',t=>{
+  for(const scenario of ['valid','changed','missing-after','missing-required','forged']){
+    const c=capture(t),path=join(c.candidate,'..','scene.json');writeFileSync(path,'local measurement input');
+    const before=externalInputSnapshot([path]);c.manifest.externalInputs={before,after:structuredClone(before),unchanged:true,requiredPaths:[path]};
+    if(scenario==='changed')writeFileSync(path,'changed input');
+    if(scenario==='missing-after')delete c.manifest.externalInputs.after;
+    if(scenario==='missing-required')c.manifest.externalInputs.requiredPaths.push(path+'.missing');
+    if(scenario==='forged')c.manifest.externalInputs.before.digest='0'.repeat(64);
+    assert.equal(c.check().ready,scenario==='valid',scenario);
+  }
+});
+test('reference capture cannot omit external scene provenance',t=>{const c=capture(t);c.manifest.buildArguments=['-only-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect'];assert.equal(c.check().ready,false);});

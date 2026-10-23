@@ -1,3 +1,7 @@
+## 2026-10-23 经典字重与录制时序阶段
+
+经典900/700字重与外部输入摘要接线完成；465检查、同输入独立r38/r39各1/0/0且状态栏下零差异，r40两行邻态1/0/0。全v3七区6过/歌词失败，Phase0仍2/5，代码75.1%/交付53.0%不变。[报告](2026-10-23_reverse-sollin-classic-font-report.md)。云端6f2e413失败保留；录制屏障改序经11秒延迟App1/0/0+录屏10中间帧通过，[失败与修复证据](ci-recorder-timeout-2026-10-23.md)。本阶段清洁归档及新云端待验；随后继续字体度量/同秒、封面高清分层和P2余项/P3–P5、平台登录日推FM。
+
 ## 2026-10-23 26f69df云端iOS27完整成功
 
 [39811557009](https://github.com/RhsR1024/nexus-music/actions/runs/39811557009)/26f69df completed/success：checks、Pods、native、第10步核心22项、第11步在线/歌词/健康/发现等5项、第12步断服务离线1项均通过，共28项App测试；归档/上传成功，失败附件按条件skipped。compact logs原ZIP SHA256 a0ea197e8eae37a507043f25a08b83fbeb1841786c5ea88897c9220ee5f98788，已CRC核验并逐组读取终态，不重复统计ui-catalog与ui-downloads同一用例。

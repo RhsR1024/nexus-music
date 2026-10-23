@@ -1941,7 +1941,11 @@ final class SourceSettingsTests: XCTestCase {
     // The real production loader is held at HTTP, then the display is recorded
     // independently so a final screenshot cannot masquerade as a crossfade.
     let transitionRed=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition red tone")).firstMatch
-    XCTAssertTrue(transitionRed.waitForExistence(timeout:15));reveal(transitionRed);transitionRed.tap()
+    XCTAssertTrue(transitionRed.waitForExistence(timeout:15));reveal(transitionRed)
+    // Recorder startup can exceed the real cover loader's 10s timeout on CI.
+    // Establish video readiness before creating the deliberately held request.
+    _=try themeControl("record=1")
+    transitionRed.tap()
     // Cover extraction is bounded by the native cache queue and can follow
     // the preceding blue request; give that queue its documented headroom.
     let heldRedResult=waitForHeldCover("red")
@@ -1954,7 +1958,7 @@ final class SourceSettingsTests: XCTestCase {
     // Theme changes are verified below with multi-point scene samples; keep
     // this held-request checkpoint focused on the async owner identity.
     let heldThemeImage=XCTAttachment(screenshot:XCUIScreen.main.screenshot());heldThemeImage.name="Pending red identity while blue scene remains visible after theme rebuild";heldThemeImage.lifetime = .keepAlways;add(heldThemeImage)
-    _=try themeControl("record=1");_=try themeControl("release=red")
+    _=try themeControl("release=red")
     expectTint(true,"Current red scene after bounded crossfade")
     _=try themeControl("stop=1")
     let transitionBlue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition blue tone")).firstMatch
@@ -2633,16 +2637,22 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testVisualLabClassicDirect(){captureClassicDirect(lines:3)}
   func testVisualLabClassicShortDirect(){captureClassicDirect(lines:2)}
-  private func captureClassicDirect(lines:Int){
+  func testVisualLabClassicReferenceDirect(){captureClassicDirect(lines:3,reference:true)}
+  private func captureClassicDirect(lines:Int,reference:Bool=false){
     let app=XCUIApplication();app.launch()
     let open=app.buttons["打开播放页"].firstMatch
     XCTAssertTrue(open.waitForExistence(timeout:30));open.tap()
     let play=app.buttons["播放"].firstMatch
     XCTAssertTrue(play.waitForExistence(timeout:10));play.tap()
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
-    expectation(for:NSPredicate(format:"value CONTAINS %@","2:00"),evaluatedWith:progress);waitForExpectations(timeout:20)
+    expectation(for:NSPredicate(format:"value CONTAINS %@",reference ? "4:44" : "2:00"),evaluatedWith:progress);waitForExpectations(timeout:20)
     XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:10))
-    for line in ["这是一行合成歌词文字","音枢经典播放器三行布局测试","下一行用于验证歌词排版"].prefix(lines) {
+    var expectedLines=["这是一行合成歌词文字","音枢经典播放器三行布局测试","下一行用于验证歌词排版"]
+    if reference {
+      guard let data=try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/classic-reference-scene")!),let json=(try? JSONSerialization.jsonObject(with:data)) as? [String:Any],let text=json["lyrics"] as? [String],text.count==3 else {XCTFail("Local reference scene is missing");return}
+      expectedLines=text
+    }
+    for line in expectedLines.prefix(lines) {
       XCTAssertTrue(app.buttons[line].firstMatch.waitForExistence(timeout:15),"All three fixture lines must render before capture")
     }
     var previous=CGRect.zero,stable=0
@@ -2652,10 +2662,10 @@ final class SourceSettingsTests: XCTestCase {
     },object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[settled],timeout:10),.completed)
     if abs(app.frame.width-430)<1 && abs(app.frame.height-932)<1 {XCTAssertEqual(progress.frame.midY,671.17,accuracy:1,"Lyric line count must not shift the control stack")}
-    progress.coordinate(withNormalizedOffset:CGVector(dx:0.93,dy:0.5)).tap()
-    expectation(for:NSPredicate(format:"value CONTAINS %@","1:52"),evaluatedWith:progress);waitForExpectations(timeout:5)
+    progress.coordinate(withNormalizedOffset:CGVector(dx:reference ? 266.0/284.0 : 0.93,dy:0.5)).tap()
+    expectation(for:NSPredicate(format:"value CONTAINS %@",reference ? "4:26" : "1:52"),evaluatedWith:progress);waitForExpectations(timeout:5)
     Thread.sleep(forTimeInterval:0.2)
-    let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=lines==3 ? "Classic direct three lines" : "Classic direct two lines";shot.lifetime = .keepAlways;add(shot)
+    let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=reference ? "Classic reference content" : lines==3 ? "Classic direct three lines" : "Classic direct two lines";shot.lifetime = .keepAlways;add(shot)
     app.buttons["暂停"].firstMatch.tap()
     XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5))
     app.buttons["收起播放页"].firstMatch.tap()

@@ -75,15 +75,17 @@ final class NexusLyricLineView: ExpoView {
     emphasis = object["emphasis"] as? Bool != false
     let hex = object["color"] as? String ?? "#FFFFFF"
     let fontURI = object["fontURI"] as? String ?? ""
+    let requestedWeight = object["weight"] as? String ?? "600"
+    let weight = ["600", "700", "800", "900"].contains(requestedWeight) ? requestedWeight : "600"
     let requestedStyle = object["stageStyle"] as? String ?? "classic"
     let nextStyle = ["classic", "neon", "cyberpunk", "aurora"].contains(requestedStyle) ? requestedStyle : "classic"
     let rawWords = object["words"] as? [[String: Any]] ?? []
     let wordData = (try? JSONSerialization.data(withJSONObject: rawWords)) ?? Data()
-    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(height)|\(radius)|\(wordData.base64EncodedString())"
+    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(weight)|\(height)|\(radius)|\(wordData.base64EncodedString())"
     if signature != layoutKey {
       signature = layoutKey; stageStyle = nextStyle; blur = radius; blurred = nil
       color = Self.color(hex)
-      var font = UIFont.systemFont(ofSize: size, weight: .semibold)
+      var font = UIFont.systemFont(ofSize: size, weight: weight == "900" ? .black : weight == "800" ? .heavy : weight == "700" ? .bold : .semibold)
       if let url = URL(string: fontURI), url.isFileURL,
          url.standardizedFileURL.path.hasPrefix(NSHomeDirectory() + "/Documents/lyric-fonts/"),
          let provider = CGDataProvider(url: url as CFURL), let cgFont = CGFont(provider), let name = cgFont.postScriptName,

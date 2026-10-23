@@ -6,7 +6,8 @@ import { spawn,execFileSync } from 'node:child_process';
 import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync,existsSync } from 'node:fs';
 import {resolve,sep} from 'node:path';
 import { createHash } from 'node:crypto';
-import {fileSha256,sourceSnapshot,installedBundleSnapshot} from './lib/ui-provenance.mjs';
+import {fileSha256,sourceSnapshot,installedBundleSnapshot,externalInputSnapshot} from './lib/ui-provenance.mjs';
+import {loadReferenceScene} from './lib/reference-scene.mjs';
 import {exportFailureEvidence} from './export-failure-evidence.mjs';
 
 const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
@@ -49,8 +50,11 @@ const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossP
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const fixtureOnlineUI=matchingUI||discoveryUI;
 const structuredLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testStructuredNavidromeLyrics'));
+const classicReferenceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicReferenceDirect'));
+if(Boolean(process.env.NEXUS_UI_REFERENCE_SCENE)!==classicReferenceUI)throw new Error('Reference scene requires its single explicit reference capture target and local JSON');
+const referenceScene=classicReferenceUI?loadReferenceScene(process.env.NEXUS_UI_REFERENCE_SCENE):null;
 const classicShortUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicShortDirect'));
-const classicUI=structuredLyricsUI||classicShortUI||process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicDirect'));
+const classicUI=classicReferenceUI||structuredLyricsUI||classicShortUI||process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicDirect'));
 const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabAppearanceDirect'));
 if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
 const entryFile=classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
@@ -81,15 +85,21 @@ const healthScript=matchingScript.replace('Nexus Matching Fixture','Nexus Health
 // UI transport/skin/font checks need a track that stays active while XCTest
 // scrolls and queries accessibility on slower runners. Natural EOF is covered
 // by the native playback tests; serve truthful 120-second metadata and bytes.
-const navidromeAudio=matchingAudio,navidromeDuration=120;
+const navidromeDuration=referenceScene?.duration??120;
+const navidromeAudio=referenceScene?Buffer.alloc(44+48000*2*navidromeDuration):matchingAudio;
+if(referenceScene){
+  matchingAudio.copy(navidromeAudio,0,0,44);navidromeAudio.writeUInt32LE(navidromeAudio.length-8,4);navidromeAudio.writeUInt32LE(navidromeAudio.length-44,40);
+  for(let offset=44;offset<navidromeAudio.length;offset+=audio.length-44)audio.copy(navidromeAudio,offset,44,Math.min(audio.length,44+navidromeAudio.length-offset));
+}
 // Version the synthetic recording when its bytes change. Existing test devices
 // can still contain the original 12-second recording in the normal audio cache.
 const photoArtworkVersion=String(Date.now()),photoArtworkKinds=['portrait','landscape','missing','corrupt'];
 const photoCoverRequests=counts.photoCoverRequests={};
 const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
-const song=()=>({id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+const song=()=>({id:referenceScene?'fixture-classic-reference-'+referenceScene.id:classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
+  if(referenceScene&&req.url==='/classic-reference-scene'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({lyrics:referenceScene.lyrics}));return;}
   if(req.url.startsWith('/am-fixture-control')){const control=new URL(req.url,'http://127.0.0.1');amLongQueue=control.searchParams.get('longQueue')==='1';res.setHeader('Content-Type','application/json');res.end(JSON.stringify({longQueue:amLongQueue}));return;}
   if(req.url==='/photo-artwork-fixture-control'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:photoArtworkVersion,requests:photoCoverRequests}));return;}
 
@@ -117,6 +127,10 @@ const server = createServer(async (req, res) => {
         recorder.once('error',finish);recorder.once('exit',()=>finish(new Error('Simulator video exited before readiness')));
         recorder.stderr.on('data',data=>{if(data.toString().includes('Recording started'))finish();});
       });}catch{recorder.kill('SIGINT');themeRecorder=undefined;res.writeHead(500);res.end();return;}
+      // Opt-in fault injection proves recorder readiness cannot consume a
+      // production cover request's timeout. Only this isolated fixture uses it.
+      const readyDelay=Number(process.env.NEXUS_UI_THEME_RECORD_READY_DELAY_MS??0);
+      if(Number.isFinite(readyDelay)&&readyDelay>0&&readyDelay<=15000){counts.recorderReadyDelayMs=readyDelay;await new Promise(resolve=>setTimeout(resolve,readyDelay));}
       counts.transitionVideo=file;
     }
     if(control.searchParams.has('stop')&&themeRecorder){const recorder=themeRecorder;themeRecorder=undefined;recorder.kill('SIGINT');await new Promise(resolve=>recorder.once('exit',resolve));}
@@ -270,6 +284,7 @@ const server = createServer(async (req, res) => {
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),audio.length-1):audio.length-1;if(start>=audio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${audio.length}`);res.end(audio.subarray(start,end+1));}else res.end(audio);return;
   }
   if(method==='getCoverArt'){
+    if(referenceScene&&params.get('id')===song().coverArt){res.setHeader('Content-Type','image/png');res.end(referenceScene.cover);return;}
     if(params.get('u')==='fixture-photo'){
       const kind=photoArtworkKinds.find(kind=>params.get('id')===`photo-${kind}-${photoArtworkVersion}`);
       if(kind){photoCoverRequests[kind]=(photoCoverRequests[kind]??0)+1;
@@ -304,6 +319,7 @@ const server = createServer(async (req, res) => {
       {index:2,agentId:'lead',start:13000,end:18000,value:'Lead',cue:[{byteStart:0,byteEnd:3,start:13000,end:18000}]},
     ],
   }]:[]}});
+  else if(method==='getLyricsBySongId'&&referenceScene)respond({lyricsList:{structuredLyrics:[{lang:'zh',synced:true,line:referenceScene.lyrics.map((value,index)=>({start:[0,260000,280000][index],value}))}]}});
   else if(method==='getLyricsBySongId'&&classicUI)respond({lyricsList:{structuredLyrics:[{lang:'zh',synced:true,line:[{start:0,value:'这是一行合成歌词文字'},{start:100000,value:'音枢经典播放器三行布局测试'},...(classicShortUI?[]:[{start:116000,value:'下一行用于验证歌词排版'}])]}]}});
   else if(method==='getLyricsBySongId')respond({lyricsList:{structuredLyrics:[{lang:'en',synced:true,line:[{start:0,value:'Synthetic lyric one'},{start:6000,value:'Synthetic lyric two'}],cueLine:[{index:0,start:0,end:6000,value:'Synthetic lyric one',cue:[{byteStart:0,byteEnd:9,start:0,end:2000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:2000,end:4000,value:'lyric '},{byteStart:16,byteEnd:18,start:4000,end:6000,value:'one'}]},{index:1,start:6000,end:navidromeDuration*1000,value:'Synthetic lyric two',cue:[{byteStart:0,byteEnd:9,start:6000,end:8000,value:'Synthetic '},{byteStart:10,byteEnd:15,start:8000,end:10000,value:'lyric '},{byteStart:16,byteEnd:18,start:10000,end:navidromeDuration*1000,value:'two'}]}]}]}});
   else if(method==='star'||method==='unstar'){starred=method==='star';respond({});}
@@ -322,6 +338,7 @@ try {
   console.log(`UI capture result: ${resultPath}; log: ${logPath}`);
   const fixturePath=entryFile??'scripts/test-ui.mjs';
   const runManifest={schemaVersion:1,startedAt:new Date().toISOString(),resultBundle:resolve(resultPath),sourceBefore,configuration,fixture:{path:fixturePath,sha256:sourceBefore.files[fixturePath]},simulator:process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'};
+  if(referenceScene)runManifest.externalInputs={before:referenceScene.snapshot,requiredPaths:referenceScene.paths};
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', configuration,
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
@@ -332,6 +349,7 @@ try {
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
   if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
+  if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');
   if(!appearanceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabAppearanceDirect');
   runManifest.buildArguments=args;
@@ -343,6 +361,7 @@ try {
   process.exitCode = code ?? 1;
   Object.assign(runManifest,{finishedAt:new Date().toISOString(),exitCode:code,sourceAfter:sourceSnapshot(),installedBundle:installedBundleSnapshot(runManifest.simulator),resultInfoSha256:existsSync(resolve(resultPath,'Info.plist'))?fileSha256(resolve(resultPath,'Info.plist')):null});
   runManifest.sourceUnchanged=runManifest.sourceBefore.digest===runManifest.sourceAfter.digest;
+  if(referenceScene){runManifest.externalInputs.after=externalInputSnapshot(referenceScene.paths);runManifest.externalInputs.unchanged=runManifest.externalInputs.before.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   if(code===0&&counts.transitionVideo){
     try{
