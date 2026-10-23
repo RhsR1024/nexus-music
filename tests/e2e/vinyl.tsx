@@ -1,6 +1,7 @@
 // Capture-only entry: the shipping index never imports this module.
 // Use production services, queue, native playback, navigation and Player.
 import {registerRootComponent} from 'expo';
+import {VisualSamplingContext} from '../../src/ui/VisualSampling.ts';
 import {MusicApplication} from '../../App.tsx';
 import {getServices,type Services} from '../../src/app/services.ts';
 import {defaults} from '../../src/app/preferences.ts';
@@ -19,5 +20,6 @@ const initialize=()=>pending??=getServices().then(async services=>{
   services.playback.controller.setQueue(makeQueue([{id:'vinyl-capture-entry',track}]));
   return services;
 }).catch(error=>{pending=undefined;throw error;});
-function VinylFixture(){return <MusicApplication initialize={initialize}/>;}
+const sampling={recordPhase:160/360} as const;
+function VinylFixture(){return <VisualSamplingContext.Provider value={sampling}><MusicApplication initialize={initialize}/></VisualSamplingContext.Provider>;}
 registerRootComponent(VinylFixture);

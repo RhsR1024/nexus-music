@@ -1,0 +1,237 @@
+{
+  "id": "4851-vinyl-whole-r13",
+  "title": "4851 r13 照片内框居中",
+  "reference": "resource/reference-ui/sollin-2026-10-18/IMG_4851.PNG",
+  "referenceSha256": "6b241210bc815be92d0a931aac9c2867e6e82cfaaab5ec8c114325809e0e92f8",
+  "candidate": "build/ui-4851-r13-20261023/screenshots/001-Vinyl-reference-content.png",
+  "captureEvidence": {
+    "manifest": "build/ui-4851-r13-20261023/run-manifest.json",
+    "exportIndex": "build/ui-4851-r13-20261023/screenshots/index.json"
+  },
+  "state": {
+    "screen": "vinyl player",
+    "theme": "blush + rose",
+    "mode": "light",
+    "background": "solid",
+    "playback": "playing at 32.9% (fixture seek 1:33/4:44; pause restored after capture)",
+    "scroll": "top",
+    "fontScale": 1,
+    "language": "zh UI / reference content",
+    "notes": "沿用r12固定相位159°，只将照片Cover置于label边框内可用直径135.33pt，中心恢复外框中心；外框/门槛/遮罩不变。"
+  },
+  "size": [
+    1290,
+    2796
+  ],
+  "ignoreTop": 180,
+  "window": 7,
+  "grid": [
+    6,
+    8
+  ],
+  "contentMasks": [
+    [
+      355,
+      801,
+      430,
+      430
+    ],
+    [
+      430,
+      2664,
+      430,
+      42
+    ]
+  ],
+  "controlMasks": [],
+  "controlRegions": [
+    [
+      72,
+      2040,
+      1116,
+      150
+    ],
+    [
+      150,
+      2220,
+      1020,
+      270
+    ],
+    [
+      135,
+      2484,
+      1035,
+      144
+    ]
+  ],
+  "controlColorRegions": [
+    [
+      627,
+      2334,
+      14,
+      48
+    ],
+    [
+      649,
+      2334,
+      14,
+      48
+    ]
+  ],
+  "colorPatches": [
+    {
+      "label": "deck top-left",
+      "rect": [
+        180,
+        480,
+        40,
+        40
+      ]
+    },
+    {
+      "label": "deck top-mid",
+      "rect": [
+        580,
+        470,
+        40,
+        40
+      ]
+    },
+    {
+      "label": "deck bottom-left",
+      "rect": [
+        170,
+        1460,
+        40,
+        40
+      ]
+    },
+    {
+      "label": "deck bottom-right",
+      "rect": [
+        1080,
+        1450,
+        40,
+        40
+      ]
+    },
+    {
+      "label": "record groove",
+      "rect": [
+        540,
+        700,
+        30,
+        30
+      ]
+    },
+    {
+      "label": "arm tube",
+      "rect": [
+        925,
+        805,
+        30,
+        20
+      ]
+    },
+    {
+      "label": "arm base ring",
+      "rect": [
+        1008,
+        528,
+        24,
+        24
+      ]
+    },
+    {
+      "label": "play fill",
+      "rect": [
+        660,
+        2270,
+        20,
+        20
+      ]
+    },
+    {
+      "label": "pause bar",
+      "rect": [
+        630,
+        2350,
+        8,
+        12
+      ]
+    },
+    {
+      "label": "progress fill",
+      "rect": [
+        200,
+        2063,
+        30,
+        12
+      ]
+    },
+    {
+      "label": "progress rest",
+      "rect": [
+        900,
+        2067,
+        30,
+        8
+      ]
+    }
+  ],
+  "criticalRegions": [
+    {
+      "label": "deck",
+      "rect": [
+        89,
+        467,
+        1112,
+        1054
+      ]
+    },
+    {
+      "label": "title",
+      "rect": [
+        60,
+        1584,
+        1170,
+        192
+      ]
+    },
+    {
+      "label": "progress",
+      "rect": [
+        72,
+        2040,
+        1116,
+        150
+      ]
+    },
+    {
+      "label": "transport",
+      "rect": [
+        150,
+        2220,
+        1020,
+        270
+      ]
+    },
+    {
+      "label": "tools",
+      "rect": [
+        135,
+        2484,
+        1035,
+        144
+      ]
+    }
+  ],
+  "targets": {
+    "controlSsim": 0.9,
+    "controlDeltaE": 4,
+    "controlEdge": 0.35
+  },
+  "acceptanceScope": "diagnostic; geometry/manual/normal navigation/motion separate",
+  "frozenAnchors": "docs/ui-spec/anchor-list-4851-2026-10-23.md",
+  "candidateSha256": "004b7af86a2b9480463265bb0f2ab1c7203be1c9b0c25575dc65652cc6cc0e8a"
+}

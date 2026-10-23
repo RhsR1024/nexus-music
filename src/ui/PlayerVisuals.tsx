@@ -1,5 +1,5 @@
 import {requireNativeView} from 'expo';
-import {useEffect,useMemo,useRef,useState,useSyncExternalStore,type PropsWithChildren} from 'react';
+import {useContext,useEffect,useMemo,useRef,useState,useSyncExternalStore,type PropsWithChildren} from 'react';
 import {AccessibilityInfo,Animated,AppState,Easing,View,type GestureResponderEvent,type ViewProps} from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
 import {RingSeekGesture,ringFraction} from '../domain/ringSeek.ts';
@@ -8,18 +8,22 @@ import {trackKey,type Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';
 import {usePresentationVisible} from './AdaptiveModal.tsx';
 import {paper} from './tokens.ts';
+import {VisualSamplingContext} from './VisualSampling.ts';
 const NativeVinylReflection=requireNativeView<ViewProps>('NexusNative','VinylReflection');
 // IMG_4851 deck local units: 370.33x351pt deck, 300pt record at (10.33,33),
 // 66.67pt base ring at (280.33,12.67), black arm-rest at (293.83,127.33).
 // The current 12.3pt tonearm engages at 21.6deg; material reconstruction
 // and the 60pt base remain approximate pending the frozen visual gates.
 export function Vinyl({services,track,width,playing}:{services:Services;track:Track;width:number;playing:boolean}){
-  const visible=usePresentationVisible();
+  const visible=usePresentationVisible(),sampling=useContext(VisualSamplingContext);
+  const sampledPhase=sampling&&Number.isFinite(sampling.recordPhase)?((sampling.recordPhase%1)+1)%1:undefined;
   const identity=trackKey(track.origin);
   const rotation=useMemo(()=>new Animated.Value(0),[identity]),tonearm=useRef(new Animated.Value(playing?1:0)).current;
   const [reduce,setReduce]=useState(true),[foreground,setForeground]=useState(AppState.currentState==='active');
   useEffect(()=>{let active=true;void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(active)setReduce(value);});const motion=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduce),app=AppState.addEventListener('change',value=>setForeground(value==='active'));return()=>{active=false;motion.remove();app.remove();};},[]);
-  useEffect(()=>{let active=true,animation:Animated.CompositeAnimation|undefined;
+  useEffect(()=>{
+    if(sampledPhase!==undefined){rotation.stopAnimation();rotation.setValue(sampledPhase);return;}
+    let active=true,animation:Animated.CompositeAnimation|undefined;
     // Wrap at complete turns so long sessions do not accumulate float error.
     // stopAnimation returns the actual native phase; stale callbacks cannot
     // restart a hidden, replaced or unmounted turntable.
@@ -31,7 +35,7 @@ export function Vinyl({services,track,width,playing}:{services:Services;track:Tr
     };
     rotation.stopAnimation(value=>{if(active&&playing&&visible&&!reduce&&foreground)turn(value);});
     return()=>{active=false;animation?.stop();rotation.stopAnimation();};
-  },[identity,playing,visible,reduce,foreground,rotation]);
+  },[identity,playing,visible,reduce,foreground,rotation,sampledPhase]);
   useEffect(()=>{
     const target=playing?1:0;
     tonearm.stopAnimation();
@@ -43,7 +47,7 @@ export function Vinyl({services,track,width,playing}:{services:Services;track:Tr
   },[playing,visible,reduce,foreground,tonearm]);
   // Record and arm use deck-local coordinates (design 370.33x351), so the
   // narrow left band and the arm's right bay keep their measured proportions.
-  const s=width/370.33,h=351*s,record=300*s,label=139.33*s;
+  const s=width/370.33,h=351*s,record=300*s,label=139.33*s,photo=128*s,labelBorder=(label-photo)/2;
   const baseD=60*s,baseX=315*s,baseY=45*s,jointD=21.67*s,jointX=309*s,jointY=56*s;
   const resting=tonearm.interpolate({inputRange:[0,1],outputRange:['0deg','21.6deg']});
   return <View testID="vinyl-turntable" collapsable={false} accessible={false} pointerEvents="none" style={{height:h,alignItems:'center'}}>
@@ -58,7 +62,7 @@ export function Vinyl({services,track,width,playing}:{services:Services;track:Tr
             {[76,78.7,83,85.3,87.7,90,92.3,94.7,99.7,104.3,106.7,109,111.3,113.7,118.3,125.3].map((r,i)=><View key={`g${i}`} style={{position:'absolute',left:(150-r)*s,top:(150-r)*s,width:2*r*s,height:2*r*s,borderRadius:r*s,borderWidth:.33,borderColor:'#1E1E1E'}}/>)}
             {[77,79.7,84,86.3,88.7,91,93.3,95.7,100.7,105.3,107.7,110,112.3,114.7,119.3,126.3].map((r,i)=><View key={`d${i}`} style={{position:'absolute',left:(150-r)*s,top:(150-r)*s,width:2*r*s,height:2*r*s,borderRadius:r*s,borderWidth:.33,borderColor:'#050505'}}/>)}
             {[[131.3,4.6,'#030303'],[136,4,'#0E0E0E'],[138.7,2,'#020202'],[149.7,11,'#0C0C0C'],[150,.5,'#1A1A1A']].map(([r,w,c],i)=><View key={`o${i}`} style={{position:'absolute',left:(150-(r as number))*s,top:(150-(r as number))*s,width:2*(r as number)*s,height:2*(r as number)*s,borderRadius:(r as number)*s,borderWidth:(w as number)*s,borderColor:c as string}}/>)}
-            <View style={{width:label,height:label,borderRadius:label/2,overflow:'hidden',borderWidth:2*s,borderColor:'#1F3041'}}><Cover services={services} track={track} size={label}/></View>
+            <View style={{width:label,height:label,borderRadius:label/2,overflow:'hidden',borderWidth:labelBorder,borderColor:'#1F3041'}}><Cover services={services} track={track} size={photo} radius={photo/2}/></View>
           </Animated.View>
           <View testID="vinyl-spindle" collapsable={false} style={{position:'absolute',width:9*s,height:9*s,borderRadius:4.5*s,backgroundColor:'#BABDBA',borderWidth:2*s,borderColor:'#53585B'}}/>
         </View>
