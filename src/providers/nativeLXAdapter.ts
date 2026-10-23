@@ -1,5 +1,5 @@
 import { abortError, throwIfAborted } from './async.ts';
-import { readLXCapabilities } from './lx.ts';
+import { readLXInitialize } from './lx.ts';
 import type { LXTransport } from './multiSourceResolver.ts';
 import type { SourceLifecycle } from './sourceRegistry.ts';
 
@@ -33,7 +33,7 @@ export function createNativeLX(native: NativeLX): SourceLifecycle & LXTransport 
       try {
         const result = await native.initializeSource(source.id, revision, source.name, source.script);
         throwIfAborted(signal);
-        return readLXCapabilities(JSON.parse(result));
+        return readLXInitialize(result);
       } finally { signal.removeEventListener('abort', cancel); }
     },
     destroy(id, revision) { void native.destroySource(id, revision).catch(() => {}); },

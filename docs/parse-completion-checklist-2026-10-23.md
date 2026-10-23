@@ -6,7 +6,7 @@
 |---|---|---|---|
 |P1|空字段/坏rich格式逐级回退至另一rich或plain，保留可读文本；翻译/罗马音同样处理|lyrics/normalize.ts normalizeLyrics；lyrics/service.ts消费；lyric-normalize-fallback/lyric-service测试|代码/业务测试及合成服务App通过；真实来源/真机待，不计全部parse完成|
 |P2|结构化offset/行词时间有限且合理；词间单调与所属行窗口、坏数据降级；最终展开行/总词预算、同起点行结束语义|structured.ts/normalize.ts；structured-lyrics/navidrome与activeLyric/stage测试|时序预算/声部与合成App通过；稀疏cue仍行级降级，真实服务/设备待|
-|P3|LX能力声明name/quality长度数量预算，已知动作授权/未知音质兼容、坏源隔离与宿主初始化|providers/lx.ts readLXCapabilities；nativeLXAdapter.ts；lx-adapter.test.ts|待实施|
+|P3|LX能力声明name/quality长度数量预算，已知动作授权/未知音质兼容、坏源隔离与宿主初始化|providers/lx.ts readLXCapabilities；nativeLXAdapter.ts；lx-adapter.test.ts|已实施并通过业务/adapter→Registry/诊断边界测试；真实LX服务/真机待，见[P3回执](parse-lx-p3-2026-10-23.md)|
 |P4|LX v2五平台身份/元数据一致、KG复合ID、MID/数值ID区分、长整数/有限duration/质量预算、预览与入库同验证|storage/playlistJSON.ts lxTrack/decodePlaylistJSON；playlist-json.test.ts|待实施|
 |P5|正式Files/LXMC→同parser→准确预览→取消零写入/确认原子导入→重启保身份顺序与重复项；失败原库保留|LibraryDataTools.tsx；library.importCollections；导入App测试|待实施|
 
@@ -37,3 +37,7 @@ P1代码2987f1f已正常push，清洁本地unsigned归档与包校验通过，�
 验证须补真实adapter→parser→Registry组合：坏声明/超限源failed且匹配revision销毁，有效源ready并能request；多字节边界、重复洪泛、未知quality roundtrip和运行时未知action拒绝；诊断也不能绕过。上述仅审计/计划，P3仍未实施、不增加工程完成比例。
 
 P3预算兼容性只读复核：本地V261008共24份脚本中，能静态识别的33处actions字面量数组最大4项/最长11个UTF16单元，20处qualitys最大4项/最长9单元；仍有变量数组和运行时拼装，不能外推24份动态兼容。Q1515固定547ccfe6的user-api-preload.js:153–168/319–327支持未知动作过滤，但其quality白名单不移植；CyMusic固定bf0d4694的脚本头name24是元信息策略，不是能力name标准。主代理已亲读Q1515这些行及本项目ScriptRuntime.swift:84–85的1MiB UTF8限制。因此256/128/64拟作为音枢本地预算，保持未知quality原值/顺序、缺省name回退平台、合法未知动作不授权、原数组先限后去重；尚未实施或执行新预算动态验证。
+
+## P3 2026-10-23 实施结果
+
+上述审计项已落地：`readLXInitialize` 在 parse 前按 UTF-8 字节校验 1MiB（Hermes 安全，不依赖 `Buffer`）；name 256、actions/qualitys 原始数组 64×128 先限后去重；未知动作不授权、未知 quality 保留原值但不扩展路由；空 qualitys 仍可用于 lyric/pic；坏声明使整脚本失败，Registry 按 revision 隔离销毁，诊断 adapter 同路径受预算。`tests/lx-adapter.test.ts` 8/8 覆盖 adapter→parser→Registry 隔离与诊断边界；`npm run check` 474/474、`npm run test:native` 通过。未做 24 份脚本逐份动态兼容、真实平台服务或真机验收，详见[P3回执](parse-lx-p3-2026-10-23.md)。P4/P5 仍待实施。
