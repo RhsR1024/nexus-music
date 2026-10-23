@@ -1,3 +1,9 @@
+## 2026-10-23 高清封面r47与P3阶段回执
+
+封面512/1024两档与P3 LX初始化预算已实现并验证：`npm run check` 474/474、`tests/lx-adapter.test.ts` 8/8、原生`CoverCacheTests`通过。r47 Release正式采集manifest `exitCode:0`、`sourceUnchanged:true`、外部scene/cover `unchanged:true`，`provenanceReady:true`；visual-lab封面98.825%/ΔE 1.392/ink r 0.994，整页95.03%、控件93.91%，仅歌词78.41%/5.60未过。r45因采集中编辑源码作废为诊断；r46在构建前因未加载工具链环境失败并保留目录，未覆盖。r44标点试验为负证据，产品恢复原标点。缓存实检924×924 JPEG（248548B）。
+
+CI现状：39879388063/27e19b7仍in_progress，39882388385/e73473b唯一pending（1/1）。39837345526/6f2e413于step10失败，为已记录的录制时序问题，已有11秒延迟复验通过证据[ci-recorder-timeout](ci-recorder-timeout-2026-10-23.md)，修复已含于27e19b7，待终态。本轮无新本地iOS27归档声明；本机SDK26.2不冒充iOS27，真实服务、签名与真机仍待。下一次push后旧pending由single并发自动替换，不手动取消运行中任务。
+
 ## 2026-10-23 同秒采集阶段回执
 
 e73473b已正常push。测试/文档阶段本地R41c/R43各1/0/0，源码相同、实际04:26/04:44，状态栏下零差异；465检查通过，17.5pt试验暂撤回并保留逐字反证。该阶段未改产品代码，无新增device archive声明，沿用27e19b7产品归档的有限证据。push后API核对39879388063/27e19b7运行、39882388385/e73473b唯一pending，1运行/1排队，未取消运行中或重派旧版；新iOS27终态、真实服务/签名/真机待。见[UI回执](ui-spec/classic-time-and-font-r41-2026-10-23.md)。

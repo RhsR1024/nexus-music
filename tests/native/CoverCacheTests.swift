@@ -16,7 +16,22 @@ import UniformTypeIdentifiers
     let properties = CGImageSourceCopyPropertiesAtIndex(image, 0, nil)! as NSDictionary
     assert((properties[kCGImagePropertyPixelWidth] as! Int) <= 512 && (properties[kCGImagePropertyPixelHeight] as! Int) == 512)
     assert(cache.hit(key) == file); assert(cache.store(Data([1, 2]), key: key) == nil); assert(cache.hit("../escape") == nil)
-    let epoch = cache.epoch; cache.clear(); assert(cache.epoch > epoch && cache.hit(key) == nil)
+    let hdKey = String(repeating: "b", count: 64)
+    let hdFile = cache.store(data as Data, key: hdKey, maxPixelSize: 1024)!
+    let hdImage = CGImageSourceCreateWithURL(URL(string: hdFile)! as CFURL, nil)!
+    let hdProperties = CGImageSourceCopyPropertiesAtIndex(hdImage, 0, nil)! as NSDictionary
+    assert((hdProperties[kCGImagePropertyPixelWidth] as! Int) == 512 && (hdProperties[kCGImagePropertyPixelHeight] as! Int) == 1024)
+    assert(cache.hit(key) == file && cache.hit(hdKey) == hdFile && file != hdFile)
+    assert(cache.store(data as Data, key: hdKey, maxPixelSize: 4096) == nil)
+    let smallContext = CGContext(data: nil, width: 40, height: 20, bitsPerComponent: 8, bytesPerRow: 160, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    let smallData = NSMutableData(), smallDestination = CGImageDestinationCreateWithData(smallData, UTType.png.identifier as CFString, 1, nil)!
+    CGImageDestinationAddImage(smallDestination, smallContext.makeImage()!, nil); assert(CGImageDestinationFinalize(smallDestination))
+    let smallFile = cache.store(smallData as Data, key: String(repeating: "c", count: 64), maxPixelSize: 1024)!
+    let smallImage = CGImageSourceCreateWithURL(URL(string: smallFile)! as CFURL, nil)!
+    let smallProperties = CGImageSourceCopyPropertiesAtIndex(smallImage, 0, nil)! as NSDictionary
+    assert((smallProperties[kCGImagePropertyPixelWidth] as! Int) == 40 && (smallProperties[kCGImagePropertyPixelHeight] as! Int) == 20)
+    assert(cache.store(Data(repeating: 0, count: 8 * 1024 * 1024 + 1), key: hdKey, maxPixelSize: 1024) == nil)
+    let epoch = cache.epoch; cache.clear(); assert(cache.epoch > epoch && cache.hit(key) == nil && cache.hit(hdKey) == nil)
     print("Native cover cache checks passed: bounded thumbnail, validated image, hashed path and clear epoch")
   }
 }

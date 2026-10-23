@@ -48,7 +48,8 @@ public final class NexusNativeModule: Module {
     AsyncFunction("decodeQRC") { (hex: String) throws -> String in try ScriptUtilities.perform("qrcDecode", ["input": hex]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("coverStatistics") { self.covers.statistics() }.runOnQueue(coverQueue)
     AsyncFunction("clearCovers") { self.covers.clear() }.runOnQueue(coverQueue)
-    AsyncFunction("fetchCover") { (key: String, url: String, promise: Promise) in
+    AsyncFunction("fetchCover") { (key: String, url: String, maxPixelSize: Int, promise: Promise) in
+      guard [512, 1024].contains(maxPixelSize) else { promise.reject("COVER_SIZE", "封面尺寸无效"); return }
       if let hit = self.covers.hit(key) { promise.resolve(hit); return }
       if var pending = self.coverRequests[key] { pending.promises.append(promise); self.coverRequests[key] = pending; return }
       guard self.coverRequests.count < 4 else { promise.reject("COVER_BUSY", "封面加载繁忙"); return }
@@ -60,7 +61,7 @@ public final class NexusNativeModule: Module {
         pending.client.destroy()
         let status = response?["statusCode"] as? Int ?? 0
         let data = (response?["body"] as? String).flatMap { Data(base64Encoded: $0) }
-        let result = error == nil && epoch == self.covers.epoch && (200..<300).contains(status) ? data.flatMap { self.covers.store($0, key: key) } : nil
+        let result = error == nil && epoch == self.covers.epoch && (200..<300).contains(status) ? data.flatMap { self.covers.store($0, key: key, maxPixelSize: maxPixelSize) } : nil
         for promise in pending.promises { if let result { promise.resolve(result) } else { promise.reject("COVER_FAILED", "封面暂不可用") } }
       }
     }.runOnQueue(coverQueue)

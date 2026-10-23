@@ -43,7 +43,42 @@ test('cover grid bounds native concurrency and cancelled queued work never start
 test('clearing covers invalidates queued and active image results',async()=>{
   const finish:(()=>void)[]=[];let starts=0;const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});
   const service=new CoverService({fetchCover:async()=>{starts++;await new Promise<void>(resolve=>finish.push(resolve));return'file:///fixture.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async value=>value,registry,{request:async()=>''},async()=> '');
-  const jobs=Array.from({length:6},(_,i)=>service.loadURL(`https://images.invalid/${i}.jpg`,new AbortController().signal).then(()=>true,()=>false));
+  const jobs=Array.from({length:6},(_,i)=>service.loadURL(`https://images.invalid/${i}.jpg`,new AbortController().signal,i%2?1024:512).then(()=>true,()=>false));
   await new Promise(resolve=>setTimeout(resolve,0));await service.clear();finish.forEach(resolve=>resolve());
   assert.deepEqual(await Promise.all(jobs),Array(6).fill(false));assert.equal(starts,4);
+});
+
+test('player and thumbnail variants bind request size and cache identity without signed credentials',async()=>{
+  const calls:{key:string;url:string;size:number}[]=[];const sizes:number[]=[];
+  const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});
+  const service=new CoverService({fetchCover:async(key,url,size)=>{calls.push({key,url,size});return'file:///fixture.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async value=>value,registry,{request:async()=>''},async(_account,_id,_signal,size)=>{sizes.push(size);return`https://server.invalid/cover?size=${size}&token=private`;});
+  const signal=new AbortController().signal;
+  await service.loadPrivate('account','cover',signal);await service.loadPrivate('account','cover',signal,1024);await service.loadPrivate('account','cover',signal,1024);
+  assert.deepEqual(sizes,[512,1024,1024]);assert.notEqual(calls[0]!.key,calls[1]!.key);assert.equal(calls[1]!.key,calls[2]!.key);
+  assert.deepEqual(calls.map(x=>x.size),sizes);assert.ok(calls.every(x=>!x.key.includes('token')&&!x.key.includes('https')));
+  assert.deepEqual(JSON.parse(calls[1]!.key),['cover-v2',1024,['navidrome','account','cover']]);
+  await service.loadURL('https://images.invalid/cover',signal);await service.loadURL('https://images.invalid/cover',signal,1024);
+  assert.notEqual(calls[3]!.key,calls[4]!.key);assert.equal(calls[3]!.url,calls[4]!.url);
+});
+
+test('LX resolution variants retain revision identity and local artwork keeps its extraction boundary',async()=>{
+  const registry=new SourceRegistry({initialize:async()=>[{platform:'wy',name:'fixture',actions:['pic'],qualities:[]}],destroy(){}});registry.register({id:'a',name:'a',script:'fixture',fingerprint:'digest'});await registry.setEnabled('a',true);
+  const calls:{key:string;size:number}[]=[];let localCalls=0;
+  const service=new CoverService({fetchCover:async(key,_url,size)=>{calls.push({key,size});return'file:///fixture.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async value=>value,registry,{request:async()=> 'https://images.invalid/cover'},async()=>'',async()=>{localCalls++;return'file:///local-original.jpg';});
+  const track:Track={origin:{kind:'online',platform:'wy',id:'1'},title:'Fixture',artist:'Fixture',metadata:{},qualities:[]},signal=new AbortController().signal;
+  await service.loadTrack(track,signal);await service.loadTrack(track,signal,1024);
+  assert.deepEqual(JSON.parse(calls[1]!.key),['cover-v2',1024,['lx','digest','wy','1']]);assert.notEqual(calls[0]!.key,calls[1]!.key);
+  assert.equal(await service.loadTrack({...track,origin:{kind:'local',id:'local'}},signal,1024),'file:///local-original.jpg');assert.equal(localCalls,1);assert.equal(calls.length,2);
+});
+
+
+test('failed large covers fall back after releasing slots; clear never refills them',async()=>{
+  const registry=new SourceRegistry({initialize:async()=>[],destroy(){}}),requested:number[]=[];
+  const service=new CoverService({fetchCover:async(_key,_url,size)=>{if(size===1024)throw Error('offline');return'file:///thumbnail.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async value=>value,registry,{request:async()=>''},async(_a,_id,_s,size)=>{requested.push(size);return`https://server.invalid/cover?size=${size}`;});
+  const jobs=Array.from({length:6},(_,i)=>service.loadPrivate('account',String(i),new AbortController().signal,1024));
+  assert.deepEqual(await Promise.all(jobs),Array(6).fill('file:///thumbnail.jpg'));assert.equal(requested.filter(x=>x===512).length,6);
+  const finish:(()=>void)[]=[];let starts=0;
+  const delayed=new CoverService({fetchCover:async()=>{starts++;await new Promise<void>(resolve=>finish.push(resolve));throw Error('cleared');},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async value=>value,registry,{request:async()=>''},async()=> 'https://server.invalid/cover');
+  const pending=delayed.loadURL('https://images.invalid/cover',new AbortController().signal,1024);const outcome=pending.then(()=>true,()=>false);
+  await new Promise(resolve=>setTimeout(resolve,0));await delayed.clear();finish.forEach(resolve=>resolve());assert.equal(await outcome,false);assert.equal(starts,1);
 });
