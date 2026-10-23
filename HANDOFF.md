@@ -2185,3 +2185,8 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 外部案例 strict review 当前为 22 Evidence、9 Findings、6 Paths、3 Work Items，0 errors/0 warnings；APK reverse gate 与 `--review` 均 PASS。设备最终状态：屏幕熄灭超时 600000ms、`stay_on_while_plugged_in=0`、Sollin `MANAGE_EXTERNAL_STORAGE=allow`、`READ_MEDIA_AUDIO=allow`，隔离 WAV 已从手机删除，Sollin 前台且播放暂停。
 
 仍需后续补证：真实下载成功文件及元数据、本地文件实际播放、麦克风授权成功态、系统媒体输出成功态，以及连续手势/转场录屏；本批不把这些写成完成。
+
+
+## 2026-10-24 本地文件实际播放补证
+
+新增 E-574：隔离 WAV 被扫描后点击歌曲行进入实际播放，Sollin media-session state=3，mini 播放器切换为本地文件并显示“暂无歌词”；随后已暂停、删除手机上的精确文件、重新扫描并移除扫描目录。外部案例当前为23 Evidence、9 Findings、6 Paths、0 errors/0 warnings。
