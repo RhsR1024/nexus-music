@@ -1,3 +1,4 @@
+import {createLyricBudget} from './budget.ts';
 import {parseTTML} from './ttml.ts';
 export interface LyricWord {startMs:number;endMs:number;text:string}
 export interface LyricCue extends LyricWord {byteStart:number;byteEnd:number}
@@ -27,8 +28,8 @@ export function parseLyrics(input:string):LyricDocument {
   if(input.length>2*1024*1024)throw new Error('歌词数据过大');
   const offset=Number([...input.matchAll(/\[offset:([+-]?\d+)\]/gi)].at(-1)?.[1]??0);
   const shift=Number.isFinite(offset)?offset:0;
-  const lines:LyricLine[]=[],plain:string[]=[];
-  for(const raw of input.replace(/^\uFEFF/,'').split(/\r?\n/).slice(0,10000)) {
+  const lines:LyricLine[]=[],plain:string[]=[],charge=createLyricBudget();
+  for(const raw of input.replace(/^\uFEFF/,'').split(/\r?\n/)) {
     const value=raw.trim();if(!value||/^\[(ar|ti|al|by|offset|re|ve|length):/i.test(value)||value.startsWith('{'))continue;
     const enhanced=value.match(/^\[(\d+),(\d+)\](.*)$/);
     if(enhanced) {
@@ -36,16 +37,18 @@ export function parseLyrics(input:string):LyricDocument {
       if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||start+duration>maxTime)continue;
       const body=enhanced[3]!,kind=/<\d+,\d+,\d+>/.test(body)?'krc':/\(\d+,\d+,\d+\)/.test(body)?'yrc':'qrc';
       const parsed=tokens(body,start,kind);
+      charge(parsed.words?.length??0);
       lines.push({startMs:Math.max(0,start-shift),endMs:Math.max(0,start+duration-shift),text:parsed.text,
         ...(parsed.words?{words:parsed.words.map(word=>({...word,startMs:Math.max(0,word.startMs-shift),endMs:Math.max(0,word.endMs-shift)}))}:{})});
       continue;
     }
     const tags=[...value.matchAll(/\[(\d{1,4}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g)];
-    if(!tags.length){plain.push(value);continue;}
+    if(!tags.length){charge();plain.push(value);continue;}
     const end=tags.at(-1)!.index!+tags.at(-1)![0].length,body=value.slice(end);
     for(const tag of tags) {
       const start=timestamp(tag[1]!,tag[2]!,tag[3]);if(start===undefined)continue;
       const parsed=tokens(body,start,'lx');
+      charge(parsed.words?.length??0);
       lines.push({startMs:Math.max(0,start-shift),text:parsed.text,...(parsed.words?{words:parsed.words.map(word=>({...word,startMs:Math.max(0,word.startMs-shift),endMs:Math.max(0,word.endMs-shift)}))}:{})});
     }
   }

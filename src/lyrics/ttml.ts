@@ -1,3 +1,4 @@
+import {createLyricBudget} from './budget.ts';
 import type {LyricDocument,LyricLine,LyricWord} from './parser.ts';
 // Original bounded TTML lyric subset. No DOM, entity expansion, DTD or networking.
 import {parseBoundedXML,type XMLElement as Element} from '../formats/xml.ts';
@@ -18,7 +19,7 @@ export function parseTTML(input:string):LyricDocument {
     if(!Number.isFinite(result)||result<0||result>maxTime)throw new Error('TTML 时间越界');return result;
   };
   if((attr(root,'timeBase')??'media')!=='media'||(attr(root,'subFrameRate')??'1')!=='1')throw new Error('TTML 时间基准暂不支持');
-  const lines:LyricLine[]=[];
+  const lines:LyricLine[]=[],charge=createLyricBudget();
   interface Timing {start:number;end:number;agent?:string;preserve:boolean}
   const timing=(node:Element,parent:Timing):Timing=>{
     if(attr(node,'timeContainer')==='seq')throw new Error('TTML 顺序时间容器暂不支持');
@@ -41,6 +42,7 @@ export function parseTTML(input:string):LyricDocument {
       const append=(words:LyricWord[],background:boolean)=>{
         if(!context.preserve){while(words.length&&!words[0]!.text.trim())words.shift();while(words.length&&!words.at(-1)!.text.trim())words.pop();if(words.length){words[0]={...words[0]!,text:words[0]!.text.trimStart()};words[words.length-1]={...words.at(-1)!,text:words.at(-1)!.text.trimEnd()};}}
         if(!words.length)return;if(words.length>2000||lines.length>=10000)throw new Error('TTML 歌词过多');
+        charge(words.length);
         const ordered=words.every((word,i)=>i===0||word.startMs>=words[i-1]!.startMs);
         lines.push({startMs:Math.min(...words.map(word=>word.startMs)),endMs:Math.max(...words.map(word=>word.endMs)),text:words.map(word=>word.text).join(''),...(ordered?{words}:{}),...(background?{background:true}:{}),...(context.agent?{agent:context.agent}:{}),...(!background&&translation.length?{translation:translation.join('').trim()}:{}),...(!background&&romanization.length?{romanization:romanization.join('').trim()}: {})});
       };
