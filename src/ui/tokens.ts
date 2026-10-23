@@ -82,7 +82,9 @@ export const classicBlushBackground = {
 export const classicLyricLayout = {before: -10, after: 11} as const;
 // 4854 r49: inactive 17.5pt restores the reference advance; the active row
 // keeps 17pt so its measured width (781px) stays exact. The 17pt box preserves
-// the baseline rhythm for both rows.
+// the baseline rhythm for both rows. r53 matched the reference band ink by
+// raising the synthetic Black dilation to .26 (20833 vs 20916) yet scored
+// slightly lower (region SSIM 79.42 vs 79.52), so .1 remains the best state.
 export const classicLyricTypography = {size:17,inactiveSize:17.5,activeWeight:'900',inactiveWeight:'600',activeEmbolden:.1} as const;
 export const classicInk = {text:'#201919',secondary:'#5C4E4A',lyricInactive:'rgba(32,25,25,0.545)'} as const;
 export function classicLyricRow(live:boolean,fontScale:number,styleLineHeight:number){
