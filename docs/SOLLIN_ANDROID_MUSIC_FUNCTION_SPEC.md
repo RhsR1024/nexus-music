@@ -64,6 +64,6 @@
 
 动态案例已通过 strict case-review：112 条 Evidence（含录屏）已计算哈希，23 个 Finding、21 条调用路径均有引用，3 个 Work Items，0 errors / 0 warnings。已补齐 LX 检测与下载成功/失败清理、本地隔离音频扫描与实际播放、多文件夹/子目录聚合、真实 ID3 标签的艺术家合并与专辑拆分、麦克风及内置音频识曲成功态、熄屏返回、Android 媒体通知、强制停止/冷启动、播放器/队列录屏、文件修改时间和添加时间正序、同值时长与同值文件时间次级排序及混合缺失标签、本地搜索、索引移除、重扫恢复、在播保护、队列控制、歌单删除、数据/备份/同步、外观枚举、下载设置契约和本轮测试清理。仍待：系统媒体输出成功态、下载暂停/恢复与进程重启续传、更复杂跨字段标签冲突、添加时间同值和排序持久化范围、队列锁定对外部替换和跨页面持久化的专项语义、扫描过滤字段的实际效果、新建歌单远端写入结果、WebDAV/云端备份成功、密码锁屏、后台任务续接，以及录屏逐帧人工亲看；这些不能用单张静态截图代替。
 
-完整证据索引位于外部案例的 `report/ANDROID_MUSIC_FUNCTION_SPEC.md`；其 `notes/observations.md`、`notes/actions.jsonl`、`notes/timeline.md` 和 `evidence/E-*.md` 保存可复现细节。
+完整证据索引位于外部案例的 `report/ANDROID_MUSIC_FUNCTION_SPEC.md`；其 `notes/observations.md`、`notes/actions.jsonl`、`timeline.md` 和 `evidence/E-*.md` 保存可复现细节。
 
 本轮新增同一文件修改时间排序证据：Equal Alpha.wav 与 Equal Beta.wav 的修改时间相同；“文件修改时间/正序”显示 Alpha→Beta，切换倒序显示 Beta→Alpha，随后删除目录、移除扫描根并重扫恢复本地空态（E-788、E-790、E-792、E-794）。实现时需让排序方向作用于同值的名称次级键。
