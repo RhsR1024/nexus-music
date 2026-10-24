@@ -1,3 +1,4 @@
+import type {Track} from '../src/domain/track.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseProviderJSON } from '../src/providers/http.ts';
@@ -34,4 +35,17 @@ test('search pagination uses requested page and maps returned total', async () =
   const page = await provider.search('wy', 'query & +', 2, new AbortController().signal, 30);
   assert.ok(body.includes('offset=30')); assert.ok(body.includes('s=query%20%26%20%2B'));
   assert.equal(page.hasMore, true); assert.equal(page.total, 100);
+});
+
+test('WY missing search cover uses exact public song identity and ignores mismatched detail rows',async()=>{
+  const track:Track={origin:{kind:'online',platform:'wy',id:'9007199254740993'},title:'Public fixture',artist:'Fixture',metadata:{},qualities:[]};
+  let calls=0;
+  const provider=new OnlineProvider({md5:async()=>'',deviceId:()=>'',http:async(url,request,signal)=>{
+    calls++;assert.equal(url,'https://music.163.com/api/v3/song/detail');assert.equal(request?.method,'POST');
+    const fields=new URLSearchParams(request?.body as string);assert.deepEqual(JSON.parse(fields.get('ids')!),[track.origin.id]);
+    assert.ok(signal);return{code:200,songs:[{id:'other',al:{picUrl:'https://images.invalid/wrong.jpg'}},{id:track.origin.id,al:{picUrl:'https://images.invalid/right.jpg'}}]};
+  }});
+  assert.equal(await provider.artwork(track,new AbortController().signal),'https://images.invalid/right.jpg');
+  assert.equal(await provider.artwork({...track,origin:{kind:'online',platform:'tx',id:'private-fixture'}},new AbortController().signal),undefined);
+  assert.equal(calls,1);
 });

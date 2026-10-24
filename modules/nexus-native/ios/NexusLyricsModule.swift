@@ -94,6 +94,8 @@ final class NexusLyricLineView: ExpoView {
     let size = min(100, max(10, object["size"] as? Double ?? 24))
     let center = object["center"] as? Bool == true
     let height = min(2, max(1.1, (object["lineHeight"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 1.35))
+    // Compact previews reserve one row; full lyric pages keep wrapping.
+    let maxLines = (object["maxLines"] as? Int).map { min(10, max(0, $0)) } ?? 0
     let radius = min(4, max(0, (object["blur"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
     emphasis = object["emphasis"] as? Bool != false
     let hex = object["color"] as? String ?? "#FFFFFF"
@@ -107,9 +109,11 @@ final class NexusLyricLineView: ExpoView {
     let rawCues = object["timedCues"] as? [[String: Any]] ?? []
     // Dictionary order must not rebuild glyph layout on a clock-only update.
     let timingData = (try? JSONSerialization.data(withJSONObject: [rawWords, rawCues], options: [.sortedKeys])) ?? Data()
-    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(weight)|\(height)|\(radius)|\(embolden)|\(timingData.base64EncodedString())"
+    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(weight)|\(height)|\(maxLines)|\(radius)|\(embolden)|\(timingData.base64EncodedString())"
     if signature != layoutKey {
       signature = layoutKey; stageStyle = nextStyle; blur = radius; blurred = nil
+      container.maximumNumberOfLines = maxLines
+      container.lineBreakMode = maxLines > 0 ? .byTruncatingTail : .byWordWrapping
       color = Self.color(hex)
       var font = UIFont.systemFont(ofSize: size, weight: weight == "900" ? .black : weight == "800" ? .heavy : weight == "700" ? .bold : weight == "600" ? .semibold : .medium)
       if let url = URL(string: fontURI), url.isFileURL,

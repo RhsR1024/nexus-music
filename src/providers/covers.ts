@@ -8,8 +8,9 @@ export interface CoverNative {fetchCover(key:string,url:string,maxPixelSize:Cove
 export class CoverService {
   private active=0;private epoch=0;private waiting:{run:()=>void;cancel:()=>void}[]=[];
   private native:CoverNative;private hash:(value:string)=>Promise<string>;private registry:SourceRegistry;private transport:LXTransport;private privateURL:(account:string,id:string,signal:AbortSignal,size:CoverSize)=>Promise<string>;
+  private publicCover?: (track:Track,signal:AbortSignal)=>Promise<string|undefined>;
   private localCover?:(track:Track,signal:AbortSignal)=>Promise<string|undefined>;
-  constructor(native:CoverNative,hash:(value:string)=>Promise<string>,registry:SourceRegistry,transport:LXTransport,privateURL:(account:string,id:string,signal:AbortSignal,size:CoverSize)=>Promise<string>,localCover?:(track:Track,signal:AbortSignal)=>Promise<string|undefined>){this.localCover=localCover;this.native=native;this.hash=hash;this.registry=registry;this.transport=transport;this.privateURL=privateURL;}
+  constructor(native:CoverNative,hash:(value:string)=>Promise<string>,registry:SourceRegistry,transport:LXTransport,privateURL:(account:string,id:string,signal:AbortSignal,size:CoverSize)=>Promise<string>,localCover?:(track:Track,signal:AbortSignal)=>Promise<string|undefined>,publicCover?:(track:Track,signal:AbortSignal)=>Promise<string|undefined>){this.publicCover=publicCover;this.localCover=localCover;this.native=native;this.hash=hash;this.registry=registry;this.transport=transport;this.privateURL=privateURL;}
   statistics(){return this.native.coverStatistics();}
   clear(){this.epoch++;for(const job of [...this.waiting])job.cancel();return this.native.clearCovers();}
   async loadPrivate(account:string,id:string,signal:AbortSignal,size:CoverSize=512){
@@ -19,6 +20,15 @@ export class CoverService {
     if(track.origin.kind==='local'||track.origin.kind==='device'||track.origin.kind==='webdav')return this.localCover?.(track,signal);
     if(track.origin.kind==='navidrome')return typeof track.metadata.coverArtId==='string'&&track.metadata.coverArtId?this.loadPrivate(track.origin.accountId,track.metadata.coverArtId,signal,size):undefined;
     if(track.artwork)return this.loadURL(track.artwork,signal,size);
+    if(this.publicCover){
+      const epoch=this.epoch;
+      try{
+        const release=await this.acquire(signal);let url:string|undefined;
+        try{url=await bounded(child=>this.publicCover!(track,child),signal,6000);}finally{release();}
+        throwIfAborted(signal);if(epoch!==this.epoch)throw new Error('封面请求已过期');
+        if(url)return this.loadURL(url,signal,size);
+      }catch{throwIfAborted(signal);if(epoch!==this.epoch)throw new Error('封面请求已过期');}
+    }
     const platform=track.origin.platform;
     for(const source of this.registry.getSnapshot()){
       if(!this.registry.isCurrent(source))continue;

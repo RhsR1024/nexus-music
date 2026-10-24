@@ -450,9 +450,15 @@ final class SourceSettingsTests: XCTestCase {
     defer { XCUIDevice.shared.orientation = .portrait }
     let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
-    let query=app.textFields["搜索歌曲或歌手"];for _ in 0..<8 {if query.isHittable{break};app.swipeUp()};XCTAssertTrue(query.isHittable)
+    let query=app.textFields["搜索歌曲或歌手"];for _ in 0..<8 {if query.isHittable{break};app.swipeUp()};let diagnostic=XCTAttachment(screenshot:app.screenshot());diagnostic.name="Search menu entry";diagnostic.lifetime = .keepAlways;add(diagnostic)
+    XCTAssertTrue(query.isHittable)
     query.tap();query.typeText("fixture");query.typeText("\n");app.buttons["搜索"].firstMatch.tap()
     let song=app.buttons["search-track-wy-0"];XCTAssertTrue(song.waitForExistence(timeout:15))
+    let actions=app.buttons["search-more-wy-0"]
+    for _ in 0..<6 {if actions.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(actions.isHittable);actions.tap()
+    XCTAssertTrue(app.buttons["search-action-加入歌单"].waitForExistence(timeout:5))
+    let menuImage=XCTAttachment(screenshot:app.screenshot());menuImage.name="Search shared song actions";menuImage.lifetime = .keepAlways;add(menuImage)
     let comments=app.buttons["歌曲评论"].firstMatch;for _ in 0..<6 {if comments.isHittable{break};app.swipeUp()};comments.tap()
     XCTAssertTrue(app.staticTexts["Synthetic hot comment"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["Synthetic comment 1"].exists)
     let more=app.buttons["加载更多评论"];for _ in 0..<6 {if more.isHittable{break};app.swipeUp()};more.tap()
@@ -2174,7 +2180,7 @@ final class SourceSettingsTests: XCTestCase {
     func evidence(_ name:String){let attachment=XCTAttachment(screenshot:app.screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)}
     func detail(){let first=app.buttons["discovery-item-0"];XCTAssertTrue(first.waitForExistence(timeout:15));reach(first);first.tap();XCTAssertTrue(app.buttons["刷新歌单"].waitForExistence(timeout:10))}
     let more=app.buttons["更多操作：Synthetic discovery one"]
-    let panel=app.otherElements["discovery-actions"].firstMatch
+    let panel=app.descendants(matching:.any).matching(identifier:"discovery-actions").firstMatch
     func action(_ name:String)->XCUIElement{app.buttons["discovery-action-"+name]}
     func actions(){reach(more);more.tap();XCTAssertTrue(panel.waitForExistence(timeout:10));for name in ["下一首","加入队列","加入歌单"]{XCTAssertTrue(action(name).waitForExistence(timeout:10));XCTAssertTrue(action(name).isHittable)}}
     let name="Nexus discovery actions "+String(UUID().uuidString.prefix(8))
@@ -2657,6 +2663,68 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();openSettings(app,page:"background");reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Persisted visual image settings and fallback";screenshot.lifetime = .keepAlways;add(screenshot)
   }
+  // Explicitly selected local-only live validation. Keep all imported sources.
+  func testLiveSourceCatalog() throws {
+    let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/live-source-index")!)
+    let rows=try XCTUnwrap(JSONSerialization.jsonObject(with:bytes) as? [[String:Any]])
+    XCTAssertFalse(rows.isEmpty);XCTAssertLessThanOrEqual(rows.count,32)
+    let app=XCUIApplication();app.launch();openSettings(app,page:"sources")
+    func reach(_ item:XCUIElement){
+      for _ in 0..<30 {if item.isHittable{break};let above=item.exists && item.frame.midY<app.frame.midY
+        if above{app.swipeDown()}else{app.swipeUp()}}
+      XCTAssertTrue(item.isHittable)
+    }
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    let address=app.textFields["音源订阅地址"],submit=app.buttons["从地址导入"]
+    for row in rows {
+      let index=try XCTUnwrap(row["index"] as? Int)
+      reach(address);address.tap()
+      for character in "http://127.0.0.1:18439/live-source-\(index).js"{address.typeText(String(character))}
+      address.typeText("\n");reach(submit);submit.tap()
+      let imported=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+        let value=address.value as? String ?? ""
+        return !value.contains("127.0.0.1") && address.isEnabled
+      },object:nil)
+      XCTAssertEqual(XCTWaiter.wait(for:[imported],timeout:20),.completed,"Live source import must finish through the production catalog")
+    }
+    let select=app.buttons["全选"].firstMatch;reach(select);select.tap()
+    let enable=app.buttons["启用"].firstMatch;reach(enable);enable.tap()
+    let complete=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","完成 ")).firstMatch
+    XCTAssertTrue(complete.waitForExistence(timeout:180));image("Live source catalog initialization results")
+    try verifyLiveSourcePlayback(app)
+  }
+  func testLiveSourcePlayback() throws {
+    let app=XCUIApplication();app.launch();try verifyLiveSourcePlayback(app)
+  }
+  private func verifyLiveSourcePlayback(_ app:XCUIApplication) throws {
+    func reach(_ item:XCUIElement){
+      for _ in 0..<30 {if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}}
+      XCTAssertTrue(item.isHittable)
+    }
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    // Real public metadata and live script resolution, with the production entry.
+    openSettings(app,page:"playback")
+    let basic=app.descendants(matching:.any).matching(identifier:"128k").firstMatch;reach(basic);basic.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];reach(query);query.tap()
+    for character in "Shape of You"{query.typeText(String(character))};query.typeText("\n")
+    let search=app.buttons["run-online-search"];reach(search);search.tap()
+    let first=app.buttons["search-track-wy-0"];XCTAssertTrue(first.waitForExistence(timeout:45));reach(first);image("Live source public search results");first.tap()
+    let mini=app.buttons["打开播放页"];XCTAssertTrue(mini.waitForExistence(timeout:30));mini.tap()
+    app.buttons["更多播放控制"].tap();app.buttons["播放界面样式"].tap()
+    let classic=app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch
+    XCTAssertTrue(classic.waitForExistence(timeout:10));classic.tap()
+    XCTAssertTrue(classic.waitForNonExistence(timeout:10))
+    let artwork=app.descendants(matching:.any).matching(identifier:"classic-artwork").firstMatch
+    XCTAssertTrue(artwork.descendants(matching:.any).matching(identifier:"cover-image").firstMatch.waitForExistence(timeout:30),"Public song artwork must replace the placeholder")
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:120))
+    let transport=app.buttons["暂停"].firstMatch
+    XCTAssertTrue(transport.isHittable);XCTAssertLessThanOrEqual(transport.frame.maxY,app.windows.firstMatch.frame.maxY-16,"Long real lyrics must leave the full transport visible")
+    XCTAssertTrue(app.buttons["上一首"].firstMatch.isHittable);XCTAssertTrue(app.buttons["下一首"].firstMatch.isHittable)
+    image("Live source actual decoded playback")
+    let pause=app.buttons["暂停"].firstMatch;reach(pause);pause.tap()
+  }
+
   func testLiveLXPlayback() throws {
     let app=XCUIApplication();app.launch()
     openSettings(app,page:"sources")

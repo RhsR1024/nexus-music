@@ -1,6 +1,4 @@
 import {Text,TextInput} from './Typography.tsx';
-import {CommentsModal} from './CommentsModal.tsx';
-import {MatchModal} from './MatchModal.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { Discovery } from './Discovery.tsx';
 import { useEffect, useState, useSyncExternalStore } from 'react';
@@ -9,16 +7,16 @@ import type { Services } from '../app/services.ts';
 import type { OnlinePlatform } from '../domain/track.ts';
 import { trackKey } from '../domain/track.ts';
 import { platforms } from '../providers/searchCoordinator.ts';
-import {PlaylistPicker} from './PlaylistPicker.tsx';
+import {TrackActions} from './TrackActions.tsx';
+import {Ionicons} from '@expo/vector-icons';
 import type {Track} from '../domain/track.ts';
 export const platformNames: Readonly<Record<OnlinePlatform,string>> = {wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕'};
 export function Search({ services }: { services: Services }) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const state = useSyncExternalStore(services.search.subscribe,services.search.getSnapshot);
   const [query,setQuery] = useState(state.query), [platform,setPlatform] = useState<OnlinePlatform|'all'>('all');
-  const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
-  const [commenting,setCommenting]=useState<Track|null>(null);
-  const [adding,setAdding]=useState<readonly Track[]>([]),[matching,setMatching]=useState<Track|null>(null);
+
+  const [menuTrack,setMenuTrack]=useState<Track|null>(null);
   const [pages,setPages]=useState<Partial<Record<OnlinePlatform,number>>>({});
   useEffect(()=>setPages({}),[state.query]);
   useEffect(()=>setPages(value=>{
@@ -36,13 +34,10 @@ export function Search({ services }: { services: Services }) {
     {state.groups.map(group => <View key={group.platform} style={styles.group}>
       <Text style={styles.heading}>{platformNames[group.platform]}　<Text style={styles.caption}>{group.items.length} 首已载入{group.total!==undefined?` / ${group.total}`:''}</Text></Text>
       {group.items.slice((pages[group.platform]??0)*50,((pages[group.platform]??0)+1)*50).map((track,relativeIndex) => {const index=(pages[group.platform]??0)*50+relativeIndex;return <View key={`${index}-${trackKey(track.origin)}`} style={styles.trackRow}>
-        <Pressable accessibilityRole="button" testID={`search-track-${group.platform}-${index}`} accessibilityLabel={`播放${track.title}`} onPress={() => services.playTracks(group.items,index)}>
+        <Pressable accessibilityRole="button" testID={`search-track-${group.platform}-${index}`} accessibilityLabel={`播放${track.title}`} style={{flex:1,minHeight:44}} onPress={() => services.playTracks(group.items,index)}>
           <Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''}</Text>
         </Pressable>
-        <View style={styles.row}><Pressable accessibilityRole="button" onPress={()=>setCommenting(track)} style={styles.chip}><Text style={styles.text}>歌曲评论</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>setMatching(track)} style={styles.chip}><Text style={styles.text}>匹配歌曲</Text></Pressable><Pressable accessibilityRole="button" onPress={() => services.addToQueue(track,true)} style={styles.chip}><Text style={styles.text}>下一首</Text></Pressable><Pressable accessibilityRole="button" onPress={() => services.addToQueue(track)} style={styles.chip}><Text style={styles.text}>加入队列</Text></Pressable>
-          <Pressable accessibilityRole="button" onPress={()=>{void services.library.favorite(track).catch(()=>{});}} style={styles.chip}><Text style={styles.text}>{library.favorites.some(item=>trackKey(item.origin)===trackKey(track.origin))?'取消本地收藏':'本地收藏'}</Text></Pressable>
-          <Pressable accessibilityRole="button" onPress={()=>setAdding([track])} style={styles.chip}><Text style={styles.text}>加入歌单</Text></Pressable>
-        </View>
+        <Pressable testID={`search-more-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`更多操作：${track.title}`} onPress={()=>setMenuTrack(track)} style={styles.more}><Ionicons name="ellipsis-horizontal" size={24} color={theme.palette.accent}/></Pressable>
       </View>;})}
       {group.items.length>50&&<View style={styles.row}>
         <Pressable accessibilityRole="button" disabled={!(pages[group.platform]??0)} onPress={()=>setPages(value=>({...value,[group.platform]:Math.max(0,(value[group.platform]??0)-1)}))} style={styles.chip}><Text style={styles.text}>上一页</Text></Pressable>
@@ -54,8 +49,7 @@ export function Search({ services }: { services: Services }) {
       {!group.loading&&!group.error&&!group.items.length&&<Text style={styles.caption}>没有匹配结果</Text>}
       {(group.hasMore||group.error)&&<Pressable accessibilityRole="button" disabled={group.loading} onPress={() => { void (group.error ? services.search.retry(group.platform) : services.search.more(group.platform)); }} style={styles.button}><Text style={styles.text}>{group.error?'重试':'加载更多'}</Text></Pressable>}
     </View>)}
-    <CommentsModal services={services} track={commenting} onClose={()=>setCommenting(null)}/>
-    <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/><PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
+    <TrackActions services={services} track={menuTrack} prefix="search" onClose={()=>setMenuTrack(null)} extras/>
   </View>;
 }
 const makeStyles=(theme:Theme)=>StyleSheet.create({
@@ -63,5 +57,5 @@ const makeStyles=(theme:Theme)=>StyleSheet.create({
   input:{color:theme.color('#EEECE7'),borderWidth:1,borderColor:theme.color('#414754'),borderRadius:13,padding:14,marginVertical:18,fontSize:15},
   row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:8},chip:{backgroundColor:theme.color('#263329'),borderRadius:10,paddingHorizontal:11,paddingVertical:9},selected:{borderWidth:1,borderColor:theme.color('#D9F49B')},
   text:{color:theme.color('#D9F49B'),fontSize:12},button:{backgroundColor:theme.color('#303A32'),borderRadius:12,padding:13,alignItems:'center',marginVertical:10},
-  group:{marginTop:26},heading:{color:theme.color('#E5E8E0'),fontSize:18},track:{color:theme.color('#DFE4EE'),fontSize:15,lineHeight:23},trackRow:{paddingVertical:13,borderBottomWidth:1,borderBottomColor:theme.color('#2E3440')},error:{color:theme.color('#D3AB94'),fontSize:12},
+  group:{marginTop:26},heading:{color:theme.color('#E5E8E0'),fontSize:18},track:{color:theme.color('#DFE4EE'),fontSize:15,lineHeight:23},more:{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'},trackRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,paddingVertical:13,borderBottomWidth:1,borderBottomColor:theme.color('#2E3440')},error:{color:theme.color('#D3AB94'),fontSize:12},
 });

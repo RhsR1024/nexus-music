@@ -1,9 +1,9 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {Alert, FlatList, Pressable, View, useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {Modal,SheetModal} from './AdaptiveModal.tsx';
+import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {OnlinePlatform,Track} from '../domain/track.ts';
 import type {BrowseItem} from '../providers/discovery.ts';
@@ -12,20 +12,19 @@ import {Cover} from './Cover.tsx';
 import {trackRows,viewTrackRows,type TrackSort} from '../domain/trackList.ts';
 import {TrackListTools} from './TrackListTools.tsx';
 import {QishuiImport} from './QishuiImport.tsx';
-import {PlaylistPicker} from './PlaylistPicker.tsx';
+import {TrackActions} from './TrackActions.tsx';
 type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易'],['tx','QQ'],['kw','酷我'],['kg','酷狗'],['mg','咪咕']]as const;
 export function Discovery({services,embedded=false}:{services:Services;embedded?:boolean}){
   const theme=useTheme(),{width,fontScale}=useWindowDimensions();
-  const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [contentWidth,setContentWidth]=useState<number>();
   const [tools,setTools]=useState(false),[descriptionOpen,setDescriptionOpen]=useState(false);
   const [query,setQuery]=useState(''),[sort,setSort]=useState<TrackSort>('original');
   const [total,setTotal]=useState<number>();
 
   const [open,setOpen]=useState(false),[platform,setPlatform]=useState<OnlinePlatform>('wy'),[view,setView]=useState<PageView>({kind:'playlists'}),[category,setCategory]=useState<string>();
-  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]),[menuTrack,setMenuTrack]=useState<Track|null>(null);
+  const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[menuTrack,setMenuTrack]=useState<Track|null>(null);
   const page=useRef(0),generation=useRef(0),pending=useRef(new AbortController()),importAbort=useRef(new AbortController());
   async function load(append=false){
     const version=++generation.current;pending.current.abort();pending.current=new AbortController();const signal=pending.current.signal,next=append?page.current+1:1;
@@ -44,7 +43,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
     finally{if(version===generation.current)setLoading(false);}
   }
   useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);setRetryAppend(false);setImporting(false);setMessage('');page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();};},[open,embedded,platform,view,category]);
-  function close(){importAbort.current.abort();setImporting(false);setAdding([]);setMenuTrack(null);setOpen(false);}
+  function close(){importAbort.current.abort();setImporting(false);setMenuTrack(null);setOpen(false);}
   async function importPlaylist(){
     if(view.kind!=='detail')return;importAbort.current.abort();importAbort.current=new AbortController();const signal=importAbort.current.signal;
     setImporting(true);setMessage('');
@@ -97,8 +96,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
       </Pressable>}
       ListFooterComponent={<View style={{gap:12,paddingVertical:24}}>{loading&&<Text style={{color:theme.palette.secondary}}>正在获取平台数据…</Text>}{!!error&&<Text style={{color:theme.palette.accent}}>{error}</Text>}{!loading&&!error&&!items.length&&<Text style={{color:theme.palette.secondary}}>此平台暂未返回可展示内容</Text>}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading)}{more&&button('加载更多',()=>{void load(true);},loading)}</View>}/>
   </View>;
-  const sheetAction=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],action:()=>void)=><Pressable testID={`discovery-action-${label}`} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minHeight:56,paddingHorizontal:16,borderRadius:14,backgroundColor:theme.palette.surface,flexDirection:'row',alignItems:'center',gap:14}}><Ionicons name={icon} size={22} color={theme.palette.accent}/><Text style={{color:theme.palette.text,fontSize:16,fontWeight:'600'}}>{label}</Text><Ionicons name="chevron-forward" size={18} color={theme.palette.secondary} style={{marginLeft:'auto'}}/></Pressable>;
-  const overlays=<SheetModal visible={!!menuTrack||adding.length>0} animationType="slide" onRequestClose={()=>{setMenuTrack(null);setAdding([]);}}>{adding.length>0?<PlaylistPicker inline services={services} tracks={adding} visible onClose={()=>setAdding([])}/>:<View testID="discovery-actions" style={{flex:1,backgroundColor:theme.palette.background[0],padding:24,paddingTop:48,gap:14}}><Pressable accessibilityRole="button" accessibilityLabel="收起歌曲更多操作" onPress={()=>setMenuTrack(null)} style={{minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable><Text accessibilityRole="header" style={{fontSize:24,fontWeight:'700',color:theme.palette.text}}>{menuTrack?.title??'歌曲操作'}</Text><Text style={{color:theme.palette.secondary}}>{menuTrack?.artist}{menuTrack?.album?` · ${menuTrack.album}`:''}</Text>{menuTrack&&<View style={{gap:10}}>{sheetAction('下一首','play-skip-forward',()=>{services.addToQueue(menuTrack,true);setMenuTrack(null);})}{sheetAction('加入队列','list',()=>{services.addToQueue(menuTrack);setMenuTrack(null);})}{sheetAction(services.library.isFavorite(menuTrack)?'取消本地收藏':'本地收藏',services.library.isFavorite(menuTrack)?'heart':'heart-outline',()=>{void services.library.favorite(menuTrack).catch(()=>setMessage('收藏未保存，原数据保留；请重试'));setMenuTrack(null);})}{sheetAction('加入歌单','albums-outline',()=>{setAdding([menuTrack]);setMenuTrack(null);})}</View>}</View>}</SheetModal>;
+  const overlays=<TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <><View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View><Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

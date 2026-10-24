@@ -3,7 +3,7 @@ import {fixtureFont} from './fixtures/font.mjs';
 import {silentMP3} from './fixtures/silent-mp3.mjs';
 import { createServer } from 'node:http';
 import { spawn,execFileSync } from 'node:child_process';
-import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync,existsSync } from 'node:fs';
+import { openSync, closeSync,writeFileSync,readFileSync,mkdirSync,rmSync,watch,statSync,readSync,existsSync,readdirSync,realpathSync } from 'node:fs';
 import {resolve,sep} from 'node:path';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
@@ -46,6 +46,30 @@ function seedLocalAudio() {
   }
 }
 seedLocalAudio();
+// Explicit local opt-in: serve unchanged private scripts only to the simulator.
+// These bytes are never imported by Metro or written into the app bundle.
+const liveCatalogUI=process.argv.slice(2).some(target=>/\/testLiveSource(?:Catalog|Playback)$/.test(target));
+let liveSources=[];
+if(liveCatalogUI){
+  if(!process.env.NEXUS_LX_SOURCE_DIRECTORY)throw new Error('Live source catalog requires an explicit local directory');
+  const directory=realpathSync(process.env.NEXUS_LX_SOURCE_DIRECTORY);
+  const visit=folder=>readdirSync(folder,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).flatMap(entry=>{
+    const path=resolve(folder,entry.name);
+    if(entry.isSymbolicLink())throw new Error('Live source directory must not contain symbolic links');
+    return entry.isDirectory()?visit(path):entry.isFile()&&/\.js$/i.test(entry.name)?[path]:[];
+  });
+  liveSources=visit(directory).map(path=>{
+    const script=readFileSync(path,'utf8');
+    if(Buffer.byteLength(script)>8*1024*1024)throw new Error('Live source exceeds import size limit');
+    const header=script.slice(0,16384).match(/^\s*(?:\/\*([\s\S]*?)\*\/|((?:\/\/[^\n]*\n)+))/)?.[0]??'';
+    const name=(header.match(/@name\s+([^\r\n]*)/)?.[1]??'').replace(/\*\/$/,'').trim().slice(0,128)||path.split(sep).at(-1).replace(/\.js$/i,'').slice(0,128);
+    return {path,script,name,sha256:fileSha256(path)};
+  });
+  if(!liveSources.length||liveSources.length>32)throw new Error('Live source count outside catalog limit');
+  mkdirSync(runDirectory,{recursive:true});
+  writeFileSync(resolve(runDirectory,'private-source-manifest.json'),JSON.stringify(liveSources.map(({path,name,sha256})=>({path,name,sha256})),null,2));
+  console.log(`Live local sources: ${liveSources.length}; contents remain private`);
+}
 let fixture = `/**\n * @name Nexus UI Test Source\n * @version 1.0-test\n */\nlx.on('request', async()=>{throw new Error('test only')});\nlx.send('inited',{sources:{wy:{name:'Fixture',actions:['musicUrl'],qualitys:['128k']}}});`;
 if(process.env.NEXUS_LX_VALIDATION_SOURCE){
   const directory=resolve('resource/V261008'),path=resolve(directory,process.env.NEXUS_LX_VALIDATION_SOURCE);
@@ -115,6 +139,16 @@ const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-$
 const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScene.id:structuredLyricsUI?'fixture-classic-structured-sparse-v1':classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-v2-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
+  if(liveCatalogUI&&req.url==='/live-source-index'){
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify(liveSources.map(({name},index)=>({name,index}))));return;
+  }
+  const liveIndex=liveCatalogUI?req.url?.match(/^\/live-source-(\d+)\.js$/):null;
+  if(liveIndex){
+    const source=liveSources[Number(liveIndex[1])];
+    if(!source){res.writeHead(404);res.end();return;}
+    res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(source.script);return;
+  }
+
   if(referenceScene&&req.url==='/classic-reference-scene'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({lyrics:referenceScene.lyrics}));return;}
   if(req.url.startsWith('/am-fixture-control')){const control=new URL(req.url,'http://127.0.0.1');amLongQueue=control.searchParams.get('longQueue')==='1';res.setHeader('Content-Type','application/json');res.end(JSON.stringify({longQueue:amLongQueue}));return;}
   if(req.url==='/photo-artwork-fixture-control'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:photoArtworkVersion,requests:photoCoverRequests}));return;}
@@ -363,6 +397,7 @@ try {
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
+  if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);

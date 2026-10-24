@@ -1,3 +1,7 @@
+## 2026-10-24 真实公开搜索缺封面修复
+
+五固定HEAD再核对未变（joy d6f1af7、Q547ccfe、wtf6624ab5、Cybf0d469、自有8e47cdc）。沿决策0028的封面职责、许可与Android边界；本批新增核对悦音 wy.ts:78–105 的公开song/detail精确ID和al.picUrl，Q/wtf的wy/index.js:26、musicInfo.js:6为独立weapi路径。不复制加密/客户端或源码；音枢原创OnlineProvider.artwork与CoverService可选回调，保留本地/私人媒体边界、四并发、取消与清理代次。TS可共享未来Android；ImageIO缓存/原生歌词绘制仍需Android对应实现。参考工程的根许可不覆盖其第三方依赖，未引入依赖或资源。真实验证与尚未通过的边界见[本批回执](implementation-shared-song-actions-2026-10-24.md)，不以此声称Sollin使用相同API。
+
 ## 2026-10-20 Mineradio / AMLL / Youmi 补充参考
 
 用户指定三仓已在Windows独立检出并固定：Mineradio-paused `d43de565acabfdc1a9c9820a27e81a98ccbebcef`、applemusic-like-lyrics `ca0f41d67882d936c0365ffd99c16841ea2fa39d`、7DaysMax/Youmi-Music-IOS `152567b3c4a337c9c5bee06bb7f40ebaa49d40c2`。与音枢e72827d的21项源码/符号/行号、现有能力、候选落点、Android与维护/许可/验收边界见[具体比较](MINERADIO_AMLL_YOUMI_REFERENCE_REVIEW.md)。仅行为与契约研究，未复制GPL/AGPL或未明许可的代码/资产；不因项目有能力就扩范围或改变既定视觉目标。

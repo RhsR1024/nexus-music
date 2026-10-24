@@ -43,3 +43,7 @@ resource/
 
 # Local reverse-skill case evidence (third-party binaries/strings never ship)
 /work/
+
+# User-provided private sources used for explicitly authorized local validation
+/resources/V261020/
+/resources/V261020.zip

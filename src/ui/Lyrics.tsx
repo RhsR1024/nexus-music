@@ -215,7 +215,7 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
       const actual=first+index,now=state.position*1000-offset,singing=now>=item.startMs&&(item.endMs===undefined||now<item.endMs);
       const live=actual===active||!!item.background&&singing,row=classicLyricRow(live,preferences.fontScale,style.lineHeight);
       return <Pressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} accessibilityHint="双击歌词定位，长按打开歌词设置" onPress={event=>tap(item.startMs,actual,event.nativeEvent.timestamp)} onLongPress={onOpenSettings} style={{minHeight:lineHeight,justifyContent:'center'}}>
-        <NativeLyricLine line={live?item:{...item,words:undefined,timedCues:undefined}} position={live?now:0} playing={live&&state.intent==='playing'&&!state.buffering} center size={row.size} font={font} fontURI={services.fonts.selectedURI()} color={live?classicInk.text:classicInk.lyricInactive} lineHeight={row.lineHeight} emphasis={style.emphasis} weight={row.weight} embolden={row.embolden}/>
+        <NativeLyricLine line={live?item:{...item,words:undefined,timedCues:undefined}} position={live?now:0} playing={live&&state.intent==='playing'&&!state.buffering} center size={row.size} font={font} fontURI={services.fonts.selectedURI()} color={live?classicInk.text:classicInk.lyricInactive} maxLines={1} lineHeight={row.lineHeight} emphasis={style.emphasis} weight={row.weight} embolden={row.embolden}/>
       </Pressable>;
     })}
     {!document?.synced&&!!document?.plain.length&&<Text numberOfLines={2} style={{textAlign:'center',color:theme.palette.secondary,fontSize:15}}>{document.plain[0]}</Text>}

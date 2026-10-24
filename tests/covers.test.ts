@@ -82,3 +82,18 @@ test('failed large covers fall back after releasing slots; clear never refills t
   const pending=delayed.loadURL('https://images.invalid/cover',new AbortController().signal,1024);const outcome=pending.then(()=>true,()=>false);
   await new Promise(resolve=>setTimeout(resolve,0));await delayed.clear();finish.forEach(resolve=>resolve());assert.equal(await outcome,false);assert.equal(starts,1);
 });
+
+test('missing artwork can use public metadata without requiring an LX pic action',async()=>{
+  const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});let metadataCalls=0;
+  const service=new CoverService({fetchCover:async(_key,url)=>{assert.equal(url,'https://p1.music.126.net/public.jpg');return'file:///cover.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async x=>x,registry,{request:async()=>{throw new Error('No LX picture action');}},async()=>'',undefined,async()=>{metadataCalls++;return'http://p1.music.126.net/public.jpg';});
+  const track:Track={origin:{kind:'online',platform:'wy',id:'1'},title:'Public fixture',artist:'Fixture',metadata:{},qualities:[]};
+  assert.equal(await service.loadTrack(track,new AbortController().signal),'file:///cover.jpg');assert.equal(metadataCalls,1);
+});
+
+test('clearing covers rejects late public metadata before it can fetch a stale image',async()=>{
+  const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});let complete!:(url:string)=>void,started!:()=>void;const ready=new Promise<void>(resolve=>{started=resolve;});let fetched=0;
+  const service=new CoverService({fetchCover:async()=>{fetched++;return'file:///cover.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async x=>x,registry,{request:async()=>''},async()=>'',undefined,async()=>{started();return new Promise<string>(resolve=>{complete=resolve;});});
+  const track:Track={origin:{kind:'online',platform:'wy',id:'1'},title:'Public fixture',artist:'Fixture',metadata:{},qualities:[]};
+  const result=service.loadTrack(track,new AbortController().signal);await ready;await service.clear();complete('https://images.invalid/stale.jpg');
+  await assert.rejects(result,/过期/);assert.equal(fetched,0);
+});

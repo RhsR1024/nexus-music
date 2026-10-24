@@ -62,6 +62,15 @@ export class OnlineProvider {
   private http: HTTPClient; private md5: OnlineDependencies['md5']; private deviceId: () => string;
   private sha1: NonNullable<OnlineDependencies['sha1']>;
   constructor(dependencies: OnlineDependencies) { this.http = dependencies.http ?? requestJSON; this.md5 = dependencies.md5; this.deviceId = dependencies.deviceId; this.sha1 = dependencies.sha1 ?? (async () => { throw new Error('SHA1不可用'); }); }
+  async artwork(track:Track,signal:AbortSignal):Promise<string|undefined>{
+    if(track.origin.kind!=='online'||track.origin.platform!=='wy'||!/^\d+$/.test(track.origin.id))return undefined;
+    const id=track.origin.id;
+    const body=Object.entries({c:JSON.stringify([{id}]),ids:JSON.stringify([id])}).map(([key,value])=>`${key}=${encodeURIComponent(value)}`).join('&');
+    const response=row(await this.http('https://music.163.com/api/v3/song/detail',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Referer:'https://music.163.com/'},body},signal));
+    if(response.code!==200)throw new Error('封面元数据暂不可用');
+    const song=list(response.songs).map(row).find(song=>text(song.id)===id);
+    return song?text(row(song.al??song.album).picUrl)||undefined:undefined;
+  }
   async enrich(track:Track,signal:AbortSignal):Promise<Track>{
     if(track.origin.kind!=='online'||track.origin.platform!=='tx'||track.metadata.needsMetadata!==true)return track;
     const body=JSON.stringify({comm:{ct:19,cv:1859,uin:0},req:{module:'music.pf_song_detail_svr',method:'get_song_detail_yqq',param:{song_type:0,song_mid:track.origin.id}}});

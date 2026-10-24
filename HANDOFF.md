@@ -1,3 +1,11 @@
+## 2026-10-24 通用歌曲菜单与23份真实音源
+
+本批原创共享TrackActions，搜索结果改紧凑更多入口，发现详情复用同一菜单与歌单选择。用户新增授权 resources/V261020 全部真实源：23/23份已从正式入口导入且数据库原文SHA匹配，首次初始化22/23成功，失败1份保留；脚本/ZIP/私有清单不入Git或bundle。实际公开搜索/真实源解析/解码PCM/暂停已通过；真实长歌词暴露经典控制区裁切和网易搜索缺封面，现已补有界预览与精确ID公开封面元数据回退。
+
+511业务/类型、完整native通过；菜单Release联合2/0/0；最终真实Release SourceUITests-1792850412464为1/0/0、sourceUnchanged=true，真实封面和整枚控制区截图已亲看。r1/r2失败和未通过UI质量的历史保留。模拟器收尾Shutdown使installedBundle快照不可用，不宣称完整provenanceReady。手机已配对，但本批未签名安装；23源不等于所有平台/音质可用。完整[实施与验证回执](docs/implementation-shared-song-actions-2026-10-24.md)、[UI质量回执](docs/ui-spec/shared-actions-live-2026-10-24.md)。
+
+第一批尚未全部落地：共享长按多选/批量矩阵、搜索全状态与后续功能仍继续，不增加全项目完成百分比。阶段归档/提交/push/CI结果待另记；不追加Sollin采集。
+
 ## 2026-10-24 Android Sollin Q119–Q125功能能力采集状态
 
 按用户最新口径，本阶段只整理 Sollin 暴露的功能与操作路径，不验证并发量、速度、百分比、超时上限或内部实现；榜单名称/ID是目录数据，不逐个打开。正式范围见[决策0080](docs/decisions/0080-sollin-capability-capture-scope.md)。
