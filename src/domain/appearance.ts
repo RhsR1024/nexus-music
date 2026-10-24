@@ -8,7 +8,7 @@ export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgr
 // IMG_4856 exposes 背景透明度/卡片透明度/背景遮罩/遮罩颜色/背景模糊. `cardOpacity`
 // starts at 100% so existing cards stay opaque until the user lowers it; the
 // reference screenshot itself is at 30%.
-export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,cardOpacity:1,backgroundMask:0,maskColor:'#FFFFFF',playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,coverColor:false,globalBackgroundMotion:false,dynamicBackground:false,glassNavigation:true};
+export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,cardOpacity:1,backgroundMask:0,maskColor:'#FFFFFF',playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,coverColor:true,globalBackgroundMotion:false,dynamicBackground:false,glassNavigation:true};
 export const accentColors:Record<Accent,readonly[string,string]>={rose:['#E83D56','#FF94B0'],coral:['#BA4240','#FF9B94'],purple:['#7650AB','#D4B4FF'],blue:['#2E64A0','#9AC8FF'],orange:['#A65A14','#FFC485']};
 // IMG_4856 keeps the accent swatch at #E83D56 while slider fills and thumbs use a
 // desaturated brick (#864D4F), so controls derive their own muted tone from the

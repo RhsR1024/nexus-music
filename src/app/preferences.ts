@@ -21,7 +21,11 @@ export class PreferenceStore {
       // The old motion switch animated the global layer only with cover color.
       // Preserve that effective choice once, then persist both controls separately.
       const globalBackgroundMotion=Object.hasOwn(value,'globalBackgroundMotion')?value.globalBackgroundMotion:value.dynamicBackground===true&&value.coverColor===true;
-      this.value = this.validate({ ...defaults, ...value,globalBackgroundMotion });
+      // The cover palette used to ship off, leaving every background on the fixed
+      // theme gradient. Records written before the default flipped upgrade once;
+      // after that the stored choice (including a manual off) is kept.
+      const coverColor=(value as {coverColorDefaultOn?:boolean}).coverColorDefaultOn===true?value.coverColor===true:true;
+      this.value = this.validate({ ...defaults, ...value,globalBackgroundMotion,coverColor,coverColorDefaultOn:true } as Preferences);
     }catch{throw new InvalidRecordError();}}
   }
   private validate(value: Preferences): Preferences {

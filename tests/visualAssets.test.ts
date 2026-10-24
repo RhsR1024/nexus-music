@@ -92,6 +92,15 @@ test('old effective global motion migrates once and separate global/player choic
   }
 });
 
+test('pre-flip preference records upgrade to the cover palette default once',async()=>{
+  let record:unknown={coverColor:false,dynamicBackground:false,globalBackgroundMotion:false};
+  const repository={get:async<T>()=>record as T,put:async(_:string,value:unknown)=>{record=structuredClone(value);}} as unknown as Repository;
+  const store=new PreferenceStore(repository);await store.restore();assert.equal(store.getSnapshot().coverColor,true,'records written before the default flip follow the cover palette');
+  await store.update({coverColor:false});
+  const restarted=new PreferenceStore(repository);await restarted.restore();assert.equal(restarted.getSnapshot().coverColor,false,'a manual off chosen after the upgrade survives restart');
+  const fresh=new PreferenceStore({get:async<T>()=>undefined as T,put:async()=>{}} as unknown as Repository);await fresh.restore();assert.equal(fresh.getSnapshot().coverColor,true,'fresh installs default to the cover palette');
+});
+
 test('flow palettes coalesce independently, validate three colors and protect cached arrays',async()=>{
   const gate=deferred<readonly string[]>();let calls=0;const samples=['#FF0000','#00FF00','#0000FF'];
   const cache=new VisualColorCache({visualPalette:async()=> '#112233',visualFlowPalette:async()=>{calls++;return gate.promise;}});

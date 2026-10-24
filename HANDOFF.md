@@ -1,3 +1,7 @@
+## 2026-10-24 封面取色默认开启修复
+
+用户指出 r3 真实播放截图中蓝色封面下背景仍是固定 blush 桃粉，不符合封面取色预期。根因是 `appearanceDefaults.coverColor` 历史默认 false，非取色链路故障（`CoverThemeStore`→原生取色→`coverThemeGradient`→`Player.tsx:199` 均正常）。本批默认改为 true 并对旧偏好记录做一次性升级（标记 `coverColorDefaultOn`，此后手动关闭可持久）；`npm run check` 512/512，经典直达 Release 1/0/0（`SourceUITests-1792853123798.xcresult`），截图亲看确认三色带夹具封面下背景由桃粉变为取色淡薰衣草。真机/签名与真实源 r4 复采未验。详见[实施回执](docs/implementation-cover-tint-default-2026-10-24.md)。浅色混合偏浅与更动态的取色呈现（如 iOS18 MeshGradient 方案）留待后续视觉收敛批次。
+
 ## 2026-10-24 b61e09d 清洁归档与同步边界
 
 代码提交 b61e09ded558092006f374ce4ef086019e7ac536 已本地保存。清洁归档 ARCHIVE SUCCEEDED；manifest dirty=false/workingTreeChanges=[]，arm64/iphoneos26.2/min15.1/设备族[1,2]/unsigned。IPA SHA256 f1612e9480ff1bb42e499e02007ea950d7f8ffef3e399cbf634d729e1d8e6dd0；ZIP CRC、测试适配器排除、23份私人原始脚本字节均不在bundle的核对通过。当前包与收据保留 build/local-shared-actions-b61e09d-20261024。511业务/类型、完整native、最终真实源App 1/0/0及前段菜单2/0/0见[回执](docs/implementation-shared-song-actions-2026-10-24.md)。签名/真机与全源全档位仍未验。

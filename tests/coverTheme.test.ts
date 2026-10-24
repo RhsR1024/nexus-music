@@ -87,7 +87,7 @@ test('red and blue covers generate different light/dark backgrounds with readabl
         for(const text of [palette.text,palette.secondary])assert.ok(contrast(composite,text)>=4.5,`${mode} ${color}: ${composite}/${text}`);
       }
     }
-    assert.deepEqual(appearancePalette(mode,appearanceDefaults,'#FF0000'),appearancePalette(mode,appearanceDefaults));
+    const disabled={...appearanceDefaults,coverColor:false,globalBackgroundMotion:false};assert.deepEqual(appearancePalette(mode,disabled,'#FF0000'),appearancePalette(mode,disabled));
   }
 });
 test('global flow loads without cover tint and survives palette failure without reviving rejected images',async()=>{
