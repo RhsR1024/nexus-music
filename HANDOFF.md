@@ -2289,3 +2289,5 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 本批Q86新增E-1074–E-1080：艺术家全选50/50、专辑1/14→14/14→取消普通列表；补统一状态契约docs/SOLLIN_ANDROID_STATE_CONTRACTS.md。232 Evidence、50 Findings、48 Paths、77 timeline events；完整采集与审核仍未完成。
 
 Q87新增E-1082–E-1090：专辑前两首批量下一首保序插入当前之后，当前曲不变，队列100→102，删除插入两项恢复100；无活动音频条件，不代表起播验收。外部报告新增选择与队列前后图解。237 Evidence、51 Findings、49 Paths、78 timeline events；严格复核通过，整体目标与审核继续进行。
+
+Q88新增E-1092–E-1104：倒序选专辑两首后按列表顺序插入；相邻同两首重复提交不增项，102保持；清理恢复100。244 Evidence、52 Findings、50 Paths、79 timeline events，严格复核通过。去重算法和其他位置/身份仍未知，规格审核不把局部观测扩大为通用规则。
