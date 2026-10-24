@@ -1,3 +1,7 @@
+## 2026-10-23 动态界面采集存储与范围
+
+新Android设备UI观察使用独立scope，不重初始化既有离线案例。用户指定原始截图/录屏/大型分析素材写入`/Volumes/T7 Touch/NexusMusic/SollinCapture/`，项目忽略work只留链接；采集前检查SSD已挂载且可写，不自动在内盘创建替代目录。既有IPA/APK gate保留用于固定工具/样本基线核验，不能替代新设备scope、版本身份、截图/交互证据和独立review。设备连接与截图能力不计作任何功能已采集或对齐。
+
 ## 2026-10-21 UI方法衔接
 
 逆向硬门禁不变；UI实施按 [UI_ALIGNMENT_WORKFLOW](UI_ALIGNMENT_WORKFLOW.md)。先提出具体差异/待核机制，再按需复用或新增已review的Evidence→Finding→Path；门禁通过不证明像素、交互或服务完成。本轮指导文档调整不是新的二进制分析证据，不增加功能E/F/P或完成量。
