@@ -31,7 +31,7 @@ CASE='/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023
 node scripts/sollin-reverse-gate.mjs apk
 ```
 
-动态scope另用包原生case-guard校验（先读脚本帮助并使用当前版本参数）；APK gate检查的是离线基线，不代替动态scope。`capture.py`支持shot/tap/swipe/back/key/text：`python3 "$CASE/capture.py" shot <唯一名称>`；`python3 "$CASE/tree.py" <同名>`另存XML。两工具有防覆盖；capture.py只自动记录PNG动作，不自动建Evidence/Finding/Path或保存XML。tree.py应亲自核对本次dump是否成功，不能将旧手机XML当新证据。ADB input text不能直接可靠输入中文，之前尝试已报异常；勿把未输入的查询写成已提交。
+动态scope另运行 `bash ../reverse-skill/skills/scripts/case-guard.sh --case-root "$CASE"` 校验（先读脚本帮助确认当前版本参数）；APK gate检查的是离线基线，不代替动态scope。`capture.py`支持shot/tap/swipe/back/key/text：`python3 "$CASE/capture.py" shot <唯一名称>`；`python3 "$CASE/tree.py" <同名>`另存XML。两工具有防覆盖；capture.py只自动记录PNG动作，不自动建Evidence/Finding/Path或保存XML。tree.py应亲自核对本次dump是否成功，不能将旧手机XML当新证据。ADB input text不能直接可靠输入中文，之前尝试已报异常；勿把未输入的查询写成已提交。
 
 坐标仅是当前1080×2340的辅助：发现底部搜索约943,2144；搜索类型歌曲150/歌单345/专辑540/艺术家735/MV930，y370；网易云筛选540,620；底部输入600,2180。必须先读取当前XML，再使用坐标，动画/键盘/滚动会改变位置。每次手势后等待稳定；截图与XML分别产生，可能跨瞬时状态，需记录等待时间。
 
@@ -70,7 +70,7 @@ git diff --check
 
 ## 当前状态与下一轮
 
-Q91已完成，动态strict复核272E/55F/53P/82事件，0错误0警告。当前音乐库收藏0/我的歌单0，media-session state0，代理null，无adb reverse，无运行测试句柄。下一轮优先采音乐平台登录入口及无需人工的授权取消/失败状态；接手须重新检测设备，不能假定此快照持续有效。
+Q92已完成，动态strict复核275E/56F/54P/83事件，0错误0警告。当前音乐库收藏0/我的歌单0，media-session state0，代理null，无adb reverse，无运行测试句柄。下一轮优先采音乐平台登录入口及无需人工的授权取消/失败状态；接手须重新检测设备，不能假定此快照持续有效。
 
 优先序：
 
@@ -131,3 +131,12 @@ q94原动作日志SHA256与当前图不一致，E-990匹配当前图；原值保
 - 下一轮具体计划：先重新读发现当前XML确认落点；进入网易云扫码页只观察二维码生成、刷新/过期/返回，不扫描或确认登录、不退出原账号；二维码含临时授权值只留必要状态描述，不能存payload。再核对QQ官方网页的登录入口/取消，失败按失败记录。
 - 应补文档：平台授权矩阵分已有/未登录、官方页面、等待/过期、取消及成功前置条件；同步状态契约/功能摘要/审核与本账本。q94补采、批量下载/本地删除及其余历史审核保持待办。
 - 验证：动态strict272E/55F/53P/82事件、0错误0警告；APK --review和链接/diff在本轮提交前重验。准确提交查询git log。
+
+### 2026-10-24 Q92 扫码观察与授权矩阵
+
+- 本轮完成：E-1162/E-1164/E-1166、F-056/P-054；约190秒五次等待，刷新后仍等待，返回账号有效标签。现有账号未改，不保存QR/链接/会话。
+- 历史变化：Q91扫码等待/刷新/返回缺口已部分补齐；过期和实际换码未证明，扫码成功仍需条件。新增SOLLIN_ANDROID_PLATFORM_AUTH_SPEC.md集中列各平台已验/未验。
+- 仍剩：新授权成功/验证码/过期与退出、QQ网页授权取消、酷狗空字段安全校验；q94补采、批量下载/本地删除、历史语义/动效仍待。
+- 下一轮计划：QQ官方网页登录定位可见登录触发，进入选择器仅测试取消返回；不提交已有凭据。不找到入口则保留未测，再推进q94可独立补采。更新平台矩阵/状态契约/审核及本账本。
+- 方法：独占手机有界采样进程31125已exit0；安全白名单只留状态文字。刷新未比payload所以不算换码验证。动作日志另审1176条现存一致，q94旧差异和q187有回执移除不覆盖。
+- 收尾：已从网易云账号返回发现，未改账号与网络，手机临时dump已删除，无运行测试句柄。严格review及APK --review按提交前结果；不把静态账号有效标签当远端校验。
