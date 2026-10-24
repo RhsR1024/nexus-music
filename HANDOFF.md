@@ -1,16 +1,16 @@
-## 2026-10-24 Android Sollin Q119–Q123功能能力采集状态
+## 2026-10-24 Android Sollin Q119–Q125功能能力采集状态
 
 按用户最新口径，本阶段只整理 Sollin 暴露的功能与操作路径，不验证并发量、速度、百分比、超时上限或内部实现；榜单名称/ID是目录数据，不逐个打开。正式范围见[决策0080](docs/decisions/0080-sollin-capability-capture-scope.md)。
 
 Q120确认下载管理器支持单项暂停/继续与批量管理入口；Q122确认单项取消和全部取消都会让未完成任务进入“下载已取消”状态。批量移除任务记录和删除已下载音频是分离操作，完成音频删除有确认且会一并清理歌词、封面、元数据（E-1300–E-1303）。Q119未捕获活动态，Q121的单项取消受完成竞态影响，均不作为正面能力证据。
 
-Q122收尾后管理器显示暂无任务/暂无已下载音频，搜索历史已清空，Sollin回到发现页，media-session state=0；本轮新增下载均经应用确认流程清理。原始素材与哈希仅在T7外置案例。动作日志当前2882条中2880条引用哈希匹配，Q119–Q122新增212/212匹配；仅保留已知q94历史差异与q187按回执移除。动态strict review为389 Evidence / 97 Findings / 95 Paths / 3 Work Items / 115 timeline events，0 error / 0 warning；case-guard 与 APK `--review` 均 PASS。T7 AppleDouble sidecar只在内存中过滤后审查，未修改案例原始材料或审查脚本。
+Q122收尾后管理器显示暂无任务/暂无已下载音频，搜索历史已清空，Sollin回到发现页，media-session state=0；本轮新增下载均经应用确认流程清理。Q125按用户要求只读查看普通专辑详情、收藏歌单/专辑目录、精选入口与榜单页；没有执行收藏、添加、删除、取消、下载或播放。原始素材与哈希仅在T7外置案例。
 
-Q123尝试确认退后台时下载是否继续，但点每日推荐后截图与控件树变空；后续只读诊断显示设备已Asleep且焦点为NotificationShade，无法判断黑帧是否来自Sollin页面，也未提交下载任务。此次不形成能力结论；继续采集需要用户唤醒并解锁设备，详见外置案例 `notes/q123-background-download-review.json`。日志新增8张截图均哈希匹配，不纳入功能Evidence。
+Q123尝试确认退后台时下载是否继续，但点每日推荐后截图与控件树变空；后续只读诊断显示设备已Asleep且焦点为NotificationShade，无法判断黑帧是否来自Sollin页面，也未提交下载任务。此次不形成能力结论；当时若要继续观察需先唤醒并解锁设备，详见外置案例 `notes/q123-background-download-review.json`。该项后来按Q125的范围决策移出采集门槛。日志新增8张截图均哈希匹配，不纳入功能Evidence。
 
-最新动态strict review为389 Evidence / 97 Findings / 95 Paths / 3 Work Items / 116 timeline events，0 error / 0 warning；动作日志2890条中2888条匹配，Q119–Q122为212/212、Q123为8/8，q94和q187两项历史例外不变。case-guard 与 APK `--review` PASS。
+最新动态strict review为395 Evidence / 101 Findings / 99 Paths / 3 Work Items / 117 timeline events，0 error / 0 warning；动作日志2982条中2978条引用哈希匹配，已记录的差异包括q94历史不一致、q187与Q124按回执移除；Q125新增30/30匹配。case-guard 与 APK `--review` PASS。
 
-功能清单主体覆盖发现、搜索、播放与队列、音乐库/双歌单、本地、下载、识曲、备份同步、外观和平台入口；剩余按功能条件或外部依赖分类，见[功能清单§13](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md#13-剩余项与补采分类)和[审核记录](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)。不要将模块数或证据数写成伪完成率。
+按用户限定的可见功能能力范围，Sollin采集已完成，可开始NexusMusic实现；不追加规格/性能或后台能力采集。成功空榜单未自然出现，精选样本未见独立数字专辑入口，远端收藏写入后的跨页回读未按只读要求测试；这些边界不阻碍实现。人工授权和外部设备状态按需独立验收。详见[功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md)、[状态契约](docs/SOLLIN_ANDROID_STATE_CONTRACTS.md)、[审核记录](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)和[逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)。
 
 ## 2026-10-24 Android Sollin Q118复核后的当前状态
 
@@ -2363,6 +2363,7 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 Q87新增E-1082–E-1090：专辑前两首批量下一首保序插入当前之后，当前曲不变，队列100→102，删除插入两项恢复100；无活动音频条件，不代表起播验收。外部报告新增选择与队列前后图解。237 Evidence、51 Findings、49 Paths、78 timeline events；严格复核通过，整体目标与审核继续进行。
 
 Q88新增E-1092–E-1104：倒序选专辑两首后按列表顺序插入；相邻同两首重复提交不增项，102保持；清理恢复100。244 Evidence、52 Findings、50 Paths、79 timeline events，严格复核通过。去重算法和其他位置/身份仍未知，规格审核不把局部观测扩大为通用规则。
+
 > Sollin Android采集接手先读 [逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)。用户要求每轮记录历史与当前已采/完成/剩余、下一轮计划、规格补充、方法、证据和设备状态。
 
 Q90已完成本地临时歌单批量写入/重启/删除清理，E-1120–E-1146、F-054/P-052，265E/54F/52P/81事件strict通过。用户追问进度与平台登录：约70%为无权重粗估，非验收百分比；音乐平台完整登录尚未采，明确在范围内，下一轮优先采入口与无需人工的取消/失败路径，不退出已有私人账号。逐轮交接已同步计划与残余。
