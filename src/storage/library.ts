@@ -84,6 +84,13 @@ export class LibraryStore {
   removeEntry(id:string,entryId:string){return this.updatePlaylist(id,playlist=>({...playlist,entries:playlist.entries.filter(item=>item.id!==entryId)}));}
   removeEntries(id:string,entryIds:readonly string[]){const wanted=new Set(entryIds);return this.updatePlaylist(id,playlist=>({...playlist,entries:playlist.entries.filter(item=>!wanted.has(item.id))}));}
   removeFavorites(tracks:readonly Track[]){const wanted=new Set(tracks.map(track=>trackKey(track.origin)));return this.change(current=>({...current,favorites:current.favorites.filter(track=>!wanted.has(trackKey(track.origin)))}));}
+  // Batch add keeps the argument (selection) order as one block at the front;
+  // already-favorited tracks stay untouched instead of toggling off.
+  addFavorites(tracks:readonly Track[]){tracks.forEach(validateTrack);return this.change(current=>{
+    const missing=tracks.filter(track=>!current.favorites.some(item=>trackKey(item.origin)===trackKey(track.origin))).map(cleanTrack);
+    if(!missing.length)return current;
+    return{...current,favorites:[...missing,...current.favorites]};
+  });}
   removeHistoryTracks(tracks:readonly Track[]){const wanted=new Set(tracks.map(track=>trackKey(track.origin)));return this.change(current=>({...current,history:current.history.filter(item=>!wanted.has(trackKey(item.track.origin)))}));}
   moveEntry(id:string,entryId:string,to:number){return this.updatePlaylist(id,playlist=>{
     const entries=[...playlist.entries],from=entries.findIndex(item=>item.id===entryId);

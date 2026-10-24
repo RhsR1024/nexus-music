@@ -1,3 +1,13 @@
+## 2026-10-24 批次0 AM网格背景与批次1批量动作扩展
+
+批次0按[决策0081](docs/decisions/0081-am-mesh-gradient-background.md)落地：原生`MeshField`种子漂移、`MeshTimeline`停相位时钟、`NexusMeshView`在iOS18+用SwiftUI `MeshGradient`、15–17回退双色渐变，后台/离窗/减少动态停表；React只传调色板/身份/门控，`meshPalette`在取色失败或无封面时关闭该层。批次1把长按多选扩展到发现侧歌单/榜单/专辑详情（搜索与音乐库列表此前已有），批量收藏按选择顺序、批量下一首按列表顺序，收藏/下一首提交后退出、加歌单保留面板。
+
+验证：`npm run check` 520/520；`npm run test:native` exit0（`mesh-field tests passed`，含网格不折叠与相位门控）；真实音源沿用模拟器内`resources/V261020` 23份脚本，`SourceUITests-1792859692162` 1通过/0失败/0跳过——公开搜索“Shape of You”→解析→AM→`ambient-mesh` 430×932→暂停后网格保留为still，两张真实播放截图已亲看。IPA/APK gate 与 `--review` 均PASS（0错误/0警告），本批未新增逆向证据、未扩采。未验：iOS15–17回退运行、漂移录屏逐帧、真机/签名/后台，以及发现详情批量下载在无源平台的真机行为。详见[回执](docs/implementation-mesh-gradient-2026-10-24.md)。
+
+## 2026-10-24 MeshGradient采纳与连续实施授权
+
+用户采纳 AM 动态网格渐变落地方式（封面模糊底 + iOS18 `MeshGradient` 网格、取色驱动、种子化漂移、15–17回退、全原生层），已落[决策0081](docs/decisions/0081-am-mesh-gradient-background.md)并更新 PRODUCT_SCOPE/TASK_PLAN/IMPLEMENTATION_PLAN；用户授权按批次连续编码至开发完成。批次顺序从批次0（MeshGradient背景）开始，随后批次1–8按功能清单建议顺序；每批测试+验收+提交。取色默认开启修复见[回执](docs/implementation-cover-tint-default-2026-10-24.md)，远端已至 e392096。
+
 ## 2026-10-24 封面取色默认开启修复
 
 用户指出 r3 真实播放截图中蓝色封面下背景仍是固定 blush 桃粉，不符合封面取色预期。根因是 `appearanceDefaults.coverColor` 历史默认 false，非取色链路故障（`CoverThemeStore`→原生取色→`coverThemeGradient`→`Player.tsx:199` 均正常）。本批默认改为 true 并对旧偏好记录做一次性升级（标记 `coverColorDefaultOn`，此后手动关闭可持久）；`npm run check` 512/512，经典直达 Release 1/0/0（`SourceUITests-1792853123798.xcresult`），截图亲看确认三色带夹具封面下背景由桃粉变为取色淡薰衣草。真机/签名与真实源 r4 复采未验。详见[实施回执](docs/implementation-cover-tint-default-2026-10-24.md)。浅色混合偏浅与更动态的取色呈现（如 iOS18 MeshGradient 方案）留待后续视觉收敛批次。

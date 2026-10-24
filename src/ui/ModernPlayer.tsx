@@ -5,8 +5,8 @@ import {requireNativeView} from 'expo';
 import {Image,type ViewProps} from 'react-native';
 import {AMPlayer} from './AMPlayer.tsx';
 import {AM2Player} from './AM2Player.tsx';
-import {useVisualAssets,useVisualImage,MotionImage} from './VisualBackground.tsx';
-import {darkenCoverColor,playerBackgroundImage} from '../domain/appearance.ts';
+import {useVisualAssets,useVisualImage,MotionImage,AmbientMeshGradient} from './VisualBackground.tsx';
+import {darkenCoverColor,meshPalette,playerBackgroundImage} from '../domain/appearance.ts';
 import {Text} from './Typography.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {Alert, Pressable, StyleSheet, View, useWindowDimensions} from 'react-native';
@@ -24,15 +24,19 @@ const PhotoMask=requireNativeView<ViewProps>('NexusNative','PhotoMask');
 export function ArtworkBackdrop({services,track,photo=false}:{services:Services;track:Track;photo?:boolean}){
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const assets=useVisualAssets(services),custom=useVisualImage(services,assets.photo);
-  const [artwork,setArtwork]=useState<{key:string;uri:string}>(),[failedImages,setFailedImages]=useState<readonly string[]>([]),[tint,setTint]=useState('#183647');
+  const [artwork,setArtwork]=useState<{key:string;uri:string}>(),[failedImages,setFailedImages]=useState<readonly string[]>([]),[tint,setTint]=useState('#183647'),[mesh,setMesh]=useState<readonly string[]>();
   const key=JSON.stringify([track.origin,track.artwork,track.metadata.davVersion,track.metadata.coverArtId]);
   useEffect(()=>{const abort=new AbortController();setArtwork(undefined);setFailedImages([]);services.covers.loadTrack(track,abort.signal).then(value=>{if(!abort.signal.aborted&&value)setArtwork({key,uri:value});}).catch(()=>{});return()=>abort.abort();},[services,key]);
   const file=artwork?.key===key?artwork.uri:undefined;
   const uri=playerBackgroundImage(preferences.playerBackground,photo,custom,file,failedImages);
   useEffect(()=>{let valid=true;setTint('#183647');if(uri&&preferences.coverColor)void services.visualColors.color(uri).then(color=>{if(valid)setTint(darkenCoverColor(color));}).catch(()=>{});return()=>{valid=false;};},[services,uri,preferences.coverColor]);
+  // Decision 0081: the mesh rides on the extracted cover palette; the photo
+  // skin is its own full-bleed composition and keeps the plain backdrop.
+  useEffect(()=>{let valid=true;setMesh(undefined);if(uri&&!photo&&preferences.coverColor)void services.visualColors.flowPalette(uri).then(palette=>{if(valid)setMesh(meshPalette(undefined,palette));}).catch(()=>{});return()=>{valid=false;};},[services,uri,photo,preferences.coverColor]);
   const blur=preferences.playerBlur;
   return <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:tint}]}>
     {uri&&<MotionImage uri={uri} blur={blur} opacity={preferences.coverColor?.45:1} moving={preferences.dynamicBackground&&playback.phase==='ready'&&playback.intent==='playing'&&!playback.buffering} onError={()=>setFailedImages(previous=>previous.includes(uri)?previous:[...previous.slice(-3),uri])}/>}
+    {mesh&&<AmbientMeshGradient colors={mesh} identity={key} moving={preferences.dynamicBackground&&playback.phase==='ready'&&playback.intent==='playing'&&!playback.buffering} pending={false} dark/>}
     <LinearGradient colors={[`rgba(7,14,24,${preferences.playerDarkness})`,`rgba(7,14,24,${Math.min(.96,preferences.playerDarkness+.15)})`,'rgba(7,14,24,0.94)']} style={StyleSheet.absoluteFill}/>
     {photo&&uri&&<PhotoMask testID="photo-hero-mask" pointerEvents="none" style={StyleSheet.absoluteFill}><Image testID="photo-hero-image" source={{uri}} resizeMode="cover" onError={()=>setFailedImages(previous=>previous.includes(uri)?previous:[...previous.slice(-3),uri])} style={StyleSheet.absoluteFill}/></PhotoMask>}
     {photo&&uri&&<LinearGradient colors={[`rgba(7,14,24,${preferences.playerDarkness*.35})`,`rgba(7,14,24,${Math.min(.85,preferences.playerDarkness+.05)})`,'rgba(7,14,24,0)']} locations={[0,.5,1]} style={StyleSheet.absoluteFill}/>}

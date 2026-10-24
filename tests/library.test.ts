@@ -64,3 +64,18 @@ test('a failed LX import leaves the existing library and stored snapshot unchang
   await library.importCollections([{title:'Keep',tracks:preview.collections[0]!.tracks}]);const before=library.getSnapshot();fail();
   await assert.rejects(library.importCollections(preview.collections));assert.equal(library.getSnapshot(),before);
 });
+
+test('batch favorites keep the selection order ahead of existing entries and never toggle off',async()=>{
+  const {library}=setup();
+  const a={...track,origin:{kind:'online' as const,platform:'wy' as const,id:'a'}};
+  const b={...track,origin:{kind:'online' as const,platform:'wy' as const,id:'b'}};
+  const c={...track,origin:{kind:'online' as const,platform:'wy' as const,id:'c'}};
+  await library.addFavorites([b,a]);
+  assert.deepEqual(library.getSnapshot().favorites.map(item=>item.origin.id),['b','a']);
+  // Re-submitting an existing favorite must not remove it; new rows join the front.
+  await library.addFavorites([a,c]);
+  assert.deepEqual(library.getSnapshot().favorites.map(item=>item.origin.id),['c','b','a']);
+  // A duplicate inside one batch collapses to a single entry.
+  await library.addFavorites([a,a]);
+  assert.deepEqual(library.getSnapshot().favorites.map(item=>item.origin.id),['c','b','a']);
+});

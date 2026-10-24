@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {CoverThemeStore} from '../src/appearance/coverTheme.ts';
 import {PlaybackController} from '../src/playback/controller.ts';
 import {makeQueue} from '../src/domain/queue.ts';
-import {appearanceDefaults,appearancePalette,coverThemeGradient,flowThemeGradient,visualThemes} from '../src/domain/appearance.ts';
+import {appearanceDefaults,appearancePalette,coverThemeGradient,flowThemeGradient,meshPalette,visualThemes} from '../src/domain/appearance.ts';
 import {track,deferred} from './fixtures.ts';
 import type {Track} from '../src/domain/track.ts';
 
@@ -144,4 +144,13 @@ test('static flow fallback preserves readable semantic text for all extreme pale
       for(const text of [palette.text,palette.secondary])assert.ok(contrast(composite,text)>=4.5,`${mode} ${a}/${b}/${c}: ${composite}/${text}`);
     }
   }
+});
+test('mesh palette prefers the flow palette and fans a dominant color out',()=>{
+  assert.deepEqual(meshPalette(undefined,['#FF0000','#00FF00','#0000FF']),['#FF0000','#00FF00','#0000FF']);
+  assert.deepEqual(meshPalette('#123456',undefined),['#123456','#123456','#123456']);
+  assert.deepEqual(meshPalette('#123456',['#ABCDEF']),['#ABCDEF']);
+  assert.deepEqual(meshPalette('#123456',['bad','#00FF00','#0000FF']),['#123456','#123456','#123456']);
+  assert.equal(meshPalette(undefined,['#FF0000','#00FF00','#0000FF','#123456']),undefined);
+  assert.equal(meshPalette('nope',['bad','#00FF00','#0000FF']),undefined);
+  assert.equal(meshPalette(undefined,undefined),undefined);
 });

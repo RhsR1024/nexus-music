@@ -20,6 +20,11 @@ export function AmbientSoftLights({colors,identity,moving,pending,dark}:{colors:
   const running=useMotionGate(moving);
   return <View testID={`ambient-motion-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeAmbient testID="ambient-soft-lights" colors={colors} identity={identity} moving={running} pending={pending} dark={dark} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
 }
+const NativeMesh=requireNativeView<ViewProps&{colors:readonly string[];identity:string;moving:boolean;pending:boolean;dark:boolean}>('NexusNative','Mesh');
+export function AmbientMeshGradient({colors,identity,moving,pending,dark}:{colors:readonly string[];identity:string;moving:boolean;pending:boolean;dark:boolean}){
+  const running=useMotionGate(moving);
+  return <View testID={`ambient-mesh-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeMesh testID="ambient-mesh" colors={colors} identity={identity} moving={running} pending={pending} dark={dark} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
+}
 export function MotionImage({uri,blur=0,opacity=1,moving=false,onError,testID}:{testID?:string;uri:string;blur?:number;opacity?:number;moving?:boolean;onError?:()=>void}){
   const phase=useRef(new Animated.Value(0)).current,running=useMotionGate(moving);
   useEffect(()=>{let alive=true,animation:Animated.CompositeAnimation|undefined;

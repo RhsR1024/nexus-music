@@ -5,11 +5,11 @@ import { Pressable, ScrollView, StyleSheet} from 'react-native';
 import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
-export function PlaylistPicker({services,tracks,visible,onClose,inline=false}:{services:Services;tracks:readonly Track[];visible:boolean;onClose:()=>void;inline?:boolean}) {
+export function PlaylistPicker({services,tracks,visible,onClose,inline=false,onAdded}:{services:Services;tracks:readonly Track[];visible:boolean;onClose:()=>void;inline?:boolean;onAdded?:(playlistTitle:string)=>void}) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [name,setName]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  async function add(id?:string){setBusy(true);setError('');try{if(id)await services.library.addTracks(id,tracks);else await services.library.createPlaylist(name,tracks);setName('');onClose();}catch{setError('未能保存，原歌单保留，请重试');}finally{setBusy(false);}}
+  async function add(id?:string){setBusy(true);setError('');try{const title=id?library.playlists.find(playlist=>playlist.id===id)?.title??'歌单':name.trim();if(id)await services.library.addTracks(id,tracks);else await services.library.createPlaylist(name,tracks);setName('');onAdded?.(title);onClose();}catch{setError('未能保存，原歌单保留，请重试');}finally{setBusy(false);}}
   const content=<ScrollView keyboardShouldPersistTaps="handled" style={styles.root} contentContainerStyle={[styles.content,inline&&styles.inlineContent]}>
       <Pressable accessibilityRole="button" onPress={onClose}><Text style={styles.action}>取消添加</Text></Pressable>
       <Text style={styles.title}>加入音枢歌单</Text><Text style={styles.caption}>加入 {tracks.length} 首；已存在的歌曲也会保留为独立条目。</Text>

@@ -27,6 +27,9 @@ build/tests/native-covers
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/AmbientScene.swift modules/nexus-native/ios/AmbientTransition.swift tests/native/AmbientSceneTests.swift -framework CoreGraphics -o build/tests/native-ambient
 build/tests/native-ambient
 
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/AmbientScene.swift modules/nexus-native/ios/MeshField.swift tests/native/MeshFieldTests.swift -framework CoreGraphics -o build/tests/native-mesh
+build/tests/native-mesh
+
 xcrun swiftc -swift-version 5 ios/NexusMusicUITests/BackgroundPixels.swift tests/native/BackgroundPixelTests.swift -framework CoreGraphics -framework ImageIO -o build/tests/native-background-pixels
 build/tests/native-background-pixels
 

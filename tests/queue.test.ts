@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { trackKey } from '../src/domain/track.ts';
-import { makeQueue, enqueueNext, advance, remove, move, append, emptyQueue } from '../src/domain/queue.ts';
+import { makeQueue, enqueueNext, enqueueNextMany, advance, remove, move, append, emptyQueue } from '../src/domain/queue.ts';
 import { entry, track } from './fixtures.ts';
 
 test('long IDs remain strings; accounts and platforms never share identity', () => {
@@ -50,4 +50,18 @@ test('manual reorder keeps current identity and resets priority', () => {
   assert.deepEqual(q.priorityIds, []);
   assert.throws(() => move(q, 'a', -1));
   assert.throws(() => append(q, entry('a')));
+});
+
+test('batch play-next keeps the list order and follows earlier priority blocks', () => {
+  const base = makeQueue([entry('a'), entry('b'), entry('c')]);
+  const batch = enqueueNextMany(base, [entry('x'), entry('y'), entry('z')]);
+  assert.deepEqual(batch.entries.map(e => e.id), ['a', 'x', 'y', 'z', 'b', 'c']);
+  assert.deepEqual(batch.priorityIds, ['x', 'y', 'z']);
+  assert.equal(batch.currentId, 'a');
+  // A later single insert lands after the whole earlier block, not before it.
+  assert.deepEqual(enqueueNext(batch, entry('q')).entries.map(e => e.id), ['a', 'x', 'y', 'z', 'q', 'b', 'c']);
+  // An empty batch is a no-op and duplicate entry IDs are rejected before any insert.
+  assert.equal(enqueueNextMany(base, []), base);
+  assert.throws(() => enqueueNextMany(base, [entry('x'), entry('x')]));
+  assert.deepEqual(base.entries.map(e => e.id), ['a', 'b', 'c']);
 });

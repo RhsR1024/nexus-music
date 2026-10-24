@@ -34,7 +34,7 @@ import { createPlaybackSession } from '../playback/nativeSession.ts';
 import { AccountFmStation } from '../playback/accountFmStation.ts';
 import { OnlineProvider } from '../providers/online.ts';
 import { SearchCoordinator } from '../providers/searchCoordinator.ts';
-import { makeQueue, append, appendMany, enqueueNext } from '../domain/queue.ts';
+import { makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
 import type { Track } from '../domain/track.ts';
 import {requestJSON,type HTTPClient} from '../providers/http.ts';
@@ -175,7 +175,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     const entry = {id:Crypto.randomUUID(),track}, queue = playback.controller.getSnapshot().queue;
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
-  const addTracksToQueue=(tracks:readonly Track[])=>{const queue=playback.controller.getSnapshot().queue;playback.controller.setQueue(appendMany(queue,tracks.map(track=>({id:Crypto.randomUUID(),track}))));};
+  const addTracksToQueue=(tracks:readonly Track[],next=false)=>{if(!tracks.length)return;const queue=playback.controller.getSnapshot().queue;playback.controller.setQueue(next?enqueueNextMany(queue,tracks.map(track=>({id:Crypto.randomUUID(),track}))):appendMany(queue,tracks.map(track=>({id:Crypto.randomUUID(),track}))));};
   const restoreBackup=async(savedLibrary:import('../storage/library.ts').LibraryState,stats:PlaybackStatsState)=>{
     validateLibrary(savedLibrary);const safeStats=cleanPlaybackStats(stats);
     await libraryMutations.run(async()=>{

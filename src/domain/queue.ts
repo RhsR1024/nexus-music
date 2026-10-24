@@ -51,6 +51,14 @@ export function enqueueNext(queue: QueueState, entry: QueueEntry): QueueState {
   return { ...queue, entries, priorityIds: [...queue.priorityIds, entry.id] };
 }
 
+// Batch "play next": the block keeps its argument order and lands after the
+// current track (or after the last previously queued priority block).
+export function enqueueNextMany(queue: QueueState, entries: readonly QueueEntry[]): QueueState {
+  let result = queue;
+  for (const entry of entries) result = enqueueNext(result, entry);
+  return result;
+}
+
 export function select(queue: QueueState, id: string): QueueState {
   if (!queue.entries.some(entry => entry.id === id)) throw new Error('队列条目不存在');
   return { ...queue, currentId: id, priorityIds: [] };

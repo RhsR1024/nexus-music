@@ -2725,6 +2725,45 @@ final class SourceSettingsTests: XCTestCase {
     let pause=app.buttons["暂停"].firstMatch;reach(pause);pause.tap()
   }
 
+  func testLiveSourceMeshBackground() throws {
+    let app=XCUIApplication();app.launch()
+    // A previous run can relaunch straight into the full-screen player; the
+    // settings shell is only reachable after that presentation is dismissed.
+    let handle=app.buttons["player-drag-handle"].firstMatch
+    if handle.waitForExistence(timeout:2) {
+      if handle.isHittable {handle.tap()} else {handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()}
+      _ = waitForGone(handle,timeout:8)
+    }
+    func reach(_ item:XCUIElement){
+      for _ in 0..<24 {if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}}
+      XCTAssertTrue(item.isHittable)
+    }
+    openSettings(app,page:"playback")
+    let basic=app.descendants(matching:.any).matching(identifier:"128k").firstMatch;reach(basic);basic.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];reach(query);query.tap()
+    for character in "Shape of You"{query.typeText(String(character))};query.typeText("\n")
+    let search=app.buttons["run-online-search"];reach(search);search.tap()
+    let first=app.buttons["search-track-wy-0"];XCTAssertTrue(first.waitForExistence(timeout:45));reach(first);first.tap()
+    let mini=app.buttons["打开播放页"];XCTAssertTrue(mini.waitForExistence(timeout:30));mini.tap()
+    app.buttons["更多播放控制"].tap();app.buttons["播放界面样式"].tap()
+    let am=app.descendants(matching:.any).matching(identifier:"play-skin-am").firstMatch
+    XCTAssertTrue(am.waitForExistence(timeout:10));am.tap()
+    XCTAssertTrue(am.waitForNonExistence(timeout:10))
+    // Decision 0081: the AM backdrop composes the native mesh from the real
+    // cover palette, under the existing readability gradient.
+    let mesh=app.descendants(matching:.any).matching(identifier:"ambient-mesh").firstMatch
+    XCTAssertTrue(mesh.waitForExistence(timeout:30),"AM backdrop must run the native mesh with the real cover palette")
+    XCTAssertGreaterThan(mesh.frame.width,300,"Mesh must cover the player width")
+    XCTAssertGreaterThan(mesh.frame.height,600,"Mesh must cover the player height")
+    let playing=XCTAttachment(screenshot:app.screenshot());playing.name="Live source AM mesh playing";playing.lifetime = .keepAlways;add(playing)
+    let pause=app.buttons["暂停"].firstMatch;reach(pause);pause.tap()
+    let still=app.descendants(matching:.any).matching(identifier:"ambient-mesh-still").firstMatch
+    XCTAssertTrue(still.waitForExistence(timeout:10),"Paused intent must park the mesh drift")
+    XCTAssertTrue(mesh.exists,"The mesh palette must survive the pause")
+    let paused=XCTAttachment(screenshot:app.screenshot());paused.name="Live source AM mesh paused";paused.lifetime = .keepAlways;add(paused)
+  }
+
   func testLiveLXPlayback() throws {
     let app=XCUIApplication();app.launch()
     openSettings(app,page:"sources")

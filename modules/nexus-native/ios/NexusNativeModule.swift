@@ -40,6 +40,15 @@ public final class NexusNativeModule: Module {
       Prop("dark") { (view: NexusAmbientView, dark: Bool) in view.setDark(dark) }
       OnViewDidUpdateProps { (view: NexusAmbientView) in view.applyProps() }
     }
+    View(NexusMeshView.self) {
+      ViewName("Mesh")
+      Prop("colors") { (view: NexusMeshView, colors: [String]) in view.setColors(colors) }
+      Prop("identity") { (view: NexusMeshView, identity: String) in view.setIdentity(identity) }
+      Prop("moving") { (view: NexusMeshView, moving: Bool) in view.setMoving(moving) }
+      Prop("pending") { (view: NexusMeshView, pending: Bool) in view.setPending(pending) }
+      Prop("dark") { (view: NexusMeshView, dark: Bool) in view.setDark(dark) }
+      OnViewDidUpdateProps { (view: NexusMeshView) in view.applyProps() }
+    }
     Function("launchArgument") { (name: String) -> String? in
       ProcessInfo.processInfo.environment[name] ?? UserDefaults.standard.string(forKey: name)
     }

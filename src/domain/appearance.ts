@@ -116,3 +116,11 @@ export function playerBackgroundImage(mode:AppearanceOptions['playerBackground']
   const preferred=custom&&(photoSkin||mode==='photo')?custom:cover;
   return preferred&&failed.includes(preferred)?(cover&&failed.includes(cover)?undefined:cover):preferred;
 }
+
+// Mesh background palette assembly (decision 0081): the native layer accepts
+// 1–3 validated hex colors; the flow palette wins, a single dominant color
+// fans out to a triple, and anything unparseable keeps the layer off.
+export function meshPalette(color:string|undefined,flow:readonly string[]|undefined):readonly string[]|undefined{
+  const valid=(value:readonly string[]|undefined)=>value&&(value.length>=1&&value.length<=3)&&value.every(entry=>/^#[0-9a-f]{6}$/i.test(entry))?value:undefined;
+  return valid(flow)??(color&&/^#[0-9a-f]{6}$/i.test(color)?[color,color,color]:undefined);
+}

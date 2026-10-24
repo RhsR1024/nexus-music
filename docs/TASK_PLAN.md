@@ -1,6 +1,19 @@
+## 2026-10-24 批次0/1交付：AM网格背景与批量动作扩展
+
+- [x] 原生`MeshField`（3×3种子漂移、调色板校验、不折叠断言）与`MeshTimeline`（仅门控打开时累计、暂停停相位、忽略非有限输入）。
+- [x] `NexusMeshView`：iOS18+ SwiftUI `MeshGradient`，15–17双色渐变回退；离窗/后台/减少动态停表；`pending`不替换已显示调色板；注册`NexusNative.Mesh`。
+- [x] React：`meshPalette`+`AmbientMeshGradient`接入`ArtworkBackdrop`（写真皮肤保留原构图）；取色失败/无封面/偏好关闭时关闭该层。
+- [x] 批次1：`selection`模型、`BatchSelectionBar`、`Toast`；发现详情长按多选与批量收藏/加歌单/下一首/下载；`addFavorites`按选择顺序前插、`enqueueNextMany`整块保序。
+- [x] `npm run check` 520/520；`npm run test:native` exit0；真实音源`SourceUITests-1792859692162` 1通过/0失败/0跳过（公开搜索→解析→AM→网格→暂停）。
+- [x] IPA/APK gate 与 `--review` PASS；未新增逆向证据，未追加Sollin采集。
+- [ ] iOS15–17回退运行、漂移录屏逐帧、真机/签名/后台；发现详情批量下载在无源平台的真机行为。
+- [ ] 批次2起（搜索全状态机/统一播放意图）继续。
+
 ## 2026-10-24 功能实施接续
 
-封面取色默认开启修复已交付：默认偏好与旧记录迁移、512检查、经典直达Release 1/0/0与截图亲看确认背景随封面取色，见[回执](implementation-cover-tint-default-2026-10-24.md)；真机/真实源r4复采未验。用户提出的 AM 动态网格渐变（iOS18 MeshGradient：封面模糊底+取色网格动画，低版本回退现有实现）已评估为可行，列为后续播放器背景视觉批次候选，不因评估增加完成度。
+用户采纳 AM 动态网格渐变落地方式（[决策0081](decisions/0081-am-mesh-gradient-background.md)）并授权按批次正式开工直至开发完成。当前执行顺序：批次0 MeshGradient 背景（iOS18门控+回退+原生层+AM接入）→ 批次1 选择状态机/批量动作矩阵 → 批次2 搜索全状态机+统一播放意图 → 批次3 播放器/歌词/队列编辑 → 批次4 音乐库双歌单体系 → 批次5 本地扫描五视图 → 批次6 下载管理器 → 批次7 数据/备份/同步+外观 → 批次8 平台账号入口。每批做有意义的测试与必要真机验收，验收通过后提交push。
+
+封面取色默认开启修复已交付：默认偏好与旧记录迁移、512检查、经典直达Release 1/0/0与截图亲看确认背景随封面取色，见[回执](implementation-cover-tint-default-2026-10-24.md)；真机/真实源r4复采未验。
 
 通用歌曲菜单已在搜索/发现共享；23份用户授权真实源已全部导入、22份首次初始化成功，真实公开歌曲播放与封面/长歌词控制区修复通过本地Release。511业务/类型、完整native、菜单2/0/0、真实播放1/0/0；真机/签名/全部源的平台音质矩阵仍未验。完整[回执](implementation-shared-song-actions-2026-10-24.md)。第一批选择状态机/批量动作矩阵与后续批次继续，不因菜单子批次提高全项目完成百分比，不追加Sollin采集。
 
