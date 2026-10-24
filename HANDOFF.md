@@ -1,3 +1,7 @@
+## 2026-10-24 Android Sollin Q95 本地批量移除闭环
+
+本地两首隔离 WAV 完成批量移除采集：1/2→全选2/2→取消保留；确认框正文“将移除 N 首歌曲，不会删除设备上的原文件”随选择数在1/2间变化；确认后0首、两个WAV仍在设备、force-stop重启仍0；文件存在时重扫恢复2首；删除文件并移除扫描根保存后列表暂不重建，重扫才归零（E-1176–E-1200、F-059/F-060、P-057/P-058）。这证明“从本地列表移除”是索引操作，文件删除需另行确认。最终设备本地0首、扫描根空、收藏/歌单0、媒体state0，测试目录与临时dump已清理。动态strict 292E/60F/58P/87事件0错误0警告，动作日志1220条仅保留q94历史差异与q187有回执移除两项例外。下一轮补本地/搜索批量收藏、加歌单、下一首副作用及搜索空态/失败。
+
 ## 2026-10-24 Android Sollin 音乐功能规格动态批次
 
 已通过 ADB 在小米10/Android13 上完成发现、榜单、歌单、每日推荐、心动模式、搜索、听歌识曲、播放器、歌词、队列、解析链路、相似歌曲、音乐库、本地扫描、下载、锁屏/通知、Home后台恢复和冷启动等音乐能力采集。多文件本地批次覆盖根目录/子目录扫描、文件夹、艺术家、专辑聚合及清理闭环，并用两份真实 ID3 v2.3 标签验证了艺术家合并和专辑拆分。原始截图/控件树/日志只在 T7 Touch 外部案例 `/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023`；图文报告为 `report/ANDROID_MUSIC_FUNCTION_SPEC.md`，仓库脱敏摘要为 [Sollin Android 音乐功能规格](docs/SOLLIN_ANDROID_MUSIC_FUNCTION_SPEC.md)。本批 strict review：212 条 Evidence（含录屏）、44 个 Finding、42 条 Path，3 个 Work Items、72 timeline events，0 warning/error。
