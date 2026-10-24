@@ -1,10 +1,10 @@
-## 2026-10-24 Android Sollin Q106–Q112 审查与当前采集状态
+## 2026-10-24 Android Sollin Q106–Q114 审查与当前采集状态
 
 榜单按可复用功能路径验收：发现→平台榜单目录→选择一个目录数据值→标题/歌曲列表→共享歌曲动作。65个名称/ID不是65项功能；Q106记录的54个结果页只是样本，按用户要求不继续逐个打开。参考项目已核对固定版本：`joy-music-mobile` HEAD `d6f1af7` 的五个平台目录/详情适配器，以及 `Cymusic` HEAD `bf0d469` 的QQ `getTopLists`/`getTopListDetail`接口（具体文件与行号见功能清单）；仅用于NexusMusic架构参考，不证明Sollin内部调用。榜单共享断网冷启动失败→恢复重试已验证（E-1287/E-1288）；批量收藏/歌单/下一首/下载副作用和清理见E-1280。
 
-其余补采核对了推荐歌单收藏闭环（E-1284）、私人雷达批量动作（E-1285）、新碟专辑反馈/刷新/下载完成态（E-1281/E-1283）、搜索历史容量/手势（E-1282/E-1289）及歌单收藏按钮/取消确认（E-1286）。Q112在系统Wi-Fi VALIDATED时重开收藏歌单目录仍显示“同步失败/0项”，重试不恢复；这不足以判定收藏未传播或数据已删除，专辑卡同一数据源也未加载（E-1290）。平台服务/会话恢复后需按稳定歌单或专辑身份重核传播。榜单名称数量不作为缺口；当前状态缺口见 [功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md) §13。
+其余补采核对了推荐歌单收藏闭环（E-1284）、私人雷达批量动作（E-1285）、新碟专辑反馈/刷新/下载完成态（E-1281/E-1283）、搜索历史容量/手势（E-1282/E-1289）及歌单收藏按钮/取消确认（E-1286）。Q112目录曾显示“同步失败/0项”（E-1290）；Q113目录恢复为15项且无错误，但公开推荐样本详情切为“已收藏”后，显式刷新和完整列表回读仍未见目标，随后已确认撤销（E-1291/E-1292）。Q114检查当前搜索历史页，只有全局“清空”和可点击行；右滑无删除、行尾点击重搜，结合Q111左滑/长按测试，未发现当前页单条删除控件（E-1293）。测试词已清除。Q114开场误触账号入口的截图只留T7、排除于Evidence和仓库。这些均不推断服务端写入或隐藏页面状态。榜单名称数量不作为缺口；当前状态缺口见 [功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md) §13。
 
-外置案例动态strict已通过：376 Evidence / 91 Findings / 88 Paths / 104 timeline events，0 errors / 0 warnings；动作日志2480条中2478条哈希匹配，余下是已知q94历史哈希差异和q187有回执移除。Q106–Q112 Finding/Path已纳入正式报告，单证据Finding保持candidate。详细状态与限制见 [规格审核](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)、[状态契约](docs/SOLLIN_ANDROID_STATE_CONTRACTS.md)和[逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)。接手时重新检查手机、网络和T7，不将Q112的平台同步失败写成数据删除。
+外置案例动态strict已通过：379 Evidence / 92 Findings / 89 Paths / 106 timeline events，0 errors / 0 warnings；动作日志2520条中2518条哈希匹配，余下是已知q94历史哈希差异和q187有回执移除，Q113本批25条与Q114本批15条均全部匹配。Q106–Q114 Finding/Path已纳入正式报告，单轮候选Finding保持candidate。当前手机Sollin前台、发现页、搜索历史已清空、Wi-Fi连接且系统VALIDATED（飞行模式开启但Wi-Fi手动开启）、media state=0。详细状态与限制见 [规格审核](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)、[状态契约](docs/SOLLIN_ANDROID_STATE_CONTRACTS.md)和[逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)。接手时重新检查手机、网络和T7。
 
 ## 2026-10-24 Android Sollin Q104 持续无人值守补采
 
