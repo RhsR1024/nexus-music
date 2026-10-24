@@ -2287,3 +2287,5 @@ push 后 API 核对（2026-10-17 16:09 Asia/Shanghai）：`39016561400`（`920d1
 本批追加E-1072：艺术家详情歌曲长按1/50多选；仍未执行全选/批量副作用。外置strict review通过后统计为228 Evidence、49 Findings、47 Paths、76 timeline events。规格审核尚未完成，历史q94日志哈希不一致限制持续保留。
 
 本批Q86新增E-1074–E-1080：艺术家全选50/50、专辑1/14→14/14→取消普通列表；补统一状态契约docs/SOLLIN_ANDROID_STATE_CONTRACTS.md。232 Evidence、50 Findings、48 Paths、77 timeline events；完整采集与审核仍未完成。
+
+Q87新增E-1082–E-1090：专辑前两首批量下一首保序插入当前之后，当前曲不变，队列100→102，删除插入两项恢复100；无活动音频条件，不代表起播验收。外部报告新增选择与队列前后图解。237 Evidence、51 Findings、49 Paths、78 timeline events；严格复核通过，整体目标与审核继续进行。
