@@ -1,3 +1,9 @@
+## 2026-10-24 b61e09d 清洁归档与同步边界
+
+代码提交 b61e09ded558092006f374ce4ef086019e7ac536 已本地保存。清洁归档 ARCHIVE SUCCEEDED；manifest dirty=false/workingTreeChanges=[]，arm64/iphoneos26.2/min15.1/设备族[1,2]/unsigned。IPA SHA256 f1612e9480ff1bb42e499e02007ea950d7f8ffef3e399cbf634d729e1d8e6dd0；ZIP CRC、测试适配器排除、23份私人原始脚本字节均不在bundle的核对通过。当前包与收据保留 build/local-shared-actions-b61e09d-20261024。511业务/类型、完整native、最终真实源App 1/0/0及前段菜单2/0/0见[回执](implementation-shared-song-actions-2026-10-24.md)。签名/真机与全源全档位仍未验。
+
+origin仍为git@github.com:RhsR1024/nexus-music.git。ls-remote与正常push均因Permission denied(publickey)失败；agent无身份，按既有Keychain流程尝试加载也未成功。未创建新密钥、未改全局认证、未force push。本地提交保留，不能称远端已更新或本批CI通过；成功push后的远端SHA/队列核对尚待。阶段首次及收尾磁盘检查均已执行，收尾约38GiB可用；本批未做缓存或证据删除。
+
 ## 2026-10-23 黑胶阶段清洁归档及push回执
 
 2326f4e已正常push到RhsR1024/nexus-music。`build/logs/archive-vinyl-pivot-20261023.log` ARCHIVE SUCCEEDED、verify-archive通过；manifest commit2326f4e9810d585119e0b082e54da086281ddfb3、dirty=false、arm64/SDK26.2/unsigned，SHA157187638b29ff70303d72e5db43179189db512aa604674208736ff777759d18。IPA SHA5813f8fe0c981df15ba84635ecb79da8f136134a311d33a9fe43d3ebadee160a，ZIP CRC通过，正式bundle不含vinyl-capture-entry/夹具初始化错误/online-adapter-fixture标记。本机不冒称iOS27、签名或真机。
