@@ -292,3 +292,16 @@ Youmi 是 `7DaysMax/Youmi-Music-IOS` 的 fork 且未声明许可证；其网易�
 ## A07 既有 EQ 预设卡片（2026-10-17）
 
 五参考HEAD按固定表重新核对。Q `SoundEffectControl.tsx:38–45` 保留增益/有界预设和声明式UI职责；悦音/wtf/Cy当前src、Wayferar当前docs限定检索无EQ/preamp匹配，沿0014边界，不外推全仓无能力。IPA E-007→F-006→P-006 严格review通过，截图02/07只补视觉。原创卡片用音枢实际十频段值绘制、按曲线和前级计算选中态；保留七预设/24个自定义与唯一DSP，不复制Q参数、参考图片或商业配额。共享TS与未来Android原生音效边界见 [本批报告](2026-10-17_reverse-sollin-eq-report.md)。
+## 2026-10-24 榜单目录与歌曲列表接口核对
+
+榜单名称/ID是provider目录数据，不应按榜单逐个计为产品功能。验收对象是可复用路径：平台目录加载（动态接口或provider内置目录）→选择ID→读取对应歌曲列表→通用列表状态和歌曲动作。无需为了“覆盖榜单”逐个打开全部目录值；Sollin截图证据只证明UI行为，不证明其内部provider/API调用。
+
+本机参考源码核对（固定HEAD，仅静态源码，不代表本轮实际请求/运行）：
+
+| 项目 | 平台与入口 | 证据位置 | 适用边界 |
+|---|---|---|---|
+| `joy-music-mobile` `d6f1af7` | 网易云 `getBoards`/`getBoardList`；QQ同一双入口；酷狗、酷我、咪咕也各有目录/详情适配器 | `src/core/discover/sources/wy.ts:281,337`；`tx.ts:348,401`；`kg.ts:484,518`；`kw.ts:336,369`；`mg.ts:228,235` | WY/TX/KG/KW示例从平台端点读取目录/列表；MG当前目录来自内置目录常量，歌曲列表按ID请求平台接口。展示了各平台可复用provider边界，不表示目录都必须在线动态拉取 |
+| `q1515-lx-music-mobile` `547ccfe` | 五个平台分别有榜单模块与平台目录/详情请求方法 | `src/utils/musicSdk/{wy,tx,kg,kw,mg}/leaderboard.js`：网易云110/118/168；QQ 99/104/224；酷狗76/81/185；酷我98/103/200；咪咕145/158/218 | 该checkout中多个 `getBoards()` 当前返回内置榜单常量；`getBoardsData`/`getData` 与 `getList` 展示的是平台请求边界，不能仅凭函数存在声称该动态目录分支在当前版本被调用 |
+| `Cymusic` `bf0d469` | QQ `getTopLists()` 获取目录，`getTopListDetail(topListItem)` 读取歌曲详情 | `src/helpers/userApi/getMusicSource.ts:235,151` | 单平台实例，补充目录和详情分离的明确调用示例 |
+
+本次只核对接口/架构入口，没有复制参考实现，也没有把任何参考代码当成Sollin行为证据。音枢未来可按provider与榜单ID建立可复用目录、详情分页、错误/空态契约；平台API可用性、账号条件、许可与实现差异仍需独立审查。
