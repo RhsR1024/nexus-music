@@ -302,6 +302,7 @@ Youmi 是 `7DaysMax/Youmi-Music-IOS` 的 fork 且未声明许可证；其网易�
 |---|---|---|---|
 | `joy-music-mobile` `d6f1af7` | 网易云 `getBoards`/`getBoardList`；QQ同一双入口；酷狗、酷我、咪咕也各有目录/详情适配器 | `src/core/discover/sources/wy.ts:281,337`；`tx.ts:348,401`；`kg.ts:484,518`；`kw.ts:336,369`；`mg.ts:228,235` | WY/TX/KG/KW示例从平台端点读取目录/列表；MG当前目录来自内置目录常量，歌曲列表按ID请求平台接口。展示了各平台可复用provider边界，不表示目录都必须在线动态拉取 |
 | `q1515-lx-music-mobile` `547ccfe` | 五个平台分别有榜单模块与平台目录/详情请求方法 | `src/utils/musicSdk/{wy,tx,kg,kw,mg}/leaderboard.js`：网易云110/118/168；QQ 99/104/224；酷狗76/81/185；酷我98/103/200；咪咕145/158/218 | 该checkout中多个 `getBoards()` 当前返回内置榜单常量；`getBoardsData`/`getData` 与 `getList` 展示的是平台请求边界，不能仅凭函数存在声称该动态目录分支在当前版本被调用 |
+| `wtfdelphia-lx-music-mobile` `6624ab5` | WY/TX/KG/KW/MG五个provider均有榜单目录与按榜单ID取歌曲列表的方法 | `src/utils/musicSdk/{wy,tx,kg,kw,mg}/leaderboard.js`：WY `getBoardsData/getList` 110/168；TX 99/224；KG 76/185；KW 98/200；MG 145/218 | 当前 `getBoards()` 返回 `topList`/`boardList` 常量；动态目录请求/解析路径存在于模块中，但部分调用段落注释，不能据此声称运行时会动态取目录。各 `getList(bangid,page)` 是列表请求路径 |
 | `Cymusic` `bf0d469` | QQ `getTopLists()` 获取目录，`getTopListDetail(topListItem)` 读取歌曲详情 | `src/helpers/userApi/getMusicSource.ts:235,151` | 单平台实例，补充目录和详情分离的明确调用示例 |
 
-本次只核对接口/架构入口，没有复制参考实现，也没有把任何参考代码当成Sollin行为证据。音枢未来可按provider与榜单ID建立可复用目录、详情分页、错误/空态契约；平台API可用性、账号条件、许可与实现差异仍需独立审查。
+本次核对的是少量代表项目的接口/架构入口，不按具体榜单值逐一打开；没有复制参考实现，也没有把任何参考代码当成Sollin行为证据。音枢未来可按provider与榜单ID建立可复用目录、详情分页、错误/空态契约；平台API可用性、账号条件、许可与实现差异仍需独立审查。

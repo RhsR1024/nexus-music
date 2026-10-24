@@ -1,16 +1,24 @@
-## 2026-10-24 Android Sollin Q106–Q114 审查与当前采集状态
+## 2026-10-24 Android Sollin Q117复核后的当前状态
 
-榜单按可复用功能路径验收：发现→平台榜单目录→选择一个目录数据值→标题/歌曲列表→共享歌曲动作。65个名称/ID不是65项功能；Q106记录的54个结果页只是样本，按用户要求不继续逐个打开。参考项目已核对固定版本：`joy-music-mobile` HEAD `d6f1af7` 的五个平台目录/详情适配器，以及 `Cymusic` HEAD `bf0d469` 的QQ `getTopLists`/`getTopListDetail`接口（具体文件与行号见功能清单）；仅用于NexusMusic架构参考，不证明Sollin内部调用。榜单共享断网冷启动失败→恢复重试已验证（E-1287/E-1288）；批量收藏/歌单/下一首/下载副作用和清理见E-1280。
+Q117补齐搜索输入联想语义：输入 love 时出现完整建议词，点击后查询替换为建议文本并加载歌曲；专辑×QQ、MV×QQ返回结果，MV×咪咕显示含建议项的空态（E-1297）。同时尝试断网点击搜索“加载更多”：短间隔出现加载指示，等待后保留已有行但显示“没有更多结果了”，未见失败/重试文案（E-1298）。离线期间没有保存系统活动网络快照，此项只记候选观察，不推断请求失败被误报为末页，也不将它升级为实现要求。搜索历史已清空，未触发播放、收藏、下载或队列动作。
 
-其余补采核对了推荐歌单收藏闭环（E-1284）、私人雷达批量动作（E-1285）、新碟专辑反馈/刷新/下载完成态（E-1281/E-1283）、搜索历史容量/手势（E-1282/E-1289）及歌单收藏按钮/取消确认（E-1286）。Q112目录曾显示“同步失败/0项”（E-1290）；Q113目录恢复为15项且无错误，但公开推荐样本详情切为“已收藏”后，显式刷新和完整列表回读仍未见目标，随后已确认撤销（E-1291/E-1292）。Q114检查当前搜索历史页，只有全局“清空”和可点击行；右滑无删除、行尾点击重搜，结合Q111左滑/长按测试，未发现当前页单条删除控件（E-1293）。测试词已清除。Q114开场误触账号入口的截图只留T7、排除于Evidence和仓库。这些均不推断服务端写入或隐藏页面状态。榜单名称数量不作为缺口；当前状态缺口见 [功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md) §13。
+当前动态strict review为384 Evidence / 95 Findings / 93 Paths / 3 Work Items / 110 timeline events，0 errors / 0 warnings；全动作日志2652条中2650条与当前截图哈希匹配，两个明示例外仍为q94旧图哈希差异与q187有回执移除。Q115本批62/62、Q116累计36/36、Q117新增36/36匹配。APK reverse gate及case-guard通过。该门禁证明证据结构和哈希引用完整，不代表功能已全部覆盖。
 
-外置案例动态strict已通过：379 Evidence / 92 Findings / 89 Paths / 106 timeline events，0 errors / 0 warnings；动作日志2520条中2518条哈希匹配，余下是已知q94历史哈希差异和q187有回执移除，Q113本批25条与Q114本批15条均全部匹配。Q106–Q114 Finding/Path已纳入正式报告，单轮候选Finding保持candidate。当前手机Sollin前台、发现页、搜索历史已清空、Wi-Fi连接且系统VALIDATED（飞行模式开启但Wi-Fi手动开启）、media state=0。详细状态与限制见 [规格审核](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)、[状态契约](docs/SOLLIN_ANDROID_STATE_CONTRACTS.md)和[逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)。接手时重新检查手机、网络和T7。
+榜单按用户指定的共享功能路径验收：目录加载→选择一个目录ID→歌曲列表→歌曲动作；名称/ID是provider数据值，不逐个打开。参考项目只用于NexusMusic provider架构对照，不证明Sollin内部调用。Q117结束时设备为Sollin发现页、media-session state=0、Wi-Fi VALIDATED、飞行模式=1、屏幕超时600000ms、充电常亮=0。审计时屏幕因超时熄灭；ADB唤醒后确认Sollin仍为恢复活动，但通知遮罩保持焦点，因此未继续触控；下次设备采集需先由用户解锁。当前仍有共享榜单空数据态、歌单/专辑收藏关系回读和持久化、单任务下载活动百分比/单项暂停、后台调度/Range续传等未决边界，以及人工授权、外设、跨设备和逐帧视频复核；详见 [功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md) §13。Q117记录见 [逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)、[状态契约](docs/SOLLIN_ANDROID_STATE_CONTRACTS.md) 与 [规格审核](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)。
 
-## 2026-10-24 Android Sollin Q104 持续无人值守补采
+## 2026-10-24 Android Sollin Q106–Q115 历史快照
+
+榜单按可复用功能路径验收：发现→平台榜单目录→选择一个目录数据值→标题/歌曲列表→共享歌曲动作。65个名称/ID不是65项功能；Q106记录的54个结果页只是样本，按用户要求不继续逐个打开。参考项目已核对固定版本：`joy-music-mobile` HEAD `d6f1af7`、`q1515-lx-music-mobile` HEAD `547ccfe`和`wtfdelphia-lx-music-mobile` HEAD `6624ab5`均有五平台榜单provider及按ID取歌曲列表的路径；部分版本当前使用内置目录常量，动态目录请求方法不等于运行时调用。`Cymusic` HEAD `bf0d469`另有QQ `getTopLists`/`getTopListDetail`接口（具体文件与调用边界见 [参考比较](docs/REFERENCE_COMPARISON.md)）；这些只作NexusMusic架构参考，不证明Sollin内部调用。榜单共享断网冷启动失败→恢复重试已验证（E-1287/E-1288）；批量收藏/歌单/下一首/下载副作用和清理见E-1280。
+
+其余补采核对了推荐歌单收藏闭环（E-1284）、私人雷达批量动作（E-1285）、新碟专辑反馈/刷新/下载完成态（E-1281/E-1283）、搜索历史容量/手势（E-1282/E-1289）及歌单收藏按钮/取消确认（E-1286）。Q112目录曾显示“同步失败/0项”（E-1290）；Q113目录恢复为15项且无错误，但公开推荐样本详情切为“已收藏”后，显式刷新和完整列表回读仍未见目标，随后已确认撤销（E-1291/E-1292）。Q114检查当前搜索历史页，只有全局“清空”和可点击行；右滑无删除、行尾点击重搜，结合Q111左滑/长按测试，未发现当前页单条删除控件（E-1293）。测试词已清除。Q115两次在线单曲均在进入管理器前完成，任务请求FLAC、实际档位未确认、文件为.mp3；立即断开Wi-Fi后单曲保留Bad state失败记录及重试/移除入口。两条完成文件和失败记录均已清理，Wi-Fi恢复且系统VALIDATED（E-1294）。Q114开场误触账号入口的截图只留T7、排除于Evidence和仓库。这些均不推断服务端写入或隐藏页面状态。榜单名称数量不作为缺口；当前状态缺口见 [功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md) §13。
+
+外置案例动态strict通过：380 Evidence / 92 Findings / 90 Paths / 108 timeline events，0 errors / 0 warnings；动作日志2581条中2579条截图哈希匹配，余下仅已知q94历史差异与q187有回执移除。Q115新增62条动作截图哈希全部匹配；息屏期间两张黑帧明确排除于功能证据。Q106–Q115 Finding/Path已纳入正式报告，单轮候选Finding保持candidate。当前手机Sollin前台、发现页、屏幕超时设置已恢复原值600000ms、搜索历史已清空、Wi-Fi连接且系统VALIDATED（飞行模式开启但Wi-Fi手动开启）、下载任务/文件均为0、media state=0。已知q94历史哈希差异与q187有回执移除仍保留。详细状态与限制见 [规格审核](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)、[状态契约](docs/SOLLIN_ANDROID_STATE_CONTRACTS.md)和[逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)。接手时重新检查手机、网络和T7。
+
+## 2026-10-24 Android Sollin Q104 当时的持续无人值守补采
 
 设备重新核对为 Mi 10/Android 13、Sollin 2.0.0/code2060，T7案例目录挂载可写，动态case-guard与APK baseline review通过。Q104新增外部证据E-1273/F-077/P-074（榜单滚动分类入口、飙升榜与黑胶VIP热歌榜列表切换）和E-1274/F-078/P-075（精选轮播新碟首发→专辑详情、简介展开）。当前媒体会话state=0，没有队列/收藏/歌单/本地/下载新增。
 
-审核纠正前轮过度概括：无人值守采集**仍在进行**。其余榜单分类、推荐歌单真实批量副作用、下载单任务/后台状态、搜索历史容量/单删、跨类型平台组合、专辑收藏/刷新/分页等仍需继续按ADB可行性补采，不得统称为人工/外设阻塞。Q104完整状态和下一轮见 [采集交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md) 与 [功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md)。Q104动态strict case-review 360E/78F/75P/96事件，0错误/0警告；22条新增截图动作哈希一致；全日志仅保留既有q94历史差异与q187有回执移除。APK gate --review、动态case-guard通过。
+以下为Q104当时的状态快照，后续Q106–Q117已补齐榜单共享路径、多个页面批量动作、历史容量与可见手势、收藏目录回读、单曲下载边界和搜索输入联想；榜单名称/ID现按目录数据值处理，不再作为逐项待测功能。Q104的严格审核计数和当时缺口保留作历史记录，当前状态以文档顶部Q117摘要及功能清单为准。
 
 ## 2026-10-24 Android Sollin Q103 艺术家页批量副作用
 
@@ -2354,3 +2362,12 @@ Q93–Q94完成QQ已有网页会话边界与收藏歌单独立重采；279E/58F/
 ## 2026-10-24 Android Sollin 终轮 功能清单与状态路径整理
 
 Q103阶段的历史总结曾写“无人值守可采集项收敛完毕”；Q104–Q112后续审查已撤回该结论，不作为当前状态。新建 [SOLLIN_ANDROID_FEATURE_INVENTORY.md](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md)：13模块功能表（已验证行为/证据/实现要点）、跨页面批量动作矩阵、参考异常与产品决策清单、〔人工〕〔外设〕〔跨设备〕〔条件未复现〕剩余项分类、对齐IMPLEMENTATION_PLAN的实现批次建议。本轮会话完成Q97收尾+Q98–Q103六轮采集（搜索批量收藏/加歌单、本地批量副作用与双歌单体系、平台空态矩阵与建议项/历史清空、批量下载暂停/继续/停滞/重启、艺术家页批量副作用），动态strict 358E/76F/73P/95事件0错误0警告，动作日志1856条哈希一致（仅q94历史差异、q187有回执移除），每轮独立提交push。设备收尾：前台、本地0、收藏0/歌单0、下载0、media state=0。Q112以后的当前剩余路径见本文件顶部和更新后的功能清单§13；不得据Q103历史总结将它们全部归类为人工/外设/跨设备阻塞。
+## 2026-10-24 Android Sollin Q116 收尾记录（历史）
+
+Q116补齐Q115遗留的单曲下载失败恢复重试：Wi-Fi断开时建立失败任务，恢复系统网络至VALIDATED后点击原任务“重试”，任务达到100%；首张截图中完成文件区仍空，显式刷新后出现3.70 MB MP3。任务显示请求FLAC、实际档位未确认，扩展名不代表音质。确认删除文件/侧车及任务后管理器回到空态。设备设置已还原，Wi-Fi=2且VALIDATED、飞行模式=1、超时600000ms、充电常亮=0，Sollin前台。原始素材与脱敏Evidence只存T7外置案例；账户卡片、下载链接凭据和黑帧排除于功能Evidence。
+
+当前动态strict review为382 Evidence / 93 Findings / 91 Paths / 3 Work Items / 109 timeline events，0 errors / 0 warnings；全动作日志2616条中2614条与当前文件匹配，两个明示例外仍为q94旧图哈希差异与q187有回执移除。Q115本批62/62匹配，Q116累计36/36匹配（本轮新增35/35）。APK reverse gate及case-guard均PASS。该门禁证明证据结构和哈希引用完整，不代表功能已全部覆盖。
+
+榜单按用户指定的共享功能路径验收：目录加载→选择一个目录ID→歌曲列表→歌曲动作；名称/ID是provider数据值，不逐个打开。参考项目仅支持NexusMusic架构对照，不证明Sollin内部调用。当前仍有共享榜单空数据态、歌单收藏关系回读/持久化、单任务活动百分比/单项暂停、后台调度/Range续传以及人工授权、外设、跨设备和逐帧视频复核等限制，清单见 [功能清单](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md) §13。Q116操作的详细记录见 [逐轮交接](docs/SOLLIN_ANDROID_CAPTURE_HANDOFF.md)、[状态契约](docs/SOLLIN_ANDROID_STATE_CONTRACTS.md) 与 [规格审核](docs/SOLLIN_ANDROID_SPEC_AUDIT.md)。
+
+## 2026-10-24 Android Sollin Q106–Q115 审查与当前采集状态
