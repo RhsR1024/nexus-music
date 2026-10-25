@@ -18,6 +18,11 @@
 - 云端UI回归 `testDownloadSettingsAndOfflinePlayback`（CI 第三组）随 868585b 运行验证；本机未单独重跑该长用例。
 - 并行会话说明：批次5A（本地索引批量动作）由另一会话并行实施（74ff975），本批未触碰 localAudio/LocalAudioLibrary，无文件冲突。
 
+## 增量：任务多选批量管理（E-1300）
+
+- `BatchSelectionBar` 扩展下载动作（暂停/继续/取消/重试/移除记录）与 `unit` 文案；DownloadSettings 任务区长按进入多选（复用 selection 域），批量操作逐个执行并汇总"已暂停 N / M 个任务"。
+- 负证据：首版把整行包成 Pressable，`testDownloadSettingsAndOfflinePlayback` 在本机失败（暂停窗口错过，AX/时序变化）；改为仅内容区 Pressable 后该回归 `SourceUITests-1792906289395` 1/0/0，对照实验（stash 后同测通过）确认根因在行级 Pressable。
+
 ## 未验边界
 
 - 取消在途下载的真实中断点（下载中取消→取消态）由单测的 abort 路径覆盖，未做真机/真网络验证。
