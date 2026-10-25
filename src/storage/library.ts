@@ -5,7 +5,7 @@ import {originalSignature,lyricSignature} from '../domain/matching.ts';
 import {cleanTrack} from './cleanTrack.ts';
 import {MutationQueue} from './mutations.ts';
 export interface LocalEntry {id:string;track:Track}
-export interface LocalPlaylist {id:string;title:string;entries:readonly LocalEntry[];createdAt:number;updatedAt:number}
+export interface LocalPlaylist {id:string;title:string;entries:readonly LocalEntry[];createdAt:number;updatedAt:number;description?:string;coverUrl?:string}
 export interface TrackMatch {original:Track;target:Track;method:'automatic'|'manual';updatedAt:number}
 export interface LyricChoice {original:Track;mode:'original'|'automatic'|'manual';target?:Track;updatedAt:number}
 export interface LibraryState {version:1;favorites:readonly Track[];history:readonly {track:Track;playedAt:number}[];playlists:readonly LocalPlaylist[];matches?:readonly TrackMatch[];lyricChoices?:readonly LyricChoice[]}
@@ -20,6 +20,8 @@ export function validateLibrary(value:unknown):LibraryState {
   const playlistIds=new Set<string>();
   for(const playlist of library.playlists){
     if(!playlist||typeof playlist.id!=='string'||!playlist.id||playlistIds.has(playlist.id)||typeof playlist.title!=='string'||!playlist.title.trim()||!Array.isArray(playlist.entries)||!Number.isFinite(playlist.createdAt)||!Number.isFinite(playlist.updatedAt))throw new Error('歌单结构无效');
+    if(playlist.description!==undefined&&(typeof playlist.description!=='string'||playlist.description.length>512))throw new Error('歌单描述无效');
+    if(playlist.coverUrl!==undefined&&(typeof playlist.coverUrl!=='string'||playlist.coverUrl.length>2048))throw new Error('歌单封面地址无效');
     playlistIds.add(playlist.id);const entries=new Set<string>();
     for(const entry of playlist.entries){if(!entry||!entry.id||typeof entry.id!=='string'||entries.has(entry.id))throw new Error('歌单条目ID无效');entries.add(entry.id);validateTrack(entry.track);}
   }
@@ -77,7 +79,12 @@ export class LibraryStore {
   played(track:Track){validateTrack(track);return this.change(current=>({...current,history:[{track,playedAt:this.now()},...current.history.filter(item=>trackKey(item.track.origin)!==trackKey(track.origin))].slice(0,300)}));}
   clearHistory(){return this.change(current=>({...current,history:[]}));}
   removeHistory(track:Track){return this.change(current=>({...current,history:current.history.filter(item=>trackKey(item.track.origin)!==trackKey(track.origin))}));}
-  async createPlaylist(title:string,tracks:readonly Track[]=[]){tracks.forEach(validateTrack);const id=this.uuid(),time=this.now();await this.change(current=>({...current,playlists:[...current.playlists,{id,title:title.trim(),entries:tracks.map(track=>({id:this.uuid(),track})),createdAt:time,updatedAt:time}]}));return id;}
+  async createPlaylist(title:string,tracks:readonly Track[]=[],meta:{description?:string;coverUrl?:string}={}){tracks.forEach(validateTrack);const id=this.uuid(),time=this.now();await this.change(current=>({...current,playlists:[...current.playlists,{id,title:title.trim(),entries:tracks.map(track=>({id:this.uuid(),track})),createdAt:time,updatedAt:time,...(meta.description?.trim()?{description:meta.description.trim()}:{}) , ...(meta.coverUrl?.trim()?{coverUrl:meta.coverUrl.trim()}:{})}]}));return id;}
+  // Undo for delete-playlist (Sollin E-1240): put the captured playlist back.
+  // A same-id conflict (possible if the user created one in the undo window)
+  // falls back to a fresh id so restore never corrupts the list.
+  async restorePlaylist(playlist:LocalPlaylist){await this.change(current=>current.playlists.some(item=>item.id===playlist.id)?current:{...current,playlists:[...current.playlists,playlist]});return;}
+  updatePlaylistMeta(id:string,meta:{description?:string;coverUrl?:string}){return this.updatePlaylist(id,playlist=>({...playlist,...(meta.description!==undefined?{description:meta.description.trim()||undefined}:{}),...(meta.coverUrl!==undefined?{coverUrl:meta.coverUrl.trim()||undefined}:{})}));}
   renamePlaylist(id:string,title:string){return this.updatePlaylist(id,playlist=>({...playlist,title:title.trim()}));}
   deletePlaylist(id:string){return this.change(current=>({...current,playlists:current.playlists.filter(item=>item.id!==id)}));}
   addTracks(id:string,tracks:readonly Track[]){tracks.forEach(validateTrack);return this.updatePlaylist(id,playlist=>({...playlist,entries:[...playlist.entries,...tracks.map(track=>({id:this.uuid(),track}))]}));}

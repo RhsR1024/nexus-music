@@ -30,6 +30,7 @@ import { SourceRegistry } from '../providers/sourceRegistry.ts';
 import { SourceCatalog } from '../providers/sourceCatalog.ts';
 import { PreferenceStore } from './preferences.ts';
 import { SearchHistoryStore } from '../storage/searchHistory.ts';
+import { DevicePlaylistStore } from '../storage/devicePlaylists.ts';
 import { MultiSourceResolver } from '../providers/multiSourceResolver.ts';
 import { createPlaybackSession } from '../playback/nativeSession.ts';
 import { AccountFmStation } from '../playback/accountFmStation.ts';
@@ -73,6 +74,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const visualNative=requireNativeModule<VisualNative>('NexusFiles'),visualAssets=new VisualAssetStore(repository,visualNative),visualColors=new VisualColorCache(visualNative);await restore('visualAssets.v1','外观图片',()=>visualAssets.restore());
   const preferences = new PreferenceStore(repository); await restore('preferences.v1','偏好',()=>preferences.restore());
   const searchHistory = new SearchHistoryStore(repository); await restore('search.history.v1','搜索历史',()=>searchHistory.restore());
+  const devicePlaylists = new DevicePlaylistStore(repository,Crypto.randomUUID); await restore('device.playlists.v1','本地歌单',()=>devicePlaylists.restore());
   const hash=(value:string)=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,value);
   const davTransport=new DAVNativeTransport(requireNativeModule<DAVNativeModule>('NexusWebDAV'),Crypto.randomUUID);
   const davAccounts=new WebDAVAccounts(repository,nativeSecrets,hash,davTransport);await restore('webdav.accounts.v1','WebDAV',()=>davAccounts.restore());
@@ -192,7 +194,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
-  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
+  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

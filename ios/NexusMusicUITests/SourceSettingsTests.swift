@@ -1010,6 +1010,67 @@ final class SourceSettingsTests: XCTestCase {
     let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
     XCTAssertFalse(lxmcPlaylist().exists)
   }
+  // Batch 4: the device-only playlist system (Sollin E-1247–E-1251). Runs on a
+  // real imported audio file: default 我喜欢的（仅本机）always present and
+  // undeletable, creating prompts the device-only declaration, the local
+  // picker excludes the default and closes on submit, deletion happens with
+  // no confirmation, and the library playlist list never shows local names.
+  func testLocalPlaylistDualSystem() throws {
+    let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
+    selectLocalFixture("Synthetic Tagged Tone",in:app)
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:15))
+    app.buttons["歌单"].tap()
+    image("Local playlists default list")
+    let liked=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","打开本地歌单：我喜欢的 · ")).firstMatch
+    XCTAssertTrue(liked.waitForExistence(timeout:10),"The default device-only playlist must always exist")
+    // The device playlist store persists across runs; a run-unique suffix
+    // keeps every query unambiguous despite leftovers from failed runs.
+    let suffix=Int(Date().timeIntervalSince1970)%100000
+    let name="夜跑\(suffix)"
+    let field=app.textFields["新本地歌单名称"]
+    for _ in 0..<8 {if field.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(field.isHittable);field.tap();field.typeText(name)
+    app.buttons["local-playlist-create"].tap()
+    XCTAssertTrue(app.buttons["返回本地歌单"].waitForExistence(timeout:8),"Creating a local playlist opens its detail")
+    XCTAssertTrue(app.buttons["删除歌单"].firstMatch.exists,"A user-created local playlist offers deletion")
+    XCTAssertFalse(app.buttons["移除"].firstMatch.waitForExistence(timeout:3),"A fresh local playlist has no songs yet")
+    app.buttons["返回本地歌单"].tap()
+    liked.tap()
+    XCTAssertFalse(app.buttons["删除歌单"].firstMatch.exists,"The default playlist must not offer deletion")
+    XCTAssertTrue(app.buttons["返回本地歌单"].waitForExistence(timeout:8))
+    app.buttons["返回本地歌单"].tap()
+    // Add the imported file through the device-only picker.
+    app.buttons["歌曲"].tap()
+    let addTo=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","加入歌单")).firstMatch
+    XCTAssertTrue(addTo.waitForExistence(timeout:8));addTo.tap()
+    let nightRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","添加到本地歌单：\(name)")).firstMatch
+    XCTAssertTrue(nightRow.waitForExistence(timeout:8),"The local picker lists local playlists only")
+    XCTAssertFalse(app.buttons.matching(NSPredicate(format:"label CONTAINS %@","我喜欢的")).firstMatch.exists,"The local picker excludes the default playlist")
+    nightRow.tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","已添加到本地歌单「\(name)」")).firstMatch.waitForExistence(timeout:8),"Submitting must close the picker and confirm")
+    image("Local picker submitted and closed")
+    XCTAssertFalse(nightRow.exists,"Local picker closes after submitting (unlike the search-page picker)")
+    app.buttons["歌单"].tap()
+    let openNight=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","打开本地歌单：\(name) · ")).firstMatch
+    XCTAssertTrue(openNight.waitForExistence(timeout:8))
+    image("Local playlists after add");openNight.tap()
+    XCTAssertTrue(app.buttons["移除"].firstMatch.waitForExistence(timeout:8),"The added file lives in the local playlist")
+    // Device-only deletion has no confirmation dialog and takes effect now.
+    app.buttons["删除歌单"].tap()
+    XCTAssertEqual(app.alerts.count,0,"Local playlist deletion must not ask for confirmation")
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","已删除本地歌单「\(name)」")).firstMatch.waitForExistence(timeout:8))
+    XCTAssertTrue(liked.waitForExistence(timeout:8),"The default playlist survives other deletions")
+    // Isolation: the library playlist domain never saw the local name.
+    app.buttons["收起本地音频"].tap()
+    let mine=app.buttons["我的歌单"];XCTAssertTrue(mine.waitForExistence(timeout:8));mine.tap()
+    XCTAssertFalse(app.buttons.matching(NSPredicate(format:"label CONTAINS %@",name)).firstMatch.exists,"Library playlists and device playlists stay mutually invisible")
+  }
+
   func testYLocalAudioFileImport() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)

@@ -13,6 +13,8 @@ import {historyTimestamp} from '../domain/historyPresentation.ts';
 import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
+import type {LocalPlaylist} from '../storage/library.ts';
+import {Toast} from './Toast.tsx';
 import type {Track} from '../domain/track.ts';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {SheetModal} from './AdaptiveModal.tsx';
@@ -23,11 +25,12 @@ export function LibraryHome({services,openSearch,openSettings,openAccounts}:{ser
   const recommendations=useSyncExternalStore(services.recommendations.subscribe,services.recommendations.getSnapshot);
   const [tab,setTab]=useState<'favorites'|'history'|'playlists'>('favorites'),[selected,setSelected]=useState<string|null>(null);
   const [name,setName]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[adding,setAdding]=useState<readonly Track[]>([]),[visibleCount,setVisibleCount]=useState(20);
+  const [description,setDescription]=useState(''),[coverUrl,setCoverUrl]=useState(''),[undoSnapshot,setUndoSnapshot]=useState<LocalPlaylist|null>(null);
   const [listOpen,setListOpen]=useState(false);
   const [matchingTrack,setMatchingTrack]=useState<Track|null>(null);
   const [menu,setMenu]=useState<{track:Track;index:number;entryId?:string;playlistId?:string;history:boolean}|null>(null);
   const playlist=library.playlists.find(item=>item.id===selected);
-  useEffect(()=>{if(selected&&!playlist)setSelected(null);setName(playlist?.title??'');setVisibleCount(20);},[selected,playlist?.title,tab]);
+  useEffect(()=>{if(selected&&!playlist)setSelected(null);setName(playlist?.title??'');setDescription(playlist?.description??'');setCoverUrl(playlist?.coverUrl??'');setVisibleCount(20);},[selected,playlist?.title,playlist?.description,playlist?.coverUrl,tab]);
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('保存未完成，已有音乐库保留；请重试');}finally{setBusy(false);}}
   const button=(label:string,action:()=>void,disabled=busy,testID?:string)=><Pressable testID={testID} accessibilityRole="button" onPress={action} disabled={disabled} style={[styles.button,disabled&&{opacity:.4}]}><Text style={styles.action}>{label}</Text></Pressable>;
   const openPlaylistComposer=()=>{setTab('playlists');setSelected(null);setName('');};
@@ -42,14 +45,18 @@ export function LibraryHome({services,openSearch,openSettings,openAccounts}:{ser
     <LocalAudioLibrary services={services}/><DeviceMediaLibrary services={services}/><WebDAVLibrary services={services}/>
     {services.recoveryWarnings.map((warning,index)=><Text key={index} style={styles.caption}>{warning}</Text>)}
     <View style={styles.tabs}>{tabButton('favorites','我的收藏')}{tabButton('history','最近播放')}{tabButton('playlists','我的歌单')}</View>
-    {playlist?<View><Text style={styles.heading}>{playlist.title}</Text><TextInput accessibilityLabel="音枢歌单名称" value={name} onChangeText={setName} style={styles.input}/><View style={styles.row}>
-      {button('保存名称',()=>{void perform(async()=>{await services.library.renamePlaylist(playlist.id,name);});},busy||!name.trim())}
-      {button('删除歌单',()=>Alert.alert('删除此音枢歌单？','不会删除其他歌单中的相同歌曲。',[{text:'取消',style:'cancel'},{text:'删除',style:'destructive',onPress:()=>{void perform(async()=>{await services.library.deletePlaylist(playlist.id);});}}]))}
+    {playlist?<View><Text style={styles.heading}>{playlist.title}</Text><TextInput accessibilityLabel="音枢歌单名称" value={name} onChangeText={setName} style={styles.input}/>
+      <TextInput accessibilityLabel="音枢歌单描述" value={description} onChangeText={setDescription} placeholder="歌单描述（可选）" placeholderTextColor="#768191" style={styles.input}/>
+      <TextInput accessibilityLabel="音枢歌单封面地址" value={coverUrl} onChangeText={setCoverUrl} placeholder="封面图片地址（可选）" placeholderTextColor="#768191" style={styles.input}/><View style={styles.row}>
+      {button('保存信息',()=>{void perform(async()=>{await services.library.renamePlaylist(playlist.id,name);await services.library.updatePlaylistMeta(playlist.id,{description,coverUrl});});},busy||!name.trim())}
+      {button('删除歌单',()=>Alert.alert('删除此音枢歌单？','不会删除其他歌单中的相同歌曲。',[{text:'取消',style:'cancel'},{text:'删除',style:'destructive',onPress:()=>{void perform(async()=>{const snapshot=playlist;await services.library.deletePlaylist(playlist.id);setUndoSnapshot(snapshot);});}}]))}
       {button('返回歌单列表',()=>setSelected(null))}
     </View></View>:tab==='playlists'?<View>
       <TextInput accessibilityLabel="创建音枢歌单名称" value={name} onChangeText={setName} placeholder="新歌单名称" placeholderTextColor="#768191" style={styles.input}/>
-      {button('创建歌单',()=>{void perform(async()=>{const id=await services.library.createPlaylist(name);setSelected(id);});},busy||!name.trim(),'library-create-playlist-submit')}
-      {library.playlists.map(item=><Pressable accessibilityRole="button" accessibilityLabel={`${item.title} · ${item.entries.length}首`} key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><View style={{flexDirection:"row",gap:14,alignItems:"center"}}><Cover services={services} track={item.entries[0]?.track} size={58}/><View style={{flex:1}}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首</Text></View></View></Pressable>)}
+      <TextInput accessibilityLabel="创建音枢歌单描述" value={description} onChangeText={setDescription} placeholder="歌单描述（可选）" placeholderTextColor="#768191" style={styles.input}/>
+      <TextInput accessibilityLabel="创建音枢歌单封面地址" value={coverUrl} onChangeText={setCoverUrl} placeholder="封面图片地址（可选）" placeholderTextColor="#768191" style={styles.input}/>
+      {button('创建歌单',()=>{void perform(async()=>{const id=await services.library.createPlaylist(name,[],{description,coverUrl});setSelected(id);});},busy||!name.trim(),'library-create-playlist-submit')}
+      {library.playlists.map(item=><Pressable accessibilityRole="button" accessibilityLabel={`${item.title} · ${item.entries.length}首`} key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><View style={{flexDirection:"row",gap:14,alignItems:"center"}}><Cover services={services} track={item.entries[0]?.track} size={58}/><View style={{flex:1}}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首{item.description?` · ${item.description}`:''}</Text></View></View></Pressable>)}
     </View>:null}
     {!!tracks.length&&<View style={styles.row}>{button('播放全部',()=>services.playTracks(tracks,0))}{button('随机播放',()=>{void services.preferences.update({shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));})}</View>}
     {tracks.length>0&&button('全部歌曲与批量管理',()=>setListOpen(true))}
@@ -66,6 +73,7 @@ export function LibraryHome({services,openSearch,openSettings,openAccounts}:{ser
     {tab==='history'&&library.history.length>0&&button('清空播放历史',()=>Alert.alert('清空音枢播放历史？','不会修改服务端播放记录。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>{await services.library.clearHistory();});}}]))}
     <LibraryDataTools services={services}/>
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
+    <Toast message={undoSnapshot?`已删除歌单「${undoSnapshot.title}」`:''} onDismiss={()=>setUndoSnapshot(null)} action={undoSnapshot?{label:'撤销',onRun:()=>{void perform(async()=>{await services.library.restorePlaylist(undoSnapshot);});}}:undefined}/>
     <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} visible={listOpen} onClose={()=>setListOpen(false)}/>
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
     <MatchModal services={services} track={matchingTrack} onClose={()=>setMatchingTrack(null)}/>

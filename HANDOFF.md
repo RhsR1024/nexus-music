@@ -1,3 +1,9 @@
+## 2026-10-25 批次4音乐库双歌单体系
+
+按[功能清单§6](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md)落地双歌单体系：新增 `src/domain/devicePlaylist.ts` + `src/storage/devicePlaylists.ts`（键 `device.playlists.v1` 永不进入音乐库JSON，与云同步/WebDAV域隔离），默认"我喜欢的（仅本机）"恒在且拒删；本地音频页新增"歌单"视图（新建/重命名/删除无确认/逐曲移除/行播放）与 `LocalPlaylistPicker`（只列本地歌单、排除默认、空态提示新建、提交后关闭——与搜索页选择器保留面板不同），行"加入歌单"改走本地选择器；自建歌单补 描述/封面URL 三字段与删除撤销（Toast动作按钮+快照回插 `restorePlaylist`）。打开/新建收起键盘。
+
+验证：`npm run check` 537/537；UI `testLocalPlaylistDualSystem` 最终 `SourceUITests-1792894967968` 1/0/0（真实导入音频：默认恒在/唯一名新建/创建可删默认不可删/选择器排除默认/提交关闭/删除无确认/音乐库看不到本地名），3张截图亲看；本地导入回归 `1792893739359` 1/0/0。四轮负证据保留（断言位置错、键盘遮挡、AX节点重复需firstMatch、消息查询误用buttons+跨运行同名残留），全部修复并记入回执。IPA/APK gate与`--review` PASS。未验：本地歌单批量多选（批次5）、撤销Toast录屏、iOS27云端终态（fde9b2c/0aeed10云端结果待核对）、真机/签名/后台。详见[回执](docs/implementation-device-playlists-2026-10-25.md)。
+
 ## 2026-10-25 批次3队列编辑与解析健壮性
 
 队列面板按[功能清单§5](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md)补齐编辑矩阵：头部当前序号/总数（`· n/total`）、定位当前（scrollToIndex+失败回退offset）、清除当前之后（`removeAfter` 清理越界优先块、含待清计数）、锁定开关（隐藏逐行 移除/上移/下移/拖动 并提示，行点击播放保留）；逐行新增可见上移/下移。锁定边界按E-862/E-918：控制器以 entries 引用变化判定外部重建并仅此时重置锁定，`advance` 保持引用故自然前进/队内选曲不解锁。解析失败自动跳进（E-1272参考）在 nativeSession 沿既有 repeat/shuffle 路径实现，连续失败上限15熔断报错、ready即重置、单曲/队尾直接报错；解析档位低于偏好时播放器三处档位文案追加"已降级为 X"。
