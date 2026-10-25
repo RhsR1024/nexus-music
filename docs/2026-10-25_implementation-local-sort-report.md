@@ -67,4 +67,6 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testLiveLocalSort
 
 本地UI构建包含开工时已有的Files helper工作树补丁（轮询/坐标回退），本次修正其中一处API误用并保留在工作树，未混入本批提交；manifest记录了其完整源码哈希。本批提交新真实用例及排除选择器背后local-track行的定位修正。生产排序代码、真实音频输入与截图的来源已分别绑定，不能把该本地工作树测试称为clean HEAD构建。
 
-收尾检查磁盘余量约25GiB；构建期间未清缓存或原始证据，保留当前DerivedData、有效阶段与未解决CI证据，回执build/logs/cleanup-local-sort-20261025.json。未进行文件整目录删除、采集迁移、force push或旧CI重派。
+收尾磁盘余量约24GiB；构建结束后逐文件核对SHA与lsof，清理4,215,580字节的重复原生测试音频副本，最终副本、当前DerivedData、有效阶段与负证据保留。回执build/logs/cleanup-local-sort-20261025.json；没有整目录删除或采集迁移。
+
+功能提交1962c98已正常push并核对远端一致；[CI 40174617383](https://github.com/RhsR1024/nexus-music/actions/runs/40174617383)运行中，API实核同分支1运行/0queued/0pending。未force push、取消运行中任务或重派旧版；云端终态待验。
