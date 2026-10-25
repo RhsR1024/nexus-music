@@ -1163,11 +1163,16 @@ final class SourceSettingsTests: XCTestCase {
     func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
     func openLocal(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();XCTAssertTrue(app.buttons["收起本地音频"].waitForExistence(timeout:10))}
     func barElement()->XCUIElement{return app.descendants(matching:.any).matching(identifier:"local-playlist-batch-selection-bar").firstMatch}
-    func bar(_ n:Int){let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in barElement().label == "已选 \(n) / 2 首"},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:8),.completed)}
+    func bar(_ n:Int,total:Int=2){let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in barElement().label == "已选 \(n) / \(total) 首"},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:8),.completed)}
     func selectBoth(){app.buttons["local-playlist-track-0"].press(forDuration:1.1);bar(1);app.buttons["local-playlist-batch-select-all"].tap();bar(2)}
-    func openPlaylist(_ title:String,_ count:Int){let row=app.buttons["打开本地歌单：\(title) · \(count)首"];XCTAssertTrue(row.waitForExistence(timeout:10));row.tap()}
+    func openPlaylist(_ title:String,_ count:Int){let row=app.buttons["打开本地歌单：\(title) · \(count)首"];for _ in 0..<12{if row.exists && row.isHittable{break};app.swipeUp()};XCTAssertTrue(row.waitForExistence(timeout:10));row.tap()}
     func filter(_ title:String){let f=app.textFields["搜索本地歌曲艺术家专辑"];f.tap();let old=f.value as? String ?? "";f.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:old.count));if !title.isEmpty{f.typeText(title)};f.typeText("\n")}
     func createInPicker(_ title:String){let f=app.textFields["新建本地歌单名称"];XCTAssertTrue(f.waitForExistence(timeout:8));f.tap();f.typeText(title);f.typeText("\n");app.buttons["新建本地歌单并添加"].tap()}
+    func skin(_ name:String){
+      app.buttons["更多播放控制"].tap();app.buttons["播放界面样式"].tap()
+      let option=app.descendants(matching:.any).matching(identifier:"play-skin-\(name)").firstMatch
+      XCTAssertTrue(option.waitForExistence(timeout:10));for _ in 0..<5{if option.isHittable{break};app.swipeUp()};option.tap()
+    }
     let handle=app.buttons["player-drag-handle"].firstMatch;if handle.waitForExistence(timeout:2){handle.tap()}
     func openQueue(){
       let player=app.buttons["打开播放页"];XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
@@ -1178,7 +1183,7 @@ final class SourceSettingsTests: XCTestCase {
     }
     func closeQueue(){app.buttons["收起队列"].tap();XCTAssertTrue(waitForGone(app.buttons["收起队列"],timeout:10));app.buttons["收起播放选项"].tap();XCTAssertTrue(waitForGone(app.buttons["收起播放选项"],timeout:10));app.buttons["player-drag-handle"].tap()}
     // Clear through normal player navigation, then restart with persisted empty queue.
-    if app.buttons["打开播放页"].waitForExistence(timeout:3){openQueue();app.buttons["清空播放队列"].tap();app.alerts.buttons["清空"].tap();app.terminate();app.launch()}
+    if app.buttons["打开播放页"].waitForExistence(timeout:3){app.buttons["打开播放页"].tap();skin("classic");app.buttons["player-drag-handle"].tap();openQueue();app.buttons["清空播放队列"].tap();app.alerts.buttons["清空"].tap();app.terminate();app.launch()}
     openLocal()
     for name in names {
       app.buttons["导入音频文件"].tap();selectLocalFixture(name,in:app)
@@ -1215,6 +1220,30 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["local-playlist-track-0"].tap();app.buttons["收起本地音频"].tap();let player=app.buttons["打开播放页"];XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90),"Playlist removal must retain actual MP3 playback");XCTAssertTrue(app.buttons["暂停"].firstMatch.isHittable);image("Real playlist retained audio PCM playback");app.buttons["暂停"].firstMatch.tap()
     app.buttons["player-drag-handle"].tap();openLocal();app.buttons["歌曲"].tap();XCTAssertEqual(app.staticTexts["local-filter-count"].label,"2 / 2 首");XCTAssertEqual(app.buttons.matching(NSPredicate(format:"label == %@","已收藏")).count,2)
+    // Build eight real playlist entries through normal UI; no queue injection.
+    app.buttons["歌单"].tap();openPlaylist(copy,2)
+    for total in [2,4] {
+      app.buttons["local-playlist-track-0"].press(forDuration:1.1);bar(1,total:total)
+      app.buttons["local-playlist-batch-select-all"].tap();bar(total,total:total)
+      app.buttons["local-playlist-batch-action-加歌单"].tap()
+      let destination=app.buttons["添加到本地歌单：\(copy)"];XCTAssertTrue(destination.waitForExistence(timeout:10));destination.tap()
+      XCTAssertTrue(app.staticTexts["已添加到本地歌单「\(copy)」"].waitForExistence(timeout:10))
+      app.buttons["返回本地歌单"].tap();openPlaylist(copy,total*2)
+    }
+    app.buttons["local-playlist-track-0"].tap();app.buttons["收起本地音频"].tap();player.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90));app.buttons["暂停"].firstMatch.tap()
+    skin("am");let body=app.descendants(matching:.any).matching(identifier:"am-body").firstMatch
+    XCTAssertTrue(body.waitForExistence(timeout:10));app.buttons["am-content-queue"].tap()
+    for mode in ["one","shuffle","off"]{let choice=app.descendants(matching:.any).matching(identifier:"queue-mode-\(mode)").firstMatch;choice.tap();XCTAssertTrue(choice.isSelected)}
+    XCTAssertTrue(app.staticTexts["· 1/8"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.buttons["1. \(names[0])"].isHittable);XCTAssertTrue(app.buttons["2. \(names[1])"].isHittable);image("Real eight entries AM queue first position")
+    let last=app.buttons["8. \(names[1])"]
+    for _ in 0..<6{if last.exists && last.isHittable{break};body.swipeUp()}
+    XCTAssertTrue(last.isHittable,"All eight actual playlist entries must remain reachable");last.tap()
+    // Track changes remount the AM body at its cover; reopen the actual queue.
+    if !app.staticTexts["播放队列"].exists{app.buttons["am-content-queue"].tap()}
+    XCTAssertTrue(app.staticTexts["· 8/8"].waitForExistence(timeout:10));XCTAssertTrue(app.buttons["暂停"].isHittable);image("Real eight entries AM queue last position");app.buttons["暂停"].tap()
+    app.buttons["am-content-queue"].tap();skin("classic");XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))
   }
 
   func testLiveLocalIndexActions() throws {
@@ -1797,7 +1826,7 @@ final class SourceSettingsTests: XCTestCase {
     singleMode.tap();XCTAssertTrue(singleMode.isSelected)
     shuffleMode.tap();XCTAssertTrue(shuffleMode.isSelected);XCTAssertFalse(singleMode.isSelected)
     sequenceMode.tap();XCTAssertTrue(sequenceMode.isSelected)
-    XCTAssertTrue(app.staticTexts["· 8"].waitForExistence(timeout:5),"The long-queue fixture must publish all eight rows")
+    XCTAssertTrue(app.staticTexts["· 1/8"].waitForExistence(timeout:5),"Queue heading must retain the current position and all eight entries")
     XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","2. Synthetic tone 2")).firstMatch.isHittable,"The second queue row must be on screen beneath the header")
     let amQueueImage=XCTAttachment(screenshot:XCUIScreen.main.screenshot());amQueueImage.name="AM exclusive authoritative queue body";amQueueImage.lifetime = .keepAlways;add(amQueueImage)
     _ = try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=0")!)
