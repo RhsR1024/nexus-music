@@ -4,6 +4,8 @@
 
 540项业务/类型通过；真实V261020脚本取得公开MP3，最终Release SourceUITests-1792900858251为1/0/0、158.281秒，源码/输入不变、5张实际附件亲看/provenance ready，App副本SHA等于真实输入、SQLite设备收藏true而音乐库收藏0。APK gate/review与既有395E动态严格审核通过，未补采Sollin。工作树因并行任务reset后已隔离，原目录7行测试修改保留。详见[本批回执](docs/implementation-local-index-2026-10-25.md)。
 
+代码74ff975已正常push至origin/codex/local-audio-index并核对远端；主检出其他任务的7行修改保持原样，后续使用附加的受管工作树。PR/CI队列状态另留任务附件与本机publish-receipt，不称云端通过。
+
 批次5仍继续：扫描根/文件夹视图/规则、完整六字段双向排序持久化、本地歌单详情多选；真机/签名/后台、连续动效及云端终态未验，不将5A记整批完成。
 
 ## 2026-10-25 批次4音乐库双歌单体系

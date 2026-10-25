@@ -43,3 +43,7 @@ Info.plist SHA256：`87ab8db62af335ef9f01a4b95c08ce8c0728db0701b40b82f0c82ab4296
 - 提交/推送与CI队列核对在阶段提交后补记；不force push。
 
 收尾：独立模拟器已在来源/数据库核对后Shutdown；磁盘约27GiB可用。已优先清理无使用者的旧缓存，其余当前缓存与必要原始证据保留。正式bundle已实核不含23份音源原文或测试在线适配器，真实本地测试的合成HTTP计数均为0。
+
+## 分支交付
+
+功能代码74ff9754b72ca7087ec03852e780688058cda651已正常push到origin/codex/local-audio-index，ls-remote确认SHA相同；未force push。受管工作树继续保留供批次5后续实施；原主检出的7行未提交测试修改保持原样。本仓push工作流只匹配main，本分支的PR创建后运行及队列核对另留本机publish-receipt，不把本地成功记为云端终态。源码文件摘要与最终r5实际构建仍一致。
