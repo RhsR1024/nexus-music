@@ -10,7 +10,9 @@
       "NexusMusicAuthModule",
       "NexusFilesModule",
       "NexusMediaLibraryModule",
-      "NexusDAVModule"
-    ]
+      "NexusDAVModule",
+      "NexusDownloadsModule"
+    ],
+    "appDelegateSubscribers": ["NexusDownloadsAppDelegateSubscriber"]
   }
 }
