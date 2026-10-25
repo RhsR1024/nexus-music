@@ -1,5 +1,7 @@
 ## 2026-10-25 批次6增量：原生后台URLSession下载底座（本机验收完成）
 
+另核对既有队列：5D对应云端`40193664989/f55414c`终态failure，失败步骤同为"Verify source management and Navidrome playback in the App"，与已定位的八行旧文案断言回归一致，修复包含于787a957及本批排队运行40202784084；云端终态以实际运行为准。
+
 接续工作树中未提交的批次6续作并完成收口：iOS新增原生后台下载会话（journal只记任务身份/状态，URL不入盘；generation拒绝陈旧回调；配额/长度/编码校验原生强制；resume数据受保护并排除备份），JS适配器只观察日志、abort('pause'/'cancel')映射原生停止方向并保留已收字节，`OfflineDownloadStore`在原生可用时按任务独立并发并在restore时认领paused/cancelled。补齐原缺口：新增9项适配器单元测试，`npm run check` 570/570；原生真实音频契约 `scripts/verify-live-native-offline.mjs` 以两份授权V261020原始MP3通过（暂停262144字节→Range续传→完成字节精确3,740,360/4,215,580、取消→显式重试、journal重启恢复、ack保留payload、容量拒绝、journal无URL），回执`build/native-offline-real-20261025-r1/receipt.json`；Release冒烟 `SourceUITests-1792937561109` 1/0/0证明模块与AppDelegate订阅者编译进正式App。macOS ephemeral不等同iOS后台验收：挂起/锁屏系统级续跑、真实provider多任务、真机/签名（0可用身份）与后台播放仍待，不据此结束批次6。详见[回执](docs/2026-10-25_native-background-transfers-report.md)。
 
 ## 2026-10-25 批次6增量：在途取消与失败后重试
