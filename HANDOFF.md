@@ -1,6 +1,10 @@
 ## 2026-10-25 批次5C：文件夹与扫描（验收完成）
 
+代码`b6227e4`与文档`f3675d8`已正常push到origin/main，远端SHA核对一致；两笔在同一push事件内，paths-ignore按整体差异评估，故云端运行[40187742231](https://github.com/RhsR1024/nexus-music/actions/runs/40187742231)对应f3675d8（包含5C全部代码）当前运行中，1运行/0排队，未取消运行或重派旧提交。终态未验前不记云端通过。
+
 已接系统目录授权/原生书签、递归/平层扫描、文件夹视图、最小时长/屏蔽目录、保存与显式重扫分离。手动隐藏与扫描排除分开，手动导入不随移根消失，App副本/播放引用保留。556项检查、两首真实MP3的Mac原生扫描契约与最终Release `SourceUITests-1792925051344`（1/0/0、3分10秒、8张附件亲看）通过。期间r3通过后r4–r6三轮复核失败均定位并修复：r4为取消后立即重添加时present落在上一个picker关闭动画内静默失败、promise永久挂起（原生改为等待层级收起）；r5为远程Files AX子树不可查询叠加sheet被系统撤下且无delegate回调导致spinner冻结（原生新增看门狗按取消收口，测试选择器循环改为优先确认sheet导航栏"打开"并可自愈重开）；r6为看门狗首版3秒未展示阈值与Files冷启动（实际展示约4秒）冲突产生孤儿sheet（阈值放宽到20秒并dismiss迟到孤儿）。三轮负证据均有截图/控件树/屏幕录像，真实用户路径的冻结缺陷由本批一并消除。
+
+另核对既有队列：5B对应云端`40174617383`（1962c98）终态failure，失败步骤为"Verify source management and Navidrome playback in the App"，无日志权限仅能部分归因，与此前3df539f的Navidrome长队列断言失败同区；5B本地Release证据不变，云端以运行中的f3675d8为准。
 
 [实施回执](docs/2026-10-25_implementation-local-folders-report.md)与[真实场景](docs/ui-spec/local-folder-live-2026-10-25.md)。继续既有Q125资料，未补采Sollin；APK gate/review与395E动态严格review通过。本地歌单详情多选、保留副本管理与批次6/7等余项继续，不能记全部本地能力完成。原Files helper未提交补丁因5C测试依赖其folderName参数化与Files轮询加固，已随本批一并提交。
 
