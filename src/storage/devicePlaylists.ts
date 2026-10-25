@@ -1,4 +1,4 @@
-import {addDeviceTracks, createDevicePlaylist, deleteDevicePlaylist, devicePlaylistEntries, normalizeDevicePlaylists, removeDeviceEntry, renameDevicePlaylist, withDefaultDevicePlaylist, type DevicePlaylist, type DevicePlaylistState} from '../domain/devicePlaylist.ts';
+import {addDeviceTracks, createDevicePlaylist, deleteDevicePlaylist, devicePlaylistEntries, normalizeDevicePlaylists, removeDeviceEntries, removeDeviceEntry, renameDevicePlaylist, withDefaultDevicePlaylist, type DevicePlaylist, type DevicePlaylistState} from '../domain/devicePlaylist.ts';
 import type {Track} from '../domain/track.ts';
 import type { Repository } from './repository.ts';
 
@@ -39,6 +39,7 @@ export class DevicePlaylistStore {
   remove(id: string) { return this.mutate(state => deleteDevicePlaylist(state, id)); }
   addTracks(id: string, tracks: readonly Track[]) { return this.mutate(state => addDeviceTracks(state, id, devicePlaylistEntries(tracks, () => this.uuid()), this.now())); }
   removeEntry(id: string, entryId: string) { return this.mutate(state => removeDeviceEntry(state, id, entryId, this.now())); }
+  removeEntries(id: string, entryIds: readonly string[]) { return this.mutate(state => removeDeviceEntries(state, id, entryIds, this.now())); }
 
   private mutate(patch: (state: DevicePlaylistState) => DevicePlaylistState): Promise<void> {
     const next = this.tail.then(async () => {

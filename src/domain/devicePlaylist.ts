@@ -76,3 +76,11 @@ export function removeDeviceEntry(state: DevicePlaylistState, id: string, entryI
   if (!state.playlists.some(playlist => playlist.id === id)) throw new Error('本地歌单不存在');
   return { ...state, playlists: state.playlists.map(playlist => playlist.id === id ? { ...playlist, entries: playlist.entries.filter(entry => entry.id !== entryId), updatedAt: now } : playlist) };
 }
+
+// Batch removal commits once: a multi-row removal either lands whole or keeps
+// the previous playlist, matching the single-row entry contract.
+export function removeDeviceEntries(state: DevicePlaylistState, id: string, entryIds: readonly string[], now: number): DevicePlaylistState {
+  if (!state.playlists.some(playlist => playlist.id === id)) throw new Error('本地歌单不存在');
+  const gone = new Set(entryIds);
+  return { ...state, playlists: state.playlists.map(playlist => playlist.id === id ? { ...playlist, entries: playlist.entries.filter(entry => !gone.has(entry.id)), updatedAt: now } : playlist) };
+}

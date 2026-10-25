@@ -128,7 +128,11 @@ export class LocalAudioStore {
   restoreIndex() {return this.changeRecords(files=>files.map(file=>file.hidden?{...file,hidden:false}:file));}
   setFavorites(ids:readonly string[],favorite:boolean) {
     const wanted=new Set(ids);
-    return this.changeRecords(files=>files.map(file=>wanted.has(file.id)?{...file,favorite}:file));
+    return this.changeRecords(files=>{
+      const available=new Set(files.map(file=>file.id));
+      if([...wanted].some(id=>!available.has(id)))throw new Error('本地音频已缺失，请重新导入');
+      return files.map(file=>wanted.has(file.id)?{...file,favorite}:file);
+    });
   }
   remove(id:string) {
     const run=this.tail.then(async()=>{

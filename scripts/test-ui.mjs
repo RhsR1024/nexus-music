@@ -18,12 +18,12 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLiveLocal(?:IndexActions|Sorting|FolderScan)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLiveLocal(?:IndexActions|Sorting|FolderScan|PlaylistBatch)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
-const liveLocalSorting=liveLocalFolderUI||process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalSorting'));
-if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)!==liveLocalSorting)throw new Error('Real local sorting requires a second actual audio file and its explicit target');
+const liveLocalSorting=liveLocalFolderUI||process.argv.slice(2).some(target=>/\/testLiveLocal(?:Sorting|PlaylistBatch)$/.test(target));
+if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)!==liveLocalSorting)throw new Error('Real two-song local verification requires a second actual audio file and its explicit target');
 const liveLocalPaths=liveLocalPath?[liveLocalPath,...(liveLocalSorting?[realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)]:[])]:[];
 const liveLocalSnapshot=liveLocalPath?externalInputSnapshot(liveLocalPaths):null;
 if(liveLocalPaths.some(path=>!/\.mp3$/i.test(path)||statSync(path).size<100000||statSync(path).size>30000000))throw new Error('Real local audio must be a complete MP3 of 100 KB–30 MB');
@@ -416,7 +416,7 @@ try {
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
-  if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan');
+  if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalPlaylistBatch');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.

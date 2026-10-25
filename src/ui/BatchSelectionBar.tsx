@@ -2,9 +2,9 @@ import {Ionicons} from '@expo/vector-icons';
 import {Pressable,StyleSheet,View} from 'react-native';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {radius,space,typography} from './tokens.ts';
+import {controls,radius,space,typography} from './tokens.ts';
 
-export type BatchAction='favorite'|'playlist'|'next'|'download'|'unfavorite'|'delete'|'dl-pause'|'dl-resume'|'dl-cancel'|'dl-retry'|'dl-remove'
+export type BatchAction='favorite'|'playlist'|'next'|'download'|'unfavorite'|'delete'|'pl-remove'|'dl-pause'|'dl-resume'|'dl-cancel'|'dl-retry'|'dl-remove'
 const actionMeta:Readonly<Record<BatchAction,{label:string;icon:React.ComponentProps<typeof Ionicons>['name']}>>={
   favorite:{label:'收藏',icon:'heart-outline'},
   unfavorite:{label:'取消收藏',icon:'heart-dislike-outline'},
@@ -12,12 +12,21 @@ const actionMeta:Readonly<Record<BatchAction,{label:string;icon:React.ComponentP
   next:{label:'下一首',icon:'play-skip-forward'},
   download:{label:'下载',icon:'download-outline'},
   delete:{label:'删除',icon:'trash-outline'},
+  'pl-remove':{label:'移出歌单',icon:'remove-circle-outline'},
   'dl-pause':{label:'暂停',icon:'pause-outline'},
   'dl-resume':{label:'继续',icon:'play-outline'},
   'dl-cancel':{label:'取消',icon:'close-circle-outline'},
   'dl-retry':{label:'重试',icon:'refresh-outline'},
   'dl-remove':{label:'移除记录',icon:'trash-outline'},
 };
+
+// Decorative mark; the enclosing row announces its selected state.
+export function SelectionMark({selected}:{selected:boolean}){
+  const {palette:p}=useTheme();
+  return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.mark,{borderColor:selected?p.accent:p.secondary,backgroundColor:selected?p.accent:'transparent'}]}>
+    {selected&&<View style={[styles.tick,{borderColor:p.surface}]}/>}
+  </View>;
+}
 
 // 已选 N / 总数 panel. Per-action commit behavior stays with the page so the
 // documented divergence (favorite/next close, playlist keeps) lives next to
@@ -49,6 +58,8 @@ export function BatchSelectionBar({count,total,actions,onAction,onSelectAll,onCa
   </View>;
 }
 const styles=StyleSheet.create({
+  mark:{width:controls.icon,height:controls.icon,borderRadius:radius.full,borderWidth:1.5,alignItems:'center',justifyContent:'center'},
+  tick:{width:10,height:6,borderLeftWidth:2,borderBottomWidth:2,marginTop:-2,transform:[{rotate:'-45deg'}]},
   host:{borderRadius:radius.xl,borderWidth:StyleSheet.hairlineWidth,padding:space.lg,gap:space.md},
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   headerControls:{flexDirection:'row',gap:space.md},

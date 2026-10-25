@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addDeviceTracks, createDevicePlaylist, defaultDevicePlaylistId, defaultDevicePlaylistTitle, deleteDevicePlaylist, normalizeDevicePlaylists, removeDeviceEntry, renameDevicePlaylist, withDefaultDevicePlaylist } from '../src/domain/devicePlaylist.ts';
+import { addDeviceTracks, createDevicePlaylist, defaultDevicePlaylistId, defaultDevicePlaylistTitle, deleteDevicePlaylist, normalizeDevicePlaylists, removeDeviceEntries, removeDeviceEntry, renameDevicePlaylist, withDefaultDevicePlaylist } from '../src/domain/devicePlaylist.ts';
 import { DevicePlaylistStore } from '../src/storage/devicePlaylists.ts';
 import { LibraryStore } from '../src/storage/library.ts';
 import { track } from './fixtures.ts';
@@ -54,6 +54,48 @@ test('device playlist deletion removes only the named playlist and unknown ids f
   await assert.rejects(store.remove('missing'), /本地歌单不存在/);
   await assert.rejects(store.create('  '), /名称不能为空/);
   await assert.rejects(store.rename(defaultDevicePlaylistId, ' '), /名称不能为空/);
+});
+
+test('device playlist batch removal removes many entries in one committed write', async () => {
+  let state = normalizeDevicePlaylists({ version: 1, playlists: withDefaultDevicePlaylist([], 5) });
+  state = addDeviceTracks(state, defaultDevicePlaylistId, [{ id: 'e1', track }, { id: 'e2', track }, { id: 'e3', track }], 9);
+  state = removeDeviceEntries(state, defaultDevicePlaylistId, ['e1', 'e3'], 10);
+  assert.deepEqual(state.playlists[0]!.entries.map(entry => entry.id), ['e2']);
+  assert.throws(() => removeDeviceEntries(state, 'missing', ['e2'], 11), /本地歌单不存在/);
+  const { store } = setup(); await store.restore();
+  const id = await store.create('晨跑', [track, track, track]);
+  const entries = store.getSnapshot().find(playlist => playlist.id === id)!.entries;
+  await store.removeEntries(id, [entries[0]!.id, entries[2]!.id]);
+  assert.deepEqual(store.getSnapshot().find(playlist => playlist.id === id)!.entries.map(entry => entry.id), [entries[1]!.id]);
+  await assert.rejects(store.removeEntries('missing', [entries[1]!.id]), /本地歌单不存在/);
+});
+
+
+test('device playlist batch removal is atomic on disk failure and subsequent edits recover', async () => {
+  let value: unknown, writes = 0, fail = false, counter = 0;
+  const repository: Pick<Repository, 'get' | 'put'> = {
+    get: async <T>() => value as T | undefined,
+    put: async (_, next) => { writes++; if (fail) throw new Error('disk full'); value = structuredClone(next); },
+  };
+  const store = new DevicePlaylistStore(repository, () => `entry-${++counter}`, () => counter);
+  await store.restore();
+  const id = await store.create('Batch', [track, track, track]);
+  const before = store.getSnapshot(), entries = before.find(p => p.id === id)!.entries;
+  let publications = 0; store.subscribe(() => publications++);
+  fail = true;
+  await assert.rejects(store.removeEntries(id, [entries[0]!.id, entries[2]!.id]), /disk full/);
+  assert.equal(store.getSnapshot(), before); assert.equal(publications, 0);
+  const restored = new DevicePlaylistStore(repository); await restored.restore();
+  assert.deepEqual(restored.getSnapshot(), before);
+  fail = false; const baseline = writes;
+  // A queued append must survive the preceding removal, even when all entries
+  // reference the same song. Song identity is not playlist-entry identity.
+  await Promise.all([store.removeEntries(id, [entries[0]!.id, entries[2]!.id]), store.addTracks(id, [track])]);
+  assert.equal(writes - baseline, 2); assert.equal(publications, 2);
+  const remaining = store.getSnapshot().find(p => p.id === id)!.entries;
+  assert.equal(remaining.length, 2); assert.equal(remaining[0]!.id, entries[1]!.id);
+  assert.ok(!entries.some(e => e.id === remaining[1]!.id));
+  await restored.restore(); assert.deepEqual(restored.getSnapshot(), store.getSnapshot());
 });
 
 test('library playlists keep optional description and cover URL with delete undo restore', async () => {

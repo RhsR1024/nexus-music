@@ -103,3 +103,14 @@ test('song controls route local flags independently from library membership, inc
   const restored=new LocalAudioStore(f.repository,f.native);await restored.restore();assert.equal(restored.isFavorite(local.origin.id),false);assert.equal(restored.getSnapshot().length,0);
   assert.ok(notifications>=5);stop();const before=notifications;await favorites.toggle(local);assert.equal(notifications,before);
 });
+
+test('batch favorite rejects removed audio atomically while retained hidden audio stays editable',async()=>{
+  const f=fixture();await f.store.import([{uri:'a',name:'one.wav'},{uri:'b',name:'two.wav'}]);
+  const a='a'.repeat(64),b='b'.repeat(64);await f.store.remove(b);
+  const before=f.store.getSnapshot();
+  await assert.rejects(f.store.setFavorites([a,b],true),/重新导入/);
+  assert.equal(f.store.getSnapshot(),before);assert.equal(f.store.isFavorite(a),false);
+  await f.store.removeFromIndex([a]);assert.equal(f.store.getSnapshot().length,0);
+  await f.store.setFavorites([a],true);assert.equal(f.store.isFavorite(a),true);
+  await f.store.restoreIndex();assert.equal(f.store.getSnapshot()[0]!.favorite,true);
+});
