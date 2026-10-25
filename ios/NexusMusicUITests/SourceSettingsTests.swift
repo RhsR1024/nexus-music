@@ -445,6 +445,31 @@ final class SourceSettingsTests: XCTestCase {
     let close=app.buttons["收起播放页"];reach(close,up:false);close.tap();openSettings(app,page:"sources")
     let selected=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Matching Fixture").firstMatch;reach(selected);selected.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
   }
+  func testSearchHistoryAndStates() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10))
+    let clearHistory=app.buttons["search-history-clear"]
+    if clearHistory.exists {clearHistory.tap();XCTAssertTrue(clearHistory.waitForNonExistence(timeout:5))}
+    app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    query.tap();query.typeText("Fixture song\n")
+    XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:15))
+    XCTAssertTrue(app.staticTexts["search-end-wy"].waitForExistence(timeout:10),"A terminal result set must say there is no more content")
+    let clear=app.buttons["search-clear"];XCTAssertTrue(clear.isHittable);clear.tap()
+    let history=app.buttons["search-history-0"];XCTAssertTrue(history.waitForExistence(timeout:5))
+    XCTAssertEqual(history.label,"搜索历史：Fixture song")
+    query.tap();query.typeText("Fixt")
+    let suggestion=app.buttons["search-suggestion-0"];XCTAssertTrue(suggestion.waitForExistence(timeout:5))
+    XCTAssertEqual(suggestion.label,"搜索建议：Fixture song")
+    suggestion.tap()
+    XCTAssertEqual(query.value as? String,"Fixture song")
+    XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:15))
+    app.buttons["search-clear"].tap()
+    XCTAssertTrue(app.buttons["search-history-0"].waitForExistence(timeout:5))
+    app.buttons["search-history-clear"].tap()
+    XCTAssertTrue(app.buttons["search-history-0"].waitForNonExistence(timeout:5))
+    XCTAssertTrue(app.staticTexts["输入歌曲、歌手或专辑名开始搜索。"].exists)
+  }
   func testPublicComments() throws {
     XCUIDevice.shared.orientation = .portrait
     defer { XCUIDevice.shared.orientation = .portrait }
@@ -2017,17 +2042,17 @@ final class SourceSettingsTests: XCTestCase {
     XCUIDevice.shared.press(.home);app.activate();motion(true)
     let closePlayer=app.buttons["收起播放页"];reveal(closePlayer);closePlayer.tap();motion(true)
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
-    let openDiscovery=app.buttons["发现 · 分类 · 排行榜 · 歌单导入"];reveal(openDiscovery);openDiscovery.tap()
-    let closeDiscovery=app.buttons["收起发现"];XCTAssertTrue(closeDiscovery.waitForExistence(timeout:10));closeDiscovery.tap()
-    let discoveryDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:closeDiscovery)
-    XCTAssertEqual(XCTWaiter.wait(for:[discoveryDismissed],timeout:10),.completed)
+    // The standalone discovery entry that once opened a non-player full screen
+    // from the search page was removed with batch 2 (search is its own page);
+    // queue-modal layering above still guards presentation ownership. Root
+    // motion must still run after the player closes and a plain tab shows.
     motion(true)
     let rootPixels=backgroundPixels()
     let rootMotion=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
       let next=backgroundPixels()
       return next.count==30 && zip(rootPixels,next).reduce(0){$0+abs(Int($1.0)-Int($1.1))}>=5
     },object:app)
-    XCTAssertEqual(XCTWaiter.wait(for:[rootMotion],timeout:20),.completed,"Closing a non-player full screen must restore actual root motion")
+    XCTAssertEqual(XCTWaiter.wait(for:[rootMotion],timeout:20),.completed,"Root background motion must resume on a plain tab after the player closes")
     app.buttons["mini-action-toggle"].tap();motion(false)
     expectTint(false,"Visible global background restored after player and pause")
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
@@ -2695,6 +2720,135 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testLiveSourcePlayback() throws {
     let app=XCUIApplication();app.launch();try verifyLiveSourcePlayback(app)
+  }
+  // Batch 3 real-source acceptance: queue editing (index/total, lock, locate,
+  // clear-after-current) runs against a live public search result queue. Pause
+  // first: it aborts any in-flight resolution, so the auto-skip path cannot
+  // move the current index under the assertions.
+  func testLiveQueueEditing() throws {
+    let app=XCUIApplication();app.launch()
+    let handle=app.buttons["player-drag-handle"].firstMatch
+    if handle.waitForExistence(timeout:2) {
+      if handle.isHittable {handle.tap()} else {handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()}
+      _ = waitForGone(handle,timeout:8)
+    }
+    func reach(_ item:XCUIElement){
+      for _ in 0..<24 {if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}}
+      XCTAssertTrue(item.isHittable)
+    }
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10))
+    let clearHistory=app.buttons["search-history-clear"]
+    if clearHistory.exists {clearHistory.tap();XCTAssertTrue(app.buttons["search-history-0"].waitForNonExistence(timeout:5))}
+    app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    query.tap();for character in "Shape of You"{query.typeText(String(character))};query.typeText("\n")
+    let first=app.buttons["search-track-wy-0"]
+    XCTAssertTrue(first.waitForExistence(timeout:45),"Live public search must return real rows")
+    reach(first);first.tap()
+    XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:30));app.buttons["打开播放页"].firstMatch.tap()
+    let pause=app.buttons["暂停"].firstMatch
+    if pause.waitForExistence(timeout:8) && pause.isHittable {pause.tap()}
+    app.buttons["更多播放控制"].firstMatch.tap();app.buttons["播放界面样式"].firstMatch.tap()
+    let classic=app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch
+    XCTAssertTrue(classic.waitForExistence(timeout:10));classic.tap()
+    XCTAssertTrue(classic.waitForNonExistence(timeout:10))
+    let openQueue=app.buttons["查看播放队列"].firstMatch;reach(openQueue);openQueue.tap()
+    let queue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
+    XCTAssertTrue(queue.waitForExistence(timeout:10));reach(queue);queue.tap()
+    XCTAssertTrue(app.staticTexts["播放队列"].waitForExistence(timeout:10),"Queue panel must open from the classic player")
+    let total=app.staticTexts.matching(NSPredicate(format:"label MATCHES %@","· [0-9]+/[0-9]+")).firstMatch
+    XCTAssertTrue(total.waitForExistence(timeout:10),"Header must show the current index over the total")
+    image("Live queue header index total")
+    let rowEdits=NSPredicate(format:"label BEGINSWITH %@","移除：")
+    XCTAssertTrue(app.buttons.matching(rowEdits).firstMatch.exists,"Unlocked rows must expose remove controls")
+    app.switches["锁定队列"].firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["队列已锁定，逐行编辑已隐藏；点按歌曲仍可切换播放。"].waitForExistence(timeout:5))
+    XCTAssertFalse(app.buttons.matching(rowEdits).firstMatch.exists,"Lock must hide per-row editing")
+    XCTAssertFalse(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","拖动排序：")).firstMatch.exists)
+    image("Live queue locked hides row edits")
+    app.switches["解锁队列"].firstMatch.tap()
+    XCTAssertTrue(app.buttons.matching(rowEdits).firstMatch.waitForExistence(timeout:5))
+    app.swipeUp();app.swipeUp()
+    let clearAfter=app.buttons["queue-clear-after"];reach(clearAfter);clearAfter.tap()
+    XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label CONTAINS %@","清除当前之后（0 首）")).firstMatch.waitForExistence(timeout:5),"Clear-after-current must drop every upcoming entry")
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label MATCHES %@","· [0-9]+/[0-9]+")).firstMatch.exists)
+    image("Live queue clear after current")
+    app.buttons["收起队列"].firstMatch.tap()
+    let collapse=app.buttons["收起播放页"].firstMatch;reach(collapse);collapse.tap()
+    _ = waitForGone(collapse,timeout:10)
+    let clear=app.buttons["search-clear"];reach(clear);clear.tap()
+    if app.buttons["search-history-0"].waitForExistence(timeout:5) {app.buttons["search-history-clear"].tap();XCTAssertTrue(app.buttons["search-history-0"].waitForNonExistence(timeout:5))}
+  }
+
+  // Batch 2 real-source acceptance: the search state machine, explicit
+  // load-more, history and suggestions must all run against live public
+  // metadata with the user's real sources, not synthetic fixtures.
+  func testLiveSourceSearchStates() throws {
+    let app=XCUIApplication();app.launch()
+    // A previous run can relaunch straight into the full-screen player; the
+    // search tab is only reachable after that presentation is dismissed.
+    let handle=app.buttons["player-drag-handle"].firstMatch
+    if handle.waitForExistence(timeout:2) {
+      if handle.isHittable {handle.tap()} else {handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()}
+      _ = waitForGone(handle,timeout:8)
+    }
+    func reach(_ item:XCUIElement){
+      for _ in 0..<24 {if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}}
+      XCTAssertTrue(item.isHittable)
+    }
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10))
+    let clearHistory=app.buttons["search-history-clear"]
+    if clearHistory.exists {clearHistory.tap();XCTAssertTrue(app.buttons["search-history-0"].waitForNonExistence(timeout:5))}
+    app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    query.tap();for character in "Shape of You"{query.typeText(String(character))};query.typeText("\n")
+    let first=app.buttons["search-track-wy-0"]
+    XCTAssertTrue(first.waitForExistence(timeout:45),"Live public search must return real rows");image("Live search real results")
+    let more=app.buttons["search-load-more-wy"]
+    XCTAssertTrue(more.waitForExistence(timeout:20),"A popular real query must expose the explicit load-more entry")
+    reach(more);more.tap()
+    XCTAssertTrue(app.buttons["search-track-wy-30"].waitForExistence(timeout:45),"Appending page two must extend the real result list")
+    image("Live search after load more")
+    // Unified playback intent: one tap on a row makes that result set the
+    // authoritative queue and drives the current track without leaving search.
+    // A restored session already shows a mini player and the mini title is
+    // collapsed under its button label, so the check opens the full player and
+    // matches its exposed title text. Scroll momentum can shift rows under the
+    // tap point, so settle before tapping and prefer a row whose title differs
+    // from row zero's to keep the assertion discriminating.
+    func titleOf(_ index:Int)->String{app.buttons["search-track-wy-\(index)"].label}
+    var pick = 1
+    for index in 1...8 where titleOf(index) != titleOf(0) { pick = index; break }
+    let row=app.buttons["search-track-wy-\(pick)"]
+    reach(row);Thread.sleep(forTimeInterval:0.8);XCTAssertTrue(row.isHittable)
+    let rowTitle=String(row.label.dropFirst(2))
+    row.tap()
+    let mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
+    XCTAssertTrue(mini.waitForExistence(timeout:30))
+    app.buttons["打开播放页"].firstMatch.tap()
+    XCTAssertTrue(app.staticTexts[rowTitle].waitForExistence(timeout:20),"Tapping a row must drive the current track: \(rowTitle)")
+    image("Live search single tap queue rebuild")
+    let collapse=app.buttons["收起播放页"].firstMatch;reach(collapse);collapse.tap()
+    XCTAssertTrue(waitForGone(collapse,timeout:10))
+    let clear=app.buttons["search-clear"];reach(clear);clear.tap()
+    let history=app.buttons["search-history-0"];XCTAssertTrue(history.waitForExistence(timeout:5))
+    XCTAssertEqual(history.label,"搜索历史：Shape of You")
+    image("Live search history recorded")
+    query.tap();query.typeText("Shape")
+    let suggestion=app.buttons["search-suggestion-0"];XCTAssertTrue(suggestion.waitForExistence(timeout:5))
+    XCTAssertEqual(suggestion.label,"搜索建议：Shape of You")
+    suggestion.tap()
+    XCTAssertEqual(query.value as? String,"Shape of You")
+    XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:45))
+    image("Live search suggestion resubmit")
+    reach(clear);clear.tap()
+    XCTAssertTrue(app.buttons["search-history-0"].waitForExistence(timeout:5))
+    app.buttons["search-history-clear"].tap()
+    XCTAssertTrue(app.buttons["search-history-0"].waitForNonExistence(timeout:5))
+    XCTAssertTrue(app.staticTexts["输入歌曲、歌手或专辑名开始搜索。"].exists)
+    image("Live search history cleared")
   }
   private func verifyLiveSourcePlayback(_ app:XCUIApplication) throws {
     func reach(_ item:XCUIElement){

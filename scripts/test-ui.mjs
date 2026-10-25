@@ -48,7 +48,7 @@ function seedLocalAudio() {
 seedLocalAudio();
 // Explicit local opt-in: serve unchanged private scripts only to the simulator.
 // These bytes are never imported by Metro or written into the app bundle.
-const liveCatalogUI=process.argv.slice(2).some(target=>/\/testLiveSource(?:Catalog|Playback)$/.test(target));
+const liveCatalogUI=process.argv.slice(2).some(target=>/\/testLiveSource(?:Catalog|Playback|SearchStates)$/.test(target));
 let liveSources=[];
 if(liveCatalogUI){
   if(!process.env.NEXUS_LX_SOURCE_DIRECTORY)throw new Error('Live source catalog requires an explicit local directory');
@@ -86,7 +86,8 @@ const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new M
 const counts={requests:{},authFailures:0,authSuccesses:0};
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
-const fixtureOnlineUI=matchingUI||discoveryUI;
+const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
+const fixtureOnlineUI=matchingUI||discoveryUI||searchUI;
 const structuredLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testStructuredNavidromeLyrics'));
 const classicReferenceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicReferenceDirect'));
 const vinylReferenceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabVinylReferenceDirect'));
@@ -397,11 +398,11 @@ try {
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
-  if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback');
+  if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');
