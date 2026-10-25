@@ -64,6 +64,8 @@ seedLocalAudio();
 // Explicit local opt-in: serve unchanged private scripts only to the simulator.
 // These bytes are never imported by Metro or written into the app bundle.
 const liveCatalogUI=process.argv.slice(2).some(target=>/\/testLiveSource(?:Catalog|Playback|SearchStates)$/.test(target));
+const liveDownloadUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadBatch'));
+if(liveDownloadUI&&process.argv.slice(2).length!==1)throw new Error('Real download batch requires its single explicit live target');
 let liveSources=[];
 if(liveCatalogUI){
   if(!process.env.NEXUS_LX_SOURCE_DIRECTORY)throw new Error('Live source catalog requires an explicit local directory');
@@ -115,7 +117,7 @@ const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisu
 if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
 const entryFile=vinylReferenceUI?'tests/e2e/vinyl.tsx':classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
-const offlineUI=process.argv.slice(2).some(target=>target.endsWith('/testDownloadSettingsAndOfflinePlayback'));
+const offlineUI=process.argv.slice(2).some(target=>['/testDownloadSettingsAndOfflinePlayback','/testDownloadTaskBatchActions'].some(suffix=>target.endsWith(suffix)));
 let blockOfflineStream=false;
 const offlineCounts={full:0,resumed:0,blocked:0};
 let holdDiscoveryDetail=false;
@@ -418,6 +420,7 @@ try {
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalPlaylistBatch');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
+  if(!liveDownloadUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadBatch');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);

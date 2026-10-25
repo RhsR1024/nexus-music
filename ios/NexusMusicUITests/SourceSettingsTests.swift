@@ -1246,6 +1246,187 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["am-content-queue"].tap();skin("classic");XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))
   }
 
+  // Batch 6 real-source acceptance: two live public songs saved offline, the
+  // task page multi-select (Sollin E-1300) with batch actions, and the record
+  // versus file separation (E-1303). Downloads may finish before navigation,
+  // so the settled-state wait tolerates either outcome and cleanup runs
+  // through the actual single-row path. Opt-in: real network and LX source.
+  func testLiveDownloadBatch() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    func reach(_ item:XCUIElement){for _ in 0..<24 {if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(item.isHittable)}
+    let handle=app.buttons["player-drag-handle"].firstMatch
+    if handle.waitForExistence(timeout:2) {if handle.isHittable {handle.tap()} else {handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()};_ = waitForGone(handle,timeout:8)}
+    func saveCurrent(){
+      XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:30));app.buttons["打开播放页"].firstMatch.tap()
+      let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap()
+      XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:8));app.buttons["收起播放页"].firstMatch.tap()
+    }
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10))
+    app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    // Cover/remix rows of a popular query often cannot resolve on the real LX
+    // source (observed: 待解析 forever → 下载失败), so save the ORIGINAL row
+    // of two well-known queries. Scroll momentum can shift rows under the tap
+    // point, so settle before tapping and verify the player title; the quality
+    // banner must leave 待解析 before saving or the task can never fetch bytes.
+    // Resolved banner formats: classic "X 档位 · quality 实际请求" and
+    // modern "偏好 q · 成功请求档位 quality（非实际文件格式证明）".
+    func resolvedBanner()->Bool{return app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@ AND NOT label CONTAINS %@ AND (label CONTAINS %@ OR label CONTAINS %@)","档位","待解析","实际请求","成功请求档位")).firstMatch.exists}
+    // Cover/remix rows of a popular query often never resolve on the real LX
+    // source (observed: 待解析 forever → 下载失败), and the 300-row live list
+    // drifts between runs, so try the first rows in order and only save a
+    // track whose resolve actually settled.
+    func searchAndSave(_ term:String)->String{
+      let clear=app.buttons["search-clear"]
+      if clear.exists {clear.tap()}
+      query.tap();for character in term{query.typeText(String(character))};query.typeText("\n")
+      var settled=String()
+      for pick in 0..<3 {
+        let row=app.buttons["search-track-wy-\(pick)"]
+        XCTAssertTrue(row.waitForExistence(timeout:45),"Live public search must return real rows for \(term)")
+        reach(row);Thread.sleep(forTimeInterval:0.8)
+        let rowTitle=String(row.label.dropFirst(2))
+        row.tap()
+        let mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
+        XCTAssertTrue(mini.waitForExistence(timeout:30))
+        app.buttons["打开播放页"].firstMatch.tap()
+        let resolved=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in resolvedBanner()},object:nil)
+        if XCTWaiter.wait(for:[resolved],timeout:120) == .completed {
+          settled=rowTitle
+          let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap()
+          XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:8));app.buttons["收起播放页"].firstMatch.tap()
+          return settled
+        }
+        XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:8));app.buttons["收起播放页"].firstMatch.tap()
+        Thread.sleep(forTimeInterval:1)
+      }
+      XCTFail("\(term): none of the first three rows resolved on the real source")
+      return settled
+    }
+    _=searchAndSave("Shape of You")
+    _=searchAndSave("Perfect")
+    openSettings(app,page:"downloads")
+    let tasks=app.buttons["settings-open-downloadTasks"];reach(tasks);tasks.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-downloadTasks"].waitForExistence(timeout:8))
+    let statusTexts=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","offline-status-"))
+    let saved=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in statusTexts.allElementsBoundByIndex.filter{$0.label.contains("已保存")}.count>=2},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[saved],timeout:420),.completed,"Both real downloads must settle")
+    let summary=app.staticTexts["offline-task-summary"];XCTAssertTrue(summary.waitForExistence(timeout:8))
+    XCTAssertTrue(summary.label.contains("0 个正在下载"),summary.label);XCTAssertTrue(summary.label.contains("2 个已保存"),summary.label)
+    XCTAssertEqual(statusTexts.allElementsBoundByIndex.filter{$0.label.contains("已保存")}.count,2,"Two real songs must be saved offline")
+    image("Real downloads saved offline")
+    // The completed payload must play offline without touching the provider.
+    let playSaved=app.buttons["播放离线文件"].firstMatch;XCTAssertTrue(playSaved.waitForExistence(timeout:8));reach(playSaved);playSaved.tap()
+    XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:10));app.buttons["打开播放页"].firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90),"Real saved download must decode to PCM")
+    let pause=app.buttons["暂停"].firstMatch;if pause.isHittable{pause.tap()}
+    XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:8));app.buttons["收起播放页"].firstMatch.tap()
+    openSettings(app,page:"downloads");reach(tasks);tasks.tap()
+    // Completed rows keep their own delete path; the batch selection bar is
+    // bound to unfinished tasks, so cleanup runs per row (E-1303).
+    for _ in 0..<2 {
+      let remove=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","删除离线文件：")).firstMatch
+      XCTAssertTrue(remove.waitForExistence(timeout:10));reach(remove);remove.tap();app.alerts.buttons["删除"].tap()
+      RunLoop.current.run(until:Date().addingTimeInterval(2))
+    }
+    XCTAssertTrue(app.staticTexts["暂无已下载音频"].waitForExistence(timeout:10));image("Real offline storage cleaned")
+  }
+
+  // Batch 6 App acceptance for the task multi-select itself (Sollin E-1300,
+  // E-1301): the 120-second fixture audio keeps each download mid-flight for
+  // tens of seconds, so 批量暂停, 批量取消 and 批量重试 run against two
+  // genuinely active tasks and settle to completed payloads. The live test
+  // covers the real-provider end-to-end path; this one covers the mechanics.
+  func testDownloadTaskBatchActions() throws {
+    let app=XCUIApplication();app.launch()
+    func reveal(_ element:XCUIElement){
+      func visible()->Bool{guard element.exists else{return false};let frame=element.frame;return frame.width>0 && frame.height>0 && app.frame.insetBy(dx:4,dy:44).contains(frame) && element.isHittable}
+      for _ in 0..<32 {if visible(){break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(visible(),"Offline control must be fully visible and hittable: \(element.identifier)")
+    }
+    func type(_ field:XCUIElement,_ value:String){reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")}
+    func control(_ block:Bool?=nil) throws -> [String:Int] {
+      let done=expectation(description:"Read isolated fixture counters"),path="http://127.0.0.1:18439/offline-fixture-control"+(block == nil ? "" : "?block=\(block! ? 1 : 0)")
+      var result:[String:Int]?,failure:Error?
+      URLSession.shared.dataTask(with:URL(string:path)!){data,_,error in
+        failure=error;if let data {result=(try? JSONSerialization.jsonObject(with:data)) as? [String:Int]};done.fulfill()
+      }.resume();wait(for:[done],timeout:10)
+      if let failure{throw failure};return try XCTUnwrap(result)
+    }
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    openSettings(app,page:"sources")
+    type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439");type(app.textFields["Navidrome用户名"],"fixture-user");type(app.secureTextFields["Navidrome密码"],"fixture-password")
+    app.buttons["验证并保存连接"].tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch;XCTAssertTrue(account.waitForExistence(timeout:10));reveal(account);account.tap()
+    // The 8-song long-queue album keeps each 120-second WAV download
+    // mid-flight for about a minute, so two saves are still active when the
+    // task page opens. The player's own transport button is the hittable
+    // 下一首; the album page keeps a covered one behind the modal.
+    let longQueueDone=expectation(description:"Enable long-queue fixture")
+    URLSession.shared.dataTask(with:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=1")!){_,_,_ in longQueueDone.fulfill()}.resume()
+    wait(for:[longQueueDone],timeout:10)
+    let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch;XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();app.buttons["播放全部"].tap()
+    XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:15));app.buttons["打开播放页"].firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:30),"Fixture stream must play before saving")
+    func saveCurrent(){
+      let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reveal(save);save.tap()
+      RunLoop.current.run(until:Date().addingTimeInterval(1))
+    }
+    saveCurrent()
+    let next=app.buttons.matching(NSPredicate(format:"label == %@","下一首")).allElementsBoundByIndex.first{$0.isHittable}
+    XCTAssertNotNil(next,"The player's own next control must be hittable while the modal is open")
+    next!.tap()
+    saveCurrent()
+    XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:8));app.buttons["收起播放页"].firstMatch.tap()
+    openSettings(app,page:"downloads")
+    let openTasks=app.buttons["settings-open-downloadTasks"];reveal(openTasks);openTasks.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-downloadTasks"].waitForExistence(timeout:8))
+    let rows=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","offline-download-"))
+    let active=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in rows.allElementsBoundByIndex.count>=2},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[active],timeout:30),.completed,"Two held downloads must appear as tasks")
+    let summary=app.staticTexts["offline-task-summary"];XCTAssertTrue(summary.waitForExistence(timeout:8));XCTAssertTrue(summary.label.contains("2 个待处理"),summary.label)
+    // The row View's center sits over its action buttons; the content
+    // Pressable that owns onLongPress lives in the row's upper half.
+    func rowContent(_ row:XCUIElement)->XCUICoordinate{return row.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.2))}
+    rowContent(rows.allElementsBoundByIndex.first!).press(forDuration:1.1)
+    let bar=app.descendants(matching:.any).matching(identifier:"offline-batch-selection-bar").firstMatch
+    XCTAssertTrue(bar.waitForExistence(timeout:8));XCTAssertEqual(bar.label,"已选 1 / 2 个任务")
+    XCTAssertFalse(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","移除记录：")).firstMatch.exists,"Record removal hides while selecting");image("Batch selection entered on held downloads")
+    let secondRow=rows.allElementsBoundByIndex[1];reveal(secondRow);rowContent(secondRow).tap()
+    let twoSelected=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in bar.label=="已选 2 / 2 个任务"},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[twoSelected],timeout:8),.completed,"Tapping the second row must extend the selection")
+    app.buttons["offline-batch-action-暂停"].tap()
+    XCTAssertTrue(app.staticTexts["已暂停 2 / 2 个任务"].waitForExistence(timeout:15))
+    let paused=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons.matching(NSPredicate(format:"label == %@","继续下载")).allElementsBoundByIndex.count>=2},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[paused],timeout:20),.completed,"Batch pause must settle both tasks");image("Batch paused two held downloads")
+    rowContent(rows.allElementsBoundByIndex.first!).press(forDuration:1.1)
+    XCTAssertTrue(bar.waitForExistence(timeout:8));let secondSelect=rows.allElementsBoundByIndex[1];reveal(secondSelect);rowContent(secondSelect).tap()
+    app.buttons["offline-batch-action-取消"].tap()
+    XCTAssertTrue(app.staticTexts["已取消 2 / 2 个任务"].waitForExistence(timeout:15))
+    let cancelled=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons.matching(NSPredicate(format:"label == %@","重试下载")).allElementsBoundByIndex.count>=2},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[cancelled],timeout:20),.completed,"Batch cancel must keep retryable records");image("Batch cancelled two held downloads")
+    rowContent(rows.allElementsBoundByIndex.first!).press(forDuration:1.1)
+    XCTAssertTrue(bar.waitForExistence(timeout:8));let retrySecond=rows.allElementsBoundByIndex[1];reveal(retrySecond);rowContent(retrySecond).tap()
+    let retryTwo=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in bar.label=="已选 2 / 2 个任务"},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[retryTwo],timeout:8),.completed,"Retry selection must cover both cancelled records")
+    app.buttons["offline-batch-action-重试"].tap()
+    // Each retry resolves only when its download actually completes, so the
+    // batch receipt lands after both 120-second fixtures finish (~2 minutes).
+    XCTAssertTrue(app.staticTexts["已重试 2 / 2 个任务"].waitForExistence(timeout:240))
+    let saved=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","删除离线文件：")).allElementsBoundByIndex.count>=2},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[saved],timeout:150),.completed,"Batch retry must complete both payloads");image("Batch retried downloads completed")
+    for _ in 0..<2 {
+      let remove=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","删除离线文件：")).firstMatch
+      XCTAssertTrue(remove.waitForExistence(timeout:10));reveal(remove);remove.tap();app.alerts.buttons["删除"].tap()
+      RunLoop.current.run(until:Date().addingTimeInterval(2))
+    }
+    XCTAssertTrue(app.staticTexts["暂无已下载音频"].waitForExistence(timeout:10))
+    openSettings(app,page:"sources");let removeAccount=app.buttons["移除连接：fixture-user"];reveal(removeAccount);removeAccount.tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
+  }
+
   func testLiveLocalIndexActions() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
