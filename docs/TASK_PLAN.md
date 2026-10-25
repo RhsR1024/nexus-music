@@ -2,7 +2,8 @@
 
 - [x] 原生后台URLSession会话、任务journal、generation防串、配额与校验、resume数据保护；JS观察适配器与独立并发接入。
 - [x] 9项适配器单测（570/570）；两份真实MP3原生契约（暂停续传/取消重试/journal恢复/ack/配额）；Release冒烟1/0/0证明模块编译进App。
-- [ ] iOS后台系统级续跑、真实provider多任务App验收、真机/签名与后台播放。
+- [x] 批量多选App验收（fixture长队列）：批量暂停/取消/重试与记录文件分离，Release 1/0/0；真实封面小图崩溃已修复并契约验证。
+- [ ] iOS后台系统级续跑、真实provider批量下载live验收（音源当前时段不可用，恢复后重跑）、真机/签名与后台播放。
 
 [回执](2026-10-25_native-background-transfers-report.md)。继续保留副本管理与批次7评估；不扩大Sollin采集。
 

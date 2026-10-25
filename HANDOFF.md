@@ -1,3 +1,9 @@
+## 2026-10-25 批次6 App级批量下载验收与真实封面崩溃修复
+
+批量多选App验收以长队列fixture完成：`testDownloadTaskBatchActions`（长按内容区进入选择、1/2→2/2、批量暂停/取消/重试、重试回执在下载实际完成后出现、记录与文件分离、清理闭环）Release `SourceUITests-1792952660647` 1/0/0；负证据记录了行中心长按会命中操作按钮区、需内容区坐标。真实源live下载测试连续多轮被真实LX音源阻断——全部尝试行（含Ed Sheeran原曲）长时间"待解析"三行×120秒未解析，判定为音源当前时段不可用/限流（早间批次可解析、fixture/native/单测全通过），live重跑留待音源恢复，不以fixture替代。
+
+live测试转而暴露并修复一个既有产品崩溃：打开某真实曲目播放器即SIGSEGV（`app-2026-10-26-033858.ips`：`vImageBoxConvolve` ← `RCTBlurredImageWithRadius`），根因是真实CDN偶发返回占位/破损小图被封面缓存照常写出，RN模糊半径51卷积小图崩溃。修复：`CoverCache.store` 拒绝 <32px 解码结果，`CoverGuardCLI` 契约验证四种尺寸（`build/cover-guard-replay-1792962144`）。`npm run check` 570/570。真机/签名、iOS后台系统级续跑、真实provider多任务与live重跑仍待。详见[回执](docs/2026-10-25_native-background-transfers-report.md)。
+
 ## 2026-10-25 批次6增量：原生后台URLSession下载底座（本机验收完成）
 
 另核对既有队列：5D对应云端`40193664989/f55414c`终态failure，失败步骤同为"Verify source management and Navidrome playback in the App"，与已定位的八行旧文案断言回归一致，修复包含于787a957及本批排队运行40202784084；云端终态以实际运行为准。
