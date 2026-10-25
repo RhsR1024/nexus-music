@@ -2359,11 +2359,14 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(more.waitForExistence(timeout:10));XCTAssertTrue(more.isHittable)
     func library(){tab("library");let local=app.descendants(matching:.any).matching(identifier:"library-local").firstMatch;reach(local);local.tap();let lists=app.buttons["我的歌单"];reach(lists);lists.tap()}
     library();let single=app.buttons[name+" · 1首"];XCTAssertTrue(single.waitForExistence(timeout:10));reach(single)
-    tab("search");let discover=app.buttons["发现 · 分类 · 排行榜 · 歌单导入"];XCTAssertTrue(discover.waitForExistence(timeout:10));discover.tap();detail();actions();evidence("Full discovery modal owns its song action sheet")
+    // The standalone discovery modal was removed with batch 2 (the discover
+    // tab is the only presentation); re-enter the same detail there to prove
+    // the second add still preserves the duplicate entry.
+    tab("discover");detail();actions();evidence("Embedded discovery owns its song action sheet after tab return")
     action("加入歌单").tap();XCTAssertTrue(app.buttons["取消添加"].waitForExistence(timeout:10));app.buttons["取消添加"].tap()
     XCTAssertTrue(more.waitForExistence(timeout:10));actions();action("加入歌单").tap()
     let existing=app.buttons[name+" · 1 首"];XCTAssertTrue(existing.waitForExistence(timeout:10));reach(existing);existing.tap()
-    XCTAssertTrue(more.waitForExistence(timeout:10));let close=app.buttons["收起发现"];reach(close);close.tap()
+    XCTAssertTrue(more.waitForExistence(timeout:10))
     library();let duplicate=app.buttons[name+" · 2首"];XCTAssertTrue(duplicate.waitForExistence(timeout:10));reach(duplicate);evidence("Both discovery presentations preserve duplicate playlist entries");duplicate.tap()
     let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
     XCTAssertFalse(app.buttons[name+" · 2首"].exists)
