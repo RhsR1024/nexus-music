@@ -16,12 +16,13 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
 }){
   const theme=useTheme(),styles=makeStyles(theme);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
   const sleepLabel=sleep.mode==='off'?'已关闭':sleep.mode==='track'?'本曲结束后':`剩余 ${Math.max(0,Math.ceil((sleep.deadline-Date.now())/60000))} 分钟`;
-  const favorite=services.library.isFavorite(favoriteTrack);
+  const favorite=services.songFavorites.isFavorite(favoriteTrack);
   const platform=track.origin.kind==='online'?platformName[track.origin.platform]:track.origin.kind==='imported'?'汽水':'本地';
   const subtitle=[track.artist,track.album,platform].filter(Boolean).join(' · ');
-  const toggleFavorite=()=>{void services.library.favorite(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
+  const toggleFavorite=()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
   const share=()=>{void Share.share({message:`${track.title} — ${track.artist}`}).catch(()=>{});};
   const card=(icon:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,active=false)=>(
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={active?{text:'已收藏'}:undefined} onPress={action} style={styles.card}>

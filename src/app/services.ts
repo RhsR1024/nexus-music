@@ -1,3 +1,4 @@
+import {createSongFavorites} from './songFavorites.ts';
 import {VisualAssetStore,VisualColorCache,type VisualNative} from '../storage/visualAssets.ts';
 import {CoverThemeStore} from '../appearance/coverTheme.ts';
 import {PublicComments} from '../providers/comments.ts';
@@ -194,7 +195,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
-  return { coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
+  const songFavorites=createSongFavorites(library,localAudio);
+  return { songFavorites, coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

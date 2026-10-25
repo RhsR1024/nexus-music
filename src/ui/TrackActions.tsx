@@ -18,15 +18,15 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
   extras?:boolean;
 }){
   const theme=useTheme();
-  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [commenting,setCommenting]=useState(false),[matching,setMatching]=useState(false);
   const [adding,setAdding]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   useEffect(()=>{setAdding(false);setCommenting(false);setMatching(false);setError('');},[track]);
   const current=useRef(track);current.current=track;
-  const favorite=track?services.library.isFavorite(track):false;
+  const favorite=track?services.songFavorites.isFavorite(track):false;
   async function saveFavorite(){
     if(!track||busy)return;setBusy(true);setError('');
-    try{await services.library.favorite(track);if(current.current===track)onClose();}
+    try{await services.songFavorites.toggle(track);if(current.current===track)onClose();}
     catch{if(current.current===track)setError('收藏未保存，原数据保留；请重试');}
     finally{setBusy(false);}
   }

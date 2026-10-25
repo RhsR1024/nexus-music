@@ -1015,6 +1015,41 @@ final class SourceSettingsTests: XCTestCase {
   // undeletable, creating prompts the device-only declaration, the local
   // picker excludes the default and closes on submit, deletion happens with
   // no confirmation, and the library playlist list never shows local names.
+  // Opt-in: unchanged public MP3 resolved by the user's real LX source.
+  func testLiveLocalIndexActions() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    func openLocal(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap()}
+    func filter(){let input=app.textFields["搜索本地歌曲艺术家专辑"];XCTAssertTrue(input.waitForExistence(timeout:10));input.tap();for character in "Shape of You"{input.typeText(String(character))};XCTAssertEqual(input.value as? String,"Shape of You");input.typeText("\n")}
+    func row()->XCUIElement{app.buttons["local-track-0"]}
+    let handle=app.buttons["player-drag-handle"].firstMatch;if handle.waitForExistence(timeout:2){handle.tap()}
+    openLocal();app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app)
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20));filter()
+    XCTAssertTrue(row().waitForExistence(timeout:10));XCTAssertTrue(row().isHittable);image("Real public audio local list")
+    row().press(forDuration:1.2)
+    let bar=app.descendants(matching:.any).matching(identifier:"local-batch-selection-bar").firstMatch
+    XCTAssertTrue(bar.waitForExistence(timeout:8));XCTAssertTrue(app.staticTexts["已选 1 / 1 首"].exists)
+    app.buttons["local-batch-select-all"].tap();XCTAssertTrue(app.staticTexts["已选 0 / 1 首"].exists)
+    app.buttons["local-batch-select-all"].tap();XCTAssertTrue(app.staticTexts["已选 1 / 1 首"].exists);image("Real public audio local selection")
+    app.buttons["local-batch-action-收藏"].tap();XCTAssertTrue(bar.waitForNonExistence(timeout:10));XCTAssertTrue(app.buttons["已收藏"].exists)
+    row().press(forDuration:1.2);app.buttons["local-batch-action-收藏"].tap();XCTAssertTrue(bar.waitForNonExistence(timeout:10));XCTAssertTrue(app.buttons["已收藏"].exists)
+    row().press(forDuration:1.2);app.buttons["local-batch-action-下一首"].tap();XCTAssertTrue(bar.waitForNonExistence(timeout:10))
+    row().press(forDuration:1.2);app.buttons["local-batch-action-下一首"].tap();XCTAssertTrue(app.staticTexts["所选歌曲已在队列中"].waitForExistence(timeout:8))
+    row().press(forDuration:1.2);app.buttons["local-batch-action-加歌单"].tap();XCTAssertTrue(app.buttons["取消添加到本地歌单"].waitForExistence(timeout:8))
+    let name="公开歌曲\(Int(Date().timeIntervalSince1970)%100000)";let field=app.textFields["新建本地歌单名称"];field.tap();for character in name{field.typeText(String(character))};XCTAssertEqual(field.value as? String,name);field.typeText("\n");app.buttons["新建本地歌单并添加"].tap()
+    XCTAssertTrue(bar.waitForNonExistence(timeout:10));XCTAssertTrue(app.staticTexts["已添加到本地歌单「\(name)」"].exists)
+    app.buttons["从列表移除"].tap();XCTAssertTrue(app.alerts["从本地列表移除？"].waitForExistence(timeout:5));app.alerts.buttons["取消"].tap();XCTAssertTrue(row().exists)
+    row().press(forDuration:1.2);app.buttons["local-batch-action-删除"].tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(row().waitForNonExistence(timeout:10));XCTAssertTrue(app.buttons["local-restore-index"].exists);image("Real audio index removed file retained")
+    app.terminate();app.launch();openLocal();filter();XCTAssertFalse(row().exists)
+    app.buttons["local-restore-index"].tap();XCTAssertTrue(row().waitForExistence(timeout:10));XCTAssertTrue(app.buttons["已收藏"].exists);image("Real audio index restored after restart")
+    row().tap();app.buttons["收起本地音频"].tap();let player=app.buttons["打开播放页"];XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90),"Restored actual MP3 must decode to PCM");XCTAssertTrue(app.buttons["暂停"].firstMatch.isHittable)
+    XCTAssertTrue(app.staticTexts["本地 MP3 · 原始文件"].exists)
+    let favorite=app.buttons["收藏歌曲"].firstMatch;XCTAssertEqual(favorite.value as? String,"已收藏");favorite.tap();XCTAssertEqual(favorite.value as? String,"未收藏");favorite.tap();XCTAssertEqual(favorite.value as? String,"已收藏")
+    image("Real audio restored PCM playback");app.buttons["暂停"].firstMatch.tap()
+  }
+
   func testLocalPlaylistDualSystem() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)

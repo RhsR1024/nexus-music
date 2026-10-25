@@ -25,7 +25,7 @@ try {
     if(execFileSync('git',['-C',apkRoot,'rev-parse','HEAD'],{encoding:'utf8'}).trim()!==apkPin)throw new Error('User-specified APK skill revision changed; review before use');
     if(execFileSync('git',['-C',apkRoot,'status','--porcelain','--untracked-files=no'],{encoding:'utf8'}).trim())throw new Error('Tracked APK skill files changed');
     const installed=realpathSync(resolve(project,'.agents/skills/sollin-apk-reverse'));
-    if(installed!==resolve(project,'work/installed-skills/sollin-apk-reverse'))throw new Error('APK skill must use the project-scoped installation');
+    if(installed!==realpathSync(resolve(project,'work/installed-skills/sollin-apk-reverse')))throw new Error('APK skill must use the project-scoped installation');
     const files=execFileSync('git',['-C',apkRoot,'ls-files','skills/apk-reverse'],{encoding:'utf8'}).trim().split('\n');
     for(const file of files)if(!readFileSync(resolve(apkRoot,file)).equals(readFileSync(resolve(installed,file.slice('skills/apk-reverse/'.length)))))throw new Error(`Installed APK skill differs: ${file}`);
     if(!readFileSync(resolve(apkRoot,'LICENSE')).equals(readFileSync(resolve(installed,'LICENSE'))))throw new Error('APK skill license missing or changed');
@@ -35,7 +35,7 @@ try {
   if(index.platform!=='macos'||Date.now()-statSync(indexPath).mtimeMs>7*86400000)throw new Error('Refresh tool-index on this Mac before proceeding');
   const python=index.tools.find(tool=>tool.name==='python3'&&tool.available)?.path;
   if(!python)throw new Error('tool-index has no verified Python interpreter');
-  const source=resolve(project,'../ReferenceProject',sample.file),digest=createHash('sha256');
+  const source=realpathSync(resolve(project,'../ReferenceProject',sample.file)),digest=createHash('sha256');
   for await(const bytes of createReadStream(source))digest.update(bytes);
   if(digest.digest('hex')!==sample.sha256)throw new Error('Sollin sample hash differs from the reviewed reference');
   const caseRoot=resolve(project,`work/sollin-${kind}`),scope=readFileSync(resolve(caseRoot,'scope.md'),'utf8');

@@ -12,8 +12,8 @@ type Content='cover'|'lyrics'|'queue';
 export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,onMore,onStyle,onComments}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void;onComments?:()=>void}){
   const {width,height,fontScale}=useWindowDimensions(),columns=width>height&&width>=600&&fontScale<1.8;
   const [content,setContent]=useState<Content>('cover');
-  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
-  const favorite=services.library.isFavorite(favoriteTrack);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
+  const favorite=services.songFavorites.isFavorite(favoriteTrack);
   // IMG_4866: 382pt square artwork (24pt side margins) starting 110pt down,
   // then a 60pt gap before the 20pt title block.
   const side=Math.max(1,Math.min(columns?width*.42:width-48,430,height*(columns?.62:fontScale>1.4?.26:.41)));
@@ -29,14 +29,14 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
     {/* IMG_4866 heart/dots ink centre stays at 583pt while the text block
         sits 2pt higher, so the icon pair keeps the old offset. */}
     <View style={{flexDirection:'row',gap:6,marginTop:2}}>
-      {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏')}
+      {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏')}
       {circle('ellipsis-horizontal','更多播放控制',onMore)}
     </View>
   </View>;
   const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:14,minHeight:75}}>
     <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')}><Cover services={services} track={track} size={75} radius={18}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:4}}><Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:16,fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:14}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
-    {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏',44)}
+    {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏',44)}
     {circle('ellipsis-horizontal','更多播放控制',onMore,undefined,44)}
   </View>;
   // IMG_4861 puts the transport 15pt higher above the tool row than the cover

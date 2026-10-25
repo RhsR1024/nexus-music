@@ -55,9 +55,9 @@ export function Player({ services }: { services: Services }) {
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   // Multi-source fallback may land below the preferred quality; say so instead
   // of letting the request tier read as the requested one.
-  const qualityNotice = state.media?.quality && state.media.quality !== preferences.quality ? `，已降级为 ${state.media.quality}` : '';
+  const qualityNotice = currentEntry(state.queue)?.track.origin.kind!=='local' && state.media?.quality && state.media.quality !== preferences.quality ? `，已降级为 ${state.media.quality}` : '';
   const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
-  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [commenting,setCommenting]=useState<Track|null>(null);
   const [choosingLyric,setChoosingLyric]=useState(false),[classicLyricRequest,setClassicLyricRequest]=useState(0);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
@@ -76,6 +76,7 @@ export function Player({ services }: { services: Services }) {
   };
   const entry = currentEntry(state.queue);
   if (!entry) return null;
+  const localQuality=entry.track.origin.kind==='local'?`本地 ${typeof entry.track.metadata.localFormat==='string'?entry.track.metadata.localFormat.toUpperCase():'音频'} · 原始文件`:null;
   const match=entry.track.origin.kind==='imported'||entry.track.origin.kind==='online'?services.library.matchFor(entry.track):undefined;
   const actualMatch=state.media?.matchedTrack,lyricTrack=actualMatch??(entry.track.origin.kind==='imported'?match?.target:match?.method==='manual'&&!state.media?match.target:undefined)??entry.track;
   const toggle = () => { if (state.intent === 'playing') controller.pause(); else void controller.play(); };
@@ -91,11 +92,11 @@ export function Player({ services }: { services: Services }) {
   const detailContent=(<>
         <Cover services={services} track={entry.track} size={240}/>
         <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
-        <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}{qualityNotice}（非实际文件格式证明）</Text>
+        <Text style={styles.caption}>{localQuality??`偏好 ${preferences.quality} · 成功请求档位 ${state.media?.quality??'待解析'}${qualityNotice}（非实际文件格式证明）`}</Text>
         <Spectrum services={services} />
         {(entry.track.origin.kind==='imported'||entry.track.origin.kind==='online')&&<View style={styles.row}><Text style={styles.caption}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
         {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)}/>}
-        <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
+        <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
         <View style={styles.row}>{button(`播放倍速 ${preferences.rate}x`,()=>setPanel('rate'))}{button('睡眠定时器',()=>setPanel('sleep'))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
@@ -123,8 +124,8 @@ export function Player({ services }: { services: Services }) {
   </>);
   const iconButton=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24,color:string=theme.palette.text,style?:React.ComponentProps<typeof Ionicons>['style'])=>(
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color={color} style={style}/></Pressable>);
-  const glyphButton=(glyph:React.ReactNode,label:string,action:()=>void)=>(
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{glyph}</Pressable>);
+  const glyphButton=(glyph:React.ReactNode,label:string,action:()=>void,value?:string)=>(
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{glyph}</Pressable>);
   // IMG_4854: header dots are #423E3C, back/next #403A39, tool glyphs lighter
   // still at #5E514F; dark layouts keep the theme text ink.
   const classicHeaderInk=theme.mode==='dark'?theme.palette.text:paper.iconStrong;
@@ -168,18 +169,18 @@ export function Player({ services }: { services: Services }) {
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:0,marginHorizontal:25.5}}>
       {glyphButton(<Ionicons name="repeat" size={26} color={classicToolInk} style={{transform:[{scaleX:1.047},{scaleY:1.171}]}}/>,`循环：${preferences.repeat}`,cycleRepeat)}
       {glyphButton(<Ionicons name="chatbubbles-outline" size={20} color={classicToolInk} style={{transform:[{scaleX:-1.164},{scaleY:.957}]}}/>,'歌曲评论',()=>setCommenting(entry.track))}
-      {glyphButton(<MaterialIcons name={services.library.isFavorite(entry.track)?'favorite':'favorite-border'} size={24} color={classicToolInk}/>,'收藏歌曲',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}
+      {glyphButton(<MaterialIcons name={services.songFavorites.isFavorite(entry.track)?'favorite':'favorite-border'} size={24} color={classicToolInk}/>,'收藏歌曲',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},services.songFavorites.isFavorite(entry.track)?'已收藏':'未收藏')}
       <Pressable accessibilityRole="button" accessibilityLabel="查看播放队列" onPress={()=>{setDetailPanel('content');setDetails(true);}} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{queueJar}</Pressable>
       {glyphButton(<MaterialIcons name="format-list-bulleted" size={24} color={classicToolInk} style={{transform:[{scaleX:1.091}]}}/>,'播放队列',()=>{setDetailPanel('content');setDetails(true);})}
     </View>
     {/* Kept above the safe-area fold (932pt screen, ~898pt viewport) so the
         reference's last line is not clipped by the scroll viewport. */}
-    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{preferences.quality} 档位 · {state.media?.quality??'待解析'}{qualityNotice} 实际请求</Text>
+    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{localQuality??`${preferences.quality} 档位 · ${state.media?.quality??'待解析'}${qualityNotice} 实际请求`}</Text>
     <ClassicLyricChrome services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
   </>;
   const classicTools=<View style={{gap:12,marginTop:12}}>
-    <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
-    <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}{qualityNotice}（非实际文件格式证明）</Text>
+    <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
+    <Text style={styles.caption}>{localQuality??`偏好 ${preferences.quality} · 成功请求档位 ${state.media?.quality??'待解析'}${qualityNotice}（非实际文件格式证明）`}</Text>
     <Spectrum services={services}/>
     <View style={styles.row}>{button('−15秒',()=>controller.seek(state.position-15))}{button('＋15秒',()=>controller.seek(state.position+15))}{button(`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle});})}{button('匹配歌曲',()=>setMatching(entry.track))}</View>
   </View>;
@@ -190,10 +191,10 @@ export function Player({ services }: { services: Services }) {
         <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text>{(!preferences.miniLyrics||open)&&<Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase==='resolving'?'正在选择音源…':state.error??(state.buffering?'缓冲中…':time(state.position))}</Text>}
       </Pressable>{preferences.miniLyrics&&!open&&<MiniLyric key={JSON.stringify(lyricTrack.origin)} services={services} track={lyricTrack}/>}</View><View style={{flexDirection:'row',flexShrink:0,alignItems:'center'}}>{preferences.miniActions.map(action=>{
         if(action==='queue')return <QueueView key={action} services={services} compact/>;
-        const favorite=services.library.isFavorite(entry.track),label=action==='toggle'?(state.intent==='playing'?'暂停':'播放'):miniActionLabels[action];
+        const favorite=services.songFavorites.isFavorite(entry.track),label=action==='toggle'?(state.intent==='playing'?'暂停':'播放'):miniActionLabels[action];
         const icon=action==='previous'?'play-skip-back':action==='toggle'?(state.intent==='playing'?'pause':'play'):action==='next'?'play-skip-forward':favorite?'heart':'heart-outline';
         return <Pressable key={action} testID={`mini-action-${action}`} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={action==='favorite'?{text:favorite?'已收藏':'未收藏'}:undefined} onPress={()=>{
-          if(action==='toggle')toggle();else if(action==='previous')services.playback.next(-1);else if(action==='next')services.playback.next();else void services.library.favorite(entry.track).catch(()=>Alert.alert('收藏未保存','原有数据保留，请重试。'));
+          if(action==='toggle')toggle();else if(action==='previous')services.playback.next(-1);else if(action==='next')services.playback.next();else void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('收藏未保存','原有数据保留，请重试。'));
         }} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={24} color={theme.palette.text}/></Pressable>;
       })}</View>
     </View></GlassSurface></View>

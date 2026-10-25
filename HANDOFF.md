@@ -1,8 +1,16 @@
+## 2026-10-25 批次5A：本地索引与批量动作
+
+本地歌曲/艺术家/专辑分组补长按选择、全选/取消、批量收藏/本地歌单/下一首去重/索引移除；索引隐藏跨重启且保留文件/播放引用，可显式恢复。设备收藏标志与音乐库集合分离，播放器/歌曲菜单按同一标志读写；本地原文件不再误称flac降级。批次4旧合成Files测试的“真实音源”口径已更正。
+
+540项业务/类型通过；真实V261020脚本取得公开MP3，最终Release SourceUITests-1792900858251为1/0/0、158.281秒，源码/输入不变、5张实际附件亲看/provenance ready，App副本SHA等于真实输入、SQLite设备收藏true而音乐库收藏0。APK gate/review与既有395E动态严格审核通过，未补采Sollin。工作树因并行任务reset后已隔离，原目录7行测试修改保留。详见[本批回执](docs/implementation-local-index-2026-10-25.md)。
+
+批次5仍继续：扫描根/文件夹视图/规则、完整六字段双向排序持久化、本地歌单详情多选；真机/签名/后台、连续动效及云端终态未验，不将5A记整批完成。
+
 ## 2026-10-25 批次4音乐库双歌单体系
 
 按[功能清单§6](docs/SOLLIN_ANDROID_FEATURE_INVENTORY.md)落地双歌单体系：新增 `src/domain/devicePlaylist.ts` + `src/storage/devicePlaylists.ts`（键 `device.playlists.v1` 永不进入音乐库JSON，与云同步/WebDAV域隔离），默认"我喜欢的（仅本机）"恒在且拒删；本地音频页新增"歌单"视图（新建/重命名/删除无确认/逐曲移除/行播放）与 `LocalPlaylistPicker`（只列本地歌单、排除默认、空态提示新建、提交后关闭——与搜索页选择器保留面板不同），行"加入歌单"改走本地选择器；自建歌单补 描述/封面URL 三字段与删除撤销（Toast动作按钮+快照回插 `restorePlaylist`）。打开/新建收起键盘。
 
-验证：`npm run check` 537/537；UI `testLocalPlaylistDualSystem` 最终 `SourceUITests-1792894967968` 1/0/0（真实导入音频：默认恒在/唯一名新建/创建可删默认不可删/选择器排除默认/提交关闭/删除无确认/音乐库看不到本地名），3张截图亲看；本地导入回归 `1792893739359` 1/0/0。四轮负证据保留（断言位置错、键盘遮挡、AX节点重复需firstMatch、消息查询误用buttons+跨运行同名残留），全部修复并记入回执。IPA/APK gate与`--review` PASS。未验：本地歌单批量多选（批次5）、撤销Toast录屏、iOS27云端终态（fde9b2c/0aeed10云端结果待核对）、真机/签名/后台。详见[回执](docs/implementation-device-playlists-2026-10-25.md)。
+验证：`npm run check` 537/537；UI `testLocalPlaylistDualSystem` 最终 `SourceUITests-1792894967968` 1/0/0（Files导入合成音频（非真实音源）：默认恒在/唯一名新建/创建可删默认不可删/选择器排除默认/提交关闭/删除无确认/音乐库看不到本地名），3张截图亲看；本地导入回归 `1792893739359` 1/0/0。四轮负证据保留（断言位置错、键盘遮挡、AX节点重复需firstMatch、消息查询误用buttons+跨运行同名残留），全部修复并记入回执。IPA/APK gate与`--review` PASS。未验：本地歌单批量多选（批次5）、撤销Toast录屏、iOS27云端终态（fde9b2c/0aeed10云端结果待核对）、真机/签名/后台。详见[回执](docs/implementation-device-playlists-2026-10-25.md)。
 
 ## 2026-10-25 批次3队列编辑与解析健壮性
 

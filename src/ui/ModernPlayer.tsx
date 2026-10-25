@@ -46,11 +46,11 @@ export function ArtworkBackdrop({services,track,photo=false}:{services:Services;
 export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layout,onMore,onStyle,onLyricsSettings,onQueue,onComments,onSleep,visible=true}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;layout:Exclude<PlayerLayout,'classic'>;onMore:()=>void;onStyle:()=>void;onLyricsSettings?:()=>void;onQueue?:()=>void;onComments?:()=>void;onSleep?:()=>void;visible?:boolean}){
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const {width,height}=useWindowDimensions(),controller=services.playback.controller;
   const icon=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=25)=><Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color="#FFFFFF"/></Pressable>;
-  const isFavorite=services.library.isFavorite(favoriteTrack);
-  const toggleFavorite=()=>{void services.library.favorite(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
+  const isFavorite=services.songFavorites.isFavorite(favoriteTrack);
+  const toggleFavorite=()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
   const favoriteButton=<Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:isFavorite?'已收藏':'未收藏'}} onPress={toggleFavorite} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={isFavorite?'heart':'heart-outline'} size={25} color="#FFFFFF"/></Pressable>;
   const transport=icon(state.intent==='playing'?'pause':'play',state.intent==='playing'?'暂停':'播放',()=>{if(state.intent==='playing')controller.pause();else void controller.play();},56);
   if(layout==='vinyl')return <VinylPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onLyricsSettings={onLyricsSettings??onMore} onQueue={onQueue??onMore} onSleep={onSleep??onMore}/>;

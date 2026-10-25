@@ -14,7 +14,7 @@ import {useTheme} from './theme.tsx';
 export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity,visible,controls,onMore}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;identity:string;visible:boolean;controls:ReactNode;onMore:()=>void}){
   const theme=useTheme();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const model=useMemo(()=>new AM2Presentation(),[]),view=useSyncExternalStore(model.subscribe,model.getSnapshot);
   const [foreground,setForeground]=useState(AppState.currentState==='active'),[error,setError]=useState(''),[settings,setSettings]=useState(false);
   const {width,height,fontScale}=useWindowDimensions(),columns=am2Columns(width-120,height-120,fontScale);
@@ -22,7 +22,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
   useEffect(()=>{model.configure({identity,active:visible&&foreground&&!settings,automatic:preferences.am2AutoLyrics,delaySeconds:preferences.am2DelaySeconds});},[model,identity,visible,foreground,settings,preferences.am2AutoLyrics,preferences.am2DelaySeconds]);
   useEffect(()=>()=>model.dispose(),[model]);
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{void services.preferences.update(patch).then(()=>setError('')).catch(()=>setError('设置未保存，之前的设置保留。'));};
-  const favorite=services.library.isFavorite(favoriteTrack);
+  const favorite=services.songFavorites.isFavorite(favoriteTrack);
   const button=(title:string,action:()=>void,id?:string)=><Pressable testID={id} accessibilityRole="button" onPress={action} style={{minHeight:44,paddingHorizontal:12,justifyContent:'center'}}><Text style={{color:'#FFFFFF'}}>{title}</Text></Pressable>;
   const tabs=(['lyrics','comments','queue'] as const).map((content:AM2Content)=>{
     const selected=view.content===content,label={cover:'封面',lyrics:'歌词',comments:'评论',queue:'队列'}[content];
@@ -35,7 +35,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
     <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
       {view.content!=='cover'&&<Cover services={services} track={track} size={48}/>}
       <View style={{flex:1}}><Text numberOfLines={1} style={{fontSize:22,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:13,color:'#D5D5DA'}}>{track.artist}</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:favorite?'已收藏':'未收藏'}} onPress={()=>{void services.library.favorite(favoriteTrack).catch(()=>setError('收藏未保存，之前的数据保留。'));}} style={{minHeight:48,minWidth:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={favorite?'heart':'heart-outline'} color="#FFFFFF" size={24}/></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:favorite?'已收藏':'未收藏'}} onPress={()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>setError('收藏未保存，之前的数据保留。'));}} style={{minHeight:48,minWidth:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={favorite?'heart':'heart-outline'} color="#FFFFFF" size={24}/></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="更多播放控制" onPress={onMore} style={{minHeight:48,minWidth:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="ellipsis-horizontal" color="#FFFFFF" size={24}/></Pressable>
     </View>
     <ScrollView horizontal style={{flexGrow:0,flexShrink:0}} contentContainerStyle={{alignItems:'center'}}>{tabs}{view.content!=='cover'&&button('返回封面',()=>model.select('cover'),'am2-return-cover')}{button(settings?'收起 AM2 设置':'AM2 设置',()=>setSettings(!settings),'am2-settings')}{!settings&&view.content==='lyrics'&&button(view.fullscreen?'还原歌词区域':'展开歌词区域',()=>model.toggleFullscreen(),'am2-expand-lyrics')}</ScrollView>

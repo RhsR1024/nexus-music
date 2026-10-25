@@ -37,18 +37,18 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
   const {width,height}=useWindowDimensions();
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [lyricsOpen,setLyricsOpen]=useState(false);
   // IMG_4851 deck: 370.33x351pt at x29.67/y155.67 on the 430x932 reference.
   const deck=Math.max(1,Math.min(width-59.34,370.33));
-  const isFavorite=services.library.isFavorite(favoriteTrack);
+  const isFavorite=services.songFavorites.isFavorite(favoriteTrack);
   const playing=state.intent==='playing';
   const controller=services.playback.controller;
   const icon=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24)=>(
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={[styles.hit,{width:space.section}]}>
       <Ionicons name={name} size={size} color={paper.vinylIcon}/>
     </Pressable>);
-  const toggleFavorite=()=>{void services.library.favorite(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
+  const toggleFavorite=()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
   return <View style={styles.root}>
     <PaperBackdrop services={services} track={track}/>
     <View style={[styles.content,{paddingTop:Math.max(96,height*(155.67/932))}]}>

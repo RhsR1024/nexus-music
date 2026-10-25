@@ -13,7 +13,7 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
   const {width,height,fontScale}=useWindowDimensions(),columns=width>height&&width>=600&&fontScale<1.8;
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot),controller=services.playback.controller;
   const prefs=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
+  useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [presentation]=useState(()=>new PhotoActions()),shown=useSyncExternalStore(presentation.subscribe,presentation.getSnapshot);
   const [foreground,setForeground]=useState(AppState.currentState==='active'),[reduce,setReduce]=useState(true);
   const identity=JSON.stringify([state.queue.currentId,lyricTrack.origin]);
@@ -27,9 +27,9 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
     if(!shown||reduce)return;
     const animation=Animated.parallel([Animated.timing(opacity,{toValue:1,duration:120,useNativeDriver:true,isInteraction:false}),Animated.timing(scale,{toValue:1,duration:140,useNativeDriver:true,isInteraction:false})]);animation.start();return()=>animation.stop();
   },[shown,reduce,opacity,scale]);
-  const favorite=services.library.isFavorite(favoriteTrack);
+  const favorite=services.songFavorites.isFavorite(favoriteTrack);
   const tool=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24,id?:string,value?:string)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} onPress={()=>{presentation.interact();action();}} style={{minWidth:44,minHeight:48,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color="#FFFFFF"/></Pressable>;
-  const favoriteButton=tool(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.library.favorite(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));},24,undefined,favorite?'已收藏':'未收藏');
+  const favoriteButton=tool(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));},24,undefined,favorite?'已收藏':'未收藏');
   return <View testID="photo-player" style={{flex:1,minHeight:0,gap:6}}>
     /* IMG_4868: the artwork fades into a dark foundation so lyrics stay legible */
     <LinearGradient testID="photo-bottom-scrim" pointerEvents="none" colors={['transparent','rgba(0,0,0,0.72)']} locations={[0,1]} style={{position:'absolute',left:0,right:0,bottom:0,height:'42%'}}/>
