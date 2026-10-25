@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { trackKey } from '../src/domain/track.ts';
-import { makeQueue, enqueueNext, enqueueNextMany, advance, remove, move, append, emptyQueue } from '../src/domain/queue.ts';
+import { makeQueue, enqueueNext, enqueueNextMany, advance, remove, removeAfter, move, append, emptyQueue } from '../src/domain/queue.ts';
 import { entry, track } from './fixtures.ts';
 
 test('long IDs remain strings; accounts and platforms never share identity', () => {
@@ -64,4 +64,20 @@ test('batch play-next keeps the list order and follows earlier priority blocks',
   assert.equal(enqueueNextMany(base, []), base);
   assert.throws(() => enqueueNextMany(base, [entry('x'), entry('x')]));
   assert.deepEqual(base.entries.map(e => e.id), ['a', 'b', 'c']);
+});
+
+test('clear-after-current drops only the upcoming tail and its priority marks', () => {
+  const base = enqueueNextMany(makeQueue([entry('a'), entry('b'), entry('c')]), [entry('x'), entry('y')]);
+  // entries: a x y b c; clearing after the current keeps the played prefix.
+  const cleared = removeAfter(base, base.currentId!);
+  assert.deepEqual(cleared.entries.map(e => e.id), ['a']);
+  assert.deepEqual(cleared.priorityIds, []);
+  assert.equal(cleared.currentId, 'a');
+  // Clearing after a middle entry keeps everything up to and including it.
+  const middle = removeAfter(base, 'y');
+  assert.deepEqual(middle.entries.map(e => e.id), ['a', 'x', 'y']);
+  assert.deepEqual(middle.priorityIds, ['x', 'y']);
+  // No upcoming entries and unknown ids are no-ops.
+  assert.equal(removeAfter(middle, 'y'), middle);
+  assert.equal(removeAfter(base, 'missing'), base);
 });

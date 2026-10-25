@@ -2,7 +2,7 @@ import {PlaybackMessageError} from '../src/playback/errors.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PlaybackController, type ResolvedMedia, type PlaybackBackend } from '../src/playback/controller.ts';
-import { makeQueue, select, appendMany } from '../src/domain/queue.ts';
+import { advance, makeQueue, select, appendMany } from '../src/domain/queue.ts';
 import { deferred, entry } from './fixtures.ts';
 
 function rig() {
@@ -178,4 +178,72 @@ test('bulk list append leaves an active native session and paused cursor unchang
   assert.deepEqual(calls,before);assert.equal(controller.getSnapshot().token,token);assert.equal(controller.getSnapshot().position,42);assert.equal(controller.getSnapshot().intent,'playing');
   controller.pause();const paused=controller.getSnapshot();controller.setQueue(appendMany(paused.queue,[entry('extra3')]));
   assert.equal(controller.getSnapshot().token,paused.token);assert.equal(controller.getSnapshot().position,42);assert.equal(controller.getSnapshot().intent,'paused');
+});
+
+test('resolution failures skip forward along the queue while playing', async () => {
+  const calls:string[]=[];
+  const backend:PlaybackBackend={stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}};
+  const queue=makeQueue([entry('a'),entry('b'),entry('c')]);
+  const controller=new PlaybackController({resolve:()=>{calls.push('resolve');return calls.length<3?Promise.reject(new Error('fixture offline')):Promise.resolve({url:'https://example.test/ok.mp3'});}},backend,queue);
+  controller.setResolveFailureHandler(current=>{
+    const next=advance(current);
+    if(!next.currentId)return false;
+    void controller.play(next);
+    return true;
+  });
+  const started=controller.play();
+  const deadline=Date.now()+5000;
+  while(controller.getSnapshot().phase!=='ready'){if(Date.now()>deadline)throw new Error('skip chain did not settle');await new Promise(resolve=>setTimeout(resolve,10));}
+  await started;await new Promise(resolve=>setTimeout(resolve,20));
+  assert.equal(controller.getSnapshot().queue.currentId,'c');
+  assert.equal(controller.getSnapshot().media?.url,'https://example.test/ok.mp3');
+  assert.equal(calls.length,3);
+});
+
+test('single-track failures surface the error without skipping', async () => {
+  const backend:PlaybackBackend={stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}};
+  const controller=new PlaybackController({resolve:()=>Promise.reject(new Error('offline'))},backend,makeQueue([entry('a')]));
+  await controller.play();
+  const state=controller.getSnapshot();
+  assert.equal(state.phase,'error');assert.match(state.error??'',/无法获取或加载歌曲/);
+  assert.equal(state.queue.currentId,'a');
+});
+
+test('runaway skipping is capped and ends in a visible error', async () => {
+  const backend:PlaybackBackend={stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}};
+  const queue=makeQueue(Array.from({length:20},(_,index)=>entry(`a${index}`)));
+  const controller=new PlaybackController({resolve:()=>Promise.reject(new Error('offline'))},backend,queue);
+  let skips=0;
+  controller.setResolveFailureHandler(current=>{
+    if(skips>=15){return false;}
+    const next=advance(current);
+    if(!next.currentId)return false;
+    skips++;void controller.play(next);
+    return true;
+  });
+  const started=controller.play();
+  const deadline=Date.now()+8000;
+  while(controller.getSnapshot().phase!=='error'){if(Date.now()>deadline)throw new Error('runaway chain did not settle');await new Promise(resolve=>setTimeout(resolve,10));}
+  await started;await new Promise(resolve=>setTimeout(resolve,20));
+  assert.equal(skips,15);
+  assert.equal(controller.getSnapshot().queue.currentId,'a15');
+  assert.match(controller.getSnapshot().error??'',/无法获取或加载歌曲/);
+});
+
+test('queue lock survives advancement and in-queue selection, resets on rebuild', async () => {
+  const backend:PlaybackBackend={stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}};
+  const queue=makeQueue([entry('a'),entry('b')]);
+  const controller=new PlaybackController({resolve:()=>Promise.resolve({url:'https://example.test/ok.mp3'})},backend,queue);
+  controller.setQueueLocked(true);
+  await controller.play();
+  assert.equal(controller.getSnapshot().queueLocked,true);
+  const token=controller.getSnapshot().token!;
+  await controller.onEnded(token);
+  assert.equal(controller.getSnapshot().queue.currentId,'b');
+  assert.equal(controller.getSnapshot().queueLocked,true);
+  await controller.play(select(queue,'a'));
+  assert.equal(controller.getSnapshot().queue.currentId,'a');
+  assert.equal(controller.getSnapshot().queueLocked,true);
+  await controller.play(makeQueue([entry('x'),entry('y')]));
+  assert.equal(controller.getSnapshot().queueLocked,false);
 });

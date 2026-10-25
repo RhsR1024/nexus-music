@@ -53,6 +53,9 @@ export function Player({ services }: { services: Services }) {
   const { controller } = services.playback;
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
+  // Multi-source fallback may land below the preferred quality; say so instead
+  // of letting the request tier read as the requested one.
+  const qualityNotice = state.media?.quality && state.media.quality !== preferences.quality ? `，已降级为 ${state.media.quality}` : '';
   const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
   useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
   const [commenting,setCommenting]=useState<Track|null>(null);
@@ -88,7 +91,7 @@ export function Player({ services }: { services: Services }) {
   const detailContent=(<>
         <Cover services={services} track={entry.track} size={240}/>
         <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
-        <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
+        <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}{qualityNotice}（非实际文件格式证明）</Text>
         <Spectrum services={services} />
         {(entry.track.origin.kind==='imported'||entry.track.origin.kind==='online')&&<View style={styles.row}><Text style={styles.caption}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
         {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)}/>}
@@ -171,12 +174,12 @@ export function Player({ services }: { services: Services }) {
     </View>
     {/* Kept above the safe-area fold (932pt screen, ~898pt viewport) so the
         reference's last line is not clipped by the scroll viewport. */}
-    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{preferences.quality} 档位 · {state.media?.quality??'待解析'} 实际请求</Text>
+    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{preferences.quality} 档位 · {state.media?.quality??'待解析'}{qualityNotice} 实际请求</Text>
     <ClassicLyricChrome services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
   </>;
   const classicTools=<View style={{gap:12,marginTop:12}}>
     <View style={styles.row}>{button(services.library.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.library.favorite(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
-    <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}（非实际文件格式证明）</Text>
+    <Text style={styles.caption}>偏好 {preferences.quality} · 成功请求档位 {state.media?.quality ?? '待解析'}{qualityNotice}（非实际文件格式证明）</Text>
     <Spectrum services={services}/>
     <View style={styles.row}>{button('−15秒',()=>controller.seek(state.position-15))}{button('＋15秒',()=>controller.seek(state.position+15))}{button(`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle});})}{button('匹配歌曲',()=>setMatching(entry.track))}</View>
   </View>;

@@ -42,7 +42,16 @@ export interface PlaybackState {
   duration: number;
   buffering: boolean;
   media: ResolvedMedia | null;
+  // Page-scoped queue lock (Sollin §5): hides per-row queue edits. Only an
+  // external rebuild — a play() with different entries — restores editing;
+  // natural advancement and in-queue selection keep the lock.
+  queueLocked: boolean;
 }
+
+// Resolution failures while the user wants to play can skip to the next entry
+// (Sollin E-1272). The session installs a handler that advances through its
+// normal repeat/shuffle path; returning true suppresses the local error state.
+export type ResolveFailureHandler = (queue: QueueState) => boolean | Promise<boolean>;
 
 export class PlaybackController {
   private generation = 0;
@@ -56,12 +65,16 @@ export class PlaybackController {
   private loadedTrack: Track | undefined;
   private rejectedRoutes = new Set<string>();
   private cursor: {entryId:string;seconds:number}|undefined;
+  private resolveFailureHandler: ResolveFailureHandler | undefined;
 
   constructor(resolver: MediaResolver, backend: PlaybackBackend, queue: QueueState) {
     this.resolver = resolver;
     this.backend = backend;
-    this.state = { queue, intent: 'paused', phase: 'idle', error: null, token: null, position: 0, duration: 0, buffering: false, media: null };
+    this.state = { queue, intent: 'paused', phase: 'idle', error: null, token: null, position: 0, duration: 0, buffering: false, media: null, queueLocked: false };
   }
+
+  setResolveFailureHandler(handler: ResolveFailureHandler | undefined): void { this.resolveFailureHandler = handler; }
+  setQueueLocked(locked: boolean): void { if (this.disposed || locked === this.state.queueLocked) return; this.update({ queueLocked: locked }); }
 
   getSnapshot = (): PlaybackState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -103,7 +116,8 @@ export class PlaybackController {
     const token = { entryId: entry.id, generation };
     const pending = new AbortController();
     this.pending = pending;
-    this.update({ queue, intent: 'playing', phase: 'resolving', error: null, token, position: this.cursor?.entryId===entry.id?this.cursor.seconds:0, duration: 0, media: null });
+    const rebuilt = queue.entries !== this.state.queue.entries;
+    this.update({ queue, intent: 'playing', phase: 'resolving', error: null, token, position: this.cursor?.entryId===entry.id?this.cursor.seconds:0, duration: 0, media: null, ...(rebuilt ? { queueLocked: false } : {}) });
     try {
       const resolved = await this.resolver.resolve(entry.track, pending.signal, this.rejectedRoutes);
       if (pending.signal.aborted || generation !== this.generation || this.disposed) return;
@@ -121,6 +135,7 @@ export class PlaybackController {
       this.update({ phase: 'ready', media });
     } catch (error) {
       if (pending.signal.aborted || generation !== this.generation || this.disposed) return;
+      if (this.state.intent === 'playing' && await this.resolveFailureHandler?.(queue) === true) return;
       // Resolver errors can contain private tokens/URLs; do not surface raw messages.
       this.update({ phase: 'error', intent: 'paused', error: error instanceof PlaybackMessageError?error.displayMessage:'无法获取或加载歌曲，请重试或检查来源配置' });
     }

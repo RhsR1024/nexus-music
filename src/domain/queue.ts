@@ -82,6 +82,15 @@ export function remove(queue: QueueState, id: string): QueueState {
   return { entries, currentId, priorityIds: queue.priorityIds.filter(item => item !== id && item !== currentId) };
 }
 
+// "Clear after current": keep everything up to and including the entry, drop
+// the rest of the upcoming list. Priority blocks that pointed past it go too.
+export function removeAfter(queue: QueueState, id: string): QueueState {
+  const index = queue.entries.findIndex(entry => entry.id === id);
+  if (index < 0 || index === queue.entries.length - 1) return queue;
+  const entries = queue.entries.slice(0, index + 1);
+  return { ...queue, entries, priorityIds: queue.priorityIds.filter(item => entries.some(entry => entry.id === item)) };
+}
+
 export function move(queue: QueueState, id: string, to: number): QueueState {
   const from = queue.entries.findIndex(entry => entry.id === id);
   if (from < 0 || !Number.isInteger(to) || to < 0 || to >= queue.entries.length) {

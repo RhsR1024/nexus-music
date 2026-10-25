@@ -83,6 +83,22 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
     }
     void controller.play(queue);
   };
+  // Sollin E-1272 reference behaviour: while the user wants to play, a track
+  // whose resolution fails skips to the next entry along the same repeat and
+  // shuffle path, up to a bounded run before surfacing the failure.
+  let skipFailures = 0;
+  controller.subscribe(()=>{if(controller.getSnapshot().phase==='ready')skipFailures=0;});
+  controller.setResolveFailureHandler(queue => {
+    if (skipFailures >= 15) { skipFailures = 0; return false; }
+    const settings = preferences.getSnapshot();
+    let target = advance(queue, settings.repeat === 'all' ? 'all' : 'off');
+    if (settings.shuffle && !queue.priorityIds.length) target = shuffle.next(queue, settings.repeat === 'all', 1);
+    const nextId = target.currentId;
+    if (!nextId || nextId === queue.currentId) { skipFailures = 0; return false; }
+    skipFailures++;
+    void controller.play(target);
+    return true;
+  });
   native.addListener('playback', event => {
     const token = { entryId: String(event.entryId), generation: Number(event.generation) };
     const before=controller.getSnapshot();
