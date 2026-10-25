@@ -47,3 +47,5 @@ Info.plist SHA256：`87ab8db62af335ef9f01a4b95c08ce8c0728db0701b40b82f0c82ab4296
 ## 分支交付
 
 功能代码74ff9754b72ca7087ec03852e780688058cda651已正常push到origin/codex/local-audio-index，ls-remote确认SHA相同；未force push。受管工作树继续保留供批次5后续实施；原主检出的7行未提交测试修改保持原样。本仓push工作流只匹配main，本分支的PR创建后运行及队列核对另留本机publish-receipt，不把本地成功记为云端终态。源码文件摘要与最终r5实际构建仍一致。
+
+代码与回执893952f已正常快进push至main，原主检出也已同步代码且原7行未提交修改逐行保留。GitHub PR集成403未创建PR。CI快照为40154950684/eb6b207运行、40161392630/893952f唯一pending，保持1/1；未取消或重派运行，云端终态仍待。详见[构建状态](BUILD_STATUS.md)。

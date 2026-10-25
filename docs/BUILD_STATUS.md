@@ -1,3 +1,9 @@
+## 2026-10-25 批次5A main推送与CI队列快照
+
+功能74ff975及回执893952f已正常快进push到origin/main，远端SHA核对一致；分支codex/local-audio-index同时保留。GitHub集成创建PR返回403，实际没有创建PR；按既有阶段授权完成普通main推送，未force push。原主检出已快进到同一代码，原有SourceSettingsTests.swift的5增/2删逐行保留且仍未提交；本地恢复补丁及回执留在受管工作树build/local-music-live-20261025。
+
+push后API快照：40154950684/eb6b207运行中，40161392630/893952f是唯一pending，1运行/1等待；没有取消运行中任务或重派旧提交。新云端终态未验，不能将540业务/类型与真实MP3 Release 1/0/0当作云端通过。后续文档-only提交按工作流paths-ignore不触发竞争构建；该CI实际覆盖893952f所含代码与测试。[功能与负证据回执](implementation-local-index-2026-10-25.md)。
+
 ## 2026-10-24 b61e09d 清洁归档与同步边界
 
 代码提交 b61e09ded558092006f374ce4ef086019e7ac536 已本地保存。清洁归档 ARCHIVE SUCCEEDED；manifest dirty=false/workingTreeChanges=[]，arm64/iphoneos26.2/min15.1/设备族[1,2]/unsigned。IPA SHA256 f1612e9480ff1bb42e499e02007ea950d7f8ffef3e399cbf634d729e1d8e6dd0；ZIP CRC、测试适配器排除、23份私人原始脚本字节均不在bundle的核对通过。当前包与收据保留 build/local-shared-actions-b61e09d-20261024。511业务/类型、完整native、最终真实源App 1/0/0及前段菜单2/0/0见[回执](implementation-shared-song-actions-2026-10-24.md)。签名/真机与全源全档位仍未验。
