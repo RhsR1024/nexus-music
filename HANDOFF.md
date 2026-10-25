@@ -1,3 +1,9 @@
+## 2026-10-25 批次5C：文件夹与扫描（验收完成）
+
+已接系统目录授权/原生书签、递归/平层扫描、文件夹视图、最小时长/屏蔽目录、保存与显式重扫分离。手动隐藏与扫描排除分开，手动导入不随移根消失，App副本/播放引用保留。556项检查、两首真实MP3的Mac原生扫描契约与最终Release `SourceUITests-1792925051344`（1/0/0、3分10秒、8张附件亲看）通过。期间r3通过后r4–r6三轮复核失败均定位并修复：r4为取消后立即重添加时present落在上一个picker关闭动画内静默失败、promise永久挂起（原生改为等待层级收起）；r5为远程Files AX子树不可查询叠加sheet被系统撤下且无delegate回调导致spinner冻结（原生新增看门狗按取消收口，测试选择器循环改为优先确认sheet导航栏"打开"并可自愈重开）；r6为看门狗首版3秒未展示阈值与Files冷启动（实际展示约4秒）冲突产生孤儿sheet（阈值放宽到20秒并dismiss迟到孤儿）。三轮负证据均有截图/控件树/屏幕录像，真实用户路径的冻结缺陷由本批一并消除。
+
+[实施回执](docs/2026-10-25_implementation-local-folders-report.md)与[真实场景](docs/ui-spec/local-folder-live-2026-10-25.md)。继续既有Q125资料，未补采Sollin；APK gate/review与395E动态严格review通过。本地歌单详情多选、保留副本管理与批次6/7等余项继续，不能记全部本地能力完成。原Files helper未提交补丁因5C测试依赖其folderName参数化与Files轮询加固，已随本批一并提交。
+
 ## 2026-10-25 批次5B：本地六字段双向排序
 
 `1962c98`已正常提交并push，远端main核对一致；对应[CI 40174617383](https://github.com/RhsR1024/nexus-music/actions/runs/40174617383)运行中，API实核1运行/0queued/0pending，终态待。未取消运行或重派旧提交。
