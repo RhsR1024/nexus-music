@@ -18,10 +18,11 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLiveLocal(?:IndexActions|Sorting)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLiveLocal(?:IndexActions|Sorting|FolderScan)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
-const liveLocalSorting=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalSorting'));
+const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
+const liveLocalSorting=liveLocalFolderUI||process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalSorting'));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)!==liveLocalSorting)throw new Error('Real local sorting requires a second actual audio file and its explicit target');
 const liveLocalPaths=liveLocalPath?[liveLocalPath,...(liveLocalSorting?[realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)]:[])]:[];
 const liveLocalSnapshot=liveLocalPath?externalInputSnapshot(liveLocalPaths):null;
@@ -32,10 +33,10 @@ function seedLocalAudio() {
   try {
     const groups=execFileSync('xcrun',['simctl','get_app_container',process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D','com.apple.DocumentsApp','groups'],{encoding:'utf8',stdio:['ignore','pipe','ignore']});
     const container=groups.split('\n').find(line=>line.startsWith('group.com.apple.FileProvider.LocalStorage\t'))?.split('\t')[1];if(!container)return;
-    localFixtureDirectory=resolve(container,'File Provider Storage','Nexus UITest Fixtures');mkdirSync(localFixtureDirectory,{recursive:true});
+    localFixtureDirectory=resolve(container,'File Provider Storage',liveLocalFolderUI?'Nexus Real Scan':'Nexus UITest Fixtures');mkdirSync(localFixtureDirectory,{recursive:true});
     if(liveLocalPath){
-      for(const path of liveLocalPaths){writeFileSync(resolve(localFixtureDirectory,basename(path)),readFileSync(path));}
-      if(liveLocalPaths.some(path=>fileSha256(resolve(localFixtureDirectory,basename(path)))!==fileSha256(path)))throw new Error('Real audio copy hash mismatch');
+      const seeded=liveLocalPaths.map((path,index)=>{const directory=liveLocalFolderUI&&index===1?resolve(localFixtureDirectory,'Albums'):localFixtureDirectory;mkdirSync(directory,{recursive:true});const destination=resolve(directory,basename(path));writeFileSync(destination,readFileSync(path));return [path,destination];});
+      if(seeded.some(([path,destination])=>fileSha256(destination)!==fileSha256(path)))throw new Error('Real audio copy hash mismatch');
       console.log('[ui-real-audio] unchanged public audio copied into Files');return;
     }
     writeFileSync(resolve(localFixtureDirectory,'Synthetic Tagged Tone.mp3'),silentMP3(1200));writeFileSync(resolve(localFixtureDirectory,'Nexus Fixture.ttf'),fixtureFont());
@@ -415,7 +416,7 @@ try {
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
-  if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting');
+  if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.

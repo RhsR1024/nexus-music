@@ -127,18 +127,18 @@ final class SourceSettingsTests: XCTestCase {
     },object:control)
     XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed,"WebDAV control must be reachable after dismissing the system password sheet")
   }
-  private func selectLocalFixture(_ prefix:String,in app:XCUIApplication){
+  private func selectLocalFixture(_ prefix:String,in app:XCUIApplication,folderName:String="Nexus UITest Fixtures"){
     // iOS 27 Files is a remote accessibility subtree. Reading `.frame` on an
     // element that the provider refreshes between `exists` and the frame query
     // raises kAXErrorInvalidUIElement and aborts the test, so navigate by
     // existence and tap the cells directly.
     let fileCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
-    let folderCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
+    let folderCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@",folderName)).firstMatch
     let fileRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ AND NOT (identifier BEGINSWITH %@)",prefix,"local-track-")).firstMatch
     // The navigation title also begins with the folder name; its Actions
     // Menu opens a context menu, not the directory (cloud failure evidence).
-    let folderRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ AND NOT (label CONTAINS[c] %@) AND NOT (label CONTAINS %@)","Nexus UITest Fixtures","Actions Menu","操作菜单")).firstMatch
-    let fixtureRoot=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.browsingRoot Source: com.apple.FileProvider.LocalStorage, Title: Nexus UITest Fixtures")).firstMatch
+    let folderRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ AND NOT (label CONTAINS[c] %@) AND NOT (label CONTAINS %@)",folderName,"Actions Menu","操作菜单")).firstMatch
+    let fixtureRoot=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.browsingRoot Source: com.apple.FileProvider.LocalStorage, Title: \(folderName)")).firstMatch
     let locations=NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])
     func settle(){RunLoop.current.run(until:Date().addingTimeInterval(2))}
     let cancel=app.buttons.matching(NSPredicate(format:"label IN %@",["取消","Cancel","取消選取"])).firstMatch
@@ -173,10 +173,44 @@ final class SourceSettingsTests: XCTestCase {
       settle()
     }
     // The local FileProvider can take tens of seconds to enumerate a directory
-    // that was recreated by the test harness.
-    if fileCell.waitForExistence(timeout:30){fileCell.tap()}
-    else if fileRow.waitForExistence(timeout:5){fileRow.tap()}
-    else {
+    // that was recreated by the test harness; a re-seeded file restarts that
+    // enumeration, so poll in several rounds instead of one wait. Grid view
+    // defers the cell's AX element behind a hung thumbnail request, so return
+    // to the list view (its toggle is named after the CURRENT mode) first.
+    let fileIdCell=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","\(prefix),")).firstMatch
+    let gridToggle=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.itemCollectionMenuButton.图标")).firstMatch
+    if gridToggle.exists && gridToggle.isHittable{
+      gridToggle.tap()
+      let listMode=app.buttons.matching(NSPredicate(format:"label IN %@",["列表","List"])).firstMatch
+      if listMode.waitForExistence(timeout:5){listMode.tap()}
+      settle()
+    }
+    // The Files remote AX view can enumerate the cell in debugDescription
+    // while `exists` keeps returning false for the same query (observed on
+    // iOS 26.3.1 with a freshly re-seeded directory). As a last resort,
+    // parse the cell's frame out of the hierarchy snapshot and tap its
+    // center — the fixture directory holds exactly this one file.
+    var selected=false
+    for _ in 0..<4 {
+      if fileCell.waitForExistence(timeout:30){fileCell.tap();selected=true;break}
+      if fileIdCell.waitForExistence(timeout:10){fileIdCell.tap();selected=true;break}
+      if fileRow.waitForExistence(timeout:5){fileRow.tap();selected=true;break}
+      let tree=app.debugDescription
+      let snapshot=XCTAttachment(string:tree);snapshot.name="Files fixture poll";snapshot.lifetime = .keepAlways;add(snapshot)
+      if let range=tree.range(of:"\\{\\{([\\d.\\-]+), ([\\d.\\-]+)\\}, \\{([\\d.\\-]+), ([\\d.\\-]+)\\}\\}, identifier: '\(prefix)",options:.regularExpression){
+        let frameText=String(tree[range]),expression=try! NSRegularExpression(pattern:"[-\\d.]+")
+        let numbers=expression.matches(in:frameText,range:NSRange(frameText.startIndex...,in:frameText)).compactMap{match in
+          Range(match.range,in:frameText).flatMap{Double(frameText[$0])}
+        }
+        if numbers.count>=4{
+          let x=numbers[0]+numbers[2]/2,y=numbers[1]+numbers[3]/2
+          app.coordinate(withNormalizedOffset:CGVector(dx:x/app.frame.width,dy:y/app.frame.height)).tap()
+          selected=true;break
+        }
+      }
+      settle()
+    }
+    if !selected{
       let image=XCTAttachment(screenshot:app.screenshot());image.name="Files fixture row unreachable";image.lifetime = .keepAlways;add(image)
       let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Files fixture hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
       XCTFail("The actual Files cell/row must be visible before selection")
@@ -1016,6 +1050,77 @@ final class SourceSettingsTests: XCTestCase {
   // picker excludes the default and closes on submit, deletion happens with
   // no confirmation, and the library playlist list never shows local names.
   // Opt-in: unchanged public MP3 resolved by the user's real LX source.
+  func testLiveLocalFolderScan() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let value=XCTAttachment(screenshot:app.screenshot());value.name=name;value.lifetime = .keepAlways;add(value)}
+    func openLocal(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch.tap();XCTAssertTrue(app.buttons["收起本地音频"].waitForExistence(timeout:10))}
+    func count(_ value:String){let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.staticTexts["local-filter-count"].label == value},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed)}
+    func settings(){app.buttons["local-scan-open"].tap();XCTAssertTrue(app.buttons["local-scan-add"].waitForExistence(timeout:8))}
+    func reach(_ element:XCUIElement){let wrapper=app.descendants(matching:.any).matching(identifier:"local-scan-viewport").firstMatch;let viewport=wrapper.descendants(matching:.scrollView).firstMatch;for _ in 0..<8{if element.isHittable{return};let down=element.frame.minY < wrapper.frame.minY;viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:down ? 0.2 : 0.6)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:down ? 0.7 : 0.15)))};if !element.isHittable{image("Real scan controls reach failure")};XCTAssertTrue(element.isHittable)}
+    func tap(_ id:String){let value=app.buttons[id];reach(value);value.tap()}
+    func scan(){tap("local-scan-rescan");let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons["local-scan-rescan"].isEnabled && app.staticTexts["local-scan-message"].label.hasPrefix("扫描完成")},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:40),.completed)}
+    func save(){tap("local-scan-save");XCTAssertTrue(app.staticTexts["规则已保存，重新扫描后生效"].waitForExistence(timeout:8))}
+    func minimum(_ value:String){let field=app.textFields["扫描最小时长秒"];reach(field);field.tap();let old=field.value as? String ?? "";field.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:old.count));field.typeText(value);XCTAssertEqual(field.value as? String,value)}
+    func closeSettings(){app.buttons["local-scan-close"].tap()}
+    func chooseFolder(){
+      let root=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.browsingRoot Source: com.apple.FileProvider.LocalStorage, Title: Nexus Real Scan")).firstMatch
+      let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus Real Scan")).firstMatch
+      let open=app.buttons.matching(NSPredicate(format:"label IN %@",["打开","Open","选择","Choose"])).firstMatch
+      var picked=false
+      var reopened=false
+      var iteration=0
+      for _ in 0..<24 {
+        iteration+=1
+        // The sheet reopens at the last browsed location, and 打开 belongs to
+        // the sheet's own navigation bar, which stays queryable even when the
+        // remote Files subtree hides the browsingRoot identifiers; confirm
+        // the currently viewed directory first.
+        if open.exists && open.isEnabled{open.tap();picked=true;break}
+        if root.exists || app.navigationBars.staticTexts["Nexus Real Scan"].exists{
+          if open.waitForExistence(timeout:3), open.isEnabled{open.tap();picked=true;break}
+        }
+        let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse"])).firstMatch
+        if folder.exists && folder.isHittable{folder.tap()}
+        else if let phone=app.cells.matching(NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])).allElementsBoundByIndex.first(where:{$0.isHittable}){phone.tap()}
+        else if browse.exists && browse.isHittable{browse.tap()}
+        else if !reopened, iteration>1, app.buttons["local-scan-add"].isHittable{reopened=true;app.buttons["local-scan-add"].tap()}
+        RunLoop.current.run(until:Date().addingTimeInterval(2))
+      }
+      if !picked{image("Real folder picker unavailable");let tree=XCTAttachment(string:app.debugDescription);tree.name="Folder picker hierarchy";tree.lifetime = .keepAlways;add(tree)}
+      XCTAssertTrue(picked,"Select the actual public-audio directory through the system picker")
+      let allow=app.alerts.buttons.matching(NSPredicate(format:"label IN %@",["允许","Allow"])).firstMatch;if allow.waitForExistence(timeout:2){allow.tap()}
+      XCTAssertTrue(app.staticTexts["扫描完成 · 2 首"].waitForExistence(timeout:45));
+    }
+    openLocal();settings()
+    while app.buttons["local-scan-root-remove-0"].exists{tap("local-scan-root-remove-0")};save();scan()
+    app.buttons["local-scan-add"].tap()
+    let cancel=app.buttons.matching(NSPredicate(format:"label IN %@",["取消","Cancel"])).firstMatch
+    let pickerReady=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.browsingRoot Source:")).firstMatch;XCTAssertTrue(pickerReady.waitForExistence(timeout:15));image("Real system folder picker cancel")
+    if cancel.exists && cancel.isHittable{cancel.tap()}else{app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.083)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.9)))}
+    XCTAssertTrue(app.staticTexts["已取消，目录和索引保留"].waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["尚未添加文件夹"].exists)
+    app.buttons["local-scan-add"].tap()
+    chooseFolder();closeSettings();count("2 / 2 首")
+    app.buttons["从列表移除"].firstMatch.tap();app.alerts["从本地列表移除？"].buttons["移除"].tap();count("1 / 1 首");settings();scan();closeSettings();count("2 / 2 首");image("Real scan restores user hidden index")
+    app.buttons["文件夹"].tap();XCTAssertTrue(app.buttons["Nexus Real Scan · 1首"].exists);XCTAssertTrue(app.buttons["Nexus Real Scan / Albums · 1首"].exists);image("Real folder physical groups")
+    app.buttons["Nexus Real Scan / Albums · 1首"].tap();count("1 / 2 首");XCTAssertEqual(app.buttons["local-track-0"].label,"Perfect - Ed Sheeran");app.buttons["返回文件夹"].tap();app.buttons["歌曲"].tap()
+    settings();minimum("240");save();closeSettings();count("2 / 2 首")
+    settings();scan();closeSettings();count("1 / 1 首");XCTAssertEqual(app.buttons["local-track-0"].label,"Perfect - Ed Sheeran");image("Real folder minimum duration applied")
+    app.terminate();app.launch();openLocal();count("1 / 1 首");settings();XCTAssertEqual(app.textFields["扫描最小时长秒"].value as? String,"240");scan();closeSettings();count("1 / 1 首")
+    settings();minimum("0");save();scan();tap("local-scan-block-1");save();closeSettings();count("2 / 2 首")
+    settings();scan();closeSettings();count("1 / 1 首");XCTAssertEqual(app.buttons["local-track-0"].label,"Shape of You - Ed Sheeran");image("Real folder child exclusion applied")
+    settings();tap("local-scan-block-1");save();scan();tap("local-scan-root-recursive-0");save();scan();closeSettings();count("1 / 1 首")
+    settings();tap("local-scan-root-recursive-0");save();scan();closeSettings();count("2 / 2 首")
+    app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90));app.buttons["暂停"].firstMatch.tap();app.buttons["player-drag-handle"].tap();openLocal()
+    settings();tap("local-scan-root-remove-0");save();closeSettings();count("2 / 2 首")
+    settings();scan();closeSettings();count("0 / 0 首");XCTAssertFalse(app.buttons["local-restore-index"].exists);image("Real folder root removed after rescan")
+    app.terminate();app.launch();openLocal();count("0 / 0 首");app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap();let play=app.buttons["播放"].firstMatch;if play.exists{play.tap()};XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90),"Owned queue audio remains playable after root/index removal");image("Real scanned audio retained PCM after root removal");app.buttons["暂停"].firstMatch.tap()
+    app.buttons["player-drag-handle"].tap();openLocal();app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app,folderName:"Nexus Real Scan")
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:25));count("1 / 1 首")
+    settings();tap("local-scan-add");chooseFolder();closeSettings();count("2 / 2 首")
+    settings();tap("local-scan-root-remove-0");save();scan();closeSettings();count("1 / 1 首");XCTAssertEqual(app.buttons["local-track-0"].label,"Shape of You - Ed Sheeran")
+    app.terminate();app.launch();openLocal();count("1 / 1 首");app.buttons["文件夹"].tap();XCTAssertTrue(app.buttons["单独导入 · 1首"].exists);image("Real manual import survives root removal and restart")
+  }
+
   func testLiveLocalSorting() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

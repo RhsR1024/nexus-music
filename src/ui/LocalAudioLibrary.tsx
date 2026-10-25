@@ -6,6 +6,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
 import {viewLocalAudio,type LocalSortField,type LocalSortDirection} from '../domain/localAudioSort.ts';
+import {LocalScanSettings} from './LocalScanSettings.tsx';
+import {scanFolderKey} from '../domain/localScan.ts';
 import {LocalAudioTools} from './LocalAudioTools.tsx';
 import {Cover} from './Cover.tsx';
 import {LocalPlaylistPicker} from './LocalPlaylistPicker.tsx';
@@ -20,7 +22,8 @@ export function LocalAudioLibrary({services}:{services:Services}) {
   const {width}=useWindowDimensions(),insets=useSafeAreaInsets();
   const {palette:p}=useTheme(),files=useSyncExternalStore(services.localAudio.subscribe,services.localAudio.getSnapshot);
   const localPlaylists=useSyncExternalStore(services.devicePlaylists.subscribe,services.devicePlaylists.getSnapshot);
-  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[mode,setMode]=useState<'songs'|'albums'|'artists'|'playlists'>('songs'),[group,setGroup]=useState<string|null>(null),[message,setMessage]=useState(''),[adding,setAdding]=useState<readonly Track[]>();
+  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[mode,setMode]=useState<'songs'|'albums'|'artists'|'folders'|'playlists'>('songs'),[group,setGroup]=useState<string|null>(null),[message,setMessage]=useState(''),[adding,setAdding]=useState<readonly Track[]>();
+  const [scanOpen,setScanOpen]=useState(false);
   const [selection,setSelection]=useState(selectionNone),[batchBusy,setBatchBusy]=useState(false);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const sort=preferences.localAudioSortField,direction=preferences.localAudioSortDirection;
@@ -29,8 +32,9 @@ export function LocalAudioLibrary({services}:{services:Services}) {
   const selectedLocal=localPlaylists.find(playlist=>playlist.id===localSelected);
   const filtered=useMemo(()=>viewLocalAudio(files,query,sort,direction),[files,query,sort,direction]);
   const groupKey=(file:typeof filtered[number])=>mode==='albums'?JSON.stringify([file.track.album||'未知专辑',file.track.artist]):file.track.artist;
-  const groups=useMemo(()=>{const values=new Map<string,typeof filtered>();for(const file of filtered){const key=groupKey(file),list=values.get(key);if(list)list.push(file);else values.set(key,[file]);}return [...values].map(([key,files])=>({key,name:mode==='albums'?files[0]!.track.album||'未知专辑':files[0]!.track.artist,files})).sort((a,b)=>a.name.localeCompare(b.name,'zh'));},[filtered,mode]);
-  const shown=useMemo(()=>group?filtered.filter(file=>groupKey(file)===group):filtered,[filtered,mode,group]);
+  const groupKeys=(file:typeof filtered[number])=>mode==='folders'?(file.locations?.length?[...new Set(file.locations.map(scanFolderKey))]:['__imports__']):[groupKey(file)];
+  const groups=useMemo(()=>{const values=new Map<string,typeof filtered>();for(const file of filtered)for(const key of groupKeys(file)){const list=values.get(key);if(list)list.push(file);else values.set(key,[file]);}return [...values].map(([key,files])=>({key,name:mode==='albums'?files[0]!.track.album||'未知专辑':mode==='folders'?(key==='__imports__'?'单独导入':(()=>{const folder=files[0]!.locations!.find(value=>scanFolderKey(value)===key)!;return folder.rootName+(folder.path?' / '+folder.path:'');})()):files[0]!.track.artist,files})).sort((a,b)=>a.name.localeCompare(b.name,'zh'));},[filtered,mode]);
+  const shown=useMemo(()=>group?filtered.filter(file=>groupKeys(file).includes(group)):filtered,[filtered,mode,group]);
   useEffect(()=>{setSelection(selectionNone);},[query,sort,direction,mode,group,localSelected,open]);
   const selectedFiles=selectionByListOrder(selection,shown,file=>file.id);
   function clearSelection(){setSelection(selectionNone);}
@@ -68,14 +72,15 @@ export function LocalAudioLibrary({services}:{services:Services}) {
   const field=(props:{value:string;onChangeText:(value:string)=>void;placeholder:string;label:string})=><TextInput {...props} placeholderTextColor="#768191" style={{flex:1,color:p.text,borderWidth:1,borderColor:p.border,padding:12,borderRadius:14}}/>;
   return <View style={{gap:12,marginVertical:18}}>{button(`本地音频 · ${files.length} 首`,()=>setOpen(true))}
     <Modal visible={open} animationType="slide" onRequestClose={()=>setOpen(false)}><View style={{flex:1,padding:space.xl,paddingTop:insets.top+space.md,paddingBottom:insets.bottom+space.md,backgroundColor:p.background[0],gap:space.md}}>
+      <View style={{flex:1,gap:space.md}} accessibilityElementsHidden={scanOpen||!!adding} importantForAccessibility={scanOpen||adding?'no-hide-descendants':'auto'}>
       {button('收起本地音频',()=>setOpen(false))}<Text style={{fontSize:30,fontWeight:'700',color:p.text}}>本地音频</Text>
       {!selection.active&&<><Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>从文件App导入MP3、FLAC、AAC、M4A、WAV、AIFF；复制到此设备，音频不包含在音乐库JSON备份中。每批最多50首、单文件1GiB。</Text>
-      {button('导入音频文件',()=>{void importFiles();},busy)}{busy&&<ActivityIndicator accessibilityLabel="正在导入音频" color={p.accent}/>}</>}
+      <View style={{flexDirection:'row',gap:space.sm,flexWrap:'wrap'}}>{button('导入音频文件',()=>{void importFiles();},busy)}{button('文件夹与扫描',()=>setScanOpen(true),busy,'local-scan-open')}</View>{busy&&<ActivityIndicator accessibilityLabel="正在导入音频" color={p.accent}/>}</>}
       {services.localAudio.hiddenCount()>0&&button(`恢复已移除歌曲（${services.localAudio.hiddenCount()} 首）`,()=>{void services.localAudio.restoreIndex().then(()=>setMessage('已恢复本设备保留的音频索引')).catch(()=>setMessage('恢复未保存，请重试'));},batchBusy,'local-restore-index')}
       {!!message&&<Text accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
       {!selection.active&&<><LocalAudioTools query={query} onQuery={value=>{setQuery(value);setGroup(null);}} field={sort} direction={direction} onSort={setSort}/>
       {(sort==='modifiedAt'||sort==='addedAt')&&files.some(file=>file[sort]===undefined)&&<Text style={{...typography.caption,color:p.secondary}}>旧条目缺少时间记录，排在已知时间之后；不会推测原文件时间。</Text>}
-      <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{(['songs','albums','artists','playlists'] as const).map(value=><View key={value}>{button({songs:'歌曲',albums:'专辑',artists:'艺术家',playlists:'歌单'}[value],()=>{setMode(value);setGroup(null);setLocalSelected(null);})}</View>)}</View></>}
+      <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{(['songs','folders','albums','artists','playlists'] as const).map(value=><View key={value}>{button({songs:'歌曲',folders:'文件夹',albums:'专辑',artists:'艺术家',playlists:'歌单'}[value],()=>{setMode(value);setGroup(null);setLocalSelected(null);})}</View>)}</View></>}
       {mode!=='playlists'&&<Text testID="local-filter-count" style={{color:p.secondary,fontSize:12}}>{shown.length} / {files.length} 首</Text>}
       {selection.active&&mode!=='playlists'&&<BatchSelectionBar count={selectedFiles.length} total={shown.length} actions={['favorite','playlist','next','delete']} onAction={action=>{void batch(action);}} onSelectAll={()=>setSelection(selectedFiles.length===shown.length?{active:true,ids:[]}:selectionAll(selection,shown.map(file=>file.id)))} onCancel={clearSelection} allSelected={shown.length>0&&selectedFiles.length===shown.length} busy={batchBusy} testPrefix="local-batch"/>}
       {mode==='playlists'?(selectedLocal?<View style={{gap:10,flex:1}}>
@@ -100,11 +105,13 @@ export function LocalAudioLibrary({services}:{services:Services}) {
           <Cover services={services} track={item.entries[0]?.track} size={52}/>
           <View style={{flex:1}}><Text style={{color:p.text,fontWeight:'600'}} numberOfLines={1}>{item.title}{item.id===defaultDevicePlaylistId?'（仅本机）':''}</Text><Text style={{color:p.secondary,fontSize:12}}>{item.entries.length} 首 · 仅本机</Text></View>
         </Pressable>}/>
-      </View>):<>{group&&button(`返回${mode==='albums'?'专辑':'艺术家'}`,()=>setGroup(null))}
+      </View>):<>{group&&button(`返回${mode==='albums'?'专辑':mode==='folders'?'文件夹':'艺术家'}`,()=>setGroup(null))}
       {mode==='songs'||group?<FlatList style={{flex:1}} data={shown} keyboardShouldPersistTaps="handled" keyExtractor={file=>file.id} initialNumToRender={12} windowSize={5} ListEmptyComponent={<Text style={{color:p.secondary}}>没有匹配的本地音频</Text>} renderItem={({item,index})=><View style={{paddingVertical:12,gap:10,borderBottomWidth:1,borderBottomColor:p.border}}>
         <Pressable testID={`local-track-${index}`} accessibilityRole="button" accessibilityLabel={`${selection.active?(selection.ids.includes(item.id)?'已选，':'未选，'):''}${item.track.title}`} accessibilityState={{selected:selection.active&&selection.ids.includes(item.id)}} disabled={batchBusy} onLongPress={()=>{Keyboard.dismiss();setSelection(selectionEnter(item.id));}} onPress={()=>selection.active?setSelection(selectionToggle(selection,item.id)):services.playTracks(shown.map(file=>file.track),index)} style={{flexDirection:'row',gap:12,alignItems:'center'}}><Cover services={services} track={item.track} size={54}/><View style={{flex:1}}><Text style={{color:p.text,fontWeight:'600'}}>{item.track.title}</Text><Text style={{color:p.secondary,fontSize:12}}>{item.track.artist} · {item.extension.toUpperCase()} · {(item.bytes/1048576).toFixed(1)} MB</Text></View></Pressable>
         {!selection.active&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{button(item.favorite?'已收藏':'收藏',()=>{void services.localAudio.setFavorites([item.id],!item.favorite).catch(()=>setMessage('收藏未保存'));})}{button('下一首',()=>services.addToQueue(item.track,true))}{button('加入歌单',()=>setAdding([item.track]))}{button('从列表移除',()=>removeIndex([item.id]),batchBusy)}{button('删除音频',()=>Alert.alert('删除此设备的音频？','歌单引用仍保留，可重新导入同一文件恢复；正在使用的音频不能删除。',[{text:'取消',style:'cancel'},{text:'删除',style:'destructive',onPress:()=>{void services.localAudio.remove(item.id).then(result=>setMessage(result.pendingCleanup?'已移出曲库，暂存文件将在下次启动清理':'音频已删除')).catch(()=>setMessage('音频正在使用或删除失败，原数据保留'));}}]))}</View>}
       </View>}/>:<FlatList key={`groups-${mode}`} data={groups} numColumns={mode==='albums'?2:1} columnWrapperStyle={mode==='albums'?{justifyContent:'space-between'}:undefined} keyExtractor={group=>group.key} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`${item.name} · ${item.files.length}首`} onPress={()=>setGroup(item.key)} style={{width:mode==='albums'?'48%':'100%',marginVertical:7,padding:12,borderRadius:20,backgroundColor:p.surface,gap:10,flexDirection:mode==='albums'?'column':'row',alignItems:mode==='albums'?'flex-start':'center'}}><Cover services={services} track={item.files[0]!.track} size={mode==='albums'?Math.min(180,Math.max(80,(width-76)/2-24)):48}/><View style={{gap:5,flexShrink:1}}><Text numberOfLines={2} style={{color:p.text,fontWeight:'600'}}>{item.name}</Text><Text style={{color:p.secondary,fontSize:12}}>{item.files.length} 首</Text></View></Pressable>}/>}</>}
+      </View>
+      <LocalScanSettings store={services.localAudio} visible={scanOpen} onClose={()=>setScanOpen(false)}/>
       {!!adding&&<View style={{position:'absolute',top:0,bottom:0,left:0,right:0,paddingTop:insets.top+space.md,backgroundColor:p.background[0]}}><LocalPlaylistPicker services={services} tracks={adding??[]} visible={!!adding} onClose={()=>setAdding(undefined)} onAdded={title=>{clearSelection();setMessage(`已添加到本地歌单「${title}」`);}}/></View>}
     </View></Modal>
   </View>;

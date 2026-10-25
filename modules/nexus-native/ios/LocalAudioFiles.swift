@@ -135,3 +135,115 @@ final class LocalAudioFiles {
     if CGImageDestinationFinalize(target), output.length < 2 * 1024 * 1024 { try? (output as Data).write(to: root.appendingPathComponent(id + ".jpg"), options: .atomic) }
   }
 }
+
+// Only opaque root IDs and relative locations cross the JS boundary. Bookmarks
+// stay in local, backup-excluded native storage and are opened only for a scan.
+final class LocalAudioFolders {
+  struct Root: Codable { let id: String; let name: String; let bookmark: Data }
+  static let shared = LocalAudioFolders(files: .shared)
+  private let files: LocalAudioFiles
+  private let registry: URL
+  private let fm = FileManager.default
+  private let lock = NSLock()
+  init(files: LocalAudioFiles, registry: URL? = nil) {
+    self.files = files
+    self.registry = registry ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("nexus-audio-folders/roots.json")
+  }
+  private func failure(_ message: String) -> NSError { NSError(domain: "NexusAudioFolders", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
+  private func read() throws -> [Root] {
+    guard fm.fileExists(atPath: registry.path) else { return [] }
+    let data = try Data(contentsOf: registry)
+    do {
+      guard data.count < 4 * 1024 * 1024 else { throw failure("文件夹授权记录无效，请重新授权") }
+      let roots = try JSONDecoder().decode([Root].self, from: data)
+      guard roots.count <= 64 else { throw failure("文件夹授权记录无效") }
+      return roots
+    } catch {
+      // Preserve malformed bookmarks for recovery, separate from the valid
+      // owned-audio index. The user can reselect a source directory.
+      try fm.moveItem(at: registry, to: registry.deletingLastPathComponent().appendingPathComponent("roots-corrupt-" + UUID().uuidString + ".json"))
+      return []
+    }
+  }
+  private func write(_ roots: [Root]) throws {
+    var directory = registry.deletingLastPathComponent()
+    try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+    var values = URLResourceValues(); values.isExcludedFromBackup = true; try directory.setResourceValues(values)
+    try JSONEncoder().encode(roots).write(to: registry, options: .atomic)
+    #if os(iOS)
+    try fm.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: registry.path)
+    #endif
+  }
+  private func resolve(_ root: Root) throws -> URL {
+    var stale = false
+    let url = try URL(resolvingBookmarkData: root.bookmark, options: .withoutUI, relativeTo: nil, bookmarkDataIsStale: &stale)
+    guard !stale else { throw failure("文件夹授权已过期，请移除后重新添加文件夹") }
+    return url
+  }
+  func register(_ url: URL) throws -> [String: String] {
+    let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
+    let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+    guard url.isFileURL, values.isDirectory == true, values.isSymbolicLink != true else { throw failure("请选择可读取的文件夹") }
+    lock.lock(); defer { lock.unlock() }
+    var roots = try read()
+    let existing = roots.first { (try? resolve($0).standardizedFileURL.path) == url.standardizedFileURL.path }
+    guard roots.count < 64 || existing != nil else { throw failure("授权目录过多，请移除不再使用的目录后重启") }
+    let root = Root(id: existing?.id ?? UUID().uuidString, name: url.lastPathComponent, bookmark: try url.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil))
+    roots.removeAll { $0.id == root.id }; roots.append(root); try write(roots)
+    return ["id": root.id, "name": root.name]
+  }
+  func retainRoots(_ ids: [String]) throws {
+    lock.lock(); defer { lock.unlock() }; try write(read().filter { ids.contains($0.id) })
+  }
+  func scan(_ ids: [String], recursive: [String], blocked: [String], minimumSeconds: Double) async throws -> [String: Any] {
+    guard ids.count <= 32, Set(ids).count == ids.count, minimumSeconds.isFinite, minimumSeconds >= 0, minimumSeconds <= 86400 else { throw failure("扫描设置无效") }
+    if ids.isEmpty { return ["files": [[String: Any]](), "folders": [[String: String]](), "failed": [[String: String]]()] }
+    let roots = try read()
+    var output: [[String: Any]] = [], folders: [[String: String]] = [], failed: [[String: String]] = [], created: [(String, String)] = []
+    var inspected = 0
+    do {
+      for id in ids {
+        guard let root = roots.first(where: { $0.id == id }) else { throw failure("文件夹授权已缺失，请重新添加") }
+        let url = try resolve(root), access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        guard (try url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])).isDirectory == true, (try url.resourceValues(forKeys: [.isSymbolicLinkKey])).isSymbolicLink != true else { throw failure("文件夹不可用，原索引保留") }
+        folders.append(["rootId": id, "rootName": root.name, "path": ""])
+        if blocked.contains(id + "/") { continue }
+        var enumerationFailed = false
+        guard let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles, .skipsPackageDescendants], errorHandler: { _, _ in enumerationFailed = true; return false }) else { throw failure("无法读取文件夹，原索引保留") }
+        while let child = enumerator.nextObject() as? URL {
+          inspected += 1; guard inspected <= 50000 else { throw failure("扫描文件过多，请缩小授权范围") }
+          let values = try child.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
+          // DirectoryEnumerator does not follow symbolic links. Calling
+          // skipDescendants on a link file would skip the next real directory.
+          if values.isSymbolicLink == true { continue }
+          let relative = String(child.path.dropFirst(url.path.count + (url.path.hasSuffix("/") ? 0 : 1)))
+          guard !relative.split(separator: "/").contains("..") else { throw failure("目录路径无效") }
+          let key = id + "/" + relative
+          if values.isDirectory == true {
+            folders.append(["rootId": id, "rootName": root.name, "path": relative])
+            if !recursive.contains(id) || blocked.contains(where: { key == $0 || key.hasPrefix($0 + "/") }) { enumerator.skipDescendants() }
+            continue
+          }
+          if blocked.contains(where: { key == $0 || key.hasPrefix($0 + "/") }) { continue }
+          guard values.isRegularFile == true, ["mp3", "flac", "aac", "m4a", "wav", "aiff", "aif"].contains(child.pathExtension.lowercased()) else { continue }
+          let path = (relative as NSString).deletingLastPathComponent
+          let location = ["rootId": id, "rootName": root.name, "path": path, "fileName": child.lastPathComponent]
+          do {
+            let duration = try await AVURLAsset(url: child).load(.duration).seconds
+            if duration.isFinite && duration < minimumSeconds { continue }
+            var result = try await files.importFile(child.absoluteString, name: child.lastPathComponent)
+            if result["created"] as? Bool == true, let fileID = result["id"] as? String, let ext = result["extension"] as? String { created.append((fileID, ext)) }
+            result["location"] = location; output.append(result)
+          } catch { failed.append(location) }
+          guard output.count <= 10000 else { throw failure("本地曲库最多10000首") }
+        }
+        if enumerationFailed { throw failure("目录读取中断，原索引保留，请检查授权或云盘连接") }
+      }
+      return ["files": output, "folders": folders, "failed": failed]
+    } catch {
+      for (id, ext) in created { try? files.remove(id, ext) }
+      throw error
+    }
+  }
+}
