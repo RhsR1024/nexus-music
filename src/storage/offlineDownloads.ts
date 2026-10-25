@@ -162,8 +162,10 @@ export class OfflineDownloadStore {
   /** Sollin E-1301: cancelling keeps the record as 下载已取消 for later retry. */
   async cancel(id:string){
     const item=this.items.find(value=>value.id===id);if(!item||item.status==='completed')return;
-    this.cancelRequested.add(id);this.pauseRequested.delete(id);this.cancelRequested.delete(id);const active=this.active.get(id);active?.abort();
-    if(['queued','paused','failed','cancelled'].includes(item.status))await this.update(id,{status:'cancelled',error:undefined});
+    // The transfer's abort handler consumes this intent before committing its
+    // terminal state. Keep it until that run has settled.
+    this.cancelRequested.add(id);this.pauseRequested.delete(id);const active=this.active.get(id);active?.abort();
+    if(!active||['queued','paused','failed','cancelled'].includes(item.status))await this.update(id,{status:'cancelled',error:undefined});
     if(active)await this.runs.get(id);
     this.cancelRequested.delete(id);
   }

@@ -192,14 +192,45 @@ test('cancelling keeps a retryable 下载已取消 record while unfinished work 
   await r.store.retry(item.id);assert.equal(r.store.getSnapshot()[0]!.status,'completed');
 });
 
-test('cancelAll marks every unfinished task cancelled but keeps completed files',async()=>{
-  const r=rig();const done=await r.store.enqueue(track('done'));await r.store.start(done.id);
-  const slow=await r.store.enqueue(track('slow'));
-  const hold=new Promise<void>(()=>{});const original=r.store.start.bind(r.store);
-  r.store.start=async(id:string)=>{if(id===slow.id){await r.store.pause(slow.id);return;}return original(id);};
-  await r.store.cancelAll();
-  const statuses=r.store.getSnapshot().map(item=>item.status);
-  assert.deepEqual(statuses.filter(status=>status==='cancelled').length>=1,true,'unfinished work must be cancelled');
-  assert.equal(r.store.getSnapshot().find(item=>item.id===done.id)!.status,'completed');
-  assert.equal(r.store.getStatistics().pending,0,'cancelled records leave the pending count');
+test('cancelling an in-flight transfer survives its abort settlement and stays cancelled after restore',async()=>{
+  const r=rig();let enter!:()=>void;const entered=new Promise<void>(resolve=>{enter=resolve;});let calls=0;
+  const download=r.files.download;
+  r.files.download=async(_url,_name,_headers,options)=>new Promise((_,reject)=>{
+    calls++;options!.signal!.addEventListener('abort',()=>reject(new OfflineDownloadInterrupted(4)),{once:true});enter();
+  });
+  const item=await r.store.enqueue(track('active')),run=r.store.start(item.id);await entered;
+  await r.store.cancel(item.id);await run;
+  assert.equal(r.store.getSnapshot()[0]!.status,'cancelled');assert.equal(r.store.getStatistics().pending,0);
+  const restored=rig(r.saved());await restored.store.restore();await restored.store.resumeQueued();
+  assert.equal(restored.store.getSnapshot()[0]!.status,'cancelled');assert.equal(calls,1);
+  r.files.download=download;await r.store.retry(item.id);assert.equal(r.store.getSnapshot()[0]!.status,'completed');
+});
+
+test('cancelAll aborts an active transfer and prevents queued I/O while preserving completed files',async()=>{
+  const r=rig(),done=await r.store.enqueue(track('done'));await r.store.start(done.id);
+  let enter!:()=>void;const entered=new Promise<void>(resolve=>{enter=resolve;});let calls=0;
+  r.files.download=async(_url,_name,_headers,options)=>new Promise((_,reject)=>{
+    calls++;options!.signal!.addEventListener('abort',()=>reject(new OfflineDownloadInterrupted(4)),{once:true});enter();
+  });
+  const active=await r.store.enqueue(track('active')),queued=await r.store.enqueue(track('queued'));
+  const running=r.store.start(active.id);await entered;const waiting=r.store.start(queued.id);
+  await r.store.cancelAll();await Promise.all([running,waiting]);
+  assert.deepEqual(r.store.getSnapshot().map(item=>item.status),['completed','cancelled','cancelled']);
+  assert.equal(calls,1);assert.equal(r.store.getStatistics().pending,0);assert.ok(await r.store.resolve(track('done')));
+});
+
+test('a failed cancellation write can be retried after its transport has stopped',async()=>{
+  const r=rig();let value:unknown,fail=true,enter!:()=>void;
+  const entered=new Promise<void>(resolve=>{enter=resolve;});
+  r.files.download=async(_url,_name,_headers,options)=>new Promise((_,reject)=>{
+    options!.signal!.addEventListener('abort',()=>reject(new OfflineDownloadInterrupted(4)),{once:true});enter();
+  });
+  const store=new OfflineDownloadStore({get:async<T>()=>value as T|undefined,put:async(_key,next)=>{
+    if(fail&&(next as {items:{status:string}[]}).items[0]?.status==='cancelled'){fail=false;throw new Error('disk full');}
+    value=structuredClone(next);
+  }},{files:r.files,resolve:async()=>({url:'https://audio.example/song.mp3'}),uuid:()=> '00000000-0000-4000-8000-000000000077',now:()=>1});
+  const item=await store.enqueue(track('cancel-write')),run=store.start(item.id),settled=run.catch(error=>error);
+  await entered;await assert.rejects(store.cancel(item.id),/disk full/);assert.match((await settled).message,/disk full/);
+  assert.equal(store.getSnapshot()[0]!.status,'downloading','Failed persistence must keep the old published record');
+  await store.cancel(item.id);assert.equal(store.getSnapshot()[0]!.status,'cancelled');assert.equal(store.getStatistics().pending,0);
 });
