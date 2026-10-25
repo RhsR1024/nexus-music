@@ -57,3 +57,7 @@ R1 `1792929362474`：新增Swift测试误将单个XCUIElement按查询集合计�
 真机已配对可达，但本机0个可用签名身份；未安装或执行真机播放。真机/签名/后台、AM等其他皮肤的新轮次回归、跨来源在播插入、连续动效逐帧及本批云端终态未验。现有音频缺少标签/封面/歌词属真实输入状态，未伪造。保留副本管理和后续批次余项继续。
 
 [UI场景](ui-spec/local-playlist-batch-live-2026-10-25.md)、[素材轮换回执](2026-10-25_local-playlist-retention-receipt.md)。正常提交/push与云端队列状态在交接中单列，不能以本地打包替代云端或签名验收。
+
+## 交付与云端状态
+
+功能提交`f55414cf49cc0f358852284b2be772804626b26d`正常push到origin/main，远端SHA已核对；[40193664989](https://github.com/RhsR1024/nexus-music/actions/runs/40193664989)运行中，1运行/0排队，未取消或重派。终态未验。此前5C的40187742231已failure，checks成功而ios在Source/Navidrome步骤失败；job121152125673日志明确字体与Navidrome两个测试同报长队列八行断言，根因仍需定位，与本批本地验收分列。

@@ -4,7 +4,9 @@
 
 559项检查；两首V261020真实源完整MP3的最终Release `SourceUITests-1792930982163` 1/0/0、165.048秒，7张附件来源校验和亲看通过。重启后原歌单0/副本2、本地音频2/标志2/音乐库收藏0，App音频SHA与实际输入一致。门禁/既有动态case严格审核通过，无新Sollin采集。真机可达但0可用签名身份，未执行真机播放；后台/连续动效/其他皮肤新轮次与云端终态不冒充通过。
 
-[本批回执](docs/2026-10-25_implementation-local-playlist-batch-report.md)、[UI场景](docs/ui-spec/local-playlist-batch-live-2026-10-25.md)、[轮换回执](docs/2026-10-25_local-playlist-retention-receipt.md)。完成diff/隐私检查后按约定提交push并核对远端与single队列；保留副本管理及批次6/7等余项继续。
+[本批回执](docs/2026-10-25_implementation-local-playlist-batch-report.md)、[UI场景](docs/ui-spec/local-playlist-batch-live-2026-10-25.md)、[轮换回执](docs/2026-10-25_local-playlist-retention-receipt.md)。diff/隐私检查已通过；功能提交`f55414cf49cc0f358852284b2be772804626b26d`已正常push到origin/main，远端完整SHA一致。新云端[40193664989](https://github.com/RhsR1024/nexus-music/actions/runs/40193664989)运行中，核对为1运行/0排队，未取消运行或重派旧提交；终态未验。保留副本管理及批次6/7等余项继续。
+
+既有5C云端`40187742231/f3675d8`已结束failure；checks成功，ios失败于“Verify source management and Navidrome playback in the App”。本次已能读取job `121152125673`日志，明确`testFontImportAndLyricStyle`与`testZNavidromePlaybackAndCredentials`均报“The long-queue fixture must publish all eight rows”（旧提交Swift1737行）。根因未定位，不把步骤名当作Navidrome服务故障结论。后续需优先核对该回归；本地5C/5D真实音频证据不冒充云端通过。
 
 ## 2026-10-25 批次5C：文件夹与扫描（验收完成）
 
