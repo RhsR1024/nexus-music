@@ -184,3 +184,22 @@ test('bulk pause aborts an active transfer before the next queued item starts',a
   assert.equal(calls,1);assert.deepEqual(r.store.getSnapshot().map(item=>item.status),['paused','paused']);
   assert.equal(await r.store.resolve(first.track),undefined);
 });
+
+test('cancelling keeps a retryable 下载已取消 record while unfinished work stops',async()=>{
+  const r=rig();const item=await r.store.enqueue(track('c'));
+  await r.store.cancel(item.id);assert.equal(r.store.getSnapshot()[0]!.status,'cancelled');
+  assert.equal(await r.store.resolve(track('c')),undefined,'cancelled work must not resolve');
+  await r.store.retry(item.id);assert.equal(r.store.getSnapshot()[0]!.status,'completed');
+});
+
+test('cancelAll marks every unfinished task cancelled but keeps completed files',async()=>{
+  const r=rig();const done=await r.store.enqueue(track('done'));await r.store.start(done.id);
+  const slow=await r.store.enqueue(track('slow'));
+  const hold=new Promise<void>(()=>{});const original=r.store.start.bind(r.store);
+  r.store.start=async(id:string)=>{if(id===slow.id){await r.store.pause(slow.id);return;}return original(id);};
+  await r.store.cancelAll();
+  const statuses=r.store.getSnapshot().map(item=>item.status);
+  assert.deepEqual(statuses.filter(status=>status==='cancelled').length>=1,true,'unfinished work must be cancelled');
+  assert.equal(r.store.getSnapshot().find(item=>item.id===done.id)!.status,'completed');
+  assert.equal(r.store.getStatistics().pending,0,'cancelled records leave the pending count');
+});

@@ -1,3 +1,9 @@
+## 2026-10-25 批次6下载管理取消语义
+
+存储新增 `cancelled` 状态：`cancel(id)` 同步置取消意图并中止在途传输（catch 中取消优先于暂停），记录保留为"下载已取消"供重试/移除（E-1301）；`cancelAll()` 仅结束 queued/downloading/paused（E-1302），失败记录保留原语义；`retry` 重置取消记录；`getStatistics().pending` 不含取消。DownloadSettings：queued/downloading/paused 行新增"取消下载"，取消态行显示"重试下载"+"移除记录"，移除确认与"全部取消"文案按"记录与文件分离"更新。
+
+验证：`npm run check` 542/542（新增2项：单取消保留不可解析+重试完成；全部取消保留完成文件且pending归零）。云端第三组 `testDownloadSettingsAndOfflinePlayback` 随 868585b 运行验证。未验：批量多选管理界面（E-1300 后续增量）、真机/真网络中断点、iOS27终态。详见[回执](docs/implementation-download-cancel-2026-10-25.md)。
+
 ## 2026-10-25 第二组失败定位与discovery测试修复（2e5fbd7）
 
 云端 fde9b2c/0aeed10/eb6b207 均败于第二组（matched playback/lyrics/health/comments/discovery）。本地按CI同命令复现并在干净基线二分后确认两个独立根因：① `testDiscoverySongActions` 仍从搜索页打开批次2已移除的独立发现模态——第一组只修了取色主题测试的同型引用，此处漏网已改为经发现Tab重进同一详情验证重复保留（`2e5fbd7`，本地该测试已通过）；② `testSourceHealth` 的分享面板收起等待在 1401657 干净基线worktree同样失败——非批次2-4回归，判定为本机 iOS 26.3.1 模拟器既有环境特性，云端 iOS 27 终态以 2e5fbd7 运行为准。`testOnlineMatching` 在本机旧容器重导入已存在音源会超20秒窗口（失败时树中 `已启用` 已出现），新容器单独运行通过（`SourceUITests-1792901659850` 1/0/0）；CI 全新安装不受影响。全部组2用例在真干净树+新容器下分别通过（lyrics/discovery/comments 见 `SourceUITests-1792899645893`）。

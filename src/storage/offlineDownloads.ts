@@ -1,7 +1,7 @@
 import {trackKey, validateTrack, type Track} from '../domain/track.ts';
 import type {Repository} from './repository.ts';
 
-export type OfflineDownloadStatus = 'queued'|'downloading'|'paused'|'failed'|'completed';
+export type OfflineDownloadStatus = 'queued'|'downloading'|'paused'|'failed'|'cancelled'|'completed';
 export interface OfflineDownloadRecord {
   id:string;
   track:Track;
@@ -48,7 +48,7 @@ function validateRecord(value:unknown):OfflineDownloadRecord{
   if(!value||typeof value!=='object')throw new Error('离线下载记录无效');
   const row=value as Partial<OfflineDownloadRecord>;
   const bytes=row.bytes,updatedAt=row.updatedAt;
-  if(typeof row.id!=='string'||!row.id||!validFileName(row.fileName)||!['queued','downloading','paused','failed','completed'].includes(row.status as string)||!Number.isSafeInteger(bytes)||!Number.isSafeInteger(updatedAt))throw new Error('离线下载记录无效');
+  if(typeof row.id!=='string'||!row.id||!validFileName(row.fileName)||!['queued','downloading','paused','failed','cancelled','completed'].includes(row.status as string)||!Number.isSafeInteger(bytes)||!Number.isSafeInteger(updatedAt))throw new Error('离线下载记录无效');
   const safeBytes=bytes as number,safeUpdatedAt=updatedAt as number;
   if(safeBytes<0||safeBytes>2*1024*1024*1024||safeUpdatedAt<0)throw new Error('离线下载记录无效');
   if(row.partialBytes!==undefined&&(!Number.isSafeInteger(row.partialBytes)||row.partialBytes<0||row.partialBytes>2*1024*1024*1024))throw new Error('离线下载临时文件无效');
@@ -68,6 +68,7 @@ export class OfflineDownloadStore {
   private active=new Map<string,AbortController>();
   private runs=new Map<string,Promise<void>>();
   private pauseRequested=new Set<string>();
+  private cancelRequested=new Set<string>();
   private removed=new Set<string>();
   private repository:Pick<Repository,'get'|'put'>;
   private options:OfflineDownloadOptions;
@@ -122,7 +123,7 @@ export class OfflineDownloadStore {
   async start(id:string){
     const existing=this.runs.get(id);if(existing)return existing;
     const run=this.tail.then(async()=>{
-      const item=this.items.find(value=>value.id===id);if(this.removed.has(id)||this.pauseRequested.has(id)||!item||item.status==='completed'||item.status==='paused')return;
+      const item=this.items.find(value=>value.id===id);if(this.removed.has(id)||this.pauseRequested.has(id)||this.cancelRequested.has(id)||!item||item.status==='completed'||item.status==='paused'||item.status==='cancelled')return;
       const abort=new AbortController();this.active.set(id,abort);
       let invalidFile=false,capacityExceeded=false,integrityFailed=false,validator:string|undefined;
       try{
@@ -139,10 +140,12 @@ export class OfflineDownloadStore {
         if(total>(this.options.maxTotalBytes?.()??2*1024*1024*1024)){capacityExceeded=true;throw new Error('离线容量已满，请先清理已保存文件');}
         await this.update(id,{status:'completed',bytes,partialBytes:undefined,digest,validator,quality:media.quality,error:undefined});
       }catch(error){
+        const cancelled=this.cancelRequested.delete(id);
         const paused=this.pauseRequested.delete(id);
         const current=this.items.find(value=>value.id===id),partial=invalidFile||capacityExceeded||integrityFailed?0:Math.max(0,this.options.files.partialSize(current?.fileName??''));
         if(invalidFile||capacityExceeded||integrityFailed)try{await this.options.files.remove(current?.fileName??'');}catch{/* Keep the record even when cleanup fails. */}
-        if(paused)await this.update(id,{status:'paused',bytes:0,partialBytes:partial,digest:undefined,validator,error:undefined});
+        if(cancelled)await this.update(id,{status:'cancelled',error:undefined});
+        else if(paused)await this.update(id,{status:'paused',bytes:0,partialBytes:partial,digest:undefined,validator,error:undefined});
         else if(!abort.signal.aborted)await this.update(id,{status:'failed',bytes:0,partialBytes:partial,digest:undefined,validator,error:integrityFailed?'离线文件完整性校验失败':error instanceof Error&&error.message==='离线容量已满，请先清理已保存文件'?error.message:'下载失败，原有数据保留'});
       }finally{this.active.delete(id);}
     });
@@ -156,10 +159,20 @@ export class OfflineDownloadStore {
     if(item.status==='queued')await this.update(id,{status:'paused',error:undefined});
     if(active)await this.runs.get(id);
   }
+  /** Sollin E-1301: cancelling keeps the record as 下载已取消 for later retry. */
+  async cancel(id:string){
+    const item=this.items.find(value=>value.id===id);if(!item||item.status==='completed')return;
+    this.cancelRequested.add(id);this.pauseRequested.delete(id);this.cancelRequested.delete(id);const active=this.active.get(id);active?.abort();
+    if(['queued','paused','failed','cancelled'].includes(item.status))await this.update(id,{status:'cancelled',error:undefined});
+    if(active)await this.runs.get(id);
+    this.cancelRequested.delete(id);
+  }
   async resume(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='paused')await this.update(id,{status:'queued',error:undefined});this.pauseRequested.delete(id);return this.start(id);}
-  async retry(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='completed')return;await this.update(id,{status:'queued',bytes:0,error:undefined,digest:undefined});this.pauseRequested.delete(id);return this.start(id);}
+  async retry(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='completed')return;await this.update(id,{status:'queued',bytes:0,partialBytes:undefined,error:undefined,digest:undefined});this.pauseRequested.delete(id);this.cancelRequested.delete(id);return this.start(id);}
   async pauseAll(){await Promise.all(this.items.filter(item=>item.status==='queued'||item.status==='downloading').map(item=>this.pause(item.id)));}
   async resumeAll(){await Promise.all(this.items.filter(item=>item.status==='queued'||item.status==='paused').map(item=>this.resume(item.id)));}
+  /** Sollin E-1302: 全部取消 ends unfinished work but keeps their records. */
+  async cancelAll(){await Promise.all(this.items.filter(item=>['queued','downloading','paused'].includes(item.status)).map(item=>this.cancel(item.id)));}
   async cancelPending(){await Promise.all(this.items.filter(item=>item.status!=='completed').map(item=>this.remove(item.id)));}
   async remove(id:string){
     const item=this.items.find(value=>value.id===id);if(!item)return;
