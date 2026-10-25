@@ -18,11 +18,14 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLiveLocalIndexActions$/.test(target));
-if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit testLiveLocalIndexActions target and audio path');
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLiveLocal(?:IndexActions|Sorting)$/.test(target));
+if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
-const liveLocalSnapshot=liveLocalPath?externalInputSnapshot([liveLocalPath]):null;
-if(liveLocalPath&&(!/\.mp3$/i.test(liveLocalPath)||statSync(liveLocalPath).size<100000||statSync(liveLocalPath).size>30000000))throw new Error('Real local audio must be a complete MP3 of 100 KB–30 MB');
+const liveLocalSorting=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalSorting'));
+if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)!==liveLocalSorting)throw new Error('Real local sorting requires a second actual audio file and its explicit target');
+const liveLocalPaths=liveLocalPath?[liveLocalPath,...(liveLocalSorting?[realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)]:[])]:[];
+const liveLocalSnapshot=liveLocalPath?externalInputSnapshot(liveLocalPaths):null;
+if(liveLocalPaths.some(path=>!/\.mp3$/i.test(path)||statSync(path).size<100000||statSync(path).size>30000000))throw new Error('Real local audio must be a complete MP3 of 100 KB–30 MB');
 let localFixtureDirectory;
 function seedLocalAudio() {
   if(localFixtureDirectory)return;
@@ -31,8 +34,8 @@ function seedLocalAudio() {
     const container=groups.split('\n').find(line=>line.startsWith('group.com.apple.FileProvider.LocalStorage\t'))?.split('\t')[1];if(!container)return;
     localFixtureDirectory=resolve(container,'File Provider Storage','Nexus UITest Fixtures');mkdirSync(localFixtureDirectory,{recursive:true});
     if(liveLocalPath){
-      writeFileSync(resolve(localFixtureDirectory,basename(liveLocalPath)),readFileSync(liveLocalPath));
-      if(fileSha256(resolve(localFixtureDirectory,basename(liveLocalPath)))!==fileSha256(liveLocalPath))throw new Error('Real audio copy hash mismatch');
+      for(const path of liveLocalPaths){writeFileSync(resolve(localFixtureDirectory,basename(path)),readFileSync(path));}
+      if(liveLocalPaths.some(path=>fileSha256(resolve(localFixtureDirectory,basename(path)))!==fileSha256(path)))throw new Error('Real audio copy hash mismatch');
       console.log('[ui-real-audio] unchanged public audio copied into Files');return;
     }
     writeFileSync(resolve(localFixtureDirectory,'Synthetic Tagged Tone.mp3'),silentMP3(1200));writeFileSync(resolve(localFixtureDirectory,'Nexus Fixture.ttf'),fixtureFont());
@@ -406,13 +409,13 @@ try {
   const fixturePath=entryFile??'scripts/test-ui.mjs';
   const runManifest={schemaVersion:1,startedAt:new Date().toISOString(),resultBundle:resolve(resultPath),sourceBefore,configuration,fixture:{path:fixturePath,sha256:sourceBefore.files[fixturePath]},simulator:process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'};
   if(referenceScene)runManifest.externalInputs={before:referenceScene.snapshot,requiredPaths:referenceScene.paths};
-  if(liveLocalPath)runManifest.externalInputs={before:liveLocalSnapshot,requiredPaths:[liveLocalPath]};
+  if(liveLocalPath)runManifest.externalInputs={before:liveLocalSnapshot,requiredPaths:liveLocalPaths};
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', configuration,
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
-  if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions');
+  if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
@@ -432,7 +435,7 @@ try {
   Object.assign(runManifest,{finishedAt:new Date().toISOString(),exitCode:code,sourceAfter:sourceSnapshot(),installedBundle:installedBundleSnapshot(runManifest.simulator),resultInfoSha256:existsSync(resolve(resultPath,'Info.plist'))?fileSha256(resolve(resultPath,'Info.plist')):null});
   runManifest.sourceUnchanged=runManifest.sourceBefore.digest===runManifest.sourceAfter.digest;
   if(referenceScene){runManifest.externalInputs.after=externalInputSnapshot(referenceScene.paths);runManifest.externalInputs.unchanged=runManifest.externalInputs.before.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
-  if(liveLocalPath){runManifest.externalInputs.after=externalInputSnapshot([liveLocalPath]);runManifest.externalInputs.unchanged=liveLocalSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
+  if(liveLocalPath){runManifest.externalInputs.after=externalInputSnapshot(liveLocalPaths);runManifest.externalInputs.unchanged=liveLocalSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   if(code===0&&counts.transitionVideo){
     try{

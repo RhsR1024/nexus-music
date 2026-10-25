@@ -2,8 +2,8 @@ import {PlaybackMessageError} from '../playback/errors.ts';
 import {InvalidRecordError} from './recovery.ts';
 import type {Repository} from './repository.ts';
 import {validateTrack,type Track} from '../domain/track.ts';
-export interface LocalAudioRecord {id:string;extension:string;bytes:number;track:Track;lyric:string;hidden?:boolean;favorite?:boolean}
-export interface ImportedAudio {id:string;extension:string;bytes:number;durationMs:number;title:string;artist:string;album:string;lyric:string;created:boolean}
+export interface LocalAudioRecord {id:string;extension:string;bytes:number;track:Track;lyric:string;hidden?:boolean;favorite?:boolean;addedAt?:number;modifiedAt?:number}
+export interface ImportedAudio {id:string;extension:string;bytes:number;durationMs:number;title:string;artist:string;album:string;lyric:string;created:boolean;modifiedAt?:number}
 export interface LocalAudioNative {
   beginRemoval(id:string,extension_:string):Promise<string>;
   finishRemoval(token:string,restore:boolean):Promise<void>;
@@ -18,6 +18,7 @@ const validExtension=(ext:unknown):ext is string=>typeof ext==='string'&&['mp3',
 function validate(record:LocalAudioRecord) {
   if(!record||!validID(record.id)||!validExtension(record.extension)||!Number.isSafeInteger(record.bytes)||record.bytes<1||record.bytes>1073741824||typeof record.lyric!=='string'||record.lyric.length>2097152)throw new Error('本地音频记录无效');
   if((record.hidden!==undefined&&typeof record.hidden!=='boolean')||(record.favorite!==undefined&&typeof record.favorite!=='boolean'))throw new Error('本地音频状态无效');
+  for(const time of [record.addedAt,record.modifiedAt])if(time!==undefined&&(!Number.isFinite(time)||time<0||time>8640000000000000))throw new Error('本地音频时间无效');
   validateTrack(record.track);if(!Number.isFinite(record.track.durationMs)||!record.track.durationMs||record.track.durationMs<=0)throw new Error('本地音频时长无效');if(record.track.origin.kind!=='local'||record.track.origin.id!==record.id)throw new Error('本地音频身份无效');return record;
 }
 export class LocalAudioStore {
@@ -42,7 +43,7 @@ export class LocalAudioStore {
         for(const asset of assets) {
           const value=await this.native.importAudio(asset.uri,asset.name);
           if(value.created&&validID(value.id)&&validExtension(value.extension))created.push(value);
-          const record=validate({id:value.id,extension:value.extension,bytes:value.bytes,lyric:value.lyric,track:{origin:{kind:'local',id:value.id},title:value.title,artist:value.artist,album:value.album,durationMs:value.durationMs,metadata:{localFormat:value.extension},qualities:[]}});
+          const record=validate({id:value.id,extension:value.extension,bytes:value.bytes,lyric:value.lyric,addedAt:Date.now(),modifiedAt:value.modifiedAt,track:{origin:{kind:'local',id:value.id},title:value.title,artist:value.artist,album:value.album,durationMs:value.durationMs,metadata:{localFormat:value.extension},qualities:[]}});
           const existing=next.find(file=>file.id===record.id);
           if(existing){
             if(existing.hidden){next[next.indexOf(existing)]={...existing,hidden:false};added++;}else duplicates++;

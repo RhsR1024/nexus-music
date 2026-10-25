@@ -134,7 +134,7 @@ final class SourceSettingsTests: XCTestCase {
     // existence and tap the cells directly.
     let fileCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
     let folderCell=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch
-    let fileRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",prefix)).firstMatch
+    let fileRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ AND NOT (identifier BEGINSWITH %@)",prefix,"local-track-")).firstMatch
     // The navigation title also begins with the folder name; its Actions
     // Menu opens a context menu, not the directory (cloud failure evidence).
     let folderRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ AND NOT (label CONTAINS[c] %@) AND NOT (label CONTAINS %@)","Nexus UITest Fixtures","Actions Menu","操作菜单")).firstMatch
@@ -1016,6 +1016,39 @@ final class SourceSettingsTests: XCTestCase {
   // picker excludes the default and closes on submit, deletion happens with
   // no confirmation, and the library playlist list never shows local names.
   // Opt-in: unchanged public MP3 resolved by the user's real LX source.
+  func testLiveLocalSorting() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func openLocal(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch.tap();XCTAssertTrue(app.buttons["收起本地音频"].waitForExistence(timeout:10))}
+    func first(_ title:String){let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons["local-track-0"].label == title},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:8),.completed,"Actual public songs must change order: \(title)")}
+    func choose(_ field:String,_ label:String){app.buttons["local-sort-field"].tap();let option=app.descendants(matching:.any).matching(identifier:"local-sort-\(field)").firstMatch;XCTAssertTrue(option.waitForExistence(timeout:5));option.tap();XCTAssertEqual(app.buttons["local-sort-field"].label,"排序 · \(label)")}
+    let handle=app.buttons["player-drag-handle"].firstMatch;if handle.waitForExistence(timeout:2){handle.tap()}
+    openLocal();choose("title","名称");if app.buttons["local-sort-direction"].label == "倒序"{app.buttons["local-sort-direction"].tap()}
+    for name in ["Shape of You - Ed Sheeran","Perfect - Ed Sheeran"] {
+      app.buttons["导入音频文件"].tap();selectLocalFixture(name,in:app)
+      XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:25))
+    }
+    XCTAssertEqual(app.staticTexts["local-filter-count"].label,"2 / 2 首")
+    // These are complete, unchanged public MP3s resolved by the real V261020
+    // source. Neither has ID3 artist/album tags; their missing tags remain visible.
+    let shape="Shape of You - Ed Sheeran",perfect="Perfect - Ed Sheeran"
+    for (field,label,ascending) in [("title","名称",perfect),("duration","时长",shape),("modifiedAt","文件修改时间",shape),("addedAt","添加时间",shape),("artist","艺术家",perfect),("album","专辑",perfect)] {
+      choose(field,label);XCTAssertEqual(app.buttons["local-sort-direction"].label,"正序");first(ascending)
+      app.buttons["local-sort-direction"].tap();first(ascending == shape ? perfect : shape)
+      XCTAssertEqual(app.buttons["local-sort-direction"].label,"倒序")
+      if field == "title"{image("Real audio name descending")}
+      app.buttons["local-sort-direction"].tap();first(ascending)
+    }
+    choose("addedAt","添加时间");app.buttons["local-sort-direction"].tap();first(perfect)
+    image("Real audio added descending")
+    app.terminate();app.launch();openLocal()
+    XCTAssertEqual(app.buttons["local-sort-field"].label,"排序 · 添加时间");XCTAssertEqual(app.buttons["local-sort-direction"].label,"倒序");first(perfect)
+    app.buttons["local-sort-field"].tap();image("Real audio six field sort after restart");app.descendants(matching:.any).matching(identifier:"local-sort-addedAt").firstMatch.tap()
+    let input=app.textFields["搜索本地歌曲艺术家专辑"];input.tap();for c in "Perfect"{input.typeText(String(c))};XCTAssertEqual(input.value as? String,"Perfect");input.typeText("\n");XCTAssertEqual(app.staticTexts["local-filter-count"].label,"1 / 2 首");first(perfect)
+    app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap();let player=app.buttons["打开播放页"];XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90),"Sorted real MP3 must decode to PCM");XCTAssertTrue(app.buttons["暂停"].firstMatch.isHittable);image("Real sorted audio PCM playback");app.buttons["暂停"].firstMatch.tap()
+  }
+
   func testLiveLocalIndexActions() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}

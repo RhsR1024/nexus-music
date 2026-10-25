@@ -5,8 +5,8 @@ import {Modal} from './AdaptiveModal.tsx';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
-import {trackRows,viewTrackRows,type TrackSort} from '../domain/trackList.ts';
-import {TrackListTools} from './TrackListTools.tsx';
+import {viewLocalAudio,type LocalSortField,type LocalSortDirection} from '../domain/localAudioSort.ts';
+import {LocalAudioTools} from './LocalAudioTools.tsx';
 import {Cover} from './Cover.tsx';
 import {LocalPlaylistPicker} from './LocalPlaylistPicker.tsx';
 import {defaultDevicePlaylistId} from '../domain/devicePlaylist.ts';
@@ -15,21 +15,23 @@ import {BatchSelectionBar,type BatchAction} from './BatchSelectionBar.tsx';
 import {selectionNone,selectionEnter,selectionToggle,selectionAll,selectionByListOrder} from '../domain/selection.ts';
 import {useTheme} from './theme.tsx';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {controls,space} from './tokens.ts';
+import {controls,space,typography} from './tokens.ts';
 export function LocalAudioLibrary({services}:{services:Services}) {
   const {width}=useWindowDimensions(),insets=useSafeAreaInsets();
   const {palette:p}=useTheme(),files=useSyncExternalStore(services.localAudio.subscribe,services.localAudio.getSnapshot);
   const localPlaylists=useSyncExternalStore(services.devicePlaylists.subscribe,services.devicePlaylists.getSnapshot);
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[mode,setMode]=useState<'songs'|'albums'|'artists'|'playlists'>('songs'),[group,setGroup]=useState<string|null>(null),[message,setMessage]=useState(''),[adding,setAdding]=useState<readonly Track[]>();
   const [selection,setSelection]=useState(selectionNone),[batchBusy,setBatchBusy]=useState(false);
-  const [sort,setSort]=useState<TrackSort>('original');
+  const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
+  const sort=preferences.localAudioSortField,direction=preferences.localAudioSortDirection;
+  function setSort(field:LocalSortField,direction:LocalSortDirection){void services.preferences.update({localAudioSortField:field,localAudioSortDirection:direction}).catch(()=>setMessage('排序未保存，原顺序保留，请重试'));}
   const [localSelected,setLocalSelected]=useState<string|null>(null),[localName,setLocalName]=useState(''),[newLocalName,setNewLocalName]=useState('');
   const selectedLocal=localPlaylists.find(playlist=>playlist.id===localSelected);
-  const filtered=useMemo(()=>viewTrackRows(trackRows(files.map(file=>file.track),files.map(file=>file.id)),query,sort).map(row=>files[row.originalIndex]!),[files,query,sort]);
+  const filtered=useMemo(()=>viewLocalAudio(files,query,sort,direction),[files,query,sort,direction]);
   const groupKey=(file:typeof filtered[number])=>mode==='albums'?JSON.stringify([file.track.album||'未知专辑',file.track.artist]):file.track.artist;
   const groups=useMemo(()=>{const values=new Map<string,typeof filtered>();for(const file of filtered){const key=groupKey(file),list=values.get(key);if(list)list.push(file);else values.set(key,[file]);}return [...values].map(([key,files])=>({key,name:mode==='albums'?files[0]!.track.album||'未知专辑':files[0]!.track.artist,files})).sort((a,b)=>a.name.localeCompare(b.name,'zh'));},[filtered,mode]);
   const shown=useMemo(()=>group?filtered.filter(file=>groupKey(file)===group):filtered,[filtered,mode,group]);
-  useEffect(()=>{setSelection(selectionNone);},[query,sort,mode,group,localSelected,open]);
+  useEffect(()=>{setSelection(selectionNone);},[query,sort,direction,mode,group,localSelected,open]);
   const selectedFiles=selectionByListOrder(selection,shown,file=>file.id);
   function clearSelection(){setSelection(selectionNone);}
   function removeIndex(ids:readonly string[]) {
@@ -71,7 +73,8 @@ export function LocalAudioLibrary({services}:{services:Services}) {
       {button('导入音频文件',()=>{void importFiles();},busy)}{busy&&<ActivityIndicator accessibilityLabel="正在导入音频" color={p.accent}/>}</>}
       {services.localAudio.hiddenCount()>0&&button(`恢复已移除歌曲（${services.localAudio.hiddenCount()} 首）`,()=>{void services.localAudio.restoreIndex().then(()=>setMessage('已恢复本设备保留的音频索引')).catch(()=>setMessage('恢复未保存，请重试'));},batchBusy,'local-restore-index')}
       {!!message&&<Text accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
-      {!selection.active&&<><TrackListTools label="搜索本地歌曲艺术家专辑" query={query} onQuery={value=>{setQuery(value);setGroup(null);}} sort={sort} onSort={setSort}/>
+      {!selection.active&&<><LocalAudioTools query={query} onQuery={value=>{setQuery(value);setGroup(null);}} field={sort} direction={direction} onSort={setSort}/>
+      {(sort==='modifiedAt'||sort==='addedAt')&&files.some(file=>file[sort]===undefined)&&<Text style={{...typography.caption,color:p.secondary}}>旧条目缺少时间记录，排在已知时间之后；不会推测原文件时间。</Text>}
       <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{(['songs','albums','artists','playlists'] as const).map(value=><View key={value}>{button({songs:'歌曲',albums:'专辑',artists:'艺术家',playlists:'歌单'}[value],()=>{setMode(value);setGroup(null);setLocalSelected(null);})}</View>)}</View></>}
       {mode!=='playlists'&&<Text testID="local-filter-count" style={{color:p.secondary,fontSize:12}}>{shown.length} / {files.length} 首</Text>}
       {selection.active&&mode!=='playlists'&&<BatchSelectionBar count={selectedFiles.length} total={shown.length} actions={['favorite','playlist','next','delete']} onAction={action=>{void batch(action);}} onSelectAll={()=>setSelection(selectedFiles.length===shown.length?{active:true,ids:[]}:selectionAll(selection,shown.map(file=>file.id)))} onCancel={clearSelection} allSelected={shown.length>0&&selectedFiles.length===shown.length} busy={batchBusy} testPrefix="local-batch"/>}

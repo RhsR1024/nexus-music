@@ -1,3 +1,11 @@
+## 2026-10-25 批次5B：本地六字段双向排序
+
+已接入名称/时长/文件修改时间/添加时间/艺术家/专辑正倒序和字段/方向持久化，继续使用本地索引、当前筛选与同一权威播放器。修改时间/时长同值随方向反转名称次级键；添加时间同值按导入次序反转。历史条目缺失时间保留未知并提示，不补造原文件时间。548项逻辑/类型与真实Perfect MP3原生导入测试通过；最终两首真实音频Release UI 1/0/0、106.473秒，六字段实际行序、重启保持、重复导入与PCM解码通过，四附件provenance/亲看通过。
+
+沿用Q125完成的参考资料，原生路由、APK gate及--review通过，动态case395E/101F/99P/3WI/117events严格复核0错误0警告；未新增Sollin采集。指定resources/V261020真实源用于公开歌曲完整MP3验证，不用合成截图。开工时已有Files helper补丁保留未提交，其中API误用已修正；仅本批新真实用例及排除背后local-track行的定位修正进入提交。本地UI构建包含该既有工作树补丁，manifest已绑定。
+
+详见[实施回执](docs/2026-10-25_implementation-local-sort-report.md)与[真实UI场景](docs/ui-spec/local-sort-live-2026-10-25.md)。批次5余项为文件夹/扫描授权与规则、本地歌单详情多选；真机/签名/后台与动效独立。此前main 3df539f的云端40166507491在Navidrome长队列断言失败，不计新批通过。
+
 ## 2026-10-25 批次6下载管理取消语义
 
 存储新增 `cancelled` 状态：`cancel(id)` 同步置取消意图并中止在途传输（catch 中取消优先于暂停），记录保留为"下载已取消"供重试/移除（E-1301）；`cancelAll()` 仅结束 queued/downloading/paused（E-1302），失败记录保留原语义；`retry` 重置取消记录；`getStatistics().pending` 不含取消。DownloadSettings：queued/downloading/paused 行新增"取消下载"，取消态行显示"重试下载"+"移除记录"，移除确认与"全部取消"文案按"记录与文件分离"更新。

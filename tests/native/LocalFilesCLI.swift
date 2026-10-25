@@ -5,6 +5,8 @@ import Foundation
     let root=URL(fileURLWithPath:CommandLine.arguments[1]),input=URL(fileURLWithPath:CommandLine.arguments[2]),files=LocalAudioFiles(root:root)
     do {
       var value=try await files.importFile(input.absoluteString,name:CommandLine.arguments[3])
+      let originalDate=try input.resourceValues(forKeys:[.contentModificationDateKey]).contentModificationDate!
+      assert(abs((value["modifiedAt"] as! Double)-originalDate.timeIntervalSince1970*1000)<1)
       let id=value["id"] as! String,ext=value["extension"] as! String
       let uri=try files.resolve(id,ext);let url=URL(string:uri)!
       assert(files.retain(url));var protected=false;do{try files.remove(id,ext)}catch{protected=true};assert(protected);files.release(url)

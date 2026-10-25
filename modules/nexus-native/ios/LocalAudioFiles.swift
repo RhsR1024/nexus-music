@@ -119,7 +119,12 @@ final class LocalAudioFiles {
     let destination = try file(id, ext), created = !fm.fileExists(atPath: destination.path)
     if created { try fm.moveItem(at: temporary, to: destination) }
     if let image { saveCover(image, id: id) }
-    return ["id": id, "extension": ext, "bytes": size, "durationMs": duration * 1000, "title": title, "artist": artist, "album": album, "lyric": lyric, "created": created]
+    var result: [String: Any] = ["id": id, "extension": ext, "bytes": size, "durationMs": duration * 1000, "title": title, "artist": artist, "album": album, "lyric": lyric, "created": created]
+    if let modified = try? input.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate {
+      let milliseconds = modified.timeIntervalSince1970 * 1000
+      if milliseconds.isFinite && milliseconds >= 0 { result["modifiedAt"] = milliseconds }
+    }
+    return result
   }
   private func saveCover(_ data: Data, id: String) {
     guard let source = CGImageSourceCreateWithData(data as CFData, nil),

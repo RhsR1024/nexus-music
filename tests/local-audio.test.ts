@@ -11,6 +11,19 @@ function fixture() {
   const native:LocalAudioNative={beginRemoval:async id=>id,finishRemoval:async()=>{},reconcile:async()=>{},importAudio:async(uri,name)=>{if(uri==='bad')throw new Error('invalid audio');return{id:uri.repeat(64),extension:'wav',bytes:100,durationMs:1000,title:name,artist:'fixture',album:'album',lyric:'[00:00]fixture',created:true};},resolveAudio:async(id,ext)=>`file:///current-container/${id}.${ext}`,localArtwork:async id=>`file:///current-container/${id}.jpg`,removeAudio:async id=>{removed.push(id);}};
   return{store:new LocalAudioStore(repository,native),repository,native,data,removed,setFailure:()=>{failure=true;}};
 }
+test('import timestamps survive duplicate import, index removal and restart without inventing legacy dates',async()=>{
+  const f=fixture(),importer=f.native.importAudio;
+  f.native.importAudio=async(uri,name)=>({...await importer(uri,name),modifiedAt:1704067200000});
+  const before=Date.now();await f.store.import([{uri:'a',name:'a.mp3'}]);
+  const first=f.store.getSnapshot()[0]!;assert.ok(first.addedAt!>=before&&first.addedAt!<=Date.now());assert.equal(first.modifiedAt,1704067200000);
+  await f.store.removeFromIndex([first.id]);await f.store.import([{uri:'a',name:'renamed.mp3'}]);assert.equal(f.store.getSnapshot()[0]!.addedAt,first.addedAt);
+  const restored=new LocalAudioStore(f.repository,f.native);await restored.restore();assert.equal(restored.getSnapshot()[0]!.modifiedAt,first.modifiedAt);
+  const legacy={...first};delete legacy.addedAt;delete legacy.modifiedAt;f.data.set('localAudio.v1',{version:1,files:[legacy]});await restored.restore();assert.equal(restored.getSnapshot()[0]!.addedAt,undefined);
+});
+test('invalid native timestamps roll back and never enter the index',async()=>{
+  const f=fixture(),importer=f.native.importAudio;f.native.importAudio=async(uri,name)=>({...await importer(uri,name),modifiedAt:NaN});
+  await assert.rejects(f.store.import([{uri:'a',name:'a.mp3'}]));assert.equal(f.store.getSnapshot().length,0);assert.equal(f.removed.length,1);
+});
 test('local audio uses content identities, preserves equal names with different content and restores references',async()=>{
   const f=fixture();assert.deepEqual(await f.store.import([{uri:'a',name:'same.wav'},{uri:'b',name:'same.wav'}]),{added:2,duplicates:0});
   const first=f.store.getSnapshot()[0]!.track;assert.equal(trackKey(first.origin),'["local","files","'+'a'.repeat(64)+'"]');

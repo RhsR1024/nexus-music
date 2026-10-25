@@ -1,3 +1,4 @@
+import {localSortFields,type LocalSortField,type LocalSortDirection} from '../domain/localAudioSort.ts';
 import {normalizeLyricOffsets,normalizeLyricStyle,lyricStyleDefaults,type LyricStyle,type LyricAlignment} from '../lyrics/settings.ts';
 import {normalizePresets,validGains,validPreamp,type EQPreset} from '../domain/equalizer.ts';
 import {InvalidRecordError} from '../storage/recovery.ts';
@@ -7,8 +8,8 @@ import {appearanceDefaults,visualThemes,type AppearanceOptions,type VisualTheme}
 import {miniPlayerDefaults,normalizeMiniActions,toggleMiniAction,moveMiniAction,type MiniPlayerOptions,type MiniAction} from '../domain/miniPlayer.ts';
 export type StageStyle='classic'|'neon'|'cyberpunk'|'aurora';
 export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage'|'am2';
-export interface Preferences extends AppearanceOptions,MiniPlayerOptions { stageStyle:StageStyle;stageBackdrop:boolean; am2AutoLyrics:boolean;am2DelaySeconds:number;am2ShowVolume:boolean; lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; favoriteVisualTheme:VisualTheme|null; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; rate:number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number }
-export const defaults: Preferences = { ...appearanceDefaults,...miniPlayerDefaults,stageStyle:'classic',stageBackdrop:true,am2AutoLyrics:true,am2DelaySeconds:5,am2ShowVolume:false,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',favoriteVisualTheme:null,quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, rate: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048 };
+export interface Preferences extends AppearanceOptions,MiniPlayerOptions { localAudioSortField:LocalSortField;localAudioSortDirection:LocalSortDirection; stageStyle:StageStyle;stageBackdrop:boolean; am2AutoLyrics:boolean;am2DelaySeconds:number;am2ShowVolume:boolean; lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; favoriteVisualTheme:VisualTheme|null; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; rate:number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number }
+export const defaults: Preferences = { ...appearanceDefaults,...miniPlayerDefaults,localAudioSortField:'title',localAudioSortDirection:'asc',stageStyle:'classic',stageBackdrop:true,am2AutoLyrics:true,am2DelaySeconds:5,am2ShowVolume:false,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',favoriteVisualTheme:null,quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, rate: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048 };
 export class PreferenceStore {
   private repository: Repository; private value: Preferences = defaults;
   private listeners = new Set<() => void>(); private tail: Promise<unknown> = Promise.resolve();
@@ -29,6 +30,7 @@ export class PreferenceStore {
     }catch{throw new InvalidRecordError();}}
   }
   private validate(value: Preferences): Preferences {
+    if(!localSortFields.includes(value.localAudioSortField)||!['asc','desc'].includes(value.localAudioSortDirection))throw new Error('本地排序设置无效');
     if(!['classic','neon','cyberpunk','aurora'].includes(value.stageStyle)||typeof value.stageBackdrop!=='boolean')throw new Error('舞台样式无效');
     if(typeof value.am2AutoLyrics!=='boolean'||typeof value.am2ShowVolume!=='boolean'||!Number.isFinite(value.am2DelaySeconds)||value.am2DelaySeconds<1||value.am2DelaySeconds>60)throw new Error('AM2 设置无效');
     if(typeof value.miniLyrics!=='boolean')throw new Error('迷你歌词设置无效');
