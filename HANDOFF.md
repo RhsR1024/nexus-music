@@ -1,3 +1,9 @@
+## 2026-10-25 第二组失败定位与discovery测试修复（2e5fbd7）
+
+云端 fde9b2c/0aeed10/eb6b207 均败于第二组（matched playback/lyrics/health/comments/discovery）。本地按CI同命令复现并在干净基线二分后确认两个独立根因：① `testDiscoverySongActions` 仍从搜索页打开批次2已移除的独立发现模态——第一组只修了取色主题测试的同型引用，此处漏网已改为经发现Tab重进同一详情验证重复保留（`2e5fbd7`，本地该测试已通过）；② `testSourceHealth` 的分享面板收起等待在 1401657 干净基线worktree同样失败——非批次2-4回归，判定为本机 iOS 26.3.1 模拟器既有环境特性，云端 iOS 27 终态以 2e5fbd7 运行为准。`testOnlineMatching` 在本机旧容器重导入已存在音源会超20秒窗口（失败时树中 `已启用` 已出现），新容器单独运行通过（`SourceUITests-1792901659850` 1/0/0）；CI 全新安装不受影响。全部组2用例在真干净树+新容器下分别通过（lyrics/discovery/comments 见 `SourceUITests-1792899645893`）。
+
+协调记录：本会话曾将工作树中批次5A的未提交改动误判为污染并 stash（`quarantine:` 前缀），该工作已由并行会话以 74ff975/893952f/aa4b4b7 正式提交，stash 留存可恢复、不需采纳；两会话共用同一模拟器，容器状态可能互相影响，建议各自验收前 `simctl uninstall` 清容器。
+
 ## 2026-10-25 批次5A main推送与CI队列快照
 
 功能74ff975及回执893952f已正常快进push到origin/main，远端SHA核对一致；分支codex/local-audio-index同时保留。GitHub集成创建PR返回403，实际没有创建PR；按既有阶段授权完成普通main推送，未force push。原主检出已快进到同一代码，原有SourceSettingsTests.swift的5增/2删逐行保留且仍未提交；本地恢复补丁及回执留在受管工作树build/local-music-live-20261025。
