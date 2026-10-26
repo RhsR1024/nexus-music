@@ -9,7 +9,7 @@ export interface BackupPreview {file:RemoteBackup;backup:LibraryBackup;digestVer
 export interface CloudBackupState {config?:BackupConfig;files:readonly RemoteBackup[];preview?:BackupPreview;busy:null|'configure'|'list'|'upload'|'download'|'restore';message:string;error:string}
 export interface BackupTransport {backup(root:string,path:string,credentials:WebDAVCredentials,operation:'GET'|'PUT'|'MKCOL',body:string,etag:string,signal:AbortSignal):Promise<{status:number;body:string;etag:string;bytes:number}>}
 interface Accounts {getSnapshot():readonly WebDAVAccount[];subscribe(listener:()=>void):()=>void;credentials(id:string):Promise<WebDAVCredentials>;client(id:string):Promise<Pick<WebDAVClient,'list'|'stat'>>}
-interface Options {repository:Pick<Repository,'get'|'put'>;accounts:Accounts;transport:BackupTransport;hash:(text:string)=>Promise<string>;uuid:()=>string;snapshot:(date:Date)=>string;restore:(backup:LibraryBackup)=>Promise<void>;now?:()=>Date}
+interface Options {repository:Pick<Repository,'get'|'put'>;accounts:Accounts;transport:BackupTransport;hash:(text:string)=>Promise<string>;uuid:()=>string;snapshot:(date:Date)=>string|Promise<string>;restore:(backup:LibraryBackup)=>Promise<void>;now?:()=>Date}
 export class CloudBackupError extends Error {
   constructor(kind:'config'|'connection'|'format'|'digest'|'collision'|'changed'|'http'|'busy'){
     super({config:'备份目录无效，请使用连接根目录内的相对文件夹',connection:'备份连接已移除或更改，请重新选择并刷新',format:'备份格式或大小不受支持，本机数据未更改',digest:'备份摘要不一致，本机数据未更改',collision:'远端同名版本已存在，本次未覆盖，请刷新后重试',changed:'远端备份版本已变化，请刷新列表后重新预览',http:'云备份请求未完成，请检查权限、空间与网络后重试',busy:'正在处理备份，请等待或取消当前请求'}[kind]);
@@ -77,7 +77,7 @@ export class WebDAVBackups {
     }catch(error){check();if(error instanceof WebDAVError&&error.kind==='missing')return{files:[],message:'备份目录尚不存在，上传时将创建'};throw error;}
   });}
   upload(){return this.run('upload',async({config,account,credentials,client,signal,check})=>{
-    const date=(this.options.now??(()=>new Date()))(),body=this.options.snapshot(date);try{decodeBackup(body);}catch{throw new CloudBackupError('format');}
+    const date=(this.options.now??(()=>new Date()))(),body=await this.options.snapshot(date);check();try{decodeBackup(body);}catch{throw new CloudBackupError('format');}
     const digest=await this.options.hash(body);check();const uuid=this.options.uuid().replace(/-/g,'').toLowerCase();if(!/^[a-f\d]{64}$/.test(digest)||!/^[a-f\d]{32}$/.test(uuid))throw new CloudBackupError('format');
     let prefix='';for(const part of config.directory.split('/').filter(Boolean)){
       prefix+=part+'/';let exists=false;

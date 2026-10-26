@@ -44,10 +44,11 @@ import {requestJSON,type HTTPClient} from '../providers/http.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
 import { NavidromeClient } from '../providers/navidrome.ts';
 import { nativeSecrets } from '../storage/nativeSecrets.ts';
-import {LibraryStore,validateLibrary} from '../storage/library.ts';
-import {cleanPlaybackStats,PlaybackStatsStore,type PlaybackStatsState} from '../storage/playbackStats.ts';
+import {LibraryStore} from '../storage/library.ts';
+import {PlaybackStatsStore} from '../storage/playbackStats.ts';
 import {WebDAVStatistics} from '../storage/webdavStatistics.ts';
 import {MutationQueue} from '../storage/mutations.ts';
+import {createBackupRestore} from '../storage/restoreLibraryBackup.ts';
 import {encodeBackup} from '../storage/backup.ts';
 import {WebDAVBackups} from '../storage/webdavBackups.ts';
 import {WebDAVSync} from '../storage/webdavSync.ts';
@@ -74,7 +75,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await deviceMedia.checkAuthorization();
   mediaNative.addListener('changed',()=>{void deviceMedia.checkAuthorization().then(status=>{if(status==='authorized')deviceMedia.invalidate();}).catch(deviceMedia.invalidate);});
   const visualNative=requireNativeModule<VisualNative>('NexusFiles'),visualAssets=new VisualAssetStore(repository,visualNative),visualColors=new VisualColorCache(visualNative);await restore('visualAssets.v1','外观图片',()=>visualAssets.restore());
-  const preferences = new PreferenceStore(repository); await restore('preferences.v1','偏好',()=>preferences.restore());
+  const libraryMutations=new MutationQueue();
+  const preferences = new PreferenceStore(repository,libraryMutations); await restore('preferences.v1','偏好',()=>preferences.restore());
   const searchHistory = new SearchHistoryStore(repository); await restore('search.history.v1','搜索历史',()=>searchHistory.restore());
   const devicePlaylists = new DevicePlaylistStore(repository,Crypto.randomUUID); await restore('device.playlists.v1','本地歌单',()=>devicePlaylists.restore());
   const hash=(value:string)=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,value);
@@ -90,7 +92,6 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const musicWebLogin=new MusicWebLoginCoordinator({native:loadNativeMusicAuth(),flow:musicAuth.wy,accounts:musicAccounts,profile:neteaseProfile,hash,uuid:Crypto.randomUUID});
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
   await Font.loadAsync({CupertinoIcons:require('../../assets/fonts/CupertinoIcons.ttf')});
-  const libraryMutations=new MutationQueue();
   const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations);await restore('library.v1','音乐库',()=>library.restore());
   const playbackStats=new PlaybackStatsStore(repository,Date.now,libraryMutations,Crypto.randomUUID);await restore('playbackStats.v1','播放统计',()=>playbackStats.restore());
   // Recommendations are derived from local library/statistics only. No Sollin
@@ -182,15 +183,10 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     playback.controller.setQueue(next ? enqueueNext(queue,entry) : append(queue,entry));
   };
   const addTracksToQueue=(tracks:readonly Track[],next=false)=>{if(!tracks.length)return;const queue=playback.controller.getSnapshot().queue;playback.controller.setQueue(next?enqueueNextMany(queue,tracks.map(track=>({id:Crypto.randomUUID(),track}))):appendMany(queue,tracks.map(track=>({id:Crypto.randomUUID(),track}))));};
-  const restoreBackup=async(savedLibrary:import('../storage/library.ts').LibraryState,stats:PlaybackStatsState)=>{
-    validateLibrary(savedLibrary);const safeStats=cleanPlaybackStats(stats);
-    await libraryMutations.run(async()=>{
-      await repository.putMany([['library.v1',savedLibrary],['playbackStats.v1',safeStats]]);
-      await Promise.all([library.restore(),playbackStats.restore(true)]);
-    });
-  };
+  const restoreBackup=createBackupRestore({repository,mutations:libraryMutations,library,statistics:playbackStats,preferences});
+  const snapshotBackup=(date=new Date())=>libraryMutations.run(async()=>encodeBackup(library.getSnapshot(),date,playbackStats.getSnapshot(),preferences.getSnapshot()));
   const davBackups=new WebDAVBackups({repository,accounts:davAccounts,transport:davTransport,hash,uuid:Crypto.randomUUID,
-    snapshot:date=>encodeBackup(library.getSnapshot(),date,playbackStats.getSnapshot()),restore:backup=>restoreBackup(backup.library,backup.statistics!)});
+    snapshot:snapshotBackup,restore:backup=>restoreBackup(backup.library,backup.statistics!,backup.settings)});
   await restore('webdav.backup.v1','云备份目录',()=>davBackups.restore());
   const davStatistics=new WebDAVStatistics({repository,accounts:davAccounts,transport:davTransport,statistics:playbackStats,hash});
   await restore('webdav.statistics.v1','统计同步目录',()=>davStatistics.restore());
@@ -199,7 +195,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
-  return { songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
+  return { snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

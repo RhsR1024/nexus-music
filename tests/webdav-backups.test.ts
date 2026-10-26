@@ -87,3 +87,7 @@ test('backup decoder drops unknown root fields and secret metadata before cloud 
   const encoded=encodeBackup(library,date);assert.doesNotMatch(encoded,/fixture-private/);
   const safe=decodeBackup(JSON.stringify({...decodeBackup(encoded),credentials:'fixture-private-root',scripts:['fixture-script']}));assert.equal('credentials' in safe,false);assert.equal('scripts' in safe,false);assert.equal(safe.library.favorites[0]!.metadata.songId,'original');assert.equal(safe.library.favorites[0]!.qualities[0]!.sizeBytes,123);
 });
+
+test('asynchronous backup snapshots cannot write after cancellation while waiting for queued local commits',async()=>{
+  const f=fixture();await f.configure();const entered=deferred<void>(),wait=deferred<void>();(f.options as unknown as {snapshot:()=>Promise<string>}).snapshot=async()=>{entered.resolve();await wait.promise;return encodeBackup(emptyLibrary,date);};const pending=f.backups.upload();await entered.promise;f.backups.cancel();wait.resolve();await assert.rejects(pending);assert.equal(f.files.size,0);assert.equal(f.calls.length,0);
+});

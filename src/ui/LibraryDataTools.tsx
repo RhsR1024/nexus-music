@@ -1,10 +1,10 @@
 import {Text} from './Typography.tsx';
-import {useState,useSyncExternalStore} from 'react';
+import {useState} from 'react';
 import {Alert,Pressable,Share,View} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
-import {decodeBackup,encodeBackup} from '../storage/backup.ts';
+import {decodeBackup} from '../storage/backup.ts';
 import {decodePlaylistJSON} from '../storage/playlistJSON.ts';
 import {decodeWayfarer} from '../storage/wayfarer.ts';
 import {decodeImportText} from '../providers/nativeLX.ts';
@@ -18,19 +18,17 @@ import {StatisticsCloud} from './StatisticsCloud.tsx';
 // One implementation shared by the music library and data settings.
 export function LibraryDataTools({services}:{services:Services}){
   const {palette:p}=useTheme();
-  const library=useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
-  const playbackStats=useSyncExternalStore(services.playbackStats.subscribe,services.playbackStats.getSnapshot);
   const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
-  async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('操作未完成，已有音乐库保留，请检查文件后重试');}finally{setBusy(false);}}
+  async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('操作未确认完成，请核对本机数据与文件后重试');}finally{setBusy(false);}}
   const button=(label:string,action:()=>void)=><Pressable accessibilityRole="button" disabled={busy} accessibilityState={{disabled:busy}} onPress={action} style={{padding:13,minHeight:44,borderRadius:14,backgroundColor:p.selected,opacity:busy?.4:1}}><Text style={{color:p.accent}}>{label}</Text></Pressable>;
-  async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(encodeBackup(library,new Date(),playbackStats));await Share.share({url:file.uri,title:'音枢音乐库备份'});}finally{if(file.exists)file.delete();}}
+  async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(await services.snapshotBackup());await Share.share({url:file.uri,title:'音枢音乐库备份'});}finally{if(file.exists)file.delete();}}
   async function importBackup(){
     const result=await DocumentPicker.getDocumentAsync({type:'*/*',copyToCacheDirectory:true});if(result.canceled)return;
     const file=new File(result.assets[0]!.uri);
     try{
       if(file.size>32*1024*1024)throw new Error('too large');const backup=decodeBackup(await file.text());
-      Alert.alert('恢复音枢备份',`包含 ${backup.library.playlists.length} 个歌单、${backup.library.favorites.length} 首收藏和 ${backup.library.history.length} 条历史。确认后替换当前音乐库和本机播放统计，播放队列不变。`,[
-        {text:'取消',style:'cancel'},{text:'替换音乐库',style:'destructive',onPress:()=>{void perform(async()=>{await services.restoreBackup(backup.library,backup.statistics!);setMessage('音乐库与播放统计已恢复');});}},
+      Alert.alert('恢复音枢备份',`包含 ${backup.library.playlists.length} 个歌单、${backup.library.favorites.length} 首收藏和 ${backup.library.history.length} 条历史。${backup.settings?'包含播放/歌词/EQ和外观设置，将一并恢复。':'此旧备份无设置，保留当前设置。'}确认后替换当前音乐库和本机播放统计，播放队列不变；音频/图片/字体文件和连接凭据留在本机。`,[
+        {text:'取消',style:'cancel'},{text:'替换音乐库',style:'destructive',onPress:()=>{void perform(async()=>{await services.restoreBackup(backup.library,backup.statistics!,backup.settings);setMessage('音乐库与播放统计已恢复');});}},
       ]);
     }finally{if(file.exists)file.delete();}
   }
@@ -62,7 +60,7 @@ export function LibraryDataTools({services}:{services:Services}){
     {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
     {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
     <QishuiImport services={services}/>
-    <Text style={{color:p.secondary,fontSize:12,lineHeight:21}}>备份包含音乐库和本机实际播放统计，不包含密码、JS音源或音频文件。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
+    <Text style={{color:p.secondary,fontSize:12,lineHeight:21}}>备份包含音乐库、实际播放统计及播放/歌词/EQ/外观设置；不含密码、JS音源、音频/图片/字体文件。旧备份无设置时保留当前设置。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
     {!!message&&<Text accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
   </View>;
 }
