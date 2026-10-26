@@ -2,6 +2,7 @@ import {requireNativeView} from 'expo';
 import {useContext,useEffect,useMemo,useRef,useState,useSyncExternalStore,type PropsWithChildren} from 'react';
 import {AccessibilityInfo,Animated,AppState,Easing,View,type GestureResponderEvent,type ViewProps} from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
+import {playbackTimeline} from '../playback/timeline.ts';
 import {RingSeekGesture,ringFraction} from '../domain/ringSeek.ts';
 import type {Services} from '../app/services.ts';
 import {trackKey,type Track} from '../domain/track.ts';
@@ -116,13 +117,13 @@ export function FrequencyHalo({services,playing,children}:PropsWithChildren<{ser
   const cancel=()=>{gesture.cancel();setPreview(undefined);};
   const fraction=(event:GestureResponderEvent)=>ringFraction(event.nativeEvent.locationX,event.nativeEvent.locationY,148,26);
   const clock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
-  const enabled=!!token&&Number.isFinite(state.duration)&&state.duration>0;
+  const timeline=playbackTimeline(state),enabled=timeline.seekable;
   const effectivePreview=gesture.preview(token,state.duration)===undefined?undefined:preview;
-  const progress=effectivePreview??(enabled?Math.max(0,Math.min(1,state.position/state.duration)):0);
-  const position=effectivePreview===undefined?state.position:effectivePreview*state.duration;
+  const progress=effectivePreview??timeline.progress;
+  const position=effectivePreview===undefined?timeline.position:effectivePreview*state.duration;
   const showSpectrum=playing&&spectrum.supported&&spectrum.bands.length>=32;
   return <View style={{width:148,height:148,alignItems:'center',justifyContent:'center'}}>
-    <View testID="wave-seek-ring" accessible accessibilityRole="adjustable" accessibilityLabel="环形播放进度" accessibilityHint="沿外环拖动，松手定位；中心按钮播放或暂停" accessibilityState={{disabled:!enabled}} accessibilityValue={{min:0,max:Math.floor(state.duration),now:Math.floor(position),text:`${clock(position)} / ${clock(state.duration)}`}} accessibilityActions={[{name:'increment'},{name:'decrement'}]}
+    <View testID="wave-seek-ring" accessible accessibilityRole="adjustable" accessibilityLabel="环形播放进度" accessibilityHint="沿外环拖动，松手定位；中心按钮播放或暂停" accessibilityState={{disabled:!enabled}} accessibilityValue={{min:0,max:Math.floor(timeline.duration),now:Math.floor(position),text:`${clock(position)} / ${clock(timeline.duration)}`}} accessibilityActions={[{name:'increment'},{name:'decrement'}]}
       onAccessibilityAction={event=>{if(enabled){cancel();controller.seek(controller.getSnapshot().position+(event.nativeEvent.actionName==='increment'?10:-10));}}}
       onStartShouldSetResponder={event=>{const {locationX:x,locationY:y,touches}=event.nativeEvent,radius=Math.hypot(x-74,y-74);return enabled&&touches.length===1&&radius>=52&&radius<=74;}}
       onResponderGrant={event=>{const value=current();setPreview(gesture.begin(value.token,value.duration,fraction(event)));}}

@@ -1,3 +1,4 @@
+import {playbackTimeline} from '../playback/timeline.ts';
 import {miniActionLabels} from '../domain/miniPlayer.ts';
 import {MiniLyric} from './MiniLyric.tsx';
 import {effectiveLyricFont} from '../storage/fontCatalog.ts';
@@ -52,6 +53,7 @@ export function Player({ services }: { services: Services }) {
   const {width,height}=useWindowDimensions(),landscape=width>height;
   const { controller } = services.playback;
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const timeline=playbackTimeline(state);
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   // Multi-source fallback may land below the preferred quality; say so instead
   // of letting the request tier read as the requested one.
@@ -99,12 +101,12 @@ export function Player({ services }: { services: Services }) {
         <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
         <View style={styles.row}>{button(`播放倍速 ${preferences.rate}x`,()=>setPanel('rate'))}{button('睡眠定时器',()=>setPanel('sleep'))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
-        <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityValue={{ min: 0, max: Math.floor(state.duration), now: Math.floor(state.position) }}
-          accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10))}
-          onPress={event => { if (state.duration) controller.seek(event.nativeEvent.locationX / 300 * state.duration); }} style={styles.progress}>
-          <View style={[styles.fill, { width: `${state.duration ? Math.min(100, state.position/state.duration*100) : 0}%` }]} />
+        <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityState={{disabled:!timeline.seekable}} accessibilityValue={{ min: 0, max: Math.floor(timeline.duration), now: Math.floor(timeline.position) }}
+          accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => {if(timeline.seekable)controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10));}}
+          onPress={event => { if (timeline.seekable) controller.seek(event.nativeEvent.locationX / 300 * state.duration); }} style={styles.progress}>
+          <View style={[styles.fill, { width: `${timeline.duration ? Math.min(100, timeline.position/timeline.duration*100) : 0}%` }]} />
         </Pressable>
-        <Text style={styles.caption}>{time(state.position)} / {time(state.duration)}</Text>
+        <Text style={styles.caption}>{time(timeline.position)} / {time(timeline.duration)}</Text>
         <View style={styles.row}>{button('上一首', () => services.playback.next(-1))}{button(state.intent === 'playing' ? '暂停' : '播放', toggle)}{button('下一首', () => services.playback.next())}</View>
         <View style={styles.row}>{button('−15秒', () => controller.seek(state.position-15))}{button('＋15秒', () => controller.seek(state.position+15))}</View>
         <View style={styles.row}>

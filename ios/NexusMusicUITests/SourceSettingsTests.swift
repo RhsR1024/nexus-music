@@ -1583,6 +1583,24 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"storage");tap(app.buttons["open-listening-statistics"]);let row=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","statistics-row-")).firstMatch;reach(row);XCTAssertTrue(row.label.contains("播放 1 次"));row.tap();app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(6));app.buttons["暂停"].firstMatch.tap();image("Real backup actual playback after restore");tap(app.buttons["收起播放页"].firstMatch)
   }
 
+  func testLiveRestoredTimeline() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:10));for _ in 0..<18{if element.isHittable{return};let above=element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    func progress()->XCUIElement{app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch}
+    func checkCold(_ name:String){XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:15));let item=progress();reach(item);XCTAssertTrue((item.value as? String ?? "").contains("/ 3:53"));XCTAssertFalse(item.isEnabled,"Metadata must never enable native seeking before prepare");XCTAssertFalse(app.buttons["暂停"].firstMatch.exists);image(name)}
+    func layout(_ id:String){let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap();openSettings(app,page:"skins");let item=app.descendants(matching:.any).matching(identifier:"player-layout-"+id).firstMatch;reach(item);item.tap();XCTAssertTrue(app.buttons["skins-sheet-close"].waitForNonExistence(timeout:10));app.buttons["打开播放页"].firstMatch.tap()}
+    selectClassicSourcePlayback(in:app);openSettings(app,page:"storage");let entry=app.buttons["open-listening-statistics"];reach(entry);entry.tap();app.buttons["清空本机听歌统计"].tap();app.alerts.buttons["清空"].tap();XCTAssertTrue(app.staticTexts["播放统计已清空"].waitForExistence(timeout:10));app.buttons["收起听歌统计"].tap()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;reach(local);local.tap();app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app);XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
+    let field=app.textFields["搜索本地歌曲艺术家专辑"];field.tap();for c in "Shape of You"{field.typeText(String(c))};XCTAssertEqual(field.value as? String,"Shape of You");field.typeText("\n");app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(6));app.buttons["暂停"].firstMatch.tap();let nativeValue=progress().value as? String ?? "";XCTAssertTrue(nativeValue.contains("/ 3:53"));let savedPosition=nativeValue.components(separatedBy:" / ").first
+    app.terminate();app.launch();app.buttons["打开播放页"].firstMatch.tap();checkCold("Real restored timeline classic paused");XCTAssertEqual((progress().value as? String)?.components(separatedBy:" / ").first,savedPosition)
+    layout("am");checkCold("Real restored timeline AM paused");layout("wave");checkCold("Real restored timeline wave paused");let ring=app.descendants(matching:.any).matching(identifier:"wave-seek-ring").firstMatch;XCTAssertTrue(ring.waitForExistence(timeout:10));XCTAssertTrue((ring.value as? String ?? "").contains("/ 3:53"));XCTAssertFalse(ring.isEnabled)
+    app.buttons["播放"].firstMatch.tap();XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"wave-spectrum-bars").firstMatch.waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertTrue(progress().isEnabled);XCTAssertTrue(ring.isEnabled);app.buttons["暂停"].firstMatch.tap();image("Real restored timeline native duration after explicit playback")
+    layout("classic");let expected=(progress().value as? String)?.components(separatedBy:" / ").first;app.terminate();app.launch();app.buttons["打开播放页"].firstMatch.tap();checkCold("Real restored timeline second restart");XCTAssertEqual((progress().value as? String)?.components(separatedBy:" / ").first,expected)
+  }
+
   func testLocalPlaylistDualSystem() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)
