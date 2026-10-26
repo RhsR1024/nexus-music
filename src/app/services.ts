@@ -126,7 +126,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   let playbackController:ReturnType<typeof createPlaybackSession>['controller']|undefined;
   const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal)=>{
     const media=await resolveTrack(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');return media;
-  },files:createOfflineDownloadFiles(),uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,isInUse:track=>{
+  },files:createOfflineDownloadFiles(),concurrency:()=>preferences.getSnapshot().downloadConcurrency,uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,isInUse:track=>{
     const state=playbackController?.getSnapshot();if(state?.intent!=='playing')return false;
     const current=state.queue.entries.find(entry=>entry.id===state.queue.currentId)?.track;
     return !!current&&trackKey(current.origin)===trackKey(track.origin);

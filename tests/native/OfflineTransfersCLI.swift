@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import AVFoundation
 
 @main struct OfflineTransfersCLI {
   static func checked<T>(_ body: (@escaping (Result<T, Error>) -> Void) -> Void) async throws -> T {
@@ -51,7 +52,36 @@ import CryptoKit
     let capacity = try await wait(restored, third) { $0.state == "failed" }
     guard capacity.error == "capacity", !FileManager.default.fileExists(atPath: files.appendingPathComponent(third).path) else { fatalError("native capacity must reject extra payload") }
     try await checked { restored.discard(third, completion: $0) }
-    let receipt: [String: Any] = ["transport":"macOS Foundation URLSession ephemeral; not iOS background acceptance", "pausedBytes":paused.received,"completedBytes":[completedA.received,completedB.received],"sha256":[args[3],args[4]],"cancelAndRetry":true,"journalRecovery":true,"ackRetainsPayload":true,"capacityEnforced":true]
+    let policyRoot = root.appendingPathComponent("concurrency"), policyFiles = policyRoot.appendingPathComponent("files"), policyMeta = policyRoot.appendingPathComponent("metadata")
+    let policy = OfflineBackgroundTransfers(directory: policyFiles, metadata: policyMeta, configuration: .ephemeral)
+    try await checked { policy.configure(8 * 1024 * 1024 * 1024, completion: $0) }
+    do { try await checked { policy.setConcurrency(4, completion: $0) }; fatalError("invalid concurrency accepted") } catch {}
+    try await checked { policy.setConcurrency(1, completion: $0) }
+    for (name, endpoint) in [(first,"/a"),(second,"/b"),(third,"/a")] { _ = try await checked { policy.begin(args[1]+endpoint, name: name, headers: [:], resume: false, completion: $0) } }
+    _ = try await wait(policy, first) { $0.received >= 65536 }
+    guard await snapshot(policy, second)?.state == "queued", await snapshot(policy, third)?.state == "queued" else { fatalError("limit one must queue later native tasks") }
+    try await checked { policy.setConcurrency(2, completion: $0) }; _ = try await wait(policy, second) { $0.received >= 65536 }
+    guard await snapshot(policy, third)?.state == "queued" else { fatalError("limit two") }
+    try await checked { policy.setConcurrency(3, completion: $0) }; _ = try await wait(policy, third) { $0.received >= 65536 }
+    guard await snapshot(policy, first)?.state == "running", await snapshot(policy, second)?.state == "running" else { fatalError("three real transfers must overlap") }
+    try await checked { policy.setConcurrency(1, completion: $0) }
+    let fourth = "00000000-0000-4000-8000-000000000004.audio"
+    _ = try await checked { policy.begin(args[1]+"/b", name: fourth, headers: [:], resume: false, completion: $0) }
+    guard await snapshot(policy, first)?.state == "running", await snapshot(policy, second)?.state == "running", await snapshot(policy, third)?.state == "running", await snapshot(policy, fourth)?.state == "queued" else { fatalError("decrease must retain started tasks and defer new work") }
+    for (name, expected) in [(first,args[3]),(second,args[4]),(third,args[3]),(fourth,args[4])] {
+      let state = try await wait(policy, name) { $0.state == "completed" || $0.state == "failed" }
+      guard state.state == "completed", try hash(policyFiles.appendingPathComponent(name)) == expected else { fatalError("concurrency payload mismatch") }
+      let decoded = try AVAudioFile(forReading: policyFiles.appendingPathComponent(name))
+      guard decoded.length > 0, let buffer = AVAudioPCMBuffer(pcmFormat: decoded.processingFormat, frameCapacity: 4096) else { fatalError("downloaded audio format") }
+      try decoded.read(into: buffer); guard buffer.frameLength > 0 else { fatalError("downloaded audio decode") }
+    }
+    let policyRestart = OfflineBackgroundTransfers(directory: policyFiles, metadata: policyMeta, configuration: .ephemeral)
+    let fifth = "00000000-0000-4000-8000-000000000005.audio", sixth = "00000000-0000-4000-8000-000000000006.audio"
+    for (name, endpoint) in [(fifth,"/a"),(sixth,"/b")] { _ = try await checked { policyRestart.begin(args[1]+endpoint, name: name, headers: [:], resume: false, completion: $0) } }
+    _ = try await wait(policyRestart, fifth) { $0.received >= 65536 }
+    guard await snapshot(policyRestart, sixth)?.state == "queued" else { fatalError("native persisted concurrency must survive restart") }
+    for name in [sixth,fifth] { try await checked { policyRestart.stop(name, pause: false, completion: $0) }; _ = try await wait(policyRestart, name) { $0.state == "cancelled" } }
+    let receipt: [String: Any] = ["transport":"macOS Foundation URLSession ephemeral; not iOS background acceptance", "pausedBytes":paused.received,"completedBytes":[completedA.received,completedB.received],"sha256":[args[3],args[4]],"cancelAndRetry":true,"journalRecovery":true,"ackRetainsPayload":true,"capacityEnforced":true,"concurrencyOneTwoThree":true,"decreaseKeepsActive":true,"restartKeepsConcurrency":true,"concurrencyPayloadCopiesVerified":4,"downloadedAudioExtensionPCMDecoded":true,"totalQuota8GiBAccepted":true]
     print(String(data: try JSONSerialization.data(withJSONObject: receipt, options: [.sortedKeys]), encoding: .utf8)!)
   }
 }

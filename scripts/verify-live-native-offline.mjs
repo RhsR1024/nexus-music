@@ -26,7 +26,7 @@ const run=(command,args)=>new Promise((resolveRun,reject)=>{
   child.on('exit',code=>code===0?resolveRun({stdout,stderr}):reject(new Error(`Native probe exited ${code}: ${stderr.slice(-3000)}`)));
 });
 const binary=join(output,'native-offline-probe');
-await run('xcrun',['swiftc','-swift-version','5',...sources.slice(0,2),'-o',binary]);
+await run('xcrun',['swiftc','-swift-version','5',...sources.slice(0,2),'-framework','AVFoundation','-o',binary]);
 const requests=[];
 const server=createServer((request,response)=>{
   const index=request.url==='/a'?0:request.url==='/b'?1:-1;if(index<0){response.writeHead(404).end();return;}

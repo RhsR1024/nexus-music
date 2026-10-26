@@ -1,4 +1,4 @@
-import {useState,useSyncExternalStore} from 'react';
+import {useRef,useState,useSyncExternalStore} from 'react';
 import {Alert,Pressable,SectionList,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
@@ -7,12 +7,15 @@ import {BatchSelectionBar} from './BatchSelectionBar.tsx';
 import {selectionAll,selectionByListOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {controls,radius,space,typography} from './tokens.ts';
 
 export function DownloadSettings({services,openTasks}:{services:Services;openTasks:()=>void}){
   const {palette:p}=useTheme();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.offlineDownloads.subscribe,services.offlineDownloads.getSnapshot);
-  const stats=services.offlineDownloads.getStatistics(),[message,setMessage]=useState('');
+  const stats=services.offlineDownloads.getStatistics(),[message,setMessage]=useState(''),[saving,setSaving]=useState(false),locked=useRef(false);
+  const applyConcurrency=(value:1|2|3)=>{if(locked.current)return;locked.current=true;setSaving(true);setMessage('');void services.offlineDownloads.updateConcurrency(value,()=>services.preferences.update({downloadConcurrency:value})).then(()=>setMessage(`下载并发已设为 ${value}`)).catch(()=>setMessage('下载并发未保存，请重试；已开始的任务继续结算。')).finally(()=>{locked.current=false;setSaving(false);});};
+  const chooseConcurrency=(value:1|2|3)=>{if(saving||value===preferences.downloadConcurrency)return;if(value===1){applyConcurrency(value);return;}Alert.alert('提高下载并发？',`同时下载 ${value} 个任务可能增加平台限流、网络失败和设备资源占用。失败任务可稍后重试。`,[{text:'保持当前',style:'cancel'},{text:`使用 ${value} 并发`,onPress:()=>applyConcurrency(value)}]);};
   return <View style={{gap:20,paddingTop:12}}>
     <Text style={{color:p.secondary,lineHeight:22}}>在线下载音质跟随播放偏好；私人曲库按服务端返回保存。仅完整保存并通过校验的文件可离线播放。</Text>
     <View style={{borderRadius:22,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,overflow:'hidden'}}>
@@ -20,6 +23,11 @@ export function DownloadSettings({services,openTasks}:{services:Services;openTas
       <Pressable testID="settings-open-downloadTasks" accessibilityRole="button" accessibilityLabel="查看下载任务与文件" onPress={openTasks} style={{minHeight:82,padding:18,borderTopWidth:1,borderTopColor:p.border,flexDirection:'row',alignItems:'center',gap:14}}>
         <Ionicons name="download-outline" size={24} color={p.accent}/><View style={{flex:1,gap:5}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>下载任务与文件</Text><Text style={{color:p.secondary,fontSize:13}}>{stats.pending} 个待处理 · {stats.files} 个已保存</Text></View><Ionicons name="chevron-forward" size={20} color={p.secondary}/>
       </Pressable>
+    </View>
+    <View style={{gap:space.md}}><Text accessibilityRole="header" style={{...typography.heading,color:p.text}}>同时下载任务数</Text>
+      <Text testID="download-concurrency-summary" accessibilityLiveRegion="polite" style={{...typography.body,color:p.secondary}}>最多 {preferences.downloadConcurrency} 个任务{saving?' · 正在保存':''}</Text>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:space.sm}}>{([1,2,3] as const).map(value=><Pressable key={value} testID={`download-concurrency-${value}`} accessibilityRole="radio" accessibilityLabel={`${value} 个并发${value===1?'（推荐）':''}`} accessibilityState={{selected:preferences.downloadConcurrency===value,disabled:saving}} disabled={saving} onPress={()=>chooseConcurrency(value)} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:preferences.downloadConcurrency===value?p.selected:p.surface,opacity:saving?.5:1}}><Text style={{...typography.body,color:p.accent}}>{value} 个{value===1?'（推荐）':''}</Text></Pressable>)}</View>
+      <Text style={{...typography.caption,color:p.secondary}}>限制后续启动的任务；降低上限不强行中断已开始的传输。暂停、取消或完成后释放名额，等待任务按提交顺序启动；部分设备会依次下载，实际并行数量受系统限制。</Text>
     </View>
     <View style={{gap:12}}><Text accessibilityRole="header" style={{color:p.secondary,fontSize:13}}>离线文件容量上限</Text>
       <Text testID="offline-capacity-summary" style={{color:p.secondary}}>{(stats.bytes/1048576).toFixed(1)} MB / {preferences.offlineLimitMB} MB</Text>

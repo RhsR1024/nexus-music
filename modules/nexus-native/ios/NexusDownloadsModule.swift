@@ -9,6 +9,11 @@ public final class NexusDownloadsModule: Module {
         switch result { case .success: promise.resolve(); case .failure: promise.reject("DOWNLOAD_QUOTA", "下载容量设置未保存") }
       }
     }
+    AsyncFunction("setConcurrency") { (value: Int, promise: Promise) in
+      OfflineBackgroundTransfers.shared.setConcurrency(value) { result in
+        switch result { case .success: promise.resolve(); case .failure: promise.reject("DOWNLOAD_CONCURRENCY", "下载并发设置未保存") }
+      }
+    }
     AsyncFunction("snapshot") { (name: String, promise: Promise) in
       OfflineBackgroundTransfers.shared.snapshot(name) { promise.resolve($0?.dictionary) }
     }

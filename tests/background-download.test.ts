@@ -10,7 +10,7 @@ function rig(options:{autoBegin?:boolean}={}){
   const states=new Map<string,BackgroundDownloadState>();
   const calls:{stop:[string,boolean][];discard:string[];acknowledge:string[];begins:string[]}={stop:[],discard:[],acknowledge:[],begins:[]};
   const native:BackgroundDownloadNative={
-    configure:async()=>{},
+    configure:async()=>{},setConcurrency:async()=>{},
     snapshot:async name=>states.get(name)??null,
     async begin(_url,name,_headers,resume){
       calls.begins.push(name);
@@ -79,9 +79,9 @@ test('a vanished journal entry fails instead of waiting forever',async()=>{
   assert.deepEqual(r.calls.begins,['gone.audio']);
 });
 
-test('recoverState reports only durable paused or cancelled states',async()=>{
+test('recoverState distinguishes live native work from durable pause, cancel and waiting',async()=>{
   const r=rig();
-  for(const [state,expected] of [['paused','paused'],['pausing','paused'],['cancelled','cancelled'],['cancelling','cancelled'],['running',undefined]] as const){
+  for(const [state,expected] of [['paused','paused'],['pausing','paused'],['cancelled','cancelled'],['cancelling','cancelled'],['running','downloading'],['completed','downloading'],['failed','failed'],['queued',undefined]] as const){
     r.set({fileName:'a.audio',state,received:0,expected:0});
     assert.equal(await r.adapter.recoverState!('a.audio'),expected,state);
     r.forget('a.audio');

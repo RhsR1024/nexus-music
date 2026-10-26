@@ -1,8 +1,9 @@
 import {OfflineDownloadInterrupted,type OfflineDownloadFiles} from './offlineDownloads.ts';
 
-export interface BackgroundDownloadState {fileName:string;state:'running'|'pausing'|'cancelling'|'paused'|'cancelled'|'failed'|'completed';received:number;expected:number;error?:string}
+export interface BackgroundDownloadState {fileName:string;state:'queued'|'running'|'pausing'|'cancelling'|'paused'|'cancelled'|'failed'|'completed';received:number;expected:number;error?:string}
 export interface BackgroundDownloadNative {
   configure(maximum:number):Promise<void>;
+  setConcurrency(maximum:number):Promise<void>;
   snapshot(name:string):Promise<BackgroundDownloadState|null>;
   begin(url:string,name:string,headers:Readonly<Record<string,string>>,resume:boolean):Promise<BackgroundDownloadState>;
   stop(name:string,pause:boolean):Promise<void>;
@@ -34,11 +35,12 @@ export function createBackgroundDownload(native:BackgroundDownloadNative,files:O
   return {
     ...files,independentTransfers:true,
     configure:maximum=>native.configure(maximum),
+    setConcurrency:maximum=>native.setConcurrency(maximum),
     async stopDownload(name,pause){
       await native.stop(name,pause);
-      while(true){const state=remember(await native.snapshot(name));if(!state||!['running','pausing','cancelling'].includes(state.state))return;await delay();}
+      while(true){const state=remember(await native.snapshot(name));if(!state||!['queued','running','pausing','cancelling'].includes(state.state))return;await delay();}
     },
-    async recoverState(name){const state=remember(await native.snapshot(name));return state?.state==='paused'||state?.state==='pausing'?'paused':state?.state==='cancelled'||state?.state==='cancelling'?'cancelled':undefined;},
+    async recoverState(name){const state=remember(await native.snapshot(name));return state?.state==='running'||state?.state==='completed'?'downloading':state?.state==='failed'?'failed':state?.state==='paused'||state?.state==='pausing'?'paused':state?.state==='cancelled'||state?.state==='cancelling'?'cancelled':undefined;},
     async download(url,name,headers,options){
       if(options?.signal?.aborted)throw new OfflineDownloadInterrupted(0);
       remember(await native.begin(url,name,headers??{},(options?.offset??0)>0));

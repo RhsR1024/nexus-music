@@ -29,6 +29,8 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
   private var session: URLSession!
   private var records: [String: OfflineTransferRecord] = [:]
   private var tasks: [String: URLSessionDownloadTask] = [:]
+  private var admitted = Set<Int>()
+  private var concurrency = 1
   private var storageError = false
   private var maximumTotalBytes: Int64 = 2 * 1024 * 1024 * 1024
   private var payloadBytes: Int64 = 0
@@ -68,7 +70,9 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
         } catch { try manager.moveItem(at: journal, to: self.metadata.appendingPathComponent("journal-invalid-\(UUID().uuidString).json")) }
       }
     let quotaFile = metadata.appendingPathComponent("quota.json")
-    if manager.fileExists(atPath: quotaFile.path), let value = try? JSONDecoder().decode(Int64.self, from: Data(contentsOf: quotaFile)), value > 0, value <= maximumBytes { maximumTotalBytes = value }
+    if manager.fileExists(atPath: quotaFile.path), let value = try? JSONDecoder().decode(Int64.self, from: Data(contentsOf: quotaFile)), value > 0, value <= 8 * 1024 * 1024 * 1024 { maximumTotalBytes = value }
+    let concurrencyFile = metadata.appendingPathComponent("concurrency.json")
+    if let data = try? Data(contentsOf: concurrencyFile), let value = try? JSONDecoder().decode(Int.self, from: data), (1...3).contains(value) { concurrency = value }
     payloadBytes = try usedPayloadBytes()
   }
 
@@ -83,13 +87,13 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
         self.tasks[pair.0] = task
         if record.intent == "cancel" { task.cancel() }
         else if record.intent == "pause" { self.pauseTask(task, name: pair.0, generation: pair.1) }
-        else if task.state == .suspended { task.resume() }
+        else if task.state == .running || task.state == .canceling { self.admitted.insert(task.taskIdentifier) }
       }
       for (name, var record) in self.records where ["running", "pausing", "cancelling"].contains(record.state) && self.tasks[name] == nil {
         record.state = record.intent == "cancel" ? "cancelled" : record.intent == "pause" ? "paused" : "failed"
         record.error = record.state == "failed" ? "interrupted" : nil; self.records[name] = record
       }
-      try? self.persist(); self.ready = true
+      self.schedule(); try? self.persist(); self.ready = true
       let waiting = self.pending; self.pending.removeAll(); waiting.forEach { $0() }
     } }
   }
@@ -102,10 +106,24 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
   }
   func configure(_ maximum: Int64, completion: @escaping (Result<Void, Error>) -> Void) {
     perform { do {
-      guard !self.storageError, maximum > 0, maximum <= self.maximumBytes else { throw Self.failure("quota") }
+      guard !self.storageError, maximum > 0, maximum <= 8 * 1024 * 1024 * 1024 else { throw Self.failure("quota") }
       try JSONEncoder().encode(maximum).write(to: self.metadata.appendingPathComponent("quota.json"), options: .atomic)
       self.maximumTotalBytes = maximum; self.payloadBytes = try self.usedPayloadBytes(); completion(.success(()))
     } catch { completion(.failure(Self.failure("无法保存下载容量设置"))) } }
+  }
+  // Existing transfers finish after a decrease; new work observes the bound.
+  private func schedule() {
+    for (name, task) in tasks.sorted(by: { $0.value.taskIdentifier < $1.value.taskIdentifier }) {
+      guard admitted.count < concurrency else { break }
+      if !admitted.contains(task.taskIdentifier), records[name]?.state == "running", records[name]?.intent == nil, task.state == .suspended { admitted.insert(task.taskIdentifier); task.resume() }
+    }
+  }
+  func setConcurrency(_ value: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+    perform { do {
+      guard !self.storageError, (1...3).contains(value) else { throw Self.failure("concurrency") }
+      try JSONEncoder().encode(value).write(to: self.metadata.appendingPathComponent("concurrency.json"), options: .atomic)
+      self.concurrency = value; self.schedule(); completion(.success(()))
+    } catch { completion(.failure(Self.failure("无法保存下载并发设置"))) } }
   }
   private static func valid(_ name: String) -> Bool { name.range(of: "^[a-f0-9-]{8,80}\\.(audio|mp3|m4a|aac|flac|wav|aiff)$", options: .regularExpression) != nil }
   private static func failure(_ code: String) -> NSError { NSError(domain: "NexusOffline", code: 1, userInfo: [NSLocalizedDescriptionKey: code]) }
@@ -124,7 +142,7 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
     lastWrite = Date().timeIntervalSince1970
   }
   private func perform(_ work: @escaping () -> Void) { queue.async { self.connect(); if self.ready { work() } else { self.pending.append(work) } } }
-  func snapshot(_ name: String, completion: @escaping (OfflineTransferRecord?) -> Void) { perform { completion(self.records[name]) } }
+  func snapshot(_ name: String, completion: @escaping (OfflineTransferRecord?) -> Void) { perform { var record = self.records[name]; if record?.state == "running", let task = self.tasks[name], !self.admitted.contains(task.taskIdentifier) { record?.state = "queued" }; completion(record) } }
 
   func begin(_ url: String, name: String, headers: [String: String], resume: Bool, completion: @escaping (Result<OfflineTransferRecord, Error>) -> Void) {
     perform { do {
@@ -148,7 +166,7 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
       self.records[name] = record
       do { try self.persist() } catch { self.records[name] = old; task.cancel(); throw error }
       try? FileManager.default.removeItem(at: resumeFile)
-      task.taskDescription = name + "|" + record.generation; self.tasks[name] = task; task.resume(); completion(.success(record))
+      task.taskDescription = name + "|" + record.generation; self.tasks[name] = task; self.schedule(); completion(.success(record))
     } catch { completion(.failure(Self.failure("无法保存或启动后台下载"))) } }
   }
 
@@ -165,7 +183,7 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
     task.cancel { data in self.queue.async {
       guard var record = self.records[name], record.generation == generation, record.intent == "pause" else { return }
       self.storeResume(data, name: name); record.state = "paused"; self.records[name] = record
-      self.tasks.removeValue(forKey: name); try? self.persist()
+      self.tasks.removeValue(forKey: name); self.admitted.remove(task.taskIdentifier); self.schedule(); try? self.persist()
     } }
   }
   func stop(_ name: String, pause: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -228,6 +246,7 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
     } catch { record.state = "failed"; record.error = record.error ?? "response-or-storage"; records[pair.0] = record; try? persist() }
   }
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    admitted.remove(task.taskIdentifier); defer { schedule() }
     guard let pair = identity(task), var record = records[pair.0], record.generation == pair.1 else { return }
     tasks.removeValue(forKey: pair.0)
     if record.state == "completed" { return }

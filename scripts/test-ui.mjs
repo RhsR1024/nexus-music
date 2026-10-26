@@ -22,7 +22,7 @@ if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEX
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -430,6 +430,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveRestoredTimeline')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveRestoredTimeline');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveThemeConfig');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveRetainedAudio')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveRetainedAudio');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadPolicy')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadPolicy');
   if(!liveBackupSettingsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveBackupSettings');
   if(!liveStatisticsSyncUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveStatisticsSync');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');

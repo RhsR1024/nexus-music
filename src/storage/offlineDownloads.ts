@@ -19,8 +19,9 @@ export interface OfflineDownloadMedia {url:string;headers?:Readonly<Record<strin
 export interface OfflineDownloadFiles {
   independentTransfers?:boolean;
   configure?(maximum:number):Promise<void>;
+  setConcurrency?(maximum:number):Promise<void>;
   stopDownload?(fileName:string,pause:boolean):Promise<void>;
-  recoverState?(fileName:string):Promise<'paused'|'cancelled'|undefined>;
+  recoverState?(fileName:string):Promise<'downloading'|'paused'|'cancelled'|'failed'|undefined>;
   recoverDownload?(fileName:string,options?:{signal?:AbortSignal}):Promise<number|undefined>;
   acknowledge?(fileName:string):Promise<void>;
   download(url:string,fileName:string,headers?:Readonly<Record<string,string>>,options?:{signal?:AbortSignal;offset?:number;validator?:string;onValidator?:(validator:string|undefined)=>void}):Promise<number>;
@@ -43,6 +44,7 @@ export interface OfflineDownloadOptions {
   files:OfflineDownloadFiles;
   uuid():string;
   now():number;
+  concurrency?:()=>number;
   maxBytes?:number;
   maxTotalBytes?:()=>number;
   isInUse?:(track:Track)=>boolean;
@@ -69,10 +71,20 @@ function validateRecord(value:unknown):OfflineDownloadRecord{
 export class OfflineDownloadStore {
   private items:readonly OfflineDownloadRecord[]=[];
   private listeners=new Set<()=>void>();
-  private tail:Promise<unknown>=Promise.resolve();
   private mutationTail:Promise<unknown>=Promise.resolve();
   private active=new Map<string,AbortController>();
   private runs=new Map<string,Promise<void>>();
+  private admitted=new Set<string>();
+  private waiting:{id:string;resolve:()=>void}[]=[];
+  private policyTail:Promise<unknown>=Promise.resolve();
+  private concurrency(){const value=this.options.concurrency?.()??3;if(!Number.isInteger(value)||value<1||value>3)throw Error('下载并发设置无效');return this.options.files.independentTransfers?value:1;}
+  private drain(){while(this.waiting.length&&this.admitted.size<this.concurrency()){const next=this.waiting.shift()!;this.admitted.add(next.id);next.resolve();}}
+  private admit(id:string,adopting:boolean){if(adopting){this.admitted.add(id);return Promise.resolve();}return new Promise<void>(resolve=>{this.waiting.push({id,resolve});this.drain();});}
+  private releaseWaiting(id:string){const next=this.waiting.find(item=>item.id===id);if(next){this.waiting=this.waiting.filter(item=>item!==next);next.resolve();}}
+  updateConcurrency(value:number,persist:()=>Promise<void>){
+    if(!Number.isInteger(value)||value<1||value>3)return Promise.reject(Error('下载并发设置无效'));
+    const run=this.policyTail.then(async()=>{const old=this.options.concurrency?.()??3;await this.options.files.setConcurrency?.(value);try{await persist();}catch(error){await this.options.files.setConcurrency?.(old);throw error;}this.drain();});this.policyTail=run.catch(()=>{});return run;
+  }
   private pauseRequested=new Set<string>();
   private cancelRequested=new Set<string>();
   private removed=new Set<string>();
@@ -88,6 +100,7 @@ export class OfflineDownloadStore {
   private async update(id:string,patch:Partial<OfflineDownloadRecord>){await this.mutate(async()=>{const current=this.items.find(item=>item.id===id);if(!current)return;const next=this.items.map(item=>item.id===id?{...item,...patch,updatedAt:this.options.now()}:item);await this.save(next);this.publish(next);});}
   async restore(){
     await this.mutate(async()=>{
+      await this.options.files.setConcurrency?.(this.options.concurrency?.()??3);
       const saved=await this.repository.get<SavedDownloads>('offlineDownloads.v1');if(!saved)return;
       try{
         if(saved.version!==1||!Array.isArray(saved.items)||saved.items.length>1000)throw new Error();
@@ -102,18 +115,21 @@ export class OfflineDownloadStore {
             return item.digest===digest?item:{...item,digest};
           }
           const state=await this.options.files.recoverState?.(item.fileName);
-          return state?{...item,status:state}:item.status==='downloading'?{...item,status:'queued'}:item;
+          return state?{...item,status:state,...(state==='failed'?{error:item.error??'后台下载失败，可重试'}:{})}:item.status==='downloading'?{...item,status:'queued'}:item;
         }));
-        await this.save(repaired);this.items=repaired;
+        await this.save(repaired);this.items=repaired;for(const item of repaired)if(item.status==='downloading')this.admitted.add(item.id);
         await Promise.all(repaired.filter(item=>item.status==='completed').map(item=>this.options.files.acknowledge?.(item.fileName).catch(()=>{})));
       }catch{throw new Error('离线下载数据无法读取');}
     });
+    // Native work already has a URLSession owner. Observe it immediately,
+    // without waiting for online providers to initialize or admitting new work.
+    for(const item of this.items)if(item.status==='downloading')void this.start(item.id).catch(()=>{});
   }
   /** Native tasks are adopted before resolving URLs; fallback transfers retain
-   * their serial tail. Each record has at most one live JS observer.
+   * serial admission. Each record has at most one live JS observer.
    */
   async resumeQueued(): Promise<void> {
-    const queued = this.items.filter(item => item.status === 'queued').map(item => item.id);
+    const queued = this.items.filter(item => item.status === 'queued'||item.status==='downloading').sort((a,b)=>Number(b.status==='downloading')-Number(a.status==='downloading')).map(item => item.id);
     if(this.options.files.independentTransfers){await Promise.all(queued.map(id=>this.start(id).catch(()=>{})));return;}
     for (const id of queued) {
       if (!this.items.some(item => item.id === id && item.status === 'queued')) continue;
@@ -130,14 +146,16 @@ export class OfflineDownloadStore {
   }
   async start(id:string){
     const existing=this.runs.get(id);if(existing)return existing;
-    const run=(this.options.files.independentTransfers?Promise.resolve():this.tail).then(async()=>{
-      const item=this.items.find(value=>value.id===id);if(this.removed.has(id)||this.pauseRequested.has(id)||this.cancelRequested.has(id)||!item||item.status==='completed'||item.status==='paused'||item.status==='cancelled')return;
+    const run=Promise.resolve().then(async()=>{
+      await this.admit(id,this.items.find(value=>value.id===id)?.status==='downloading');
+      try{const item=this.items.find(value=>value.id===id);if(this.removed.has(id)||this.pauseRequested.has(id)||this.cancelRequested.has(id)||!item||item.status==='completed'||item.status==='paused'||item.status==='cancelled')return;
       const abort=new AbortController();this.active.set(id,abort);
       let invalidFile=false,capacityExceeded=false,integrityFailed=false,validator:string|undefined;
       try{
         await this.update(id,{status:'downloading',error:undefined});
         const current=this.items.find(value=>value.id===id);if(!current)throw new Error('下载任务不存在');
         if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
+        await this.options.files.setConcurrency?.(this.options.concurrency?.()??3);
         await this.options.files.configure?.(this.options.maxTotalBytes?.()??2*1024*1024*1024);
         const recovered=await this.options.files.recoverDownload?.(current.fileName,{signal:abort.signal});
         const media=recovered===undefined?await this.options.resolve(current.track,abort.signal):undefined;if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
@@ -163,27 +181,28 @@ export class OfflineDownloadStore {
         else if(paused)await this.update(id,{status:'paused',bytes:0,partialBytes:partial,digest:undefined,validator,error:undefined});
         else if(!abort.signal.aborted)await this.update(id,{status:'failed',bytes:0,partialBytes:partial,digest:undefined,validator,error:integrityFailed?'离线文件完整性校验失败':error instanceof Error&&error.message==='离线容量已满，请先清理已保存文件'?error.message:'下载失败，原有数据保留'});
       }finally{this.active.delete(id);}
+      }finally{this.admitted.delete(id);this.drain();}
     });
-    this.runs.set(id,run);this.tail=run.catch(()=>{});try{await run;}finally{if(this.runs.get(id)===run)this.runs.delete(id);}
+    this.runs.set(id,run);try{await run;}finally{if(this.runs.get(id)===run)this.runs.delete(id);}
   }
   async pause(id:string){
     const item=this.items.find(value=>value.id===id);if(!item||!['queued','downloading'].includes(item.status))return;
     // A run can already be active while its downloading state is being saved.
     // Publish the pause intent synchronously so that window cannot start I/O.
-    this.pauseRequested.add(id);const active=this.active.get(id);active?.abort('pause');
+    this.pauseRequested.add(id);this.releaseWaiting(id);const active=this.active.get(id);active?.abort('pause');
     if(!active)await this.options.files.stopDownload?.(item.fileName,true);
     if(item.status==='queued')await this.update(id,{status:'paused',partialBytes:Math.max(0,this.options.files.partialSize(item.fileName)),error:undefined});
-    if(active)await this.runs.get(id);
+    await this.runs.get(id);
   }
   /** Sollin E-1301: cancelling keeps the record as 下载已取消 for later retry. */
   async cancel(id:string){
     const item=this.items.find(value=>value.id===id);if(!item||item.status==='completed')return;
     // The transfer's abort handler consumes this intent before committing its
     // terminal state. Keep it until that run has settled.
-    this.cancelRequested.add(id);this.pauseRequested.delete(id);const active=this.active.get(id);active?.abort('cancel');
+    this.cancelRequested.add(id);this.pauseRequested.delete(id);this.releaseWaiting(id);const active=this.active.get(id);active?.abort('cancel');
     if(!active)await this.options.files.stopDownload?.(item.fileName,false);
     if(!active||['queued','paused','failed','cancelled'].includes(item.status))await this.update(id,{status:'cancelled',error:undefined});
-    if(active)await this.runs.get(id);
+    await this.runs.get(id);
     this.cancelRequested.delete(id);
   }
   async resume(id:string){const item=this.items.find(value=>value.id===id);if(!item)throw new Error('下载任务不存在');if(item.status==='paused')await this.update(id,{status:'queued',error:undefined});this.pauseRequested.delete(id);return this.start(id);}
@@ -198,7 +217,7 @@ export class OfflineDownloadStore {
     if(this.options.isInUse?.(item.track))throw new OfflineDownloadInUse();
     this.removed.add(id);
     try{
-      this.pauseRequested.delete(id);const active=this.active.get(id);active?.abort('remove');const run=this.runs.get(id);if(run)await run;
+      this.pauseRequested.delete(id);this.releaseWaiting(id);const active=this.active.get(id);active?.abort('remove');const run=this.runs.get(id);if(run)await run;
       if(this.options.isInUse?.(item.track))throw new OfflineDownloadInUse();
       await this.mutate(async()=>{const next=this.items.filter(value=>value.id!==id);await this.save(next);this.publish(next);});
       try{await this.options.files.remove(item.fileName);}catch{/* A missing file is already removed. */}

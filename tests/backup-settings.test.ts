@@ -53,3 +53,10 @@ test('backup size limits apply to UTF-8 bytes on both export and import',()=>{
 test('canonical offset identities preserve opaque Unicode and path-like server IDs without exporting raw URI keys',()=>{
   const key=JSON.stringify(['navidrome','a'.repeat(64),'曲库/歌曲.mp3']),unsafe=JSON.stringify(['local','files','file:///private/audio.mp3']);assert.deepEqual(settings({lyricOffsets:{[key]:100,[unsafe]:200,'private-non-identity':300}}).preferences.lyricOffsets,{[key]:100});
 });
+
+test('new device-local download concurrency is validated and preserved across old portable settings restore',async()=>{
+  const r=rig();const legacy:Partial<Preferences>={...defaults,volume:.8};delete legacy.downloadConcurrency;r.records.set('preferences.v1',legacy);await r.preferences.restore();assert.equal(r.preferences.getSnapshot().downloadConcurrency,1);assert.equal(r.preferences.getSnapshot().volume,.8);await r.preferences.update({downloadConcurrency:3});
+  for(const value of [0,4,1.5,NaN])await assert.rejects(r.preferences.update({downloadConcurrency:value as 1}));assert.equal(r.preferences.getSnapshot().downloadConcurrency,3);
+  const exported=settings({volume:.6});assert.equal(Object.hasOwn(exported.preferences,'downloadConcurrency'),false);await r.restore(emptyLibrary,emptyPlaybackStats,exported);assert.equal(r.preferences.getSnapshot().downloadConcurrency,3);assert.equal(r.preferences.getSnapshot().volume,.6);
+  const restarted=new PreferenceStore(r.repository);await restarted.restore();assert.equal(restarted.getSnapshot().downloadConcurrency,3);
+});

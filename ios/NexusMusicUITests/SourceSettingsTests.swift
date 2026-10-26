@@ -1626,6 +1626,25 @@ final class SourceSettingsTests: XCTestCase {
     tap("background-sheet-close");app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));app.buttons["播放"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));app.buttons["暂停"].firstMatch.tap();image("Real theme actual playback after restore")
   }
 
+  func testLiveDownloadPolicy() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:10));for _ in 0..<20{if element.isHittable{return};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    func choose(_ value:Int){let e=app.descendants(matching:.any).matching(identifier:"download-concurrency-\(value)").firstMatch;reach(e);e.tap()}
+    func expect(_ value:Int){let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label == %@","最多 \(value) 个任务"),object:app.staticTexts["download-concurrency-summary"]);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:15),.completed)}
+    func openLocal(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let e=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;reach(e);e.tap()}
+    func play(){let clear=app.buttons["清空歌曲筛选"];if clear.exists{clear.tap()};let f=app.textFields["搜索本地歌曲艺术家专辑"];reach(f);f.tap();for c in "Shape of You"{f.typeText(String(c))};XCTAssertEqual(f.value as? String,"Shape of You");f.typeText("\n");app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4))}
+    selectClassicSourcePlayback(in:app);openLocal();app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app);XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20));play();image("Real download policy actual PCM before settings");app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].tap()
+    openSettings(app,page:"downloads");choose(1);expect(1);image("Real download policy recommended one")
+    choose(2);XCTAssertTrue(app.alerts["提高下载并发？"].waitForExistence(timeout:5));image("Real download policy two confirmation");app.alerts.buttons["保持当前"].tap();expect(1)
+    choose(2);app.alerts.buttons["使用 2 并发"].tap();expect(2);image("Real download policy two saved")
+    choose(3);XCTAssertTrue(app.alerts["提高下载并发？"].waitForExistence(timeout:5));image("Real download policy three confirmation");app.alerts.buttons["使用 3 并发"].tap();expect(3);image("Real download policy three saved")
+    app.terminate();app.launch();openSettings(app,page:"downloads");reach(app.staticTexts["download-concurrency-summary"]);expect(3);image("Real download policy three after restart");choose(1);expect(1);image("Real download policy lower to one")
+    app.terminate();app.launch();openSettings(app,page:"downloads");reach(app.staticTexts["download-concurrency-summary"]);expect(1);image("Real download policy one after restart");openLocal();play();app.buttons["暂停"].firstMatch.tap();image("Real download policy actual PCM after restart")
+  }
+
   func testLiveRetainedAudio() throws {
     XCUIDevice.shared.orientation = .portrait
     defer{XCUIDevice.shared.orientation = .portrait}
