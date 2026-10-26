@@ -9,6 +9,7 @@ import {viewLocalAudio,type LocalSortField,type LocalSortDirection} from '../dom
 import {LocalScanSettings} from './LocalScanSettings.tsx';
 import {scanFolderKey} from '../domain/localScan.ts';
 import {LocalAudioTools} from './LocalAudioTools.tsx';
+import {RetainedAudio} from './RetainedAudio.tsx';
 import {Cover} from './Cover.tsx';
 import {LocalPlaylistPicker} from './LocalPlaylistPicker.tsx';
 import {defaultDevicePlaylistId} from '../domain/devicePlaylist.ts';
@@ -24,6 +25,7 @@ export function LocalAudioLibrary({services}:{services:Services}) {
   const localPlaylists=useSyncExternalStore(services.devicePlaylists.subscribe,services.devicePlaylists.getSnapshot);
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[mode,setMode]=useState<'songs'|'albums'|'artists'|'folders'|'playlists'>('songs'),[group,setGroup]=useState<string|null>(null),[message,setMessage]=useState(''),[adding,setAdding]=useState<readonly Track[]>();
   const [scanOpen,setScanOpen]=useState(false);
+  const [retainedOpen,setRetainedOpen]=useState(false);
   const [selection,setSelection]=useState(selectionNone),[batchBusy,setBatchBusy]=useState(false);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const sort=preferences.localAudioSortField,direction=preferences.localAudioSortDirection;
@@ -95,6 +97,7 @@ export function LocalAudioLibrary({services}:{services:Services}) {
       {!selection.active&&<><Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>从文件App导入MP3、FLAC、AAC、M4A、WAV、AIFF；复制到此设备，音频不包含在音乐库JSON备份中。每批最多50首、单文件1GiB。</Text>
       <View style={{flexDirection:'row',gap:space.sm,flexWrap:'wrap'}}>{button('导入音频文件',()=>{void importFiles();},busy)}{button('文件夹与扫描',()=>setScanOpen(true),busy,'local-scan-open')}</View>{busy&&<ActivityIndicator accessibilityLabel="正在导入音频" color={p.accent}/>}</>}
       {services.localAudio.hiddenCount()>0&&button(`恢复已移除歌曲（${services.localAudio.hiddenCount()} 首）`,()=>{void services.localAudio.restoreIndex().then(()=>setMessage('已恢复本设备保留的音频索引')).catch(()=>setMessage('恢复未保存，请重试'));},batchBusy,'local-restore-index')}
+      {button(`管理保留副本（${services.localAudio.getRetainedSnapshot().length} 首）`,()=>setRetainedOpen(true),busy||batchBusy,'local-retained-open')}
       {!!message&&<Text accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
       {!selection.active&&<><LocalAudioTools query={query} onQuery={value=>{setQuery(value);setGroup(null);}} field={sort} direction={direction} onSort={setSort}/>
       {(sort==='modifiedAt'||sort==='addedAt')&&files.some(file=>file[sort]===undefined)&&<Text style={{...typography.caption,color:p.secondary}}>旧条目缺少时间记录，排在已知时间之后；不会推测原文件时间。</Text>}
@@ -131,6 +134,7 @@ export function LocalAudioLibrary({services}:{services:Services}) {
       </View>}/>:<FlatList key={`groups-${mode}`} data={groups} numColumns={mode==='albums'?2:1} columnWrapperStyle={mode==='albums'?{justifyContent:'space-between'}:undefined} keyExtractor={group=>group.key} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`${item.name} · ${item.files.length}首`} onPress={()=>setGroup(item.key)} style={{width:mode==='albums'?'48%':'100%',marginVertical:7,padding:12,borderRadius:20,backgroundColor:p.surface,gap:10,flexDirection:mode==='albums'?'column':'row',alignItems:mode==='albums'?'flex-start':'center'}}><Cover services={services} track={item.files[0]!.track} size={mode==='albums'?Math.min(180,Math.max(80,(width-76)/2-24)):48}/><View style={{gap:5,flexShrink:1}}><Text numberOfLines={2} style={{color:p.text,fontWeight:'600'}}>{item.name}</Text><Text style={{color:p.secondary,fontSize:12}}>{item.files.length} 首</Text></View></Pressable>}/>}</>}
       </View>
       <LocalScanSettings store={services.localAudio} visible={scanOpen} onClose={()=>setScanOpen(false)}/>
+      {retainedOpen&&<RetainedAudio services={services} onClose={()=>setRetainedOpen(false)}/>}
       {!!adding&&<View style={{position:'absolute',top:0,bottom:0,left:0,right:0,paddingTop:insets.top+space.md,backgroundColor:p.background[0]}}><LocalPlaylistPicker services={services} tracks={adding??[]} visible={!!adding} onClose={()=>setAdding(undefined)} onAdded={title=>{clearSelection();setMessage(`已添加到本地歌单「${title}」`);}}/></View>}
     </View></Modal>
   </View>;

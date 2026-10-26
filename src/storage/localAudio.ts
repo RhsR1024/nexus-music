@@ -30,17 +30,18 @@ function validate(record:LocalAudioRecord) {
   validateTrack(record.track);if(!Number.isFinite(record.track.durationMs)||!record.track.durationMs||record.track.durationMs<=0)throw new Error('本地音频时长无效');if(record.track.origin.kind!=='local'||record.track.origin.id!==record.id)throw new Error('本地音频身份无效');return record;
 }
 export class LocalAudioStore {
-  private files:readonly LocalAudioRecord[]=[];private visible:readonly LocalAudioRecord[]=[];private listeners=new Set<()=>void>();private tail:Promise<unknown>=Promise.resolve();
+  private files:readonly LocalAudioRecord[]=[];private visible:readonly LocalAudioRecord[]=[];private retained:readonly LocalAudioRecord[]=[];private listeners=new Set<()=>void>();private tail:Promise<unknown>=Promise.resolve();
   private repository:Pick<Repository,'get'|'put'>;private native:LocalAudioNative;
   constructor(repository:Pick<Repository,'get'|'put'>,native:LocalAudioNative){this.repository=repository;this.native=native;}
   private scan:LocalScanState=emptyLocalScan;
   getScanSnapshot=()=>this.scan;
   getSnapshot=()=>this.visible;
+  getRetainedSnapshot=()=>this.retained;
   private persist(files:readonly LocalAudioRecord[],scan=this.scan){return this.repository.put('localAudio.v1',{version:1,files,scan});}
   isFavorite=(id:string)=>this.files.some(file=>file.id===id&&file.favorite===true);
   hiddenCount=()=>this.files.filter(file=>file.hidden&&!file.scanExcluded).length;
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
-  private publish(files:readonly LocalAudioRecord[],scan=this.scan) {this.scan=scan;this.files=files;this.visible=files.filter(file=>!file.hidden&&!file.scanExcluded);for(const listener of this.listeners)listener();}
+  private publish(files:readonly LocalAudioRecord[],scan=this.scan) {this.scan=scan;this.files=files;this.visible=files.filter(file=>!file.hidden&&!file.scanExcluded);this.retained=files.filter(file=>file.hidden||file.scanExcluded);for(const listener of this.listeners)listener();}
   async restore() {
     const state=await this.repository.get<{version:1;files:LocalAudioRecord[];scan?:LocalScanState}>('localAudio.v1');if(!state)return;
     try{if(state.version!==1||!Array.isArray(state.files)||state.files.length>10000)throw new Error();state.files.forEach(validate);if(new Set(state.files.map(file=>file.id)).size!==state.files.length)throw new Error();this.publish(state.files,validateLocalScan(state.scan??emptyLocalScan));}catch{throw new InvalidRecordError();}
@@ -126,6 +127,13 @@ export class LocalAudioStore {
     return this.changeRecords(files=>files.map(file=>wanted.has(file.id)?{...file,hidden:true}:file));
   }
   restoreIndex() {return this.changeRecords(files=>files.map(file=>file.hidden?{...file,hidden:false}:file));}
+  restoreRetained(ids:readonly string[]) {
+    const wanted=new Set(ids);
+    return this.changeRecords(files=>{
+      if([...wanted].some(id=>!files.some(file=>file.id===id&&(file.hidden||file.scanExcluded))))throw Error('保留副本已变化，请刷新后重试');
+      return files.map(file=>!wanted.has(file.id)?file:{...file,hidden:false,...(file.scanExcluded?{scanExcluded:false,manualImport:true,locations:[]}:{} )});
+    });
+  }
   setFavorites(ids:readonly string[],favorite:boolean) {
     const wanted=new Set(ids);
     return this.changeRecords(files=>{
@@ -134,9 +142,11 @@ export class LocalAudioStore {
       return files.map(file=>wanted.has(file.id)?{...file,favorite}:file);
     });
   }
-  remove(id:string) {
+  removeRetained(id:string) {return this.remove(id,true);}
+  remove(id:string,retainedOnly=false) {
     const run=this.tail.then(async()=>{
       const file=this.files.find(file=>file.id===id);if(!file)return{pendingCleanup:false};
+      if(retainedOnly&&!file.hidden&&!file.scanExcluded)throw Error('音频已恢复到列表，请重新确认');
       const token=await this.native.beginRemoval(file.id,file.extension),next=this.files.filter(file=>file.id!==id);
       try{await this.persist(next);}
       catch(error){await this.native.finishRemoval(token,true);throw error;}
