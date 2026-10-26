@@ -19,7 +19,8 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics)$/.test(target));
+const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -286,6 +287,10 @@ const server = createServer(async (req, res) => {
     playlist.payload.title=playlist.payload.title.replace('Sync original ','Sync cloud ');playlist.payload.updatedAt+=1;document.revision+=1;document.deviceId='d'.repeat(32);
     backupFiles.set(path,JSON.stringify(document));res.end('ok');return;
   }
+  if(liveStatisticsSyncUI&&req.url==='/statistics-probe-state'){
+    const raw=[...backupFiles].find(([name])=>name.endsWith('/statistics-v1.json'))?.[1],file=raw?JSON.parse(raw):null;
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({puts:counts.backup?.put??0,gets:counts.backup?.get??0,revision:file?.revision??0,tracks:file?.statistics.items.length??0,playCount:file?.statistics.items.reduce((n,x)=>n+x.playCount,0)??0}));return;
+  }
   if(req.url.startsWith('/backup-dav/')||req.url.startsWith('/sync-dav/')){
     counts.backup??={propfind:0,mkcol:0,put:0,get:0,authFailures:0};
     if(req.headers.authorization!=='Basic '+Buffer.from('fixture-user:fixture-password').toString('base64')){counts.backup.authFailures++;res.writeHead(401);res.end();return;}
@@ -296,7 +301,7 @@ const server = createServer(async (req, res) => {
       else if(req.headers['if-none-match']!=='*'){res.writeHead(400);res.end();return;}
       else if(previous!==undefined){res.writeHead(412);res.end();return;}
       const parts=[];for await(const part of req)parts.push(part);const body=Buffer.concat(parts).toString('utf8');const parsed=JSON.parse(body);
-      if(!['nexus-music','nexus-music-sync'].includes(parsed.format)||/fixture-password|fixture-secret|Authorization/.test(body)){res.writeHead(400);res.end();return;}
+      if(!(['nexus-music','nexus-music-sync'].includes(parsed.format)||liveStatisticsSyncUI&&parsed.format==='nexus-listening-statistics')||/fixture-password|fixture-secret|Authorization/.test(body)){res.writeHead(400);res.end();return;}
       backupFiles.set(req.url,body);if(parsed.format==='nexus-music')backupFiles.set(req.url.slice(0,req.url.lastIndexOf('/')+1)+'broken.json','{synthetic invalid JSON');res.writeHead(previous===undefined?201:204,{ETag:'"'+createHash('sha256').update(body).digest('hex')+'"'});res.end();return;
     }
     if(req.method==='GET'){counts.backup.get++;if(!backupFiles.has(req.url)){res.writeHead(404);res.end();return;}const body=backupFiles.get(req.url),tag='"'+createHash('sha256').update(body).digest('hex')+'"';if(req.headers['if-match']&&req.headers['if-match']!==tag){res.writeHead(412);res.end();return;}res.writeHead(200,{'Content-Type':'application/json',ETag:tag});res.end(body);return;}
@@ -400,7 +405,7 @@ const server = createServer(async (req, res) => {
 });
 // The real local-file test never uses fixture HTTP routes. Give its harness an
 // ephemeral port so an unrelated online regression can keep its fixed port.
-await new Promise((resolve, reject) => { server.once('error', reject); server.listen(liveLocalUI?0:18439, '127.0.0.1', resolve); });
+await new Promise((resolve, reject) => { server.once('error', reject); server.listen(liveLocalUI&&!liveStatisticsSyncUI?0:18439, '127.0.0.1', resolve); });
 mkdirSync(runDirectory,{recursive:true});
 const logPath=resolve(runDirectory,'ui-catalog.log');
 const sourceBefore=sourceSnapshot();
@@ -419,6 +424,7 @@ try {
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalPlaylistBatch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveListeningStatistics');
+  if(!liveStatisticsSyncUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveStatisticsSync');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
   if(!liveDownloadUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadBatch');
   // Always spell out the entry: a previous fixture build must not leak into a
@@ -461,4 +467,4 @@ try {
       catch(error){console.error(`Failure attachment export unavailable: ${error.message}; original result: ${resultPath}`);}
     }
   } catch { console.error(`UI summary unavailable; inspect ${resultPath} and build/logs/ui-catalog.log`); }
-} finally { if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync(resolve(runDirectory,'ui-server-counts.json'),JSON.stringify(counts,null,2));closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }
+} finally { if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync(resolve(runDirectory,'ui-server-counts.json'),JSON.stringify(counts,null,2));if(liveStatisticsSyncUI){const remote=[...backupFiles].find(([name])=>name.endsWith('/statistics-v1.json'))?.[1];if(remote)writeFileSync(resolve(runDirectory,'actual-cloud-statistics.json'),remote);}closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }

@@ -1505,6 +1505,46 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();openStats();reach(rows.firstMatch);XCTAssertEqual(rows.count,1);XCTAssertTrue(rows.firstMatch.label.contains("播放 2 次"));image("Real listening statistics restored after restart");app.buttons["收起听歌统计"].tap()
   }
 
+  func testLiveStatisticsSync() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer{XCUIDevice.shared.orientation = .portrait}
+    let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
+    defer{removeUIInterruptionMonitor(monitor)}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){for _ in 0..<18{if element.isHittable{return};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    func openStats(){openSettings(app,page:"storage");let entry=app.buttons["open-listening-statistics"];reach(entry);entry.tap();XCTAssertTrue(app.buttons["收起听歌统计"].waitForExistence(timeout:10))}
+    func clear(){app.buttons["清空本机听歌统计"].tap();app.alerts.buttons["清空"].tap();XCTAssertTrue(app.staticTexts["播放统计已清空"].waitForExistence(timeout:10))}
+    func cloud(){openSettings(app,page:"storage");let entry=app.buttons["statistics-cloud-open"];reach(entry);entry.tap();XCTAssertTrue(app.buttons["收起统计同步"].waitForExistence(timeout:10))}
+    func action(_ id:String){let button=app.buttons[id];reach(button);XCTAssertTrue(button.isEnabled);button.tap()}
+    func message(_ value:String){let item=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@",value)).firstMatch;XCTAssertTrue(item.waitForExistence(timeout:25))}
+    func probe() throws -> [String:Any]{let done=expectation(description:"Actual statistics HTTP state");var result:[String:Any]=[:];URLSession.shared.dataTask(with:URL(string:"http://127.0.0.1:18439/statistics-probe-state")!){data,_,error in
+      XCTAssertNil(error);if let data=data{result=(try? JSONSerialization.jsonObject(with:data)) as? [String:Any] ?? [:]};done.fulfill()
+    }.resume();wait(for:[done],timeout:10);return result}
+    func pauseAfterPlayback(){app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(6));app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()}
+    let handle=app.buttons["player-drag-handle"].firstMatch;if handle.waitForExistence(timeout:2){handle.tap()}
+    openStats();clear();app.buttons["收起听歌统计"].tap()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;reach(local);local.tap();app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app)
+    message("已导入");let search=app.textFields["搜索本地歌曲艺术家专辑"];search.tap();for c in "Shape of You"{search.typeText(String(c))};XCTAssertEqual(search.value as? String,"Shape of You");search.typeText("\n");app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap();pauseAfterPlayback()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch;reach(webdav);webdav.tap()
+    let address=app.textFields["WebDAV服务器根目录"];if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
+    let old=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","移除WebDAV连接：Public statistics"));while old.firstMatch.exists{reach(old.firstMatch);old.firstMatch.tap();app.alerts.buttons["移除"].tap();message("WebDAV连接与凭据已移除")}
+    let account="Public statistics "+String(Int(Date().timeIntervalSince1970)),folder="public-statistics/"
+    for (field,value) in [(address,"http://127.0.0.1:18439/backup-dav/"),(app.textFields["WebDAV用户名"],"fixture-user")]{reach(field);field.tap();for c in value{field.typeText(String(c))};field.typeText("\n");XCTAssertEqual(field.value as? String,value)}
+    let password=app.secureTextFields["WebDAV密码"];reach(password);password.tap();for c in "fixture-password"{password.typeText(String(c))};password.typeText("\n");let label=app.textFields["WebDAV连接名称"];reach(label);label.tap();for c in account{label.typeText(String(c))};label.typeText("\n");XCTAssertEqual(label.value as? String,account);reach(app.buttons["验证并保存WebDAV"]);app.buttons["验证并保存WebDAV"].tap();XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));image("Real statistics public WebDAV connection");let closeDAV=app.buttons["收起WebDAV"];XCTAssertTrue(waitForHittable(closeDAV,timeout:10));closeDAV.tap();XCTAssertTrue(closeDAV.waitForNonExistence(timeout:10));_=dismissPasswordSuggestion(in:app)
+    cloud();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","统计连接："+account)).firstMatch;reach(connection);connection.tap();let directory=app.textFields["统计同步相对目录"];reach(directory);replaceText(directory,with:folder,in:app);action("statistics-cloud-save");message("统计目录已保存")
+    action("statistics-cloud-refresh");message("云端暂无听歌统计")
+    action("statistics-cloud-upload");XCTAssertTrue(app.alerts["上传听歌统计？"].waitForExistence(timeout:15));image("Real statistics upload confirmation");app.alerts.buttons["取消"].tap();message("上传预览已取消，云端未写入");XCTAssertEqual(try probe()["puts"] as? Int,0)
+    action("statistics-cloud-upload");XCTAssertTrue(app.alerts["上传听歌统计？"].waitForExistence(timeout:15));app.alerts.buttons["继续上传统计"].tap();message("听歌统计已上传并回读验证（修订 #1）");image("Real statistics uploaded revision one");XCTAssertEqual(try probe()["playCount"] as? Int,1);app.buttons["收起统计同步"].tap()
+    openStats();clear();app.buttons["收起听歌统计"].tap();cloud()
+    for _ in 0..<2{action("statistics-cloud-download");message("已合并云端听歌统计（修订 #1）")};app.buttons["收起统计同步"].tap()
+    openStats();let row=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","statistics-row-")).firstMatch;reach(row);XCTAssertTrue(row.label.contains("播放 1 次"));image("Real statistics duplicate merge preserves one play");row.tap();pauseAfterPlayback()
+    cloud();action("statistics-cloud-download");message("已合并云端听歌统计（修订 #1）");action("statistics-cloud-upload");XCTAssertTrue(app.alerts["上传听歌统计？"].waitForExistence(timeout:15));app.alerts.buttons["继续上传统计"].tap();message("听歌统计已上传并回读验证（修订 #2）");let final=try probe();XCTAssertEqual(final["puts"] as? Int,2);XCTAssertEqual(final["playCount"] as? Int,2);image("Real statistics merged and uploaded revision two");app.buttons["收起统计同步"].tap()
+    app.terminate();app.launch();cloud();XCTAssertEqual(directory.value as? String,folder);action("statistics-cloud-refresh");message("云端修订 #2");image("Real statistics cloud configuration after restart");app.buttons["收起统计同步"].tap();openStats();reach(row);XCTAssertTrue(row.label.contains("播放 2 次"));image("Real statistics two plays after restart");app.buttons["收起听歌统计"].tap()
+  }
+
   func testLocalPlaylistDualSystem() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)

@@ -13,6 +13,7 @@ import {CloudSync} from './CloudSync.tsx';
 import {QishuiImport} from './QishuiImport.tsx';
 import {useTheme} from './theme.tsx';
 import {PlaybackStatistics} from './PlaybackStatistics.tsx';
+import {StatisticsCloud} from './StatisticsCloud.tsx';
 
 // One implementation shared by the music library and data settings.
 export function LibraryDataTools({services}:{services:Services}){
@@ -54,6 +55,7 @@ export function LibraryDataTools({services}:{services:Services}){
   }
   return <View style={{gap:12,marginVertical:20}}>
     <PlaybackStatistics services={services}/>
+    <StatisticsCloud services={services}/>
     <Text accessibilityRole="header" style={{color:p.text,fontSize:20,fontWeight:'600'}}>备份与迁移</Text>
     <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{button('导出音乐库备份',()=>{void perform(exportBackup);})}{button('恢复音枢备份',()=>{void perform(importBackup);})}</View>
     <CloudBackup services={services}/><CloudSync services={services}/>

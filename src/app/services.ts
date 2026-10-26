@@ -46,6 +46,7 @@ import { NavidromeClient } from '../providers/navidrome.ts';
 import { nativeSecrets } from '../storage/nativeSecrets.ts';
 import {LibraryStore,validateLibrary} from '../storage/library.ts';
 import {cleanPlaybackStats,PlaybackStatsStore,type PlaybackStatsState} from '../storage/playbackStats.ts';
+import {WebDAVStatistics} from '../storage/webdavStatistics.ts';
 import {MutationQueue} from '../storage/mutations.ts';
 import {encodeBackup} from '../storage/backup.ts';
 import {WebDAVBackups} from '../storage/webdavBackups.ts';
@@ -91,7 +92,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await Font.loadAsync({CupertinoIcons:require('../../assets/fonts/CupertinoIcons.ttf')});
   const libraryMutations=new MutationQueue();
   const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations);await restore('library.v1','音乐库',()=>library.restore());
-  const playbackStats=new PlaybackStatsStore(repository,Date.now,libraryMutations);await restore('playbackStats.v1','播放统计',()=>playbackStats.restore());
+  const playbackStats=new PlaybackStatsStore(repository,Date.now,libraryMutations,Crypto.randomUUID);await restore('playbackStats.v1','播放统计',()=>playbackStats.restore());
   // Recommendations are derived from local library/statistics only. No Sollin
   // account, private endpoint, or remote recommendation protocol is involved.
   const recommendations=new LocalRecommendationStore(library,playbackStats,Date.now);
@@ -191,12 +192,14 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const davBackups=new WebDAVBackups({repository,accounts:davAccounts,transport:davTransport,hash,uuid:Crypto.randomUUID,
     snapshot:date=>encodeBackup(library.getSnapshot(),date,playbackStats.getSnapshot()),restore:backup=>restoreBackup(backup.library,backup.statistics!)});
   await restore('webdav.backup.v1','云备份目录',()=>davBackups.restore());
+  const davStatistics=new WebDAVStatistics({repository,accounts:davAccounts,transport:davTransport,statistics:playbackStats,hash});
+  await restore('webdav.statistics.v1','统计同步目录',()=>davStatistics.restore());
   const davSync=new WebDAVSync({repository,accounts:davAccounts,transport:davTransport,library,mutations:libraryMutations,uuid:Crypto.randomUUID});
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
-  return { songFavorites, coverTheme, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
+  return { songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;
