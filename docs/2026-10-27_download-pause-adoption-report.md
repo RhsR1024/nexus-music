@@ -30,3 +30,5 @@
 - index：`5ce9877619b3b92782456e31beec9151ebdc4406c51599846d47cc366775ac25`
 
 R3采集前candidate.patch、10附件/精确xcresult及外部输入前后SHA均通过；未使用latest/skip-hash。原生暂停真实契约另绑定Native/桥接/JS存储源码、二进制与输入。既有APK --review/395E严格审核沿本批回执，无新增Sollin证据。系统后台/实际App进程终止及真机签名仍待独立验证。
+
+交付：修正源码 `b46d2f665cf8356755031912413b841deca330e7` 已正常push且远端SHA一致；CI `40376417168` pending，`40363241671/a01f71d` in_progress，前一pending `40371822539/40a889a`被single策略自动替换为cancelled，未手动取消/重派。当前1运行/1等待，不把取消或旧版运行计作本修正通过。文档后续提交不改变该轮源绑定。
