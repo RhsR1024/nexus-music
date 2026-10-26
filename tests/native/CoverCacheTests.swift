@@ -23,13 +23,13 @@ import UniformTypeIdentifiers
     assert((hdProperties[kCGImagePropertyPixelWidth] as! Int) == 512 && (hdProperties[kCGImagePropertyPixelHeight] as! Int) == 1024)
     assert(cache.hit(key) == file && cache.hit(hdKey) == hdFile && file != hdFile)
     assert(cache.store(data as Data, key: hdKey, maxPixelSize: 4096) == nil)
-    let smallContext = CGContext(data: nil, width: 40, height: 20, bitsPerComponent: 8, bytesPerRow: 160, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    let smallContext = CGContext(data: nil, width: 100, height: 64, bitsPerComponent: 8, bytesPerRow: 400, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
     let smallData = NSMutableData(), smallDestination = CGImageDestinationCreateWithData(smallData, UTType.png.identifier as CFString, 1, nil)!
     CGImageDestinationAddImage(smallDestination, smallContext.makeImage()!, nil); assert(CGImageDestinationFinalize(smallDestination))
     let smallFile = cache.store(smallData as Data, key: String(repeating: "c", count: 64), maxPixelSize: 1024)!
     let smallImage = CGImageSourceCreateWithURL(URL(string: smallFile)! as CFURL, nil)!
     let smallProperties = CGImageSourceCopyPropertiesAtIndex(smallImage, 0, nil)! as NSDictionary
-    assert((smallProperties[kCGImagePropertyPixelWidth] as! Int) == 40 && (smallProperties[kCGImagePropertyPixelHeight] as! Int) == 20)
+    assert((smallProperties[kCGImagePropertyPixelWidth] as! Int) == 100 && (smallProperties[kCGImagePropertyPixelHeight] as! Int) == 64)
     assert(cache.store(Data(repeating: 0, count: 8 * 1024 * 1024 + 1), key: hdKey, maxPixelSize: 1024) == nil)
     let epoch = cache.epoch; cache.clear(); assert(cache.epoch > epoch && cache.hit(key) == nil && cache.hit(hdKey) == nil)
     print("Native cover cache checks passed: bounded thumbnail, validated image, hashed path and clear epoch")

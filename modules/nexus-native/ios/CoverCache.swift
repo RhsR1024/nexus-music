@@ -25,9 +25,10 @@ final class CoverCache {
           let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
           let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: maxPixelSize] as CFDictionary) else { return nil }
     // Degenerate CDN payloads (tracking pixels, broken covers) decode to tiny
-    // bitmaps; RN's box-blur segmentation faults on them, so reject anything
-    // below real cover resolution and let the placeholder render instead.
-    guard image.width >= 32, image.height >= 32 else { return nil }
+    // bitmaps; RN's box blur (kernel up to ~51 at radius 55) segmentation
+    // faults on images smaller than the kernel, so reject anything below real
+    // cover resolution and let the placeholder render instead.
+    guard image.width >= 48, image.height >= 48 else { return nil }
     let output = NSMutableData()
     guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
     CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)

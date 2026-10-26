@@ -24,6 +24,9 @@ build/tests/native-cache
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/CoverCache.swift tests/native/CoverCacheTests.swift -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers -o build/tests/native-covers
 build/tests/native-covers
 
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/CoverCache.swift tests/native/CoverGuardCLI.swift -framework AppKit -framework ImageIO -framework UniformTypeIdentifiers -o build/tests/native-cover-guard
+build/tests/native-cover-guard "build/tests/cover-guard-$(date +%s)"
+
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/AmbientScene.swift modules/nexus-native/ios/AmbientTransition.swift tests/native/AmbientSceneTests.swift -framework CoreGraphics -o build/tests/native-ambient
 build/tests/native-ambient
 
