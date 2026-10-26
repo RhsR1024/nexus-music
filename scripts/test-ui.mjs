@@ -20,8 +20,9 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
+const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -427,6 +428,7 @@ try {
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalPlaylistBatch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveListeningStatistics');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveRestoredTimeline')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveRestoredTimeline');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveThemeConfig');
   if(!liveBackupSettingsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveBackupSettings');
   if(!liveStatisticsSyncUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveStatisticsSync');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
@@ -471,4 +473,20 @@ try {
       catch(error){console.error(`Failure attachment export unavailable: ${error.message}; original result: ${resultPath}`);}
     }
   } catch { console.error(`UI summary unavailable; inspect ${resultPath} and build/logs/ui-catalog.log`); }
-} finally { if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync(resolve(runDirectory,'ui-server-counts.json'),JSON.stringify(counts,null,2));if(liveStatisticsSyncUI){const remote=[...backupFiles].find(([name])=>name.endsWith('/statistics-v1.json'))?.[1];if(remote)writeFileSync(resolve(runDirectory,'actual-cloud-statistics.json'),remote);}closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true}); }
+} finally {
+  if(themeRecorder)themeRecorder.kill('SIGINT');logWatcher.close();writeFileSync(resolve(runDirectory,'ui-server-counts.json'),JSON.stringify(counts,null,2));
+  if(liveStatisticsSyncUI){const remote=[...backupFiles].find(([name])=>name.endsWith('/statistics-v1.json'))?.[1];if(remote)writeFileSync(resolve(runDirectory,'actual-cloud-statistics.json'),remote);}
+  // Observe the actual OS Save-to-Files output before removing this harness's
+  // temporary Files directory. Never generate or seed a theme import document.
+  if(liveThemeConfigUI&&localFixtureDirectory){
+    try{
+      const names=readdirSync(localFixtureDirectory).filter(name=>/^nexus-theme-\d+\.json$/.test(name));
+      if(names.length!==1)throw Error('Expected one actual saved theme file');
+      const path=resolve(localFixtureDirectory,names[0]),body=readFileSync(path),savedSha256=fileSha256(path);
+      writeFileSync(resolve(runDirectory,'actual-saved-theme.json'),body);
+      const archivedSha256=fileSha256(resolve(runDirectory,'actual-saved-theme.json'));if(savedSha256!==archivedSha256)throw Error('Actual saved theme hash mismatch');
+      writeFileSync(resolve(runDirectory,'actual-saved-theme-receipt.json'),JSON.stringify({name:names[0],bytes:body.length,savedSha256,archivedSha256,temporaryOriginalRemovedAfterArchiving:true},null,2));
+    }catch(error){console.error(`Actual theme export archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
+  }
+  closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true});
+}

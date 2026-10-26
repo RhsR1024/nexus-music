@@ -1601,6 +1601,31 @@ final class SourceSettingsTests: XCTestCase {
     layout("classic");let expected=(progress().value as? String)?.components(separatedBy:" / ").first;app.terminate();app.launch();app.buttons["打开播放页"].firstMatch.tap();checkCold("Real restored timeline second restart");XCTAssertEqual((progress().value as? String)?.components(separatedBy:" / ").first,expected)
   }
 
+  func testLiveThemeConfig() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:10));for _ in 0..<18{if element.isHittable{return};let above=element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    func item(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func tap(_ id:String){let element=item(id);reach(element);element.tap()}
+    selectClassicSourcePlayback(in:app);app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;reach(local);local.tap();app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app);XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
+    let field=app.textFields["搜索本地歌曲艺术家专辑"];field.tap();for c in "Shape of You"{field.typeText(String(c))};XCTAssertEqual(field.value as? String,"Shape of You");field.typeText("\n");app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));app.buttons["暂停"].firstMatch.tap();image("Real theme actual public playback before import");app.buttons["收起播放页"].firstMatch.tap()
+    openSettings(app,page:"appearance");let cover=app.switches["appearance-cover-color"];reach(cover);if cover.value as? String == "1"{cover.tap()};XCTAssertEqual(cover.value as? String,"0")
+    openSettings(app,page:"background");tap("visual-blush");tap("background-solid");XCTAssertTrue(item("visual-blush").isSelected);image("Real theme original configuration")
+    tap("appearance-export-theme");let saveActivity=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Save to Files","存储到文件","儲存到檔案","保存到“文件”"])).firstMatch;for _ in 0..<5{if saveActivity.exists&&saveActivity.isHittable{break};app.swipeUp()};guard saveActivity.waitForExistence(timeout:15) else{let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual theme export share hierarchy";tree.lifetime = .keepAlways;add(tree);XCTFail("Actual OS Save to Files must be available");return};saveActivity.tap()
+    let phone=app.cells.matching(NSPredicate(format:"label IN %@",["On My iPhone","我的iPhone","我的 iPhone","在我的 iPhone"])).firstMatch;if phone.waitForExistence(timeout:3){phone.tap()};let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch;if folder.waitForExistence(timeout:3){folder.tap()}
+    let filename=app.textFields.firstMatch;XCTAssertTrue(filename.waitForExistence(timeout:10));let actualName=filename.value as? String ?? "";XCTAssertTrue(actualName.hasPrefix("nexus-theme-"));image("Real theme OS save actual exported file");let save=app.buttons.matching(NSPredicate(format:"label IN %@",["Save","保存","儲存","存储"])).firstMatch;XCTAssertTrue(save.waitForExistence(timeout:10));XCTAssertTrue(save.isEnabled);save.tap();XCTAssertTrue(item("appearance-export-theme").waitForExistence(timeout:15))
+    tap("background-sheet-close");openSettings(app,page:"appearance");reach(cover);cover.tap();XCTAssertEqual(cover.value as? String,"1");openSettings(app,page:"background");tap("visual-mint");tap("background-gradient");XCTAssertTrue(item("visual-mint").isSelected)
+    func chooseActualExport(){tap("appearance-import-theme");selectLocalFixture(actualName.components(separatedBy:".json").first!,in:app);XCTAssertTrue(app.alerts["导入主题配置"].waitForExistence(timeout:15))}
+    chooseActualExport();image("Real theme import preview cancel");app.alerts.buttons["取消"].tap();XCTAssertTrue(item("visual-mint").isSelected);XCTAssertTrue(item("background-gradient").isSelected)
+    chooseActualExport();app.alerts.buttons["应用主题"].tap();let success=app.alerts["主题已导入"];XCTAssertTrue(success.waitForExistence(timeout:15));XCTAssertEqual(success.buttons.count,1);success.buttons.firstMatch.tap();XCTAssertTrue(item("visual-blush").isSelected);XCTAssertTrue(item("background-solid").isSelected);image("Real theme restored actual configuration")
+    tap("background-sheet-close");app.terminate();app.launch();openSettings(app,page:"appearance");reach(cover);XCTAssertEqual(cover.value as? String,"0");openSettings(app,page:"background");XCTAssertTrue(item("visual-blush").waitForExistence(timeout:10));XCTAssertTrue(item("visual-blush").isSelected);XCTAssertTrue(item("background-solid").isSelected);image("Real theme restored after restart")
+    XCUIDevice.shared.orientation = .landscapeLeft
+    reach(item("appearance-import-theme"));XCTAssertTrue(app.frame.contains(item("appearance-export-theme").frame));image("Real theme landscape action reachability");XCUIDevice.shared.orientation = .portrait
+    tap("background-sheet-close");app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));app.buttons["播放"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));app.buttons["暂停"].firstMatch.tap();image("Real theme actual playback after restore")
+  }
+
   func testLocalPlaylistDualSystem() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)
@@ -1993,7 +2018,7 @@ final class SourceSettingsTests: XCTestCase {
     if gradient.exists && !gradient.isSelected {gradient.tap()}
     // Use the shipping theme for colour evidence, including settings captures.
     let backgroundScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
-    func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.isHittable)}
+    func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.exists && element.isHittable{break};let above=element.exists && element.frame.midY<backgroundScroll.frame.midY;backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.exists && element.isHittable)}
     func reachValue(_ identifier:String,_ target:String,_ up:Bool){
       let label=app.staticTexts["visual-value-"+identifier]
       for _ in 0..<18 {
@@ -2010,6 +2035,16 @@ final class SourceSettingsTests: XCTestCase {
         }
       }
     }
+    // A preceding failed import test can leave its one-pixel photo selected.
+    // Photo skin intentionally prefers the local photo over the cover, so
+    // remove only that known public fixture before asserting cover rendering.
+    let photoName=app.staticTexts["visual-photo-name"];reveal(photoName)
+    if photoName.label.contains("Nexus Visual Fixture.png"){
+      let remove=app.buttons["visual-remove-photo"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+      expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:photoName);waitForExpectations(timeout:10)
+    }
+    XCTAssertTrue(photoName.label.contains("尚未导入"),"Cover regression requires no unrelated personal photo")
+    openSettings(app,page:"background")
     let reset=app.buttons["appearance-reset"]
     XCTAssertTrue(reset.waitForExistence(timeout:5));reset.tap()
     // IMG_4855 records 纯色 / 卡片 30%. Keep the required shipping blush+rose
@@ -3285,16 +3320,17 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testVisualImagesAndPlayerBackgroundPersistence() throws {
     let app=XCUIApplication();app.launch()
+    let viewport=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
     func reveal(_ element:XCUIElement,expectAbove:Bool?=nil){
       for _ in 0..<45 {
-        if element.isHittable{break}
+        if element.exists && element.isHittable{break}
         // RN virtualizes off-screen descendants. After importing a lower card,
         // an absent target is usually above the viewport; forcing the downward
         // gesture in that case searched farther away from it until timeout.
-        let above=expectAbove ?? (element.exists && element.frame.midY<app.frame.midY)
-        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))
+        let above=expectAbove ?? (element.exists && element.frame.midY<viewport.frame.midY)
+        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.7 : 0.35)))
       }
-      XCTAssertTrue(element.isHittable,"Visual control must be visible: \(element.identifier)")
+      XCTAssertTrue(element.exists && element.isHittable,"Visual control must be visible: \(element.identifier)")
     }
     func choose(_ id:String,expectAbove:Bool?=nil){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;reveal(control,expectAbove:expectAbove);control.tap()}
     func importFixture(_ id:String){
@@ -3329,11 +3365,13 @@ final class SourceSettingsTests: XCTestCase {
     let photo=app.buttons["visual-import-photo"];reveal(photo);importFixture("visual-import-photo")
     expectImported("visual-photo-name")
     let importedImage=XCTAttachment(screenshot:app.screenshot());importedImage.name="Imported background and photo previews";importedImage.lifetime = .keepAlways;add(importedImage)
-    choose("background-image",expectAbove:true);choose("player-background-photo");choose("visual-backgroundOpacity-up");choose("visual-playerBlur-up");choose("visual-coverRadius-up");for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()}}
-    let savedValues=["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label}
+    choose("background-image",expectAbove:true);choose("player-background-photo")
+    var savedValues:[String]=[]
+    for id in ["backgroundOpacity","playerBlur","coverRadius"]{choose("visual-"+id+"-up",expectAbove:id=="backgroundOpacity" ? true:nil);let value=app.staticTexts["visual-value-"+id];reveal(value);savedValues.append(value.label)}
+    for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()};expectation(for:NSPredicate(format:"value == %@","1"),evaluatedWith:control);waitForExpectations(timeout:10)}
     app.terminate();app.launch();openSettings(app,page:"background")
-    let restoredPhoto=app.staticTexts["visual-photo-name"];reveal(restoredPhoto);XCTAssertTrue(restoredPhoto.label.contains("Nexus Visual Fixture.png"));let motion=app.switches["visual-motion"];reveal(motion);XCTAssertEqual(motion.value as? String,"1");XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"player-background-photo").firstMatch.isSelected);XCTAssertEqual(["backgroundOpacity","playerBlur","coverRadius"].map {app.staticTexts["visual-value-"+$0].label},savedValues)
-    let removeBackground=app.buttons["visual-remove-background"];reveal(removeBackground);removeBackground.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:10);XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("Nexus Visual Fixture.png"),"Removing a shared background must retain the photo slot")
+    let restoredPhoto=app.staticTexts["visual-photo-name"];reveal(restoredPhoto);XCTAssertTrue(restoredPhoto.label.contains("Nexus Visual Fixture.png"));let motion=app.switches["visual-motion"];reveal(motion);XCTAssertEqual(motion.value as? String,"1");let selected=app.descendants(matching:.any).matching(identifier:"player-background-photo").firstMatch;reveal(selected,expectAbove:true);XCTAssertTrue(selected.isSelected);var restoredValues:[String]=[];for id in ["backgroundOpacity","playerBlur","coverRadius"]{let value=app.staticTexts["visual-value-"+id];reveal(value,expectAbove:id=="backgroundOpacity" ? true:nil);restoredValues.append(value.label)};XCTAssertEqual(restoredValues,savedValues)
+    let removeBackground=app.buttons["visual-remove-background"];reveal(removeBackground,expectAbove:true);removeBackground.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:10);let retainedPhoto=app.staticTexts["visual-photo-name"];reveal(retainedPhoto);XCTAssertTrue(retainedPhoto.label.contains("Nexus Visual Fixture.png"),"Removing a shared background must retain the photo slot")
     let removePhoto=app.buttons["visual-remove-photo"];reveal(removePhoto);removePhoto.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:10)
     app.terminate();app.launch();openSettings(app,page:"background");reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Persisted visual image settings and fallback";screenshot.lifetime = .keepAlways;add(screenshot)

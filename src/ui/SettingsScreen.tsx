@@ -114,8 +114,8 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
     const timer=setTimeout(()=>{appearanceOffset.current=0;accentAnchorSession.current=-1;anchorAccentField();},250);
     return()=>clearTimeout(timer);
   },[appearanceSheet.visible,appearanceSheet.section,appearanceSheet.session]);
-  const sheetHeader=<View style={{flexDirection:'row',alignItems:'center',gap:appearanceSheet.section==='background'?0:12,marginTop:appearanceSheet.section==='background'?appearanceSheetLayout.titleGap:0}}>
-    <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,fontSize:23.6,fontWeight:'800',color:settingsInk[sheetDark?'dark':'light'],transform:[{translateY:1.1}]}}>{titles[appearanceSheet.section]}</Text>
+  const sheetHeader=<View style={{flexDirection:'row',alignItems:'center',flexWrap:'wrap',rowGap:8,gap:appearanceSheet.section==='background'?0:12,marginTop:appearanceSheet.section==='background'?appearanceSheetLayout.titleGap:0}}>
+    <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,minWidth:appearanceSheet.section==='background'?120:undefined,fontSize:23.6,fontWeight:'800',color:settingsInk[sheetDark?'dark':'light'],transform:[{translateY:1.1}]}}>{titles[appearanceSheet.section]}</Text>
     {appearanceSheet.section==='background'?<BackgroundThemeActions services={services}/>:<Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{width:48,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>}
   </View>;
   return <View style={{flex:1}} onAccessibilityEscape={page==='home'?undefined:back}>

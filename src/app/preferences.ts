@@ -64,7 +64,9 @@ export class PreferenceStore {
   update(patch: Partial<Preferences>) {return this.mutate(()=>patch);}
   private mutate(patch:(value:Preferences)=>Partial<Preferences>) {
     const next = this.mutations.run(async () => {
-      const value = validatePreferences({ ...this.value, ...patch(this.value) });
+      // Every new write is already past the cover-default migration, including
+      // the first explicit choice on a fresh installation.
+      const value = validatePreferences({ ...this.value, ...patch(this.value),coverColorDefaultOn:true } as Preferences);
       await this.repository.put('preferences.v1', value); this.value = value;
       for (const listener of this.listeners) listener();
     });

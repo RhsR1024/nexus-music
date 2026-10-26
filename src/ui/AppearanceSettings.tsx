@@ -3,7 +3,7 @@ import {VisualSettings} from './VisualSettings.tsx';
 import {Text} from './Typography.tsx';
 import {useRef,useState,useSyncExternalStore} from 'react';
 import {Alert, Pressable, Share, StyleSheet, Switch, Text as NativeText, View} from 'react-native';
-import {File, Paths} from 'expo-file-system';
+import {ThemeConfigActions} from './ThemeConfigActions.tsx';
 import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
@@ -22,11 +22,10 @@ export function BackgroundThemeActions({services}:{services:Services}){
   const favorite=value.favoriteVisualTheme===value.visualTheme;
   const toggleFavorite=()=>{void services.preferences.update({favoriteVisualTheme:favorite?null:value.visualTheme}).catch(()=>Alert.alert('主题收藏未保存','原收藏保留，请重试。'));};
   const shareTheme=()=>{void Share.share({message:`音枢主题 · ${themeLabels[value.visualTheme]} · ${styleLabels[value.backgroundStyle]}`}).catch(()=>{});};
-  const exportTheme=async()=>{const file=new File(Paths.cache,`nexus-theme-${Date.now()}.json`);try{file.write(JSON.stringify({visualTheme:value.visualTheme,accent:value.accent,backgroundStyle:value.backgroundStyle,cardOpacity:value.cardOpacity},null,2));await Share.share({url:file.uri,title:'音枢主题配置'});}catch{Alert.alert('主题配置导出失败','请重试。');}finally{if(file.exists)file.delete();}};
   const icon=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,id?:string,accessibility?:{hint?:string;selected?:boolean},longPress?:()=>void,size=25,offsetY=0)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityHint={accessibility?.hint} accessibilityState={accessibility?.selected===undefined?undefined:{selected:accessibility.selected}} onPress={action} onLongPress={longPress} delayLongPress={500} style={{width:48,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color={theme.palette.text} style={offsetY?{transform:[{translateY:offsetY}]}:undefined}/></Pressable>;
   return <View accessibilityLabel="主题操作" style={{flexDirection:'row',alignItems:'center'}}>
     {icon(favorite?'bookmark':'bookmark-outline',favorite?'取消收藏当前主题':'收藏当前主题',toggleFavorite,'appearance-favorite-theme',{hint:'长按随机切换主题',selected:favorite},shuffleTheme,25,1)}
-    {icon('download-outline','导出主题配置',()=>{void exportTheme();})}
+    <ThemeConfigActions services={services}/>
     {icon('share-outline','分享当前主题',shareTheme)}
     {icon('refresh','恢复默认外观',()=>{void services.preferences.update({...appearanceDefaults}).catch(()=>Alert.alert('外观未保存','之前的设置已保留，请重试。'));},'appearance-reset')}
   </View>;
@@ -95,7 +94,7 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
             <Text numberOfLines={1} style={{width:31,marginLeft:6.3,flexShrink:0,color:ink,fontSize:15.2,fontWeight:'600',transform:[{translateY:-.4}]}}>{styleLabels[value.backgroundStyle]}</Text>
             <Text style={{width:4,flexShrink:0,color:ink,fontSize:15.2,fontWeight:'600',textAlign:'center',transform:[{translateY:.6}]}}>·</Text>
             <Text numberOfLines={1} style={{width:32.3,marginLeft:5.7,flexShrink:0,color:ink,fontSize:15.2,fontWeight:'600',transform:[{translateY:-.4}]}}>卡片</Text>
-            <Text numberOfLines={1} style={{width:35.5,flexShrink:0,color:ink,fontSize:15.2,fontWeight:'600',transform:[{translateY:.3}]}}>{Math.round(value.cardOpacity*100)}%</Text>
+            <Text numberOfLines={1} style={{minWidth:35.5,flexShrink:0,color:ink,fontSize:15.2,fontWeight:'600',transform:[{translateY:.3}]}}>{Math.round(value.cardOpacity*100)}%</Text>
           </View>
         </View>
       </View>
