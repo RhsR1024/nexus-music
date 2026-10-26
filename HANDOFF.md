@@ -1,3 +1,9 @@
+## 2026-10-27 批次6恢复偏移及回归修正
+
+原生已暂停而JS偏移未落盘的恢复分支已回填有效partialBytes。真实MP3负证据131072→0/resume=false/无Range，修正后131072→131072/resume=true/Range续传且完整SHA一致；新增正式Native桥接/JS存储契约，622检查。最终真实MP3 Release `SourceUITests-1793038088417` 1/0/0、149.899秒、10附件来源/亲看，配置/Native均1、零下载记录、两owned SHA与单队列保留。旧CI批量用例显式选择2并保持原断言，另加两项实际在途检查，1/0/0、231.524秒；其夹具图未作UI验收。 见[回执](docs/2026-10-27_download-pause-adoption-report.md)。
+
+本节已解决下节“下一修复partialBytes”项；真实契约是同一Native进程重建JS存储/旧记录窗口，不冒充iOS系统后台、App实际终止或真机签名。40a889a已正常push/远端一致，40371822539等待、40363241671仍运行；待本修正提交后核对single队列。其余命名/侧车/保存位置/平台质量和真实provider多任务等继续，总目标active。
+
 ## 2026-10-27 批次6：下载并发设置
 
 下载页1/2/3并发选择、默认1与2/3风险确认/取消已接线，主调度名额及原生URLSession实际启动上限/持久化、已有任务认领、失败保留与旧备份兼容落实；总额度8GiB与单文件2GiB分开。621检查、完整native exit0、真实两首MP3原生1→2→3并发/降低/重建引擎、四副本SHA和.audio PCM解码通过。最终真实MP3 Release `SourceUITests-1793035837166` 1/0/0、141.770秒、10附件来源/亲看，重启3→1及实际PCM和Native/pref一致核对。 见[回执](docs/2026-10-27_download-concurrency-report.md)。

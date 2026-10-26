@@ -115,6 +115,10 @@ export class OfflineDownloadStore {
             return item.digest===digest?item:{...item,digest};
           }
           const state=await this.options.files.recoverState?.(item.fileName);
+          if(state==='paused'){
+            const observed=this.options.files.partialSize(item.fileName),partialBytes=Number.isSafeInteger(observed)&&observed>=0&&observed<=(this.options.maxBytes??2*1024*1024*1024)?observed:item.partialBytes??0;
+            return {...item,status:state,partialBytes};
+          }
           return state?{...item,status:state,...(state==='failed'?{error:item.error??'后台下载失败，可重试'}:{})}:item.status==='downloading'?{...item,status:'queued'}:item;
         }));
         await this.save(repaired);this.items=repaired;for(const item of repaired)if(item.status==='downloading')this.admitted.add(item.id);

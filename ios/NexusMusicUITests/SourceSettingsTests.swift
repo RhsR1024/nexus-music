@@ -1355,6 +1355,11 @@ final class SourceSettingsTests: XCTestCase {
       if let failure{throw failure};return try XCTUnwrap(result)
     }
     func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    // The scenario requires two in-flight transfers. Select that policy
+    // through the production UI rather than relying on a historic default.
+    openSettings(app,page:"downloads")
+    func policy(_ value:Int){let e=app.descendants(matching:.any).matching(identifier:"download-concurrency-\(value)").firstMatch;reveal(e);e.tap();if value>1{XCTAssertTrue(app.alerts["提高下载并发？"].waitForExistence(timeout:5));app.alerts.buttons["使用 \(value) 并发"].tap()};let saved=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label == %@","最多 \(value) 个任务"),object:app.staticTexts["download-concurrency-summary"]);XCTAssertEqual(XCTWaiter.wait(for:[saved],timeout:15),.completed)}
+    policy(1);policy(2)
     openSettings(app,page:"sources")
     type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439");type(app.textFields["Navidrome用户名"],"fixture-user");type(app.secureTextFields["Navidrome密码"],"fixture-password")
     app.buttons["验证并保存连接"].tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
@@ -1387,6 +1392,8 @@ final class SourceSettingsTests: XCTestCase {
     let active=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in rows.allElementsBoundByIndex.count>=2},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[active],timeout:30),.completed,"Two held downloads must appear as tasks")
     let summary=app.staticTexts["offline-task-summary"];XCTAssertTrue(summary.waitForExistence(timeout:8));XCTAssertTrue(summary.label.contains("2 个待处理"),summary.label)
+    let bothRunning=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in summary.label.contains("2 个正在下载")},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[bothRunning],timeout:20),.completed,"The explicit two-task policy must admit both held transfers")
     // The row View's center sits over its action buttons; the content
     // Pressable that owns onLongPress lives in the row's upper half.
     func rowContent(_ row:XCUIElement)->XCUICoordinate{return row.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.2))}
@@ -1423,6 +1430,7 @@ final class SourceSettingsTests: XCTestCase {
       RunLoop.current.run(until:Date().addingTimeInterval(2))
     }
     XCTAssertTrue(app.staticTexts["暂无已下载音频"].waitForExistence(timeout:10))
+    openSettings(app,page:"downloads");policy(1)
     openSettings(app,page:"sources");let removeAccount=app.buttons["移除连接：fixture-user"];reveal(removeAccount);removeAccount.tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
   }
