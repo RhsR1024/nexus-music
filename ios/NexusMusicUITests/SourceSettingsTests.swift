@@ -1459,6 +1459,18 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["本地 MP3 · 原始文件"].exists)
     let favorite=app.buttons["收藏歌曲"].firstMatch;XCTAssertEqual(favorite.value as? String,"已收藏");favorite.tap();XCTAssertEqual(favorite.value as? String,"未收藏");favorite.tap();XCTAssertEqual(favorite.value as? String,"已收藏")
     image("Real audio restored PCM playback");app.buttons["暂停"].firstMatch.tap()
+    app.buttons["收起播放页"].firstMatch.tap();openSettings(app,page:"storage")
+    let clear=app.buttons["清理临时音频、封面和歌词缓存"]
+    for _ in 0..<16{if clear.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(clear.isHittable);clear.tap()
+    let confirmation=app.alerts["清理临时缓存？"]
+    XCTAssertTrue(confirmation.waitForExistence(timeout:5));XCTAssertTrue(confirmation.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","离线下载及本地音频")).firstMatch.exists)
+    image("Real audio cache clear confirmation");confirmation.buttons["取消"].tap();XCTAssertTrue(confirmation.waitForNonExistence(timeout:5));XCTAssertTrue(clear.isEnabled)
+    clear.tap();confirmation.buttons["清理"].tap()
+    XCTAssertTrue(app.staticTexts["已清理临时缓存，离线下载与本地音频已保留"].waitForExistence(timeout:20));image("Real audio cache clear completed")
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let reopen=app.buttons["打开播放页"];XCTAssertTrue(reopen.waitForExistence(timeout:10));reopen.tap();app.buttons["播放"].firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:30));XCTAssertTrue(app.buttons["暂停"].firstMatch.isHittable);image("Real audio playback retained after cache clear");app.buttons["暂停"].firstMatch.tap()
   }
 
   func testLocalPlaylistDualSystem() throws {

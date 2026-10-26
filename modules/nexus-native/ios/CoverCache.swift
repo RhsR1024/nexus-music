@@ -17,6 +17,15 @@ final class CoverCache {
     guard valid(key) else { return nil }
     let file = directory.appendingPathComponent(key + ".jpg")
     guard FileManager.default.fileExists(atPath: file.path) else { return nil }
+    // Existing caches predate the store guard. Validate hits too, so an upgrade
+    // cannot hand an old tracking pixel or damaged file back to RN's blur path.
+    guard let source = CGImageSourceCreateWithURL(file as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+          let width = properties[kCGImagePropertyPixelWidth] as? Int,
+          let height = properties[kCGImagePropertyPixelHeight] as? Int,
+          width >= 48, height >= 48 else {
+      try? FileManager.default.removeItem(at: file); return nil
+    }
     try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
     return file.absoluteString
   }

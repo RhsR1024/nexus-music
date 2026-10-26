@@ -1,3 +1,4 @@
+import {themeCovers} from './fixtures/theme-covers.mjs';
 import {photoArtwork} from './fixtures/photo-artwork.mjs';
 import {fixtureFont} from './fixtures/font.mjs';
 import {silentMP3} from './fixtures/silent-mp3.mjs';
@@ -128,8 +129,7 @@ const pagerPages=[];
 const heldDiscoveryResponses=[];
 const transitionVersion=String(Date.now()),heldThemeResponses=[],releasedThemeColors=new Set();
 let transitionFixture=false,themeRecorder;
-// Original solid 32x32 and three-stripe 24x24 RGB fixtures; no user covers.
-const themeCovers={multi:'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAIklEQVR4nGP4z8CAFWEXxSMxatCoQaMGjRo0atCoQQNvEADG3T3fu7tafwAAAABJRU5ErkJggg==',red:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKM2KqT+3SCjEsKHX1bAMROq78ums7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD26NAXoPyCF5AAAAAElFTkSuQmCC',blue:'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPElEQVR4nO3RQREAMAjEwKNKqqj+HWCjEsKHX1bAMRPqvs6ms7oeDwz4A2QiZCJkImQiZCJkImQiZKKQD7ROAZW9UfakAAAAAElFTkSuQmCC'};
+
 const matchingAudio=Buffer.alloc(44+48000*2*120);audio.copy(matchingAudio,0,0,44);matchingAudio.writeUInt32LE(matchingAudio.length-8,4);matchingAudio.writeUInt32LE(matchingAudio.length-44,40);
 for(let offset=44;offset<matchingAudio.length;offset+=audio.length-44)audio.copy(matchingAudio,offset,44,Math.min(audio.length,44+matchingAudio.length-offset));
 const matchingScript=`/**\n * @name Nexus Matching Fixture\n * @version 1.0-test\n */
