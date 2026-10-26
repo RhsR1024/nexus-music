@@ -1473,6 +1473,38 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:30));XCTAssertTrue(app.buttons["暂停"].firstMatch.isHittable);image("Real audio playback retained after cache clear");app.buttons["暂停"].firstMatch.tap()
   }
 
+  func testLiveListeningStatistics() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    let statisticsList=app.descendants(matching:.any).matching(identifier:"statistics-list").firstMatch
+    func top(){for _ in 0..<10{if app.buttons["statistics-group-songs"].isHittable{break};statisticsList.swipeDown()}}
+    func tapHeader(_ item:XCUIElement){top();XCTAssertTrue(item.isHittable);item.tap()}
+    func reach(_ item:XCUIElement){for _ in 0..<16{if item.isHittable{break};statisticsList.swipeUp()};if !item.isHittable{image("Real listening statistics reach failure");let tree=XCTAttachment(string:app.debugDescription);tree.name="Real statistics reach hierarchy";tree.lifetime = .keepAlways;add(tree)};XCTAssertTrue(item.isHittable)}
+    func openStats(){openSettings(app,page:"storage");let entry=app.buttons["open-listening-statistics"];for _ in 0..<18{if entry.isHittable{break};app.swipeUp()};XCTAssertTrue(entry.isHittable);entry.tap();XCTAssertTrue(app.buttons["收起听歌统计"].waitForExistence(timeout:10));top()}
+    let handle=app.buttons["player-drag-handle"].firstMatch;if handle.waitForExistence(timeout:2){handle.tap()}
+    // Establish the baseline through the product confirmation, never by seeding
+    // counters. This dedicated simulator contains only public acceptance data.
+    openStats();app.buttons["清空本机听歌统计"].tap();app.alerts.buttons["清空"].tap()
+    XCTAssertTrue(app.staticTexts["播放统计已清空"].waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["暂无此范围的听歌统计，实际播放后会出现在这里。"].exists)
+    app.buttons["收起听歌统计"].tap();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;XCTAssertTrue(local.waitForExistence(timeout:15));local.tap()
+    app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app)
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
+    let input=app.textFields["搜索本地歌曲艺术家专辑"];input.tap();for character in "Shape of You"{input.typeText(String(character))};XCTAssertEqual(input.value as? String,"Shape of You");input.typeText("\n");XCTAssertTrue(app.buttons["local-track-0"].waitForExistence(timeout:8));app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap()
+    app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(6));app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    openStats();let rows=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","statistics-row-"));XCTAssertTrue(app.staticTexts["statistics-counts"].label.contains("歌曲 1 · 已知歌手 0 · 已知专辑 0"));image("Real listening statistics overview");reach(rows.firstMatch);XCTAssertEqual(rows.count,1);XCTAssertTrue(rows.firstMatch.label.contains("Shape of You - Ed Sheeran"));image("Real listening statistics songs")
+    tapHeader(app.buttons["按播放次数"]);XCTAssertTrue(app.buttons["按播放次数"].isSelected);tapHeader(app.buttons["statistics-group-artists"]);reach(rows.firstMatch);XCTAssertEqual(rows.count,1);XCTAssertTrue(rows.firstMatch.label.contains("未知艺术家"))
+    tapHeader(app.buttons["statistics-group-albums"]);reach(rows.firstMatch);XCTAssertTrue(rows.firstMatch.label.contains("未知专辑"));rows.firstMatch.tap();XCTAssertTrue(app.buttons["返回统计分组"].waitForExistence(timeout:5));reach(rows.firstMatch);XCTAssertTrue(rows.firstMatch.label.contains("Shape of You"));app.buttons["返回统计分组"].tap()
+    tapHeader(app.buttons["全部日期"]);XCTAssertTrue(app.buttons["取消选择日期"].waitForExistence(timeout:5));let date=app.buttons.matching(NSPredicate(format:"label MATCHES %@","[0-9]{4}-[0-9]{2}-[0-9]{2} · .*" )).firstMatch;XCTAssertTrue(date.waitForExistence(timeout:8));date.tap();image("Real listening statistics day and hours")
+    XCUIDevice.shared.orientation = .landscapeLeft
+    XCTAssertTrue(app.buttons["收起听歌统计"].waitForExistence(timeout:10));reach(rows.firstMatch);XCTAssertTrue(app.buttons["清空本机听歌统计"].isHittable);image("Real listening statistics landscape reachability")
+    XCUIDevice.shared.orientation = .portrait
+    tapHeader(app.buttons["statistics-group-songs"]);reach(rows.firstMatch);rows.firstMatch.tap();XCTAssertTrue(app.buttons["收起听歌统计"].waitForNonExistence(timeout:10));app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:30));app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    app.terminate();app.launch();openStats();reach(rows.firstMatch);XCTAssertEqual(rows.count,1);XCTAssertTrue(rows.firstMatch.label.contains("播放 2 次"));image("Real listening statistics restored after restart");app.buttons["收起听歌统计"].tap()
+  }
+
   func testLocalPlaylistDualSystem() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)

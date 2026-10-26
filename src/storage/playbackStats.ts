@@ -3,19 +3,22 @@ import {trackKey,validateTrack,type Track} from '../domain/track.ts';
 import type {Repository} from './repository.ts';
 import {InvalidRecordError} from './recovery.ts';
 import {MutationQueue} from './mutations.ts';
-export interface PlaybackStat {track:Track;playCount:number;listenedMs:number;firstPlayedAt:number;lastPlayedAt:number}
+import {addActivity,boundActivity,maximumTotalListeningBuckets,validateActivity,type ListeningBucket} from '../domain/listeningActivity.ts';
+export interface PlaybackStat {track:Track;playCount:number;listenedMs:number;firstPlayedAt:number;lastPlayedAt:number;activity?:readonly ListeningBucket[]}
 export interface PlaybackStatsState {version:1;items:readonly PlaybackStat[]}
 export const emptyPlaybackStats:PlaybackStatsState={version:1,items:[]};
 export function validatePlaybackStats(value:unknown):PlaybackStatsState {
   if(!value||typeof value!=='object'||(value as PlaybackStatsState).version!==1||!Array.isArray((value as PlaybackStatsState).items)||(value as PlaybackStatsState).items.length>1000)throw new Error('播放统计格式无效');
-  const state=value as PlaybackStatsState,keys=new Set<string>();
+  const state=value as PlaybackStatsState,keys=new Set<string>();let buckets=0;
   for(const item of state.items){
     validateTrack(item.track);const key=trackKey(item.track.origin);
     if(keys.has(key)||!Number.isSafeInteger(item.playCount)||item.playCount<1||!Number.isFinite(item.listenedMs)||item.listenedMs<0||!Number.isFinite(item.firstPlayedAt)||item.firstPlayedAt<0||!Number.isFinite(item.lastPlayedAt)||item.lastPlayedAt<item.firstPlayedAt)throw new Error('播放统计条目无效');keys.add(key);
+    if(item.listenedMs>Number.MAX_SAFE_INTEGER)throw Error('播放统计时长超出可用范围');
+    if(item.activity!==undefined){validateActivity(item.activity,item.listenedMs,item.playCount);buckets+=item.activity.length;}
   }
-  return state;
+  if(buckets>maximumTotalListeningBuckets)throw Error('分时统计超过保留上限');return state;
 }
-export function cleanPlaybackStats(value:PlaybackStatsState):PlaybackStatsState {validatePlaybackStats(value);return{version:1,items:value.items.map(item=>({track:cleanTrack(item.track),playCount:item.playCount,listenedMs:item.listenedMs,firstPlayedAt:item.firstPlayedAt,lastPlayedAt:item.lastPlayedAt}))};}
+export function cleanPlaybackStats(value:PlaybackStatsState):PlaybackStatsState {validatePlaybackStats(value);return{version:1,items:value.items.map(item=>({track:cleanTrack(item.track),playCount:item.playCount,listenedMs:item.listenedMs,firstPlayedAt:item.firstPlayedAt,lastPlayedAt:item.lastPlayedAt,...(item.activity?{activity:validateActivity(item.activity,item.listenedMs,item.playCount)}:{})}))};}
 export interface ListeningSample {session:string;listenedMs:number;track:Track}
 export class PlaybackStatsStore {
   private value:PlaybackStatsState=emptyPlaybackStats;
@@ -41,9 +44,9 @@ export class PlaybackStatsStore {
       const before=previous?.ms??0;if(sample.listenedMs<=before)return current;
       const delta=sample.listenedMs-before,time=this.now(),counted=previous?.counted??false;
       const old=current.items.find(item=>trackKey(item.track.origin)===key);
-      const item:PlaybackStat={track:cleanTrack(sample.track),playCount:(old?.playCount??0)+(counted?0:1),listenedMs:(old?.listenedMs??0)+delta,firstPlayedAt:old?.firstPlayedAt??time,lastPlayedAt:Math.max(old?.lastPlayedAt??0,time)};
+      const item:PlaybackStat={track:cleanTrack(sample.track),playCount:(old?.playCount??0)+(counted?0:1),listenedMs:(old?.listenedMs??0)+delta,firstPlayedAt:old?.firstPlayedAt??time,lastPlayedAt:Math.max(old?.lastPlayedAt??0,time),activity:addActivity(old?.activity??[],time,delta,counted?0:1)};
       // Commit the session watermark only after persistence succeeds (see below).
-      return{version:1,items:[item,...current.items.filter(value=>trackKey(value.track.origin)!==key)].slice(0,1000)};
+      return{version:1,items:boundActivity([item,...current.items.filter(value=>trackKey(value.track.origin)!==key)].slice(0,1000))};
     },()=>{const key=trackKey(sample.track.origin),previous=this.sessions.get(sample.session);if(!previous||sample.listenedMs>previous.ms)this.sessions.set(sample.session,{key,ms:sample.listenedMs,counted:true});while(this.sessions.size>128)this.sessions.delete(this.sessions.keys().next().value!);});
   }
   clear(){
