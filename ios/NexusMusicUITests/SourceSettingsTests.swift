@@ -3126,13 +3126,25 @@ final class SourceSettingsTests: XCTestCase {
     expectTint(true,"Current red scene after bounded crossfade")
     _=try themeControl("stop=1")
     let transitionBlue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition blue tone")).firstMatch
-    reveal(transitionBlue);transitionBlue.tap()
+    let missing=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition missing tone")).firstMatch
+    // Resolve both rows before starting the native request's ten-second clock.
+    // Slow AX snapshots/scrolling must not turn this late-response probe into
+    // a legitimate timeout and fallback of the current blue identity.
+    reveal(missing);reveal(transitionBlue)
+    XCTAssertTrue(missing.isHittable)
+    let missingFrame=missing.frame,appFrame=app.frame
+    let missingPoint=app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:missingFrame.midX-appFrame.minX,dy:missingFrame.midY-appFrame.minY))
+    transitionBlue.tap()
     XCTAssertEqual(waitForHeldCover("blue"),.completed,"The blue identity itself must reach the held HTTP fixture")
     expectTint(true,"Previous red scene retained while blue cover HTTP is held")
-    let missing=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","transition missing tone")).firstMatch
-    reveal(missing);missing.tap()
-    _=try themeControl("release=blue")
+    missingPoint.tap()
     XCTAssertEqual(waitForHeldCover("missing"),.completed,"The missing identity itself must supersede the held blue request before tint validation")
+    let barrierState=try themeState()
+    let blueAge=(barrierState["heldAgesMs"] as? [String:NSNumber])?["blue"]?.doubleValue
+    XCTAssertNotNil(blueAge,"The old blue response must still be pending when the new owner starts")
+    XCTAssertLessThan(blueAge ?? .infinity,10_000,"The owner switch must precede the production HTTP timeout")
+    let timing=XCTAttachment(string:String(describing:barrierState));timing.name="Cover owner barrier ages before late blue release";timing.lifetime = .keepAlways;add(timing)
+    _=try themeControl("release=blue")
     expectTint(true,"Late blue artwork cannot replace the retained red scene for a newer identity")
     _=try themeControl("release=missing")
     let failedFallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app)

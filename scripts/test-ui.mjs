@@ -128,6 +128,20 @@ const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisu
 if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
 const entryFile=vinylReferenceUI?'tests/e2e/vinyl.tsx':classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
+// Optional public recording for this functional race regression. Controlled
+// artwork identities remain test data and are not visual acceptance evidence.
+const themeAudioPath=process.env.NEXUS_UI_THEME_AUDIO?realpathSync(process.env.NEXUS_UI_THEME_AUDIO):null;
+let themeAudioDuration=null,themeAudioSnapshot=null;
+if(themeAudioPath){
+  if(!coverThemeUI||process.argv.slice(2).length!==1||!themeAudioPath.endsWith('.mp3'))throw Error('Theme audio requires the single cover-theme regression and a complete MP3');
+  const expected=process.env.NEXUS_UI_THEME_AUDIO_SHA256;
+  if(!/^[a-f0-9]{64}$/.test(expected??'')||fileSha256(themeAudioPath)!==expected)throw Error('Theme audio SHA-256 mismatch');
+  if(statSync(themeAudioPath).size>30*1024*1024)throw Error('Theme audio exceeds the bounded regression input');
+  const info=execFileSync('/usr/bin/afinfo',['-r',themeAudioPath],{encoding:'utf8',env:{...process.env,LC_ALL:'C'}});
+  themeAudioDuration=Number(/estimated duration:\s*([\d.]+) sec/.exec(info)?.[1]);
+  if(!Number.isFinite(themeAudioDuration)||themeAudioDuration<=0||themeAudioDuration>1800)throw Error('Theme recording duration unavailable or outside the bounded input');
+  themeAudioSnapshot=externalInputSnapshot([themeAudioPath]);
+}
 const offlineUI=process.argv.slice(2).some(target=>['/testDownloadSettingsAndOfflinePlayback','/testDownloadTaskBatchActions'].some(suffix=>target.endsWith(suffix)));
 let blockOfflineStream=false,holdOfflineFull=false;
 const offlineCounts={full:0,resumed:0,blocked:0,heldFull:0};
@@ -153,8 +167,8 @@ const healthScript=matchingScript.replace('Nexus Matching Fixture','Nexus Health
 // UI transport/skin/font checks need a track that stays active while XCTest
 // scrolls and queries accessibility on slower runners. Natural EOF is covered
 // by the native playback tests; serve truthful 120-second metadata and bytes.
-const navidromeDuration=referenceScene?.duration??120;
-const navidromeAudio=referenceScene?Buffer.alloc(44+48000*2*navidromeDuration):matchingAudio;
+const navidromeDuration=themeAudioDuration??referenceScene?.duration??120;
+const navidromeAudio=themeAudioPath?readFileSync(themeAudioPath):referenceScene?Buffer.alloc(44+48000*2*navidromeDuration):matchingAudio;
 if(referenceScene){
   matchingAudio.copy(navidromeAudio,0,0,44);navidromeAudio.writeUInt32LE(navidromeAudio.length-8,4);navidromeAudio.writeUInt32LE(navidromeAudio.length-44,40);
   for(let offset=44;offset<navidromeAudio.length;offset+=audio.length-44)audio.copy(navidromeAudio,offset,44,Math.min(audio.length,44+navidromeAudio.length-offset));
@@ -164,7 +178,7 @@ if(referenceScene){
 const photoArtworkVersion=String(Date.now()),photoArtworkKinds=['portrait','landscape','missing','corrupt'];
 const photoCoverRequests=counts.photoCoverRequests={};
 const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
-const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScene.id:structuredLyricsUI?'fixture-classic-structured-sparse-v1':classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-v2-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
+const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScene.id:structuredLyricsUI?'fixture-classic-structured-sparse-v1':classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-v2-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:themeAudioPath?'mp3':'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
   if(liveCatalogUI&&req.url==='/live-source-index'){
@@ -215,7 +229,8 @@ const server = createServer(async (req, res) => {
     }
     if(control.searchParams.has('stop')&&themeRecorder){const recorder=themeRecorder;themeRecorder=undefined;recorder.kill('SIGINT');await new Promise(resolve=>recorder.once('exit',resolve));}
     const heldColors=[...new Set(heldThemeResponses.map(item=>item.color))];
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldColors.length,heldColors}));return;
+    const heldAgesMs=Object.fromEntries(heldColors.map(color=>[color,Math.max(...heldThemeResponses.filter(item=>item.color===color).map(item=>Date.now()-item.startedAt))]));
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldColors.length,heldColors,heldAgesMs}));return;
   }
   if(discoveryUI&&req.url.startsWith('/discovery-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
@@ -368,7 +383,7 @@ const server = createServer(async (req, res) => {
       res.once('close',()=>clearInterval(timer));return;
     }
     const audio=navidromeAudio;
-    res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/bytes=(\d+)-(\d*)/);
+    res.setHeader('Content-Type',themeAudioPath?'audio/mpeg':'audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/bytes=(\d+)-(\d*)/);
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),audio.length-1):audio.length-1;if(start>=audio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${audio.length}`);res.end(audio.subarray(start,end+1));}else res.end(audio);return;
   }
   if(method==='getCoverArt'){
@@ -387,10 +402,13 @@ const server = createServer(async (req, res) => {
     // test selects its new album. Only this run's identities are barriers.
     if(coverThemeUI&&params.get('id')?.startsWith('transition-')&&params.get('id').endsWith(`-${transitionVersion}`)){
       const color=params.get('id').split('-')[1];
-      const held={color,send:()=>{counts.transitionReleases??=[];counts.transitionReleases.push(color);if(color==='missing'){res.writeHead(404);res.end();}else{res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers[color],'base64'));}}};
+      const startedAt=Date.now();
+      const event=(type)=>{counts.transitionEvents??=[];counts.transitionEvents.push({color,type,at:Date.now(),ageMs:Date.now()-startedAt});};
+      event('request');
+      const held={color,startedAt,send:()=>{event('release');counts.transitionReleases??=[];counts.transitionReleases.push(color);if(color==='missing'){res.writeHead(404);res.end();}else{res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers[color],'base64'));}}};
       if(releasedThemeColors.has(color)){held.send();return;}
       heldThemeResponses.push(held);
-      res.once('close',()=>{const index=heldThemeResponses.indexOf(held);if(index>=0)heldThemeResponses.splice(index,1);});return;
+      res.once('close',()=>{event('close');const index=heldThemeResponses.indexOf(held);if(index>=0)heldThemeResponses.splice(index,1);});return;
     }
     res.setHeader('Content-Type','image/png');res.end(Buffer.from(coverThemeUI&&params.get('u')==='fixture-theme'?themeCovers[params.get('id')]??themeCovers.red:themeCovers.multi,'base64'));return;
   }
@@ -433,6 +451,7 @@ try {
   const runManifest={schemaVersion:1,startedAt:new Date().toISOString(),resultBundle:resolve(resultPath),sourceBefore,configuration,fixture:{path:fixturePath,sha256:sourceBefore.files[fixturePath]},simulator:process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'};
   if(referenceScene)runManifest.externalInputs={before:referenceScene.snapshot,requiredPaths:referenceScene.paths};
   if(liveLocalPath)runManifest.externalInputs={before:liveLocalSnapshot,requiredPaths:liveLocalPaths};
+  if(themeAudioPath){runManifest.externalInputs={before:themeAudioSnapshot,requiredPaths:[themeAudioPath]};runManifest.fixture.audio={path:themeAudioPath,duration:themeAudioDuration,sha256:fileSha256(themeAudioPath)};}
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', configuration,
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
@@ -474,6 +493,7 @@ try {
   runManifest.sourceUnchanged=runManifest.sourceBefore.digest===runManifest.sourceAfter.digest;
   if(referenceScene){runManifest.externalInputs.after=externalInputSnapshot(referenceScene.paths);runManifest.externalInputs.unchanged=runManifest.externalInputs.before.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
   if(liveLocalPath){runManifest.externalInputs.after=externalInputSnapshot(liveLocalPaths);runManifest.externalInputs.unchanged=liveLocalSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
+  if(themeAudioPath){runManifest.externalInputs.after=externalInputSnapshot([themeAudioPath]);runManifest.externalInputs.unchanged=themeAudioSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   if(code===0&&counts.transitionVideo){
     try{
