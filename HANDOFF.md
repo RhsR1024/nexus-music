@@ -1,5 +1,7 @@
 ## 2026-10-27 背景透明度CI读取专项
 
+交付：修正`238a9ccc68485251f7452599bee25a024023d43c`正常push、远端SHA一致；[CI40460456576](https://github.com/RhsR1024/nexus-music/actions/runs/40460456576)pending，40458280308/3725f22仍运行，实际1运行/1等待。未取消运行或重派旧版；本修正云端终态待。
+
 只读StaticText按有效几何可见性读取，取消其hittable前置；按钮等交互约束及原产品断言全部保留。Release1/0/0、360.868秒；233个src/modules文件与真实音质批相同，两首真实音频SHA保持。仅CI功能回归，未查看夹具PNG作UI验收；iOS27云端终态待。见[回执](docs/2026-10-27_background-opacity-ci-report.md)。下一核对云端并继续批次6余项。
 
 ## 2026-10-27 批次6：独立平台下载音质
