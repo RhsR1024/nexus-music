@@ -2,6 +2,10 @@
 
 批次6落实平台下载首选、独立下载解析和恢复跟随播放。网易云/QQ/酷狗/酷我/咪咕共用配置入口，只展示当前启用LX音源声明且音枢认识的质量级别；空能力与失效首选有明确提示。具体九级顺序属于音枢既有Quality策略，不推断为Sollin内部实现或实际文件编码。
 
+## 交付
+
+交付：源码`3725f22e5cec736326be06cf527af741ab6b4c35`正常push、远端SHA一致；[CI40458280308](https://github.com/RhsR1024/nexus-music/actions/runs/40458280308)运行，当前1运行/0等待。99d5e5e的40434766673为21通过/1失败，背景页visual-value-backgroundOpacity定位待查；本批云端终态待，未取消运行或重派旧版。下一优先CI背景节点核验，再继续封面/目录等。小型回执`build/ci-sidecars-99d-20261027/summary.json`。
+
 ## 依据与实现
 
 采用现有E830→F023→P021可见配置能力，不增加Sollin采集。原生master-route、亲读PRIMARY及precedent/tool-index、APK gate与采纳前`--review`通过；本机日志`build/download-quality-20261027-{route,gate,review}.log`。当前功能case严格哈希review PASS：395 Evidence/101 Finding/99 Path/3 workitems/117 timeline，0错误/警告，见`...-case-review.json`。固定包cab634bd855fc287f6e420c1f36fd1a6b9245960；本批无新的参考代码或原生补丁采纳。
