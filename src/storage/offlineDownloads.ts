@@ -228,6 +228,9 @@ export class OfflineDownloadStore {
     }finally{this.removed.delete(id);}
   }
   async clearCompleted(){for(const item of [...this.items].filter(value=>value.status==='completed')){if(this.options.isInUse?.(item.track))continue;await this.remove(item.id);}}
+  prepareExport<T>(id:string,prepare:(record:OfflineDownloadRecord,uri:string)=>T):Promise<T>{
+    return this.mutate(async()=>{const item=this.items.find(value=>value.id===id);if(!item||item.status!=='completed'||this.removed.has(id)||!this.options.files.exists(item.fileName)||this.options.files.size(item.fileName)!==item.bytes||!item.digest||this.options.files.digest(item.fileName)?.toLowerCase()!==item.digest.toLowerCase())throw Error('离线音频不可导出，请检查文件或重新下载');return prepare({...item,track:{...item.track}},this.options.files.uri(item.fileName));});
+  }
   async resolve(track:Track):Promise<{url:string;quality?:string}|undefined>{
     const item=this.find(track);if(!item||item.status!=='completed'||!this.options.files.exists(item.fileName))return;
     return {url:this.options.files.uri(item.fileName),quality:item.quality};

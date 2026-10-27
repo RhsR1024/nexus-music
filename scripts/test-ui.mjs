@@ -19,10 +19,11 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
+const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNamingExport'));
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -67,8 +68,9 @@ function seedLocalAudio() {
 seedLocalAudio();
 // Explicit local opt-in: serve unchanged private scripts only to the simulator.
 // These bytes are never imported by Metro or written into the app bundle.
-const liveCatalogUI=process.argv.slice(2).some(target=>/\/testLiveSource(?:Catalog|Playback|SearchStates)$/.test(target));
-const liveDownloadUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadBatch'));
+const liveDownloadNamingUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNaming'));
+const liveCatalogUI=liveDownloadNamingUI||process.argv.slice(2).some(target=>/\/testLiveSource(?:Catalog|Playback|SearchStates)$/.test(target));
+const liveDownloadUI=process.argv.slice(2).some(target=>/\/testLiveDownload(?:Batch|Naming)$/.test(target));
 if(liveDownloadUI&&process.argv.slice(2).length!==1)throw new Error('Real download batch requires its single explicit live target');
 let liveSources=[];
 if(liveCatalogUI){
@@ -79,7 +81,8 @@ if(liveCatalogUI){
     if(entry.isSymbolicLink())throw new Error('Live source directory must not contain symbolic links');
     return entry.isDirectory()?visit(path):entry.isFile()&&/\.js$/i.test(entry.name)?[path]:[];
   });
-  liveSources=visit(directory).map(path=>{
+  if(liveDownloadNamingUI&&!/^[a-f0-9]{64}$/.test(process.env.NEXUS_UI_DOWNLOAD_SOURCE_SHA256??''))throw new Error('Real naming requires an explicit source SHA256');
+  liveSources=visit(directory).filter(path=>!liveDownloadNamingUI||fileSha256(path)===process.env.NEXUS_UI_DOWNLOAD_SOURCE_SHA256).map(path=>{
     const script=readFileSync(path,'utf8');
     if(Buffer.byteLength(script)>8*1024*1024)throw new Error('Live source exceeds import size limit');
     const header=script.slice(0,16384).match(/^\s*(?:\/\*([\s\S]*?)\*\/|((?:\/\/[^\n]*\n)+))/)?.[0]??'';
@@ -161,10 +164,12 @@ const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScen
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
 const server = createServer(async (req, res) => {
   if(liveCatalogUI&&req.url==='/live-source-index'){
+    counts.liveSourceIndex=(counts.liveSourceIndex??0)+1;
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify(liveSources.map(({name},index)=>({name,index}))));return;
   }
   const liveIndex=liveCatalogUI?req.url?.match(/^\/live-source-(\d+)\.js$/):null;
   if(liveIndex){
+    counts.liveSourceImports=(counts.liveSourceImports??0)+1;
     const source=liveSources[Number(liveIndex[1])];
     if(!source){res.writeHead(404);res.end();return;}
     res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(source.script);return;
@@ -408,7 +413,7 @@ const server = createServer(async (req, res) => {
 });
 // The real local-file test never uses fixture HTTP routes. Give its harness an
 // ephemeral port so an unrelated online regression can keep its fixed port.
-await new Promise((resolve, reject) => { server.once('error', reject); server.listen(liveLocalUI&&!liveStatisticsSyncUI&&!liveBackupSettingsUI?0:18439, '127.0.0.1', resolve); });
+await new Promise((resolve, reject) => { server.once('error', reject); server.listen(liveLocalUI&&!liveStatisticsSyncUI&&!liveBackupSettingsUI&&!liveDownloadNamingUI?0:18439, '127.0.0.1', resolve); });
 mkdirSync(runDirectory,{recursive:true});
 const logPath=resolve(runDirectory,'ui-catalog.log');
 const sourceBefore=sourceSnapshot();
@@ -434,7 +439,9 @@ try {
   if(!liveBackupSettingsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveBackupSettings');
   if(!liveStatisticsSyncUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveStatisticsSync');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
-  if(!liveDownloadUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadBatch');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadBatch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadBatch');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNaming')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadNaming');
+  if(!liveDownloadExportUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadNamingExport');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
@@ -489,6 +496,18 @@ try {
       const archivedSha256=fileSha256(resolve(runDirectory,'actual-saved-theme.json'));if(savedSha256!==archivedSha256)throw Error('Actual saved theme hash mismatch');
       writeFileSync(resolve(runDirectory,'actual-saved-theme-receipt.json'),JSON.stringify({name:names[0],bytes:body.length,savedSha256,archivedSha256,temporaryOriginalRemovedAfterArchiving:true},null,2));
     }catch(error){console.error(`Actual theme export archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
+  }
+  // Preserve the file actually emitted by the OS activity before deleting
+  // this harness-owned folder; never seed the named export itself.
+  if((liveDownloadNamingUI||liveDownloadExportUI)&&localFixtureDirectory){
+    try{
+      const names=readdirSync(localFixtureDirectory).filter(name=>name.includes('__')&&/\.(mp3|m4a|flac|wav|aiff|ogg|aac)$/i.test(name));
+      if(names.length!==1)throw Error('Expected one actual named audio export');
+      const source=resolve(localFixtureDirectory,names[0]);if(statSync(source).size>30000000)throw Error('Unexpected export size');
+      const target=resolve(runDirectory,'actual-saved-audio'+names[0].slice(names[0].lastIndexOf('.')));writeFileSync(target,readFileSync(source));
+      const savedSha256=fileSha256(source),archivedSha256=fileSha256(target);if(savedSha256!==archivedSha256)throw Error('Saved audio archive changed');
+      writeFileSync(resolve(runDirectory,'actual-saved-audio-receipt.json'),JSON.stringify({name:names[0],bytes:statSync(source).size,savedSha256,archivedSha256,temporaryOriginalRemovedAfterArchiving:true},null,2));
+    }catch(error){console.error(`Actual named audio archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
   }
   closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true});
 }

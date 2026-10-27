@@ -60,3 +60,10 @@ test('new device-local download concurrency is validated and preserved across ol
   const exported=settings({volume:.6});assert.equal(Object.hasOwn(exported.preferences,'downloadConcurrency'),false);await r.restore(emptyLibrary,emptyPlaybackStats,exported);assert.equal(r.preferences.getSnapshot().downloadConcurrency,3);assert.equal(r.preferences.getSnapshot().volume,.6);
   const restarted=new PreferenceStore(r.repository);await restarted.restore();assert.equal(restarted.getSnapshot().downloadConcurrency,3);
 });
+
+test('download naming persists across restart and old portable backups retain the device naming policy',async()=>{
+ const r=rig();const legacy:Partial<Preferences>={...defaults};delete legacy.downloadNameOrder;delete legacy.downloadNameSeparator;r.records.set('preferences.v1',legacy);await r.preferences.restore();assert.equal(r.preferences.getSnapshot().downloadNameSeparator,' - ');
+ await r.preferences.update({downloadNameOrder:'artist-title',downloadNameSeparator:'__'});await assert.rejects(r.preferences.update({downloadNameSeparator:'/'}));assert.equal(r.preferences.getSnapshot().downloadNameSeparator,'__');
+ const restarted=new PreferenceStore(r.repository);await restarted.restore();assert.equal(restarted.getSnapshot().downloadNameOrder,'artist-title');assert.equal(restarted.getSnapshot().downloadNameSeparator,'__');
+ const exported=settings();assert(!Object.hasOwn(exported.preferences,'downloadNameOrder'));await r.restore(emptyLibrary,emptyPlaybackStats,exported);assert.equal(r.preferences.getSnapshot().downloadNameSeparator,'__');
+});

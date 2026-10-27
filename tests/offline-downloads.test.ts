@@ -260,3 +260,20 @@ test('restore immediately adopts running native tasks before any new start witho
 test('restore fills a native pause that settled before JS persistence and resume carries the recovered byte offset',async()=>{
   const saved={version:1,items:[{id:'native-pause',track:track('public-pause'),fileName:'00000000-0000-4000-8000-000000000001.audio',status:'downloading',bytes:0,updatedAt:1}]};let offset:number|undefined;const files:OfflineDownloadFiles={independentTransfers:true,recoverState:async()=> 'paused',partialSize:()=>131072,download:async(_url,_name,_headers,options)=>{offset=options?.offset;return 3740360;},exists:()=>true,size:()=>3740360,digest:()=> 'a'.repeat(32),uri:()=>'',remove:async()=>{}};const store=new OfflineDownloadStore({get:async<T>()=>saved as T,put:async()=>{}},{files,resolve:async()=>({url:'https://audio.example/public.mp3'}),uuid:()=>'',now:()=>1,concurrency:()=>1});await store.restore();assert.equal(store.getSnapshot()[0]?.status,'paused');assert.equal(store.getSnapshot()[0]?.partialBytes,131072);await store.resume('native-pause');assert.equal(offset,131072);assert.equal(store.getSnapshot()[0]?.status,'completed');
 });
+
+test('export staging holds the index lock, rejects incomplete/corrupt/removed files, and leaves source intact on sheet cancellation',async()=>{
+ const {exportOfflineAudio}=await import('../src/storage/offlineExport.ts');const naming={downloadNameOrder:'artist-title' as const,downloadNameSeparator:'_'};
+ const r=rig(),item=await r.store.enqueue(track());let copied=0,cleaned=0,shared=0;
+ const files={stage(_uri:string,name:(header:Uint8Array)=>string){assert.equal(name(new TextEncoder().encode('ID3abcdef')),'Artist_Song.mp3');copied++;return{uri:'file:///staged/Artist_Song.mp3',remove:()=>{cleaned++;}};},async share(){shared++;throw Error('sheet cancelled');}};
+ await assert.rejects(exportOfflineAudio(r.store,item.id,naming,files));assert.equal(copied,0);
+ await r.store.start(item.id);await assert.rejects(exportOfflineAudio(r.store,item.id,naming,files),/sheet cancelled/);assert.equal(copied,1);assert.equal(shared,1);assert.equal(cleaned,1);assert.equal(r.store.getSnapshot()[0]!.status,'completed');assert(r.files.exists(item.fileName));
+ const digest=r.files.digest;r.files.digest=()=> 'b'.repeat(32);await assert.rejects(exportOfflineAudio(r.store,item.id,naming,files));assert.equal(copied,1);r.files.digest=digest;
+ await r.store.remove(item.id);await assert.rejects(exportOfflineAudio(r.store,item.id,naming,files));assert.equal(copied,1);
+});
+
+test('OS export sheet owns a staged copy and never holds the managed-file mutation lock',async()=>{
+ const {exportOfflineAudio}=await import('../src/storage/offlineExport.ts');const r=rig(),item=await r.store.enqueue(track());await r.store.start(item.id);
+ let started!:()=>void,finish!:()=>void,cleaned=0;const ready=new Promise<void>(resolve=>{started=resolve;}),sheet=new Promise<void>(resolve=>{finish=resolve;});
+ const exported=exportOfflineAudio(r.store,item.id,{downloadNameOrder:'title-artist',downloadNameSeparator:' - '},{stage:()=>({uri:'file:///independent-copy.mp3',remove:()=>{cleaned++;}}),async share(){started();await sheet;}});
+ await ready;await r.store.remove(item.id);assert(!r.files.exists(item.fileName));assert.equal(cleaned,0);finish();await exported;assert.equal(cleaned,1);
+});

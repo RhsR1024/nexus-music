@@ -1,0 +1,13 @@
+import {Share} from 'react-native';
+import {Directory,File,Paths} from 'expo-file-system';
+import * as Crypto from 'expo-crypto';
+import type {AudioExportFiles} from '../storage/offlineExport.ts';
+export const offlineAudioExportFiles:AudioExportFiles={
+  stage(uri,name){
+    const source=new File(uri),handle=source.open();let header:Uint8Array;
+    try{header=handle.readBytes(16);}finally{handle.close();}
+    const directory=new Directory(Paths.cache,`nexus-audio-export-${Crypto.randomUUID()}`);
+    directory.create();try{const target=new File(directory,name(header));source.copy(target);const digest=source.md5;if(target.size!==source.size||!digest||target.md5!==digest)throw Error('音频副本校验失败');return{uri:target.uri,remove:()=>{try{directory.delete();}catch{/* Do not mask the OS sheet result; cache remains disposable. */}}};}catch(error){try{directory.delete();}catch{}throw error;}
+  },
+  async share(uri){await Share.share({url:uri,title:'导出离线音频'});},
+};
