@@ -1,3 +1,7 @@
+## 2026-10-28 QQ 网页账号来源复核
+
+按用户指定的 Q-music Android 例外推进 F30，区别于 Q-1515：固定 5db858f32695d10c5e9ef0f7037d586aef6a8c4b，9个许可/来源文件与固定提交逐字节一致。采用公开 OAuth 起点、音乐身份/Cookie 与资料/音乐接口字段，原创 iOS WebKit、state 验证及 TypeScript 适配，不搬运 Android 桥接、配对/原生补丁、依赖或私有令牌。Apache/NOTICE 已保留于第三方说明。实际仅验匿名表单与取消路径；不推断 Sollin 后端，不把源码调用链记作真实账号授权通过。详见[参考边界](Q_MUSIC_ANDROID_REFERENCE.md)和[回执](2026-10-28_qq-web-login-report.md)。
+
 ## 2026-10-24 真实公开搜索缺封面修复
 
 五固定HEAD再核对未变（joy d6f1af7、Q547ccfe、wtf6624ab5、Cybf0d469、自有8e47cdc）。沿决策0028的封面职责、许可与Android边界；本批新增核对悦音 wy.ts:78–105 的公开song/detail精确ID和al.picUrl，Q/wtf的wy/index.js:26、musicInfo.js:6为独立weapi路径。不复制加密/客户端或源码；音枢原创OnlineProvider.artwork与CoverService可选回调，保留本地/私人媒体边界、四并发、取消与清理代次。TS可共享未来Android；ImageIO缓存/原生歌词绘制仍需Android对应实现。参考工程的根许可不覆盖其第三方依赖，未引入依赖或资源。真实验证与尚未通过的边界见[本批回执](implementation-shared-song-actions-2026-10-24.md)，不以此声称Sollin使用相同API。

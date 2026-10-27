@@ -6,7 +6,7 @@ export function parseProviderJSON(text: string): unknown {
     (token, prefix: string | undefined, integer: string | undefined) => integer ? `${prefix}"${integer}"` : token);
   return JSON.parse(preserved);
 }
-export interface HTTPRequest { method?: string; headers?: Readonly<Record<string, string>>; body?: string }
+export interface HTTPRequest { method?: string; headers?: Readonly<Record<string, string>>; body?: string; credentials?:'omit' }
 export class HTTPResponseError extends Error {
   readonly status: number;
   constructor(status: number) { super('服务暂时不可用'); this.status=status; }

@@ -4,6 +4,7 @@ import {MusicAuthError,MusicAuthFlow} from '../src/providers/musicAuth.ts';
 import {MusicAccounts} from '../src/providers/musicAccounts.ts';
 import {NeteaseAccountProfileClient} from '../src/providers/neteaseAccountProfile.ts';
 import {MusicWebLoginCoordinator,musicCookieHeader,parseNeteaseCookiePayload} from '../src/providers/musicWebLogin.ts';
+import {QQAccountProfileClient} from '../src/providers/qqAccountProfile.ts';
 
 const hash=async(value:string)=>Buffer.from(value).toString('hex').padEnd(64,'0').slice(0,64);
 
@@ -81,4 +82,44 @@ test('an unverified web session is never saved as an account',async()=>{
   await assert.rejects(login.login(),(error)=>error instanceof MusicAuthError&&error.kind==='failed');
   assert.equal(f.records.has('music.accounts.v1'),false);
   assert.equal(f.secrets.size,0);
+});
+
+test('QQ login saves a distinct QQ principal with no daily or FM capability and keeps cookies out of metadata',async()=>{
+  const f=accountsFixture(),flow=new MusicAuthFlow<Record<string,unknown>>();let calls=0;
+  const qqProfile=new QQAccountProfileClient({http:async()=>++calls===1?{code:0,data:{creator:{nick:'Fixture QQ listener'}}}:{code:0,status:{code:0,data:{}}}});
+  const native={open:async(_id:string,provider:string,url:string)=>{
+    assert.equal(provider,'tx');assert.equal(new URL(url).hostname,'graph.qq.com');
+    assert.equal(new URL(url).searchParams.get('state'),'qq-login-id');
+    assert.equal(new URL(url).searchParams.has('display'),false);
+    return JSON.stringify({qqmusic_key:'synthetic-qq-key',qqmusic_uin:'o000042',login_type:'1'});
+  },cancel:async()=>{}};
+  const login=new MusicWebLoginCoordinator({native,flow,accounts:f.accounts,profile:new NeteaseAccountProfileClient(),qqProfile,hash,uuid:()=> 'qq-login-id'});
+  const result=await login.login('tx');
+  assert.equal(result.account.platform,'tx');assert.equal(result.account.username,'qq:2:42');
+  assert.equal(result.session.accountId,result.account.id);assert.deepEqual(result.account.capabilities,[]);
+  assert.doesNotMatch(JSON.stringify([...f.records.values()]),/synthetic-qq-key/);
+  assert.match([...f.secrets.values()][0]!,/synthetic-qq-key/);
+});
+
+test('QQ authorization response arriving after cancellation cannot save an account',async()=>{
+  const f=accountsFixture(),flow=new MusicAuthFlow<Record<string,unknown>>();let finish:(value:unknown)=>void=()=>{};
+  let calls=0;
+  const qqProfile=new QQAccountProfileClient({http:async()=>++calls===1?{code:0,data:{creator:{nick:'Fixture QQ listener'}}}:await new Promise(resolve=>{finish=resolve;})});
+  const native={open:async()=>JSON.stringify({qqmusic_key:'synthetic-qq-key',qqmusic_uin:'42'}),cancel:async()=>{}};
+  const login=new MusicWebLoginCoordinator({native,flow,accounts:f.accounts,profile:new NeteaseAccountProfileClient(),qqProfile,hash,uuid:()=> 'qq-cancel-id'});
+  const pending=login.login('tx');const rejected=assert.rejects(pending,error=>error instanceof MusicAuthError&&error.kind==='cancelled');
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(calls,2);login.cancel();
+  finish({code:0,status:{code:0,data:{}}});await rejected;await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.secrets.size,0);assert.equal(f.records.size,0);
+});
+
+test('cancelling during account identity hashing cannot persist a late verified QQ session',async()=>{
+  const f=accountsFixture(),flow=new MusicAuthFlow<Record<string,unknown>>();let finish:(value:string)=>void=()=>{};
+  let calls=0;
+  const qqProfile=new QQAccountProfileClient({http:async()=>++calls===1?{code:0,data:{creator:{nick:'Fixture QQ listener'}}}:{code:0,status:{code:0,data:{}}}});
+  const native={open:async()=>JSON.stringify({qqmusic_key:'synthetic-qq-key',qqmusic_uin:'42'}),cancel:async()=>{}};
+  const login=new MusicWebLoginCoordinator({native,flow,accounts:f.accounts,profile:new NeteaseAccountProfileClient(),qqProfile,hash:async()=>await new Promise<string>(resolve=>{finish=resolve;}),uuid:()=> 'qq-hash-id'});
+  const pending=login.login('tx'),rejected=assert.rejects(pending,error=>error instanceof MusicAuthError&&error.kind==='cancelled');
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(calls,2);login.cancel();finish('a'.repeat(64));await rejected;
+  assert.equal(f.secrets.size,0);assert.equal(f.records.size,0);
 });

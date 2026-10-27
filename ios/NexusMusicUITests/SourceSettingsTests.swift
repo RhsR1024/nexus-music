@@ -634,6 +634,65 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
     XCTAssertFalse(navigation.exists)
   }
+  func testLiveQQWebLogin() throws {
+    XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){
+      XCTAssertTrue(element.waitForExistence(timeout:15))
+      for _ in 0..<8 {if waitForHittable(element,timeout:0.3){return};app.swipeUp()}
+      XCTAssertTrue(waitForHittable(element,timeout:5))
+    }
+    openSettings(app,page:"accounts")
+    let qq=app.buttons["login-music-account-tx"]
+    reach(qq);image("Real QQ official account entry with public audio library")
+    qq.tap()
+    let navigation=app.navigationBars["QQ 音乐登录"]
+    XCTAssertTrue(navigation.waitForExistence(timeout:20))
+    XCTAssertTrue(waitForGone(app.activityIndicators["music-web-login-loading-tx"],timeout:40),"Wait for the official document to finish loading before exercising its form")
+    let web=app.webViews.firstMatch
+    XCTAssertTrue(web.waitForExistence(timeout:15))
+    let officialContent=web.descendants(matching:.any).matching(NSPredicate(format:"label MATCHES %@",".*(QQ|帐号|账号|授权|登录|Login).*" )).firstMatch
+    XCTAssertTrue(officialContent.waitForExistence(timeout:35),"The actual official login page must render; a native window alone is insufficient")
+    let passwordMode=web.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["账号密码登录","帐号密码登录","密码登录"])).firstMatch
+    if passwordMode.waitForExistence(timeout:10){XCTAssertTrue(waitForHittable(passwordMode,timeout:5));passwordMode.tap()}
+    XCTAssertTrue(web.secureTextFields.firstMatch.waitForExistence(timeout:20),"A usable official password form must be reachable without QQ-app launch")
+    XCTAssertTrue(web.textFields.firstMatch.exists,"The official account field must be present")
+    image("Real QQ official web page without credentials")
+    let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Real QQ official page accessibility";hierarchy.lifetime = .keepAlways;add(hierarchy)
+    let oldErrors=web.staticTexts.allElementsBoundByIndex.map(\.label).filter{$0.contains("输入")&&($0.contains("帐号")||$0.contains("账号"))}
+    let submit=web.buttons["登录"].firstMatch
+    XCTAssertTrue(waitForHittable(submit,timeout:10));submit.tap()
+    let emptyPrompt=web.staticTexts.matching(NSPredicate(format:"label MATCHES %@","^你还没有输入[帐账]号[！!]$")).firstMatch
+    let emptyAccount=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      emptyPrompt.exists && self.waitForHittable(emptyPrompt,timeout:0.2)
+    },object:nil)
+    let emptyResult=XCTWaiter.wait(for:[emptyAccount],timeout:15)
+    let observedErrors=web.staticTexts.allElementsBoundByIndex.map(\.label).filter{$0.contains("输入")&&($0.contains("帐号")||$0.contains("账号"))}
+    let promptState=XCTAttachment(string:"Before submission: \(oldErrors)\nAfter submission: \(observedErrors)");promptState.name="Real QQ empty account prompt observations";promptState.lifetime = .keepAlways;add(promptState)
+    if emptyResult != .completed {
+      image("Real QQ empty account assertion failure")
+      let failed=XCTAttachment(string:app.debugDescription);failed.name="Real QQ empty account failure accessibility";failed.lifetime = .keepAlways;add(failed)
+    }
+    XCTAssertEqual(emptyResult,.completed,"The real official form must visibly reject an empty account without sending private credentials")
+    image("Real QQ official empty account validation")
+    navigation.buttons["关闭"].tap()
+    XCTAssertTrue(waitForGone(navigation,timeout:10))
+    XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
+    reach(qq);image("Real QQ login cancelled without account")
+    qq.tap();XCTAssertTrue(navigation.waitForExistence(timeout:15));navigation.buttons["关闭"].tap()
+    XCTAssertTrue(waitForGone(navigation,timeout:10))
+    app.terminate();app.launch();openSettings(app,page:"accounts");reach(qq)
+    XCTAssertFalse(app.buttons["verify-music-account-tx"].exists,"An anonymous or cancelled login must not create an account")
+    image("Real QQ cancelled login remains logged out after restart")
+    let netease=app.buttons["login-music-account-wy"]
+    for _ in 0..<8 {if waitForHittable(netease,timeout:0.3){break};app.swipeDown()}
+    XCTAssertTrue(waitForHittable(netease,timeout:5));netease.tap()
+    let wyNavigation=app.navigationBars["网易云登录"]
+    XCTAssertTrue(wyNavigation.waitForExistence(timeout:15));wyNavigation.buttons["关闭"].tap()
+    XCTAssertTrue(waitForGone(wyNavigation,timeout:10))
+    XCTAssertFalse(app.buttons["暂停"].exists,"Account entry and cancellation must preserve the paused real-audio playback intent")
+  }
   func testAccountRecommendationsEntryAndLoginRouting() throws {
     let app=XCUIApplication();app.launch()
     let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch

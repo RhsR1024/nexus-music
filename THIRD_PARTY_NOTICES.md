@@ -2,6 +2,12 @@
 
 The project does not apply a single license to all reference projects or assets.
 
+## QQ music web account protocol
+
+`src/providers/qqAccountProfile.ts` adapts the cookie identity and official request contracts from Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/{cookies,qqCredentials,requests,accountTransfer}.ts`. The official OAuth client ID and music-site redirect in `musicWebLogin.ts` and `NexusMusicAuthModule.swift` were checked against that commit's `login.ts`; NexusMusic uses the default desktop web presentation and adds an attempt-bound state check. NexusMusic uses its own TypeScript clients, Keychain account store and ephemeral iOS WebKit session; it does not import Android bridges, desktop pairing, dependencies or native patches. The adaptation limits this entry to QQ web identities, validates both response envelopes and discards playlist response content after the authorization check. QQ daily authorization is separate. Apache 2.0 is reproduced at `licenses/lx-apache-2.0.txt`.
+
+Upstream NOTICE: Q-music Android, Copyright 2026 Nshpiter. This product is based on LX Music Mobile, https://github.com/lyswhut/lx-music-mobile. LX Music Mobile is Copyright lyswhut and its contributors and is distributed under the Apache License 2.0. Q-music Android retains the upstream license, attribution, project agreement, and disclaimer. Q-music Android is an independent derivative project. It is not an official LX Music release and is not endorsed or supported by the upstream author.
+
 ## QQ request signature
 
 `src/providers/qqSignature.ts` adapts the QQ signature protocol algorithm from LX Music Mobile, reference fork wtfdelphia/lx-music-mobile, commit `6624ab58cbd2f5bda52ab8006912d3c60dc1f847`, file `src/utils/musicSdk/tx/utils/crypto.js`.
