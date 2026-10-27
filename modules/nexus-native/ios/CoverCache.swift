@@ -6,8 +6,10 @@ final class CoverCache {
   static let queue = DispatchQueue(label: "nexus.covers")
   static let shared = CoverCache()
   private(set) var epoch = 0
+  private let maximumBytes: Int
   private let directory: URL
-  init(directory: URL? = nil) {
+  init(directory: URL? = nil, maximumBytes: Int = 32 * 1024 * 1024) {
+    self.maximumBytes = maximumBytes
     self.directory = directory ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("NexusCovers", isDirectory: true)
     try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
   }
@@ -29,10 +31,13 @@ final class CoverCache {
     try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
     return file.absoluteString
   }
-  func store(_ data: Data, key: String, maxPixelSize: Int = 512) -> String? {
-    guard [512, 1024].contains(maxPixelSize), valid(key), data.count <= 8 * 1024 * 1024,
+  func store(_ data: Data, key: String, maxPixelSize: Int = 512, exporting: Bool = false) -> String? {
+    guard (exporting ? [256,500,512,1000,1024,1200,2048] : [512,1024]).contains(maxPixelSize), valid(key), data.count <= 8 * 1024 * 1024,
           let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
-          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: maxPixelSize] as CFDictionary) else { return nil }
+          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+          let width = properties[kCGImagePropertyPixelWidth] as? Int, let height = properties[kCGImagePropertyPixelHeight] as? Int,
+          !exporting || (width > 0 && height > 0 && width <= 16384 && height <= 16384 && width * height <= 16777216),
+          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: exporting ? min(maxPixelSize,max(width,height)) : maxPixelSize] as CFDictionary) else { return nil }
     // Degenerate CDN payloads (tracking pixels, broken covers) decode to tiny
     // bitmaps; RN's box blur (kernel up to ~51 at radius 55) segmentation
     // faults on images smaller than the kernel, so reject anything below real
@@ -53,7 +58,7 @@ final class CoverCache {
   private func trim() {
     let files = files().sorted { ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast) < ((try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast) }
     var size = files.reduce(0) { $0 + ((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
-    for file in files where size > 32 * 1024 * 1024 {
+    for file in files where size > maximumBytes {
       let bytes = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
       if (try? FileManager.default.removeItem(at: file)) != nil { size -= bytes }
     }

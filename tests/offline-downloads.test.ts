@@ -305,3 +305,9 @@ test('requested download preference and successful source tag remain distinct ac
  const store=new OfflineDownloadStore(repository,options),item=await store.enqueue(track());await store.start(item.id);assert.equal(store.getSnapshot()[0]!.requestedQuality,'flac');assert.equal(store.getSnapshot()[0]!.quality,'128k');
  const recovered=new OfflineDownloadStore(repository,options);await recovered.restore();assert.equal(recovered.getSnapshot()[0]!.requestedQuality,'flac');assert.equal(recovered.getSnapshot()[0]!.status,'completed');assert(!JSON.stringify(saved).includes('https://'));
 });
+
+test('cover export captures the track platform size once and forwards it to both fetch and JPEG staging',async()=>{
+ const {exportOfflineAudio}=await import('../src/storage/offlineExport.ts');const r=rig(),item=await r.store.enqueue(track());await r.store.start(item.id);const sizes:number[]=[],policy={wy:1000 as const};let shared=0,cleaned=0;
+ await exportOfflineAudio(r.store,item.id,{downloadNameOrder:'artist-title',downloadNameSeparator:'__'},{stage:()=>({uri:'file:///audio',remove:()=>{cleaned++;},addCover:async(_name,_uri,size)=>{sizes.push(size!);return'file:///cover.jpg';}}),async share(){shared++;}},{downloadAttachLyrics:false,downloadAttachCover:true,downloadAttachMetadata:false,downloadCoverSizes:policy,signal:new AbortController().signal,lyrics:async()=>{throw Error('not selected');},cover:async(_track,_signal,size)=>{sizes.push(size);Object.assign(policy,{wy:256});return'file:///actual-cover.jpg';}});
+ assert.deepEqual(sizes,[1000,1000]);assert.equal(shared,1);assert.equal(cleaned,1);assert(r.files.exists(item.fileName));
+});

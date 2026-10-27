@@ -10,6 +10,7 @@ public final class NexusNativeModule: Module {
   private var probes: [String: AudioURLProbe] = [:]
   private let coverQueue = CoverCache.queue
   private let covers = CoverCache.shared
+  private let exportCovers = CoverCache(directory: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("NexusExportCovers"), maximumBytes: 16 * 1024 * 1024)
   private var coverRequests: [String: (client: ScriptHTTP, promises: [Promise])] = [:]
 
   public func definition() -> ModuleDefinition {
@@ -61,24 +62,16 @@ public final class NexusNativeModule: Module {
     AsyncFunction("cancelAudioProbe") { (id: String) in self.probes[id]?.cancel() }.runOnQueue(probeQueue)
     AsyncFunction("decodeKRC") { (base64: String) throws -> String in try ScriptUtilities.perform("krcDecode", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("decodeQRC") { (hex: String) throws -> String in try ScriptUtilities.perform("qrcDecode", ["input": hex]) as! String }.runOnQueue(runtimeQueue)
-    AsyncFunction("coverStatistics") { self.covers.statistics() }.runOnQueue(coverQueue)
-    AsyncFunction("clearCovers") { self.covers.clear() }.runOnQueue(coverQueue)
+    AsyncFunction("coverStatistics") {
+      let normal = self.covers.statistics(), exported = self.exportCovers.statistics()
+      return ["files": (normal["files"] as? Int ?? 0) + (exported["files"] as? Int ?? 0), "bytes": (normal["bytes"] as? Int ?? 0) + (exported["bytes"] as? Int ?? 0)]
+    }.runOnQueue(coverQueue)
+    AsyncFunction("clearCovers") { self.covers.clear(); self.exportCovers.clear() }.runOnQueue(coverQueue)
     AsyncFunction("fetchCover") { (key: String, url: String, maxPixelSize: Int, promise: Promise) in
-      guard [512, 1024].contains(maxPixelSize) else { promise.reject("COVER_SIZE", "封面尺寸无效"); return }
-      if let hit = self.covers.hit(key) { promise.resolve(hit); return }
-      if var pending = self.coverRequests[key] { pending.promises.append(promise); self.coverRequests[key] = pending; return }
-      guard self.coverRequests.count < 4 else { promise.reject("COVER_BUSY", "封面加载繁忙"); return }
-      let client = ScriptHTTP(queue: self.coverQueue)
-      let epoch = self.covers.epoch
-      self.coverRequests[key] = (client, [promise])
-      client.start(id: 1, url: url, optionsJSON: "{\"binary\":true,\"timeout\":10000}") { [weak self] error, response in
-        guard let self, let pending = self.coverRequests.removeValue(forKey: key) else { return }
-        pending.client.destroy()
-        let status = response?["statusCode"] as? Int ?? 0
-        let data = (response?["body"] as? String).flatMap { Data(base64Encoded: $0) }
-        let result = error == nil && epoch == self.covers.epoch && (200..<300).contains(status) ? data.flatMap { self.covers.store($0, key: key, maxPixelSize: maxPixelSize) } : nil
-        for promise in pending.promises { if let result { promise.resolve(result) } else { promise.reject("COVER_FAILED", "封面暂不可用") } }
-      }
+      self.fetchCover(key, url: url, maximum: maxPixelSize, exporting: false, promise: promise)
+    }.runOnQueue(coverQueue)
+    AsyncFunction("fetchExportCover") { (key: String, url: String, maxPixelSize: Int, promise: Promise) in
+      self.fetchCover(key, url: url, maximum: maxPixelSize, exporting: true, promise: promise)
     }.runOnQueue(coverQueue)
     AsyncFunction("fetchScript") { (url: String, promise: Promise) in
       guard self.downloads.count < 4 else { promise.reject("DOWNLOAD_LIMIT", "请等待其他导入完成"); return }
@@ -150,6 +143,23 @@ public final class NexusNativeModule: Module {
         for entry in downloads.values { entry.client.destroy(); entry.promise.reject("SOURCE_DESTROYED", "操作已结束") }
         downloads.removeAll()
       }
+    }
+  }
+  private func fetchCover(_ key: String, url: String, maximum: Int, exporting: Bool, promise: Promise) {
+    guard (exporting ? [256,500,512,1000,1024,1200,2048] : [512,1024]).contains(maximum) else { promise.reject("COVER_SIZE", "封面尺寸无效"); return }
+    let cache = exporting ? exportCovers : covers, requestKey = (exporting ? "export:" : "display:") + key
+    if let hit = cache.hit(key) { promise.resolve(hit); return }
+    if var pending = coverRequests[requestKey] { pending.promises.append(promise); coverRequests[requestKey] = pending; return }
+    guard coverRequests.count < 4 else { promise.reject("COVER_BUSY", "封面加载繁忙"); return }
+    let client = ScriptHTTP(queue: coverQueue), epoch = cache.epoch
+    coverRequests[requestKey] = (client, [promise])
+    client.start(id: 1, url: url, optionsJSON: "{\"binary\":true,\"timeout\":10000}") { [weak self] error, response in
+      guard let self, let pending = self.coverRequests.removeValue(forKey: requestKey) else { return }
+      pending.client.destroy()
+      let status = response?["statusCode"] as? Int ?? 0
+      let data = (response?["body"] as? String).flatMap { Data(base64Encoded: $0) }
+      let result = error == nil && epoch == cache.epoch && (200..<300).contains(status) ? data.flatMap { cache.store($0, key: key, maxPixelSize: maximum, exporting: exporting) } : nil
+      for promise in pending.promises { if let result { promise.resolve(result) } else { promise.reject("COVER_FAILED", "封面暂不可用") } }
     }
   }
   private func bootstrapText() -> String? {

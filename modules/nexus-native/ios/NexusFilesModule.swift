@@ -32,7 +32,7 @@ public final class NexusFilesModule: Module {
       }
       presentWhenSettled(after: 0)
     }.runOnQueue(.main)
-    AsyncFunction("exportCoverJPEG") { (input: String, target: String) throws -> String in try AudioExportStaging.jpeg(input, target: target) }.runOnQueue(queue)
+    AsyncFunction("exportCoverJPEG") { (input: String, target: String, maximum: Int) throws -> String in try AudioExportStaging.jpeg(input, target: target, maxPixelSize: maximum) }.runOnQueue(queue)
     AsyncFunction("exportAudioFiles") { (values: [String], promise: Promise) in
       guard self.audioExporter == nil, self.folderPicker == nil else { promise.reject("AUDIO_EXPORT_BUSY", "文件选择器尚未关闭"); return }
       let urls: [URL]

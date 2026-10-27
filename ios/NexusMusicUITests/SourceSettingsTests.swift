@@ -1688,6 +1688,38 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();openQuality();summary("128k");tap("download-platform-tx");summary("320k");image("Real download policy persisted after actual transfer")
   }
 
+  func testLiveDownloadCoverLarge() throws { try liveDownloadCoverSize(1000, checkPlatforms: true) }
+  func testLiveDownloadCoverSmall() throws { try liveDownloadCoverSize(256, checkPlatforms: false) }
+  private func liveDownloadCoverSize(_ maximum:Int, checkPlatforms:Bool) throws {
+    XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func item(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:15));for _ in 0..<24{if element.isHittable{return};let above=element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    func tap(_ id:String){let element=item(id);reach(element);element.tap()}
+    func summary(_ text:String){XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@",text),object:app.staticTexts["download-cover-size-summary"])],timeout:15),.completed)}
+    func openCover(){openSettings(app,page:"downloads");tap("download-cover-open")}
+    openCover();tap("download-cover-platform-wy");tap("download-cover-size-\(maximum)");summary("\(maximum)");image("Real cover NetEase longest edge \(maximum)")
+    if checkPlatforms {
+      tap("download-cover-platform-tx");tap("download-cover-size-1200");summary("1200");image("Real cover independent QQ 1200")
+      tap("download-cover-platform-kw");tap("download-cover-size-500");summary("500");image("Real cover independent Kuwo 500")
+      tap("download-cover-platform-tx");tap("download-cover-size-default");summary("默认最长边512");tap("download-cover-platform-wy");summary("\(maximum)");image("Real cover reset QQ preserves NetEase");tap("download-cover-platform-tx");tap("download-cover-size-1200");summary("1200")
+    }
+    app.terminate();app.launch();openCover();summary("\(maximum)");image("Real cover selected size restored \(maximum)")
+    if checkPlatforms{tap("download-cover-platform-tx");summary("1200");tap("download-cover-platform-kw");summary("500");tap("download-cover-platform-wy");summary("\(maximum)")}
+    tap("download-cover-open")
+    for id in ["downloadAttachLyrics","downloadAttachCover","downloadAttachMetadata"]{let control=app.switches["download-attach-"+id];reach(control);if control.value as? String != "1"{control.tap()};XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@","1"),object:control)],timeout:10),.completed)}
+    tap("settings-open-downloadTasks");let count=app.staticTexts["offline-task-summary"];XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertTrue(count.label.contains("2 个已保存"))
+    let export=app.buttons["导出音频文件：Shape of You · Ed Sheeran"];reach(export);export.tap()
+    let activity=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Save to Files","存储到文件","儲存到檔案","保存到“文件”"])).firstMatch
+    for _ in 0..<5{if activity.waitForExistence(timeout:2)&&activity.isHittable{break};app.swipeUp()};XCTAssertTrue(activity.waitForExistence(timeout:30));image("Real cover prepared actual four files \(maximum)");activity.tap()
+    let save=app.buttons.matching(NSPredicate(format:"label IN %@",["Save","Export","保存","存储","导出","儲存"])).firstMatch;XCTAssertTrue(save.waitForExistence(timeout:60))
+    let phone=app.cells.matching(NSPredicate(format:"label IN %@",["On My iPhone","我的iPhone","我的 iPhone","在我的 iPhone"])).firstMatch;if phone.exists&&phone.isHittable{phone.tap()}
+    let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch;if folder.waitForExistence(timeout:3){folder.tap()}
+    image("Real cover actual OS four file save \(maximum)");XCTAssertTrue(save.isEnabled);save.tap()
+    XCTAssertFalse(app.buttons["好"].waitForExistence(timeout:3));XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:export)],timeout:20),.completed);XCTAssertTrue(count.label.contains("2 个已保存"));image("Real cover saved with two originals retained \(maximum)")
+  }
+
   func testLiveDownloadAttachments() throws {
     XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
     let app=XCUIApplication();app.launch()

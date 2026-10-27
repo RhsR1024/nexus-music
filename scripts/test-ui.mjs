@@ -19,12 +19,13 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
+const liveDownloadCoverUI=process.argv.slice(2).some(target=>/\/testLiveDownloadCover(?:Large|Small)$/.test(target));
 const liveDownloadAttachmentsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadAttachments'));
 const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNamingExport'));
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small))$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -445,6 +446,7 @@ try {
   if(!liveDownloadExportUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadNamingExport');
   if(!liveDownloadAttachmentsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadAttachments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadQuality')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadQuality');
+  for(const variant of ['Large','Small'])if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadCover'+variant)))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadCover'+variant);
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
@@ -512,7 +514,7 @@ try {
       writeFileSync(resolve(runDirectory,'actual-saved-audio-receipt.json'),JSON.stringify({name:names[0],bytes:statSync(source).size,savedSha256,archivedSha256,temporaryOriginalRemovedAfterArchiving:true},null,2));
     }catch(error){console.error(`Actual named audio archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
   }
-  if(liveDownloadAttachmentsUI&&localFixtureDirectory){
+  if((liveDownloadAttachmentsUI||liveDownloadCoverUI)&&localFixtureDirectory){
     try{
       const names=readdirSync(localFixtureDirectory).filter(name=>/^Ed Sheeran__Shape of You\.(?:mp3|lrc|jpg|meta\.json)$/.test(name));
       if(names.length!==4)throw Error('Expected four actual OS-exported companion files');

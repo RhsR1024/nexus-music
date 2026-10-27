@@ -22,7 +22,8 @@ enum AudioExportStaging {
     }
     return urls
   }
-  static func jpeg(_ input: String, target: String) throws -> String {
+  static func jpeg(_ input: String, target: String, maxPixelSize: Int = 512) throws -> String {
+    guard [256,500,512,1000,1024,1200,2048].contains(maxPixelSize) else { throw failure() }
     let output = try stageURL(target)
     guard output.pathExtension == "jpg", !FileManager.default.fileExists(atPath: output.path), let inputURL = URL(string: input), inputURL.isFileURL, inputURL.host == nil || inputURL.host == "" || inputURL.host == "localhost", inputURL.query == nil, inputURL.fragment == nil else { throw failure() }
     let sourceURL = inputURL.standardizedFileURL.resolvingSymlinksInPath()
@@ -31,7 +32,7 @@ enum AudioExportStaging {
           let source = CGImageSourceCreateWithURL(sourceURL as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
           let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
           let width = properties[kCGImagePropertyPixelWidth] as? Int, let height = properties[kCGImagePropertyPixelHeight] as? Int, width > 0, height > 0, width <= 16384, height <= 16384, width * height <= 16777216,
-          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 512] as CFDictionary) else { throw failure() }
+          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: min(maxPixelSize, max(width, height))] as CFDictionary) else { throw failure() }
     let data = NSMutableData()
     guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { throw failure() }
     CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)

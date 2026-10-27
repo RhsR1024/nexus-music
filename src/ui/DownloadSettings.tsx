@@ -1,3 +1,4 @@
+import {DownloadCoverSettings} from './DownloadCoverSettings.tsx';
 import {DownloadQualitySettings} from './DownloadQualitySettings.tsx';
 import {downloadBasename} from '../domain/downloadNaming.ts';
 import {exportOfflineAudio,OfflineExportUnavailable} from '../storage/offlineExport.ts';
@@ -36,9 +37,10 @@ export function DownloadSettings({services,openTasks}:{services:Services;openTas
       <Text style={{...typography.caption,color:p.secondary}}>限制后续启动的任务；降低上限不强行中断已开始的传输。暂停、取消或完成后释放名额，等待任务按提交顺序启动；部分设备会依次下载，实际并行数量受系统限制。</Text>
     </View>
     <View style={{gap:space.md}}><Text accessibilityRole="header" style={{...typography.heading,color:p.text}}>附加导出文件</Text>
-      {([['downloadAttachLyrics','歌词（LRC）'],['downloadAttachCover','封面（JPG，最长边512像素内）'],['downloadAttachMetadata','歌曲信息（meta.json）']] as const).map(([key,label])=><View key={key} style={{minHeight:controls.hit,flexDirection:'row',gap:space.md,alignItems:'center',justifyContent:'space-between'}}><Text style={{...typography.body,color:p.text,flex:1}}>{label}</Text><Switch testID={`download-attach-${key}`} accessibilityLabel={label} value={preferences[key]} onValueChange={value=>{void services.preferences.update({[key]:value}).then(()=>setMessage('附加文件选项已保存')).catch(()=>setMessage('附加文件选项未保存，请重试'));}}/></View>)}
+      {([['downloadAttachLyrics','歌词（LRC）'],['downloadAttachCover','封面（JPG）'],['downloadAttachMetadata','歌曲信息（meta.json）']] as const).map(([key,label])=><View key={key} style={{minHeight:controls.hit,flexDirection:'row',gap:space.md,alignItems:'center',justifyContent:'space-between'}}><Text style={{...typography.body,color:p.text,flex:1}}>{label}</Text><Switch testID={`download-attach-${key}`} accessibilityLabel={label} value={preferences[key]} onValueChange={value=>{void services.preferences.update({[key]:value}).then(()=>setMessage('附加文件选项已保存')).catch(()=>setMessage('附加文件选项未保存，请重试'));}}/></View>)}
       <Text style={{...typography.caption,color:p.secondary}}>导出已完成音频时，所选附加文件使用相同文件名前缀。歌词使用当前所选来源并保留时间轴；不可用时可重试或关闭该项。歌曲信息只含名称、专辑、时长和文件校验，不包含账号或请求地址。</Text>
     </View>
+    <DownloadCoverSettings services={services}/>
     <View style={{gap:space.md}}><Text accessibilityRole="header" style={{...typography.heading,color:p.text}}>音频导出命名</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:space.sm}}>{(['title-artist','artist-title'] as const).map(order=><Pressable key={order} testID={`download-name-${order}`} accessibilityRole="radio" accessibilityState={{selected:preferences.downloadNameOrder===order}} onPress={()=>{void services.preferences.update({downloadNameOrder:order}).then(()=>setMessage('命名顺序已保存')).catch(()=>setMessage('命名顺序未保存，请重试'));}} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:preferences.downloadNameOrder===order?p.selected:p.surface}}><Text style={{...typography.body,color:p.accent}}>{order==='title-artist'?'歌名在前':'歌手在前'}</Text></Pressable>)}</View>
       <Text testID="download-name-preview" style={{...typography.body,color:p.secondary}}>{preview?`文件名前缀：${downloadBasename(preview.track,preferences)}`:'下载完成后显示实际歌曲的文件名前缀'}</Text>
@@ -61,7 +63,7 @@ export function DownloadTasks({services}:{services:Services}){
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;exportAbort.current?.abort();};},[]);
   const exportAudio=(id:string)=>{
     if(exportLock.current)return;exportLock.current=true;setExporting(true);setMessage('正在准备导出文件…');const abort=new AbortController();exportAbort.current=abort;
-    void exportOfflineAudio(services.offlineDownloads,id,services.preferences.getSnapshot(),offlineAudioExportFiles,{...services.preferences.getSnapshot(),signal:abort.signal,lyrics:async(track,signal)=>(await services.lyrics.load(track,signal)).document,cover:(track,signal)=>services.covers.loadTrack(track,signal,512)})
+    void exportOfflineAudio(services.offlineDownloads,id,services.preferences.getSnapshot(),offlineAudioExportFiles,{...services.preferences.getSnapshot(),signal:abort.signal,lyrics:async(track,signal)=>(await services.lyrics.load(track,signal)).document,cover:(track,signal,maximum)=>services.covers.loadForExport(track,signal,maximum)})
       .then(()=>{if(alive.current)setMessage('');}).catch(error=>{if(alive.current)setMessage(abort.signal.aborted?'已取消准备导出':error instanceof OfflineExportUnavailable?error.message:'文件未导出，请检查文件或存储空间后重试');}).finally(()=>{exportLock.current=false;exportAbort.current=null;if(alive.current)setExporting(false);});
   };
   const downloads=useSyncExternalStore(services.offlineDownloads.subscribe,services.offlineDownloads.getSnapshot);
