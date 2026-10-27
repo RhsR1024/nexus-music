@@ -1,3 +1,5 @@
+import {downloadPlatforms,downloadQualityDefaults,normalizeDownloadQualities,type DownloadQualityPreferences} from '../domain/downloadQuality.ts';
+import type {OnlinePlatform} from '../domain/track.ts';
 import {downloadAttachmentDefaults,validateDownloadAttachments,type DownloadAttachments} from '../domain/downloadAttachments.ts';
 import {downloadNamingDefaults,validateDownloadNaming,type DownloadNaming} from '../domain/downloadNaming.ts';
 import {localSortFields,type LocalSortField,type LocalSortDirection} from '../domain/localAudioSort.ts';
@@ -11,8 +13,8 @@ import {appearanceDefaults,visualThemes,type AppearanceOptions,type VisualTheme}
 import {miniPlayerDefaults,normalizeMiniActions,toggleMiniAction,moveMiniAction,type MiniPlayerOptions,type MiniAction} from '../domain/miniPlayer.ts';
 export type StageStyle='classic'|'neon'|'cyberpunk'|'aurora';
 export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage'|'am2';
-export interface Preferences extends AppearanceOptions,MiniPlayerOptions,DownloadNaming,DownloadAttachments { localAudioSortField:LocalSortField;localAudioSortDirection:LocalSortDirection; stageStyle:StageStyle;stageBackdrop:boolean; am2AutoLyrics:boolean;am2DelaySeconds:number;am2ShowVolume:boolean; lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; favoriteVisualTheme:VisualTheme|null; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; rate:number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number; downloadConcurrency:1|2|3 }
-export const defaults: Preferences = { ...downloadAttachmentDefaults,...downloadNamingDefaults,...appearanceDefaults,...miniPlayerDefaults,localAudioSortField:'title',localAudioSortDirection:'asc',stageStyle:'classic',stageBackdrop:true,am2AutoLyrics:true,am2DelaySeconds:5,am2ShowVolume:false,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',favoriteVisualTheme:null,quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, rate: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048,downloadConcurrency:1 };
+export interface Preferences extends AppearanceOptions,MiniPlayerOptions,DownloadNaming,DownloadAttachments,DownloadQualityPreferences { localAudioSortField:LocalSortField;localAudioSortDirection:LocalSortDirection; stageStyle:StageStyle;stageBackdrop:boolean; am2AutoLyrics:boolean;am2DelaySeconds:number;am2ShowVolume:boolean; lyricStyle:LyricStyle; autoMatch:boolean; lyricAlignment:LyricAlignment; lyricOffsets:Readonly<Record<string,number>>; volume:number; preampDB:number; eqPresets:readonly EQPreset[]; playerLayout:PlayerLayout; favoriteVisualTheme:VisualTheme|null; quality: Quality; eqEnabled: boolean; gains: readonly number[]; repeat: 'off' | 'all' | 'one'; shuffle: boolean; lyricOffsetMs: number; fontScale: number; rate:number; theme: 'system' | 'dark' | 'light'; cacheLimitMB: number; offlineLimitMB:number; downloadConcurrency:1|2|3 }
+export const defaults: Preferences = { ...downloadQualityDefaults,...downloadAttachmentDefaults,...downloadNamingDefaults,...appearanceDefaults,...miniPlayerDefaults,localAudioSortField:'title',localAudioSortDirection:'asc',stageStyle:'classic',stageBackdrop:true,am2AutoLyrics:true,am2DelaySeconds:5,am2ShowVolume:false,lyricStyle:lyricStyleDefaults,autoMatch:true,lyricAlignment:'auto',lyricOffsets:{},volume:1,preampDB:0,eqPresets:[],playerLayout:'classic',favoriteVisualTheme:null,quality: 'flac', eqEnabled: false, gains: Array(10).fill(0), repeat: 'off', shuffle: false, lyricOffsetMs: 0, fontScale: 1, rate: 1, theme: 'system', cacheLimitMB: 256, offlineLimitMB: 2048,downloadConcurrency:1 };
 export function validatePreferences(value: Preferences): Preferences {
     validateDownloadNaming(value);validateDownloadAttachments(value);
     if(!Number.isInteger(value.downloadConcurrency)||![1,2,3].includes(value.downloadConcurrency))throw new Error('下载并发设置无效');
@@ -29,14 +31,14 @@ export function validatePreferences(value: Preferences): Preferences {
     if (typeof value.shuffle!=='boolean'||typeof value.eqEnabled!=='boolean'||!Number.isFinite(value.volume)||value.volume<0||value.volume>1||!normalizeQuality(value.quality) || !validGains(value.gains) || !validPreamp(value.preampDB) ||
       !['off', 'all', 'one'].includes(value.repeat) || !Number.isFinite(value.lyricOffsetMs) || Math.abs(value.lyricOffsetMs)>600000 || !Number.isFinite(value.fontScale) || value.fontScale < .7 || value.fontScale > 2 || !Number.isFinite(value.rate) || value.rate < .5 || value.rate > 3 ||
       !['system', 'dark', 'light'].includes(value.theme) || !Number.isFinite(value.cacheLimitMB) || value.cacheLimitMB < 32 || value.cacheLimitMB > 2048 || !Number.isFinite(value.offlineLimitMB) || value.offlineLimitMB < 256 || value.offlineLimitMB > 8192) throw new Error('设置数据无效');
-    return { ...value, miniActions:normalizeMiniActions(value.miniActions), lyricStyle:normalizeLyricStyle(value.lyricStyle), gains: [...value.gains], eqPresets:normalizePresets(value.eqPresets),lyricOffsets:normalizeLyricOffsets(value.lyricOffsets) };
+    return { ...value, downloadQualities:normalizeDownloadQualities(value.downloadQualities), miniActions:normalizeMiniActions(value.miniActions), lyricStyle:normalizeLyricStyle(value.lyricStyle), gains: [...value.gains], eqPresets:normalizePresets(value.eqPresets),lyricOffsets:normalizeLyricOffsets(value.lyricOffsets) };
   }
 
 export class PreferenceStore {
-  private repository: Repository; private value: Preferences = defaults;
+  private repository: Pick<Repository,'get'|'put'>; private value: Preferences = defaults;
   private listeners = new Set<() => void>(); private tail: Promise<unknown> = Promise.resolve();
   private mutations:MutationQueue;
-  constructor(repository: Repository,mutations=new MutationQueue()) { this.repository = repository;this.mutations=mutations; }
+  constructor(repository: Pick<Repository,'get'|'put'>,mutations=new MutationQueue()) { this.repository = repository;this.mutations=mutations; }
   getSnapshot = () => this.value;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   async restore() {
@@ -65,6 +67,10 @@ export class PreferenceStore {
     return this.mutate(value=>({eqPresets:normalizePresets([...value.eqPresets.filter(preset=>preset.name!==name.trim()),{name,gains:value.gains,preampDB:value.preampDB}])}));
   }
   deleteEQPreset(name:string) {return this.mutate(value=>({eqPresets:value.eqPresets.filter(preset=>preset.name!==name)}));}
+  setDownloadQuality(platform:OnlinePlatform,quality?:Quality) {
+    if(!downloadPlatforms.includes(platform))return Promise.reject(Error('下载平台无效'));
+    return this.mutate(value=>{const downloadQualities={...value.downloadQualities};if(quality===undefined)delete downloadQualities[platform];else downloadQualities[platform]=quality;return{downloadQualities};});
+  }
   update(patch: Partial<Preferences>) {return this.mutate(()=>patch);}
   private mutate(patch:(value:Preferences)=>Partial<Preferences>) {
     const next = this.mutations.run(async () => {

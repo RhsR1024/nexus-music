@@ -1659,6 +1659,35 @@ final class SourceSettingsTests: XCTestCase {
     tap("background-sheet-close");app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));app.buttons["播放"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));app.buttons["暂停"].firstMatch.tap();image("Real theme actual playback after restore")
   }
 
+  func testLiveDownloadQuality() throws {
+    XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func item(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:15));for _ in 0..<24{if element.isHittable{return};let above=element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    func tap(_ id:String){let element=item(id);reach(element);element.tap()}
+    func summary(_ text:String){let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@",text),object:app.staticTexts["download-platform-quality-summary"]);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:15),.completed)}
+    func openQuality(){openSettings(app,page:"downloads");tap("download-quality-open")}
+    func choose(_ platform:String,_ quality:String){tap("download-platform-"+platform);tap("download-quality-"+quality);summary(quality=="follow" ? "跟随播放设置":quality)}
+    openQuality();choose("wy","128k");image("Real NetEase download preference 128k")
+    choose("tx","320k");image("Real QQ independent download preference 320k")
+    choose("tx","follow");tap("download-platform-wy");summary("128k");image("Real resetting QQ preserves NetEase preference");choose("tx","320k")
+    app.terminate();app.launch();openQuality();summary("128k");tap("download-platform-tx");summary("320k");image("Real platform download preferences restored")
+    openSettings(app,page:"playback");let playback320=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","320k")).firstMatch;reach(playback320);playback320.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:playback320)],timeout:15),.completed);image("Real playback preference separately 320k")
+    let automatic=app.buttons["automatic-online-matching"];reach(automatic);let wasAutomatic=automatic.label.hasSuffix("开启")
+    if wasAutomatic{automatic.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","关闭"),object:automatic)],timeout:15),.completed)}
+    openSettings(app,page:"downloads");tap("settings-open-downloadTasks");let count=app.staticTexts["offline-task-summary"];XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertTrue(count.label.contains("2 个已保存"))
+    let remove=app.buttons["删除离线文件：Shape of You · Ed Sheeran"];reach(remove);remove.tap();XCTAssertTrue(app.alerts["删除离线文件？"].waitForExistence(timeout:5));app.alerts.buttons["删除"].tap()
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","1 个已保存"),object:count)],timeout:20),.completed)
+    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let save=app.buttons["保存离线"];reach(save);save.tap();let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
+    openSettings(app,page:"downloads");tap("settings-open-downloadTasks");XCTAssertTrue(count.waitForExistence(timeout:15))
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","2 个已保存"),object:count)],timeout:240),.completed);image("Real download with independent preference saved")
+    openSettings(app,page:"playback");reach(playback320);XCTAssertTrue(playback320.isSelected);image("Real download preserves playback preference")
+    let playback128=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","128k")).firstMatch;reach(playback128);playback128.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:playback128)],timeout:15),.completed);image("Real prior playback preference restored")
+    if wasAutomatic{reach(automatic);automatic.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","开启"),object:automatic)],timeout:15),.completed)}
+    app.terminate();app.launch();openQuality();summary("128k");tap("download-platform-tx");summary("320k");image("Real download policy persisted after actual transfer")
+  }
+
   func testLiveDownloadAttachments() throws {
     XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
     let app=XCUIApplication();app.launch()

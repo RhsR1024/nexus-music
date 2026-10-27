@@ -11,11 +11,11 @@ export interface OfflineDownloadRecord {
   partialBytes?:number;
   digest?:string;
   validator?:string;
-  quality?:string;
+  quality?:string;requestedQuality?:string;
   error?:string;
   updatedAt:number;
 }
-export interface OfflineDownloadMedia {url:string;headers?:Readonly<Record<string,string>>;quality?:string}
+export interface OfflineDownloadMedia {url:string;headers?:Readonly<Record<string,string>>;quality?:string;requestedQuality?:string}
 export interface OfflineDownloadFiles {
   independentTransfers?:boolean;
   configure?(maximum:number):Promise<void>;
@@ -64,6 +64,7 @@ function validateRecord(value:unknown):OfflineDownloadRecord{
   if(row.validator!==undefined&&(typeof row.validator!=='string'||row.validator.length>256))throw new Error('离线下载实体校验器无效');
   validateTrack(row.track as Track);
   if(row.quality!==undefined&&typeof row.quality!=='string')throw new Error('离线下载音质无效');
+  if(row.requestedQuality!==undefined&&typeof row.requestedQuality!=='string')throw new Error('离线下载首选音质无效');
   if(row.error!==undefined&&typeof row.error!=='string')throw new Error('离线下载错误无效');
   return {...row,bytes:safeBytes,updatedAt:safeUpdatedAt} as OfflineDownloadRecord;
 }
@@ -164,7 +165,7 @@ export class OfflineDownloadStore {
         const recovered=await this.options.files.recoverDownload?.(current.fileName,{signal:abort.signal});
         const media=recovered===undefined?await this.options.resolve(current.track,abort.signal):undefined;if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
         const offset=current.partialBytes??0;validator=current.validator;
-        if(media)await this.update(id,{quality:media.quality});
+        if(media)await this.update(id,{quality:media.quality,requestedQuality:media.requestedQuality});
         let bytes=recovered??await this.options.files.download(media!.url,current.fileName,media!.headers,{signal:abort.signal,offset,validator,onValidator:value=>{validator=value;}});if(!Number.isSafeInteger(bytes)||bytes<=0)bytes=this.options.files.size(current.fileName);
         if(abort.signal.aborted)throw new OfflineDownloadInterrupted(0);
         const max=this.options.maxBytes??2*1024*1024*1024;if(!Number.isSafeInteger(bytes)||bytes<=0||bytes>max){invalidFile=true;throw new Error('离线文件大小无效');}
@@ -172,7 +173,7 @@ export class OfflineDownloadStore {
         await this.mutate(async()=>{
           const total=this.items.filter(value=>value.status==='completed'&&value.id!==id).reduce((sum,value)=>sum+value.bytes,0)+bytes;
           if(total>(this.options.maxTotalBytes?.()??2*1024*1024*1024)){capacityExceeded=true;throw new Error('离线容量已满，请先清理已保存文件');}
-          const next=this.items.map(value=>value.id===id?{...value,status:'completed' as const,bytes,partialBytes:undefined,digest,validator,quality:media?.quality??current.quality,error:undefined,updatedAt:this.options.now()}:value);
+          const next=this.items.map(value=>value.id===id?{...value,status:'completed' as const,bytes,partialBytes:undefined,digest,validator,quality:media?.quality??current.quality,requestedQuality:media?.requestedQuality??current.requestedQuality,error:undefined,updatedAt:this.options.now()}:value);
           await this.save(next);this.publish(next);
         });
         await this.options.files.acknowledge?.(current.fileName).catch(()=>{});
@@ -231,7 +232,7 @@ export class OfflineDownloadStore {
   prepareExport<T>(id:string,prepare:(record:OfflineDownloadRecord,uri:string)=>T):Promise<T>{
     return this.mutate(async()=>{const item=this.items.find(value=>value.id===id);if(!item||item.status!=='completed'||this.removed.has(id)||!this.options.files.exists(item.fileName)||this.options.files.size(item.fileName)!==item.bytes||!item.digest||this.options.files.digest(item.fileName)?.toLowerCase()!==item.digest.toLowerCase())throw Error('离线音频不可导出，请检查文件或重新下载');return prepare({...item,track:{...item.track}},this.options.files.uri(item.fileName));});
   }
-  async resolve(track:Track):Promise<{url:string;quality?:string}|undefined>{
+  async resolve(track:Track):Promise<{url:string;quality?:string;requestedQuality?:string}|undefined>{
     const item=this.find(track);if(!item||item.status!=='completed'||!this.options.files.exists(item.fileName))return;
     return {url:this.options.files.uri(item.fileName),quality:item.quality};
   }

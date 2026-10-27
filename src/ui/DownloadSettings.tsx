@@ -1,3 +1,4 @@
+import {DownloadQualitySettings} from './DownloadQualitySettings.tsx';
 import {downloadBasename} from '../domain/downloadNaming.ts';
 import {exportOfflineAudio,OfflineExportUnavailable} from '../storage/offlineExport.ts';
 import {offlineAudioExportFiles} from './OfflineAudioExport.ts';
@@ -16,18 +17,19 @@ export function DownloadSettings({services,openTasks}:{services:Services;openTas
   const {palette:p}=useTheme();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const downloads=useSyncExternalStore(services.offlineDownloads.subscribe,services.offlineDownloads.getSnapshot),preview=downloads.find(item=>item.status==='completed');
-  const [separator,setSeparator]=useState(preferences.downloadNameSeparator);
+  const [separator,setSeparator]=useState(preferences.downloadNameSeparator),[showQuality,setShowQuality]=useState(false);
   const stats=services.offlineDownloads.getStatistics(),[message,setMessage]=useState(''),[saving,setSaving]=useState(false),locked=useRef(false);
   const applyConcurrency=(value:1|2|3)=>{if(locked.current)return;locked.current=true;setSaving(true);setMessage('');void services.offlineDownloads.updateConcurrency(value,()=>services.preferences.update({downloadConcurrency:value})).then(()=>setMessage(`下载并发已设为 ${value}`)).catch(()=>setMessage('下载并发未保存，请重试；已开始的任务继续结算。')).finally(()=>{locked.current=false;setSaving(false);});};
   const chooseConcurrency=(value:1|2|3)=>{if(saving||value===preferences.downloadConcurrency)return;if(value===1){applyConcurrency(value);return;}Alert.alert('提高下载并发？',`同时下载 ${value} 个任务可能增加平台限流、网络失败和设备资源占用。失败任务可稍后重试。`,[{text:'保持当前',style:'cancel'},{text:`使用 ${value} 并发`,onPress:()=>applyConcurrency(value)}]);};
   return <View style={{gap:20,paddingTop:12}}>
-    <Text style={{color:p.secondary,lineHeight:22}}>在线下载音质跟随播放偏好；私人曲库按服务端返回保存。仅完整保存并通过校验的文件可离线播放。</Text>
+    <Text style={{color:p.secondary,lineHeight:22}}>在线下载可按平台设置首选音质，未单独设置时跟随播放；私人曲库按服务端返回保存。仅完整保存并通过校验的文件可离线播放。</Text>
     <View style={{borderRadius:22,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,overflow:'hidden'}}>
-      <View style={{padding:18,flexDirection:'row',alignItems:'center',gap:14}}><Ionicons name="cloud-download-outline" size={24} color={p.accent}/><View style={{flex:1,gap:5}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>在线下载音质</Text><Text testID="download-quality-summary" style={{color:p.secondary,fontSize:13}}>跟随播放设置 · {preferences.quality}</Text></View></View>
+      <Pressable testID="download-quality-open" accessibilityRole="button" accessibilityLabel="设置各平台下载音质" accessibilityState={{expanded:showQuality}} onPress={()=>setShowQuality(value=>!value)} style={{padding:18,flexDirection:'row',alignItems:'center',gap:14}}><Ionicons name="cloud-download-outline" size={24} color={p.accent}/><View style={{flex:1,gap:5}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>在线下载音质</Text><Text testID="download-quality-summary" style={{color:p.secondary,fontSize:13}}>{Object.keys(preferences.downloadQualities).length?`已分别设置 ${Object.keys(preferences.downloadQualities).length} 个平台`:`跟随播放设置 · ${preferences.quality}`}</Text></View></Pressable>
       <Pressable testID="settings-open-downloadTasks" accessibilityRole="button" accessibilityLabel="查看下载任务与文件" onPress={openTasks} style={{minHeight:82,padding:18,borderTopWidth:1,borderTopColor:p.border,flexDirection:'row',alignItems:'center',gap:14}}>
         <Ionicons name="download-outline" size={24} color={p.accent}/><View style={{flex:1,gap:5}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>下载任务与文件</Text><Text style={{color:p.secondary,fontSize:13}}>{stats.pending} 个待处理 · {stats.files} 个已保存</Text></View><Ionicons name="chevron-forward" size={20} color={p.secondary}/>
       </Pressable>
     </View>
+    {showQuality&&<DownloadQualitySettings services={services}/>}
     <View style={{gap:space.md}}><Text accessibilityRole="header" style={{...typography.heading,color:p.text}}>同时下载任务数</Text>
       <Text testID="download-concurrency-summary" accessibilityLiveRegion="polite" style={{...typography.body,color:p.secondary}}>最多 {preferences.downloadConcurrency} 个任务{saving?' · 正在保存':''}</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:space.sm}}>{([1,2,3] as const).map(value=><Pressable key={value} testID={`download-concurrency-${value}`} accessibilityRole="radio" accessibilityLabel={`${value} 个并发${value===1?'（推荐）':''}`} accessibilityState={{selected:preferences.downloadConcurrency===value,disabled:saving}} disabled={saving} onPress={()=>chooseConcurrency(value)} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:preferences.downloadConcurrency===value?p.selected:p.surface,opacity:saving?.5:1}}><Text style={{...typography.body,color:p.accent}}>{value} 个{value===1?'（推荐）':''}</Text></Pressable>)}</View>

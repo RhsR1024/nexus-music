@@ -298,3 +298,10 @@ test('all eight attachment selections fetch and export only the selected content
   assert.deepEqual(added,[...(bits&1?['Artist__Song.lrc']:[]),...(bits&2?['Artist__Song.jpg']:[]),...(bits&4?['Artist__Song.meta.json']:[])]);assert.deepEqual(fetched,[...(bits&1?['lyrics']:[]),...(bits&2?['cover']:[])]);assert.equal(shared,1);assert.equal(cleaned,1);assert(r.files.exists(item.fileName));
  }
 });
+
+test('requested download preference and successful source tag remain distinct across persistence and recovery',async()=>{
+ let saved:unknown;const files=rig().files,repository={get:async<T>()=>saved as T|undefined,put:async(_key:string,value:unknown)=>{saved=structuredClone(value);}};
+ const options={resolve:async()=>({url:'https://audio.example/public.mp3',quality:'128k',requestedQuality:'flac'}),files,uuid:()=> '00000000-0000-4000-8000-000000000099',now:()=>1};
+ const store=new OfflineDownloadStore(repository,options),item=await store.enqueue(track());await store.start(item.id);assert.equal(store.getSnapshot()[0]!.requestedQuality,'flac');assert.equal(store.getSnapshot()[0]!.quality,'128k');
+ const recovered=new OfflineDownloadStore(repository,options);await recovered.restore();assert.equal(recovered.getSnapshot()[0]!.requestedQuality,'flac');assert.equal(recovered.getSnapshot()[0]!.status,'completed');assert(!JSON.stringify(saved).includes('https://'));
+});

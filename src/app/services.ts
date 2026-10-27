@@ -1,3 +1,4 @@
+import {createDownloadResolver} from '../providers/downloadResolver.ts';
 import {createSongFavorites} from './songFavorites.ts';
 import {VisualAssetStore,VisualColorCache,type VisualNative} from '../storage/visualAssets.ts';
 import {CoverThemeStore} from '../appearance/coverTheme.ts';
@@ -123,9 +124,10 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
     return matchedResolver.resolve(track,signal,excluded);
   };
+  const downloadResolver=createDownloadResolver({registry,transport:nativeLX,matcher:matching,library,preferences:preferences.getSnapshot,enrich:(track,signal)=>online.enrich(track,signal),other:{resolve:resolveTrack},hash});
   let playbackController:ReturnType<typeof createPlaybackSession>['controller']|undefined;
   const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal)=>{
-    const media=await resolveTrack(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');return media;
+    const media=await downloadResolver.resolve(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');return media;
   },files:createOfflineDownloadFiles(),concurrency:()=>preferences.getSnapshot().downloadConcurrency,uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,isInUse:track=>{
     const state=playbackController?.getSnapshot();if(state?.intent!=='playing')return false;
     const current=state.queue.entries.find(entry=>entry.id===state.queue.currentId)?.track;
