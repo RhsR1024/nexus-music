@@ -3528,7 +3528,10 @@ final class SourceSettingsTests: XCTestCase {
       func visible()->Bool {
         guard element.exists,viewport.exists else{return false}
         let frame=element.frame,rect=visibleRect()
-        return frame.width>0 && frame.height>0 && rect.contains(CGPoint(x:frame.midX,y:frame.midY)) && (element.isHittable || !element.isEnabled)
+        // A value label is read, not tapped. iOS can expose its geometry
+        // while reporting it as non-hittable; scrolling again at the top
+        // would hand the downward gesture to the dismissible sheet.
+        return frame.width>0 && frame.height>0 && rect.contains(CGPoint(x:frame.midX,y:frame.midY)) && (element.elementType == .staticText || element.isHittable || !element.isEnabled)
       }
       for _ in 0..<45 {
         if visible(){break}

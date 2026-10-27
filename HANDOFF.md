@@ -1,3 +1,7 @@
+## 2026-10-27 背景透明度CI读取专项
+
+只读StaticText按有效几何可见性读取，取消其hittable前置；按钮等交互约束及原产品断言全部保留。Release1/0/0、360.868秒；233个src/modules文件与真实音质批相同，两首真实音频SHA保持。仅CI功能回归，未查看夹具PNG作UI验收；iOS27云端终态待。见[回执](docs/2026-10-27_background-opacity-ci-report.md)。下一核对云端并继续批次6余项。
+
 ## 2026-10-27 批次6：独立平台下载音质
 
 交付：源码`3725f22e5cec736326be06cf527af741ab6b4c35`正常push、远端SHA一致；[CI40458280308](https://github.com/RhsR1024/nexus-music/actions/runs/40458280308)运行，当前1运行/0等待。99d5e5e的40434766673为21通过/1失败，背景页visual-value-backgroundOpacity定位待查；本批云端终态待，未取消运行或重派旧版。下一优先CI背景节点核验，再继续封面/目录等。小型回执`build/ci-sidecars-99d-20261027/summary.json`。
