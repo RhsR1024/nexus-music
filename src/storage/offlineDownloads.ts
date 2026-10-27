@@ -1,3 +1,4 @@
+import {validateDestinationIntent,type DownloadDestinationIntent} from '../domain/downloadDestination.ts';
 import {validateAttachmentPolicy,type DownloadAttachmentPolicy} from '../domain/downloadAttachmentPolicy.ts';
 import {trackKey, validateTrack, type Track} from '../domain/track.ts';
 import type {Repository} from './repository.ts';
@@ -9,6 +10,7 @@ export interface OfflineDownloadRecord {
   fileName:string;
   status:OfflineDownloadStatus;
   bytes:number;
+  destination?:DownloadDestinationIntent;
   attachmentPolicy?:DownloadAttachmentPolicy;
   partialBytes?:number;
   digest?:string;
@@ -17,16 +19,16 @@ export interface OfflineDownloadRecord {
   error?:string;
   updatedAt:number;
 }
-export interface OfflineDownloadMedia {url:string;headers?:Readonly<Record<string,string>>;quality?:string;requestedQuality?:string}
+export interface OfflineDownloadMedia {url:string;headers?:Readonly<Record<string,string>>;quality?:string;requestedQuality?:string;resumeIdentity?:string}
 export interface OfflineDownloadFiles {
   independentTransfers?:boolean;
   configure?(maximum:number):Promise<void>;
   setConcurrency?(maximum:number):Promise<void>;
   stopDownload?(fileName:string,pause:boolean):Promise<void>;
   recoverState?(fileName:string):Promise<'downloading'|'paused'|'cancelled'|'failed'|undefined>;
-  recoverDownload?(fileName:string,options?:{signal?:AbortSignal}):Promise<number|undefined>;
+  recoverDownload?(fileName:string,options?:{signal?:AbortSignal;interruption?:()=>'pause'|'cancel'}):Promise<number|undefined>;
   acknowledge?(fileName:string):Promise<void>;
-  download(url:string,fileName:string,headers?:Readonly<Record<string,string>>,options?:{signal?:AbortSignal;offset?:number;validator?:string;onValidator?:(validator:string|undefined)=>void}):Promise<number>;
+  download(url:string,fileName:string,headers?:Readonly<Record<string,string>>,options?:{signal?:AbortSignal;interruption?:()=>'pause'|'cancel';resumeIdentity?:string;offset?:number;validator?:string;onValidator?:(validator:string|undefined)=>void}):Promise<number>;
   remove(fileName:string):Promise<void>;
   exists(fileName:string):boolean;
   size(fileName:string):number;
@@ -51,6 +53,7 @@ export interface OfflineDownloadOptions {
   maxTotalBytes?:()=>number;
   reservedBytes?:()=>number;
   captureAttachments?:(track:Track)=>DownloadAttachmentPolicy|undefined;
+  captureDestination?:()=>DownloadDestinationIntent|undefined;
   isInUse?:(track:Track)=>boolean;
 }
 interface SavedDownloads {version:1;items:OfflineDownloadRecord[]}
@@ -70,7 +73,7 @@ function validateRecord(value:unknown):OfflineDownloadRecord{
   if(row.quality!==undefined&&typeof row.quality!=='string')throw new Error('离线下载音质无效');
   if(row.requestedQuality!==undefined&&typeof row.requestedQuality!=='string')throw new Error('离线下载首选音质无效');
   if(row.error!==undefined&&typeof row.error!=='string')throw new Error('离线下载错误无效');
-  return {...row,...(row.attachmentPolicy!==undefined?{attachmentPolicy:validateAttachmentPolicy(row.attachmentPolicy)}:{}),bytes:safeBytes,updatedAt:safeUpdatedAt} as OfflineDownloadRecord;
+  return {...row,...(row.destination!==undefined?{destination:validateDestinationIntent(row.destination)}:{}),...(row.attachmentPolicy!==undefined?{attachmentPolicy:validateAttachmentPolicy(row.attachmentPolicy)}:{}),bytes:safeBytes,updatedAt:safeUpdatedAt} as OfflineDownloadRecord;
 }
 
 export class OfflineDownloadStore {
@@ -149,8 +152,8 @@ export class OfflineDownloadStore {
   async enqueue(track:Track){
     validateTrack(track);return this.mutate(async()=>{const existing=this.find(track);if(existing)return existing;
       if(this.items.length>=1000)throw new Error('离线下载最多保存1000首');
-      const policy=this.options.captureAttachments?.(track);
-      const record:OfflineDownloadRecord={...(policy?{attachmentPolicy:validateAttachmentPolicy(policy)}:{}),id:this.options.uuid(),track,fileName:`${this.options.uuid()}.audio`,status:'queued',bytes:0,updatedAt:this.options.now()};
+      const policy=this.options.captureAttachments?.(track),destination=this.options.captureDestination?.();
+      const record:OfflineDownloadRecord={...(destination?{destination:validateDestinationIntent(destination)}:{}),...(policy?{attachmentPolicy:validateAttachmentPolicy(policy)}:{}),id:this.options.uuid(),track,fileName:`${this.options.uuid()}.audio`,status:'queued',bytes:0,updatedAt:this.options.now()};
       const next=[...this.items,record];await this.save(next);this.publish(next);return record;
     });
   }
@@ -160,6 +163,9 @@ export class OfflineDownloadStore {
       await this.admit(id,this.items.find(value=>value.id===id)?.status==='downloading');
       try{const item=this.items.find(value=>value.id===id);if(this.removed.has(id)||this.pauseRequested.has(id)||this.cancelRequested.has(id)||!item||item.status==='completed'||item.status==='paused'||item.status==='cancelled')return;
       const abort=new AbortController();this.active.set(id,abort);
+      // React Native's AbortController shim does not expose AbortSignal.reason.
+      // Keep transport intent with the authoritative download owner instead.
+      const interruption:()=> 'pause'|'cancel'=()=>this.pauseRequested.has(id)?'pause':'cancel';
       let invalidFile=false,capacityExceeded=false,integrityFailed=false,validator:string|undefined;
       try{
         await this.update(id,{status:'downloading',error:undefined});
@@ -167,11 +173,11 @@ export class OfflineDownloadStore {
         if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
         await this.options.files.setConcurrency?.(this.options.concurrency?.()??3);
         await this.options.files.configure?.(this.options.maxTotalBytes?.()??2*1024*1024*1024);
-        const recovered=await this.options.files.recoverDownload?.(current.fileName,{signal:abort.signal});
+        const recovered=await this.options.files.recoverDownload?.(current.fileName,{signal:abort.signal,interruption});
         const media=recovered===undefined?await this.options.resolve(current.track,abort.signal):undefined;if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
         const offset=current.partialBytes??0;validator=current.validator;
         if(media)await this.update(id,{quality:media.quality,requestedQuality:media.requestedQuality});
-        let bytes=recovered??await this.options.files.download(media!.url,current.fileName,media!.headers,{signal:abort.signal,offset,validator,onValidator:value=>{validator=value;}});if(!Number.isSafeInteger(bytes)||bytes<=0)bytes=this.options.files.size(current.fileName);
+        let bytes=recovered??await this.options.files.download(media!.url,current.fileName,media!.headers,{signal:abort.signal,interruption,resumeIdentity:media!.resumeIdentity,offset,validator,onValidator:value=>{validator=value;}});if(!Number.isSafeInteger(bytes)||bytes<=0)bytes=this.options.files.size(current.fileName);
         if(abort.signal.aborted)throw new OfflineDownloadInterrupted(0);
         const max=this.options.maxBytes??2*1024*1024*1024;if(!Number.isSafeInteger(bytes)||bytes<=0||bytes>max){invalidFile=true;throw new Error('离线文件大小无效');}
         const digest=this.options.files.digest(current.fileName);if(!digest||!/^[a-f\d]{32}$/i.test(digest)){integrityFailed=true;throw new Error('离线文件完整性校验失败');}
@@ -234,10 +240,13 @@ export class OfflineDownloadStore {
     }finally{this.removed.delete(id);}
   }
   async clearCompleted(){for(const item of [...this.items].filter(value=>value.status==='completed')){if(this.options.isInUse?.(item.track))continue;await this.remove(item.id);}}
+  async setDestination(id:string,destination:DownloadDestinationIntent){
+    const intent=validateDestinationIntent(destination);await this.mutate(async()=>{const row=this.items.find(item=>item.id===id);if(!row||row.status!=='completed'||this.removed.has(id))throw Error('原音频尚未保存');const next=this.items.map(item=>item.id===id?{...item,destination:intent}:item);await this.save(next);this.publish(next);});
+  }
   prepareExport<T>(id:string,prepare:(record:OfflineDownloadRecord,uri:string)=>T):Promise<T>{
     return this.mutate(async()=>{const item=this.items.find(value=>value.id===id);if(!item||item.status!=='completed'||this.removed.has(id)||!this.options.files.exists(item.fileName)||this.options.files.size(item.fileName)!==item.bytes||!item.digest||this.options.files.digest(item.fileName)?.toLowerCase()!==item.digest.toLowerCase())throw Error('离线音频不可导出，请检查文件或重新下载');return prepare({...item,track:{...item.track}},this.options.files.uri(item.fileName));});
   }
-  async resolve(track:Track):Promise<{url:string;quality?:string;requestedQuality?:string}|undefined>{
+  async resolve(track:Track):Promise<{url:string;quality?:string;requestedQuality?:string;resumeIdentity?:string}|undefined>{
     const item=this.find(track);if(!item||item.status!=='completed'||!this.options.files.exists(item.fileName))return;
     return {url:this.options.files.uri(item.fileName),quality:item.quality};
   }

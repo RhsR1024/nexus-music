@@ -17,8 +17,8 @@ public final class NexusDownloadsModule: Module {
     AsyncFunction("snapshot") { (name: String, promise: Promise) in
       OfflineBackgroundTransfers.shared.snapshot(name) { promise.resolve($0?.dictionary) }
     }
-    AsyncFunction("begin") { (url: String, name: String, headers: [String: String], resume: Bool, promise: Promise) in
-      OfflineBackgroundTransfers.shared.begin(url, name: name, headers: headers, resume: resume) { result in
+    AsyncFunction("begin") { (url: String, name: String, headers: [String: String], resume: Bool, identity: String?, promise: Promise) in
+      OfflineBackgroundTransfers.shared.begin(url, name: name, headers: headers, resume: resume, identity: identity) { result in
         switch result { case .success(let state): promise.resolve(state.dictionary); case .failure: promise.reject("DOWNLOAD_START", "后台下载无法启动，请重试") }
       }
     }

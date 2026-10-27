@@ -5,7 +5,7 @@ export interface BackgroundDownloadNative {
   configure(maximum:number):Promise<void>;
   setConcurrency(maximum:number):Promise<void>;
   snapshot(name:string):Promise<BackgroundDownloadState|null>;
-  begin(url:string,name:string,headers:Readonly<Record<string,string>>,resume:boolean):Promise<BackgroundDownloadState>;
+  begin(url:string,name:string,headers:Readonly<Record<string,string>>,resume:boolean,identity?:string):Promise<BackgroundDownloadState>;
   stop(name:string,pause:boolean):Promise<void>;
   discard(name:string):Promise<void>;
   acknowledge(name:string):Promise<void>;
@@ -16,9 +16,9 @@ export interface BackgroundDownloadNative {
 export function createBackgroundDownload(native:BackgroundDownloadNative,files:OfflineDownloadFiles,delay=()=>new Promise<void>(resolve=>setTimeout(resolve,250))):OfflineDownloadFiles{
   const states=new Map<string,BackgroundDownloadState>();
   const remember=(state:BackgroundDownloadState|null)=>{if(state)states.set(state.fileName,state);return state;};
-  const wait=async(name:string,signal?:AbortSignal)=>{
+  const wait=async(name:string,signal?:AbortSignal,interruption?:()=> 'pause'|'cancel')=>{
     let stop:Promise<void>|undefined;
-    const interrupt=()=>{if(!stop){stop=native.stop(name,signal?.reason==='pause');void stop.catch(()=>{});}};
+    const interrupt=()=>{if(!stop){stop=native.stop(name,(interruption?.()??signal?.reason)==='pause');void stop.catch(()=>{});}};
     signal?.addEventListener('abort',interrupt,{once:true});if(signal?.aborted)interrupt();
     try{
       while(true){
@@ -43,13 +43,13 @@ export function createBackgroundDownload(native:BackgroundDownloadNative,files:O
     async recoverState(name){const state=remember(await native.snapshot(name));return state?.state==='running'||state?.state==='completed'?'downloading':state?.state==='failed'?'failed':state?.state==='paused'||state?.state==='pausing'?'paused':state?.state==='cancelled'||state?.state==='cancelling'?'cancelled':undefined;},
     async download(url,name,headers,options){
       if(options?.signal?.aborted)throw new OfflineDownloadInterrupted(0);
-      remember(await native.begin(url,name,headers??{},(options?.offset??0)>0));
-      return wait(name,options?.signal);
+      remember(await native.begin(url,name,headers??{},(options?.offset??0)>0,options?.resumeIdentity));
+      return wait(name,options?.signal,options?.interruption);
     },
     async recoverDownload(name,options){
       const state=remember(await native.snapshot(name));
       if(!state||['paused','cancelled','failed'].includes(state.state))return;
-      return wait(name,options?.signal);
+      return wait(name,options?.signal,options?.interruption);
     },
     async acknowledge(name){await native.acknowledge(name);states.delete(name);},
     async remove(name){await native.discard(name);states.delete(name);await files.remove(name);},

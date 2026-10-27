@@ -22,7 +22,24 @@ import AVFoundation
     while stream.hasBytesAvailable { let count = stream.read(&buffer, maxLength: buffer.count); if count < 0 { throw stream.streamError! }; if count == 0 { break }; digest.update(data: Data(buffer.prefix(count))) }
     return digest.finalize().map { String(format: "%02x", $0) }.joined()
   }
+  static func verifyRequestIdentity() throws {
+    let first = URL(string: "https://media.example/rest/stream.view?id=one&u=fixture&s=first&t=first")!
+    let rotated = URL(string: "https://media.example/rest/stream.view?id=one&u=fixture&s=second&t=second")!
+    let key = String(repeating: "a", count: 64)
+    let strictFirst = try OfflineBackgroundTransfers.requestFingerprint(first, headers: [:])
+    let strictRotated = try OfflineBackgroundTransfers.requestFingerprint(rotated, headers: [:])
+    precondition(strictFirst != strictRotated)
+    let stableFirst = try OfflineBackgroundTransfers.requestFingerprint(first, headers: [:], identity: key)
+    let stableRotated = try OfflineBackgroundTransfers.requestFingerprint(rotated, headers: [:], identity: key)
+    precondition(stableFirst == stableRotated)
+    let changedAccountOrSong = try OfflineBackgroundTransfers.requestFingerprint(rotated, headers: [:], identity: String(repeating: "b", count: 64))
+    let changedServer = try OfflineBackgroundTransfers.requestFingerprint(URL(string: "https://other.example/rest/stream.view")!, headers: [:], identity: key)
+    let changedHeaders = try OfflineBackgroundTransfers.requestFingerprint(first, headers: ["Authorization":"fixture"], identity: key)
+    precondition(stableFirst != changedAccountOrSong && stableFirst != changedServer && stableFirst != changedHeaders)
+    do { _ = try OfflineBackgroundTransfers.requestFingerprint(first, headers: [:], identity: "not-a-content-key"); fatalError("Invalid identity must fail") } catch {}
+  }
   static func main() async throws {
+    try verifyRequestIdentity()
     let args = CommandLine.arguments; guard args.count == 5, URL(string: args[1])?.host == "127.0.0.1" else { fatalError("loopback URL, output directory, two expected hashes required") }
     let root = URL(fileURLWithPath: args[2]), files = root.appendingPathComponent("files"), metadata = root.appendingPathComponent("metadata")
     let engine = OfflineBackgroundTransfers(directory: files, metadata: metadata, configuration: .ephemeral)

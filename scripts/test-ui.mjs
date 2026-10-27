@@ -19,6 +19,7 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
+const liveDownloadDestinationUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadDestination'));
 const liveManagedAttachmentsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveManagedDownloadAttachments'));
 const liveDownloadCoverUI=process.argv.slice(2).some(target=>/\/testLiveDownloadCover(?:Large|Small)$/.test(target));
 const liveDownloadAttachmentsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadAttachments'));
@@ -26,7 +27,7 @@ const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -128,8 +129,8 @@ if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI
 const entryFile=vinylReferenceUI?'tests/e2e/vinyl.tsx':classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
 const offlineUI=process.argv.slice(2).some(target=>['/testDownloadSettingsAndOfflinePlayback','/testDownloadTaskBatchActions'].some(suffix=>target.endsWith(suffix)));
-let blockOfflineStream=false;
-const offlineCounts={full:0,resumed:0,blocked:0};
+let blockOfflineStream=false,holdOfflineFull=false;
+const offlineCounts={full:0,resumed:0,blocked:0,heldFull:0};
 let holdDiscoveryDetail=false;
 let truncateDiscoveryPlaylist=true;
 let amLongQueue=false;
@@ -229,6 +230,7 @@ const server = createServer(async (req, res) => {
   if(offlineUI&&req.url.startsWith('/offline-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('block'))blockOfflineStream=control.searchParams.get('block')==='1';
+    if(control.searchParams.has('pauseWindow'))holdOfflineFull=control.searchParams.get('pauseWindow')==='1';
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify({...offlineCounts,streams:counts.requests.stream??0}));return;
   }
   if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
@@ -360,7 +362,9 @@ const server = createServer(async (req, res) => {
       if(start>=navidromeAudio.length||end<start){res.writeHead(416);res.end();return;}
       res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');res.setHeader('ETag','"offline-fixture-v1"');res.setHeader('Content-Length',end-start+1);
       if(range){res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${navidromeAudio.length}`);}
-      let cursor=start;const timer=setInterval(()=>{const next=Math.min(cursor+32768,end+1);res.write(navidromeAudio.subarray(cursor,next));cursor=next;if(cursor>end){clearInterval(timer);res.end();}},100);
+      // Keep a real, progressing partial response until the test pauses it.
+      // Ordinary playback Range requests and resumed downloads retain full speed.
+      let cursor=start,held=false;const timer=setInterval(()=>{const waiting=holdOfflineFull&&!range&&cursor-start>=262144;if(waiting&&!held){held=true;offlineCounts.heldFull++;}const next=Math.min(cursor+(waiting?1:32768),end+1);res.write(navidromeAudio.subarray(cursor,next));cursor=next;if(cursor>end){clearInterval(timer);res.end();}},100);
       res.once('close',()=>clearInterval(timer));return;
     }
     const audio=navidromeAudio;
@@ -448,6 +452,7 @@ try {
   if(!liveDownloadAttachmentsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadAttachments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadQuality')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadQuality');
   if(!liveManagedAttachmentsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveManagedDownloadAttachments');
+  if(!liveDownloadDestinationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadDestination');
   for(const variant of ['Large','Small'])if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadCover'+variant)))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadCover'+variant);
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
@@ -524,6 +529,13 @@ try {
       for(const name of names){const source=resolve(localFixtureDirectory,name),bytes=statSync(source).size;if(bytes<=0||bytes>30000000)throw Error('Unexpected attachment size');const sha256=fileSha256(source);writeFileSync(resolve(target,name),readFileSync(source));if(fileSha256(resolve(target,name))!==sha256)throw Error('Attachment archive changed');files.push({name,bytes,sha256});}
       writeFileSync(resolve(runDirectory,'actual-attachments-receipt.json'),JSON.stringify({files,originalsRemovedAfterArchiving:true},null,2));
     }catch(error){console.error(`Actual companion export archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
+  }
+  if(liveDownloadDestinationUI&&localFixtureDirectory){
+    try{
+      const names=readdirSync(localFixtureDirectory).filter(name=>/^Ed Sheeran__Shape of You(?: \(2\))?\.(?:mp3|lrc|jpg|meta\.json)$/.test(name));if(names.length!==8)throw Error('Expected two actual four-file destination groups');
+      const target=resolve(runDirectory,'actual-destination-copies');mkdirSync(target);const files=[];for(const name of names){const source=resolve(localFixtureDirectory,name),bytes=statSync(source).size,sha256=fileSha256(source);if(bytes<=0||bytes>30000000)throw Error('Unexpected destination copy size');writeFileSync(resolve(target,name),readFileSync(source));if(fileSha256(resolve(target,name))!==sha256)throw Error('Destination archive changed');files.push({name,bytes,sha256});}
+      writeFileSync(resolve(runDirectory,'actual-destination-receipt.json'),JSON.stringify({files,originalsRemovedOnlyFromHarnessOwnedFolderAfterArchiving:true},null,2));
+    }catch(error){console.error(`Actual destination archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
   }
   closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true});
 }

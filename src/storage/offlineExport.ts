@@ -7,7 +7,7 @@ import type {LyricDocument} from '../lyrics/parser.ts';
 import type {Track} from '../domain/track.ts';
 import type {OfflineDownloadRecord,OfflineDownloadStore} from './offlineDownloads.ts';
 export interface StagedAudioExport {uri:string;remove():void;addText?(name:string,text:string):string;addCover?(name:string,uri:string,maximum?:DownloadCoverSize):Promise<string>}
-export interface AudioExportFiles {stage(uri:string,name:(header:Uint8Array)=>string):StagedAudioExport;share(uri:string,additional?:readonly string[]):Promise<void>}
+export interface AudioExportFiles {stage(uri:string,name:(header:Uint8Array)=>string):StagedAudioExport|Promise<StagedAudioExport>;share(uri:string,additional?:readonly string[]):Promise<void>}
 export interface AudioExportAttachments extends DownloadAttachments {signal:AbortSignal;prepared?(record:OfflineDownloadRecord,maximum:DownloadCoverSize):Promise<{lyrics?:string;cover?:string}|undefined>;lyrics(track:Track,signal:AbortSignal):Promise<LyricDocument>;downloadCoverSizes?:DownloadCoverPreferences['downloadCoverSizes'];cover(track:Track,signal:AbortSignal,maximum:DownloadCoverSize):Promise<string|undefined>}
 export class OfflineExportUnavailable extends Error {constructor(message:string){super(message);this.name='OfflineExportUnavailable';}}
 function active(signal?:AbortSignal){if(signal?.aborted)throw Error('导出已取消');}

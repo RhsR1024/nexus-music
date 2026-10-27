@@ -9,6 +9,34 @@ public final class NexusFilesModule: Module {
   private var audioExporter: AudioFileExportSheet?
   public func definition() -> ModuleDefinition {
     Name("NexusFiles")
+    AsyncFunction("downloadDestinationStatus") { () throws -> [String: String]? in try DownloadDestination.shared.status() }.runOnQueue(queue)
+    AsyncFunction("forgetDownloadDestination") { (id: String) throws in try DownloadDestination.shared.forget(id) }.runOnQueue(queue)
+    AsyncFunction("saveDownloadFiles") { (values: [String], id: String, job: String) throws -> [String] in try DownloadDestination.shared.save(values, expected: id, job: job) }.runOnQueue(queue)
+    AsyncFunction("pickDownloadDestination") { (promise: Promise) in
+      guard self.folderPicker == nil, self.audioExporter == nil else { promise.reject("FOLDER_PICKER_BUSY", "文件夹选择器尚未就绪"); return }
+      func presentWhenSettled(_ attempt: Int) {
+        guard var controller = self.appContext?.utilities?.currentViewController() else { promise.reject("FOLDER_PICKER_BUSY", "文件夹选择器尚未就绪"); return }
+        while let presented = controller.presentedViewController { controller = presented }
+        // The top utility controller may be a remote picker's child. Its
+        // ancestor can still be dismissing even when the child reports idle.
+        var ancestor: UIViewController? = controller
+        var moving = controller.viewIfLoaded?.window == nil
+        while let value = ancestor {
+          moving = moving || value.isBeingDismissed || value.isBeingPresented || value.transitionCoordinator != nil || value is UIDocumentPickerViewController || value is UIActivityViewController
+          ancestor = value.parent
+        }
+        if moving {
+          if attempt >= 20 { promise.reject("FOLDER_PICKER_BUSY", "上一个选择器尚未关闭，请稍后重试"); return }
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { presentWhenSettled(attempt + 1) }; return
+        }
+        let picker = LocalAudioFolderPicker(register: { try DownloadDestination.shared.register($0) }) { [weak self] result in
+          self?.folderPicker = nil
+          switch result { case .success(let root): promise.resolve(root); case .failure: promise.reject("DESTINATION_ACCESS", "保存目录授权失败，请重新选择") }
+        }
+        self.folderPicker = picker; picker.startWatchdog(); controller.present(picker.controller, animated: true) { picker.markPresented() }
+      }
+      presentWhenSettled(0)
+    }.runOnQueue(.main)
     AsyncFunction("pickAudioFolder") { (promise: Promise) in
       guard self.folderPicker == nil, self.audioExporter == nil else { promise.reject("FOLDER_PICKER_BUSY", "文件夹选择器尚未就绪"); return }
       // Re-adding right after a cancel can land inside the previous picker's
@@ -32,6 +60,7 @@ public final class NexusFilesModule: Module {
       }
       presentWhenSettled(after: 0)
     }.runOnQueue(.main)
+    AsyncFunction("stageAudioExport") { (input: String, target: String) throws -> String in try AudioExportStaging.stageAudio(input, target: target) }.runOnQueue(queue)
     AsyncFunction("exportCoverJPEG") { (input: String, target: String, maximum: Int) throws -> String in try AudioExportStaging.jpeg(input, target: target, maxPixelSize: maximum) }.runOnQueue(queue)
     AsyncFunction("exportAudioFiles") { (values: [String], promise: Promise) in
       guard self.audioExporter == nil, self.folderPicker == nil else { promise.reject("AUDIO_EXPORT_BUSY", "文件选择器尚未关闭"); return }
@@ -42,7 +71,15 @@ public final class NexusFilesModule: Module {
       func presentWhenSettled(_ attempt: Int) {
         guard var controller = self.appContext?.utilities?.currentViewController() else { picker.finish(false); return }
         while let presented = controller.presentedViewController { controller = presented }
-        if controller.isBeingDismissed || controller.isBeingPresented || controller is UIDocumentPickerViewController || controller is UIActivityViewController {
+        // The top utility controller may be a remote picker's child. Its
+        // ancestor can still be dismissing even when the child reports idle.
+        var ancestor: UIViewController? = controller
+        var moving = controller.viewIfLoaded?.window == nil
+        while let value = ancestor {
+          moving = moving || value.isBeingDismissed || value.isBeingPresented || value.transitionCoordinator != nil || value is UIDocumentPickerViewController || value is UIActivityViewController
+          ancestor = value.parent
+        }
+        if moving {
           if attempt >= 20 { picker.finish(false); return }
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { presentWhenSettled(attempt + 1) }; return
         }
@@ -88,8 +125,9 @@ private final class LocalAudioFolderPicker: NSObject, UIDocumentPickerDelegate, 
   private var watchdog: Timer?
   private var presented = false
   private var age: TimeInterval = 0
-  init(completion: @escaping (Result<[String: String]?, Error>) -> Void) {
-    self.completion = completion; super.init(); controller.delegate = self; controller.presentationController?.delegate = self
+  private let register: (URL) throws -> [String: String]
+  init(register: @escaping (URL) throws -> [String: String] = { try LocalAudioFolders.shared.register($0) }, completion: @escaping (Result<[String: String]?, Error>) -> Void) {
+    self.register = register; self.completion = completion; super.init(); controller.delegate = self; controller.presentationController?.delegate = self
   }
   // The provider can tear the sheet down without any delegate callback; a
   // pending promise must not freeze the scan page, so resolve it as cancelled.
@@ -98,7 +136,7 @@ private final class LocalAudioFolderPicker: NSObject, UIDocumentPickerDelegate, 
       guard let self, self.completion != nil else { return }
       self.age += 0.5
       if self.presented {
-        if self.controller.presentingViewController == nil, !self.controller.isBeingDismissed, self.controller.viewIfLoaded?.window == nil { self.finish(.success(nil)) }
+        if self.controller.presentingViewController == nil, !self.controller.isBeingDismissed, self.controller.transitionCoordinator == nil, self.controller.viewIfLoaded?.window == nil { self.finish(.success(nil)) }
       } else if self.age >= 20 {
         // A cold Files provider can take several seconds to actually show the
         // sheet; only conclude failure when it never appeared at all, and
@@ -108,14 +146,14 @@ private final class LocalAudioFolderPicker: NSObject, UIDocumentPickerDelegate, 
       }
     }
   }
-  func markPresented() { presented = true }
+  func markPresented() { presented = true; controller.presentationController?.delegate = self }
   private func finish(_ result: Result<[String: String]?, Error>) {
     watchdog?.invalidate(); watchdog = nil
     let callback = completion; completion = nil; callback?(result)
   }
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
     guard let url = urls.first else { finish(.success(nil)); return }
-    do { finish(.success(try LocalAudioFolders.shared.register(url))) } catch { finish(.failure(error)) }
+    do { finish(.success(try register(url))) } catch { finish(.failure(error)) }
   }
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finish(.success(nil)) }
   func presentationControllerDidDismiss(_ presentationController: UIPresentationController) { finish(.success(nil)) }

@@ -144,14 +144,27 @@ final class OfflineBackgroundTransfers: NSObject, URLSessionDownloadDelegate {
   private func perform(_ work: @escaping () -> Void) { queue.async { self.connect(); if self.ready { work() } else { self.pending.append(work) } } }
   func snapshot(_ name: String, completion: @escaping (OfflineTransferRecord?) -> Void) { perform { var record = self.records[name]; if record?.state == "running", let task = self.tasks[name], !self.admitted.contains(task.taskIdentifier) { record?.state = "queued" }; completion(record) } }
 
-  func begin(_ url: String, name: String, headers: [String: String], resume: Bool, completion: @escaping (Result<OfflineTransferRecord, Error>) -> Void) {
+  static func requestFingerprint(_ address: URL, headers: [String: String], identity: String? = nil) throws -> String {
+    var body: [String: Any] = ["url": address.absoluteString, "headers": headers]
+    if let identity {
+      guard identity.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
+            var endpoint = URLComponents(url: address, resolvingAgainstBaseURL: false) else { throw failure("identity") }
+      // Only a caller with a stable account/content key opts into this. Origin,
+      // endpoint, headers and that key still isolate the protected resume data.
+      endpoint.query = nil; endpoint.fragment = nil
+      guard let scope = endpoint.string else { throw failure("identity") }
+      body["url"] = scope; body["identity"] = identity
+    }
+    let data = try JSONSerialization.data(withJSONObject: body, options: .sortedKeys)
+    return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+  }
+  func begin(_ url: String, name: String, headers: [String: String], resume: Bool, identity: String? = nil, completion: @escaping (Result<OfflineTransferRecord, Error>) -> Void) {
     perform { do {
       guard !self.storageError, Self.valid(name), let address = URL(string: url), ["http", "https"].contains(address.scheme?.lowercased() ?? ""), address.host != nil, address.user == nil, address.password == nil else { throw Self.failure("request") }
       guard headers.count <= 64, headers.allSatisfy({ !$0.key.contains("\r") && !$0.key.contains("\n") && !$0.value.contains("\r") && !$0.value.contains("\n") }) else { throw Self.failure("headers") }
       if let current = self.records[name], current.state == "completed", FileManager.default.fileExists(atPath: self.directory.appendingPathComponent(name).path) { completion(.success(current)); return }
       if let current = self.records[name], self.tasks[name] != nil { completion(.success(current)); return }
-      let body = try JSONSerialization.data(withJSONObject: ["url": url, "headers": headers], options: .sortedKeys)
-      let fingerprint = SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()
+      let fingerprint = try Self.requestFingerprint(address, headers: headers, identity: identity)
       let resumeFile = self.resumeURL(name)
       let old = self.records[name]
       let resumeSize = (try? FileManager.default.attributesOfItem(atPath: resumeFile.path)[.size] as? NSNumber)?.int64Value ?? 0

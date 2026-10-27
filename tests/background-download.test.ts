@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
 import {createBackgroundDownload,type BackgroundDownloadNative,type BackgroundDownloadState} from '../src/storage/backgroundDownload.ts';
-import {OfflineDownloadInterrupted,type OfflineDownloadFiles} from '../src/storage/offlineDownloads.ts';
+import {OfflineDownloadStore,OfflineDownloadInterrupted,type OfflineDownloadFiles} from '../src/storage/offlineDownloads.ts';
 
 // The adapter only observes the native journal: pause/cancel intents must
 // reach native.stop with the right direction, a missing journal must fail
@@ -124,4 +125,28 @@ test('remove discards the journal first and partial size merges file and observe
   await r.adapter.remove('a.audio');
   assert.deepEqual(r.calls.discard,['a.audio']);
   assert.deepEqual(r.removed,['a.audio']);
+});
+
+
+test('React Native reason-less aborts preserve the owner pause/cancel intent across process recovery',async()=>{
+  const LegacyAbortController=createRequire(import.meta.url)('abort-controller').AbortController;
+  const original=globalThis.AbortController;
+  globalThis.AbortController=LegacyAbortController;
+  try{
+    const probe=new AbortController();probe.abort('pause');assert.equal(probe.signal.reason,undefined,'Exercise the installed React Native abort shim');
+    for(const mode of ['pause','cancel'] as const){
+      const r=rig(),values=new Map<string,unknown>();let sequence=0;
+      r.native.stop=async(name,pause)=>{r.calls.stop.push([name,pause]);r.set({fileName:name,state:pause?'paused':'cancelled',received:262144,expected:3740360});};
+      const repository={async get<T>(key:string){return values.get(key) as T|undefined;},async put(key:string,value:unknown){values.set(key,value);}};
+      const options={files:r.adapter,resolve:async()=>({url:'https://audio.example/a'}),uuid:()=> (++sequence).toString(16).padStart(8,'0'),now:()=>1};
+      const store=new OfflineDownloadStore(repository,options);
+      const item=await store.enqueue({origin:{kind:'online',platform:'wy',id:mode},title:'Song',artist:'Artist',metadata:{},qualities:[]});
+      const run=store.start(item.id);await tick(5);assert.equal(r.calls.begins.length,1);
+      await store[mode](item.id);await run;
+      assert.deepEqual(r.calls.stop,[[item.fileName,mode==='pause']]);
+      const restored=new OfflineDownloadStore(repository,options);await restored.restore();
+      assert.equal(restored.getSnapshot()[0]?.status,mode==='pause'?'paused':'cancelled');
+      if(mode==='pause')assert.equal(restored.getSnapshot()[0]?.partialBytes,262144);
+    }
+  }finally{globalThis.AbortController=original;}
 });

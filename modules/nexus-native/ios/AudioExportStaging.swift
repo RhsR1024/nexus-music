@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import ImageIO
 import UniformTypeIdentifiers
 
@@ -21,6 +22,27 @@ enum AudioExportStaging {
             ["mp3","m4a","aac","flac","wav","aiff","ogg","lrc","jpg","json"].contains(url.pathExtension.lowercased()) else { throw failure() }
     }
     return urls
+  }
+  static func stageAudio(_ input: String, target: String, documents: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]) throws -> String {
+    let destination = try stageURL(target), fm = FileManager.default
+    guard let original = URL(string: input), original.isFileURL, original.query == nil, original.fragment == nil,
+          original.host == nil || original.host == "" || original.host == "localhost",
+          ["mp3","m4a","aac","flac","wav","aiff","ogg"].contains(destination.pathExtension.lowercased()),
+          !fm.fileExists(atPath: destination.path), (try? original.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else { throw failure() }
+    let source = original.standardizedFileURL.resolvingSymlinksInPath(), root = documents.appendingPathComponent("offline-audio").standardizedFileURL.resolvingSymlinksInPath()
+    guard source.deletingLastPathComponent() == root,
+          source.lastPathComponent.range(of: "^[a-f0-9-]{8,80}\\.(audio|mp3|m4a|aac|flac|wav|aiff)$", options: .regularExpression) != nil else { throw failure() }
+    let info = try source.resourceValues(forKeys: [.isRegularFileKey,.fileSizeKey]); guard info.isRegularFile == true, let bytes = info.fileSize, bytes > 0, bytes <= 2 * 1024 * 1024 * 1024 else { throw failure() }
+    func digest(_ url: URL) throws -> String {
+      let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }; var value = Insecure.MD5()
+      while let chunk = try handle.read(upToCount: 256 * 1024), !chunk.isEmpty { value.update(data: chunk) }
+      return value.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+    do {
+      try fm.copyItem(at: source, to: destination)
+      let copied = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize
+      guard copied == bytes, try digest(source) == digest(destination) else { throw failure() }; return destination.absoluteString
+    } catch { try? fm.removeItem(at: destination); throw failure() }
   }
   static func jpeg(_ input: String, target: String, maxPixelSize: Int = 512) throws -> String {
     guard [256,500,512,1000,1024,1200,2048].contains(maxPixelSize) else { throw failure() }
