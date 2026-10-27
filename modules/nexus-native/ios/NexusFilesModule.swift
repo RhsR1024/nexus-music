@@ -6,10 +6,11 @@ public final class NexusFilesModule: Module {
   private let files = LocalAudioFiles.shared
   private let queue = DispatchQueue(label: "nexus.local-files")
   private var folderPicker: LocalAudioFolderPicker?
+  private var audioExporter: AudioFileExportSheet?
   public func definition() -> ModuleDefinition {
     Name("NexusFiles")
     AsyncFunction("pickAudioFolder") { (promise: Promise) in
-      guard self.folderPicker == nil else { promise.reject("FOLDER_PICKER_BUSY", "文件夹选择器尚未就绪"); return }
+      guard self.folderPicker == nil, self.audioExporter == nil else { promise.reject("FOLDER_PICKER_BUSY", "文件夹选择器尚未就绪"); return }
       // Re-adding right after a cancel can land inside the previous picker's
       // dismissal animation; presenting then fails silently and would leave
       // this promise pending forever, so wait for the hierarchy to settle.
@@ -30,6 +31,31 @@ public final class NexusFilesModule: Module {
         controller.present(picker.controller, animated: true) { picker.markPresented() }
       }
       presentWhenSettled(after: 0)
+    }.runOnQueue(.main)
+    AsyncFunction("exportCoverJPEG") { (input: String, target: String) throws -> String in try AudioExportStaging.jpeg(input, target: target) }.runOnQueue(queue)
+    AsyncFunction("exportAudioFiles") { (values: [String], promise: Promise) in
+      guard self.audioExporter == nil, self.folderPicker == nil else { promise.reject("AUDIO_EXPORT_BUSY", "文件选择器尚未关闭"); return }
+      let urls: [URL]
+      do { urls = try AudioExportStaging.files(values) } catch { promise.reject("AUDIO_EXPORT_FILES", "导出文件未就绪"); return }
+      let picker = AudioFileExportSheet(urls: urls) { [weak self] completed in self?.audioExporter = nil; promise.resolve(completed) }
+      self.audioExporter = picker
+      func presentWhenSettled(_ attempt: Int) {
+        guard var controller = self.appContext?.utilities?.currentViewController() else { picker.finish(false); return }
+        while let presented = controller.presentedViewController { controller = presented }
+        if controller.isBeingDismissed || controller.isBeingPresented || controller is UIDocumentPickerViewController || controller is UIActivityViewController {
+          if attempt >= 20 { picker.finish(false); return }
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { presentWhenSettled(attempt + 1) }; return
+        }
+        guard controller.viewIfLoaded?.window != nil else { picker.finish(false); return }
+        if let popover = picker.controller.popoverPresentationController {
+          popover.sourceView = controller.view
+          popover.sourceRect = CGRect(x: controller.view.bounds.midX, y: controller.view.bounds.maxY, width: 1, height: 1)
+          popover.permittedArrowDirections = []
+        }
+        picker.startWatchdog()
+        controller.present(picker.controller, animated: true) { picker.markPresented() }
+      }
+      presentWhenSettled(0)
     }.runOnQueue(.main)
     AsyncFunction("retainAudioFolders") { (ids: [String]) throws in try LocalAudioFolders.shared.retainRoots(ids) }.runOnQueue(queue)
     AsyncFunction("scanAudioFolders") { (ids: [String], recursive: [String], blocked: [String], minimum: Double, promise: Promise) in
@@ -93,4 +119,28 @@ private final class LocalAudioFolderPicker: NSObject, UIDocumentPickerDelegate, 
   }
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finish(.success(nil)) }
   func presentationControllerDidDismiss(_ presentationController: UIPresentationController) { finish(.success(nil)) }
+}
+
+
+private final class AudioFileExportSheet: NSObject, UIAdaptivePresentationControllerDelegate {
+  let controller: UIActivityViewController
+  private var completion: ((Bool) -> Void)?
+  private var watchdog: Timer?
+  private var presented = false
+  private var ticks = 0
+  init(urls: [URL], completion: @escaping (Bool) -> Void) {
+    controller = UIActivityViewController(activityItems: urls, applicationActivities: nil)
+    self.completion = completion; super.init()
+    controller.completionWithItemsHandler = { [weak self] _, completed, _, _ in self?.finish(completed) }
+  }
+  func markPresented() { presented = true; controller.presentationController?.delegate = self }
+  func startWatchdog() {
+    watchdog = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+      guard let self, self.completion != nil else { return }; self.ticks += 1
+      if self.presented { if self.controller.presentingViewController == nil && !self.controller.isBeingDismissed && self.controller.viewIfLoaded?.window == nil { self.finish(false) } }
+      else if self.ticks >= 40 { self.controller.dismiss(animated: false); self.finish(false) }
+    }
+  }
+  func finish(_ completed: Bool) { watchdog?.invalidate(); watchdog = nil; let callback = completion; completion = nil; callback?(completed) }
+  func presentationControllerDidDismiss(_ presentationController: UIPresentationController) { finish(false) }
 }

@@ -19,11 +19,12 @@ if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.j
 // only. Formal evidence stays Release.
 const configuration=process.env.NEXUS_UI_CONFIGURATION??'Release';
 if(!['Debug','Release'].includes(configuration))throw new Error(`Unsupported NEXUS_UI_CONFIGURATION: ${configuration}`);
+const liveDownloadAttachmentsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadAttachments'));
 const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNamingExport'));
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -442,6 +443,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadBatch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadBatch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNaming')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadNaming');
   if(!liveDownloadExportUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadNamingExport');
+  if(!liveDownloadAttachmentsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadAttachments');
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
@@ -508,6 +510,15 @@ try {
       const savedSha256=fileSha256(source),archivedSha256=fileSha256(target);if(savedSha256!==archivedSha256)throw Error('Saved audio archive changed');
       writeFileSync(resolve(runDirectory,'actual-saved-audio-receipt.json'),JSON.stringify({name:names[0],bytes:statSync(source).size,savedSha256,archivedSha256,temporaryOriginalRemovedAfterArchiving:true},null,2));
     }catch(error){console.error(`Actual named audio archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
+  }
+  if(liveDownloadAttachmentsUI&&localFixtureDirectory){
+    try{
+      const names=readdirSync(localFixtureDirectory).filter(name=>/^Ed Sheeran__Shape of You\.(?:mp3|lrc|jpg|meta\.json)$/.test(name));
+      if(names.length!==4)throw Error('Expected four actual OS-exported companion files');
+      const target=resolve(runDirectory,'actual-attachment-exports');mkdirSync(target);const files=[];
+      for(const name of names){const source=resolve(localFixtureDirectory,name),bytes=statSync(source).size;if(bytes<=0||bytes>30000000)throw Error('Unexpected attachment size');const sha256=fileSha256(source);writeFileSync(resolve(target,name),readFileSync(source));if(fileSha256(resolve(target,name))!==sha256)throw Error('Attachment archive changed');files.push({name,bytes,sha256});}
+      writeFileSync(resolve(runDirectory,'actual-attachments-receipt.json'),JSON.stringify({files,originalsRemovedAfterArchiving:true},null,2));
+    }catch(error){console.error(`Actual companion export archival failed: ${error.message}`);if(!process.exitCode)process.exitCode=1;}
   }
   closeSync(log); server.closeAllConnections(); server.close();if(localFixtureDirectory)rmSync(localFixtureDirectory,{recursive:true,force:true});
 }

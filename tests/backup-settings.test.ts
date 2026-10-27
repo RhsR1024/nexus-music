@@ -67,3 +67,7 @@ test('download naming persists across restart and old portable backups retain th
  const restarted=new PreferenceStore(r.repository);await restarted.restore();assert.equal(restarted.getSnapshot().downloadNameOrder,'artist-title');assert.equal(restarted.getSnapshot().downloadNameSeparator,'__');
  const exported=settings();assert(!Object.hasOwn(exported.preferences,'downloadNameOrder'));await r.restore(emptyLibrary,emptyPlaybackStats,exported);assert.equal(r.preferences.getSnapshot().downloadNameSeparator,'__');
 });
+
+test('attached export choices migrate, persist and remain local across portable settings restore',async()=>{
+ const r=rig();await r.preferences.restore();assert.equal(r.preferences.getSnapshot().downloadAttachLyrics,false);await r.preferences.update({downloadAttachLyrics:true,downloadAttachCover:true,downloadAttachMetadata:true});await assert.rejects(r.preferences.update({downloadAttachLyrics:1 as unknown as boolean}));const next=new PreferenceStore(r.repository);await next.restore();assert.equal(next.getSnapshot().downloadAttachCover,true);const saved=settings();assert(!Object.hasOwn(saved.preferences,'downloadAttachMetadata'));await r.restore(emptyLibrary,emptyPlaybackStats,saved);assert.equal(r.preferences.getSnapshot().downloadAttachLyrics,true);assert.equal(r.preferences.getSnapshot().downloadAttachMetadata,true);
+});

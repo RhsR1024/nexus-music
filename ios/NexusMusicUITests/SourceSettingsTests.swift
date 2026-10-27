@@ -1659,6 +1659,58 @@ final class SourceSettingsTests: XCTestCase {
     tap("background-sheet-close");app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));app.buttons["播放"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));app.buttons["暂停"].firstMatch.tap();image("Real theme actual playback after restore")
   }
 
+  func testLiveDownloadAttachments() throws {
+    XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:10));for _ in 0..<24{if element.isHittable{return};let above=element.exists && element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    let ids=["downloadAttachLyrics","downloadAttachCover","downloadAttachMetadata"]
+    openSettings(app,page:"downloads")
+    for id in ids {let control=app.switches["download-attach-"+id];reach(control);if control.value as? String != "1"{control.tap()};let enabled=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@","1"),object:control);XCTAssertEqual(XCTWaiter.wait(for:[enabled],timeout:10),.completed)}
+    image("Real companion export selected options")
+    reach(app.staticTexts["download-name-preview"])
+    let metadata=app.switches["download-attach-downloadAttachMetadata"];reach(metadata);metadata.tap()
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@","0"),object:metadata)],timeout:10),.completed)
+    XCTAssertEqual(app.switches["download-attach-downloadAttachLyrics"].value as? String,"1");XCTAssertEqual(app.switches["download-attach-downloadAttachCover"].value as? String,"1");image("Real companion metadata independently disabled")
+    metadata.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@","1"),object:metadata)],timeout:10),.completed);image("Real companion lower options and naming")
+    app.terminate();app.launch();openSettings(app,page:"downloads")
+    for id in ids {let control=app.switches["download-attach-"+id];reach(control);XCTAssertEqual(control.value as? String,"1")};image("Real companion export restored options")
+    let tasks=app.buttons["settings-open-downloadTasks"];reach(tasks);tasks.tap();let summary=app.staticTexts["offline-task-summary"];XCTAssertTrue(summary.waitForExistence(timeout:10));XCTAssertTrue(summary.label.contains("2 个已保存"))
+    let export=app.buttons["导出音频文件：Shape of You · Ed Sheeran"];reach(export);export.tap()
+    let activity=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Save to Files","存储到文件","儲存到檔案","保存到“文件”"])).firstMatch
+    func openFiles(){for _ in 0..<5{if activity.waitForExistence(timeout:2)&&activity.isHittable{break};app.swipeUp()};XCTAssertTrue(activity.waitForExistence(timeout:15));activity.tap()}
+    image("Real four file system share sheet");openFiles()
+    let save=app.buttons.matching(NSPredicate(format:"label IN %@",["Save","Export","保存","存储","导出","儲存"])).firstMatch
+    if !save.waitForExistence(timeout:60){let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual companion preparation or picker failure";tree.lifetime = .keepAlways;add(tree);XCTFail("Real companions must be available and enter OS export");return}
+    let phone=app.cells.matching(NSPredicate(format:"label IN %@",["On My iPhone","我的iPhone","我的 iPhone","在我的 iPhone"])).firstMatch;if phone.exists&&phone.isHittable{phone.tap()}
+    let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch;if folder.waitForExistence(timeout:3){folder.tap()}
+    image("Real four companion files OS export");XCTAssertTrue(save.isEnabled);save.tap()
+    if app.buttons["好"].waitForExistence(timeout:5){let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual four file post-save system dialog";tree.lifetime = .keepAlways;add(tree);image("Real four file post-save system dialog");XCTFail("Review actual system completion dialog");return}
+    let released=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:export);XCTAssertEqual(XCTWaiter.wait(for:[released],timeout:20),.completed);XCTAssertTrue(summary.label.contains("2 个已保存"));image("Real companion export two originals retained")
+    for attempt in 0..<2 {
+      reach(export);export.tap();openFiles();XCTAssertTrue(save.waitForExistence(timeout:45));if attempt==0{image("Real four file export before cancellation")}
+      for _ in 0..<6 {
+        if export.exists && export.isEnabled && summary.isHittable{break}
+        let cancel=app.buttons.matching(NSPredicate(format:"label IN %@",["Cancel","取消"])).firstMatch
+        if cancel.waitForExistence(timeout:2) && cancel.isHittable{cancel.tap();continue}
+        let back=app.buttons["BackButton"];if back.waitForExistence(timeout:2)&&back.isHittable{back.tap();continue}
+        let dismiss=app.descendants(matching:.any).matching(identifier:"PopoverDismissRegion").firstMatch
+        if dismiss.exists {
+          // Observed actual sharing popover occupies y=546...923 on 430x932.
+          // Its dismissal container is not itself reported as hittable.
+          XCTAssertTrue(activity.waitForExistence(timeout:5));XCTAssertTrue(activity.isHittable);XCTAssertGreaterThan(activity.frame.minY,app.frame.height*0.4)
+          if attempt==0{image("Real share popover outside cancellation region")}
+          dismiss.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.3)).tap();break
+        }
+        break
+      }
+      let cancellationResult=XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:export)],timeout:20)
+      if cancellationResult != .completed {let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual failed OS cancellation hierarchy";tree.lifetime = .keepAlways;add(tree);image("Real failed OS cancellation state")}
+      XCTAssertEqual(cancellationResult,.completed);XCTAssertTrue(summary.isHittable);XCTAssertTrue(summary.label.contains("2 个已保存"))
+    }
+    image("Real companion OS cancellation preserves originals")
+  }
+
   func testLiveDownloadNamingExport() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

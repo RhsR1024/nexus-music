@@ -1,8 +1,8 @@
 import {downloadBasename} from '../domain/downloadNaming.ts';
-import {exportOfflineAudio} from '../storage/offlineExport.ts';
+import {exportOfflineAudio,OfflineExportUnavailable} from '../storage/offlineExport.ts';
 import {offlineAudioExportFiles} from './OfflineAudioExport.ts';
-import {useRef,useState,useSyncExternalStore} from 'react';
-import {Alert,Pressable,SectionList,TextInput,View} from 'react-native';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {Alert,Pressable,SectionList,Switch,TextInput,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {OfflineDownloadInUse,type OfflineDownloadRecord} from '../storage/offlineDownloads.ts';
@@ -33,12 +33,16 @@ export function DownloadSettings({services,openTasks}:{services:Services;openTas
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:space.sm}}>{([1,2,3] as const).map(value=><Pressable key={value} testID={`download-concurrency-${value}`} accessibilityRole="radio" accessibilityLabel={`${value} 个并发${value===1?'（推荐）':''}`} accessibilityState={{selected:preferences.downloadConcurrency===value,disabled:saving}} disabled={saving} onPress={()=>chooseConcurrency(value)} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:preferences.downloadConcurrency===value?p.selected:p.surface,opacity:saving?.5:1}}><Text style={{...typography.body,color:p.accent}}>{value} 个{value===1?'（推荐）':''}</Text></Pressable>)}</View>
       <Text style={{...typography.caption,color:p.secondary}}>限制后续启动的任务；降低上限不强行中断已开始的传输。暂停、取消或完成后释放名额，等待任务按提交顺序启动；部分设备会依次下载，实际并行数量受系统限制。</Text>
     </View>
+    <View style={{gap:space.md}}><Text accessibilityRole="header" style={{...typography.heading,color:p.text}}>附加导出文件</Text>
+      {([['downloadAttachLyrics','歌词（LRC）'],['downloadAttachCover','封面（JPG，最长边512像素内）'],['downloadAttachMetadata','歌曲信息（meta.json）']] as const).map(([key,label])=><View key={key} style={{minHeight:controls.hit,flexDirection:'row',gap:space.md,alignItems:'center',justifyContent:'space-between'}}><Text style={{...typography.body,color:p.text,flex:1}}>{label}</Text><Switch testID={`download-attach-${key}`} accessibilityLabel={label} value={preferences[key]} onValueChange={value=>{void services.preferences.update({[key]:value}).then(()=>setMessage('附加文件选项已保存')).catch(()=>setMessage('附加文件选项未保存，请重试'));}}/></View>)}
+      <Text style={{...typography.caption,color:p.secondary}}>导出已完成音频时，所选附加文件使用相同文件名前缀。歌词使用当前所选来源并保留时间轴；不可用时可重试或关闭该项。歌曲信息只含名称、专辑、时长和文件校验，不包含账号或请求地址。</Text>
+    </View>
     <View style={{gap:space.md}}><Text accessibilityRole="header" style={{...typography.heading,color:p.text}}>音频导出命名</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:space.sm}}>{(['title-artist','artist-title'] as const).map(order=><Pressable key={order} testID={`download-name-${order}`} accessibilityRole="radio" accessibilityState={{selected:preferences.downloadNameOrder===order}} onPress={()=>{void services.preferences.update({downloadNameOrder:order}).then(()=>setMessage('命名顺序已保存')).catch(()=>setMessage('命名顺序未保存，请重试'));}} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:preferences.downloadNameOrder===order?p.selected:p.surface}}><Text style={{...typography.body,color:p.accent}}>{order==='title-artist'?'歌名在前':'歌手在前'}</Text></Pressable>)}</View>
       <Text testID="download-name-preview" style={{...typography.body,color:p.secondary}}>{preview?`文件名前缀：${downloadBasename(preview.track,preferences)}`:'下载完成后显示实际歌曲的文件名前缀'}</Text>
       <TextInput testID="download-name-separator" accessibilityLabel="文件名分隔符" value={separator} onChangeText={setSeparator} maxLength={24} autoCapitalize="none" autoCorrect={false} style={{...typography.body,color:p.text,minHeight:controls.hit,padding:space.md,borderWidth:1,borderColor:p.border,borderRadius:radius.md}}/>
       <Pressable testID="download-name-save" accessibilityRole="button" accessibilityLabel="保存文件名分隔符" onPress={()=>{void services.preferences.update({downloadNameSeparator:separator}).then(()=>setMessage('命名分隔符已保存')).catch(()=>setMessage('分隔符未保存：最多12个字符，不能含路径或文件名保留字符'));}} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:p.surface}}><Text style={{...typography.body,color:p.accent}}>保存分隔符</Text></Pressable>
-      <Text style={{...typography.caption,color:p.secondary}}>在已完成文件中导出音频时使用；文件格式按实际内容识别。由系统选择保存位置，库内音频和播放队列保持不变。尚不导出歌词、封面或元数据侧车。</Text>
+      <Text style={{...typography.caption,color:p.secondary}}>在已完成文件中导出音频时使用；文件格式按实际内容识别。由系统选择保存位置，库内音频和播放队列保持不变。附加文件按上方选项准备。</Text>
     </View>
     <View style={{gap:12}}><Text accessibilityRole="header" style={{color:p.secondary,fontSize:13}}>离线文件容量上限</Text>
       <Text testID="offline-capacity-summary" style={{color:p.secondary}}>{(stats.bytes/1048576).toFixed(1)} MB / {preferences.offlineLimitMB} MB</Text>
@@ -51,7 +55,13 @@ export function DownloadSettings({services,openTasks}:{services:Services;openTas
 
 export function DownloadTasks({services}:{services:Services}){
   const {palette:p}=useTheme(),[message,setMessage]=useState(''),[exporting,setExporting]=useState(false),exportLock=useRef(false);
-  const exportAudio=(id:string)=>{if(exportLock.current)return;exportLock.current=true;setExporting(true);setMessage('');void exportOfflineAudio(services.offlineDownloads,id,services.preferences.getSnapshot(),offlineAudioExportFiles).catch(()=>setMessage('音频未导出，请检查文件或存储空间后重试')).finally(()=>{exportLock.current=false;setExporting(false);});};
+  const exportAbort=useRef<AbortController|null>(null),alive=useRef(true);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;exportAbort.current?.abort();};},[]);
+  const exportAudio=(id:string)=>{
+    if(exportLock.current)return;exportLock.current=true;setExporting(true);setMessage('正在准备导出文件…');const abort=new AbortController();exportAbort.current=abort;
+    void exportOfflineAudio(services.offlineDownloads,id,services.preferences.getSnapshot(),offlineAudioExportFiles,{...services.preferences.getSnapshot(),signal:abort.signal,lyrics:async(track,signal)=>(await services.lyrics.load(track,signal)).document,cover:(track,signal)=>services.covers.loadTrack(track,signal,512)})
+      .then(()=>{if(alive.current)setMessage('');}).catch(error=>{if(alive.current)setMessage(abort.signal.aborted?'已取消准备导出':error instanceof OfflineExportUnavailable?error.message:'文件未导出，请检查文件或存储空间后重试');}).finally(()=>{exportLock.current=false;exportAbort.current=null;if(alive.current)setExporting(false);});
+  };
   const downloads=useSyncExternalStore(services.offlineDownloads.subscribe,services.offlineDownloads.getSnapshot);
   const tasks=downloads.filter(item=>item.status!=='completed'),completed=downloads.filter(item=>item.status==='completed');
   // Sollin E-1300: a page-scoped multi-select over the task list offering
@@ -100,7 +110,7 @@ export function DownloadTasks({services}:{services:Services}){
       {button('offline-pause-all','全部暂停','pause-circle-outline',()=>perform(()=>services.offlineDownloads.pauseAll()),!pauseable)}
       {button('offline-resume-all','全部继续','play-circle-outline',()=>perform(()=>services.offlineDownloads.resumeAll()),!resumable)}
       {button('offline-cancel-all','全部取消','close-circle-outline',()=>Alert.alert('取消全部未完成下载？','未完成任务将标记为下载已取消，可稍后重试或移除记录；已保存的音频保留。',[{text:'保留',style:'cancel'},{text:'取消任务',style:'destructive',onPress:()=>perform(()=>services.offlineDownloads.cancelAll())}]),tasks.every(item=>!['queued','downloading','paused'].includes(item.status)))}
-    </View>{!!message&&<Text testID="offline-operation-message" accessibilityRole="alert" style={{color:p.secondary,lineHeight:22}}>{message}</Text>}</View>}
+    </View>{exporting&&button('offline-export-abort','取消准备导出','close-outline',()=>exportAbort.current?.abort())}{!!message&&<Text testID="offline-operation-message" accessibilityRole="alert" style={{color:p.secondary,lineHeight:22}}>{message}</Text>}</View>}
     renderSectionHeader={({section})=><View style={{gap:10,paddingVertical:14}}><Text testID={`offline-section-${section.key}`} accessibilityRole="header" style={{color:p.secondary,fontSize:14}}>{section.title}</Text>{section.data.length===0&&<View style={{padding:28,borderRadius:22,backgroundColor:p.surface,alignItems:'center'}}><Text style={{color:p.secondary}}>{section.key==='pending'?'暂无下载任务':'暂无已下载音频'}</Text></View>}</View>}
     ListFooterComponent={completed.length>0?<View style={{marginTop:12}}>{button('offline-clear-completed','清理已保存离线文件','trash-outline',()=>Alert.alert('清理已保存离线文件？','当前正在播放的文件会保留；其他文件需要重新下载。',[{text:'保留',style:'cancel'},{text:'清理',style:'destructive',onPress:()=>perform(()=>services.offlineDownloads.clearCompleted())}]))}</View>:null}
   />;

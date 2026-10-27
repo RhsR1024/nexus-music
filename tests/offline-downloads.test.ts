@@ -277,3 +277,24 @@ test('OS export sheet owns a staged copy and never holds the managed-file mutati
  const exported=exportOfflineAudio(r.store,item.id,{downloadNameOrder:'title-artist',downloadNameSeparator:' - '},{stage:()=>({uri:'file:///independent-copy.mp3',remove:()=>{cleaned++;}}),async share(){started();await sheet;}});
  await ready;await r.store.remove(item.id);assert(!r.files.exists(item.fileName));assert.equal(cleaned,0);finish();await exported;assert.equal(cleaned,1);
 });
+
+test('audio companions share a single actual prefix and selected files are all prepared before showing the OS UI',async()=>{
+ const {exportOfflineAudio}=await import('../src/storage/offlineExport.ts');const r=rig(),item=await r.store.enqueue(track());await r.store.start(item.id);const names:string[]=[],texts:string[]=[];let cleaned=0,shown:readonly string[]=[];
+ await exportOfflineAudio(r.store,item.id,{downloadNameOrder:'artist-title',downloadNameSeparator:'__'},{stage:(_uri,name)=>{names.push(name(new TextEncoder().encode('ID3file')));return{uri:'file:///audio',remove:()=>{cleaned++;},addText:(name,text)=>{names.push(name);texts.push(text);return'file:///'+name;},addCover:async(name)=>{names.push(name);return'file:///'+name;}};},async share(uri,additional){assert.equal(uri,'file:///audio');shown=additional!;}},{downloadAttachLyrics:true,downloadAttachCover:true,downloadAttachMetadata:true,signal:new AbortController().signal,lyrics:async()=>({synced:true,plain:[],lines:[{startMs:1000,text:'Public lyric'}]}),cover:async()=> 'file:///cached-cover.jpg'});
+ assert.deepEqual(names,['Artist__Song.mp3','Artist__Song.lrc','Artist__Song.jpg','Artist__Song.meta.json']);assert.equal(shown.length,3);assert.equal(JSON.parse(texts[1]!).audio.container,'mp3');assert.equal(cleaned,1);assert(r.files.exists(item.fileName));
+});
+test('missing selected lyrics and cancellation during companion loading discard the staged bundle without presenting or losing the original',async()=>{
+ const {exportOfflineAudio,OfflineExportUnavailable}=await import('../src/storage/offlineExport.ts');const r=rig(),item=await r.store.enqueue(track());await r.store.start(item.id);let cleaned=0,shared=0;
+ const files={stage:()=>({uri:'file:///audio',remove:()=>{cleaned++;},addText:()=> 'file:///text',addCover:async()=> 'file:///cover'}),async share(){shared++;}};
+ const base={downloadAttachLyrics:true,downloadAttachCover:false,downloadAttachMetadata:false,signal:new AbortController().signal,lyrics:async()=>({synced:false,plain:[],lines:[]}),cover:async()=>undefined};await assert.rejects(exportOfflineAudio(r.store,item.id,{downloadNameOrder:'title-artist',downloadNameSeparator:' - '},files,base),OfflineExportUnavailable);assert.equal(shared,0);assert.equal(cleaned,1);
+ const abort=new AbortController();await assert.rejects(exportOfflineAudio(r.store,item.id,{downloadNameOrder:'title-artist',downloadNameSeparator:' - '},files,{...base,signal:abort.signal,lyrics:async()=>{abort.abort();return{synced:false,plain:[],lines:[]};}}));assert.equal(shared,0);assert.equal(cleaned,2);assert(r.files.exists(item.fileName));assert.equal(r.store.getSnapshot()[0]!.status,'completed');
+});
+
+test('all eight attachment selections fetch and export only the selected content',async()=>{
+ const {exportOfflineAudio}=await import('../src/storage/offlineExport.ts');
+ for(let bits=0;bits<8;bits++){
+  const r=rig(),item=await r.store.enqueue(track());await r.store.start(item.id);const added:string[]=[],fetched:string[]=[];let shared=0,cleaned=0;
+  await exportOfflineAudio(r.store,item.id,{downloadNameOrder:'artist-title',downloadNameSeparator:'__'},{stage:(_uri,name)=>(name(new TextEncoder().encode('ID3file')),{uri:'file:///audio',remove:()=>{cleaned++;},addText:(name)=>{added.push(name);return'file:///'+name;},addCover:async(name)=>{added.push(name);return'file:///'+name;}}),async share(_uri,extra){shared++;assert.equal(extra!.length,added.length);}},{downloadAttachLyrics:!!(bits&1),downloadAttachCover:!!(bits&2),downloadAttachMetadata:!!(bits&4),signal:new AbortController().signal,lyrics:async()=>{fetched.push('lyrics');return{synced:true,plain:[],lines:[{startMs:1000,text:'Contract input'}]};},cover:async()=>{fetched.push('cover');return'file:///cover.jpg';}});
+  assert.deepEqual(added,[...(bits&1?['Artist__Song.lrc']:[]),...(bits&2?['Artist__Song.jpg']:[]),...(bits&4?['Artist__Song.meta.json']:[])]);assert.deepEqual(fetched,[...(bits&1?['lyrics']:[]),...(bits&2?['cover']:[])]);assert.equal(shared,1);assert.equal(cleaned,1);assert(r.files.exists(item.fileName));
+ }
+});
