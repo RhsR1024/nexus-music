@@ -43,3 +43,7 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testGlobalCoverTh
 新建的 `D9C3649F-A0EF-47AE-82CD-BC798CB64600` 仅供本轮使用，结果保留后已通过 `simctl` 关闭、删除；其他模拟器及真实验收设备未操作。未测量删除前的设备字节数，不宣称回收空间。原始结果、日志、输入录音和未解决云端故障材料保留。
 
 本批只验证受控 HTTP 下的应用状态与真实 MP3 输入，不增加真实在线服务、完整 QQ 授权、真机、签名、动效或视觉对齐通过项。批次 8 的剩余能力和真实授权边界继续按现有计划推进。
+
+## 交付
+
+源码 `1d6239c3eeb367071d5153597537612365326381` 已正常提交并 push，`ls-remote` 核对完整 SHA 一致。[CI40559801315](https://github.com/RhsR1024/nexus-music/actions/runs/40559801315) pending；同工作流/分支的 CI40554716636 继续运行，核对为 1 运行 / 1 等待，未取消运行或重派旧版。云端终态继续独立核对。
