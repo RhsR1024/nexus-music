@@ -3436,15 +3436,29 @@ final class SourceSettingsTests: XCTestCase {
     let app=XCUIApplication();app.launch()
     let viewport=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
     func reveal(_ element:XCUIElement,expectAbove:Bool?=nil){
-      for _ in 0..<45 {
-        if element.exists && element.isHittable{break}
-        // RN virtualizes off-screen descendants. After importing a lower card,
-        // an absent target is usually above the viewport; forcing the downward
-        // gesture in that case searched farther away from it until timeout.
-        let above=expectAbove ?? (element.exists && element.frame.midY<viewport.frame.midY)
-        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.7 : 0.35)))
+      let handle=app.buttons["background-sheet-close"]
+      func visibleRect()->CGRect {
+        var rect=viewport.frame.intersection(app.frame)
+        // RN can expose the scroll content's unclipped AX frame. Absolute
+        // screen points must stay below the sheet's real dismissal handle.
+        if handle.exists {let top=max(rect.minY,handle.frame.maxY+8);rect=CGRect(x:rect.minX,y:top,width:rect.width,height:max(0,rect.maxY-top))}
+        return rect
       }
-      XCTAssertTrue(element.exists && element.isHittable,"Visual control must be visible: \(element.identifier)")
+      func visible()->Bool {
+        guard element.exists,viewport.exists else{return false}
+        let frame=element.frame,rect=visibleRect()
+        return frame.width>0 && frame.height>0 && rect.contains(CGPoint(x:frame.midX,y:frame.midY)) && (element.isHittable || !element.isEnabled)
+      }
+      for _ in 0..<45 {
+        if visible(){break}
+        guard viewport.waitForExistence(timeout:10),waitForHittable(handle,timeout:10) else{XCTFail("Background sheet must remain open during reveal: \(element.identifier)");return}
+        let rect=visibleRect();guard !rect.isNull,rect.width>16,rect.height>80 else{XCTFail("Background scroll viewport must have visible geometry");return}
+        let above=expectAbove ?? (element.exists && element.frame.midY<rect.midY),x=rect.minX+8,high=rect.minY+rect.height*0.3,low=rect.minY+rect.height*0.7
+        let origin=app.coordinate(withNormalizedOffset:.zero)
+        origin.withOffset(CGVector(dx:x-app.frame.minX,dy:(above ? high:low)-app.frame.minY)).press(forDuration:0.05,thenDragTo:origin.withOffset(CGVector(dx:x-app.frame.minX,dy:(above ? low:high)-app.frame.minY)))
+      }
+      if !visible(){let tree=XCTAttachment(string:app.debugDescription);tree.name="Background reveal geometry failure";tree.lifetime = .keepAlways;add(tree)}
+      XCTAssertTrue(visible(),"Visual control must be visible: \(element.identifier)")
     }
     func choose(_ id:String,expectAbove:Bool?=nil){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;reveal(control,expectAbove:expectAbove);control.tap()}
     func importFixture(_ id:String){
