@@ -1,3 +1,6 @@
+import {captureAttachmentPolicy} from '../domain/downloadAttachmentPolicy.ts';
+import {ManagedDownloadAttachments} from '../storage/managedDownloadAttachments.ts';
+import {createManagedAttachmentFiles} from '../storage/managedAttachmentFiles.ts';
 import {createDownloadResolver} from '../providers/downloadResolver.ts';
 import {createSongFavorites} from './songFavorites.ts';
 import {VisualAssetStore,VisualColorCache,type VisualNative} from '../storage/visualAssets.ts';
@@ -126,9 +129,10 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   };
   const downloadResolver=createDownloadResolver({registry,transport:nativeLX,matcher:matching,library,preferences:preferences.getSnapshot,enrich:(track,signal)=>online.enrich(track,signal),other:{resolve:resolveTrack},hash});
   let playbackController:ReturnType<typeof createPlaybackSession>['controller']|undefined;
+  const attachmentFiles=createManagedAttachmentFiles();
   const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal)=>{
     const media=await downloadResolver.resolve(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');return media;
-  },files:createOfflineDownloadFiles(),concurrency:()=>preferences.getSnapshot().downloadConcurrency,uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,isInUse:track=>{
+  },files:createOfflineDownloadFiles(),captureAttachments:track=>captureAttachmentPolicy(track,preferences.getSnapshot()),reservedBytes:()=>attachmentFiles.usedBytes(),concurrency:()=>preferences.getSnapshot().downloadConcurrency,uuid:Crypto.randomUUID,now:Date.now,maxTotalBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,isInUse:track=>{
     const state=playbackController?.getSnapshot();if(state?.intent!=='playing')return false;
     const current=state.queue.entries.find(entry=>entry.id===state.queue.currentId)?.track;
     return !!current&&trackKey(current.origin)===trackKey(track.origin);
@@ -172,6 +176,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const search = new SearchCoordinator(online);
   const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},options.onlineHTTP,decodeKRC,decodeQRC);
   const lyrics=new LyricSelection(rawLyrics,matching,library);
+  const managedAttachments=new ManagedDownloadAttachments(repository,{downloads:offlineDownloads,files:attachmentFiles,maximumBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,lyrics:async(track,signal)=>(await lyrics.load(track,signal)).document,cover:(track,signal,size)=>covers.loadForExport(track,signal,size)});
+  if(!await restore('managedDownloadAttachments.v1','下载附加文件',()=>managedAttachments.restore()))await managedAttachments.restore().catch(()=>{});
   accounts.subscribe(()=>lyrics.clear());
   let previousDAVAccounts=davAccounts.getSnapshot();
   davAccounts.subscribe(()=>{const old=previousDAVAccounts;previousDAVAccounts=davAccounts.getSnapshot();lyrics.clear();const state=playback.controller.getSnapshot(),origin=state.queue.entries.find(item=>item.id===state.queue.currentId)?.track.origin;if(origin?.kind==='webdav'&&old.find(item=>item.id===origin.accountId)!==previousDAVAccounts.find(item=>item.id===origin.accountId))playback.controller.setQueue({...state.queue,currentId:null,priorityIds:[]});});
@@ -197,7 +203,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
-  return { snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
+  return { snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

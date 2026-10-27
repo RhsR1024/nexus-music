@@ -1688,6 +1688,28 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();openQuality();summary("128k");tap("download-platform-tx");summary("320k");image("Real download policy persisted after actual transfer")
   }
 
+  func testLiveManagedDownloadAttachments() throws {
+    XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func item(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:15));for _ in 0..<24{if element.isHittable || (element.elementType == .staticText && !element.frame.isEmpty && element.frame.minY>=110 && element.frame.maxY<=app.frame.height*0.8){return};let above=element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
+    func tap(_ id:String){let element=item(id);reach(element);element.tap()}
+    openSettings(app,page:"downloads")
+    for id in ["downloadAttachLyrics","downloadAttachCover","downloadAttachMetadata"]{let control=app.switches["download-attach-"+id];reach(control);if control.value as? String != "1"{control.tap()};XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@","1"),object:control)],timeout:10),.completed)}
+    tap("download-cover-open");tap("download-cover-platform-wy");tap("download-cover-size-256");image("Real managed download attachment policy before enqueue");tap("download-cover-open");tap("settings-open-downloadTasks")
+    let count=app.staticTexts["offline-task-summary"];XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertTrue(count.label.contains("2 个已保存"))
+    let remove=app.buttons["删除离线文件：Shape of You · Ed Sheeran"];reach(remove);remove.tap();XCTAssertTrue(app.alerts["删除离线文件？"].waitForExistence(timeout:5));app.alerts.buttons["删除"].tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","1 个已保存"),object:count)],timeout:20),.completed)
+    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let saveOffline=app.buttons["保存离线"];reach(saveOffline);saveOffline.tap();let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
+    openSettings(app,page:"downloads");tap("settings-open-downloadTasks");XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","2 个已保存"),object:count)],timeout:240),.completed)
+    let ready=app.staticTexts.matching(NSPredicate(format:"label == %@","附加文件 · 已保存")).firstMatch;XCTAssertTrue(ready.waitForExistence(timeout:90));reach(ready);image("Real managed companions saved after actual audio download")
+    app.terminate();app.launch();openSettings(app,page:"downloads");tap("settings-open-downloadTasks");XCTAssertTrue(ready.waitForExistence(timeout:15));reach(ready);image("Real managed companions retained after restart")
+    let export=app.buttons["导出音频文件：Shape of You · Ed Sheeran"];reach(export);export.tap()
+    let activity=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Save to Files","存储到文件","儲存到檔案","保存到“文件”"])).firstMatch;for _ in 0..<5{if activity.waitForExistence(timeout:2)&&activity.isHittable{break};app.swipeUp()};XCTAssertTrue(activity.waitForExistence(timeout:30));image("Real managed companions system share");activity.tap()
+    let save=app.buttons.matching(NSPredicate(format:"label IN %@",["Save","Export","保存","存储","导出","儲存"])).firstMatch;XCTAssertTrue(save.waitForExistence(timeout:60))
+    let phone=app.cells.matching(NSPredicate(format:"label IN %@",["On My iPhone","我的iPhone","我的 iPhone","在我的 iPhone"])).firstMatch;if phone.exists&&phone.isHittable{phone.tap()};let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch;if folder.waitForExistence(timeout:3){folder.tap()};image("Real managed companions actual OS save");XCTAssertTrue(save.isEnabled);save.tap();XCTAssertFalse(app.buttons["好"].waitForExistence(timeout:3));XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:export)],timeout:20),.completed);XCTAssertTrue(count.label.contains("2 个已保存"));reach(ready);image("Real managed companions export keeps original audio")
+  }
+
   func testLiveDownloadCoverLarge() throws { try liveDownloadCoverSize(1000, checkPlatforms: true) }
   func testLiveDownloadCoverSmall() throws { try liveDownloadCoverSize(256, checkPlatforms: false) }
   private func liveDownloadCoverSize(_ maximum:Int, checkPlatforms:Bool) throws {

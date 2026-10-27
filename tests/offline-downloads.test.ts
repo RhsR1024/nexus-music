@@ -311,3 +311,9 @@ test('cover export captures the track platform size once and forwards it to both
  await exportOfflineAudio(r.store,item.id,{downloadNameOrder:'artist-title',downloadNameSeparator:'__'},{stage:()=>({uri:'file:///audio',remove:()=>{cleaned++;},addCover:async(_name,_uri,size)=>{sizes.push(size!);return'file:///cover.jpg';}}),async share(){shared++;}},{downloadAttachLyrics:false,downloadAttachCover:true,downloadAttachMetadata:false,downloadCoverSizes:policy,signal:new AbortController().signal,lyrics:async()=>{throw Error('not selected');},cover:async(_track,_signal,size)=>{sizes.push(size);Object.assign(policy,{wy:256});return'file:///actual-cover.jpg';}});
  assert.deepEqual(sizes,[1000,1000]);assert.equal(shared,1);assert.equal(cleaned,1);assert(r.files.exists(item.fileName));
 });
+
+test('ready managed companions bypass provider fetches and receive the fixed export cover size',async()=>{
+ const {exportOfflineAudio}=await import('../src/storage/offlineExport.ts');const r=rig(),row=await r.store.enqueue(track());await r.store.start(row.id);const sizes:number[]=[],texts:string[]=[];
+ await exportOfflineAudio(r.store,row.id,{downloadNameOrder:'artist-title',downloadNameSeparator:'__'},{stage:()=>({uri:'file:///audio',remove(){},addText(_name,text){texts.push(text);return'file:///lyric';},addCover:async(_name,uri,maximum)=>{assert.equal(uri,'file:///managed.jpg');sizes.push(maximum!);return uri;}}),async share(){}},{downloadAttachLyrics:true,downloadAttachCover:true,downloadAttachMetadata:false,downloadCoverSizes:{wy:1000},signal:new AbortController().signal,prepared:async(_record,maximum)=>{sizes.push(maximum);return{lyrics:'[00:01.00]retained lyric\n',cover:'file:///managed.jpg'};},lyrics:async()=>{throw Error('Provider must not run');},cover:async()=>{throw Error('Provider must not run');}});
+ assert.deepEqual(sizes,[1000,1000]);assert.deepEqual(texts,['[00:01.00]retained lyric\n']);
+});
