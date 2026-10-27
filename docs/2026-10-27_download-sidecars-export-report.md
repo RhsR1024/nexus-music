@@ -2,6 +2,10 @@
 
 批次6继续落实：iPhone已完成音频的显式用户副本可独立附加LRC、JPG和meta.json，沿用命名顺序与分隔符。三个选项默认关闭，设备内持久保存，旧可移植备份不覆盖设备文件策略。此处不是下载时托管侧车或Android公共目录实现。
 
+## 交付
+
+交付：源码`99d5e5e04c003be8fa77074bbc9427bd900fdc8c`正常push且远端SHA一致；[CI40434766673](https://github.com/RhsR1024/nexus-music/actions/runs/40434766673)pending，40427619235/8aa0481运行，实际1运行/1等待。6a5fe8a的40425677666为21通过/1失败，仍是已由8aa0481修正的background-sheet-scroll节点；当前云端修正终态待，未取消运行或重派旧版。小型日志回执`build/ci-naming-6a-20261027/summary.json`。
+
 ## 依据与边界
 
 沿用E830/E836→F023→P021，不新增Sollin采集。reverse-skill固定cab634bd855fc287f6e420c1f36fd1a6b9245960；亲读要求与PRIMARY、原生master-route、APK gate及采纳前`--review`通过。当前动态功能case严格哈希审核PASS：395 Evidence、101 Finding、99 Path、3 workitems、117 timeline，0错误/警告；不是安装案例，也不是全项目完成计数。日志为本机`build/download-sidecars-20261027-{route,gate,review}.log`及`...-case-review.json`。参考工程无新增代码、依赖或原生补丁采纳。

@@ -1,5 +1,7 @@
 ## 2026-10-27 批次6：真实资料附加文件导出
 
+交付：源码`99d5e5e04c003be8fa77074bbc9427bd900fdc8c`正常push且远端SHA一致；[CI40434766673](https://github.com/RhsR1024/nexus-music/actions/runs/40434766673)pending，40427619235/8aa0481运行，实际1运行/1等待。6a5fe8a的40425677666为21通过/1失败，仍是已由8aa0481修正的background-sheet-scroll节点；当前云端修正终态待，未取消运行或重派旧版。小型日志回执`build/ci-naming-6a-20261027/summary.json`。
+
 iPhone已完成音频的LRC/JPG/meta.json三个独立附加导出选项落实，默认关闭、设备内保存、白名单元数据、系统多文件分享及完成/取消清理。633检查、完整native exit0；真实V261020来源曲目Release R7 1/0/0、133.326秒，四文件实际校验、两次连续取消、两个原SHA及队列一项保持。 见[回执](docs/2026-10-27_download-sidecars-export-report.md)。
 
 本阶段仅iPhone显式用户副本；独立平台下载音质/平台封面尺寸/持续目录/下载时托管侧车仍开放，真机、后台和iOS27云端未替代。下一继续批次6依赖已满足余项；不再扩Sollin采集。
