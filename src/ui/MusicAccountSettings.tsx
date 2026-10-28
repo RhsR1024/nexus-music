@@ -80,7 +80,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     {auth.status==='cancelled'&&<Text testID="music-account-cancelled" style={{fontSize:13,color:p.secondary}}>登录已取消</Text>}
     {auth.status==='expired'&&<Text testID="music-account-expired" accessibilityRole="alert" style={{fontSize:13,color:p.accent}}>登录已过期，请重新打开官方网页。</Text>}
     {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:p.secondary}}>{verified}</Text>}
-    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 日推、个人歌单、收藏与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
+    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐授权暂未开放。个人歌单、收藏与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
     <KugouAccountCard services={services} disabled={webWaiting} onRevealQr={onRevealQr}/>
   </View>;
 }

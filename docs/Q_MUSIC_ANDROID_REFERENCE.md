@@ -1,3 +1,7 @@
+## 2026-10-28 QQ私人雷达与官方读取
+
+固定daily.ts的独立Bearer key官方日推、四页雷达及详情调用已适配QQDailyClient；来源kind、失败回退与缓存隔离保持独立。708检查及相关34项通过；dailyAuthorization.ts的独立官方Skills页面已读但尚未实施，不增加完整官方日推/真实授权完成量。见[回执](2026-10-28_qq-radar-report.md)。
+
 ## 2026-10-28 酷狗每日推荐接线
 
 固定kugouApi.ts:getDailyHashes、daily.ts及kg/songList.js的请求/详情语义已适配独立KugouDailyClient。共享账号/日期/请求代次缓存与现有推荐页，酷狗不提供网易云FM；698检查通过，公开详情实际返回Shape of You。真实账号日推仍未验，正常真实音频库入口验证单列于[回执](2026-10-28_kugou-daily-report.md)。下方“酷狗日推客户端未接”是历史状态。

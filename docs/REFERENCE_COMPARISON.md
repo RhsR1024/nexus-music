@@ -1,3 +1,7 @@
+## 2026-10-28 QQ雷达/独立日推读取
+
+固定Q-music 5db858f的daily/requests/qqCredentials/cookies/dailyAuthorization与说明及三许可归属文件共九份逐字节核对。只采用协议字段/状态语义，原创HTTPS/账号隔离/严格详情，保留Apache/Nshpiter/LX；独立授权页仍未接入，不推断Sollin接口。见[回执](2026-10-28_qq-radar-report.md)。
+
 ## 2026-10-28 酷狗日推协议适配
 
 追加核对固定Q-music 5db858f的kugouApi/daily/kg-songList及账号说明、LICENSE/NOTICE/MODIFICATIONS七文件，与固定对象逐字节一致。仅采纳官方请求/签名字段、详情匹配与保序语义，原创HTTPS客户端和账号隔离，Apache/Nshpiter/LX及MakcRe MIT保持；实际公开详情已返回，不代表授权日推，亦不推断Sollin接口。见[回执](2026-10-28_kugou-daily-report.md)。

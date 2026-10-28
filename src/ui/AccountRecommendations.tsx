@@ -1,16 +1,16 @@
-import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator,Pressable,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
-import {AccountDailyError} from '../providers/accountDaily.ts';
+import {AccountDailyError,type DailyRecommendationKind} from '../providers/accountDaily.ts';
 import {AccountFmError} from '../providers/accountFm.ts';
 import type {MusicAccount} from '../providers/musicAccounts.ts';
 import {Cover} from './Cover.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 
-interface Panel {phase:'idle'|'loading'|'ready'|'empty'|'error';tracks:readonly Track[];message:string;login:boolean}
+interface Panel {phase:'idle'|'loading'|'ready'|'empty'|'error';tracks:readonly Track[];message:string;login:boolean;kind?:DailyRecommendationKind}
 const idle:Panel={phase:'idle',tracks:[],message:'',login:false};
 const LOGIN='登录已失效，请重新登录';
 
@@ -24,18 +24,19 @@ function failure(error:unknown,fallback:string):string {
   return error instanceof Error&&/会话|登录/.test(error.message)?LOGIN:fallback;
 }
 
-/** NetEase/Kugou account daily and NetEase personal FM. Legacy accounts saved without the
+/** Platform daily / QQ radar and NetEase personal FM. Legacy accounts saved without the
  * newer capabilities still load; no local or public list is shown in their
  * place when the platform call fails. */
 export function AccountRecommendations({services,openAccounts}:{services:Services;openAccounts:()=>void}){
   const {palette:p}=useTheme();
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
-  const supported=accounts.filter(item=>item.platform==='wy'||item.platform==='kg');
+  const supported=accounts.filter(item=>item.platform==='wy'||item.platform==='kg'||item.platform==='tx');
   const [selectedId,setSelectedId]=useState<string|undefined>();
   const account=supported.find(item=>item.id===selectedId)??supported[0];
   const [daily,setDaily]=useState<Panel>(idle),[fm,setFm]=useState<Panel>(idle);
   const dailyAbort=useRef<AbortController|null>(null),fmAbort=useRef<AbortController|null>(null);
   const dailyOp=useRef(0),fmOp=useRef(0);
+  const dailyName=account?.platform==='tx'&&daily.kind!=='tx_official_daily'?'私人雷达':'每日推荐';
 
   async function loadDaily(target:MusicAccount,force:boolean){
     const op=++dailyOp.current,controller=new AbortController();
@@ -45,12 +46,12 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
       const session=await services.musicAccounts.session(target.id);
       const result=await services.accountDaily.fetch(target,session,controller.signal,force);
       if(op!==dailyOp.current||controller.signal.aborted)return;
-      setDaily(result.tracks.length?{phase:'ready',tracks:result.tracks,message:'',login:false}:{phase:'empty',tracks:[],message:'今天暂无每日推荐',login:false});
+      setDaily(result.tracks.length?{phase:'ready',tracks:result.tracks,message:result.reason==='official_unavailable'?'官方每日推荐暂时不可用，当前显示私人雷达':'',login:false,kind:result.kind}:{phase:'empty',tracks:[],message:result.kind==='tx_radar'?`${result.reason==='official_unavailable'?'官方每日推荐暂时不可用；':''}私人雷达暂时没有返回歌曲`:'今天暂无每日推荐',login:false,kind:result.kind});
     }catch(error){
       if(op!==dailyOp.current||controller.signal.aborted)return;
       const message=failure(error,'每日推荐暂时不可用，请稍后重试');
       if(!message)return;
-      setDaily(previous=>({phase:'error',tracks:message===LOGIN?[]:previous.tracks,message,login:message===LOGIN}));
+      setDaily(previous=>({...previous,phase:'error',tracks:message===LOGIN?[]:previous.tracks,message,login:message===LOGIN}));
     }
   }
 
@@ -107,13 +108,13 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     }
   }
 
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     dailyOp.current++;fmOp.current++;
     dailyAbort.current?.abort();fmAbort.current?.abort();
     setDaily(idle);setFm(idle);
     if(account)void loadDaily(account,false);
     return()=>{dailyOp.current++;fmOp.current++;dailyAbort.current?.abort();fmAbort.current?.abort();};
-  },[account?.id,account?.updatedAt]);
+  },[account]);
 
   const action=(label:string,onPress:()=>void,testID:string,disabled=false)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={disabled} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:p.selected,alignItems:'center',justifyContent:'center',opacity:disabled?.45:1}}><Text style={{fontSize:13,fontWeight:'600',color:p.accent}}>{label}</Text></Pressable>;
   const refresh=(testID:string,label:string,onPress:()=>void,busy:boolean)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={busy} style={{width:44,height:44,borderRadius:22,backgroundColor:p.selected,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="refresh" size={20} color={p.accent}/></Pressable>;
@@ -132,14 +133,14 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
       <View style={{flex:1}}>
         <Text style={{fontSize:18,fontWeight:'600',color:p.text}}>平台推荐</Text>
-        <Text style={{fontSize:12,lineHeight:19,color:p.secondary,marginTop:4}}>{account?`${account.displayName??account.label} · ${account.platform==='kg'?'酷狗':'网易云'}账号`:'登录网易云或酷狗后获取账号每日推荐；私人FM仅支持网易云。未登录时不展示替代内容。'}</Text>
+        <Text style={{fontSize:12,lineHeight:19,color:p.secondary,marginTop:4}}>{account?`${account.displayName??account.label} · ${account.platform==='kg'?'酷狗':account.platform==='tx'?'QQ 音乐':'网易云'}账号`:'登录网易云或酷狗获取每日推荐，QQ 音乐提供私人雷达；私人FM仅支持网易云。未登录时不展示替代内容。'}</Text>
       </View>
-      {account&&refresh('account-daily-refresh','刷新每日推荐',()=>{void loadDaily(account,true);},daily.phase==='loading')}
+      {account&&refresh('account-daily-refresh',`刷新${dailyName}`,()=>{void loadDaily(account,true);},daily.phase==='loading')}
     </View>
-    {supported.length>1&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{supported.map((item,index)=>{const active=item.id===account?.id;return <Pressable key={item.id} testID={`account-recommendations-account-${index}`} accessibilityRole="button" accessibilityState={{selected:active}} accessibilityLabel={`选择${item.platform==='kg'?'酷狗':'网易云'}账号：${item.displayName??item.label}`} onPress={()=>setSelectedId(item.id)} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:active?p.selected:p.surface,borderWidth:1,borderColor:active?p.accent:p.border,justifyContent:'center'}}><Text style={{fontSize:13,fontWeight:active?'600':'400',color:active?p.accent:p.secondary}}>{item.displayName??item.label}</Text></Pressable>;})}</View>}
+    {supported.length>1&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{supported.map((item,index)=>{const active=item.id===account?.id;return <Pressable key={item.id} testID={`account-recommendations-account-${index}`} accessibilityRole="button" accessibilityState={{selected:active}} accessibilityLabel={`选择${item.platform==='kg'?'酷狗':item.platform==='tx'?'QQ 音乐':'网易云'}账号：${item.displayName??item.label}`} onPress={()=>setSelectedId(item.id)} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:active?p.selected:p.surface,borderWidth:1,borderColor:active?p.accent:p.border,justifyContent:'center'}}><Text style={{fontSize:13,fontWeight:active?'600':'400',color:active?p.accent:p.secondary}}>{item.platform==='tx'?'QQ':item.platform==='kg'?'酷狗':'网易云'} · {item.displayName??item.label}</Text></Pressable>;})}</View>}
     {!account&&<View><Pressable testID="account-recommendations-login" accessibilityRole="button" accessibilityLabel="登录音乐账号" onPress={openAccounts} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>去登录</Text></Pressable></View>}
     {account&&<View style={{gap:4}}>
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:6}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>每日推荐</Text>{daily.phase==='ready'&&<Text style={{fontSize:11,color:p.secondary}}>共 {daily.tracks.length} 首</Text>}</View>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:6}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>{dailyName}</Text>{daily.phase==='ready'&&<Text style={{fontSize:11,color:p.secondary}}>共 {daily.tracks.length} 首</Text>}</View>
       {daily.tracks.slice(0,5).map((track,index)=>row('account-daily',index,track,()=>services.playTracks(daily.tracks,index)))}
       {status(daily,'account-daily')}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:4}}>

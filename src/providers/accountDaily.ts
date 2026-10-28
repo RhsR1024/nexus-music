@@ -45,6 +45,7 @@ export interface AccountDailyClientOptions {
   readonly day?:()=>string;
   readonly accounts?:Pick<MusicAccounts,'getSnapshot'>;
   readonly kugou?:{validate:(account:MusicAccount,session:Readonly<Record<string,unknown>>)=>boolean;fetch:(account:MusicAccount,session:Readonly<Record<string,unknown>>,signal:AbortSignal)=>Promise<readonly Track[]>};
+  readonly qq?:{validate:(account:MusicAccount,session:Readonly<Record<string,unknown>>)=>boolean;fetch:(account:MusicAccount,session:Readonly<Record<string,unknown>>,signal:AbortSignal)=>Promise<Pick<DailyRecommendation,'kind'|'reason'|'tracks'>>};
 }
 
 /** Account-scoped reader. Production binds the authoritative repository and
@@ -56,6 +57,7 @@ export class AccountDailyClient {
   private readonly day:()=>string;
   private readonly accounts?:Pick<MusicAccounts,'getSnapshot'>;
   private readonly kugou?:AccountDailyClientOptions['kugou'];
+  private readonly qq?:AccountDailyClientOptions['qq'];
   private readonly cache=new Map<string,{expires:number;value:DailyRecommendation}>();
   private readonly generations=new Map<string,{request:number}>();
   constructor(options:AccountDailyClientOptions={}) {
@@ -65,6 +67,7 @@ export class AccountDailyClient {
     this.day=options.day??(()=>new Date(this.now()).toLocaleDateString('en-CA'));
     this.accounts=options.accounts;
     this.kugou=options.kugou;
+    this.qq=options.qq;
   }
   private key(account:MusicAccount,day:string){return JSON.stringify([account.id,account.platform,account.updatedAt,day]);}
   clear(accountId?:string){
@@ -80,6 +83,11 @@ export class AccountDailyClient {
       if(signal.aborted)throw new AccountDailyError('cancelled');
       if(account.id!==snapshot.id||account.platform!==snapshot.platform||account.updatedAt!==snapshot.updatedAt||
         this.accounts&&this.accounts.getSnapshot().find(item=>item.id===snapshot.id)!==account)throw new AccountDailyError('account_changed');
+      if(account.platform==='tx'){
+        if(!this.qq)throw new AccountDailyError('unavailable');
+        if(!this.qq.validate(account,session))throw new AccountDailyError('login_required');
+        return;
+      }
       if(account.platform==='kg'){
         if(!this.kugou)throw new AccountDailyError('unavailable');
         if(!this.kugou.validate(account,session))throw new AccountDailyError('login_required');
@@ -102,6 +110,13 @@ export class AccountDailyClient {
       if(this.generations.get(snapshot.id)!==generation)throw new AccountDailyError('account_changed');
       if(generation.request!==requestId||this.day()!==day)throw new AccountDailyError('cancelled');
     };
+    if(snapshot.platform==='tx'){
+      let result:Pick<DailyRecommendation,'kind'|'reason'|'tracks'>;
+      try{result=await this.qq!.fetch(account,session,signal);}catch(error){assertCurrent();throw error;}
+      assertCurrent();
+      const value:DailyRecommendation={accountId:snapshot.id,platform:snapshot.platform,...result};
+      this.cache.set(key,{expires:this.now()+10*60_000,value});return value;
+    }
     if(snapshot.platform==='kg'){
       let tracks:readonly Track[];
       try{tracks=await this.kugou!.fetch(account,session,signal);}catch(error){assertCurrent();throw error;}

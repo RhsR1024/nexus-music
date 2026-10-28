@@ -67,6 +67,7 @@ import {MusicAccounts} from '../providers/musicAccounts.ts';
 import {MusicAuthFlow} from '../providers/musicAuth.ts';
 import {AccountDailyClient} from '../providers/accountDaily.ts';
 import {KugouDailyClient} from '../providers/kugouDaily.ts';
+import {QQDailyClient} from '../providers/qqDaily.ts';
 import {AccountFmClient} from '../providers/accountFm.ts';
 import {MusicWebLoginCoordinator} from '../providers/musicWebLogin.ts';
 import {KugouLoginClient} from '../providers/kugouLogin.ts';
@@ -111,7 +112,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   // Recommendations are derived from local library/statistics only. No Sollin
   // account, private endpoint, or remote recommendation protocol is involved.
   const recommendations=new LocalRecommendationStore(library,playbackStats,Date.now);
-  const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,kugou:new KugouDailyClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value)})});
+  const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,kugou:new KugouDailyClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value)}),qq:new QQDailyClient({http:options.onlineHTTP??requestJSON})});
   const accountFm=new AccountFmClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
   musicAccounts.subscribe(()=>{accountDaily.clear();accountFm.clear();});
   const nativeLX = loadNativeLX();
