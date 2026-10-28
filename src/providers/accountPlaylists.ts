@@ -6,6 +6,7 @@ import type {MusicAccount,MusicAccounts,MusicSession} from './musicAccounts.ts';
 import {NeteaseAccountProfileError,type NeteaseAccountProfileClient} from './neteaseAccountProfile.ts';
 import {neteaseSessionAuth,neteaseWeapiRequest,type NeteaseSessionAuth} from './neteaseSession.ts';
 import {onlineTrack} from './online.ts';
+import type {QQPlaylists} from './qqPlaylists.ts';
 
 // Protocol reference: Nshpiter/Q-music android 5db858f, playlists.ts (Apache-2.0).
 // Independent account-bound reader; no remote writes or synchronization.
@@ -20,7 +21,7 @@ export type AccountPlaylistFailure='login_required'|'account_changed'|'cancelled
 export class AccountPlaylistError extends Error {
   readonly kind:AccountPlaylistFailure;
   constructor(kind:AccountPlaylistFailure){
-    super(({login_required:'请重新登录网易云后读取歌单',account_changed:'账号已更改，请重新读取歌单',cancelled:'操作已取消',incomplete:'歌单数据不完整或超过本机导入范围，请重试',unavailable:'暂时无法读取或保存歌单，请重试'})[kind]);
+    super(({login_required:'请重新登录对应平台后读取歌单',account_changed:'账号已更改，请重新读取歌单',cancelled:'操作已取消',incomplete:'歌单数据不完整或超过本机导入范围，请重试',unavailable:'暂时无法读取或保存歌单，请重试'})[kind]);
     this.kind=kind;
   }
 }
@@ -36,7 +37,7 @@ export class AccountPlaylists {
   private readonly catalogs=new WeakMap<MusicAccount,readonly AccountPlaylist[]>();
   private readonly previews=new WeakMap<AccountPlaylistPreview,{account:MusicAccount;operation:object}>();
   private readonly imports=new WeakSet<AccountPlaylistPreview>();
-  private readonly deps:{http:HTTPClient;accounts:Pick<MusicAccounts,'getSnapshot'|'session'>;profile:Pick<NeteaseAccountProfileClient,'fetch'>;library:Pick<LibraryStore,'createPlaylist'>};
+  private readonly deps:{http:HTTPClient;accounts:Pick<MusicAccounts,'getSnapshot'|'session'>;profile:Pick<NeteaseAccountProfileClient,'fetch'>;library:Pick<LibraryStore,'createPlaylist'>;qq?:Pick<QQPlaylists,'list'|'tracks'>};
   constructor(deps:AccountPlaylists['deps']){this.deps=deps;}
   private begin(account:MusicAccount,signal:AbortSignal){
     const operation={};this.operations.set(account.id,operation);
@@ -71,6 +72,10 @@ export class AccountPlaylists {
   async list(account:MusicAccount,signal:AbortSignal):Promise<readonly AccountPlaylist[]>{
     const {check}=this.begin(account,signal);this.catalogs.delete(account);
     try{
+      if(account.platform==='tx'&&this.deps.qq){
+        const session=await this.deps.accounts.session(account.id);check();
+        const result=Object.freeze(await this.deps.qq.list(account,session,signal,check));check();this.catalogs.set(account,result);return result;
+      }
       const {auth,owner}=await this.open(account,signal,check),items:AccountPlaylist[]=[];
       const seen=new Set<string>();let offset=0;
       for(let page=0;page<100;page++){
@@ -94,6 +99,11 @@ export class AccountPlaylists {
     const {operation,check}=this.begin(account,signal);
     try{
       if(!this.catalogs.get(account)?.includes(playlist))throw new AccountPlaylistError('account_changed');
+      if(account.platform==='tx'&&this.deps.qq){
+        const session=await this.deps.accounts.session(account.id);check();
+        const tracks=Object.freeze(await this.deps.qq.tracks(account,session,playlist,signal,check));check();
+        const result=Object.freeze({playlist,tracks});this.previews.set(result,{account,operation});return result;
+      }
       const {auth}=await this.open(account,signal,check);
       const detail=row((await this.request('v6/playlist/detail',{id:playlist.id,n:100000,s:0},auth,signal,check)).playlist);
       if(identifier(detail.id)!==playlist.id||!Array.isArray(detail.trackIds))throw new AccountPlaylistError('incomplete');

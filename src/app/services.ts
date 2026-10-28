@@ -67,6 +67,7 @@ import {MusicAccounts} from '../providers/musicAccounts.ts';
 import {MusicAuthFlow} from '../providers/musicAuth.ts';
 import {AccountDailyClient} from '../providers/accountDaily.ts';
 import {AccountPlaylists} from '../providers/accountPlaylists.ts';
+import {QQPlaylists} from '../providers/qqPlaylists.ts';
 import {KugouDailyClient} from '../providers/kugouDaily.ts';
 import {QQDailyClient} from '../providers/qqDaily.ts';
 import {QQDailyAuthorization} from '../providers/qqDailyAuthorization.ts';
@@ -116,7 +117,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const recommendations=new LocalRecommendationStore(library,playbackStats,Date.now);
   const qqDailyClient=new QQDailyClient({http:options.onlineHTTP??requestJSON});
   const qqDailyAuthorization=new QQDailyAuthorization({native:loadNativeMusicAuth(),accounts:musicAccounts,profile:qqProfile,daily:qqDailyClient,hash,uuid:Crypto.randomUUID});
-  const accountPlaylists=new AccountPlaylists({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile,library});
+  const accountPlaylists=new AccountPlaylists({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile,library,qq:new QQPlaylists({http:options.onlineHTTP??requestJSON,profile:qqProfile})});
   const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,kugou:new KugouDailyClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value)}),qq:qqDailyClient});
   const accountFm=new AccountFmClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
   musicAccounts.subscribe(()=>{accountDaily.clear();accountFm.clear();});

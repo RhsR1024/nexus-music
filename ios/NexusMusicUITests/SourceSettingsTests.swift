@@ -644,7 +644,9 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
     XCTAssertFalse(navigation.exists)
   }
-  func testLiveAccountPlaylistEntry() throws {
+  func testLiveAccountPlaylistEntry() throws { try liveAccountPlaylistEntry(qq:false) }
+  func testLiveQQPlaylistEntry() throws { try liveAccountPlaylistEntry(qq:true) }
+  private func liveAccountPlaylistEntry(qq:Bool) throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
     func reach(_ element:XCUIElement){
@@ -660,6 +662,9 @@ final class SourceSettingsTests: XCTestCase {
         origin.withOffset(CGVector(dx:x-app.frame.minX,dy:(above ? high:low)-app.frame.minY)).press(forDuration:0.05,thenDragTo:origin.withOffset(CGVector(dx:x-app.frame.minX,dy:(above ? low:high)-app.frame.minY)))
       }
       XCTAssertTrue(element.isHittable)
+      let rect=scroll.frame.intersection(app.frame),mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
+      XCTAssertGreaterThanOrEqual(element.frame.minY,rect.minY+4)
+      XCTAssertLessThanOrEqual(element.frame.maxY,mini.exists ? min(rect.maxY,mini.frame.minY-8)-4:rect.maxY-4)
     }
     let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
     XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
@@ -669,20 +674,21 @@ final class SourceSettingsTests: XCTestCase {
     RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
     app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
     openSettings(app,page:"accounts")
-    let login=app.buttons["account-playlists-login"],required=app.staticTexts["account-playlists-login-required"]
-    reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"].exists);image("Real account playlist entry without a saved account")
-    login.tap();let bar=app.navigationBars["网易云登录"];XCTAssertTrue(bar.waitForExistence(timeout:20))
-    let loaded=waitForGone(app.activityIndicators["music-web-login-loading-wy"],timeout:45)
+    let suffix=qq ? "-tx":"",platform=qq ? "QQ":"NetEase"
+    let login=app.buttons["account-playlists-login"+suffix],required=app.staticTexts["account-playlists-login-required"+suffix]
+    reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"+suffix].exists);image("Real \(platform) playlist entry without a saved account")
+    login.tap();let bar=app.navigationBars[qq ? "QQ 音乐登录":"网易云登录"];XCTAssertTrue(bar.waitForExistence(timeout:20))
+    let loaded=waitForGone(app.activityIndicators[qq ? "music-web-login-loading-tx":"music-web-login-loading-wy"],timeout:45)
     if !loaded {
-      let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual NetEase loading failure hierarchy";tree.lifetime = .keepAlways;add(tree)
-      image("Actual NetEase document while loading indicator remains")
+      let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual \(platform) loading failure hierarchy";tree.lifetime = .keepAlways;add(tree)
+      image("Actual \(platform) document while loading indicator remains")
     }
     XCTAssertTrue(loaded)
     let web=app.webViews.firstMatch;XCTAssertTrue(web.waitForExistence(timeout:15))
-    XCTAssertTrue(web.descendants(matching:.any).matching(NSPredicate(format:"label MATCHES %@",".*(网易|云音乐|登录|手机号|扫码).*" )).firstMatch.waitForExistence(timeout:35))
-    image("Real official NetEase page opened from account playlist entry")
-    bar.buttons["关闭"].tap();XCTAssertTrue(waitForGone(bar,timeout:15));reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"].exists)
-    app.terminate();app.launch();openSettings(app,page:"accounts");reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["verify-music-account-wy"].exists);image("Real account playlist remains unauthenticated after cancellation and restart")
+    XCTAssertTrue(web.descendants(matching:.any).matching(NSPredicate(format:"label MATCHES %@",qq ? ".*(QQ|帐号|账号|授权|登录|Login).*":".*(网易|云音乐|登录|手机号|扫码).*" )).firstMatch.waitForExistence(timeout:35))
+    image("Real official \(platform) page opened from account playlist entry")
+    bar.buttons["关闭"].tap();XCTAssertTrue(waitForGone(bar,timeout:15));reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"+suffix].exists)
+    app.terminate();app.launch();openSettings(app,page:"accounts");reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons[qq ? "verify-music-account-tx":"verify-music-account-wy"].exists);image("Real \(platform) playlist remains unauthenticated after cancellation and restart")
   }
   func testLiveQQWebLogin() throws {
     XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}

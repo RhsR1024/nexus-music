@@ -63,3 +63,11 @@ test('QQ cancellation after either response prevents a successful profile result
     assert.equal(calls,cancelAt);
   }
 });
+
+test('QQ encrypted playlist owner is exposed only after authorization and remains optional and bounded',async()=>{
+  for(const value of ['unit-only-encrypted-owner','x'.repeat(1025),'bad\nowner',42]){
+    let count=0;const client=new QQAccountProfileClient({http:async()=>++count===1?{code:0,data:{creator:{nick:'Public listener',encrypt_uin:value}}}:authorized});
+    const result=await client.fetch(session,new AbortController().signal);assert.equal(count,2);
+    assert.equal(result.encryptedUin,typeof value==='string'&&value==='unit-only-encrypted-owner'?value:undefined);
+  }
+});

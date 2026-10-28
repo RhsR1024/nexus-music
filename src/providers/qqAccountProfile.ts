@@ -47,7 +47,7 @@ export class QQAccountProfileError extends Error{
 export class QQAccountProfileClient{
   private readonly options:{http:HTTPClient};
   constructor(options:{http:HTTPClient}){this.options=options;}
-  async fetch(session:MusicSession,signal:AbortSignal):Promise<{userId:string;nickname:string}>{
+  async fetch(session:MusicSession,signal:AbortSignal):Promise<{userId:string;nickname:string;encryptedUin?:string}>{
     const check=()=>{if(signal.aborted)throw new QQAccountProfileError('cancelled');};
     check();
     try{
@@ -70,7 +70,8 @@ export class QQAccountProfileClient{
       const status=object(raw.status);
       if(raw.code!==0||status.code!==0||!status.data||typeof status.data!=='object'||Array.isArray(status.data))throw new QQAccountProfileError('login_required');
       // Only the authorization result is consumed. Never save or expose lists.
-      return{userId:uin,nickname:nickname.trim()};
+      const encryptedUin=creator.encrypt_uin;
+      return{userId:uin,nickname:nickname.trim(),...(typeof encryptedUin==='string'&&encryptedUin.length>0&&encryptedUin.length<=1024&&!/[\u0000-\u001f\u007f]/.test(encryptedUin)?{encryptedUin}:{})};
     }catch(error){
       check();
       if(error instanceof QQAccountProfileError)throw error;

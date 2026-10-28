@@ -27,7 +27,7 @@ const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence|AccountPlaylistEntry)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence|AccountPlaylistEntry|QQPlaylistEntry)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -464,6 +464,7 @@ try {
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalPlaylistBatch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveListeningStatistics');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveRestoredTimeline')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveRestoredTimeline');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQPlaylistEntry')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQPlaylistEntry');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveAccountPlaylistEntry')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveAccountPlaylistEntry');
   if(!liveBackgroundUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveBackgroundPersistence');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveThemeConfig');

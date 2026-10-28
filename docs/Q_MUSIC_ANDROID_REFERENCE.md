@@ -1,3 +1,7 @@
+## 2026-10-28 QQ账号歌单只读接线
+
+创建列表、收藏分页、dir201我喜欢及DissInfo完整详情契约适配音枢QQPlaylists；不使用参考同步/远端写入。复用现有Cookie/资料验证、AccountPlaylists预览归属与LibraryStore取消提交，742检查。匿名入口与未验授权态见[回执](2026-10-28_qq-account-playlist-report.md)。酷狗歌单、微信配对继续，不以源码存在声称真实服务通过。
+
 ## 2026-10-28 网易云账号歌单只读复制
 
 固定playlists.ts的user/playlist分页、v6完整ID与v3分批/权限对应已接入音枢AccountPlaylists、正式账号页和可取消本地复制；原始Cookie不进Track/备份，不实现远端写入/同步。目录/预览绑定当前账号对象与请求，保存等待期间失效在库串行队列内回滚。731检查含13项新覆盖；实际匿名入口和未验范围见[回执](2026-10-28_netease-account-playlist-report.md)。QQ/酷狗账号歌单、微信PC配对继续，不以参考代码存在声明真实服务成功。
