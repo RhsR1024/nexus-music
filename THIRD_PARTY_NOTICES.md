@@ -10,7 +10,7 @@ Upstream NOTICE: Q-music Android, Copyright 2026 Nshpiter. This product is based
 
 ## QQ account daily and radar reads
 
-`src/providers/qqDaily.ts` adapts the official request/envelope, separate daily key and radar/detail contracts from Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/{daily,requests,qqCredentials,cookies,dailyAuthorization}.ts` (Apache 2.0; Nshpiter/LX attribution and NOTICE above). NexusMusic owns its bounded HTTPS client, strict recording identity/completeness checks, account-scoped cache and cancellation. No reference runtime, dependencies, native patches or account credentials are imported. The independent official authorization page and real authenticated service acceptance remain unfinished.
+`src/providers/qqDaily.ts` adapts the official request/envelope, separate daily key and radar/detail contracts from Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/{daily,requests,qqCredentials,cookies,dailyAuthorization}.ts` (Apache 2.0; Nshpiter/LX attribution and NOTICE above). NexusMusic owns its bounded HTTPS client, strict recording identity/completeness checks, account-scoped cache and cancellation. No reference runtime, dependencies, native patches or account credentials are imported. The official Skills URL, desktop UA and key format from dailyAuthorization.ts are also adapted by NexusMusicAuthModule.swift and qqDailyAuthorization.ts. NexusMusic uses an independent ephemeral WebKit session, main-document/epoch checks, identity validation and cancellable Keychain commit instead of the reference message bridge. Real authenticated service acceptance remains unfinished.
 
 ## Kugou QR login protocol
 

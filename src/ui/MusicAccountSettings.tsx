@@ -5,6 +5,7 @@ import type {MusicWebLoginProvider} from '../providers/musicWebLogin.ts';
 import {MusicAuthError} from '../providers/musicAuth.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {QQDailyAuthorizationCard} from './QQDailyAuthorizationCard.tsx';
 import {KugouAccountCard} from './KugouAccountCard.tsx';
 import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
 
@@ -13,13 +14,15 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const auth=useSyncExternalStore(services.musicWebLogin.subscribe,services.musicWebLogin.getSnapshot);
   const kugouAuth=useSyncExternalStore(services.kugouLogin.subscribe,services.kugouLogin.getSnapshot);
+  const dailyAuth=useSyncExternalStore(services.qqDailyAuthorization.subscribe,services.qqDailyAuthorization.getSnapshot);
+  const dailyWaiting=dailyAuth.status==='waiting';
   const [error,setError]=useState('');
   const [verifying,setVerifying]=useState('');
   const [verified,setVerified]=useState('');
   const verifyController=useRef<AbortController|null>(null);
   const [loginProvider,setLoginProvider]=useState<MusicWebLoginProvider>('wy');
   const providers=[{id:'wy' as const,name:'网易云',title:'网易云音乐'},{id:'tx' as const,name:'QQ 音乐',title:'QQ 音乐'}];
-  const webWaiting=auth.status==='waiting',waiting=webWaiting||kugouLoginBusy(kugouAuth.status);
+  const webWaiting=auth.status==='waiting',waiting=webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting;
   useEffect(()=>()=>{verifyController.current?.abort();services.musicWebLogin.cancel();},[services]);
   // Settings caches visited pages. Hidden pages are not unmounted, so revoke
   // the attempt when navigation removes focus as well as on actual teardown.
@@ -36,6 +39,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     });
   };
   const remove=(id:string)=>{
+    services.musicWebLogin.cancel();services.qqDailyAuthorization.cancel();
     verifyController.current?.abort();setVerified('');
     setError('');
     void services.musicAccounts.remove(id).catch(()=>setError('账号未移除，原有会话仍保留'));
@@ -75,12 +79,13 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
         </Pressable>
         {webWaiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.name}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,color:p.secondary}}>取消</Text></Pressable>}
       </View>
+      {provider.id==='tx'&&<QQDailyAuthorizationCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)}/>}
     </View>)}
     {!!error&&<Text testID="music-account-error" accessibilityRole="alert" style={{fontSize:13,lineHeight:20,color:p.accent}}>{error}</Text>}
     {auth.status==='cancelled'&&<Text testID="music-account-cancelled" style={{fontSize:13,color:p.secondary}}>登录已取消</Text>}
     {auth.status==='expired'&&<Text testID="music-account-expired" accessibilityRole="alert" style={{fontSize:13,color:p.accent}}>登录已过期，请重新打开官方网页。</Text>}
     {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:p.secondary}}>{verified}</Text>}
-    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐授权暂未开放。个人歌单、收藏与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
-    <KugouAccountCard services={services} disabled={webWaiting} onRevealQr={onRevealQr}/>
+    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。个人歌单、收藏与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
+    <KugouAccountCard services={services} disabled={webWaiting||dailyWaiting} onRevealQr={onRevealQr}/>
   </View>;
 }

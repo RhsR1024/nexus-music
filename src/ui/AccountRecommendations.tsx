@@ -3,8 +3,8 @@ import {ActivityIndicator,Pressable,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
-import {AccountDailyError,type DailyRecommendationKind} from '../providers/accountDaily.ts';
-import {AccountFmError} from '../providers/accountFm.ts';
+import {type DailyRecommendationKind} from '../providers/accountDaily.ts';
+import {accountRecommendationFailure as failure,ACCOUNT_LOGIN_REQUIRED as LOGIN} from './accountRecommendationFailure.ts';
 import type {MusicAccount} from '../providers/musicAccounts.ts';
 import {Cover} from './Cover.tsx';
 import {Text} from './Typography.tsx';
@@ -12,18 +12,6 @@ import {useTheme} from './theme.tsx';
 
 interface Panel {phase:'idle'|'loading'|'ready'|'empty'|'error';tracks:readonly Track[];message:string;login:boolean;kind?:DailyRecommendationKind}
 const idle:Panel={phase:'idle',tracks:[],message:'',login:false};
-const LOGIN='登录已失效，请重新登录';
-
-function failure(error:unknown,fallback:string):string {
-  if(error instanceof AccountDailyError||error instanceof AccountFmError){
-    if(error.kind==='login_required')return LOGIN;
-    if(error.kind==='account_changed')return '平台账号已更改，请重试';
-    if(error.kind==='cancelled')return '';
-    return fallback;
-  }
-  return error instanceof Error&&/会话|登录/.test(error.message)?LOGIN:fallback;
-}
-
 /** Platform daily / QQ radar and NetEase personal FM. Legacy accounts saved without the
  * newer capabilities still load; no local or public list is shown in their
  * place when the platform call fails. */

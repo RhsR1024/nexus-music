@@ -1,3 +1,7 @@
+## 2026-10-28 QQ官方日推授权页接线
+
+dailyAuthorization.ts / LoginPage 的独立官方Skills/桌面UA/key格式已适配NexusMusic原生会话，不沿用RN消息桥；绑定同网页Cookie身份、校验资料/日推后本机保存，普通登录不自动授权，移除不退出QQ。718检查/26相关/原生策略通过；匿名页面实际回归与未验范围见[回执](2026-10-28_qq-daily-authorization-report.md)。
+
 ## 2026-10-28 QQ私人雷达与官方读取
 
 固定daily.ts的独立Bearer key官方日推、四页雷达及详情调用已适配QQDailyClient；来源kind、失败回退与缓存隔离保持独立。708检查及相关34项通过；dailyAuthorization.ts的独立官方Skills页面已读但尚未实施，不增加完整官方日推/真实授权完成量。见[回执](2026-10-28_qq-radar-report.md)。

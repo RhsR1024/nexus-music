@@ -5,6 +5,11 @@ import WebKit
 // Official entry from pinned Q-music-android 5db858f/login.ts. NexusMusic
 // owns the WebKit session; no reference app bridge, callback or patch is copied.
 enum MusicWebLoginPolicy {
+  static let dailyURL = "https://y.qq.com/n/ryqq_v2/qqmusic_skills"
+  static func dailyOrigin(_ url: URL) -> Bool {
+    url.scheme == "https" && url.user == nil && url.password == nil &&
+      (url.port == nil || url.port == 443) && ["y.qq.com", "a.qq.com"].contains(url.host?.lowercased() ?? "")
+  }
   static let qqURL = "https://graph.qq.com/oauth2.0/authorize?client_id=100497308&redirect_uri=https%3A%2F%2Fy.qq.com%2Fportal%2Fwx_redirect.html%3Flogin_type%3D1%26surl%3Dhttps%253A%252F%252Fy.qq.com%252F&response_type=code&scope=all"
   static func initialURL(_ provider: String, state: String? = nil) -> String? {
     switch provider {
@@ -60,7 +65,7 @@ public final class NexusMusicAuthModule: Module {
           promise.reject("AUTH_UNSUPPORTED", "该平台登录尚未接入")
           return
         }
-        guard self.sessions[id] == nil, self.sessions.count < 2 else {
+        guard self.sessions[id] == nil, self.sessions.isEmpty else {
           promise.reject("AUTH_BUSY", "已有登录窗口正在打开")
           return
         }
@@ -84,6 +89,24 @@ public final class NexusMusicAuthModule: Module {
     AsyncFunction("cancel") { (id: String) in
       DispatchQueue.main.async { [weak self] in self?.sessions.removeValue(forKey: id)?.cancel() }
     }
+    AsyncFunction("openQQDaily") { (id: String, promise: Promise) in
+      DispatchQueue.main.async { [weak self] in
+        guard let self, self.sessions.isEmpty, let presenter = Self.presenter,
+          id.range(of: "^[A-Za-z0-9-]{1,128}$", options: .regularExpression) != nil else {
+          promise.reject("AUTH_UNAVAILABLE", "暂时无法打开授权页面"); return
+        }
+        let session = MusicWebLoginSession(id: id, provider: "tx", initialURL: MusicWebLoginPolicy.dailyURL, daily: true) { [weak self] id, result in
+          self?.sessions.removeValue(forKey: id)
+          switch result {
+          case .success(let json): promise.resolve(json)
+          case .cancelled: promise.reject("AUTH_CANCELLED", "授权已取消")
+          case .expired: promise.reject("AUTH_EXPIRED", "授权已过期")
+          case .failed: promise.reject("AUTH_FAILED", "授权失败，请重试")
+          }
+        }
+        self.sessions[id] = session; session.start(from: presenter)
+      }
+    }
     OnDestroy {
       for session in Array(self.sessions.values) { session.cancel() }
       self.sessions.removeAll()
@@ -105,6 +128,7 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
   private let id: String
   private let provider: String
   private let initialURL: String
+  private let daily: Bool
   private let completion: (String, Result) -> Void
   private var dataStore: WKWebsiteDataStore?
   private var webView: WKWebView?
@@ -116,11 +140,14 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
   private var finished = false
   private var pageReady = false
   private var callbackValidated = false
+  private var navigationEpoch = 0
+  private var dailyInspecting = false
 
-  init(id: String, provider: String, initialURL: String, completion: @escaping (String, Result) -> Void) {
+  init(id: String, provider: String, initialURL: String, daily: Bool = false, completion: @escaping (String, Result) -> Void) {
     self.id = id
     self.provider = provider
     self.initialURL = initialURL
+    self.daily = daily
     self.completion = completion
   }
 
@@ -132,11 +159,11 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     let configuration = WKWebViewConfiguration()
     configuration.websiteDataStore = dataStore
     let webView = WKWebView(frame: .zero, configuration: configuration)
-    webView.accessibilityIdentifier = "music-web-login-\(provider)"
+    webView.accessibilityIdentifier = daily ? "qq-daily-authorization-web" : "music-web-login-\(provider)"
     if provider == "tx" {
       // Request the official website's desktop login controls. The mobile
       // presentation offers only an unsupported QQ-app launch in this host.
-      webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+      webView.customUserAgent = daily ? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
     }
     webView.navigationDelegate = self
     webView.uiDelegate = self
@@ -145,14 +172,14 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
 
     let controller = UIViewController()
     loginController = controller
-    controller.title = provider == "tx" ? "QQ 音乐登录" : "网易云登录"
+    controller.title = daily ? "QQ 每日推荐授权" : provider == "tx" ? "QQ 音乐登录" : "网易云登录"
     controller.view.backgroundColor = .systemBackground
     controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "关闭", style: .plain, target: self, action: #selector(cancelPressed))
     let loading = UIActivityIndicatorView(style: .medium)
     loading.hidesWhenStopped = true
     loading.isAccessibilityElement = true
     loading.accessibilityLabel = "正在载入登录网页"
-    loading.accessibilityIdentifier = "music-web-login-loading-\(provider)"
+    loading.accessibilityIdentifier = daily ? "qq-daily-authorization-loading" : "music-web-login-loading-\(provider)"
     loading.startAnimating()
     loadingIndicator = loading
     controller.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: loading)
@@ -181,6 +208,7 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
   @objc private func cancelPressed() { cancel() }
 
   func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+    navigationEpoch += 1
     pageReady = false
     loadingIndicator?.startAnimating()
     if let loading = loadingIndicator { loginController?.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: loading) }
@@ -209,7 +237,7 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
       decisionHandler(.cancel)
       return
     }
-    if provider == "tx", url.host?.lowercased() == "y.qq.com", url.path == "/portal/wx_redirect.html" {
+    if !daily, provider == "tx", url.host?.lowercased() == "y.qq.com", url.path == "/portal/wx_redirect.html" {
       guard MusicWebLoginPolicy.matchesCallback(url, state: id) else {
         decisionHandler(.cancel); finish(.failed); return
       }
@@ -225,6 +253,7 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
 
   private func pollCookies() {
     guard !finished else { return }
+    if daily { inspectDaily(); return }
     dataStore?.httpCookieStore.getAllCookies { [weak self] cookies in
       guard let self, !self.finished else { return }
       var values: [String: String] = [:]
@@ -242,6 +271,45 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
         return
       }
       self.finish(.success(json))
+    }
+  }
+
+  // Evaluate only the current main document on the two official Skills origins.
+  // No message bridge accepts arbitrary frames, URLs or page-supplied cookies.
+  private func inspectDaily() {
+    guard !finished, pageReady, !dailyInspecting, let webView, let url = webView.url,
+      MusicWebLoginPolicy.dailyOrigin(url) else { return }
+    dailyInspecting = true
+    let epoch = navigationEpoch
+    let script = #"(() => {const texts=[(document.body?.innerText||'').slice(0,200000),...Array.from(document.querySelectorAll('input,textarea')).slice(0,100).map(x=>String(x.value||'').slice(0,2048))];return texts.join('\n').match(/\bqmk-[A-Za-z0-9_-]{12,1024}\b/)?.[0]||null;})()"#
+    webView.evaluateJavaScript(script) { [weak self] value, _ in
+      guard let self else { return }
+      self.dailyInspecting = false
+      guard !self.finished, self.pageReady, self.navigationEpoch == epoch,
+        self.webView?.url == url, let key = value as? String,
+        key.range(of: "^qmk-[A-Za-z0-9_-]{12,1024}$", options: .regularExpression) != nil else { return }
+      self.dataStore?.httpCookieStore.getAllCookies { [weak self] cookies in
+        guard let self, !self.finished, self.pageReady, self.navigationEpoch == epoch,
+          self.webView?.url == url else { return }
+        var values: [String: String] = [:]
+        var identities = Set<String>()
+        for cookie in cookies {
+          let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
+          guard (domain == "qq.com" || domain.hasSuffix(".qq.com")),
+            MusicWebLoginPolicy.cookieNames("tx").contains(cookie.name),
+            cookie.expiresDate == nil || cookie.expiresDate! > Date() else { continue }
+          values[cookie.name] = cookie.value
+          if ["uin", "qqmusic_uin", "musicid"].contains(cookie.name),
+            cookie.value.range(of: "^o?[0-9]{1,20}$", options: [.regularExpression,.caseInsensitive]) != nil {
+            let normalized = cookie.value.replacingOccurrences(of: "^[oO]?0*", with: "", options: .regularExpression)
+            if !normalized.isEmpty { identities.insert(normalized) }
+          }
+        }
+        guard MusicWebLoginPolicy.ready(values, provider: "tx"), identities.count == 1 else { return }
+        let payload: [String: Any] = ["key": key, "cookies": values]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { self.finish(.failed); return }
+        self.finish(.success(json))
+      }
     }
   }
 

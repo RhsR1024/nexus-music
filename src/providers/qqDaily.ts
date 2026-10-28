@@ -73,7 +73,7 @@ export class QQDailyClient{
         };
         let reason:DailyRecommendation['reason']='';
         if(session.qqDailyKey!==undefined){
-          try{const ids=await this.officialIds(account,session,String(session.qqDailyKey),child);if(ids.length)return{kind:'tx_official_daily',reason:'',tracks:await tracks(ids)};}
+          try{if(session.qqDailyKeyOwner!==account.id)throw new AccountDailyError('unavailable');const ids=await this.officialIds(account,session,String(session.qqDailyKey),child);if(ids.length)return{kind:'tx_official_daily',reason:'',tracks:await tracks(ids)};}
           catch{throwIfAborted(child);}
           reason='official_unavailable';
         }

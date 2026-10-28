@@ -40,7 +40,7 @@ test('QQ radar reads four bounded pages, supports known row envelopes and treats
 test('QQ official key uses a separate origin and Bearer header; successful official daily never calls radar',async()=>{
   const seen:{url:string;request:Parameters<HTTPClient>[1]}[]=[];
   const client=new QQDailyClient({http:async(url,request)=>{seen.push({url,request});if(url.includes('daily-mix'))return{ret:0,sub_ret:0,songlist:[{songMid:'m2'},{songMid:'m1'},{songMid:'m2'}]};return response(JSON.parse(request.body!));}});
-  const result=await client.fetch(a,{...session,qqDailyKey:key},signal());assert.equal(result.kind,'tx_official_daily');assert.deepEqual(result.tracks.map(x=>x.origin.id),['m2','m1']);
+  const result=await client.fetch(a,{...session,qqDailyKey:key,qqDailyKeyOwner:a.id},signal());assert.equal(result.kind,'tx_official_daily');assert.deepEqual(result.tracks.map(x=>x.origin.id),['m2','m1']);
   assert.equal(seen[0]!.url,'https://a.y.qq.com/discover/daily-mix');assert.equal(seen[0]!.request.headers!.Authorization,`Bearer ${key}`);
   assert.ok(!seen[0]!.url.includes(key));assert.ok(!JSON.stringify(seen[1]).includes(key));assert.equal(seen.length,2);
 });
@@ -49,7 +49,7 @@ test('QQ invalid/empty/unavailable official daily falls back explicitly to radar
   for(const official of [{ret:401},{ret:0,songlist:[]},{ret:0,songlist:[{songMid:'invalid!'}]}]){
     const svc=service(page=>page===1?[{mid:'m1'}]:[]);
     const client=new QQDailyClient({http:async(url,request,s)=>url.includes('daily-mix')?official:svc.http(url,request,s)});
-    const result=await client.fetch(a,{...session,qqDailyKey:key},signal());assert.equal(result.kind,'tx_radar');assert.equal(result.reason,'official_unavailable');assert.equal(result.tracks[0]!.origin.id,'m1');
+    const result=await client.fetch(a,{...session,qqDailyKey:key,qqDailyKeyOwner:a.id},signal());assert.equal(result.kind,'tx_radar');assert.equal(result.reason,'official_unavailable');assert.equal(result.tracks[0]!.origin.id,'m1');
   }
 });
 
@@ -87,7 +87,7 @@ test('QQ malformed radar/envelopes and expired credentials are errors, not empty
 
 test('QQ cancellation cannot fall back or return a late radar response',async()=>{
   let release!:(value:unknown)=>void;const controller=new AbortController();
-  const client=new QQDailyClient({http:()=>new Promise(resolve=>release=resolve)}),pending=client.fetch(a,{...session,qqDailyKey:key},controller.signal);
+  const client=new QQDailyClient({http:()=>new Promise(resolve=>release=resolve)}),pending=client.fetch(a,{...session,qqDailyKey:key,qqDailyKeyOwner:a.id},controller.signal);
   while(!release)await new Promise(resolve=>setImmediate(resolve));controller.abort();release({ret:0,songlist:[]});await failKind(pending,'cancelled');
 });
 

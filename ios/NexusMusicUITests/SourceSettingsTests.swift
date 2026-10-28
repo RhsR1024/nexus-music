@@ -39,6 +39,11 @@ final class SourceSettingsTests: XCTestCase {
     }
     XCTAssertTrue(waitForHittable(tab,timeout:10),"Settings tab must be reachable after closing any presented player")
     tab.tap()
+    // A synthesized first tap can leave the tab unselected. Confirm the actual
+    // selection before looking for a page; retry only this same visible control.
+    func selected()->Bool{let end=Date().addingTimeInterval(2);repeat{if tab.isSelected{return true};RunLoop.current.run(until:Date().addingTimeInterval(0.1))}while Date()<end;return tab.isSelected}
+    if !selected() {XCTContext.runActivity(named:"Settings tab remained unselected; repeat its visible control"){_ in XCTAssertTrue(tab.isHittable);tab.tap()}}
+    XCTAssertTrue(selected(),"Settings tab must actually become selected")
     for _ in 0..<3 {let back=app.buttons["settings-back"];if !waitForHittable(back,timeout:0.2){break};back.tap()}
     var settingsPage="home"
     let sheetIDs=["background":"theme-background-sheet","theme":"theme-mode-sheet","skins":"player-style-sheet","mini":"mini-settings-sheet","navigation":"navigation-style-sheet","globalFont":"global-font-sheet","lyricFont":"lyric-font-sheet"]
@@ -744,6 +749,30 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(app.buttons["remove-music-account-kg"].exists,"No unscanned, expired or cancelled challenge can create a saved account")
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
+  }
+  func testLiveQQDailyAuthorization() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ button:XCUIElement){for _ in 0..<10 {if waitForHittable(button,timeout:0.3){return};app.swipeUp()};XCTAssertTrue(waitForHittable(button,timeout:5))}
+    openSettings(app,page:"accounts")
+    let authorize=app.buttons["qq-daily-authorize"];reach(authorize);image("Real QQ daily official authorization entry")
+    authorize.tap()
+    let bar=app.navigationBars["QQ 每日推荐授权"]
+    XCTAssertTrue(bar.waitForExistence(timeout:20));XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout:15))
+    XCTAssertTrue(waitForGone(app.activityIndicators["qq-daily-authorization-loading"],timeout:45))
+    image("Real QQ Skills page without credentials")
+    bar.buttons["关闭"].tap();XCTAssertTrue(waitForGone(bar,timeout:15))
+    let cancelled=app.staticTexts["qq-daily-cancelled"]
+    XCTAssertTrue(cancelled.waitForExistence(timeout:10))
+    let mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
+    XCTAssertTrue(mini.exists);XCTAssertLessThanOrEqual(cancelled.frame.maxY,mini.frame.minY,"Cancellation text must be fully above the mini player")
+    image("Real QQ daily authorization cancelled")
+    reach(authorize);authorize.tap();XCTAssertTrue(bar.waitForExistence(timeout:20))
+    XCUIDevice.shared.press(.home);app.activate();XCTAssertTrue(waitForGone(bar,timeout:15))
+    XCTAssertTrue(app.staticTexts["qq-daily-cancelled"].waitForExistence(timeout:10))
+    app.terminate();app.launch();openSettings(app,page:"accounts")
+    XCTAssertFalse(app.buttons["verify-music-account-tx"].exists)
+    reach(app.buttons["qq-daily-authorize"]);image("Real QQ daily authorization remains unconfigured after restart")
   }
   func testLivePlatformRecommendations() throws {
     // Explicit real-audio target; use the same normal navigation assertions.

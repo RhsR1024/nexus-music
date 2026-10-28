@@ -48,12 +48,13 @@ export class MusicAccounts {
     if(!Array.isArray(saved)||saved.some(item=>!validAccount(item))||new Set(saved.map(item=>item.id)).size!==saved.length)throw new InvalidRecordError();
     this.publish(saved.map(accountFields));
   }
-  async save(account:Omit<MusicAccount,'id'|'updatedAt'>,session:MusicSession,signal?:AbortSignal){
+  async save(account:Omit<MusicAccount,'id'|'updatedAt'>,session:MusicSession,signal?:AbortSignal,expected?:MusicAccount|null){
     return this.mutate(async()=>{
       const check=()=>{if(signal)throwIfAborted(signal);};check();
       if(!platforms.has(account.platform)||!account.label.trim()||!account.username.trim()||!safeSession(session))throw new Error('平台账号资料无效');
       const now=Date.now(),id=await this.hash(JSON.stringify([account.platform,account.username.trim()]));
       check();
+      if(expected===null&&this.value.some(item=>item.id===id)||expected&&(!this.value.includes(expected)||expected.id!==id))throw new Error('平台账号已更改，请重试');
       const displayName=account.displayName?.trim();
       const record:MusicAccount={id,platform:account.platform,label:account.label.trim(),username:account.username.trim(),...(displayName?{displayName}:{}),capabilities:[...account.capabilities],updatedAt:now};
       if(!validAccount(record))throw new Error('平台账号资料无效');
