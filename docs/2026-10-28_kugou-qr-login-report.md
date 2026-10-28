@@ -53,3 +53,7 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testLiveKugouQrLo
 复跑需换全新输出目录，脚本拒绝覆盖现有 manifest。匿名轮询在本机120秒期限到期退出；未另行推断或测量服务器后台失效策略。真实已扫码/确认、授权后的持久会话与失效、真实 Keychain 故障/崩溃、真机/签名和完整动效仍未验收。未读取个人歌单，未开放酷狗日推或受限播放。
 
 上一源码 `1d6239c3eeb367071d5153597537612365326381` 的 CI40559801315 已 success，checks/native/App/匹配歌词/离线播放与未签名 IPA 步骤实际成功；该运行不含本批酷狗代码。上一 de7f5b9 的 CI40554716636 已 failure，不计通过。本批交付后单独核对新提交远端与 CI 队列。
+
+## 交付
+
+源码 `82b2415d314c5b09848ca9e85822bc1b6f1ec2d0` 正常提交/push，`ls-remote` 核对完整 SHA 一致。[CI40608945902](https://github.com/RhsR1024/nexus-music/actions/runs/40608945902) 运行中，同工作流/分支 1 运行 / 0 等待，终态待；未取消或重派旧运行。专用模拟器已关闭，数据保留；当前证据和未决 R2 材料保留，目录大小及保留决定见 `build/kugou-login-20261028/retention-receipt.json`。
