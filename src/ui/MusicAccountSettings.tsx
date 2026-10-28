@@ -8,6 +8,7 @@ import {useTheme} from './theme.tsx';
 import {QQDailyAuthorizationCard} from './QQDailyAuthorizationCard.tsx';
 import {KugouAccountCard} from './KugouAccountCard.tsx';
 import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
+import {AccountPlaylistImport} from './AccountPlaylistImport.tsx';
 
 export function MusicAccountSettings({services,active,onRevealQr}:{services:Services;active:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
   const {palette:p}=useTheme();
@@ -85,7 +86,8 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     {auth.status==='cancelled'&&<Text testID="music-account-cancelled" style={{fontSize:13,color:p.secondary}}>登录已取消</Text>}
     {auth.status==='expired'&&<Text testID="music-account-expired" accessibilityRole="alert" style={{fontSize:13,color:p.accent}}>登录已过期，请重新打开官方网页。</Text>}
     {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:p.secondary}}>{verified}</Text>}
-    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。个人歌单、收藏与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
+    <AccountPlaylistImport services={services} active={active} disabled={waiting} onLogin={()=>login('wy')}/>
+    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。网易云歌单可手动复制到音枢歌单，QQ/酷狗歌单与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
     <KugouAccountCard services={services} disabled={webWaiting||dailyWaiting} onRevealQr={onRevealQr}/>
   </View>;
 }

@@ -43,3 +43,5 @@ The reference repository includes the Apache License 2.0, reproduced at `license
 ## Cupertino Icons font
 
 `assets/fonts/CupertinoIcons.ttf` is the official `cupertino_icons` 2.0.0 package font, used to draw three appearance-segment glyphs (`circle_fill`, `layers_alt_fill`, `photo_fill`). The package declares the MIT license reproduced at `licenses/cupertino-icons-mit.txt`.
+
+`src/providers/accountPlaylists.ts` adapts the read-only NetEase playlist pagination and complete detail contracts in Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/playlists.ts` and `requests.ts`, with the applicable Apache-2.0 and Nshpiter/LX attribution above. NexusMusic implements its own account-bound reader, metadata cleaning, UI and guarded local snapshot copy. It imports no reference synchronization or remote write logic, Android bridge, dependency or credential. Actual authenticated service acceptance is separate from controlled protocol tests.

@@ -30,6 +30,15 @@ import Foundation
     expect(MusicWebLoginPolicy.dailyOrigin(URL(string: MusicWebLoginPolicy.dailyURL)!), "Official Skills origin")
     for url in ["https://a.qq.com/discover/daily-mix", "https://y.qq.com:443/"] { expect(MusicWebLoginPolicy.dailyOrigin(URL(string:url)!), "Official daily origin") }
     for url in ["https://evil.qq.com/", "https://y.qq.com.evil.test/", "http://y.qq.com/", "https://user:pass@y.qq.com/", "https://y.qq.com:444/", "about:blank"] { expect(!MusicWebLoginPolicy.dailyOrigin(URL(string:url)!), "Reject untrusted daily source") }
+    for state in ["interactive", "complete"] {
+      expect(MusicWebLoginPolicy.documentReady(["state":state,"body":true], observedEpoch:2,currentEpoch:2,committedEpoch:2), "Committed usable DOM")
+    }
+    let rejectedDocuments: [Any] = [["state":"loading","body":true],["state":"complete","body":false],["state":"complete"],"complete"]
+    for value in rejectedDocuments {
+      expect(!MusicWebLoginPolicy.documentReady(value,observedEpoch:2,currentEpoch:2,committedEpoch:2), "Reject incomplete or malformed DOM readiness")
+    }
+    expect(!MusicWebLoginPolicy.documentReady(["state":"complete","body":true],observedEpoch:1,currentEpoch:2,committedEpoch:2), "Reject old document callback")
+    expect(!MusicWebLoginPolicy.documentReady(["state":"complete","body":true],observedEpoch:2,currentEpoch:2,committedEpoch:nil), "Provisional navigation cannot use the previous DOM")
     print("Music web login native policy passed")
   }
 }

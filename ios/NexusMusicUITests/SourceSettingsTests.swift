@@ -644,6 +644,46 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
     XCTAssertFalse(navigation.exists)
   }
+  func testLiveAccountPlaylistEntry() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){
+      let scroll=app.descendants(matching:.any).matching(identifier:"settings-scroll-accounts").firstMatch
+      for _ in 0..<16 {
+        var rect=scroll.frame.intersection(app.frame)
+        let mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
+        if mini.exists{rect.size.height=max(0,min(rect.maxY,mini.frame.minY-8)-rect.minY)}
+        if element.exists&&element.isHittable&&element.frame.minY>=rect.minY+4&&element.frame.maxY<=rect.maxY-4{return}
+        XCTAssertGreaterThan(rect.height,100)
+        let above=element.exists&&element.frame.minY<rect.minY,origin=app.coordinate(withNormalizedOffset:.zero)
+        let x=rect.maxX-12,high=rect.minY+rect.height*0.3,low=rect.minY+rect.height*0.7
+        origin.withOffset(CGVector(dx:x-app.frame.minX,dy:(above ? high:low)-app.frame.minY)).press(forDuration:0.05,thenDragTo:origin.withOffset(CGVector(dx:x-app.frame.minX,dy:(above ? low:high)-app.frame.minY)))
+      }
+      XCTAssertTrue(element.isHittable)
+    }
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
+    let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));let before=progress.value as? String ?? "";XCTAssertTrue(before.contains("/ 3:53"))
+    RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    openSettings(app,page:"accounts")
+    let login=app.buttons["account-playlists-login"],required=app.staticTexts["account-playlists-login-required"]
+    reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"].exists);image("Real account playlist entry without a saved account")
+    login.tap();let bar=app.navigationBars["网易云登录"];XCTAssertTrue(bar.waitForExistence(timeout:20))
+    let loaded=waitForGone(app.activityIndicators["music-web-login-loading-wy"],timeout:45)
+    if !loaded {
+      let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual NetEase loading failure hierarchy";tree.lifetime = .keepAlways;add(tree)
+      image("Actual NetEase document while loading indicator remains")
+    }
+    XCTAssertTrue(loaded)
+    let web=app.webViews.firstMatch;XCTAssertTrue(web.waitForExistence(timeout:15))
+    XCTAssertTrue(web.descendants(matching:.any).matching(NSPredicate(format:"label MATCHES %@",".*(网易|云音乐|登录|手机号|扫码).*" )).firstMatch.waitForExistence(timeout:35))
+    image("Real official NetEase page opened from account playlist entry")
+    bar.buttons["关闭"].tap();XCTAssertTrue(waitForGone(bar,timeout:15));reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"].exists)
+    app.terminate();app.launch();openSettings(app,page:"accounts");reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["verify-music-account-wy"].exists);image("Real account playlist remains unauthenticated after cancellation and restart")
+  }
   func testLiveQQWebLogin() throws {
     XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
     let app=XCUIApplication();app.launch()

@@ -40,6 +40,12 @@ enum MusicWebLoginPolicy {
     provider == "tx" ? ["qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin"] :
       ["MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid"]
   }
+  static func documentReady(_ value: Any?, observedEpoch: Int, currentEpoch: Int, committedEpoch: Int?) -> Bool {
+    guard observedEpoch == currentEpoch, committedEpoch == currentEpoch,
+      let value = value as? [String: Any], let state = value["state"] as? String,
+      let body = value["body"] as? Bool else { return false }
+    return body && (state == "interactive" || state == "complete")
+  }
   static func ready(_ values: [String: String], provider: String) -> Bool {
     if provider == "wy" { return !(values["MUSIC_U"] ?? "").isEmpty }
     guard provider == "tx", values["login_type"] == nil || values["login_type"] == "1" else { return false }
@@ -141,6 +147,9 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
   private var pageReady = false
   private var callbackValidated = false
   private var navigationEpoch = 0
+  private var committedEpoch: Int?
+  private var documentProbeEpoch: Int?
+  private var currentNavigation: WKNavigation?
   private var dailyInspecting = false
 
   init(id: String, provider: String, initialURL: String, daily: Bool = false, completion: @escaping (String, Result) -> Void) {
@@ -208,25 +217,35 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
   @objc private func cancelPressed() { cancel() }
 
   func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+    guard !finished, self.webView === webView else { return }
     navigationEpoch += 1
+    currentNavigation = navigation
+    committedEpoch = nil
     pageReady = false
     loadingIndicator?.startAnimating()
     if let loading = loadingIndicator { loginController?.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: loading) }
   }
 
+  func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+    guard !finished, self.webView === webView, let navigation, navigation === currentNavigation else { return }
+    committedEpoch = navigationEpoch
+    inspectDocument()
+  }
+
   func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-    pageReady = true
-    loadingIndicator?.stopAnimating()
-    loginController?.navigationItem.rightBarButtonItem = nil
-    pollCookies()
+    guard !finished, self.webView === webView, let navigation, navigation === currentNavigation,
+      committedEpoch == navigationEpoch else { return }
+    markDocumentReady(webView)
   }
 
   func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+    guard self.webView === webView, let navigation, navigation === currentNavigation else { return }
     if (error as NSError).code == NSURLErrorCancelled { return }
     finish(.failed)
   }
 
   func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+    guard self.webView === webView, let navigation, navigation === currentNavigation else { return }
     if (error as NSError).code == NSURLErrorCancelled { return }
     finish(.failed)
   }
@@ -253,9 +272,13 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
 
   private func pollCookies() {
     guard !finished else { return }
+    if !pageReady { inspectDocument(); return }
     if daily { inspectDaily(); return }
+    guard let webView, let url = documentURL(webView) else { return }
+    let epoch = navigationEpoch
     dataStore?.httpCookieStore.getAllCookies { [weak self] cookies in
-      guard let self, !self.finished else { return }
+      guard let self, !self.finished, self.pageReady, self.navigationEpoch == epoch,
+        self.webView === webView, self.webView?.url == url else { return }
       var values: [String: String] = [:]
       for cookie in cookies {
         let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
@@ -271,6 +294,37 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
         return
       }
       self.finish(.success(json))
+    }
+  }
+
+  private func documentURL(_ webView: WKWebView) -> URL? {
+    guard let url = webView.url, url.scheme == "https", MusicWebLoginPolicy.allows(url, provider: provider),
+      !daily || MusicWebLoginPolicy.dailyOrigin(url) else { return nil }
+    return url
+  }
+
+  private func markDocumentReady(_ webView: WKWebView) {
+    guard !finished, self.webView === webView, documentURL(webView) != nil else { return }
+    pageReady = true
+    loadingIndicator?.stopAnimating()
+    loginController?.navigationItem.rightBarButtonItem = nil
+    pollCookies()
+  }
+
+  // A usable main DOM can precede didFinish when an auxiliary resource stays
+  // pending. Never infer authentication from this: cookies and provider profile
+  // validation remain independent. Do not probe an old provisional document.
+  private func inspectDocument() {
+    guard !finished, !pageReady, let webView, let url = documentURL(webView),
+      committedEpoch == navigationEpoch, documentProbeEpoch != navigationEpoch else { return }
+    let epoch = navigationEpoch
+    documentProbeEpoch = epoch
+    webView.evaluateJavaScript("({state:document.readyState,body:!!document.body&&document.body.childElementCount>0})") { [weak self] value, _ in
+      guard let self else { return }
+      if self.documentProbeEpoch == epoch { self.documentProbeEpoch = nil }
+      guard !self.finished, self.webView === webView, webView.url == url,
+        MusicWebLoginPolicy.documentReady(value, observedEpoch: epoch, currentEpoch: self.navigationEpoch, committedEpoch: self.committedEpoch) else { return }
+      self.markDocumentReady(webView)
     }
   }
 

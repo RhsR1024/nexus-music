@@ -52,8 +52,16 @@ export class LibraryStore {
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
   async restore(){const value=await this.repository.get<unknown>('library.v1');if(value){try{this.value=validateLibrary(value);}catch{throw new InvalidRecordError();}}for(const listener of this.listeners)listener();}
   settled(){return this.tail;}
-  private change(run:(current:LibraryState)=>LibraryState) {
-    const next=this.mutations.run(async()=>{const value=validateLibrary(run(this.value));await this.repository.put('library.v1',value);this.value=value;for(const listener of this.listeners)listener();});
+  private change(run:(current:LibraryState)=>LibraryState,valid?:()=>boolean) {
+    const next=this.mutations.run(async()=>{
+      const previous=this.value,value=validateLibrary(run(previous));
+      if(valid&&!valid())throw new Error('操作已取消或账号已更改');
+      await this.repository.put('library.v1',value);
+      // The account can disappear while persistence is pending. The library
+      // mutation queue excludes other local writes until rollback completes.
+      if(valid&&!valid()){await this.repository.put('library.v1',previous);throw new Error('操作已取消或账号已更改');}
+      this.value=value;for(const listener of this.listeners)listener();
+    });
     this.tail=next.catch(()=>{});return next;
   }
   isFavorite(track:Track){const key=trackKey(track.origin);return this.value.favorites.some(item=>trackKey(item.origin)===key);}
@@ -79,7 +87,7 @@ export class LibraryStore {
   played(track:Track){validateTrack(track);return this.change(current=>({...current,history:[{track,playedAt:this.now()},...current.history.filter(item=>trackKey(item.track.origin)!==trackKey(track.origin))].slice(0,300)}));}
   clearHistory(){return this.change(current=>({...current,history:[]}));}
   removeHistory(track:Track){return this.change(current=>({...current,history:current.history.filter(item=>trackKey(item.track.origin)!==trackKey(track.origin))}));}
-  async createPlaylist(title:string,tracks:readonly Track[]=[],meta:{description?:string;coverUrl?:string}={}){tracks.forEach(validateTrack);const id=this.uuid(),time=this.now();await this.change(current=>({...current,playlists:[...current.playlists,{id,title:title.trim(),entries:tracks.map(track=>({id:this.uuid(),track})),createdAt:time,updatedAt:time,...(meta.description?.trim()?{description:meta.description.trim()}:{}) , ...(meta.coverUrl?.trim()?{coverUrl:meta.coverUrl.trim()}:{})}]}));return id;}
+  async createPlaylist(title:string,tracks:readonly Track[]=[],meta:{description?:string;coverUrl?:string}={},valid?:()=>boolean){tracks.forEach(validateTrack);const id=this.uuid(),time=this.now();await this.change(current=>({...current,playlists:[...current.playlists,{id,title:title.trim(),entries:tracks.map(track=>({id:this.uuid(),track})),createdAt:time,updatedAt:time,...(meta.description?.trim()?{description:meta.description.trim()}:{}) , ...(meta.coverUrl?.trim()?{coverUrl:meta.coverUrl.trim()}:{})}]}),valid);return id;}
   // Undo for delete-playlist (Sollin E-1240): put the captured playlist back.
   // A same-id conflict (possible if the user created one in the undo window)
   // falls back to a fresh id so restore never corrupts the list.

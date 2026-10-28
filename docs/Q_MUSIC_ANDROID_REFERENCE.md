@@ -1,3 +1,7 @@
+## 2026-10-28 网易云账号歌单只读复制
+
+固定playlists.ts的user/playlist分页、v6完整ID与v3分批/权限对应已接入音枢AccountPlaylists、正式账号页和可取消本地复制；原始Cookie不进Track/备份，不实现远端写入/同步。目录/预览绑定当前账号对象与请求，保存等待期间失效在库串行队列内回滚。731检查含13项新覆盖；实际匿名入口和未验范围见[回执](2026-10-28_netease-account-playlist-report.md)。QQ/酷狗账号歌单、微信PC配对继续，不以参考代码存在声明真实服务成功。
+
 ## 2026-10-28 QQ官方日推授权页接线
 
 dailyAuthorization.ts / LoginPage 的独立官方Skills/桌面UA/key格式已适配NexusMusic原生会话，不沿用RN消息桥；绑定同网页Cookie身份、校验资料/日推后本机保存，普通登录不自动授权，移除不退出QQ。718检查/26相关/原生策略通过；匿名页面实际回归与未验范围见[回执](2026-10-28_qq-daily-authorization-report.md)。

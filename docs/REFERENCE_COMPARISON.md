@@ -1,3 +1,7 @@
+## 2026-10-28 网易云账号歌单协议
+
+固定Q-music Android 5db858f32695d10c5e9ef0f7037d586aef6a8c4b的playlists/requests/netease/wy-songList及说明和三许可文件共8份与Git对象逐字节一致。仅借鉴只读分页、ID完整性及权限对应；自写账号对象/请求代次、预览与设备复制事务，不复制参考同步/收藏写入、Android依赖或桥接。Apache-2.0、Nshpiter/LX归属保留；不推断Sollin接口。真实授权目录/复制与其他平台未验，见[实施回执](2026-10-28_netease-account-playlist-report.md)。
+
 ## 2026-10-28 QQ日推独立官方页面
 
 固定Q-music 5db858f的十个来源/归属文件逐字节核对，采用Skills固定页面/桌面UA/qmk格式与独立校验语义，原创原生主文档读取/导航代次/Cookie身份及期望对象写入保护。未复制RN消息桥、Android补丁、依赖或私人令牌，Apache/Nshpiter/LX保留；不推断Sollin后端。见[回执](2026-10-28_qq-daily-authorization-report.md)。
