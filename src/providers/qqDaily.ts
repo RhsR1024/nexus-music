@@ -4,7 +4,7 @@
 import {bounded,throwIfAborted} from './async.ts';
 import {AccountDailyError,type DailyRecommendation} from './accountDaily.ts';
 import {HTTPResponseError,type HTTPClient} from './http.ts';
-import {parseQQCookiePayload,qqWebIdentity} from './qqAccountProfile.ts';
+import {parseQQCookiePayload,qqMusicIdentity} from './qqAccountProfile.ts';
 import type {MusicAccount,MusicSession} from './musicAccounts.ts';
 import type {Track} from '../domain/track.ts';
 import {onlineTrack} from './online.ts';
@@ -16,8 +16,8 @@ const loginCode=(value:unknown)=>[301,401,403,1000,104400,104401].includes(Numbe
 export const validQQDailyKey=(value:unknown):value is string=>typeof value==='string'&&/^qmk-[A-Za-z0-9_-]{12,1024}$/.test(value);
 function credentials(account:MusicAccount,session:MusicSession){
   if(account.platform!=='tx'||session.version!==1||session.platform!=='tx'||session.accountId!==account.id)throw new AccountDailyError('login_required');
-  const cookies=parseQQCookiePayload(JSON.stringify(row(session.cookies))),identity=qqWebIdentity(cookies);
-  if(account.username!==`qq:2:${identity.uin}`||session.userId!==identity.uin)throw new AccountDailyError('login_required');
+  const cookies=parseQQCookiePayload(JSON.stringify(row(session.cookies)),'music'),identity=qqMusicIdentity(cookies);
+  if(account.username!==`qq:${identity.tmeLoginType}:${identity.uin}`||session.userId!==identity.uin)throw new AccountDailyError('login_required');
   return{cookies,...identity};
 }
 export function validQQDailySession(account:MusicAccount,session:MusicSession):boolean{try{credentials(account,session);return true;}catch{return false;}}

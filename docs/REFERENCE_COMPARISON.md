@@ -1,3 +1,9 @@
+## 2026-10-28 批次8：QQ微信电脑配对
+
+固定Q-music Android 5db858f新增9个文件核对，accountTransfer/qqImportedSession/qqCredentials与原生线协议适配到原创iOS URLSession/CryptoKit/AVFoundation和确认状态机；Apache/Nshpiter/LX归属保留，无Android桥/依赖/桌面商业逻辑移植，不推断Sollin使用相同后端。真实对端/授权/签名未验。
+
+见[实施回执](2026-10-28_qq-computer-pairing-report.md)。
+
 ## 2026-10-28 批次8：酷狗二维码照片与同机切换
 
 正式酷狗QR页新增用户主动保存到照片，仅请求addOnly；成功保存后可在原期限内切换酷狗，后台停止新轮询、在途结果等前台处理，离开账号页仍取消。764检查、最终真实音频允许/拒绝专项各1/0（77.707/74.624秒），13PNG ready/亲看，实际照片新增1/拒绝新增0；无照片读取权限。真实同机酷狗扫码确认、账号保存及实体机/签名仍未验，不报F30完成。见[回执](2026-10-28_kugou-qr-photo-report.md)。参考固定Q-music同机说明/归属已核对；自写PhotoKit，不复制Android权限/依赖，不新增Sollin采集，其他全范围继续。

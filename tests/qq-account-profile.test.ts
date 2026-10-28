@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseQQCookiePayload,qqWebIdentity,QQAccountProfileClient,QQAccountProfileError} from '../src/providers/qqAccountProfile.ts';
+import {parseQQCookiePayload,qqWebIdentity,qqMusicIdentity,QQAccountProfileClient,QQAccountProfileError} from '../src/providers/qqAccountProfile.ts';
 import {HTTPResponseError} from '../src/providers/http.ts';
 
 const cookies={qqmusic_key:'synthetic-qq-key',qqmusic_uin:'o000042',login_type:'1'};
@@ -70,4 +70,25 @@ test('QQ encrypted playlist owner is exposed only after authorization and remain
     const result=await client.fetch(session,new AbortController().signal);assert.equal(count,2);
     assert.equal(result.encryptedUin,typeof value==='string'&&value==='unit-only-encrypted-owner'?value:undefined);
   }
+});
+
+
+test('imported WX identity never falls back to a residual QQ uin or QQ web credentials',()=>{
+  const wx={qqmusic_key:'Q_H_L-residual',musickey:'W_X-unit-only',wxuin:'o000099',qqmusic_uin:'99',uin:'42',login_type:'2'};
+  assert.deepEqual(qqMusicIdentity(wx),{uin:'99',authst:'W_X-unit-only',tmeLoginType:1});
+  assert.throws(()=>parseQQCookiePayload(JSON.stringify(wx)));
+  assert.deepEqual(parseQQCookiePayload(JSON.stringify(wx),'music'),wx);
+  for(const value of [{login_type:'2',uin:'42',qqmusic_key:'W_X-unit-only'},{login_type:'2',wxuin:'99',qqmusic_key:'Q_H_L-residual'},
+    {...wx,login_type:undefined},{...wx,login_type:'3'}])assert.throws(()=>qqMusicIdentity(JSON.parse(JSON.stringify(value))));
+  assert.equal(qqMusicIdentity(cookies).tmeLoginType,2);
+});
+
+test('WX official profile and music authorization use its own ID and tmeLoginType',async()=>{
+  const wx={login_type:'2',wxuin:'99',qqmusic_uin:'99',uin:'42',qqmusic_key:'W_X-unit-only'};let calls=0;
+  const client=new QQAccountProfileClient({http:async(url,request)=>{
+    if(++calls===1){assert.ok(url.endsWith('userid=99'));return profile;}
+    const body=JSON.parse(request.body??'{}');assert.equal(body.comm.tmeLoginType,1);assert.equal(body.comm.uin,'99');assert.equal(body.comm.authst,'W_X-unit-only');assert.equal(body.status.param.uin,'99');return authorized;
+  }});
+  assert.deepEqual(await client.fetch({platform:'tx',userId:'99',cookies:wx},new AbortController().signal),{userId:'99',nickname:'Fixture listener'});
+  await assert.rejects(client.fetch({platform:'tx',userId:'42',cookies:wx},new AbortController().signal));assert.equal(calls,2);
 });

@@ -1,3 +1,4 @@
+import {QQAccountTransferCard} from './QQAccountTransferCard.tsx';
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator,Pressable,View} from 'react-native';
 import type {Services} from '../app/services.ts';
@@ -16,6 +17,8 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const auth=useSyncExternalStore(services.musicWebLogin.subscribe,services.musicWebLogin.getSnapshot);
   const kugouAuth=useSyncExternalStore(services.kugouLogin.subscribe,services.kugouLogin.getSnapshot);
   const dailyAuth=useSyncExternalStore(services.qqDailyAuthorization.subscribe,services.qqDailyAuthorization.getSnapshot);
+  const transfer=useSyncExternalStore(services.qqAccountTransfer.subscribe,services.qqAccountTransfer.getSnapshot);
+  const transferWaiting=['scanning','connecting','verifying','confirm','saving'].includes(transfer.status);
   const dailyWaiting=dailyAuth.status==='waiting';
   const [error,setError]=useState('');
   const [verifying,setVerifying]=useState('');
@@ -23,7 +26,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const verifyController=useRef<AbortController|null>(null);
   const [loginProvider,setLoginProvider]=useState<MusicWebLoginProvider>('wy');
   const providers=[{id:'wy' as const,name:'网易云',title:'网易云音乐'},{id:'tx' as const,name:'QQ 音乐',title:'QQ 音乐'}];
-  const webWaiting=auth.status==='waiting',waiting=webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting;
+  const webWaiting=auth.status==='waiting',waiting=webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting||transferWaiting;
   useEffect(()=>()=>{verifyController.current?.abort();services.musicWebLogin.cancel();},[services]);
   // Settings caches visited pages. Hidden pages are not unmounted, so revoke
   // the attempt when navigation removes focus as well as on actual teardown.
@@ -67,7 +70,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
         <Text style={{fontSize:18,fontWeight:'600',color:p.text}}>{provider.title}</Text>
         <Text style={{fontSize:13,lineHeight:20,color:p.secondary}}>在官方网页完成登录。登录凭据仅保存在本机，不参与备份或同步。</Text>
       </View>
-      {provider.id==='tx'&&<Text style={{paddingHorizontal:18,paddingBottom:12,fontSize:13,lineHeight:20,color:p.secondary}}>使用 QQ 官方网页登录，暂不支持跳转 QQ App 或微信登录。会检查音乐账号授权；日推仍需单独授权。</Text>}
+      {provider.id==='tx'&&<Text style={{paddingHorizontal:18,paddingBottom:12,fontSize:13,lineHeight:20,color:p.secondary}}>使用 QQ 官方网页登录，不跳转 QQ App；微信账号可使用下方电脑配对。会检查音乐账号授权；日推仍需单独授权。</Text>}
       {accounts.filter(account=>account.platform===provider.id).map((account,index)=><View key={account.id} style={{minHeight:62,paddingHorizontal:18,flexDirection:'row',alignItems:'center',gap:12,borderTopWidth:index===0?1:0,borderTopColor:p.border,borderBottomWidth:1,borderBottomColor:p.border}}>
         <View style={{flex:1,gap:3}}><Text style={{fontSize:15,color:p.text}}>{account.displayName??account.label}</Text><Text numberOfLines={1} style={{fontSize:12,color:p.secondary}}>会话凭据已保存到本机</Text></View>
         <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`验证${provider.name}会话`} disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:64,minHeight:44,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:13,color:p.secondary}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
@@ -80,7 +83,8 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
         </Pressable>
         {webWaiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.name}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,color:p.secondary}}>取消</Text></Pressable>}
       </View>
-      {provider.id==='tx'&&<QQDailyAuthorizationCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)}/>}
+      {provider.id==='tx'&&<QQAccountTransferCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting}/>}
+      {provider.id==='tx'&&<QQDailyAuthorizationCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||transferWaiting}/>}
     </View>)}
     {!!error&&<Text testID="music-account-error" accessibilityRole="alert" style={{fontSize:13,lineHeight:20,color:p.accent}}>{error}</Text>}
     {auth.status==='cancelled'&&<Text testID="music-account-cancelled" style={{fontSize:13,color:p.secondary}}>登录已取消</Text>}
@@ -89,7 +93,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     <AccountPlaylistImport services={services} active={active} disabled={waiting} onLogin={()=>login('wy')}/>
     <AccountPlaylistImport services={services} active={active} disabled={waiting} platform="tx" onLogin={()=>login('tx')}/>
     <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。网易云和QQ歌单可手动复制到音枢歌单，酷狗歌单也可复制到音枢歌单，账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
-    <KugouAccountCard services={services} disabled={webWaiting||dailyWaiting} onRevealQr={onRevealQr}/>
+    <KugouAccountCard services={services} disabled={webWaiting||dailyWaiting||transferWaiting} onRevealQr={onRevealQr}/>
     <AccountPlaylistImport services={services} active={active} disabled={waiting} platform="kg" onLogin={()=>{void services.kugouLogin.login();}}/>
   </View>;
 }

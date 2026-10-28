@@ -1,6 +1,9 @@
 import ExpoModulesCore
 import UIKit
 import WebKit
+import CryptoKit
+import Security
+import AVFoundation
 
 // Official entry from pinned Q-music-android 5db858f/login.ts. NexusMusic
 // owns the WebKit session; no reference app bridge, callback or patch is copied.
@@ -61,9 +64,35 @@ enum MusicWebLoginPolicy {
 
 public final class NexusMusicAuthModule: Module {
   private var sessions: [String: MusicWebLoginSession] = [:]
+  private var transfer: AccountTransferRequest?
+  private var scanner: AccountTransferScanner?
 
   public func definition() -> ModuleDefinition {
     Name("NexusMusicAuth")
+    AsyncFunction("scanQQTransfer") { (id:String,promise:Promise) in
+      guard UUID(uuidString:id) != nil,self.sessions.isEmpty,self.transfer==nil,self.scanner==nil,let presenter=Self.presenter else {promise.reject("TRANSFER_BUSY","暂时无法打开扫码");return}
+      let scanner=AccountTransferScanner(id:id){[weak self] result in
+        self?.scanner=nil
+        switch result {case .success(let code):promise.resolve(code);case .failure:promise.reject("TRANSFER_CAMERA","无法使用相机，请改用配对码")}
+      };self.scanner=scanner;presenter.present(scanner,animated:true)
+    }.runOnQueue(.main)
+    AsyncFunction("receiveQQTransfer") { (id:String,code:String,promise:Promise) in
+      guard self.sessions.isEmpty,self.transfer==nil,self.scanner==nil else { promise.reject("TRANSFER_BUSY","已有登录正在进行");return }
+      do {
+        let request=try AccountTransferRequest(id:id,code:code);self.transfer=request
+        request.start{[weak self] result in
+          self?.transfer=nil
+          switch result {
+          case .success(let payload):promise.resolve(payload)
+          case .failure(let failure):
+            let code=failure == .cancelled ? "TRANSFER_CANCELLED":failure == .expired ? "TRANSFER_EXPIRED":failure == .network ? "TRANSFER_NETWORK":"TRANSFER_INVALID"
+            promise.reject(code,"未能验证电脑配对，请重新生成配对码")
+          }
+        }
+      }catch { promise.reject("TRANSFER_INVALID","配对码无效") }
+    }.runOnQueue(.main)
+    AsyncFunction("cancelQQTransfer") { (id:String) in if self.transfer?.id==id { self.transfer?.cancel() };if self.scanner?.id==id { self.scanner?.cancel() } }.runOnQueue(.main)
+
     AsyncFunction("open") { (id: String, provider: String, url: String, promise: Promise) in
       DispatchQueue.main.async { [weak self] in
         guard let self else { promise.reject("AUTH_UNAVAILABLE", "登录模块已结束"); return }
@@ -71,7 +100,7 @@ public final class NexusMusicAuthModule: Module {
           promise.reject("AUTH_UNSUPPORTED", "该平台登录尚未接入")
           return
         }
-        guard self.sessions[id] == nil, self.sessions.isEmpty else {
+        guard self.sessions[id] == nil, self.sessions.isEmpty, self.transfer==nil,self.scanner==nil else {
           promise.reject("AUTH_BUSY", "已有登录窗口正在打开")
           return
         }
@@ -97,7 +126,7 @@ public final class NexusMusicAuthModule: Module {
     }
     AsyncFunction("openQQDaily") { (id: String, promise: Promise) in
       DispatchQueue.main.async { [weak self] in
-        guard let self, self.sessions.isEmpty, let presenter = Self.presenter,
+        guard let self, self.sessions.isEmpty, self.transfer==nil,self.scanner==nil, let presenter = Self.presenter,
           id.range(of: "^[A-Za-z0-9-]{1,128}$", options: .regularExpression) != nil else {
           promise.reject("AUTH_UNAVAILABLE", "暂时无法打开授权页面"); return
         }
@@ -391,5 +420,149 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
       }
       if presenter == nil { self.completion(self.id, result) }
     }
+  }
+}
+
+// MARK: Account transfer wire
+// Independently implemented iOS client for pinned Q-music 5db858f v1 wire.
+// LAN HMAC proof and authenticated ciphertext; never a general HTTP bridge.
+private enum AccountTransferFailure: Error { case invalid, expired, cancelled, network }
+private struct AccountTransferWire {
+  let id: String
+  let key: SymmetricKey
+  let url: URL
+  init(_ text: String) throws {
+    let text=text.trimmingCharacters(in:.whitespacesAndNewlines)
+    guard text.utf8.count<=1024, let c=URLComponents(string:text),c.scheme=="qmusic",c.host=="account-transfer",
+      c.user==nil,c.password==nil,c.port==nil,c.path.isEmpty,c.fragment==nil,let items=c.queryItems,
+      items.count==5,Set(items.map(\.name))==Set(["v","host","port","id","key"]) else { throw AccountTransferFailure.invalid }
+    let values=Dictionary(uniqueKeysWithValues:items.map{($0.name,$0.value ?? "")})
+    guard values["v"]=="1",let host=values["host"],Self.privateIPv4(host),let portText=values["port"],
+      let port=Int(portText),String(port)==portText,(1024...65535).contains(port),let id=values["id"],
+      id.range(of:"^[a-f0-9]{32}$",options:.regularExpression) != nil,let secret=values["key"],
+      secret.range(of:"^[a-f0-9]{64}$",options:.regularExpression) != nil,
+      let url=URL(string:"http://\(host):\(port)/qmusic-account-transfer/\(id)") else { throw AccountTransferFailure.invalid }
+    self.id=id;self.url=url;self.key=SymmetricKey(data:Data(stride(from:0,to:64,by:2).map { offset in
+      let a=secret.index(secret.startIndex,offsetBy:offset),b=secret.index(a,offsetBy:2);return UInt8(secret[a..<b],radix:16)!
+    }))
+  }
+  static func privateIPv4(_ host:String)->Bool {
+    let pieces=host.split(separator:".",omittingEmptySubsequences:false)
+    guard pieces.count==4 else { return false }
+    var n:[Int]=[]
+    for piece in pieces { guard piece.allSatisfy({$0.isASCII && $0.isNumber}),let v=Int(piece),(0...255).contains(v),String(v)==piece else { return false };n.append(v) }
+    return n[0]==10 || n[0]==192 && n[1]==168 || n[0]==172 && (16...31).contains(n[1])
+  }
+  func request(nonce:Data)throws->(URLRequest,String) {
+    guard nonce.count==16 else { throw AccountTransferFailure.invalid }
+    let hex=nonce.map{String(format:"%02x",$0)}.joined()
+    let proof=HMAC<SHA256>.authenticationCode(for:Data("claim:\(id):\(hex)".utf8),using:key).map{String(format:"%02x",$0)}.joined()
+    var request=URLRequest(url:url,cachePolicy:.reloadIgnoringLocalCacheData,timeoutInterval:25)
+    request.httpMethod="POST";request.httpShouldHandleCookies=false;request.setValue("application/json",forHTTPHeaderField:"Content-Type")
+    request.httpBody=try JSONSerialization.data(withJSONObject:["nonce":hex,"proof":proof]);return(request,hex)
+  }
+  func open(_ data:Data,nonce:String,now:Double=Date().timeIntervalSince1970*1000)throws->String {
+    guard data.count<=32768,let envelope=try JSONSerialization.jsonObject(with:data) as? [String:Any],
+      let ivText=envelope["iv"] as? String,let encryptedText=envelope["data"] as? String,
+      let iv=Data(base64Encoded:ivText),iv.count==12,let encrypted=Data(base64Encoded:encryptedText),encrypted.count>=16,
+      encrypted.count<=32768 else { throw AccountTransferFailure.invalid }
+    let sealed=try AES.GCM.SealedBox(nonce:AES.GCM.Nonce(data:iv),ciphertext:encrypted.dropLast(16),tag:encrypted.suffix(16))
+    let plain=try AES.GCM.open(sealed,using:key,authenticating:Data("\(id):\(nonce)".utf8))
+    guard plain.count<=32768,let payload=try JSONSerialization.jsonObject(with:plain) as? [String:Any],
+      payload["v"] as? Int==1,payload["provider"] as? String=="tx",let expiry=payload["expiresAt"] as? Double,
+      expiry.isFinite,let text=String(data:plain,encoding:.utf8) else { throw AccountTransferFailure.invalid }
+    guard expiry>now,expiry<=now+180000 else { throw AccountTransferFailure.expired };return text
+  }
+}
+private final class AccountTransferRequest:NSObject,URLSessionDataDelegate {
+  let id:String
+  private let wire:AccountTransferWire
+  private var nonce="",bytes=Data(),session:URLSession?,task:URLSessionDataTask?,background:NSObjectProtocol?
+  private var completion:((Result<String,AccountTransferFailure>)->Void)?
+  init(id:String,code:String)throws { guard UUID(uuidString:id) != nil else { throw AccountTransferFailure.invalid };self.id=id;wire=try AccountTransferWire(code);super.init() }
+  func start(_ completion:@escaping(Result<String,AccountTransferFailure>)->Void) {
+    self.completion=completion
+    background=NotificationCenter.default.addObserver(forName:UIApplication.didEnterBackgroundNotification,object:nil,queue:.main){[weak self]_ in self?.cancel()}
+    do {
+      var random=Data(count:16)
+      let status=random.withUnsafeMutableBytes{SecRandomCopyBytes(kSecRandomDefault,16,$0.baseAddress!)}
+      guard status==errSecSuccess else { throw AccountTransferFailure.invalid }
+      let (request,nonce)=try wire.request(nonce:random);self.nonce=nonce
+      let config=URLSessionConfiguration.ephemeral;config.httpCookieStorage=nil;config.urlCredentialStorage=nil;config.urlCache=nil
+      config.httpShouldSetCookies=false;config.timeoutIntervalForRequest=20;config.timeoutIntervalForResource=25
+      let session=URLSession(configuration:config,delegate:self,delegateQueue:.main);self.session=session
+      let task=session.dataTask(with:request);self.task=task;task.resume()
+    }catch { finish(.failure(.invalid)) }
+  }
+  func cancel(){finish(.failure(.cancelled))}
+  func urlSession(_ session:URLSession,task:URLSessionTask,willPerformHTTPRedirection response:HTTPURLResponse,newRequest request:URLRequest,completionHandler:@escaping(URLRequest?)->Void){completionHandler(nil)}
+  func urlSession(_ session:URLSession,dataTask:URLSessionDataTask,didReceive response:URLResponse,completionHandler:@escaping(URLSession.ResponseDisposition)->Void){
+    guard completion != nil,let response=response as? HTTPURLResponse,response.url==wire.url,(200...299).contains(response.statusCode),response.expectedContentLength<=32768 else {
+      completionHandler(.cancel);finish(.failure(.expired));return
+    };completionHandler(.allow)
+  }
+  func urlSession(_ session:URLSession,dataTask:URLSessionDataTask,didReceive data:Data){
+    guard completion != nil else { return };guard bytes.count+data.count<=32768 else { finish(.failure(.invalid));return };bytes.append(data)
+  }
+  func urlSession(_ session:URLSession,task:URLSessionTask,didCompleteWithError error:Error?){
+    guard completion != nil else { return };guard error==nil else { finish(.failure(.network));return }
+    do { finish(.success(try wire.open(bytes,nonce:nonce))) }catch AccountTransferFailure.expired { finish(.failure(.expired)) }catch { finish(.failure(.invalid)) }
+  }
+  private func finish(_ result:Result<String,AccountTransferFailure>){
+    guard let callback=completion else { return };completion=nil
+    if let background { NotificationCenter.default.removeObserver(background) };background=nil
+    task?.cancel();task=nil;session?.invalidateAndCancel();session=nil;bytes.removeAll();nonce="";callback(result)
+  }
+}
+
+private final class AccountTransferScanner:UIViewController,AVCaptureMetadataOutputObjectsDelegate {
+  let id:String
+  private let capture=AVCaptureSession(),queue=DispatchQueue(label:"nexus.account-transfer-camera")
+  private var camera:AVCaptureDevice?,preview:AVCaptureVideoPreviewLayer?,background:NSObjectProtocol?
+  private var completion:((Result<String?,AccountTransferFailure>)->Void)?
+  private let hint=UILabel(),lightButton=UIButton(type:.system)
+  private var torchObservation:NSKeyValueObservation?
+  init(id:String,completion:@escaping(Result<String?,AccountTransferFailure>)->Void){self.id=id;self.completion=completion;super.init(nibName:nil,bundle:nil);modalPresentationStyle = .fullScreen}
+  required init?(coder:NSCoder){fatalError("init(coder:) unavailable")}
+  override func viewDidLoad(){
+    super.viewDidLoad();view.backgroundColor = .black
+    let preview=AVCaptureVideoPreviewLayer(session:capture);preview.videoGravity = .resizeAspectFill;view.layer.addSublayer(preview);self.preview=preview
+    let close=UIButton(type:.system);close.setTitle("返回",for:.normal);close.accessibilityIdentifier="qq-transfer-scan-cancel";close.addTarget(self,action:#selector(cancelTap),for:.touchUpInside)
+    let torch=lightButton;torch.isEnabled=false;torch.accessibilityValue="已关闭";torch.setTitle("补光",for:.normal);torch.accessibilityIdentifier="qq-transfer-scan-torch";torch.addTarget(self,action:#selector(toggleTorch),for:.touchUpInside)
+    hint.text="扫描自己电脑显示的 QQ 音乐配对二维码";hint.textColor = .white;hint.textAlignment = .center;hint.numberOfLines=0;hint.font = .preferredFont(forTextStyle:.body)
+    for v in [close,torch,hint] {v.translatesAutoresizingMaskIntoConstraints=false;view.addSubview(v)}
+    NSLayoutConstraint.activate([close.leadingAnchor.constraint(equalTo:view.safeAreaLayoutGuide.leadingAnchor,constant:20),close.topAnchor.constraint(equalTo:view.safeAreaLayoutGuide.topAnchor),close.heightAnchor.constraint(greaterThanOrEqualToConstant:44),close.widthAnchor.constraint(greaterThanOrEqualToConstant:64),torch.trailingAnchor.constraint(equalTo:view.safeAreaLayoutGuide.trailingAnchor,constant:-20),torch.topAnchor.constraint(equalTo:close.topAnchor),torch.heightAnchor.constraint(greaterThanOrEqualToConstant:44),torch.widthAnchor.constraint(greaterThanOrEqualToConstant:64),hint.leadingAnchor.constraint(equalTo:view.safeAreaLayoutGuide.leadingAnchor,constant:24),hint.trailingAnchor.constraint(equalTo:view.safeAreaLayoutGuide.trailingAnchor,constant:-24),hint.bottomAnchor.constraint(equalTo:view.safeAreaLayoutGuide.bottomAnchor,constant:-32)])
+    background=NotificationCenter.default.addObserver(forName:UIApplication.didEnterBackgroundNotification,object:nil,queue:.main){[weak self]_ in self?.cancel()}
+    AVCaptureDevice.requestAccess(for:.video){[weak self] allowed in DispatchQueue.main.async{guard let self,self.completion != nil else{return};if allowed{self.prepare()}else{self.finish(.failure(.invalid))}}}
+  }
+  override func viewDidLayoutSubviews(){super.viewDidLayoutSubviews();preview?.frame=view.bounds;if let connection=preview?.connection,connection.isVideoOrientationSupported {connection.videoOrientation=view.bounds.width>view.bounds.height ? .landscapeRight:.portrait}}
+  private func prepare(){
+    queue.async{[weak self] in
+      guard let self else{return}
+      do {
+        guard let camera=AVCaptureDevice.default(.builtInWideAngleCamera,for:.video,position:.back) else{throw AccountTransferFailure.invalid}
+        let input=try AVCaptureDeviceInput(device:camera),output=AVCaptureMetadataOutput()
+        self.capture.beginConfiguration();defer{self.capture.commitConfiguration()}
+        guard self.capture.canAddInput(input),self.capture.canAddOutput(output) else{throw AccountTransferFailure.invalid}
+        self.capture.addInput(input);self.capture.addOutput(output);output.setMetadataObjectsDelegate(self,queue:.main);output.metadataObjectTypes=[.qr]
+        DispatchQueue.main.async{[weak self] in guard let self,self.completion != nil else{return};self.camera=camera
+          self.torchObservation=camera.observe(\.isTorchAvailable,options:[.initial,.new]){[weak self] camera,_ in DispatchQueue.main.async{guard let self,self.completion != nil else{return};self.lightButton.isEnabled=camera.hasTorch && camera.isTorchAvailable;self.lightButton.accessibilityValue=camera.isTorchAvailable ? (camera.torchMode == .on ? "已开启":"已关闭"):"暂不可用"}}
+          self.queue.async{[weak self] in self?.capture.startRunning()}}
+      }catch{DispatchQueue.main.async{[weak self] in self?.finish(.failure(.invalid))}}
+    }
+  }
+  func metadataOutput(_ output:AVCaptureMetadataOutput,didOutput metadataObjects:[AVMetadataObject],from connection:AVCaptureConnection){
+    guard completion != nil,!metadataObjects.isEmpty else{return}
+    let codes=metadataObjects.compactMap{($0 as? AVMetadataMachineReadableCodeObject)?.stringValue}
+    guard let value=codes.first(where:{(try? AccountTransferWire($0)) != nil}) else{hint.text="这不是有效的电脑配对码，请重新扫描";return};finish(.success(value))
+  }
+  @objc private func cancelTap(){cancel()}
+  func cancel(){finish(.success(nil))}
+  @objc private func toggleTorch(){guard let camera,camera.hasTorch,camera.isTorchAvailable else{return};do{try camera.lockForConfiguration();defer{camera.unlockForConfiguration()};camera.torchMode=camera.torchMode == .on ? .off:.on;lightButton.accessibilityValue=camera.torchMode == .on ? "已开启":"已关闭";lightButton.setTitle(camera.torchMode == .on ? "关闭补光":"补光",for:.normal)}catch{hint.text="暂时无法打开补光，可直接扫描或返回粘贴配对码"}}
+  private func finish(_ result:Result<String?,AccountTransferFailure>){
+    guard let callback=completion else{return};completion=nil;torchObservation?.invalidate();torchObservation=nil;if let background{NotificationCenter.default.removeObserver(background)};background=nil
+    let camera=self.camera,capture=self.capture
+    queue.async{if let camera,camera.hasTorch { do { try camera.lockForConfiguration();camera.torchMode = .off;camera.unlockForConfiguration() }catch{} };capture.stopRunning()}
+    dismiss(animated:UIApplication.shared.applicationState == .active){callback(result)}
   }
 }

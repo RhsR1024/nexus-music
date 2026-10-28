@@ -15,12 +15,13 @@
           "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true
         },
-        "NSLocalNetworkUsageDescription": "连接你配置的局域网音乐服务器并播放音乐。",
+        "NSLocalNetworkUsageDescription": "连接你配置的局域网音乐服务，或在你主动配对时连接自己的电脑。",
         "UIBackgroundModes": [
           "audio"
         ],
         "NSAppleMusicUsageDescription": "读取你授权的设备音乐库，用于浏览和播放已在本机可用的音乐。",
-        "NSPhotoLibraryAddUsageDescription": "将您选择的登录二维码保存到照片，供在酷狗扫一扫中识别；不读取照片。"
+        "NSPhotoLibraryAddUsageDescription": "将您选择的登录二维码保存到照片，供在酷狗扫一扫中识别；不读取照片。",
+        "NSCameraUsageDescription": "仅在您主动扫描电脑配对码时使用相机，以连接自己的音乐账号；不拍摄或上传照片。"
       }
     },
     "plugins": [

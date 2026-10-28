@@ -1,6 +1,6 @@
 // QQ protocol fields adapted from Q-music-android 5db858f, musicAccount/
 // cookies.ts, qqCredentials.ts, requests.ts and accountTransfer.ts (Apache-2.0).
-// Modified for NexusMusic: QQ web login only, bounded cookies, strict responses,
+// Modified for NexusMusic: separate QQ web/imported music identities, bounded cookies, strict responses,
 // abortable requests and no persistence of the authorization-check playlist data.
 import type {HTTPClient} from './http.ts';
 import {HTTPResponseError} from './http.ts';
@@ -10,7 +10,7 @@ import {MusicAuthError} from './musicAuth.ts';
 const names=['qqmusic_key','qm_keyst','musickey','qqmusic_uin','uin','musicid','login_type','wxuin'];
 const object=(value:unknown):Record<string,unknown>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
 
-export function parseQQCookiePayload(raw:string):Readonly<Record<string,string>>{
+export function parseQQCookiePayload(raw:string,mode:'web'|'music'='web'):Readonly<Record<string,string>>{
   let source:Record<string,unknown>;
   try{source=object(JSON.parse(raw));}catch{throw new MusicAuthError('failed','登录结果格式无效');}
   const cookies:Record<string,string>={};
@@ -20,7 +20,7 @@ export function parseQQCookiePayload(raw:string):Readonly<Record<string,string>>
     if(typeof value!=='string'||!value||value.length>4096||/[\u0000-\u001f\u007f;]/.test(value))throw new MusicAuthError('failed','登录凭据格式无效');
     cookies[name]=value;
   }
-  qqWebIdentity(cookies);
+  if(mode==='music')qqMusicIdentity(cookies);else qqWebIdentity(cookies);
   return Object.freeze(cookies);
 }
 
@@ -33,6 +33,17 @@ export function qqWebIdentity(cookies:Readonly<Record<string,string>>){
   const identity=[cookies.qqmusic_uin,cookies.uin,cookies.musicid].find(value=>!!value&&/^o?\d{1,20}$/i.test(value)&&/[1-9]/.test(value));
   if(!authst||!identity)throw new MusicAuthError('failed','QQ 音乐登录未完成');
   return{uin:identity.replace(/^o/i,'').replace(/^0+/,''),authst,tmeLoginType:2 as const};
+}
+
+/** Imported WX sessions keep their own music ID and login type. Never fall
+ * back to a residual QQ uin, or silently relabel a web-login session as WX. */
+export function qqMusicIdentity(cookies:Readonly<Record<string,string>>):{uin:string;authst:string;tmeLoginType:1|2}{
+  if(cookies.login_type!=='2')return qqWebIdentity(cookies);
+  const keys=[cookies.qqmusic_key,cookies.qm_keyst,cookies.musickey].filter((key):key is string=>!!key);
+  const authst=keys.find(key=>key.startsWith('W_X'))??keys.find(key=>!key.startsWith('Q_H_L'));
+  const identity=[cookies.wxuin,cookies.musicid,cookies.qqmusic_uin].find(value=>!!value&&/^o?\d{1,20}$/i.test(value)&&/[1-9]/.test(value));
+  if(!authst||!identity)throw new MusicAuthError('failed','QQ 音乐登录未完成');
+  return{uin:identity.replace(/^o/i,'').replace(/^0+/,''),authst,tmeLoginType:1};
 }
 
 export class QQAccountProfileError extends Error{
@@ -52,8 +63,8 @@ export class QQAccountProfileClient{
     check();
     try{
       if(session.platform!=='tx')throw new QQAccountProfileError('login_required');
-      const cookies=parseQQCookiePayload(JSON.stringify(object(session.cookies)));
-      const {uin,authst,tmeLoginType}=qqWebIdentity(cookies);
+      const cookies=parseQQCookiePayload(JSON.stringify(object(session.cookies)),'music');
+      const {uin,authst,tmeLoginType}=qqMusicIdentity(cookies);
       if(session.userId!==undefined&&session.userId!==uin)throw new QQAccountProfileError('login_required');
       const headers={Cookie:Object.entries(cookies).map(([name,value])=>`${name}=${value}`).join('; '),Referer:'https://y.qq.com/',Origin:'https://y.qq.com',Accept:'application/json'};
       const profile=object(await this.options.http(`https://c6.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg?ct=20&cv=4747474&cid=205360838&userid=${uin}`,{method:'GET',headers,credentials:'omit'},signal));

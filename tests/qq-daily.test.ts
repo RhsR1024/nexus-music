@@ -101,3 +101,10 @@ test('QQ shared cache checks current account/session; clear and replacement reje
     const pending=late.fetch(a,session,signal());if(clear)late.clear(a.id);else current=[];release({kind:'tx_radar',reason:'',tracks:[]});await failKind(pending,'account_changed');
   }
 });
+
+test('WX radar keeps login type 1 and rejects the same numeric ID under a QQ account owner',async()=>{
+  const account={...a,username:'qq:1:99'},wx={...session,userId:'99',cookies:{login_type:'2',wxuin:'99',uin:'123',qqmusic_uin:'99',qqmusic_key:'W_X-unit-only'}};let calls=0;
+  const client=new QQDailyClient({http:async(_url,request)=>{calls++;const body=JSON.parse(request.body!);assert.equal(body.comm.tmeLoginType,1);assert.equal(body.comm.uin,'99');return{code:0,radio:{code:0,data:{VecSongs:[]}}};}});
+  assert.deepEqual(await client.fetch(account,wx,signal()),{kind:'tx_radar',reason:'',tracks:[]});assert.equal(calls,2);
+  await failKind(client.fetch({...account,username:'qq:2:99'},wx,signal()),'login_required');assert.equal(calls,2);
+});

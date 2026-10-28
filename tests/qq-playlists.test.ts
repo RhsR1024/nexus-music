@@ -86,3 +86,10 @@ test('QQ existing liked directory uses the dedicated detail total even when cata
   const s=setup();s.serve(async()=>({created:{v_playlist:[{dirId:201,dirName:'我喜欢'}]},favorite:{v_list:[],hasmore:0},liked:{total_song_num:2}}));
   const lists=await s.client.list(account,signal());assert.equal(lists.length,1);assert.equal(lists[0]!.id,'dir:201');assert.equal(lists[0]!.count,2);
 });
+
+test('WX playlist catalog uses its own music identity and never a residual QQ owner',async()=>{
+  const owner={...account,username:'qq:1:99'},session={version:1,platform:'tx',accountId:account.id,userId:'99',cookies:{login_type:'2',wxuin:'99',uin:'123',qqmusic_uin:'99',qqmusic_key:'W_X-unit-only'}};let calls=0;
+  const reader=new QQPlaylists({profile:{fetch:async()=>({userId:'99',nickname:'Public listener',encryptedUin:'unit-only-encrypted-owner'})},http:async(_url,request)=>{calls++;const body=JSON.parse(request.body!);assert.equal(body.comm.tmeLoginType,1);assert.equal(body.comm.uin,'99');assert.equal(body.created.param.uin,'99');return{code:0,created:{code:0,data:{v_playlist:[],hasmore:0}},favorite:{code:0,data:{v_list:[],hasmore:0}},liked:{code:0,data:{total_song_num:0}}};}});
+  const result=await reader.list(owner,session,signal(),()=>{});assert.equal(result.length,1);assert.equal(result[0]!.id,'dir:201');assert.equal(calls,1);
+  await reject(reader.list({...owner,username:'qq:2:99'},session,signal(),()=>{}),'login_required');assert.equal(calls,1);
+});

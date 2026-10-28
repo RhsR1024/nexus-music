@@ -2,7 +2,7 @@
 // requests.ts and qqCredentials.ts (Apache-2.0, Nshpiter/LX attribution).
 // Independent reader: no platform writes, sync, scripts or playback credentials.
 import {AccountPlaylistError,type AccountPlaylist} from './accountPlaylists.ts';
-import {parseQQCookiePayload,qqWebIdentity,type QQAccountProfileClient,QQAccountProfileError} from './qqAccountProfile.ts';
+import {parseQQCookiePayload,qqMusicIdentity,type QQAccountProfileClient,QQAccountProfileError} from './qqAccountProfile.ts';
 import type {MusicAccount,MusicSession} from './musicAccounts.ts';
 import type {HTTPClient} from './http.ts';
 import type {Track} from '../domain/track.ts';
@@ -32,11 +32,11 @@ export class QQPlaylists{
   private readonly deps:{http:HTTPClient;profile:Pick<QQAccountProfileClient,'fetch'>};
   constructor(deps:QQPlaylists['deps']){this.deps=deps;}
   private async open(account:MusicAccount,session:MusicSession,signal:AbortSignal,check:()=>void){
-    check();let cookies:Readonly<Record<string,string>>,identity:ReturnType<typeof qqWebIdentity>;
+    check();let cookies:Readonly<Record<string,string>>,identity:ReturnType<typeof qqMusicIdentity>;
     try{
       if(account.platform!=='tx'||session.version!==1||session.platform!=='tx'||session.accountId!==account.id)throw new Error();
-      cookies=parseQQCookiePayload(JSON.stringify(row(session.cookies)));identity=qqWebIdentity(cookies);
-      if(session.userId!==identity.uin||account.username!==`qq:2:${identity.uin}`)throw new Error();
+      cookies=parseQQCookiePayload(JSON.stringify(row(session.cookies)),'music');identity=qqMusicIdentity(cookies);
+      if(session.userId!==identity.uin||account.username!==`qq:${identity.tmeLoginType}:${identity.uin}`)throw new Error();
     }catch{throw new AccountPlaylistError('login_required');}
     let profile:Awaited<ReturnType<QQAccountProfileClient['fetch']>>;
     try{profile=await this.deps.profile.fetch(session,signal);}catch(error){check();if(error instanceof QQAccountProfileError)throw new AccountPlaylistError(error.kind);throw error;}

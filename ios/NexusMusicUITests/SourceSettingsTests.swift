@@ -831,6 +831,47 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
+  func testLiveQQComputerPairing() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ button:XCUIElement){for _ in 0..<12 {if waitForHittable(button,timeout:0.3){return};app.swipeUp()};XCTAssertTrue(waitForHittable(button,timeout:5))}
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
+    let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));let before=progress.value as? String ?? "";XCTAssertTrue(before.contains("/ 3:53"))
+    RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    openSettings(app,page:"accounts")
+    let open=app.buttons["qq-transfer-open"];reach(open);image("Real QQ computer pairing entry with public audio")
+    open.tap();let field=app.secureTextFields["qq-transfer-code"],connect=app.buttons["qq-transfer-connect"]
+    XCTAssertTrue(field.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["qq-transfer-scan"].exists);XCTAssertFalse(connect.isEnabled)
+    image("Real computer pairing instructions and empty secure input")
+    app.buttons["qq-transfer-scan"].tap()
+    let springboard=XCUIApplication(bundleIdentifier:"com.apple.springboard"),cameraAlert=springboard.alerts.firstMatch
+    if cameraAlert.waitForExistence(timeout:4) {
+      XCTAssertTrue(cameraAlert.staticTexts.matching(NSPredicate(format:"label CONTAINS[c] %@ OR label CONTAINS %@","camera","相机")).firstMatch.exists)
+      image("Real camera request only after explicit pairing scan")
+      let deny=cameraAlert.buttons.matching(NSPredicate(format:"label MATCHES %@","^(Don.t Allow|不允许)$")).firstMatch
+      guard deny.waitForExistence(timeout:5) else {XCTFail("Camera consent response must be identified");return};deny.tap()
+    }else{
+      let back=app.buttons["qq-transfer-scan-cancel"];if back.waitForExistence(timeout:3){back.tap()}
+    }
+    let returned=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.staticTexts["qq-transfer-failed"].exists || app.staticTexts["qq-transfer-cancelled"].exists},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[returned],timeout:20),.completed)
+    XCTAssertTrue(field.exists);XCTAssertFalse(connect.isEnabled);image("Real scanner return preserves manual pairing without an account")
+    // Exercise production validation only; no synthetic account/peer or screenshot.
+    field.tap();field.typeText("not-a-pairing-code");XCTAssertTrue(connect.isEnabled);connect.tap()
+    XCTAssertTrue(app.staticTexts["qq-transfer-failed"].waitForExistence(timeout:15));XCTAssertFalse(app.buttons["qq-transfer-confirm"].exists)
+    XCTAssertFalse(connect.isEnabled,"The short-lived code input must clear on submission")
+    app.buttons["qq-transfer-close"].tap();XCTAssertTrue(waitForGone(field,timeout:10))
+    reach(open);open.tap();XCTAssertTrue(field.waitForExistence(timeout:10));XCTAssertFalse(connect.isEnabled)
+    XCUIDevice.shared.press(.home);app.activate();XCTAssertTrue(field.waitForExistence(timeout:10));app.buttons["qq-transfer-close"].tap()
+    app.terminate();app.launch();openSettings(app,page:"accounts");reach(open)
+    XCTAssertFalse(app.buttons["verify-music-account-tx"].exists);open.tap();XCTAssertTrue(field.waitForExistence(timeout:10));XCTAssertFalse(connect.isEnabled)
+    XCTAssertFalse(app.staticTexts["qq-transfer-failed"].exists);image("Real computer pairing remains unconfigured after restart")
+    app.buttons["qq-transfer-close"].tap()
+  }
   func testLiveQQDailyAuthorization() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
