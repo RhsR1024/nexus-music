@@ -70,7 +70,6 @@ export class MusicWebLoginCoordinator {
   private readonly accounts:Pick<MusicAccounts,'save'>;
   private readonly profile:NeteaseAccountProfileClient;
   private readonly qqProfile?:QQAccountProfileClient;
-  private generation=0;
   private readonly hash:(value:string)=>Promise<string>;
   private readonly uuid:()=>string;
   constructor(dependencies:{native:MusicWebAuthNative;flow:Pick<MusicAuthFlow<Record<string,unknown>>,'start'|'cancel'|'subscribe'|'getSnapshot'>;accounts:Pick<MusicAccounts,'save'>;profile:NeteaseAccountProfileClient;qqProfile?:QQAccountProfileClient;hash:(value:string)=>Promise<string>;uuid:()=>string}){
@@ -79,11 +78,10 @@ export class MusicWebLoginCoordinator {
   }
   getSnapshot=()=>this.flow.getSnapshot();
   subscribe=(listener:()=>void)=>this.flow.subscribe(listener);
-  cancel=()=>{this.generation++;this.flow.cancel();};
+  cancel=()=>{this.flow.cancel();};
 
   async login(provider:MusicWebLoginProvider='wy'):Promise<MusicWebLoginResult>{
     if(provider!=='wy'&&provider!=='tx'||provider==='tx'&&!this.qqProfile)throw new MusicAuthError('failed','该平台登录尚未接入');
-    const generation=++this.generation;
     const parse=provider==='wy'?parseNeteaseCookiePayload:parseQQCookiePayload;
     const attempt=this.uuid(),url=MUSIC_WEB_LOGIN_URLS[provider]+(provider==='tx'?`&state=${encodeURIComponent(attempt)}`:'');
     const raw=await this.flow.start(emit=>{
@@ -94,19 +92,20 @@ export class MusicWebLoginCoordinator {
         try{
           const cookies=parse(result);
           const profile=await (provider==='wy'?this.profile:this.qqProfile!).fetch({platform:provider,cookies},controller.signal);
-          if(active)emit({type:'success',value:{cookies,profile}});
+          if(!active)return;
+          const username=provider==='wy'?`netease:${profile.userId}`:`qq:2:${profile.userId}`;
+          const accountId=await this.hash(JSON.stringify([provider,username]));
+          if(!active)return;
+          const session:MusicWebSession=Object.freeze({version:1,platform:provider,accountId,userId:profile.userId,cookies});
+          // Authorization remains waiting/cancellable through the store's own
+          // hash and both writes. Success is published only after commit.
+          const account=await this.accounts.save({platform:provider,label:provider==='wy'?'网易云音乐':'QQ 音乐',username,displayName:profile.nickname,capabilities:provider==='wy'?['daily','fm']:[]},session,controller.signal);
+          if(active)emit({type:'success',value:{account,session}});
         }
         catch(error){emit({type:'error',error});}
       },error=>{if(active)emit(eventFromNativeError(error));});
       return()=>{active=false;controller.abort();void this.native.cancel(attempt).catch(()=>{});};
     });
-    const cookies=parse(JSON.stringify(raw.cookies));
-    const profile=raw.profile as {readonly userId:string;readonly nickname:string};
-    const username=provider==='wy'?`netease:${profile.userId}`:`qq:2:${profile.userId}`;
-    const accountId=await this.hash(JSON.stringify([provider,username]));
-    if(generation!==this.generation)throw new MusicAuthError('cancelled','授权已取消');
-    const session:MusicWebSession=Object.freeze({version:1,platform:provider,accountId,userId:profile.userId,cookies});
-    const account=await this.accounts.save({platform:provider,label:provider==='wy'?'网易云音乐':'QQ 音乐',username,displayName:profile.nickname,capabilities:provider==='wy'?['daily','fm']:[]},session);
-    return{account,session};
+    return{account:raw.account as MusicAccount,session:raw.session as MusicWebSession};
   }
 }
