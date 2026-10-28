@@ -745,6 +745,16 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
+  func testLivePlatformRecommendations() throws {
+    // Explicit real-audio target; use the same normal navigation assertions.
+    try testAccountRecommendationsEntryAndLoginRouting()
+    let app=XCUIApplication()
+    XCTAssertTrue(app.buttons["login-music-account-tx"].exists)
+    let kugou=app.buttons["login-music-account-kg"]
+    for _ in 0..<6 {if waitForHittable(kugou,timeout:0.3){break};app.swipeUp()}
+    XCTAssertTrue(waitForHittable(kugou,timeout:5))
+    let shot=XCTAttachment(screenshot:app.screenshot());shot.name="Real platform accounts with public audio library";shot.lifetime = .keepAlways;add(shot)
+  }
   func testAccountRecommendationsEntryAndLoginRouting() throws {
     let app=XCUIApplication();app.launch()
     let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch

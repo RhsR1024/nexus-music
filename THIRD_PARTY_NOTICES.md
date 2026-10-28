@@ -12,6 +12,10 @@ Upstream NOTICE: Q-music Android, Copyright 2026 Nshpiter. This product is based
 
 `src/providers/kugouLogin.ts` adapts the official QR request fields and signature contract from Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/kugouApi.ts` (Apache 2.0; Nshpiter/LX NOTICE retained above). That module attributes its protocol fields to MakcRe/KuGouMusicApi, Copyright 2023 MakcRe, under MIT, reproduced at `licenses/kugou-api-mit.txt`. NexusMusic supplies its own bounded client, ephemeral nonce, PNG validation, cancellation coordinator and Keychain transaction handling. It imports no Android bridge, dependencies, playlist logic, account credentials or third-party proxy service. Protocol availability is maintained separately from actual account authorization acceptance.
 
+## Kugou daily recommendations and public details
+
+`src/providers/kugouDaily.ts` adapts official daily signature/request fields from Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/kugouApi.ts` and `daily.ts`, and public detail fields/ordering semantics from `src/utils/musicSdk/kg/songList.js` (Apache 2.0; Nshpiter/LX attribution and NOTICE above). The Kugou API protocol attribution to MakcRe under MIT remains as above. NexusMusic independently implements HTTPS-only transport, bounded requests, validation, account isolation and cancellation; it imports no Android dependencies, native patches, credentials or reference runtime. Real authenticated daily availability remains separately unverified.
+
 ## QQ request signature
 
 `src/providers/qqSignature.ts` adapts the QQ signature protocol algorithm from LX Music Mobile, reference fork wtfdelphia/lx-music-mobile, commit `6624ab58cbd2f5bda52ab8006912d3c60dc1f847`, file `src/utils/musicSdk/tx/utils/crypto.js`.

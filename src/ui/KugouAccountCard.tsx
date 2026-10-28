@@ -41,6 +41,6 @@ export function KugouAccountCard({services,disabled,onRevealQr}:{services:Servic
     </View>}
     {!!message&&<Text testID={`kugou-login-${state.status}`} accessibilityLiveRegion="polite" accessibilityRole={state.status==='failed'?'alert':undefined} style={{...typography.caption,color:state.status==='failed'?p.accent:p.secondary}}>{message}</Text>}
     {!!error&&<Text accessibilityRole="alert" style={{...typography.caption,color:p.accent}}>{error}</Text>}
-    <Text style={{...typography.caption,color:p.secondary}}>酷狗日推、个人歌单、收藏与账号播放暂未开放。</Text>
+    <Text style={{...typography.caption,color:p.secondary}}>登录后可在音乐库获取每日推荐。个人歌单、收藏与账号播放暂未开放。</Text>
   </View>;
 }

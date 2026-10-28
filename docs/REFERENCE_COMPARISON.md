@@ -1,3 +1,7 @@
+## 2026-10-28 酷狗日推协议适配
+
+追加核对固定Q-music 5db858f的kugouApi/daily/kg-songList及账号说明、LICENSE/NOTICE/MODIFICATIONS七文件，与固定对象逐字节一致。仅采纳官方请求/签名字段、详情匹配与保序语义，原创HTTPS客户端和账号隔离，Apache/Nshpiter/LX及MakcRe MIT保持；实际公开详情已返回，不代表授权日推，亦不推断Sollin接口。见[回执](2026-10-28_kugou-daily-report.md)。
+
 ## 2026-10-28 酷狗官方二维码来源复核
 
 采用用户指定的Q-music Android固定5db858f32695d10c5e9ef0f7037d586aef6a8c4b，kugouApi/账号说明及LICENSE/NOTICE/MODIFICATIONS五文件与固定对象一致。只采纳官方二维码协议字段/签名，音枢自写有界客户端、取消与Keychain流程，不导入Android桥接、依赖、个人数据或其他商业业务；保留Apache/Nshpiter/LX及MakcRe MIT。实际匿名创建/等待与正常UI生命周期已验；不推断Sollin后端，完整授权仍未通过。见[回执](2026-10-28_kugou-qr-login-report.md)。

@@ -24,15 +24,15 @@ function failure(error:unknown,fallback:string):string {
   return error instanceof Error&&/会话|登录/.test(error.message)?LOGIN:fallback;
 }
 
-/** NetEase account daily and personal FM. Legacy accounts saved without the
+/** NetEase/Kugou account daily and NetEase personal FM. Legacy accounts saved without the
  * newer capabilities still load; no local or public list is shown in their
  * place when the platform call fails. */
 export function AccountRecommendations({services,openAccounts}:{services:Services;openAccounts:()=>void}){
   const {palette:p}=useTheme();
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
-  const netease=accounts.filter(item=>item.platform==='wy');
+  const supported=accounts.filter(item=>item.platform==='wy'||item.platform==='kg');
   const [selectedId,setSelectedId]=useState<string|undefined>();
-  const account=netease.find(item=>item.id===selectedId)??netease[0];
+  const account=supported.find(item=>item.id===selectedId)??supported[0];
   const [daily,setDaily]=useState<Panel>(idle),[fm,setFm]=useState<Panel>(idle);
   const dailyAbort=useRef<AbortController|null>(null),fmAbort=useRef<AbortController|null>(null);
   const dailyOp=useRef(0),fmOp=useRef(0);
@@ -132,12 +132,12 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
       <View style={{flex:1}}>
         <Text style={{fontSize:18,fontWeight:'600',color:p.text}}>平台推荐</Text>
-        <Text style={{fontSize:12,lineHeight:19,color:p.secondary,marginTop:4}}>{account?`${account.displayName??account.label} · 网易云账号`:'登录网易云音乐后获取账号每日推荐与私人FM；未登录时不展示替代内容。'}</Text>
+        <Text style={{fontSize:12,lineHeight:19,color:p.secondary,marginTop:4}}>{account?`${account.displayName??account.label} · ${account.platform==='kg'?'酷狗':'网易云'}账号`:'登录网易云或酷狗后获取账号每日推荐；私人FM仅支持网易云。未登录时不展示替代内容。'}</Text>
       </View>
       {account&&refresh('account-daily-refresh','刷新每日推荐',()=>{void loadDaily(account,true);},daily.phase==='loading')}
     </View>
-    {netease.length>1&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{netease.map((item,index)=>{const active=item.id===account?.id;return <Pressable key={item.id} testID={`account-recommendations-account-${index}`} accessibilityRole="button" accessibilityState={{selected:active}} accessibilityLabel={`选择网易云账号：${item.displayName??item.label}`} onPress={()=>setSelectedId(item.id)} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:active?p.selected:p.surface,borderWidth:1,borderColor:active?p.accent:p.border,justifyContent:'center'}}><Text style={{fontSize:13,fontWeight:active?'600':'400',color:active?p.accent:p.secondary}}>{item.displayName??item.label}</Text></Pressable>;})}</View>}
-    {!account&&<View><Pressable testID="account-recommendations-login" accessibilityRole="button" accessibilityLabel="登录网易云音乐" onPress={openAccounts} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>去登录</Text></Pressable></View>}
+    {supported.length>1&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{supported.map((item,index)=>{const active=item.id===account?.id;return <Pressable key={item.id} testID={`account-recommendations-account-${index}`} accessibilityRole="button" accessibilityState={{selected:active}} accessibilityLabel={`选择${item.platform==='kg'?'酷狗':'网易云'}账号：${item.displayName??item.label}`} onPress={()=>setSelectedId(item.id)} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:active?p.selected:p.surface,borderWidth:1,borderColor:active?p.accent:p.border,justifyContent:'center'}}><Text style={{fontSize:13,fontWeight:active?'600':'400',color:active?p.accent:p.secondary}}>{item.displayName??item.label}</Text></Pressable>;})}</View>}
+    {!account&&<View><Pressable testID="account-recommendations-login" accessibilityRole="button" accessibilityLabel="登录音乐账号" onPress={openAccounts} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>去登录</Text></Pressable></View>}
     {account&&<View style={{gap:4}}>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:6}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>每日推荐</Text>{daily.phase==='ready'&&<Text style={{fontSize:11,color:p.secondary}}>共 {daily.tracks.length} 首</Text>}</View>
       {daily.tracks.slice(0,5).map((track,index)=>row('account-daily',index,track,()=>services.playTracks(daily.tracks,index)))}
@@ -147,7 +147,7 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
         {daily.phase==='error'&&!daily.login&&action('重试',()=>{void loadDaily(account!,true);},'account-daily-retry')}
       </View>
     </View>}
-    {account&&<View style={{gap:4,marginTop:10,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
+    {account?.platform==='wy'&&<View style={{gap:4,marginTop:10,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>私人FM</Text><Text style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>按账号偏好取一批歌曲；不喜欢会提交到网易云。</Text></View>{fm.phase==='ready'&&refresh('account-fm-refresh','换一批私人FM',()=>{void loadFm(account!,true,false);},false)}</View>
       {fm.tracks.slice(0,5).map((track,index)=>row('account-fm',index,track,()=>{void playFm(account!,index);},<Pressable key={`${track.origin.id}-discard`} testID={`account-fm-discard-${index}`} accessibilityRole="button" accessibilityLabel={`不喜欢：${track.title}`} onPress={()=>{void discardFm(account!,track);}} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="thumbs-down-outline" size={20} color={p.secondary}/></Pressable>))}
       {status(fm,'account-fm')}
