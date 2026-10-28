@@ -8,9 +8,9 @@ const row=(value:unknown):Row=>value&&typeof value==='object'&&!Array.isArray(va
 const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
 const text=(value:unknown)=>typeof value==='string'?value:typeof value==='number'&&Number.isSafeInteger(value)?String(value):'';
 const count=(value:unknown)=>value!==undefined&&value!==null&&Number.isFinite(Number(value))&&Number(value)>=0?Number(value):undefined;
-export interface BrowseItem {id:string;title:string;artwork?:string;description?:string;count?:number}
+export interface BrowseItem {id:string;title:string;artwork?:string;description?:string;count?:number;author?:string;released?:string}
 export interface BrowsePage {items:readonly BrowseItem[];hasMore:boolean;page:number}
-export interface PlaylistPage {title:string;items:readonly Track[];total?:number;hasMore:boolean;page:number}
+export interface PlaylistPage {title:string;items:readonly Track[];total?:number;hasMore:boolean;page:number;info?:Partial<BrowseItem>}
 export interface BrowseCategory {id:string;title:string;group?:string}
 function required(value:unknown){const id=text(value);if(!id)throw new Error('平台响应缺少有效ID');return id;}
 function tree(value:unknown,depth=0):Row[]{if(depth>12)return[];if(Array.isArray(value))return value.slice(0,2000).flatMap(item=>tree(item,depth+1));const object=row(value);return Object.keys(object).length?[object,...Object.values(object).filter(item=>item&&typeof item==='object').flatMap(item=>tree(item,depth+1))]:[];}

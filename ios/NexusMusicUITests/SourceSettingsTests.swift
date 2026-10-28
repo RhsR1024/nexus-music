@@ -831,6 +831,33 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
+  func testLiveAlbumSearch() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ item:XCUIElement){for _ in 0..<18{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5))}
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
+    let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));let before=progress.value as? String ?? "";XCTAssertTrue(before.contains("/ 3:53"))
+    RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    let searchTab=app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch;XCTAssertTrue(searchTab.waitForExistence(timeout:10));searchTab.tap()
+    app.descendants(matching:.any).matching(identifier:"search-kind-album").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"QQ音乐").firstMatch.tap()
+    let field=app.textFields["搜索专辑"];XCTAssertTrue(field.waitForExistence(timeout:10));field.tap();for character in "Ed Sheeran"{field.typeText(String(character))};XCTAssertEqual(field.value as? String,"Ed Sheeran");field.typeText("\n")
+    let album=app.buttons.matching(NSPredicate(format:"label CONTAINS %@ AND label CONTAINS %@","打开专辑：÷ (Deluxe)","作者Ed Sheeran")).firstMatch
+    XCTAssertTrue(album.waitForExistence(timeout:60));image("Real album search with public QQ artist metadata")
+    album.tap();let back=app.buttons["返回搜索结果"];XCTAssertTrue(back.waitForExistence(timeout:15));let first=app.otherElements["discovery-track-0"];XCTAssertTrue(first.waitForExistence(timeout:45))
+    XCTAssertTrue(app.staticTexts["album-artist"].label.contains("Ed Sheeran"));XCTAssertEqual(app.staticTexts["album-released"].label,"2017-03-03")
+    let intro=app.buttons["展开专辑简介"];reach(intro);intro.tap();let collapse=app.buttons["收起专辑简介"];XCTAssertTrue(collapse.waitForExistence(timeout:10));image("Real public album introduction expanded with artist and date");collapse.tap()
+    let firstSong=app.buttons["播放Eraser"].firstMatch;reach(firstSong);XCTAssertTrue(firstSong.exists);image("Real public album detail with sixteen ordered recordings")
+    let importer=app.buttons["导入完整专辑到音乐库"];reach(importer);importer.tap();let confirm=app.alerts["导入公开专辑"];XCTAssertTrue(confirm.waitForExistence(timeout:40));XCTAssertTrue(confirm.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","16 首")).firstMatch.exists);confirm.buttons["取消"].tap()
+    importer.tap();XCTAssertTrue(confirm.waitForExistence(timeout:40));confirm.buttons["创建本地歌单"].tap();XCTAssertTrue(app.staticTexts["已保存到我的歌单"].waitForExistence(timeout:15));image("Real complete public album saved through explicit confirmation")
+    back.tap();XCTAssertTrue(album.waitForExistence(timeout:10));reach(album);album.press(forDuration:1);XCTAssertTrue(back.waitForExistence(timeout:10));XCTAssertTrue(first.waitForExistence(timeout:30));back.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let lists=app.buttons["我的歌单"];reach(lists);lists.tap()
+    let saved=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","÷ (Deluxe)")).firstMatch;XCTAssertTrue(saved.waitForExistence(timeout:15));reach(saved);saved.tap();let delete=app.buttons["删除歌单"];reach(delete);image("Real public album copy available in the local music library")
+    delete.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(saved,timeout:10));XCTAssertFalse(app.buttons["暂停"].exists)
+  }
   func testLivePlaylistSearch() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

@@ -1,3 +1,4 @@
+import {controls} from './tokens.ts';
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {useEffect,useMemo,useRef,useState} from 'react';
@@ -20,13 +21,14 @@ import {selectionAll,selectionByListOrder,selectionByTapOrder,selectionCount,sel
 type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易'],['tx','QQ'],['kw','酷我'],['kg','酷狗'],['mg','咪咕']]as const;
-export interface DiscoveryTarget{platform:OnlinePlatform;collection:BrowseItem}
+export interface DiscoveryTarget{platform:OnlinePlatform;collection:BrowseItem;kind?:'album'}
 export function Discovery({services,embedded=false,initialCollection,onClose}:{services:Services;embedded?:boolean;initialCollection?:DiscoveryTarget;onClose?:()=>void}){
   const theme=useTheme(),{width,fontScale}=useWindowDimensions();
   const [contentWidth,setContentWidth]=useState<number>();
   const [tools,setTools]=useState(false),[descriptionOpen,setDescriptionOpen]=useState(false);
   const [query,setQuery]=useState(''),[sort,setSort]=useState<TrackSort>('original');
   const [total,setTotal]=useState<number>();
+  const [albumInfo,setAlbumInfo]=useState<Partial<BrowseItem>>({});
 
   const [open,setOpen]=useState(!!initialCollection),[platform,setPlatform]=useState<OnlinePlatform>(initialCollection?.platform??'wy'),[view,setView]=useState<PageView>(initialCollection?{kind:'detail',id:initialCollection.collection.id,title:initialCollection.collection.title,rank:false,artwork:initialCollection.collection.artwork,description:initialCollection.collection.description}:{kind:'playlists'}),[category,setCategory]=useState<string>();
   const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[menuTrack,setMenuTrack]=useState<Track|null>(null);
@@ -44,7 +46,7 @@ export function Discovery({services,embedded=false,initialCollection,onClose}:{s
       if(view.kind==='playlists'){const result=await services.discovery.playlists(platform,next,category,signal);values=result.items.map(value=>({kind:'collection',value,rank:false}));hasMore=result.hasMore;}
       else if(view.kind==='rankings'){values=(await services.discovery.rankings(platform,signal)).map(value=>({kind:'collection',value,rank:true}));}
       else if(view.kind==='categories'){values=(await services.discovery.categories(platform,signal)).map(value=>({kind:'category',...value}));}
-      else{const result=await services.discovery.detail(platform,view.id,next,signal,view.rank);values=result.items.map(track=>({kind:'track',track}));hasMore=result.hasMore;detailTotal=result.total;}
+      else{const result=initialCollection?.kind==='album'?await services.albums.detail(platform,initialCollection.collection,next,signal):await services.discovery.detail(platform,view.id,next,signal,view.rank);values=result.items.map(track=>({kind:'track',track}));hasMore=result.hasMore;detailTotal=result.total;if(initialCollection?.kind==='album'&&version===generation.current&&!signal.aborted)setAlbumInfo(result.info??{});}
       if(version!==generation.current||signal.aborted)return;
       if(view.kind==='detail')setTotal(detailTotal);
       setItems(old=>append?[...old,...values]:values);setMore(hasMore);setRetryAppend(false);page.current=next;
@@ -57,9 +59,9 @@ export function Discovery({services,embedded=false,initialCollection,onClose}:{s
     if(view.kind!=='detail')return;importAbort.current.abort();importAbort.current=new AbortController();const signal=importAbort.current.signal;
     setImporting(true);setMessage('');
     try{
-      const result=await services.discovery.complete(platform,view.id,signal,view.rank);if(signal.aborted)return;
-      if(!result.tracks.length){setMessage('此歌单为空，未创建本地歌单');return;}
-      Alert.alert('导入公开歌单',`${result.title} · ${result.tracks.length} 首。保留平台来源、完整顺序和重复项；创建一个新的音枢本地歌单。`,[{text:'取消',style:'cancel'},{text:'创建本地歌单',onPress:()=>{void services.library.createPlaylist(result.title,result.tracks).then(()=>setMessage('已保存到我的歌单')).catch(()=>setMessage('保存失败，原音乐库保留'));}}]);
+      const result=initialCollection?.kind==='album'?await services.albums.complete(platform,initialCollection.collection,signal):await services.discovery.complete(platform,view.id,signal,view.rank);if(signal.aborted)return;
+      if(!result.tracks.length){setMessage(initialCollection?.kind==='album'?'此专辑为空，未创建本地歌单':'此歌单为空，未创建本地歌单');return;}
+      Alert.alert(initialCollection?.kind==='album'?'导入公开专辑':'导入公开歌单',`${result.title} · ${result.tracks.length} 首。保留平台来源、完整顺序和重复项；创建一个新的音枢本地歌单。`,[{text:'取消',style:'cancel'},{text:'创建本地歌单',onPress:()=>{void services.library.createPlaylist(result.title,result.tracks).then(()=>setMessage('已保存到我的歌单')).catch(()=>setMessage('保存失败，原音乐库保留'));}}]);
     }catch(error){if(!signal.aborted)setMessage(error instanceof Error&&/分页|歌曲|20000/.test(error.message)?error.message:'未能完整读取歌单，原音乐库保留；可重试');}
     finally{if(!signal.aborted)setImporting(false);}
   }
@@ -98,19 +100,22 @@ export function Discovery({services,embedded=false,initialCollection,onClose}:{s
   const gridColumns=Math.max(1,Math.min(4,Math.floor((usableWidth+14)/(160*Math.max(1,fontScale)+14))));
   const columns=view.kind==='detail'?1:gridColumns,cardWidth=Math.max(1,Math.min(240,(usableWidth-14*(columns-1))/columns));
   const openCollection=(item:BrowseItem,rank:boolean)=>{setDescriptionOpen(false);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank,artwork:item.artwork,description:item.description});};
+  const albumMetadata=initialCollection?.kind==='album'?{...initialCollection.collection,...albumInfo}:undefined;
+  const detailDescription=view.kind==='detail'?albumMetadata?.description??view.description:undefined;
   const header=<View style={{gap:20,paddingBottom:24}}>
     <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{!embedded&&button(initialCollection?'返回搜索结果':'收起发现',close)}{view.kind==='detail'&&!initialCollection&&button('返回歌单广场',()=>setView({kind:'playlists'}))}</View>
     {view.kind==='detail'?<>
-      <View style={{flexDirection:'row',alignItems:'center',gap:20}}><Cover services={services} url={view.artwork} size={116}/><View style={{flex:1,gap:8}}><Text accessibilityRole="header" style={{fontSize:25,fontWeight:'700',color:theme.palette.text}}>{view.title}</Text><Text style={{color:theme.palette.secondary}}>{platforms.find(([id])=>id===platform)?.[1]} · 已加载 {loadedTracks.length}{total!==undefined?` / ${total}`:''} 首</Text></View><Pressable accessibilityRole="button" accessibilityLabel="刷新歌单" accessibilityHint="重新读取当前分页，失败时保留已加载内容" onPress={()=>{void load();}} disabled={loading} style={{width:48,height:48,borderRadius:24,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.surface,opacity:loading?.45:1}}><Ionicons name="refresh" size={22} color={theme.palette.accent}/></Pressable></View>
+      <View style={{flexDirection:'row',alignItems:'center',gap:20}}><Cover services={services} url={view.artwork} size={116}/><View style={{flex:1,gap:8}}><Text accessibilityRole="header" style={{fontSize:25,fontWeight:'700',color:theme.palette.text}}>{view.title}</Text><Text style={{color:theme.palette.secondary}}>{platforms.find(([id])=>id===platform)?.[1]} · 已加载 {loadedTracks.length}{total!==undefined?` / ${total}`:''} 首</Text></View><Pressable accessibilityRole="button" accessibilityLabel={initialCollection?.kind==='album'?'刷新专辑':'刷新歌单'} accessibilityHint="重新读取当前分页，失败时保留已加载内容" onPress={()=>{void load();}} disabled={loading} style={{width:48,height:48,borderRadius:24,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.surface,opacity:loading?.45:1}}><Ionicons name="refresh" size={22} color={theme.palette.accent}/></Pressable></View>
+      {!!albumMetadata?.author&&<Text testID="album-artist" style={{color:theme.palette.secondary}}>{albumMetadata.author}</Text>}{!!albumMetadata?.released&&<Text testID="album-released" style={{color:theme.palette.secondary}}>{albumMetadata.released}</Text>}
       <TrackListTools query={query} onQuery={setQuery} sort={sort} onSort={setSort} label="搜索已加载歌曲歌手专辑"/><Text style={{color:theme.palette.secondary,fontSize:12}}>筛选显示 {tracks.length} 首；搜索和排序仅作用于已加载歌曲，完整导入保留平台原始顺序。</Text>
-      {!!view.description&&<Pressable accessibilityRole="button" accessibilityLabel={descriptionOpen?'收起歌单简介':'展开歌单简介'} onPress={()=>setDescriptionOpen(value=>!value)}><Text numberOfLines={descriptionOpen?undefined:2} style={{color:theme.palette.secondary,lineHeight:23}}>{view.description}</Text><Text style={{color:theme.palette.accent,marginTop:6}}>{descriptionOpen?'收起':'展开'}</Text></Pressable>}
+      {!!detailDescription&&(initialCollection?.kind==='album'?<View style={{gap:8}}><Pressable accessibilityRole="button" accessibilityLabel={descriptionOpen?'收起专辑简介':'展开专辑简介'} accessibilityState={{expanded:descriptionOpen}} onPress={()=>setDescriptionOpen(value=>!value)} style={{minHeight:controls.hit,justifyContent:'center'}}><Text style={{color:theme.palette.accent}}>专辑简介 · {descriptionOpen?'收起':'展开'}</Text></Pressable><Text numberOfLines={descriptionOpen?undefined:2} style={{color:theme.palette.secondary,lineHeight:23}}>{detailDescription}</Text></View>:<Pressable accessibilityRole="button" accessibilityLabel={descriptionOpen?'收起歌单简介':'展开歌单简介'} onPress={()=>setDescriptionOpen(value=>!value)}><Text numberOfLines={descriptionOpen?undefined:2} style={{color:theme.palette.secondary,lineHeight:23}}>{detailDescription}</Text><Text style={{color:theme.palette.accent,marginTop:6}}>{descriptionOpen?'收起':'展开'}</Text></Pressable>)}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{tracks.length>0&&button('播放已加载歌曲',()=>services.playTracks(tracks,0))}{tracks.length>0&&button('随机播放已加载',()=>{void services.preferences.update({shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));})}</View>
       {selection.active&&!picking&&<BatchSelectionBar count={selectionCount(selection)} total={shownRows.length} allSelected={shownRows.length>0&&selectionCount(selection)===shownRows.length} actions={['favorite','playlist','next','download']} busy={busy} testPrefix="discovery"
         onSelectAll={()=>setSelection(selectionAll(selection,shownRows.map(row=>row.key)))}
         onCancel={()=>{setSelection(selectionNone);setPicking(false);}}
         onAction={action=>{void runBatch(action);}}/>}
       {selection.active&&picking&&<PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,shownRows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>toast.show(`已添加 ${selectionCount(selection)} 首到 ${title}`)}/>}
-      {button(importing?'正在完整读取…':'导入完整歌单到音乐库',()=>{void importPlaylist();},importing)}{importing&&button('取消读取',()=>{importAbort.current.abort();setImporting(false);})}
+      {button(importing?'正在完整读取…':initialCollection?.kind==='album'?'导入完整专辑到音乐库':'导入完整歌单到音乐库',()=>{void importPlaylist();},importing)}{importing&&button('取消读取',()=>{importAbort.current.abort();setImporting(false);})}
     </>:<>
       <Text accessibilityRole="header" style={{fontSize:40,fontWeight:'800',color:theme.palette.text,letterSpacing:-1}}>发现</Text>
       <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{platforms.map(([id,name])=><Pressable key={id} accessibilityRole="radio" accessibilityLabel={name} accessibilityState={{selected:platform===id}} onPress={()=>{setPlatform(id);setCategory(undefined);setView({kind:'playlists'});}} style={{paddingHorizontal:15,paddingVertical:11,borderRadius:22,backgroundColor:platform===id?theme.palette.selected:theme.palette.surface}}><Text style={{color:platform===id?theme.palette.accent:theme.palette.secondary,fontWeight:platform===id?'700':'400'}}>{name}</Text></Pressable>)}</View>

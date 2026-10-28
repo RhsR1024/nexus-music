@@ -2,6 +2,10 @@
 
 The project does not apply a single license to all reference projects or assets.
 
+## Public album catalog
+
+`src/providers/albums.ts` adapts public album detail fields/endpoints from Q-1515/LX Music Mobile commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/{kw,kg,mg}/album.js`, and reuses NexusMusic's attributed public search/signature adapters (Apache 2.0; LX/lyswhut attribution below). NexusMusic independently implements HTTPS-only catalog transport, validation, calendar metadata, cancellation and completeness checks. No reference runtime, native patches, static device identifiers, account tokens or commercial logic are imported. Availability is tested separately and does not establish Sollin's API implementation.
+
 ## Public playlist search
 
 `src/providers/playlistSearch.ts` adapts public search request and response fields from Q-1515/LX Music Mobile commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/{wy,tx,kw,kg,mg}/songList.js` (Apache 2.0; LX/lyswhut attribution retained below). NexusMusic supplies its own bounded HTTPS transport, metadata validation, non-executing Kuwo JSON conversion and cancellable pagination. No reference runtime, dependencies, native patches, account credentials or private service configuration is imported. These contracts do not establish Sollin's backend implementation.
