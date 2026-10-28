@@ -644,9 +644,11 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["登录已取消"].waitForExistence(timeout:10))
     XCTAssertFalse(navigation.exists)
   }
-  func testLiveAccountPlaylistEntry() throws { try liveAccountPlaylistEntry(qq:false) }
-  func testLiveQQPlaylistEntry() throws { try liveAccountPlaylistEntry(qq:true) }
-  private func liveAccountPlaylistEntry(qq:Bool) throws {
+  func testLiveAccountPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"wy") }
+  func testLiveQQPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"tx") }
+  func testLiveKugouPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"kg") }
+  private func liveAccountPlaylistEntry(provider:String) throws {
+    let qq=provider=="tx",kg=provider=="kg"
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
     func reach(_ element:XCUIElement){
@@ -674,10 +676,21 @@ final class SourceSettingsTests: XCTestCase {
     RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
     app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
     openSettings(app,page:"accounts")
-    let suffix=qq ? "-tx":"",platform=qq ? "QQ":"NetEase"
+    let suffix=provider=="wy" ? "":"-"+provider,platform=qq ? "QQ":kg ? "Kugou":"NetEase"
     let login=app.buttons["account-playlists-login"+suffix],required=app.staticTexts["account-playlists-login-required"+suffix]
     reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"+suffix].exists);image("Real \(platform) playlist entry without a saved account")
-    login.tap();let bar=app.navigationBars[qq ? "QQ 音乐登录":"网易云登录"];XCTAssertTrue(bar.waitForExistence(timeout:20))
+    login.tap()
+    if kg {
+      let qr=app.images["kugou-login-qr"]
+      XCTAssertTrue(app.staticTexts["kugou-login-waiting"].waitForExistence(timeout:25));XCTAssertTrue(qr.waitForExistence(timeout:10));reach(qr)
+      XCTAssertEqual(qr.frame.width,240,accuracy:1);XCTAssertEqual(qr.frame.height,240,accuracy:1)
+      image("Real Kugou official QR opened from playlist entry")
+      let cancel=app.buttons["cancel-music-login-kg"];reach(cancel);cancel.tap()
+      XCTAssertTrue(app.staticTexts["kugou-login-cancelled"].waitForExistence(timeout:10));XCTAssertTrue(waitForGone(qr,timeout:10))
+      reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"+suffix].exists)
+      image("Real Kugou playlist entry after QR cancellation")
+    } else {
+      let bar=app.navigationBars[qq ? "QQ 音乐登录":"网易云登录"];XCTAssertTrue(bar.waitForExistence(timeout:20))
     let loaded=waitForGone(app.activityIndicators[qq ? "music-web-login-loading-tx":"music-web-login-loading-wy"],timeout:45)
     if !loaded {
       let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual \(platform) loading failure hierarchy";tree.lifetime = .keepAlways;add(tree)
@@ -688,7 +701,8 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(web.descendants(matching:.any).matching(NSPredicate(format:"label MATCHES %@",qq ? ".*(QQ|帐号|账号|授权|登录|Login).*":".*(网易|云音乐|登录|手机号|扫码).*" )).firstMatch.waitForExistence(timeout:35))
     image("Real official \(platform) page opened from account playlist entry")
     bar.buttons["关闭"].tap();XCTAssertTrue(waitForGone(bar,timeout:15));reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"+suffix].exists)
-    app.terminate();app.launch();openSettings(app,page:"accounts");reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons[qq ? "verify-music-account-tx":"verify-music-account-wy"].exists);image("Real \(platform) playlist remains unauthenticated after cancellation and restart")
+    }
+    app.terminate();app.launch();openSettings(app,page:"accounts");reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons[kg ? "remove-music-account-kg":qq ? "verify-music-account-tx":"verify-music-account-wy"].exists);image("Real \(platform) playlist remains unauthenticated after cancellation and restart")
   }
   func testLiveQQWebLogin() throws {
     XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}

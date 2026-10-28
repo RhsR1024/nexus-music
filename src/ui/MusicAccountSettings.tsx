@@ -88,7 +88,8 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:p.secondary}}>{verified}</Text>}
     <AccountPlaylistImport services={services} active={active} disabled={waiting} onLogin={()=>login('wy')}/>
     <AccountPlaylistImport services={services} active={active} disabled={waiting} platform="tx" onLogin={()=>login('tx')}/>
-    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。网易云和QQ歌单可手动复制到音枢歌单，酷狗歌单与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
+    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。网易云和QQ歌单可手动复制到音枢歌单，酷狗歌单也可复制到音枢歌单，账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
     <KugouAccountCard services={services} disabled={webWaiting||dailyWaiting} onRevealQr={onRevealQr}/>
+    <AccountPlaylistImport services={services} active={active} disabled={waiting} platform="kg" onLogin={()=>{void services.kugouLogin.login();}}/>
   </View>;
 }

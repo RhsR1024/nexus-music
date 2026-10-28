@@ -1,3 +1,7 @@
+## 2026-10-28 酷狗账号歌单只读接线
+
+固定get_all_list/get_list_all_file_v3与公开详情契约适配KugouPlaylists/共享KugouTrackDetails，复用音枢QR和本机库取消提交。目录/文件总数稳定、循环/不完整拒绝，歌单保留重复条目，日推继续去重，753检查。8来源核对、Apache/Nshpiter/LX及MakcRe MIT保持；授权态/实服务未验，见[回执](2026-10-28_kugou-account-playlist-report.md)。
+
 ## 2026-10-28 QQ账号歌单只读接线
 
 创建列表、收藏分页、dir201我喜欢及DissInfo完整详情契约适配音枢QQPlaylists；不使用参考同步/远端写入。复用现有Cookie/资料验证、AccountPlaylists预览归属与LibraryStore取消提交，742检查。匿名入口与未验授权态见[回执](2026-10-28_qq-account-playlist-report.md)。酷狗歌单、微信配对继续，不以源码存在声称真实服务通过。

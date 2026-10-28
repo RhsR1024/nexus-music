@@ -8,7 +8,7 @@ import {useTheme} from './theme.tsx';
 import {space,radius,typography,controls} from './tokens.ts';
 import {SheetModal} from './AdaptiveModal.tsx';
 
-export function AccountPlaylistImport({services,active,disabled,onLogin,platform='wy'}:{services:Services;active:boolean;disabled:boolean;onLogin:()=>void;platform?:'wy'|'tx'}){
+export function AccountPlaylistImport({services,active,disabled,onLogin,platform='wy'}:{services:Services;active:boolean;disabled:boolean;onLogin:()=>void;platform?:'wy'|'tx'|'kg'}){
   const {palette:p}=useTheme();
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const available=accounts.filter(item=>item.platform===platform);
@@ -28,8 +28,8 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
     catch(error){if(controller.current===next&&latest.current.active)setMessage(error instanceof AccountPlaylistError?error.message:'暂时无法读取或保存歌单，请重试');}
     finally{if(controller.current===next){controller.current=null;setBusy('');if(closeWhenSettled.current){closeWhenSettled.current=false;setDetail(null);setPreview(null);}}}
   }
-  const platformName=platform==='tx'?'QQ 音乐':'网易云';
-  const testID=(id:string)=>platform==='tx'?`${id}-tx`:id;
+  const platformName=platform==='tx'?'QQ 音乐':platform==='kg'?'酷狗音乐':'网易云';
+  const testID=(id:string)=>platform==='wy'?id:`${id}-${platform}`;
   const pending=!!busy,blocked=disabled||pending;
   const button=(id:string,title:string,onPress:()=>void,locked=blocked)=><Pressable testID={testID(id)} accessibilityRole="button" disabled={locked} onPress={onPress} style={[styles.button,{backgroundColor:p.selected},locked&&styles.disabled]}><Text style={[styles.body,{color:p.accent}]}>{title}</Text></Pressable>;
   const closeDetail=()=>{if(controller.current){closeWhenSettled.current=true;controller.current.abort();setMessage('正在取消操作');}else{setDetail(null);setPreview(null);setMessage('');}};
@@ -66,7 +66,7 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
           {!!message&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{message}</Text>}
           {preview&&<View testID={testID("account-playlist-preview")} style={[styles.preview,{backgroundColor:p.selected}]}>
         <Text style={[styles.caption,{color:p.secondary}]}>已读取完整歌单，共 {preview.tracks.length} 首</Text>
-        {preview.tracks.slice(0,5).map(track=><Text key={track.origin.id} numberOfLines={2} style={[styles.caption,{color:p.text}]}>{track.title} · {track.artist}</Text>)}
+        {preview.tracks.slice(0,5).map((track,index)=><Text key={`${track.origin.id}:${index}`} numberOfLines={2} style={[styles.caption,{color:p.text}]}>{track.title} · {track.artist}</Text>)}
         {preview.tracks.length>5&&<Text style={[styles.caption,{color:p.secondary}]}>导入后可在音枢歌单查看全部歌曲。</Text>}
         {button('account-playlist-copy','复制到音枢歌单',copy)}
           </View>}

@@ -3,7 +3,7 @@
 // Independent bounded HTTPS reader; no reference runtime or native patches.
 import {bounded,throwIfAborted} from './async.ts';
 import {HTTPResponseError,queryURL,type HTTPClient} from './http.ts';
-import {onlineTrack} from './online.ts';
+import {resolveKugouTracks} from './kugouTrackDetails.ts';
 import {AccountDailyError} from './accountDaily.ts';
 import type {MusicAccount} from './musicAccounts.ts';
 import type {Track} from '../domain/track.ts';
@@ -40,25 +40,8 @@ export class KugouDailyClient{
         const hashes:string[]=[];
         for(const value of songs){const id=row(value).hash??row(value).hash_128;if(!hash(id))throw new AccountDailyError('unavailable');const upper=id.toUpperCase();if(!hashes.includes(upper))hashes.push(upper);}
         const requested=hashes.slice(0,30);if(!requested.length)return[];
-        const byHash=new Map<string,Row>();
-        const details=async(ids:readonly string[])=>{
-          const raw=row(await this.options.http('https://gateway.kugou.com/v2/album_audio/audio',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json','x-router':'kmr.service.kugou.com'},body:JSON.stringify({area_code:'1',show_privilege:1,show_album_info:'1',is_publish:'',appid:1005,clientver:11451,mid:'1',dfid:'-',clienttime:(this.options.now??Date.now)(),key:salt,fields:'album_info,author_name,audio_info,ori_audio_name,base,songname',data:ids.map(hash=>({hash}))})},child));
-          throwIfAborted(child);
-          if(![0,'0'].includes((raw.error_code??raw.errcode??raw.err_code) as string|number)||!Array.isArray(raw.data))throw new AccountDailyError('unavailable');
-          for(const group of raw.data){const item=row(Array.isArray(group)?group[0]:undefined),audio=row(item.audio_info);
-            if(!hash(audio.hash)||typeof item.songname!=='string'||!item.songname.trim()||!item.album_info||typeof item.album_info!=='object'||
-              !(typeof audio.audio_id==='string'&&/^[0-9]{1,20}$/.test(audio.audio_id)||typeof audio.audio_id==='number'&&Number.isSafeInteger(audio.audio_id)&&audio.audio_id>=0))continue;
-            for(const [key,value] of Object.entries(audio))if(/^hash(?:_|$)/.test(key)&&hash(value)&&!byHash.has(value.toUpperCase()))byHash.set(value.toUpperCase(),item);
-          }
-        };
-        await details(requested);
-        const missing=requested.filter(id=>!byHash.has(id));if(missing.length)await details(missing);
         const seen=new Set<string>();
-        return requested.map(id=>{
-          const item=byHash.get(id);if(!item)throw new AccountDailyError('unavailable');
-          const audio=row(item.audio_info),album=row(item.album_info);
-          return onlineTrack('kg',{FileHash:audio.hash,Audioid:audio.audio_id,OriSongName:item.songname,SingerName:item.author_name,AlbumName:album.album_name,AlbumID:album.album_id,Duration:Number(audio.timelength)/1000,FileSize:audio.filesize,HQFileHash:hash(audio.hash_320)?audio.hash_320:undefined,HQFileSize:hash(audio.hash_320)?audio.filesize_320:undefined,SQFileHash:hash(audio.hash_flac)?audio.hash_flac:undefined,SQFileSize:hash(audio.hash_flac)?audio.filesize_flac:undefined,ResFileHash:hash(audio.hash_high)?audio.hash_high:undefined,ResFileSize:hash(audio.hash_high)?audio.filesize_high:undefined});
-        }).filter(track=>{if(seen.has(track.origin.id))return false;seen.add(track.origin.id);return true;});
+        return(await resolveKugouTracks(this.options,requested,child)).filter(track=>{if(seen.has(track.origin.id))return false;seen.add(track.origin.id);return true;});
       },signal,30_000);
     }catch(error){
       if(signal.aborted)throw new AccountDailyError('cancelled');

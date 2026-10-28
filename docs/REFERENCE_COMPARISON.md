@@ -1,3 +1,7 @@
+## 2026-10-28 酷狗账号歌单参考
+
+Q-music Android固定5db858f32695d10c5e9ef0f7037d586aef6a8c4b的playlists/kugouApi/kugou/kg-songList及说明/三归属文件共8份逐字节匹配Git对象。仅只读签名/分页/公开详情契约，自写完整性/归属与副本事务；不复制NativeModules存储、依赖、同步或远端写操作。Apache-2.0/Nshpiter/LX与MakcRe MIT归属保留；不推断Sollin接口。见[回执](2026-10-28_kugou-account-playlist-report.md)。
+
 ## 2026-10-28 QQ账号歌单参考
 
 固定Q-music Android 5db858f32695d10c5e9ef0f7037d586aef6a8c4b的playlists/requests/cookies/qqCredentials/tx-songList及说明/三归属文件，共9份与Git对象逐字节一致。采用只读目录/详情和QQ身份字段契约，自写完整性检查及本机副本；不复制Android依赖、平台写入或同步。Apache-2.0、Nshpiter/LX归属保留，不推断Sollin接口；验证与维护边界见[回执](2026-10-28_qq-account-playlist-report.md)。
