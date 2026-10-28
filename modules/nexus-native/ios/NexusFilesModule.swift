@@ -1,14 +1,27 @@
 import ExpoModulesCore
 import UIKit
 import UniformTypeIdentifiers
+import Photos
+import ImageIO
 
 public final class NexusFilesModule: Module {
   private let files = LocalAudioFiles.shared
   private let queue = DispatchQueue(label: "nexus.local-files")
   private var folderPicker: LocalAudioFolderPicker?
   private var audioExporter: AudioFileExportSheet?
+  private var loginQrPhoto: LoginQrPhotoSave?
   public func definition() -> ModuleDefinition {
     Name("NexusFiles")
+    AsyncFunction("saveLoginQrPhoto") { (id: String, image: String, expiresAt: Double, promise: Promise) in
+      guard self.loginQrPhoto == nil else { promise.reject("QR_PHOTO_BUSY", "正在保存二维码"); return }
+      guard let operation=LoginQrPhotoSave(id:id,image:image,expiresAt:expiresAt) else { promise.reject("QR_PHOTO_EXPIRED", "二维码已失效，请重新获取"); return }
+      self.loginQrPhoto=operation
+      operation.start { [weak self] error in
+        self?.loginQrPhoto=nil
+        if let error { promise.reject(error, "未能保存登录二维码") } else { promise.resolve(true) }
+      }
+    }.runOnQueue(.main)
+    AsyncFunction("cancelLoginQrPhoto") { (id: String) in if self.loginQrPhoto?.id == id { self.loginQrPhoto?.cancel() } }.runOnQueue(.main)
     AsyncFunction("downloadDestinationStatus") { () throws -> [String: String]? in try DownloadDestination.shared.status() }.runOnQueue(queue)
     AsyncFunction("forgetDownloadDestination") { (id: String) throws in try DownloadDestination.shared.forget(id) }.runOnQueue(queue)
     AsyncFunction("saveDownloadFiles") { (values: [String], id: String, job: String) throws -> [String] in try DownloadDestination.shared.save(values, expected: id, job: job) }.runOnQueue(queue)
@@ -181,4 +194,58 @@ private final class AudioFileExportSheet: NSObject, UIAdaptivePresentationContro
   }
   func finish(_ completed: Bool) { watchdog?.invalidate(); watchdog = nil; let callback = completion; completion = nil; callback?(completed) }
   func presentationControllerDidDismiss(_ presentationController: UIPresentationController) { finish(false) }
+}
+
+// Own iOS implementation. No photo enumeration, network or arbitrary file paths.
+private final class LoginQrPhotoSave {
+  let id: String
+  private let data: Data
+  private let expiresAt: Double
+  private var cancelled = false
+  private var writing = false
+  private var completion: ((String?) -> Void)?
+  private var background: NSObjectProtocol?
+  init?(id: String, image: String, expiresAt: Double) {
+    guard UUID(uuidString:id) != nil, image.hasPrefix("data:image/png;base64,"), image.utf8.count <= 1_500_000,
+      let bytes = Data(base64Encoded:String(image.dropFirst(22))), bytes.count <= 1_000_000,
+      bytes.starts(with:[137,80,78,71,13,10,26,10]), let source = CGImageSourceCreateWithData(bytes as CFData,nil),
+      CGImageSourceGetCount(source) == 1, let properties = CGImageSourceCopyPropertiesAtIndex(source,0,nil) as? [CFString:Any],
+      let width = properties[kCGImagePropertyPixelWidth] as? Int, let height = properties[kCGImagePropertyPixelHeight] as? Int,
+      (32...1024).contains(width), (32...1024).contains(height), UIImage(data:bytes) != nil,
+      expiresAt.isFinite, expiresAt > Date().timeIntervalSince1970*1000, expiresAt <= Date().timeIntervalSince1970*1000+120_000 else { return nil }
+    self.id=id; self.data=bytes; self.expiresAt=expiresAt
+  }
+  func cancel() { if !writing { cancelled=true } }
+  func start(completion: @escaping (String?) -> Void) {
+    self.completion=completion
+    background=NotificationCenter.default.addObserver(forName:UIApplication.didEnterBackgroundNotification,object:nil,queue:.main) { [weak self] _ in self?.cancel() }
+    PHPhotoLibrary.requestAuthorization(for:.addOnly) { [weak self] status in
+      DispatchQueue.main.async {
+        guard let self else { return }
+        guard !self.cancelled else { self.finish("QR_PHOTO_CANCELLED"); return }
+        guard status == .authorized else { self.finish("QR_PHOTO_PERMISSION"); return }
+        self.writeWhenActive(0)
+      }
+    }
+  }
+  private func writeWhenActive(_ attempt: Int) {
+    guard !cancelled else { finish("QR_PHOTO_CANCELLED"); return }
+    guard Date().timeIntervalSince1970*1000 < expiresAt else { finish("QR_PHOTO_EXPIRED"); return }
+    if UIApplication.shared.applicationState == .inactive && attempt < 20 {
+      DispatchQueue.main.asyncAfter(deadline:.now()+0.1) { [weak self] in self?.writeWhenActive(attempt+1) }; return
+    }
+    guard UIApplication.shared.applicationState == .active else { finish("QR_PHOTO_CANCELLED"); return }
+    // Submission is the copy boundary; a later QR cancellation cannot undo the
+    // user's Photos copy or turn a successful PhotoKit commit into a failure.
+    writing=true
+    PHPhotoLibrary.shared().performChanges({
+      let options=PHAssetResourceCreationOptions(); options.originalFilename="NexusMusic-Login-QR-\(self.id).png"
+      PHAssetCreationRequest.forAsset().addResource(with:.photo,data:self.data,options:options)
+    }) { [weak self] success,_ in DispatchQueue.main.async { self?.finish(success ? nil:"QR_PHOTO_WRITE") } }
+  }
+  private func finish(_ error: String?) {
+    if let background { NotificationCenter.default.removeObserver(background) }; background=nil
+    let callback=completion; completion=nil; callback?(error)
+  }
+  deinit { if let background { NotificationCenter.default.removeObserver(background) } }
 }

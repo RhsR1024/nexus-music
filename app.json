@@ -19,7 +19,8 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSAppleMusicUsageDescription": "读取你授权的设备音乐库，用于浏览和播放已在本机可用的音乐。"
+        "NSAppleMusicUsageDescription": "读取你授权的设备音乐库，用于浏览和播放已在本机可用的音乐。",
+        "NSPhotoLibraryAddUsageDescription": "将您选择的登录二维码保存到照片，供在酷狗扫一扫中识别；不读取照片。"
       }
     },
     "plugins": [

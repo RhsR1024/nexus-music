@@ -647,10 +647,12 @@ final class SourceSettingsTests: XCTestCase {
   func testLiveAccountPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"wy") }
   func testLiveQQPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"tx") }
   func testLiveKugouPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"kg") }
-  private func liveAccountPlaylistEntry(provider:String) throws {
+  func testLiveKugouQrPhotoDenied() throws { try liveAccountPlaylistEntry(provider:"kg",photoMode:"deny") }
+  func testLiveKugouQrPhotoSave() throws { try liveAccountPlaylistEntry(provider:"kg",photoMode:"allow") }
+  private func liveAccountPlaylistEntry(provider:String,photoMode:String?=nil) throws {
     let qq=provider=="tx",kg=provider=="kg"
     let app=XCUIApplication();app.launch()
-    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
     func reach(_ element:XCUIElement){
       let scroll=app.descendants(matching:.any).matching(identifier:"settings-scroll-accounts").firstMatch
       for _ in 0..<16 {
@@ -685,6 +687,25 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(app.staticTexts["kugou-login-waiting"].waitForExistence(timeout:25));XCTAssertTrue(qr.waitForExistence(timeout:10));reach(qr)
       XCTAssertEqual(qr.frame.width,240,accuracy:1);XCTAssertEqual(qr.frame.height,240,accuracy:1)
       image("Real Kugou official QR opened from playlist entry")
+      if let photoMode {
+        let save=app.buttons["kugou-login-save-photo"];reach(save);save.tap()
+        let springboard=XCUIApplication(bundleIdentifier:"com.apple.springboard"),alert=springboard.alerts.firstMatch
+        guard alert.waitForExistence(timeout:15) else { XCTFail("Saving must request actual add-only permission on its first use"); return }
+        let details=XCTAttachment(string:springboard.debugDescription);details.name="Actual add-only Photos permission controls";details.lifetime = .keepAlways;add(details)
+        XCTAssertTrue(alert.staticTexts.matching(NSPredicate(format:"label CONTAINS[c] %@ OR label CONTAINS %@","add","添加")).firstMatch.exists,"The system request must describe adding photos")
+        image("Real add-only Photos permission request")
+        let pattern=photoMode=="deny" ? "^(Don.t Allow|不允许)$":"(?i)^(allow.*(add|added).*|.*add.*only|允许.*添加.*|只添加.*|允许|allow|好|ok)$"
+        let response=alert.buttons.matching(NSPredicate(format:"label MATCHES %@",pattern)).firstMatch
+        guard response.waitForExistence(timeout:5) else { XCTFail("Actual permission response must be identified"); return };response.tap()
+        let status=app.staticTexts[photoMode=="deny" ? "kugou-qr-photo-denied":"kugou-qr-photo-saved"]
+        XCTAssertTrue(status.waitForExistence(timeout:25));XCTAssertTrue(qr.exists,"Permission alert inactivity must not cancel the login")
+        reach(status);image(photoMode=="deny" ? "Real QR photo permission denied without saving":"Real QR photo saved with add-only permission")
+        if photoMode=="allow" {
+          XCUIDevice.shared.press(.home);RunLoop.current.run(until:Date().addingTimeInterval(2));app.activate()
+          XCTAssertTrue(qr.waitForExistence(timeout:10));XCTAssertFalse(app.staticTexts["kugou-login-cancelled"].exists)
+          reach(qr);image("Real saved QR handoff survives background and foreground")
+        }
+      }
       let cancel=app.buttons["cancel-music-login-kg"];reach(cancel);cancel.tap()
       XCTAssertTrue(app.staticTexts["kugou-login-cancelled"].waitForExistence(timeout:10));XCTAssertTrue(waitForGone(qr,timeout:10))
       reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(app.buttons["account-playlists-load"+suffix].exists)

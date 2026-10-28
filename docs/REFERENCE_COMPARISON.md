@@ -1,3 +1,7 @@
+## 2026-10-28 批次8：酷狗二维码照片与同机切换
+
+正式酷狗QR页新增用户主动保存到照片，仅请求addOnly；成功保存后可在原期限内切换酷狗，后台停止新轮询、在途结果等前台处理，离开账号页仍取消。764检查、最终真实音频允许/拒绝专项各1/0（77.707/74.624秒），13PNG ready/亲看，实际照片新增1/拒绝新增0；无照片读取权限。真实同机酷狗扫码确认、账号保存及实体机/签名仍未验，不报F30完成。见[回执](2026-10-28_kugou-qr-photo-report.md)。参考固定Q-music同机说明/归属已核对；自写PhotoKit，不复制Android权限/依赖，不新增Sollin采集，其他全范围继续。
+
 ## 2026-10-28 酷狗账号歌单参考
 
 Q-music Android固定5db858f32695d10c5e9ef0f7037d586aef6a8c4b的playlists/kugouApi/kugou/kg-songList及说明/三归属文件共8份逐字节匹配Git对象。仅只读签名/分页/公开详情契约，自写完整性/归属与副本事务；不复制NativeModules存储、依赖、同步或远端写操作。Apache-2.0/Nshpiter/LX与MakcRe MIT归属保留；不推断Sollin接口。见[回执](2026-10-28_kugou-account-playlist-report.md)。
