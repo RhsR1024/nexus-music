@@ -1,3 +1,7 @@
+## 2026-10-29 五平台公开歌单搜索
+
+五固定HEAD复核；Q-1515五songList.js与LICENSE逐字节匹配固定对象，采用公开搜索/分页字段，原创HTTPS、无执行酷我解析与取消/重试协调器。悦音歌曲搜索职责、wtf独立歌单聚合、Cy腾讯歌单搜索交叉核对；不采用错误伪空态、旧HTTP、递归重试或参考运行时。自有Wayferar既有许可/产品边界保留，不采未跟踪恢复代码。Apache/LX/lyswhut归属保留；不推断Sollin后端，不复制依赖/原生补丁/凭据。详细来源、维护与未验矩阵见[回执](2026-10-29_playlist-search-report.md)。
+
 ## 2026-10-28 批次8：QQ微信电脑配对
 
 固定Q-music Android 5db858f新增9个文件核对，accountTransfer/qqImportedSession/qqCredentials与原生线协议适配到原创iOS URLSession/CryptoKit/AVFoundation和确认状态机；Apache/Nshpiter/LX归属保留，无Android桥/依赖/桌面商业逻辑移植，不推断Sollin使用相同后端。真实对端/授权/签名未验。

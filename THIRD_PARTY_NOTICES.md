@@ -2,6 +2,10 @@
 
 The project does not apply a single license to all reference projects or assets.
 
+## Public playlist search
+
+`src/providers/playlistSearch.ts` adapts public search request and response fields from Q-1515/LX Music Mobile commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/{wy,tx,kw,kg,mg}/songList.js` (Apache 2.0; LX/lyswhut attribution retained below). NexusMusic supplies its own bounded HTTPS transport, metadata validation, non-executing Kuwo JSON conversion and cancellable pagination. No reference runtime, dependencies, native patches, account credentials or private service configuration is imported. These contracts do not establish Sollin's backend implementation.
+
 ## QQ music web account protocol
 
 `src/providers/qqAccountProfile.ts` adapts the cookie identity and official request contracts from Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/{cookies,qqCredentials,requests,accountTransfer}.ts`. The official OAuth client ID and music-site redirect in `musicWebLogin.ts` and `NexusMusicAuthModule.swift` were checked against that commit's `login.ts`; NexusMusic uses the default desktop web presentation and adds an attempt-bound state check. NexusMusic uses its own TypeScript clients, Keychain account store and ephemeral iOS WebKit session; it does not import Android bridges, desktop server implementation, dependencies or native patches. The web login entry remains limited to QQ identities; the separately confirmed computer transfer supports WX music identities. It validates both response envelopes and discards playlist response content after the authorization check. QQ daily authorization is separate. Apache 2.0 is reproduced at `licenses/lx-apache-2.0.txt`.

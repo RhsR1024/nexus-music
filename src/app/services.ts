@@ -1,3 +1,4 @@
+import {PlaylistSearchProvider,type PlaylistSearchItem} from '../providers/playlistSearch.ts';
 import {QQAccountTransfer} from '../providers/qqAccountTransfer.ts';
 import {DownloadDestinationSettings,type DestinationNative} from '../storage/downloadDestination.ts';
 import {DownloadDelivery} from '../storage/downloadDelivery.ts';
@@ -44,7 +45,7 @@ import { MultiSourceResolver } from '../providers/multiSourceResolver.ts';
 import { createPlaybackSession } from '../playback/nativeSession.ts';
 import { AccountFmStation } from '../playback/accountFmStation.ts';
 import { OnlineProvider } from '../providers/online.ts';
-import { SearchCoordinator } from '../providers/searchCoordinator.ts';
+import { SearchCoordinator,PagedSearchCoordinator } from '../providers/searchCoordinator.ts';
 import { makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
 import type { Track } from '../domain/track.ts';
@@ -202,6 +203,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   });
   const discovery=new DiscoveryProvider(value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),options.onlineHTTP);
   const search = new SearchCoordinator(online);
+  const playlistSearch=new PagedSearchCoordinator<PlaylistSearchItem>(new PlaylistSearchProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),deviceId:Crypto.randomUUID}),item=>item.id);
   const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},options.onlineHTTP,decodeKRC,decodeQRC);
   const lyrics=new LyricSelection(rawLyrics,matching,library);
   const managedAttachments=new ManagedDownloadAttachments(repository,{downloads:offlineDownloads,files:attachmentFiles,maximumBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,lyrics:async(track,signal)=>(await lyrics.load(track,signal)).document,cover:(track,signal,size)=>covers.loadForExport(track,signal,size)});
@@ -233,7 +235,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
-  return { qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

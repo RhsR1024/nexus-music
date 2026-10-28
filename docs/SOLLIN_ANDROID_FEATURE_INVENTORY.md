@@ -1,3 +1,7 @@
+## 2026-10-29 NexusMusic实现增量
+
+既有搜索功能合同中的歌单类型已接五平台公开搜索及点击/长按正式详情；真实官方目录专项通过。专辑/艺术家/MV未落地，既有Sollin采集结论与395E/101F/99P计数不变，不把代码接线写成Sollin新证据或完整五类型验收。见[实施回执](2026-10-29_playlist-search-report.md)。
+
 # Sollin Android 功能清单与状态路径总览
 
 > 本文是动态采集（2026-10-23/24，Q1–Q125）的**功能能力汇总**：按模块列出已确认的用户可见能力、基本操作路径、结果状态和未确认项，供音枢后续实现。采集范围按[决策0080](decisions/0080-sollin-capability-capture-scope.md)收敛为功能能力，不追测并发容量、速度、百分比、超时上限、极限或内部实现。参考版本：Sollin Android 2.0.0（code 2060），小米 Mi 10 / Android 13 / 1080×2340。完整截图/控件树/哈希在外置案例 `sollin-android-ui-20261023`（T7）；本仓库只留脱敏结论。本轮Q125完成最后三项只读界面检查。状态路径与证据边界见 [状态契约](SOLLIN_ANDROID_STATE_CONTRACTS.md)、[审核记录](SOLLIN_ANDROID_SPEC_AUDIT.md)和[逐轮交接](SOLLIN_ANDROID_CAPTURE_HANDOFF.md)。

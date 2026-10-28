@@ -831,6 +831,36 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
+  func testLivePlaylistSearch() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ item:XCUIElement){for _ in 0..<18{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5))}
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
+    let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));let before=progress.value as? String ?? "";XCTAssertTrue(before.contains("/ 3:53"))
+    RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    let searchTab=app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch;XCTAssertTrue(searchTab.waitForExistence(timeout:10));searchTab.tap();app.descendants(matching:.any).matching(identifier:"search-kind-playlist").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    let field=app.textFields["搜索歌单"];XCTAssertTrue(field.waitForExistence(timeout:10));field.tap();for character in "欧美热歌榜"{field.typeText(String(character))};XCTAssertEqual(field.value as? String,"欧美热歌榜");field.typeText("\n")
+    let official=app.buttons.matching(NSPredicate(format:"label CONTAINS %@ AND label CONTAINS %@","网易云欧美热歌榜","作者网易云音乐")).firstMatch
+    XCTAssertTrue(official.waitForExistence(timeout:60));image("Real official playlist search results with author and artwork")
+    official.tap();XCTAssertTrue(app.buttons["返回搜索结果"].waitForExistence(timeout:15))
+    XCTAssertTrue(app.staticTexts["网易云欧美热歌榜"].firstMatch.waitForExistence(timeout:15))
+    let detail=app.otherElements["discovery-track-0"];XCTAssertTrue(detail.waitForExistence(timeout:60));image("Real official playlist detail opened through normal search")
+    app.buttons["返回搜索结果"].tap();XCTAssertTrue(official.waitForExistence(timeout:10))
+    official.press(forDuration:1);XCTAssertTrue(app.buttons["返回搜索结果"].waitForExistence(timeout:10));XCTAssertTrue(detail.waitForExistence(timeout:30))
+    app.buttons["返回搜索结果"].tap();XCTAssertTrue(official.waitForExistence(timeout:10));image("Real search results retained after closing playlist detail")
+    let more=app.buttons["playlist-search-more-wy"];XCTAssertTrue(more.waitForExistence(timeout:10));reach(more);more.tap()
+    XCTAssertTrue(app.buttons["search-playlist-wy-30"].waitForExistence(timeout:45),"Real second-page results must extend the search collection")
+    image("Real public playlist search appends its second page")
+    let songs=app.descendants(matching:.any).matching(identifier:"search-kind-song").firstMatch;reach(songs);songs.tap();XCTAssertTrue(app.textFields["搜索歌曲或歌手"].waitForExistence(timeout:10))
+    XCTAssertFalse(app.buttons["search-playlist-wy-0"].exists)
+    image("Real song search remains reachable after switching result type")
+    XCTAssertFalse(app.buttons["暂停"].exists,"Browsing must preserve paused real playback intent")
+  }
   func testLiveQQComputerPairing() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

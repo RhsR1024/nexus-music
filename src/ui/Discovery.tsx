@@ -20,14 +20,15 @@ import {selectionAll,selectionByListOrder,selectionByTapOrder,selectionCount,sel
 type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易'],['tx','QQ'],['kw','酷我'],['kg','酷狗'],['mg','咪咕']]as const;
-export function Discovery({services,embedded=false}:{services:Services;embedded?:boolean}){
+export interface DiscoveryTarget{platform:OnlinePlatform;collection:BrowseItem}
+export function Discovery({services,embedded=false,initialCollection,onClose}:{services:Services;embedded?:boolean;initialCollection?:DiscoveryTarget;onClose?:()=>void}){
   const theme=useTheme(),{width,fontScale}=useWindowDimensions();
   const [contentWidth,setContentWidth]=useState<number>();
   const [tools,setTools]=useState(false),[descriptionOpen,setDescriptionOpen]=useState(false);
   const [query,setQuery]=useState(''),[sort,setSort]=useState<TrackSort>('original');
   const [total,setTotal]=useState<number>();
 
-  const [open,setOpen]=useState(false),[platform,setPlatform]=useState<OnlinePlatform>('wy'),[view,setView]=useState<PageView>({kind:'playlists'}),[category,setCategory]=useState<string>();
+  const [open,setOpen]=useState(!!initialCollection),[platform,setPlatform]=useState<OnlinePlatform>(initialCollection?.platform??'wy'),[view,setView]=useState<PageView>(initialCollection?{kind:'detail',id:initialCollection.collection.id,title:initialCollection.collection.title,rank:false,artwork:initialCollection.collection.artwork,description:initialCollection.collection.description}:{kind:'playlists'}),[category,setCategory]=useState<string>();
   const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[importing,setImporting]=useState(false),[menuTrack,setMenuTrack]=useState<Track|null>(null);
   // Batch selection (Sollin §4): scoped to the loaded detail rows, with the
   // favorite store reading tap order and the queue reading list order.
@@ -51,7 +52,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
     finally{if(version===generation.current)setLoading(false);}
   }
   useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);setRetryAppend(false);setImporting(false);setMessage('');page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();};},[open,embedded,platform,view,category]);
-  function close(){importAbort.current.abort();setImporting(false);setMenuTrack(null);setOpen(false);}
+  function close(){importAbort.current.abort();setImporting(false);setMenuTrack(null);setOpen(false);onClose?.();}
   async function importPlaylist(){
     if(view.kind!=='detail')return;importAbort.current.abort();importAbort.current=new AbortController();const signal=importAbort.current.signal;
     setImporting(true);setMessage('');
@@ -98,7 +99,7 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
   const columns=view.kind==='detail'?1:gridColumns,cardWidth=Math.max(1,Math.min(240,(usableWidth-14*(columns-1))/columns));
   const openCollection=(item:BrowseItem,rank:boolean)=>{setDescriptionOpen(false);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank,artwork:item.artwork,description:item.description});};
   const header=<View style={{gap:20,paddingBottom:24}}>
-    <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{!embedded&&button('收起发现',close)}{view.kind==='detail'&&button('返回歌单广场',()=>setView({kind:'playlists'}))}</View>
+    <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{!embedded&&button(initialCollection?'返回搜索结果':'收起发现',close)}{view.kind==='detail'&&!initialCollection&&button('返回歌单广场',()=>setView({kind:'playlists'}))}</View>
     {view.kind==='detail'?<>
       <View style={{flexDirection:'row',alignItems:'center',gap:20}}><Cover services={services} url={view.artwork} size={116}/><View style={{flex:1,gap:8}}><Text accessibilityRole="header" style={{fontSize:25,fontWeight:'700',color:theme.palette.text}}>{view.title}</Text><Text style={{color:theme.palette.secondary}}>{platforms.find(([id])=>id===platform)?.[1]} · 已加载 {loadedTracks.length}{total!==undefined?` / ${total}`:''} 首</Text></View><Pressable accessibilityRole="button" accessibilityLabel="刷新歌单" accessibilityHint="重新读取当前分页，失败时保留已加载内容" onPress={()=>{void load();}} disabled={loading} style={{width:48,height:48,borderRadius:24,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.surface,opacity:loading?.45:1}}><Ionicons name="refresh" size={22} color={theme.palette.accent}/></Pressable></View>
       <TrackListTools query={query} onQuery={setQuery} sort={sort} onSort={setSort} label="搜索已加载歌曲歌手专辑"/><Text style={{color:theme.palette.secondary,fontSize:12}}>筛选显示 {tracks.length} 首；搜索和排序仅作用于已加载歌曲，完整导入保留平台原始顺序。</Text>
@@ -142,5 +143,5 @@ export function Discovery({services,embedded=false}:{services:Services;embedded?
   </View>;
   const overlays=<TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
-  return <><View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View><Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
+  return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }
