@@ -1,0 +1,27 @@
+# 背景参数回归与真实资料验证
+
+旧提交605e3ff的云端40613883838首组22项为21通过、1失败，唯一失败为背景图片/参数持久化测试。检查步骤通过不能代替整组通过。当前8ab34c0云端仍运行；不取消运行或重派旧提交。
+
+## 定位与修正
+
+小日志artifact12790702974（SHA256 f6738e35467b267bb85e5b7e5814eb9376d6073ad90c6884471a8f7ecc9ff46e）及失败文本artifact12790489323（665fb1e2233913cf86339175115adee8e29810cac515d0a008cbc86bbc9c3dcf）均已完整下载、核对ZIP CRC；仅提取文本，不提取或人工查看合成PNG。证据保留于本机忽略目录build/ci605e3ff-20261028/。
+
+云端188.80秒点击透明度加号后，为读取visual-value-backgroundOpacity再次下拉，最后弹层消失并在外观首页匹配失败。现有控件中心可见并不保证上方数值完整可见；这是本次修正的几何缺口，尚未证明弹层关闭的底层原因。
+
+测试reveal对加减按钮合并对应数值框，要求整个纵向区域位于真实视口上下各6pt内后才点击；只读文本仍无需hittable。同时要求三个参数在持久化前实际改变：保留原加号操作，若已在上限则再用减号，随后比较修改前后数值。原正常导航、两图片导入、禁用入口、三个参数、开关、重启比较、独立删除和空状态断言保留，不改生产代码或增加产品测试入口。
+
+新增显式本机testLiveBackgroundPersistence，复用上述同一操作链，实际公开MP3播放进度必须推进后才进入设置。脚本只允许该单一目标携带公开图片，复制后核对摘要，并将图片与MP3同时纳入外部输入前后校验。原云端夹具用例仍仅用于自动断言，不作人工UI验收。
+
+## 本机验证
+
+真实公开资料：V261020来源Shape of You完整MP3，233.744秒，SHA256 be80e8647e530f86a3ffe3e558772d1378596fb878a682071bb36369d5a63203；沿用既有公开封面Shape-cover.jpg，512×512，SHA256 08cebcf4451a338f6f062f4cb9594cb86f4605e8480cb42ec98e4fc489e0bd04。原始输入只在忽略目录，不提交音频/图片。
+
+718项类型/业务检查通过。首轮R1 Release真实操作1/0/0、402.221秒，build/SourceUITests-1793169334484.xcresult；两张公开资料PNG均ready并亲看，源码/两个外部输入保持。该轮尚无参数实际变化断言，不能据此声明上限参数已改变。补强断言后的最终R2 Release 1项通过、0失败，413.543秒；精确结果build/SourceUITests-1793170014539.xcresult，目录build/background-persistence-live-20261028-r2/。最终source digest为3cc51e70e6b1963c8f2e8d1b15b0dd17be9783f5ea481aa7b3083a89cf5e44af；源文件前后/当前摘要一致，candidate.patch匹配开跑时diff，MP3与公开图片前后不变，两张最终PNG均ready且已亲看。最终轮真实加号/上限后的减号产生不同值后重启恢复通过。
+
+R2同样19→19条记录，仅上述四个键变化，其余15条与两份原音频字节/SHA保持，详见verification-receipt.json。原音频Perfect的SHA256仍086eb96aef026bf336cf5884037a17b28f519b453c19547f3b29093f32ddda39。没有将记录数量保持写成全部记录摘要相同。
+
+R1记录数量19→19，仅preferences.v1、queue.cursor.v1、library.v1和playbackStats.v1因真实播放与外观操作正常变化；其余15条摘要相同，两份原音频字节/SHA保持。回执和候选补丁位于build/background-persistence-live-20261028-r1/。
+
+本轮存储检查保留在用DerivedData及未解决/仍引用的证据，0删除；R1/R2为最新两轮有效产物，保留完整回执。实体设备本轮实际检查仍developerModeStatus=disabled、ddiServicesAvailable=false，未做实体机或签名验收。
+
+本批不新增Sollin采集或结论，不重报功能/UI完成量，不把静态图视为动效验证；iOS27云端同路径仍需新提交的实际结果。批次8完整真实账号授权/服务和其他开放能力继续。

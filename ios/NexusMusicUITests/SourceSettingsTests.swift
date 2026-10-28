@@ -3782,9 +3782,24 @@ final class SourceSettingsTests: XCTestCase {
     let homeImage=XCTAttachment(screenshot:app.screenshot());homeImage.lifetime = .keepAlways;add(homeImage)
   }
   func testVisualImagesAndPlayerBackgroundPersistence() throws {
+    try exerciseVisualImagesAndPlayerBackgroundPersistence(imageName:"Nexus Visual Fixture.png")
+  }
+  func testLiveBackgroundPersistence() throws {
+    let app=XCUIApplication();app.launch()
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
+    let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60))
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(progress.waitForExistence(timeout:10));let before=progress.value as? String ?? "";XCTAssertTrue(before.contains("/ 3:53"))
+    RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before,"Public MP3 native timeline must advance")
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    try exerciseVisualImagesAndPlayerBackgroundPersistence(imageName:"Shape-cover.jpg")
+  }
+  private func exerciseVisualImagesAndPlayerBackgroundPersistence(imageName:String) throws {
     let app=XCUIApplication();app.launch()
     let viewport=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
-    func reveal(_ element:XCUIElement,expectAbove:Bool?=nil){
+    func reveal(_ element:XCUIElement,companion:XCUIElement?=nil,expectAbove:Bool?=nil){
       let handle=app.buttons["background-sheet-close"]
       func visibleRect()->CGRect {
         var rect=viewport.frame.intersection(app.frame)
@@ -3794,12 +3809,12 @@ final class SourceSettingsTests: XCTestCase {
         return rect
       }
       func visible()->Bool {
-        guard element.exists,viewport.exists else{return false}
-        let frame=element.frame,rect=visibleRect()
+        guard element.exists,viewport.exists,companion == nil || companion!.exists else{return false}
+        let frame=companion.map{element.frame.union($0.frame)} ?? element.frame,rect=visibleRect()
         // A value label is read, not tapped. iOS can expose its geometry
         // while reporting it as non-hittable; scrolling again at the top
         // would hand the downward gesture to the dismissible sheet.
-        return frame.width>0 && frame.height>0 && rect.contains(CGPoint(x:frame.midX,y:frame.midY)) && (element.elementType == .staticText || element.isHittable || !element.isEnabled)
+        return frame.width>0 && frame.height>0 && rect.contains(CGPoint(x:frame.midX,y:frame.midY)) && frame.minY>=rect.minY+6 && frame.maxY<=rect.maxY-6 && (element.elementType == .staticText || element.isHittable || !element.isEnabled)
       }
       for _ in 0..<45 {
         if visible(){break}
@@ -3812,14 +3827,24 @@ final class SourceSettingsTests: XCTestCase {
       if !visible(){let tree=XCTAttachment(string:app.debugDescription);tree.name="Background reveal geometry failure";tree.lifetime = .keepAlways;add(tree)}
       XCTAssertTrue(visible(),"Visual control must be visible: \(element.identifier)")
     }
-    func choose(_ id:String,expectAbove:Bool?=nil){let control=app.descendants(matching:.any).matching(identifier:id).firstMatch;reveal(control,expectAbove:expectAbove);control.tap()}
+    func choose(_ id:String,expectAbove:Bool?=nil){
+      let control=app.descendants(matching:.any).matching(identifier:id).firstMatch
+      let parts=id.split(separator:"-")
+      if parts.count==3 && parts[0]=="visual" && (parts[2]=="up" || parts[2]=="down") {
+        // Reveal the value header together with its stepper. A hittable plus
+        // alone can leave the value clipped above the dismissal handle.
+        let value=app.staticTexts["visual-value-"+String(parts[1])];XCTAssertTrue(value.waitForExistence(timeout:10))
+        reveal(control,companion:value,expectAbove:expectAbove)
+      }else{reveal(control,expectAbove:expectAbove)}
+      control.tap()
+    }
     func importFixture(_ id:String){
       choose(id)
-      selectLocalFixture("Nexus Visual Fixture",in:app)
+      selectLocalFixture((imageName as NSString).deletingPathExtension,in:app)
     }
     func expectImported(_ id:String){
       let name=app.staticTexts[id]
-      let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","Nexus Visual Fixture.png"),object:name)
+      let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@",imageName),object:name)
       let result=XCTWaiter.wait(for:[ready],timeout:20)
       if result != .completed {
         let image=XCTAttachment(screenshot:app.screenshot());image.name="Visual import failure";image.lifetime = .keepAlways;add(image)
@@ -3847,11 +3872,19 @@ final class SourceSettingsTests: XCTestCase {
     let importedImage=XCTAttachment(screenshot:app.screenshot());importedImage.name="Imported background and photo previews";importedImage.lifetime = .keepAlways;add(importedImage)
     choose("background-image",expectAbove:true);choose("player-background-photo")
     var savedValues:[String]=[]
-    for id in ["backgroundOpacity","playerBlur","coverRadius"]{choose("visual-"+id+"-up",expectAbove:id=="backgroundOpacity" ? true:nil);let value=app.staticTexts["visual-value-"+id];reveal(value);savedValues.append(value.label)}
+    for id in ["backgroundOpacity","playerBlur","coverRadius"]{
+      let value=app.staticTexts["visual-value-"+id];reveal(value,expectAbove:id=="backgroundOpacity" ? true:nil);let before=value.label
+      choose("visual-"+id+"-up");reveal(value)
+      // A retained live preference can already be at its upper bound. Keep
+      // the original plus operation, then require a real edit before restart.
+      if value.label==before{choose("visual-"+id+"-down");reveal(value)}
+      XCTAssertNotEqual(value.label,before,"Parameter must actually change before persistence is checked: \(id)")
+      savedValues.append(value.label)
+    }
     for id in ["visual-cover-color","visual-motion"] {let control=app.switches[id];reveal(control);if control.value as? String != "1" {control.tap()};expectation(for:NSPredicate(format:"value == %@","1"),evaluatedWith:control);waitForExpectations(timeout:10)}
     app.terminate();app.launch();openSettings(app,page:"background")
-    let restoredPhoto=app.staticTexts["visual-photo-name"];reveal(restoredPhoto);XCTAssertTrue(restoredPhoto.label.contains("Nexus Visual Fixture.png"));let motion=app.switches["visual-motion"];reveal(motion);XCTAssertEqual(motion.value as? String,"1");let selected=app.descendants(matching:.any).matching(identifier:"player-background-photo").firstMatch;reveal(selected,expectAbove:true);XCTAssertTrue(selected.isSelected);var restoredValues:[String]=[];for id in ["backgroundOpacity","playerBlur","coverRadius"]{let value=app.staticTexts["visual-value-"+id];reveal(value,expectAbove:id=="backgroundOpacity" ? true:nil);restoredValues.append(value.label)};XCTAssertEqual(restoredValues,savedValues)
-    let removeBackground=app.buttons["visual-remove-background"];reveal(removeBackground,expectAbove:true);removeBackground.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:10);let retainedPhoto=app.staticTexts["visual-photo-name"];reveal(retainedPhoto);XCTAssertTrue(retainedPhoto.label.contains("Nexus Visual Fixture.png"),"Removing a shared background must retain the photo slot")
+    let restoredPhoto=app.staticTexts["visual-photo-name"];reveal(restoredPhoto);XCTAssertTrue(restoredPhoto.label.contains(imageName));let motion=app.switches["visual-motion"];reveal(motion);XCTAssertEqual(motion.value as? String,"1");let selected=app.descendants(matching:.any).matching(identifier:"player-background-photo").firstMatch;reveal(selected,expectAbove:true);XCTAssertTrue(selected.isSelected);var restoredValues:[String]=[];for id in ["backgroundOpacity","playerBlur","coverRadius"]{let value=app.staticTexts["visual-value-"+id];reveal(value,expectAbove:id=="backgroundOpacity" ? true:nil);restoredValues.append(value.label)};XCTAssertEqual(restoredValues,savedValues)
+    let removeBackground=app.buttons["visual-remove-background"];reveal(removeBackground,expectAbove:true);removeBackground.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-background-name"]);waitForExpectations(timeout:10);let retainedPhoto=app.staticTexts["visual-photo-name"];reveal(retainedPhoto);XCTAssertTrue(retainedPhoto.label.contains(imageName),"Removing a shared background must retain the photo slot")
     let removePhoto=app.buttons["visual-remove-photo"];reveal(removePhoto);removePhoto.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:10)
     app.terminate();app.launch();openSettings(app,page:"background");reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Persisted visual image settings and fallback";screenshot.lifetime = .keepAlways;add(screenshot)

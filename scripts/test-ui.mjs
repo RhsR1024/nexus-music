@@ -27,14 +27,19 @@ const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
 const liveLocalSorting=liveLocalFolderUI||process.argv.slice(2).some(target=>/\/(?:testLiveLocal(?:Sorting|PlaylistBatch)|testLiveRetainedAudio)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)!==liveLocalSorting)throw new Error('Real two-song local verification requires a second actual audio file and its explicit target');
 const liveLocalPaths=liveLocalPath?[liveLocalPath,...(liveLocalSorting?[realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO_SECOND)]:[])]:[];
-const liveLocalSnapshot=liveLocalPath?externalInputSnapshot(liveLocalPaths):null;
+const liveBackgroundUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackgroundPersistence'));
+if(Boolean(process.env.NEXUS_UI_LOCAL_IMAGE)!==liveBackgroundUI)throw new Error('A public cover image requires the single live background persistence target');
+const liveImagePath=liveBackgroundUI?realpathSync(process.env.NEXUS_UI_LOCAL_IMAGE):null;
+if(liveImagePath&&(basename(liveImagePath)!=='Shape-cover.jpg'||statSync(liveImagePath).size<1000||statSync(liveImagePath).size>10000000))throw new Error('Live background requires the complete public Shape-cover.jpg');
+const liveInputPaths=[...liveLocalPaths,...(liveImagePath?[liveImagePath]:[])];
+const liveLocalSnapshot=liveLocalPath?externalInputSnapshot(liveInputPaths):null;
 if(liveLocalPaths.some(path=>!/\.mp3$/i.test(path)||statSync(path).size<100000||statSync(path).size>30000000))throw new Error('Real local audio must be a complete MP3 of 100 KB–30 MB');
 let localFixtureDirectory;
 function seedLocalAudio() {
@@ -44,7 +49,7 @@ function seedLocalAudio() {
     const container=groups.split('\n').find(line=>line.startsWith('group.com.apple.FileProvider.LocalStorage\t'))?.split('\t')[1];if(!container)return;
     localFixtureDirectory=resolve(container,'File Provider Storage',liveLocalFolderUI?'Nexus Real Scan':'Nexus UITest Fixtures');mkdirSync(localFixtureDirectory,{recursive:true});
     if(liveLocalPath){
-      const seeded=liveLocalPaths.map((path,index)=>{const directory=liveLocalFolderUI&&index===1?resolve(localFixtureDirectory,'Albums'):localFixtureDirectory;mkdirSync(directory,{recursive:true});const destination=resolve(directory,basename(path));writeFileSync(destination,readFileSync(path));return [path,destination];});
+      const seeded=liveInputPaths.map((path,index)=>{const directory=liveLocalFolderUI&&index===1?resolve(localFixtureDirectory,'Albums'):localFixtureDirectory;mkdirSync(directory,{recursive:true});const destination=resolve(directory,basename(path));writeFileSync(destination,readFileSync(path));return [path,destination];});
       if(seeded.some(([path,destination])=>fileSha256(destination)!==fileSha256(path)))throw new Error('Real audio copy hash mismatch');
       console.log('[ui-real-audio] unchanged public audio copied into Files');return;
     }
@@ -450,7 +455,7 @@ try {
   const fixturePath=entryFile??'scripts/test-ui.mjs';
   const runManifest={schemaVersion:1,startedAt:new Date().toISOString(),resultBundle:resolve(resultPath),sourceBefore,configuration,fixture:{path:fixturePath,sha256:sourceBefore.files[fixturePath]},simulator:process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'};
   if(referenceScene)runManifest.externalInputs={before:referenceScene.snapshot,requiredPaths:referenceScene.paths};
-  if(liveLocalPath)runManifest.externalInputs={before:liveLocalSnapshot,requiredPaths:liveLocalPaths};
+  if(liveLocalPath)runManifest.externalInputs={before:liveLocalSnapshot,requiredPaths:liveInputPaths};
   if(themeAudioPath){runManifest.externalInputs={before:themeAudioSnapshot,requiredPaths:[themeAudioPath]};runManifest.fixture.audio={path:themeAudioPath,duration:themeAudioDuration,sha256:fileSha256(themeAudioPath)};}
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', configuration,
@@ -459,6 +464,7 @@ try {
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalPlaylistBatch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveListeningStatistics');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveRestoredTimeline')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveRestoredTimeline');
+  if(!liveBackgroundUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveBackgroundPersistence');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveThemeConfig');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveRetainedAudio')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveRetainedAudio');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadPolicy')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadPolicy');
@@ -495,7 +501,7 @@ try {
   Object.assign(runManifest,{finishedAt:new Date().toISOString(),exitCode:code,sourceAfter:sourceSnapshot(),installedBundle:installedBundleSnapshot(runManifest.simulator),resultInfoSha256:existsSync(resolve(resultPath,'Info.plist'))?fileSha256(resolve(resultPath,'Info.plist')):null});
   runManifest.sourceUnchanged=runManifest.sourceBefore.digest===runManifest.sourceAfter.digest;
   if(referenceScene){runManifest.externalInputs.after=externalInputSnapshot(referenceScene.paths);runManifest.externalInputs.unchanged=runManifest.externalInputs.before.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
-  if(liveLocalPath){runManifest.externalInputs.after=externalInputSnapshot(liveLocalPaths);runManifest.externalInputs.unchanged=liveLocalSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
+  if(liveLocalPath){runManifest.externalInputs.after=externalInputSnapshot(liveInputPaths);runManifest.externalInputs.unchanged=liveLocalSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
   if(themeAudioPath){runManifest.externalInputs.after=externalInputSnapshot([themeAudioPath]);runManifest.externalInputs.unchanged=themeAudioSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   if(code===0&&counts.transitionVideo){
