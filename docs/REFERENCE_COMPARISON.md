@@ -1,3 +1,7 @@
+## 2026-10-28 酷狗官方二维码来源复核
+
+采用用户指定的Q-music Android固定5db858f32695d10c5e9ef0f7037d586aef6a8c4b，kugouApi/账号说明及LICENSE/NOTICE/MODIFICATIONS五文件与固定对象一致。只采纳官方二维码协议字段/签名，音枢自写有界客户端、取消与Keychain流程，不导入Android桥接、依赖、个人数据或其他商业业务；保留Apache/Nshpiter/LX及MakcRe MIT。实际匿名创建/等待与正常UI生命周期已验；不推断Sollin后端，完整授权仍未通过。见[回执](2026-10-28_kugou-qr-login-report.md)。
+
 ## 2026-10-28 QQ 网页账号来源复核
 
 按用户指定的 Q-music Android 例外推进 F30，区别于 Q-1515：固定 5db858f32695d10c5e9ef0f7037d586aef6a8c4b，9个许可/来源文件与固定提交逐字节一致。采用公开 OAuth 起点、音乐身份/Cookie 与资料/音乐接口字段，原创 iOS WebKit、state 验证及 TypeScript 适配，不搬运 Android 桥接、配对/原生补丁、依赖或私有令牌。Apache/NOTICE 已保留于第三方说明。实际仅验匿名表单与取消路径；不推断 Sollin 后端，不把源码调用链记作真实账号授权通过。详见[参考边界](Q_MUSIC_ANDROID_REFERENCE.md)和[回执](2026-10-28_qq-web-login-report.md)。

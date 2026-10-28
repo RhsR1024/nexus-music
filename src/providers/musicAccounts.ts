@@ -1,5 +1,6 @@
 import {InvalidRecordError} from '../storage/recovery.ts';
 import type {Repository} from '../storage/repository.ts';
+import {throwIfAborted} from './async.ts';
 
 export type MusicPlatform='wy'|'tx'|'kg';
 export type MusicAccountCapability='playlist'|'favorite'|'daily'|'fm';
@@ -47,16 +48,26 @@ export class MusicAccounts {
     if(!Array.isArray(saved)||saved.some(item=>!validAccount(item))||new Set(saved.map(item=>item.id)).size!==saved.length)throw new InvalidRecordError();
     this.publish(saved.map(accountFields));
   }
-  async save(account:Omit<MusicAccount,'id'|'updatedAt'>,session:MusicSession){
+  async save(account:Omit<MusicAccount,'id'|'updatedAt'>,session:MusicSession,signal?:AbortSignal){
     return this.mutate(async()=>{
+      const check=()=>{if(signal)throwIfAborted(signal);};check();
       if(!platforms.has(account.platform)||!account.label.trim()||!account.username.trim()||!safeSession(session))throw new Error('平台账号资料无效');
       const now=Date.now(),id=await this.hash(JSON.stringify([account.platform,account.username.trim()]));
+      check();
       const displayName=account.displayName?.trim();
       const record:MusicAccount={id,platform:account.platform,label:account.label.trim(),username:account.username.trim(),...(displayName?{displayName}:{}),capabilities:[...account.capabilities],updatedAt:now};
       if(!validAccount(record))throw new Error('平台账号资料无效');
       const key=`nexus.music.${record.id}`,old=await this.secrets.get(key),next=[...this.value.filter(item=>item.id!==id),record];
-      await this.secrets.set(key,JSON.stringify(session));
-      try{await this.repository.put('music.accounts.v1',next);}catch(error){if(old===null)await this.secrets.remove(key);else await this.secrets.set(key,old);throw error;}
+      check();
+      const previous=this.value;let metadataWritten=false;
+      try{
+        await this.secrets.set(key,JSON.stringify(session));check();
+        await this.repository.put('music.accounts.v1',next);metadataWritten=true;check();
+      }catch(error){
+        try{if(metadataWritten)await this.repository.put('music.accounts.v1',previous);}
+        finally{if(old===null)await this.secrets.remove(key);else await this.secrets.set(key,old);}
+        throw error;
+      }
       this.publish(next);return record;
     });
   }

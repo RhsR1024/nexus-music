@@ -1,23 +1,32 @@
-import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator,Pressable,View} from 'react-native';
 import type {Services} from '../app/services.ts';
 import type {MusicWebLoginProvider} from '../providers/musicWebLogin.ts';
 import {MusicAuthError} from '../providers/musicAuth.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {KugouAccountCard} from './KugouAccountCard.tsx';
+import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
 
-export function MusicAccountSettings({services}:{services:Services}){
+export function MusicAccountSettings({services,active,onRevealQr}:{services:Services;active:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
   const {palette:p}=useTheme();
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const auth=useSyncExternalStore(services.musicWebLogin.subscribe,services.musicWebLogin.getSnapshot);
+  const kugouAuth=useSyncExternalStore(services.kugouLogin.subscribe,services.kugouLogin.getSnapshot);
   const [error,setError]=useState('');
   const [verifying,setVerifying]=useState('');
   const [verified,setVerified]=useState('');
   const verifyController=useRef<AbortController|null>(null);
   const [loginProvider,setLoginProvider]=useState<MusicWebLoginProvider>('wy');
   const providers=[{id:'wy' as const,name:'网易云',title:'网易云音乐'},{id:'tx' as const,name:'QQ 音乐',title:'QQ 音乐'}];
-  const waiting=auth.status==='waiting';
+  const webWaiting=auth.status==='waiting',waiting=webWaiting||kugouLoginBusy(kugouAuth.status);
   useEffect(()=>()=>{verifyController.current?.abort();services.musicWebLogin.cancel();},[services]);
+  // Settings caches visited pages. Hidden pages are not unmounted, so revoke
+  // the attempt when navigation removes focus as well as on actual teardown.
+  useLayoutEffect(()=>{
+    if(active)return;
+    verifyController.current?.abort();services.musicWebLogin.cancel();services.kugouLogin.cancel();
+  },[active,services]);
   const login=(provider:MusicWebLoginProvider)=>{
     verifyController.current?.abort();setVerified('');setLoginProvider(provider);
     setError('');
@@ -61,10 +70,10 @@ export function MusicAccountSettings({services}:{services:Services}){
       </View>)}
       <View style={{padding:18,flexDirection:'row',alignItems:'center',gap:12}}>
         <Pressable testID={`login-music-account-${provider.id}`} accessibilityRole="button" accessibilityLabel={`${accounts.some(account=>account.platform===provider.id)?'添加':'登录'}${provider.name}账号`} disabled={waiting} onPress={()=>login(provider.id)} style={{minHeight:48,paddingHorizontal:18,borderRadius:14,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:waiting?.65:1}}>
-          {waiting&&loginProvider===provider.id?<ActivityIndicator size="small" color="#FFFFFF"/>:null}
-          <Text style={{fontSize:15,fontWeight:'600',color:'#FFFFFF'}}>{waiting&&loginProvider===provider.id?'等待官方网页登录':`${accounts.some(account=>account.platform===provider.id)?'添加':'登录'}${provider.name}账号`}</Text>
+          {webWaiting&&loginProvider===provider.id?<ActivityIndicator size="small" color="#FFFFFF"/>:null}
+          <Text style={{fontSize:15,fontWeight:'600',color:'#FFFFFF'}}>{webWaiting&&loginProvider===provider.id?'等待官方网页登录':`${accounts.some(account=>account.platform===provider.id)?'添加':'登录'}${provider.name}账号`}</Text>
         </Pressable>
-        {waiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.name}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,color:p.secondary}}>取消</Text></Pressable>}
+        {webWaiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.name}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,color:p.secondary}}>取消</Text></Pressable>}
       </View>
     </View>)}
     {!!error&&<Text testID="music-account-error" accessibilityRole="alert" style={{fontSize:13,lineHeight:20,color:p.accent}}>{error}</Text>}
@@ -72,5 +81,6 @@ export function MusicAccountSettings({services}:{services:Services}){
     {auth.status==='expired'&&<Text testID="music-account-expired" accessibilityRole="alert" style={{fontSize:13,color:p.accent}}>登录已过期，请重新打开官方网页。</Text>}
     {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:p.secondary}}>{verified}</Text>}
     <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 日推、个人歌单、收藏与账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
+    <KugouAccountCard services={services} disabled={webWaiting} onRevealQr={onRevealQr}/>
   </View>;
 }

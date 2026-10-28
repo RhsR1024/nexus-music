@@ -38,6 +38,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
   const appearanceScroll=useRef<ScrollView|null>(null),appearanceOffset=useRef(0),appearanceOffsetSession=useRef(-1),appearanceAnchorUses=useRef(0),accentField=useRef<View|null>(null),accentAnchorSession=useRef(-1);
   const closeSheet=()=>setAppearanceSheet(value=>({...value,visible:false,session:value.session+1}));
   const heading=useRef<NativeText>(null),page=history[history.length-1]!;
+  const currentPage=useRef(page);currentPage.current=page;
   const scrolls=useRef<Partial<Record<SettingsPage,ScrollView|null>>>({}),offsets=useRef<Partial<Record<SettingsPage,number>>>({});
   const restoring=useRef<SettingsPage|null>(null);
   const previousHomeRequest=useRef(homeRequest);
@@ -83,7 +84,15 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
         {row('accounts','网易云等平台登录与本机会话','person-circle-outline')}
       </View>;
       case 'sources':return <><NavidromeSettings services={services}/><SourceSettings catalog={services.catalog} health={services.sourceHealth}/></>;
-      case 'accounts':return <MusicAccountSettings services={services}/>;
+      case 'accounts':return <MusicAccountSettings services={services} active={page==='accounts'&&!appearanceSheet.visible} onRevealQr={({top,height})=>{
+        const scroller=scrolls.current.accounts;
+        if(currentPage.current!=='accounts'||!scroller||!Number.isFinite(top)||height<=0)return;
+        scroller.getNativeScrollRef()?.measureInWindow((_x,viewportTop,_width,viewportHeight)=>{
+          if(currentPage.current!=='accounts'||viewportHeight<=0)return;
+          const delta=top-(viewportTop+Math.max(0,(viewportHeight-height)/2));
+          scroller.scrollTo({y:Math.max(0,(offsets.current.accounts??0)+delta),animated:false});
+        });
+      }}/>;
       case 'playback':return <><View style={{gap:12}}>{row('equalizer','10 段曲线、前级、预设与实时音效','options-outline')}{row('typography','歌词字体、颜色、对齐与逐字效果','text-outline')}</View><AudioSettings services={services}/><PlaybackSettings services={services}/></>;
       case 'equalizer':return <EqualizerSettings services={services}/>;
       case 'appearance':return <AppearanceOverview services={services} open={open}/>;

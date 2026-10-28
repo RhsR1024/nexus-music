@@ -57,7 +57,12 @@ final class SourceSettingsTests: XCTestCase {
     }
     func enter(_ target:String){
       let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-"+settingsPage).firstMatch
-      XCTAssertTrue(viewport.waitForExistence(timeout:5))
+      let viewportReady=viewport.waitForExistence(timeout:5)
+      if !viewportReady {
+        let screen=XCTAttachment(screenshot:XCUIScreen.main.screenshot());screen.name="Settings navigation viewport failure";screen.lifetime = .keepAlways;add(screen)
+        let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Settings navigation viewport failure accessibility";hierarchy.lifetime = .keepAlways;add(hierarchy)
+      }
+      XCTAssertTrue(viewportReady,"The actual settings viewport must be available before selecting its row")
       let row=app.buttons["settings-open-"+target]
       XCTAssertTrue(row.waitForExistence(timeout:10))
       // Settings preserves each page's scroll position. On returning from a
@@ -692,6 +697,53 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(wyNavigation.waitForExistence(timeout:15));wyNavigation.buttons["关闭"].tap()
     XCTAssertTrue(waitForGone(wyNavigation,timeout:10))
     XCTAssertFalse(app.buttons["暂停"].exists,"Account entry and cancellation must preserve the paused real-audio playback intent")
+  }
+  func testLiveKugouQrLogin() throws {
+    XCUIDevice.shared.orientation = .portrait;defer{XCUIDevice.shared.orientation = .portrait}
+    let app=XCUIApplication();app.launch();app.activate()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){
+      XCTAssertTrue(element.waitForExistence(timeout:15))
+      for _ in 0..<10 {if waitForHittable(element,timeout:0.3){return};app.swipeUp()}
+      XCTAssertTrue(waitForHittable(element,timeout:5))
+    }
+    openSettings(app,page:"accounts")
+    let login=app.buttons["login-music-account-kg"],qr=app.images["kugou-login-qr"]
+    reach(login);image("Real Kugou account entry with public audio library")
+    login.tap();XCTAssertTrue(app.staticTexts["kugou-login-waiting"].waitForExistence(timeout:25))
+    XCTAssertTrue(qr.waitForExistence(timeout:10),"The official PNG must be rendered, not only a loading placeholder")
+    reach(qr)
+    let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-accounts").firstMatch
+    let completeQr=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      let frame=qr.frame,bounds=viewport.frame
+      return frame.minY>=bounds.minY+4 && frame.maxY<=bounds.maxY-4
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[completeQr],timeout:10),.completed,"The complete real QR must fit inside the content viewport above the player")
+    image("Real Kugou official anonymous QR waiting")
+    XCTAssertEqual(qr.frame.width,240,accuracy:1);XCTAssertEqual(qr.frame.height,240,accuracy:1)
+    let cancel=app.buttons["cancel-music-login-kg"]
+    // The stable action row precedes the image; scroll back if needed.
+    for _ in 0..<6 {if waitForHittable(cancel,timeout:0.3){break};app.swipeDown()}
+    XCTAssertTrue(waitForHittable(cancel,timeout:5));cancel.tap()
+    XCTAssertTrue(app.staticTexts["kugou-login-cancelled"].waitForExistence(timeout:10));XCTAssertTrue(waitForGone(qr,timeout:5))
+    reach(login);login.tap();XCTAssertTrue(qr.waitForExistence(timeout:25))
+    XCTAssertTrue(app.staticTexts["kugou-login-expired"].waitForExistence(timeout:135),"A real anonymous QR must expire without creating an account")
+    XCTAssertTrue(waitForGone(qr,timeout:5));reach(login);image("Real Kugou QR expiry clears the image and allows retry")
+    login.tap();XCTAssertTrue(qr.waitForExistence(timeout:25))
+    let back=app.buttons["settings-back"]
+    XCTAssertTrue(waitForHittable(back,timeout:5));back.tap()
+    XCTAssertTrue(waitForGone(qr,timeout:10))
+    openSettings(app,page:"accounts");reach(login)
+    XCTAssertTrue(app.staticTexts["kugou-login-cancelled"].waitForExistence(timeout:10));XCTAssertFalse(qr.exists)
+    image("Real Kugou leaving account page cancels the QR")
+    login.tap();XCTAssertTrue(qr.waitForExistence(timeout:25))
+    XCUIDevice.shared.press(.home);app.activate()
+    XCTAssertTrue(app.staticTexts["kugou-login-cancelled"].waitForExistence(timeout:15));XCTAssertTrue(waitForGone(qr,timeout:5))
+    image("Real Kugou background cancellation clears the QR")
+    app.terminate();app.launch();openSettings(app,page:"accounts");reach(login)
+    XCTAssertFalse(app.buttons["remove-music-account-kg"].exists,"No unscanned, expired or cancelled challenge can create a saved account")
+    XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
+    XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
   func testAccountRecommendationsEntryAndLoginRouting() throws {
     let app=XCUIApplication();app.launch()

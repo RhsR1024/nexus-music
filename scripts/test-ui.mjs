@@ -27,7 +27,7 @@ const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -473,6 +473,7 @@ try {
   if(!liveManagedAttachmentsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveManagedDownloadAttachments');
   if(!liveDownloadDestinationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadDestination');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQWebLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQWebLogin');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveKugouQrLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveKugouQrLogin');
   for(const variant of ['Large','Small'])if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadCover'+variant)))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadCover'+variant);
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.

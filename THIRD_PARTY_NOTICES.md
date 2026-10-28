@@ -8,6 +8,10 @@ The project does not apply a single license to all reference projects or assets.
 
 Upstream NOTICE: Q-music Android, Copyright 2026 Nshpiter. This product is based on LX Music Mobile, https://github.com/lyswhut/lx-music-mobile. LX Music Mobile is Copyright lyswhut and its contributors and is distributed under the Apache License 2.0. Q-music Android retains the upstream license, attribution, project agreement, and disclaimer. Q-music Android is an independent derivative project. It is not an official LX Music release and is not endorsed or supported by the upstream author.
 
+## Kugou QR login protocol
+
+`src/providers/kugouLogin.ts` adapts the official QR request fields and signature contract from Q-music Android commit `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`, `src/core/musicAccount/kugouApi.ts` (Apache 2.0; Nshpiter/LX NOTICE retained above). That module attributes its protocol fields to MakcRe/KuGouMusicApi, Copyright 2023 MakcRe, under MIT, reproduced at `licenses/kugou-api-mit.txt`. NexusMusic supplies its own bounded client, ephemeral nonce, PNG validation, cancellation coordinator and Keychain transaction handling. It imports no Android bridge, dependencies, playlist logic, account credentials or third-party proxy service. Protocol availability is maintained separately from actual account authorization acceptance.
+
 ## QQ request signature
 
 `src/providers/qqSignature.ts` adapts the QQ signature protocol algorithm from LX Music Mobile, reference fork wtfdelphia/lx-music-mobile, commit `6624ab58cbd2f5bda52ab8006912d3c60dc1f847`, file `src/utils/musicSdk/tx/utils/crypto.js`.

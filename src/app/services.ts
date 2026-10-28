@@ -68,6 +68,8 @@ import {MusicAuthFlow} from '../providers/musicAuth.ts';
 import {AccountDailyClient} from '../providers/accountDaily.ts';
 import {AccountFmClient} from '../providers/accountFm.ts';
 import {MusicWebLoginCoordinator} from '../providers/musicWebLogin.ts';
+import {KugouLoginClient} from '../providers/kugouLogin.ts';
+import {KugouLoginCoordinator} from '../providers/kugouLoginCoordinator.ts';
 import {QQAccountProfileClient} from '../providers/qqAccountProfile.ts';
 import {loadNativeMusicAuth} from '../providers/nativeMusicAuth.ts';
 import {NeteaseAccountProfileClient} from '../providers/neteaseAccountProfile.ts';
@@ -97,6 +99,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   await restore('music.accounts.v1','音乐平台账号',()=>musicAccounts.restore());
   const neteaseProfile=new NeteaseAccountProfileClient({http:options.onlineHTTP??requestJSON});
   const qqProfile=new QQAccountProfileClient({http:options.onlineHTTP??requestJSON});
+  const kugouLoginClient=new KugouLoginClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
+  const kugouLogin=new KugouLoginCoordinator({client:kugouLoginClient,accounts:musicAccounts});
   const musicAuth={wy:new MusicAuthFlow<Record<string,unknown>>(),tx:new MusicAuthFlow<Record<string,unknown>>(),kg:new MusicAuthFlow<Record<string,unknown>>()};
   const musicWebLogin=new MusicWebLoginCoordinator({native:loadNativeMusicAuth(),flow:musicAuth.wy,accounts:musicAccounts,profile:neteaseProfile,qqProfile,hash,uuid:Crypto.randomUUID});
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
@@ -215,7 +219,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
-  return { snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;
