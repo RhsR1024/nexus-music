@@ -1,3 +1,7 @@
+## 2026-10-29 艺术家搜索与目录
+
+五固定HEAD复核；本批新增亲读Q-1515固定547ccfe的kg/singer.js及LICENSE并逐字节匹配，沿用已有归属的公开搜索/签名适配。其专辑方法误用singer/song，音枢自行核验singer/album；QQ新版歌曲模块同样以真实响应核验，不移植参考错误、运行时或依赖。其余四项目维持下方既有实现/维护/Android/许可边界，不冒称新增核对其艺术家模块。Apache/LX/lyswhut归属保留；不推断Sollin后端。实际可用性与未验项见[回执](2026-10-29_artist-search-report.md)。
+
 ## 2026-10-29 专辑搜索与详情契约
 
 五固定HEAD核对；Q-1515的kw/kg/mg album.js和LICENSE逐字节匹配，采用公开字段/详情契约，原创HTTPS与严格完整性、媒体映射及元信息。wtf同类职责、悦音歌曲入口、Cy歌单模块及自有Wayferar原边界交叉区分，不把它们冒称完整五平台专辑实现；不复制HTTP回退、静态设备标识、依赖/原生补丁或商业逻辑。Apache/LX/lyswhut归属保留，不推断Sollin后端。来源、真实可用性和维护边界见[回执](2026-10-29_album-search-report.md)。

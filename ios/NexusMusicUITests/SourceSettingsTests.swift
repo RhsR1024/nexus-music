@@ -831,6 +831,40 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
+  func testLiveArtistSearch() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ item:XCUIElement){for _ in 0..<18{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5))}
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
+    let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));let before=progress.value as? String ?? "";XCTAssertTrue(before.contains("/ 3:53"))
+    RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    let searchTab=app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch;XCTAssertTrue(searchTab.waitForExistence(timeout:10));searchTab.tap()
+    app.descendants(matching:.any).matching(identifier:"search-kind-artist").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    let field=app.textFields["搜索艺术家"];XCTAssertTrue(field.waitForExistence(timeout:10));field.tap();for character in "Ed Sheeran"{field.typeText(String(character))};XCTAssertEqual(field.value as? String,"Ed Sheeran");field.typeText("\n")
+    let artist=app.buttons["search-artist-wy-0"];XCTAssertTrue(artist.waitForExistence(timeout:60));image("Real public artist search preserves platform and source summary")
+    artist.tap();let back=app.buttons["返回搜索结果"];XCTAssertTrue(back.waitForExistence(timeout:15));let first=app.otherElements["discovery-track-0"]
+    XCTAssertTrue(first.waitForExistence(timeout:45));XCTAssertTrue(app.staticTexts["artist-search-counts"].exists);XCTAssertTrue(app.staticTexts["artist-detail-counts"].exists);XCTAssertTrue(app.staticTexts["artist-popular-scope"].exists)
+    image("Real artist popular collection retains separate search and detail counts")
+    let firstSong=app.buttons.matching(NSPredicate(format:"label IN %@",["播放Shape of You","选择Shape of You","取消选择Shape of You"])).firstMatch;reach(firstSong);firstSong.press(forDuration:1)
+    let all=app.buttons["discovery-select-all"];reach(all);all.tap();let bar=app.otherElements["discovery-selection-bar"];XCTAssertTrue(bar.label.contains("50 / 50"));image("Real artist selection is scoped to fifty loaded songs")
+    app.buttons["discovery-cancel-selection"].tap();reach(firstSong);firstSong.press(forDuration:1)
+    let second=app.buttons["选择Galway Girl"].firstMatch;reach(second);second.tap()
+    let favorite=app.buttons["discovery-action-收藏"];reach(favorite);favorite.tap();XCTAssertTrue(app.staticTexts["已收藏 2 首"].waitForExistence(timeout:15))
+    for index in 0...1 {let more=app.buttons["discovery-more-\(index)"];reach(more);more.tap();let remove=app.buttons["discovery-action-取消本地收藏"];XCTAssertTrue(remove.waitForExistence(timeout:10));remove.tap();XCTAssertTrue(waitForGone(remove,timeout:10))}
+    image("Real artist batch favorite and explicit cleanup use the shared library")
+    let albums=app.descendants(matching:.any).matching(identifier:"artist-tab-albums").firstMatch;reach(albums);albums.tap();XCTAssertTrue(app.buttons["discovery-item-0"].waitForExistence(timeout:30));RunLoop.current.run(until:Date().addingTimeInterval(3));image("Real artist albums are independent of the popular song collection")
+    reach(back);back.tap();XCTAssertTrue(artist.waitForExistence(timeout:10));reach(artist);artist.press(forDuration:1);XCTAssertTrue(back.waitForExistence(timeout:10));XCTAssertTrue(first.waitForExistence(timeout:30));back.tap()
+    let qq=app.descendants(matching:.any).matching(identifier:"QQ音乐").firstMatch;reach(qq);qq.tap();let qqArtist=app.buttons["search-artist-tx-0"];XCTAssertTrue(qqArtist.waitForExistence(timeout:45));qqArtist.tap();XCTAssertTrue(first.waitForExistence(timeout:45))
+    reach(albums);albums.tap();let album=app.buttons["discovery-item-0"];XCTAssertTrue(album.waitForExistence(timeout:30));reach(album);album.tap();let albumBack=app.buttons["返回艺术家专辑"];XCTAssertTrue(albumBack.waitForExistence(timeout:15));XCTAssertTrue(first.waitForExistence(timeout:45));image("Real public album opens from its artist without losing the parent context")
+    albumBack.tap();XCTAssertTrue(album.waitForExistence(timeout:10));let songs=app.descendants(matching:.any).matching(identifier:"artist-tab-songs").firstMatch;reach(songs);songs.tap();XCTAssertTrue(first.waitForExistence(timeout:30));reach(back);back.tap()
+    let kg=app.descendants(matching:.any).matching(identifier:"酷狗").firstMatch;reach(kg);kg.tap();let kgArtist=app.buttons["search-artist-kg-0"];XCTAssertTrue(kgArtist.waitForExistence(timeout:45));kgArtist.tap();XCTAssertTrue(first.waitForExistence(timeout:45))
+    let intro=app.buttons["展开艺术家简介"];reach(intro);intro.tap();let collapse=app.buttons["收起艺术家简介"];XCTAssertTrue(collapse.waitForExistence(timeout:10));image("Real artist biography expands using its own public profile");collapse.tap();reach(back);back.tap()
+    XCTAssertFalse(app.buttons["暂停"].exists,"Artist browsing and metadata actions must preserve paused real playback")
+  }
   func testLiveAlbumSearch() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

@@ -2,6 +2,10 @@
 
 The project does not apply a single license to all reference projects or assets.
 
+## Public artist catalog
+
+`src/providers/artists.ts` adapts public artist fields/contracts from the already attributed search/signature adapters and Q-1515/LX Music Mobile commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/kg/singer.js` (Apache 2.0; LX/lyswhut attribution retained below). NexusMusic independently validates public HTTPS requests, pagination, identity, metadata and limited popular-song scope. The Kugou album endpoint is independently verified rather than copying the reference's mistaken song endpoint. No reference runtime, dependencies, native patches, device identifiers, credentials or commercial logic are imported. These contracts do not establish Sollin's backend implementation.
+
 ## Public album catalog
 
 `src/providers/albums.ts` adapts public album detail fields/endpoints from Q-1515/LX Music Mobile commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/{kw,kg,mg}/album.js`, and reuses NexusMusic's attributed public search/signature adapters (Apache 2.0; LX/lyswhut attribution below). NexusMusic independently implements HTTPS-only catalog transport, validation, calendar metadata, cancellation and completeness checks. No reference runtime, native patches, static device identifiers, account tokens or commercial logic are imported. Availability is tested separately and does not establish Sollin's API implementation.
