@@ -58,3 +58,6 @@ node scripts/test-audio-probe.mjs
 
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/VisualAssets.swift tests/native/VisualAssetsCLI.swift -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers -o build/tests/native-visual-assets
 build/tests/native-visual-assets
+
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/PublicMVPolicy.swift tests/native/PublicMVPolicyTests.swift -o build/tests/native-public-mv
+build/tests/native-public-mv

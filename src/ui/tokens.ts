@@ -16,6 +16,7 @@ export const typography = {
 } as const satisfies Record<string, TextStyle>;
 
 export const controls = {hit: 44, icon: 23, transport: 24, play: 46} as const;
+export const catalogArtwork = {square:64,videoWidth:96,videoAspect:16/9} as const;
 
 // 4855/4856 @3x: top86pt with a59pt safe area; handle centre110pt.
 export const appearanceSheetLayout = {topGap:27,radius:24,topPadding:2,handleHeight:44,titleGap:3} as const;

@@ -1,3 +1,7 @@
+## 2026-10-29 MV公开目录与浏览边界
+
+五固定HEAD及既有许可/维护/Android边界复核；新增亲读Q-1515固定547ccfe的kw/musicSearch.js前95行，定向检索未发现专用MV模块，不冒称五参考新增MV实现审查。原创VideoProvider复用已有归属的公开搜索/签名适配，真实核验五目录与四官方页面；不复制静态设备标识、HTTP回退、运行时、原生补丁或私人材料，不推断Sollin后端。酷我歌曲时长不冒充MV时长，咪咕旧路由跳首页不采纳为详情。Apache/LX/lyswhut归属保留；见[回执](2026-10-29_mv-search-report.md)。
+
 ## 2026-10-29 艺术家搜索与目录
 
 五固定HEAD复核；本批新增亲读Q-1515固定547ccfe的kg/singer.js及LICENSE并逐字节匹配，沿用已有归属的公开搜索/签名适配。其专辑方法误用singer/song，音枢自行核验singer/album；QQ新版歌曲模块同样以真实响应核验，不移植参考错误、运行时或依赖。其余四项目维持下方既有实现/维护/Android/许可边界，不冒称新增核对其艺术家模块。Apache/LX/lyswhut归属保留；不推断Sollin后端。实际可用性与未验项见[回执](2026-10-29_artist-search-report.md)。

@@ -18,6 +18,13 @@ public final class NexusNativeModule: Module {
     View(NexusMaterialView.self) {
       Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }
     }
+    View(NexusPublicMVView.self) {
+      ViewName("PublicMV")
+      Events("onState")
+      Prop("source") { (view: NexusPublicMVView, value: String) in view.source = value }
+      Prop("active") { (view: NexusPublicMVView, value: Bool) in view.active = value }
+      OnViewDidUpdateProps { (view: NexusPublicMVView) in view.applyProps() }
+    }
     View(NexusVinylPivotView.self) {
       ViewName("VinylPivot")
     }

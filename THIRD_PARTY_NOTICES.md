@@ -1,3 +1,7 @@
+## Public MV catalogs
+
+`src/providers/videos.ts` reuses NexusMusic's attributed Q-1515/LX public search and signing adapters (fixed commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`; Apache 2.0 and LX/lyswhut attribution retained below). Video-specific response fields and official page routes were independently checked against real public responses. NexusMusic supplies its own bounded HTTPS transport, validation, cancellation and ephemeral iOS WebKit viewer. No reference runtime, native patches, static device identifiers, account credentials or commercial logic is imported. This does not establish Sollin's backend implementation.
+
 # Third-party references and adapted components
 
 The project does not apply a single license to all reference projects or assets.

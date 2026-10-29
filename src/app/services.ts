@@ -1,4 +1,5 @@
 import {ArtistProvider} from '../providers/artists.ts';
+import {VideoProvider} from '../providers/videos.ts';
 import {AlbumProvider} from '../providers/albums.ts';
 import {PlaylistSearchProvider,type PlaylistSearchItem} from '../providers/playlistSearch.ts';
 import {QQAccountTransfer} from '../providers/qqAccountTransfer.ts';
@@ -207,6 +208,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const search = new SearchCoordinator(online);
   const artists=new ArtistProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
   const artistSearch=new PagedSearchCoordinator(artists,item=>item.id);
+  const videos=new VideoProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
+  const videoSearch=new PagedSearchCoordinator(videos,item=>item.id);
   const albums=new AlbumProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
   const albumSearch=new PagedSearchCoordinator(albums,item=>item.id);
   const playlistSearch=new PagedSearchCoordinator<PlaylistSearchItem>(new PlaylistSearchProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),deviceId:Crypto.randomUUID}),item=>item.id);
@@ -241,7 +244,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
-  return { artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

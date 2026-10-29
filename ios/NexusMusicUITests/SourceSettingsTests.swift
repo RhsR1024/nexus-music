@@ -831,6 +831,51 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
+  func testLiveMVSearch() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ item:XCUIElement){
+      for _ in 0..<18{
+        if waitForHittable(item,timeout:0.2){return}
+        let keyboard=app.keyboards.firstMatch
+        let upper:CGFloat=160,lower=min(app.frame.height-240,keyboard.exists ? keyboard.frame.minY-app.frame.minY-80 : app.frame.height-240)
+        let down=item.exists && item.frame.midY-app.frame.minY<(upper+lower)/2
+        let origin=app.coordinate(withNormalizedOffset:.zero)
+        let from=origin.withOffset(CGVector(dx:app.frame.width/2,dy:down ? upper:lower)),to=origin.withOffset(CGVector(dx:app.frame.width/2,dy:down ? lower:upper))
+        from.press(forDuration:0.05,thenDragTo:to)
+      }
+      if !waitForHittable(item,timeout:5){image("Real MV navigation target not reachable")}
+      XCTAssertTrue(waitForHittable(item,timeout:5))
+    }
+    func loaded(){XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout:30));let status=app.staticTexts["mv-page-status"],ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label == %@","页面已载入"),object:app.staticTexts["mv-page-status"]);let result=XCTWaiter.wait(for:[ready],timeout:45);if result != .completed{image("Real MV document readiness failure")};XCTAssertEqual(result,.completed,"Actual MV state: \(status.label)");let token=app.staticTexts["mv-title"].label.components(separatedBy:" ").first ?? "";let body=app.webViews.firstMatch.descendants(matching:.any).matching(NSPredicate(format:"label CONTAINS[c] %@",token)).firstMatch;XCTAssertTrue(body.waitForExistence(timeout:20),"The official document must contain its own public MV title")}
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"library-local").firstMatch.tap()
+    let recent=app.buttons["最近播放"];reach(recent);recent.tap()
+    let realSong=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ AND NOT (label BEGINSWITH %@)","Shape of You","Shape of You -")).firstMatch;reach(realSong);realSong.tap()
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10))
+    let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));let before=progress.value as? String ?? "";XCTAssertTrue(before.contains("/ 3:53"))
+    RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["收起播放页"].firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"search-kind-mv").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"QQ音乐").firstMatch.tap()
+    let field=app.textFields["搜索MV"];XCTAssertTrue(field.waitForExistence(timeout:10));field.tap();for character in "Ed Sheeran"{field.typeText(String(character))};XCTAssertEqual(field.value as? String,"Ed Sheeran");field.typeText("\n")
+    let first=app.buttons["search-mv-tx-0"];XCTAssertTrue(first.waitForExistence(timeout:45));RunLoop.current.run(until:Date().addingTimeInterval(3));image("Real public MV search keeps source performer duration and widescreen artwork")
+    first.tap();let back=app.buttons["mv-back"];XCTAssertTrue(back.waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["mv-source"].label.contains("QQ音乐"));XCTAssertTrue(app.staticTexts["mv-source"].label.contains("Ed Sheeran"));loaded();image("Real QQ MV official page is separate from the music queue")
+    app.buttons["mv-refresh"].tap();loaded();image("Real MV official page refresh preserves its source and title")
+    back.tap();XCTAssertTrue(first.waitForExistence(timeout:10));reach(first);first.press(forDuration:1);XCTAssertTrue(back.waitForExistence(timeout:10));loaded();back.tap()
+    for (platform,label) in [("wy","网易云"),("kg","酷狗"),("kw","酷我")] {
+      let selector=app.descendants(matching:.any).matching(identifier:label).firstMatch;reach(selector);selector.tap()
+      let result=app.buttons["search-mv-\(platform)-0"];XCTAssertTrue(result.waitForExistence(timeout:45));reach(result);result.tap();XCTAssertTrue(back.waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["mv-source"].label.contains(label));loaded();image("Real \(platform) MV opens its own official detail page");back.tap()
+    }
+    let migu=app.descendants(matching:.any).matching(identifier:"咪咕").firstMatch;reach(migu);migu.tap();let mg=app.buttons["search-mv-mg-0"];XCTAssertTrue(mg.waitForExistence(timeout:45));reach(mg);mg.tap();XCTAssertTrue(back.waitForExistence(timeout:10))
+    let unavailable=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","暂不支持"),object:app.staticTexts["mv-page-status"]);XCTAssertEqual(XCTWaiter.wait(for:[unavailable],timeout:10),.completed);XCTAssertFalse(app.webViews.firstMatch.exists);XCTAssertFalse(app.buttons["mv-refresh"].exists);image("Real Migu MV metadata preserves its unavailable official page boundary");back.tap()
+    let qq=app.descendants(matching:.any).matching(identifier:"QQ音乐").firstMatch;reach(qq);qq.tap();XCTAssertTrue(first.waitForExistence(timeout:45));let more=app.buttons["mv-search-more-tx"];reach(more);more.tap();let next=app.buttons["search-mv-tx-30"];XCTAssertTrue(next.waitForExistence(timeout:45));reach(next);image("Real MV search appends a second public result page")
+    let clear=app.buttons["search-clear"];reach(clear);clear.tap();reach(field);field.tap();for c in "Taylor Swift"{field.typeText(String(c))}
+    let artistType=app.descendants(matching:.any).matching(identifier:"search-kind-artist").firstMatch;reach(artistType);artistType.tap();let artistField=app.textFields["搜索艺术家"];XCTAssertEqual(artistField.value as? String,"Taylor Swift");XCTAssertTrue(app.buttons["search-artist-tx-0"].waitForExistence(timeout:45));image("Real pending search draft survives a result type change")
+    reach(clear);clear.tap();artistField.tap();for c in "Ed Sheeran"{artistField.typeText(String(c))};let netease=app.descendants(matching:.any).matching(identifier:"网易云").firstMatch;reach(netease);netease.tap();XCTAssertEqual(artistField.value as? String,"Ed Sheeran");XCTAssertTrue(app.buttons["search-artist-wy-0"].waitForExistence(timeout:45));image("Real pending search draft survives a platform change")
+    reach(player);player.tap();XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));XCTAssertFalse(app.buttons["暂停"].exists);let paused=progress.value as? String;RunLoop.current.run(until:Date().addingTimeInterval(3));XCTAssertEqual(progress.value as? String,paused);app.buttons["收起播放页"].firstMatch.tap()
+  }
   func testLiveArtistSearch() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

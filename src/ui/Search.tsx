@@ -1,7 +1,10 @@
+import type {VideoItem} from '../providers/videos.ts';
+import type {BrowseItem} from '../providers/discovery.ts';
+import {MVDetail,videoDuration} from './MVDetail.tsx';
 import type {ArtistItem} from '../providers/artists.ts';
 import {Discovery,type DiscoveryTarget} from './Discovery.tsx';
 import {Cover} from './Cover.tsx';
-import {controls,space} from './tokens.ts';
+import {controls,space,catalogArtwork,radius} from './tokens.ts';
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useEffect, useState, useSyncExternalStore } from 'react';
@@ -19,16 +22,20 @@ import {selectionAll,selectionByListOrder,selectionByTapOrder,selectionCount,sel
 import {Ionicons} from '@expo/vector-icons';
 export const platformNames: Readonly<Record<OnlinePlatform,string>> = {wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕'};
 
+const kindNames={song:'歌曲',playlist:'歌单',album:'专辑',artist:'艺术家',mv:'MV'} as const;
+type SearchKind=keyof typeof kindNames;
 interface GroupSelection { platform: OnlinePlatform; model: SelectionModel }
 
 export function Search({ services }: { services: Services }) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const songState = useSyncExternalStore(services.search.subscribe,services.search.getSnapshot);
   const playlistState=useSyncExternalStore(services.playlistSearch.subscribe,services.playlistSearch.getSnapshot);
-  const [kind,setKind]=useState<'song'|'playlist'|'album'|'artist'>('song'),[collection,setCollection]=useState<DiscoveryTarget|null>(null);
+  const [kind,setKind]=useState<SearchKind>('song'),[collection,setCollection]=useState<DiscoveryTarget|null>(null),[video,setVideo]=useState<{platform:OnlinePlatform;item:VideoItem}|null>(null);
   const albumState=useSyncExternalStore(services.albumSearch.subscribe,services.albumSearch.getSnapshot);
   const artistState=useSyncExternalStore(services.artistSearch.subscribe,services.artistSearch.getSnapshot);
-  const catalogState=kind==='artist'?artistState:kind==='album'?albumState:playlistState;
+  const videoState=useSyncExternalStore(services.videoSearch.subscribe,services.videoSearch.getSnapshot);
+  const catalogState=kind==='mv'?videoState:kind==='artist'?artistState:kind==='album'?albumState:playlistState;
+  const catalogCoordinator=kind==='mv'?services.videoSearch:kind==='artist'?services.artistSearch:kind==='album'?services.albumSearch:services.playlistSearch;
   const state=kind==='song'?songState:catalogState;
   const history = useSyncExternalStore(services.searchHistory.subscribe,services.searchHistory.getSnapshot);
   const [query,setQuery] = useState(state.query), [platform,setPlatform] = useState<OnlinePlatform|'all'>('all');
@@ -38,19 +45,19 @@ export function Search({ services }: { services: Services }) {
   // platform group; count shows 已选 N / loaded total.
   const [selection,setSelection]=useState<GroupSelection|null>(null),[picking,setPicking]=useState(false),[busy,setBusy]=useState(false);
   const toast=useToast();
-  useEffect(()=>{setSelection(null);setPicking(false);setMenuTrack(null);setCollection(null);},[state.query,platform,kind]);
+  useEffect(()=>{setSelection(null);setPicking(false);setMenuTrack(null);setCollection(null);setVideo(null);},[state.query,platform,kind]);
 
   const draft=normalizeSearchQuery(query);
   const suggestions=draft&&draft!==state.query?suggestSearchQueries(history,draft):[];
 
-  const searchFor=(type:'song'|'playlist'|'album'|'artist',value:string,selected:OnlinePlatform|'all')=>{
-    if(type!=='artist')void services.artistSearch.search('',selected);
-    if(type==='artist'){void services.search.search('',selected);void services.playlistSearch.search('',selected);void services.albumSearch.search('',selected);void services.artistSearch.search(value,selected);return;}
-    if(type!=='album')void services.albumSearch.search('',selected);
-    if(type==='album'){void services.search.search('',selected);void services.playlistSearch.search('',selected);void services.albumSearch.search(value,selected);}
-    else if(type==='song'){void services.playlistSearch.search('',selected);void services.search.search(value,selected);}
-    else{void services.search.search('',selected);void services.playlistSearch.search(value,selected);}
+  const searchFor=(type:SearchKind,value:string,selected:OnlinePlatform|'all')=>{
+    const catalogs={song:services.search,playlist:services.playlistSearch,album:services.albumSearch,artist:services.artistSearch,mv:services.videoSearch};
+    for(const [name,catalog] of Object.entries(catalogs))void catalog.search(name===type?value:'',selected);
   };
+  function openCatalog(platform:OnlinePlatform,item:BrowseItem){
+    if(kind==='mv'){if(platform!=='mg')services.playback.controller.pause();setVideo({platform,item:item as VideoItem});}
+    else setCollection({platform,collection:item,...(kind==='album'?{kind:'album' as const}:kind==='artist'?{kind:'artist' as const}:{})});
+  }
   const submit=(value=query,selected:OnlinePlatform|'all'=platform,record=true,type=kind)=>{
     const cleaned=normalizeSearchQuery(value);
     Keyboard.dismiss();setQuery(cleaned);
@@ -88,9 +95,9 @@ export function Search({ services }: { services: Services }) {
 
   return <View>
     <Text style={styles.title}>寻找下一首喜欢的歌</Text>
-    <Text style={styles.caption}>歌曲、歌单、专辑与艺术家按平台分别搜索、展示。导入并启用LX音源后可解析播放。</Text>
+    <Text style={styles.caption}>歌曲、歌单、专辑、艺术家与MV按平台分别搜索、展示。导入并启用LX音源后可解析歌曲，MV打开平台页面。</Text>
     <View style={styles.inputRow}>
-      <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':kind==='album'?'搜索专辑':kind==='artist'?'搜索艺术家':'搜索歌单'} placeholder={kind==='song'?'歌曲、歌手':kind==='album'?'专辑关键词':kind==='artist'?'艺术家关键词':'歌单关键词'} placeholderTextColor="#768191" autoCorrect={false} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
+      <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':`搜索${kindNames[kind]}`} placeholder={kind==='song'?'歌曲、歌手':`${kindNames[kind]}关键词`} placeholderTextColor="#768191" autoCorrect={false} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
       {!!query&&<Pressable testID="search-clear" accessibilityRole="button" accessibilityLabel="清除搜索输入" onPress={clearQuery} style={styles.clear}><Ionicons name="close-circle" size={22} color={theme.palette.secondary}/></Pressable>}
     </View>
     {!!suggestions.length&&<View style={styles.section}>
@@ -110,10 +117,10 @@ export function Search({ services }: { services: Services }) {
           <Ionicons name="time-outline" size={18} color={theme.palette.secondary}/>
           <Text style={styles.historyText} numberOfLines={1}>{item}</Text>
         </Pressable>)}
-      </>:<Text style={styles.caption}>{kind==='song'?'输入歌曲或歌手开始搜索。':`输入${kind==='album'?'专辑':kind==='artist'?'艺术家':'歌单'}关键词开始搜索。`}</Text>}
+      </>:<Text style={styles.caption}>{kind==='song'?'输入歌曲或歌手开始搜索。':`输入${kindNames[kind]}关键词开始搜索。`}</Text>}
     </View>}
-    <View style={styles.row}>{(['song','playlist','album','artist']as const).map(type=><Pressable key={type} testID={`search-kind-${type}`} accessibilityRole="radio" accessibilityState={{selected:kind===type}} onPress={()=>{if(type===kind)return;setKind(type);if(state.query)submit(state.query,platform,false,type);else{void services.search.search('',platform);void services.playlistSearch.search('',platform);void services.albumSearch.search('',platform);void services.artistSearch.search('',platform);}}} style={[styles.chip,kind===type&&styles.selected]}><Text style={styles.text}>{type==='song'?'歌曲':type==='album'?'专辑':type==='artist'?'艺术家':'歌单'}</Text></Pressable>)}</View>
-    <View style={styles.row}>{(['all',...platforms] as const).map(item => <Pressable key={item} accessibilityRole="radio" accessibilityState={{selected:platform===item}} onPress={() => {setPlatform(item);if(state.query)submit(state.query,item,false);}} style={[styles.chip,platform===item&&styles.selected]}><Text style={styles.text}>{item==='all'?'聚合':platformNames[item]}</Text></Pressable>)}</View>
+    <View style={styles.row}>{(['song','playlist','album','artist','mv']as const).map(type=><Pressable key={type} testID={`search-kind-${type}`} accessibilityRole="radio" accessibilityState={{selected:kind===type}} onPress={()=>{if(type===kind)return;setKind(type);submit(query,platform,false,type);}} style={[styles.chip,kind===type&&styles.selected]}><Text style={styles.text}>{kindNames[type]}</Text></Pressable>)}</View>
+    <View style={styles.row}>{(['all',...platforms] as const).map(item => <Pressable key={item} accessibilityRole="radio" accessibilityState={{selected:platform===item}} onPress={() => {setPlatform(item);submit(query,item,false);}} style={[styles.chip,platform===item&&styles.selected]}><Text style={styles.text}>{item==='all'?'聚合':platformNames[item]}</Text></Pressable>)}</View>
     <Pressable testID="run-online-search" accessibilityRole="button" onPress={run} style={styles.button}><Text style={styles.text}>搜索</Text></Pressable>
     {kind==='song'&&songState.groups.map(group => {const model=selection?.platform===group.platform?selection.model:selectionNone;const hasItems=group.items.length>0;return <View key={group.platform} style={styles.group}>
       <Text style={styles.heading}>{platformNames[group.platform]}　<Text style={styles.caption}>{group.items.length} 首已载入{group.total!==undefined?` / ${group.total}`:''}</Text></Text>
@@ -145,16 +152,21 @@ export function Search({ services }: { services: Services }) {
       {!model.active&&hasItems&&group.hasMore&&!group.error&&<Pressable testID={`search-load-more-${group.platform}`} accessibilityRole="button" disabled={group.loading} onPress={()=>{void services.search.more(group.platform);}} style={styles.button}><Text style={styles.text}>{group.loading?'正在加载…':'加载更多'}</Text></Pressable>}
     </View>;})}
     {kind!=='song'&&catalogState.groups.map(group=><View key={group.platform} style={styles.group}>
-      <Text style={styles.heading}>{platformNames[group.platform]} <Text style={styles.caption}>{group.items.length} 个{kind==='album'?'专辑':kind==='artist'?'艺术家':'歌单'}已载入{group.total!==undefined?` / ${group.total}`:''}</Text></Text>
-      {group.items.map((item,index)=><Pressable key={item.id} testID={`search-${kind}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`打开${kind==='album'?'专辑':kind==='artist'?'艺术家':'歌单'}：${item.title}，${platformNames[group.platform]}${item.author?`，作者${item.author}`:''}${kind==='artist'?`${(item as ArtistItem).songCount!==undefined?`，${(item as ArtistItem).songCount}首歌曲`:''}${(item as ArtistItem).albumCount!==undefined?`，${(item as ArtistItem).albumCount}张专辑`:''}`:item.count!==undefined?`，${item.count}首`:''}`} onPress={()=>setCollection({platform:group.platform,collection:item,...(kind==='album'?{kind:'album' as const}:kind==='artist'?{kind:'artist' as const}:{})})} onLongPress={()=>setCollection({platform:group.platform,collection:item,...(kind==='album'?{kind:'album' as const}:kind==='artist'?{kind:'artist' as const}:{})})} style={styles.catalogRow}>
-        <Cover services={services} url={item.artwork} size={64}/><View style={{flex:1}}><Text style={styles.track} numberOfLines={2}>{item.title}</Text><Text style={styles.caption}>{platformNames[group.platform]}{item.author?` · ${item.author}`:''}{kind==='artist'?`${(item as ArtistItem).songCount!==undefined?` · ${(item as ArtistItem).songCount} 首歌曲`:''}${(item as ArtistItem).albumCount!==undefined?` · ${(item as ArtistItem).albumCount} 张专辑`:''}`:item.count!==undefined?` · ${item.count} 首`:''}</Text><Text style={styles.link}>打开{kind==='album'?'专辑':kind==='artist'?'艺术家':'歌单'}</Text></View>
-      </Pressable>)}
-      {group.loading&&<View testID={`${kind}-search-loading-${group.platform}`} style={styles.status}><ActivityIndicator color={theme.palette.accent}/><Text style={styles.caption}>{group.items.length?'正在加载更多…':`正在搜索${kind==='album'?'专辑':kind==='artist'?'艺术家':'歌单'}…`}</Text></View>}
-      {!!group.error&&<View testID={`${kind}-search-error-${group.platform}`} style={styles.status}><Text style={styles.error}>{group.error}</Text><Pressable testID={`${kind}-search-retry-${group.platform}`} accessibilityRole="button" disabled={group.loading} onPress={()=>{void (kind==='artist'?services.artistSearch:kind==='album'?services.albumSearch:services.playlistSearch).retry(group.platform);}} style={styles.button}><Text style={styles.text}>重试</Text></Pressable></View>}
+      <Text style={styles.heading}>{platformNames[group.platform]} <Text style={styles.caption}>{group.items.length} 个{kindNames[kind]}已载入{group.total!==undefined?` / ${group.total}`:''}</Text></Text>
+      {group.items.map((item,index)=>{
+        const artist=kind==='artist'?item as ArtistItem:undefined,mv=kind==='mv'?item as VideoItem:undefined;
+        const summary=artist?`${artist.songCount!==undefined?` · ${artist.songCount} 首歌曲`:''}${artist.albumCount!==undefined?` · ${artist.albumCount} 张专辑`:''}`:mv?mv.durationSeconds!==undefined?` · ${videoDuration(mv.durationSeconds)}`:'':item.count!==undefined?` · ${item.count} 首`:'';
+        return <Pressable key={item.id} testID={`search-${kind}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`打开${kindNames[kind]}：${item.title}，${platformNames[group.platform]}${item.author?`，${mv?'艺术家':'作者'}${item.author}`:''}${summary}`} onPress={()=>openCatalog(group.platform,item)} onLongPress={()=>openCatalog(group.platform,item)} style={styles.catalogRow}>
+          <Cover services={services} url={item.artwork} size={mv?catalogArtwork.videoWidth:catalogArtwork.square} aspectRatio={mv?catalogArtwork.videoAspect:1} radius={mv?Math.min(theme.appearance.coverRadius,radius.md):undefined}/><View style={{flex:1}}><Text style={styles.track} numberOfLines={2}>{item.title}</Text><Text style={styles.caption}>{platformNames[group.platform]}{item.author?` · ${item.author}`:''}{summary}</Text><Text style={styles.link}>打开{kindNames[kind]}</Text></View>
+        </Pressable>;
+      })}
+      {group.loading&&<View testID={`${kind}-search-loading-${group.platform}`} style={styles.status}><ActivityIndicator color={theme.palette.accent}/><Text style={styles.caption}>{group.items.length?'正在加载更多…':`正在搜索${kindNames[kind]}…`}</Text></View>}
+      {!!group.error&&<View testID={`${kind}-search-error-${group.platform}`} style={styles.status}><Text style={styles.error}>{group.error}</Text><Pressable testID={`${kind}-search-retry-${group.platform}`} accessibilityRole="button" disabled={group.loading} onPress={()=>{void catalogCoordinator.retry(group.platform);}} style={styles.button}><Text style={styles.text}>重试</Text></Pressable></View>}
       {!group.loading&&!group.error&&!group.items.length&&<Text testID={`${kind}-search-empty-${group.platform}`} style={styles.caption}>未找到结果，请更换关键词或平台</Text>}
       {!group.loading&&!group.error&&group.items.length>0&&!group.hasMore&&<Text testID={`${kind}-search-end-${group.platform}`} style={styles.end}>没有更多结果了</Text>}
-      {!group.loading&&!group.error&&group.hasMore&&<Pressable testID={`${kind}-search-more-${group.platform}`} accessibilityRole="button" onPress={()=>{void (kind==='artist'?services.artistSearch:kind==='album'?services.albumSearch:services.playlistSearch).more(group.platform);}} style={styles.button}><Text style={styles.text}>加载更多</Text></Pressable>}
+      {!group.loading&&!group.error&&group.hasMore&&<Pressable testID={`${kind}-search-more-${group.platform}`} accessibilityRole="button" onPress={()=>{void catalogCoordinator.more(group.platform);}} style={styles.button}><Text style={styles.text}>加载更多</Text></Pressable>}
     </View>)}
+    {video&&<MVDetail services={services} platform={video.platform} video={video.item} onClose={()=>setVideo(null)}/>}
     {collection&&<Discovery key={`${collection.platform}:${collection.collection.id}`} services={services} initialCollection={collection} onClose={()=>setCollection(null)}/>}
     <TrackActions services={services} track={menuTrack} prefix="search" onClose={()=>setMenuTrack(null)} extras/>
     <Toast message={toast.message} onDismiss={toast.clear}/>
