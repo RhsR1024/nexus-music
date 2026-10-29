@@ -1,3 +1,7 @@
+## 2026-10-29 公开热搜与输入联想
+
+五固定HEAD复核；Q-1515十个hotSearch/tipSearch模块全文与kg/util.js签名段定向阅读，连同LICENSE共12文件匹配固定对象。Apache/LX归属保留，原创匿名HTTPS、结构/去重、取消协调与正式UI；不复制静态标识、依赖或原生补丁。网易热搜独立核验替代官方路由、QQ采用新HotkeyService，酷狗生成临时mid，咪咕旧联想跳首页不采纳。wtf旧咪咕路由、Cy腾讯与悦音/Wayferar既有职责边界区分，不冒称全项目新模块审查；未推断Sollin接口。9项真实能力与未验矩阵见[回执](2026-10-29_search-assistance-report.md)。
+
 ## 2026-10-29 网易视频目录与来源边界
 
 五固定HEAD已复核；采用已许可MIT镜像32531f1331fe9db7af8e7def33b4702e59275bfe的mv_sublist.js只读请求参数，Binaryify归属/许可保留。另看固定f4ed2c7的NeteasePotPlayer公开字段线索，该仓库未声明许可，不采用其实现/依赖/资产；只记录协议字段事实，不将它或MIT接口称为Sollin实现。共用保护/UI为音枢原创，授权结构仍未实服务验收，见[回执](2026-10-29_netease-account-mvs-report.md)。

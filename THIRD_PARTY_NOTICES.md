@@ -1,3 +1,7 @@
+## Public search keywords
+
+`src/providers/searchAssistance.ts` uses public keyword field/signing contracts checked against Q-1515/LX commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/{wy,tx,kw,kg,mg}/{hotSearch,tipSearch}.js` and `kg/util.js` (`signatureParams`). Apache 2.0/LX/lyswhut attribution below is retained. NexusMusic independently implements HTTPS transport, strict parsing, ephemeral anonymous identifiers, cancellation, UI and source isolation. NetEase hot search is independently verified on an alternative official route; the retired Migu suggestion route is not adopted. No reference runtime, static device identifiers, account tokens, dependencies or native patches are copied. These endpoints do not establish Sollin's implementation.
+
 ## Public MV catalogs
 
 `src/providers/videos.ts` reuses NexusMusic's attributed Q-1515/LX public search and signing adapters (fixed commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`; Apache 2.0 and LX/lyswhut attribution retained below). Video-specific response fields and official page routes were independently checked against real public responses. NexusMusic supplies its own bounded HTTPS transport, validation, cancellation and ephemeral iOS WebKit viewer. No reference runtime, native patches, static device identifiers, account credentials or commercial logic is imported. This does not establish Sollin's backend implementation.

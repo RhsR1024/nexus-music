@@ -38,6 +38,8 @@ export function Search({ services }: { services: Services }) {
   const catalogCoordinator=kind==='mv'?services.videoSearch:kind==='artist'?services.artistSearch:kind==='album'?services.albumSearch:services.playlistSearch;
   const state=kind==='song'?songState:catalogState;
   const history = useSyncExternalStore(services.searchHistory.subscribe,services.searchHistory.getSnapshot);
+  const assistance=useSyncExternalStore(services.searchAssistance.subscribe,services.searchAssistance.getSnapshot);
+  const [editing,setEditing]=useState(false);
   const [query,setQuery] = useState(state.query), [platform,setPlatform] = useState<OnlinePlatform|'all'>('all');
 
   const [menuTrack,setMenuTrack]=useState<Track|null>(null);
@@ -49,6 +51,14 @@ export function Search({ services }: { services: Services }) {
 
   const draft=normalizeSearchQuery(query);
   const suggestions=draft&&draft!==state.query?suggestSearchQueries(history,draft):[];
+  const emptyResults=!!state.query&&state.groups.length>0&&state.groups.every(group=>!group.loading&&!group.error&&group.items.length===0);
+  const assistanceMode=!draft&&!history.length?'hot':draft&&(editing||draft!==state.query||emptyResults)?'suggest':null;
+  useEffect(()=>{
+    services.searchAssistance.clear();
+    if(!assistanceMode)return;
+    const timer=setTimeout(()=>{void services.searchAssistance.load(assistanceMode,draft,platform);},assistanceMode==='hot'?0:300);
+    return()=>{clearTimeout(timer);services.searchAssistance.clear();};
+  },[services,assistanceMode,draft,platform,kind]);
 
   const searchFor=(type:SearchKind,value:string,selected:OnlinePlatform|'all')=>{
     const catalogs={song:services.search,playlist:services.playlistSearch,album:services.albumSearch,artist:services.artistSearch,mv:services.videoSearch};
@@ -60,12 +70,12 @@ export function Search({ services }: { services: Services }) {
   }
   const submit=(value=query,selected:OnlinePlatform|'all'=platform,record=true,type=kind)=>{
     const cleaned=normalizeSearchQuery(value);
-    Keyboard.dismiss();setQuery(cleaned);
+    Keyboard.dismiss();setEditing(false);setQuery(cleaned);
     if(cleaned&&record)void services.searchHistory.record(cleaned).catch(()=>{});
     searchFor(type,cleaned,selected);
   };
   const run=()=>submit();
-  const change=(value:string)=>{setQuery(value);if(!normalizeSearchQuery(value)&&state.query)searchFor(kind,'',platform);};
+  const change=(value:string)=>{setEditing(true);setQuery(value);if(!normalizeSearchQuery(value)&&state.query)searchFor(kind,'',platform);};
   const clearQuery=()=>{setQuery('');Keyboard.dismiss();searchFor(kind,'',platform);};
 
   async function runBatch(action:BatchAction,group:SearchGroup){
@@ -93,13 +103,21 @@ export function Search({ services }: { services: Services }) {
     }else if(action==='playlist'){setPicking(true);}
   }
 
+  const assistanceSections=assistance.groups.map(group=><View key={group.platform} style={styles.section}>
+      <Text accessibilityRole="header" style={styles.heading}>{platformNames[group.platform]}{assistance.mode==='hot'?'热搜词':'搜索建议'}</Text>
+      {group.loading&&<ActivityIndicator accessibilityLabel="加载关键词" color={theme.palette.accent}/>}
+      {group.error?<><Text style={styles.caption}>{group.error}</Text>{group.retryable&&<Pressable testID={`search-assistance-retry-${group.platform}`} accessibilityRole="button" accessibilityLabel={`重试${platformNames[group.platform]}关键词`} onPress={()=>{void services.searchAssistance.retry(group.platform);}} style={styles.sectionAction}><Text style={styles.link}>重试</Text></Pressable>}</>:!group.loading&&!group.items.length?<Text style={styles.caption}>{assistance.mode==='hot'?'暂无热搜词':'暂无搜索建议'}</Text>:null}
+      {group.items.map((word,index)=><Pressable key={word} testID={`search-public-${assistance.mode}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`${platformNames[group.platform]}${assistance.mode==='hot'?'热搜词':'搜索建议'}：${word}`} onPress={()=>submit(word)} style={styles.historyRow}><Text accessible={false} style={styles.caption}>{assistance.mode==='hot'?`${index+1}.`:'·'}</Text><Text style={styles.historyText}>{word}</Text></Pressable>)}
+    </View>);
+
   return <View>
     <Text style={styles.title}>寻找下一首喜欢的歌</Text>
-    <Text style={styles.caption}>歌曲、歌单、专辑、艺术家与MV按平台分别搜索、展示。导入并启用LX音源后可解析歌曲，MV打开平台页面。</Text>
+    <Text style={styles.caption}>歌曲、歌单、专辑、艺术家与MV按平台分别搜索、展示。键入时向所选平台获取关键词建议。导入并启用LX音源后可解析歌曲，MV打开平台页面。</Text>
     <View style={styles.inputRow}>
-      <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':`搜索${kindNames[kind]}`} placeholder={kind==='song'?'歌曲、歌手':`${kindNames[kind]}关键词`} placeholderTextColor="#768191" autoCorrect={false} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
+      <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':`搜索${kindNames[kind]}`} placeholder={kind==='song'?'歌曲、歌手':`${kindNames[kind]}关键词`} placeholderTextColor="#768191" autoCorrect={false} onFocus={()=>setEditing(true)} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
       {!!query&&<Pressable testID="search-clear" accessibilityRole="button" accessibilityLabel="清除搜索输入" onPress={clearQuery} style={styles.clear}><Ionicons name="close-circle" size={22} color={theme.palette.secondary}/></Pressable>}
     </View>
+    {assistance.mode==='suggest'&&assistanceSections}
     {!!suggestions.length&&<View style={styles.section}>
       <Text style={styles.heading}>搜索建议</Text>
       {suggestions.map((item,index)=><Pressable key={item} testID={`search-suggestion-${index}`} accessibilityRole="button" accessibilityLabel={`搜索建议：${item}`} onPress={()=>submit(item)} style={styles.historyRow}>
@@ -122,6 +140,7 @@ export function Search({ services }: { services: Services }) {
     <View style={styles.row}>{(['song','playlist','album','artist','mv']as const).map(type=><Pressable key={type} testID={`search-kind-${type}`} accessibilityRole="radio" accessibilityState={{selected:kind===type}} onPress={()=>{if(type===kind)return;setKind(type);submit(query,platform,false,type);}} style={[styles.chip,kind===type&&styles.selected]}><Text style={styles.text}>{kindNames[type]}</Text></Pressable>)}</View>
     <View style={styles.row}>{(['all',...platforms] as const).map(item => <Pressable key={item} accessibilityRole="radio" accessibilityState={{selected:platform===item}} onPress={() => {setPlatform(item);submit(query,item,false);}} style={[styles.chip,platform===item&&styles.selected]}><Text style={styles.text}>{item==='all'?'聚合':platformNames[item]}</Text></Pressable>)}</View>
     <Pressable testID="run-online-search" accessibilityRole="button" onPress={run} style={styles.button}><Text style={styles.text}>搜索</Text></Pressable>
+    {assistance.mode==='hot'&&assistanceSections}
     {kind==='song'&&songState.groups.map(group => {const model=selection?.platform===group.platform?selection.model:selectionNone;const hasItems=group.items.length>0;return <View key={group.platform} style={styles.group}>
       <Text style={styles.heading}>{platformNames[group.platform]}　<Text style={styles.caption}>{group.items.length} 首已载入{group.total!==undefined?` / ${group.total}`:''}</Text></Text>
       {group.items.map((track,index) => {const id=String(index);const selected=selectionHas(model,id);return <View key={`${index}-${trackKey(track.origin)}`} style={styles.trackRow}>
