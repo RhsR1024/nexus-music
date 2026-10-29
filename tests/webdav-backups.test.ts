@@ -59,7 +59,7 @@ test('cloud list and preview distinguish legacy format-only backup from digest-v
 });
 test('cloud preview rejects changed digest, unknown versions, invalid JSON and oversized entries without invoking restore',async()=>{
   const f=fixture();await f.configure();await f.backups.upload();const generated=f.backups.getSnapshot().files[0]!;f.files.set(generated.path,f.options.snapshot()+' ');await assert.rejects(f.backups.preview(generated));
-  for(const body of ['{invalid',JSON.stringify({...decodeBackup(f.options.snapshot()),version:2})]){f.files.set(backupDirectory+'legacy.json',body);await f.backups.list();await assert.rejects(f.backups.preview(f.backups.getSnapshot().files.find(file=>file.name==='legacy.json')!));}
+  for(const body of ['{invalid',JSON.stringify({...decodeBackup(f.options.snapshot()),version:99})]){f.files.set(backupDirectory+'legacy.json',body);await f.backups.list();await assert.rejects(f.backups.preview(f.backups.getSnapshot().files.find(file=>file.name==='legacy.json')!));}
   f.files.set(backupDirectory+'huge.json','x'.repeat(32*1024*1024+1));await f.backups.list();const hits=f.calls.length;await assert.rejects(f.backups.preview(f.backups.getSnapshot().files.find(file=>file.name==='huge.json')!));assert.equal(f.calls.length,hits);assert.equal(f.restoreCalls.length,0);
 });
 test('cloud canceled read and changed credentials discard late results and do not pretend to undo accepted uploads',async()=>{
@@ -91,3 +91,5 @@ test('backup decoder drops unknown root fields and secret metadata before cloud 
 test('asynchronous backup snapshots cannot write after cancellation while waiting for queued local commits',async()=>{
   const f=fixture();await f.configure();const entered=deferred<void>(),wait=deferred<void>();(f.options as unknown as {snapshot:()=>Promise<string>}).snapshot=async()=>{entered.resolve();await wait.promise;return encodeBackup(emptyLibrary,date);};const pending=f.backups.upload();await entered.promise;f.backups.cancel();wait.resolve();await assert.rejects(pending);assert.equal(f.files.size,0);assert.equal(f.calls.length,0);
 });
+
+test('cloud v2 catalog backup previews and restores only after explicit confirmation',async()=>{const f=fixture(),favorite={kind:'album' as const,platform:'tx' as const,id:'public_album',title:'Public album',savedId:'public-entry',savedAt:0};f.options.snapshot=()=>encodeBackup({...emptyLibrary,catalogFavorites:[favorite]},date);await f.configure();await f.backups.upload();await f.backups.preview(f.backups.getSnapshot().files[0]!);assert.equal(f.backups.getSnapshot().preview!.backup.version,2);assert.deepEqual(f.backups.getSnapshot().preview!.backup.library.catalogFavorites,[favorite]);assert.equal(f.restoreCalls.length,0);await f.backups.restorePreview();assert.equal(f.restoreCalls.length,1);assert.deepEqual(f.restoreCalls[0]!.library.catalogFavorites,[favorite]);});

@@ -4,11 +4,12 @@ import type { Repository } from './repository.ts';
 import {originalSignature,lyricSignature} from '../domain/matching.ts';
 import {cleanTrack} from './cleanTrack.ts';
 import {MutationQueue} from './mutations.ts';
+import {catalogKey,cleanCatalogFavorite,cleanCatalogTarget,type CatalogFavorite,type CatalogTarget} from './catalogFavorites.ts';
 export interface LocalEntry {id:string;track:Track}
 export interface LocalPlaylist {id:string;title:string;entries:readonly LocalEntry[];createdAt:number;updatedAt:number;description?:string;coverUrl?:string}
 export interface TrackMatch {original:Track;target:Track;method:'automatic'|'manual';updatedAt:number}
 export interface LyricChoice {original:Track;mode:'original'|'automatic'|'manual';target?:Track;updatedAt:number}
-export interface LibraryState {version:1;favorites:readonly Track[];history:readonly {track:Track;playedAt:number}[];playlists:readonly LocalPlaylist[];matches?:readonly TrackMatch[];lyricChoices?:readonly LyricChoice[]}
+export interface LibraryState {version:1;favorites:readonly Track[];history:readonly {track:Track;playedAt:number}[];playlists:readonly LocalPlaylist[];matches?:readonly TrackMatch[];lyricChoices?:readonly LyricChoice[];catalogFavorites?:readonly CatalogFavorite[]}
 export const emptyLibrary:LibraryState={version:1,favorites:[],history:[],playlists:[]};
 export function validateLibrary(value:unknown):LibraryState {
   if(!value||typeof value!=='object')throw new Error('音乐库格式无效');
@@ -41,6 +42,12 @@ export function validateLibrary(value:unknown):LibraryState {
       if(choice.mode==='automatic'&&!['online','imported'].includes(choice.original.origin.kind))throw new Error('私人曲目不能自动搜索歌词');
     }
   }
+  if(library.catalogFavorites!==undefined){
+    if(!Array.isArray(library.catalogFavorites)||library.catalogFavorites.length>5000)throw Error('目录收藏数量无效');
+    const values=library.catalogFavorites.map(cleanCatalogFavorite),keys=new Set(values.map(catalogKey)),savedIds=new Set(values.map(value=>value.savedId));
+    if(keys.size!==values.length||savedIds.size!==values.length)throw Error('目录收藏身份重复');
+    return{...library,catalogFavorites:values};
+  }
   return library;
 }
 export class LibraryStore {
@@ -52,6 +59,7 @@ export class LibraryStore {
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
   async restore(){const value=await this.repository.get<unknown>('library.v1');if(value){try{this.value=validateLibrary(value);}catch{throw new InvalidRecordError();}}for(const listener of this.listeners)listener();}
   settled(){return this.tail;}
+  reload(){const next=this.mutations.run(()=>this.restore());this.tail=next.catch(()=>{});return next;}
   private change(run:(current:LibraryState)=>LibraryState,valid?:()=>boolean) {
     const next=this.mutations.run(async()=>{
       const previous=this.value,value=validateLibrary(run(previous));
@@ -65,6 +73,17 @@ export class LibraryStore {
     this.tail=next.catch(()=>{});return next;
   }
   isFavorite(track:Track){const key=trackKey(track.origin);return this.value.favorites.some(item=>trackKey(item.origin)===key);}
+  catalogFavorite(target:Pick<CatalogTarget,'kind'|'platform'|'id'>){const key=catalogKey(target);return this.value.catalogFavorites?.find(item=>catalogKey(item)===key);}
+  addCatalogFavorite(input:CatalogTarget){const target=cleanCatalogTarget(input),key=catalogKey(target);return this.change(current=>{
+    if(current.catalogFavorites?.some(item=>catalogKey(item)===key))return current;
+    return{...current,catalogFavorites:[{...target,savedId:this.uuid(),savedAt:this.now()},...(current.catalogFavorites??[])]};
+  });}
+  removeCatalogFavorite(target:Pick<CatalogTarget,'kind'|'platform'|'id'>,expectedSavedId:string){const key=catalogKey(target);return this.change(current=>{
+    const saved=current.catalogFavorites?.find(item=>catalogKey(item)===key);
+    if(!saved)return current;
+    if(saved.savedId!==expectedSavedId)throw Error('收藏已更改，请重新确认');
+    return{...current,catalogFavorites:current.catalogFavorites!.filter(item=>catalogKey(item)!==key)};
+  });}
   matchFor(track:Track){const signature=originalSignature(track);return this.value.matches?.find(value=>originalSignature(value.original)===signature);}
   lyricChoiceFor(track:Track){const signature=lyricSignature(track);return this.value.lyricChoices?.find(value=>lyricSignature(value.original)===signature);}
   setLyricChoice(original:Track,mode:LyricChoice['mode'],target?:Track,signal?:AbortSignal){

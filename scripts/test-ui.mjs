@@ -27,7 +27,7 @@ const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence|AccountPlaylistEntry|QQPlaylistEntry|KugouPlaylistEntry|KugouQrPhoto(?:Denied|Save)|QQComputerPairing|PlaylistSearch|AlbumSearch|ArtistSearch|MVSearch)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence|AccountPlaylistEntry|QQPlaylistEntry|KugouPlaylistEntry|KugouQrPhoto(?:Denied|Save)|QQComputerPairing|PlaylistSearch|AlbumSearch|ArtistSearch|MVSearch|CatalogFavorites)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -463,6 +463,7 @@ try {
     '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveArtistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveArtistSearch');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveCatalogFavorites')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveCatalogFavorites');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMVSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMVSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveAlbumSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveAlbumSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePlaylistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLivePlaylistSearch');

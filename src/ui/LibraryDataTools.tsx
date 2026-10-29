@@ -27,7 +27,7 @@ export function LibraryDataTools({services}:{services:Services}){
     const file=new File(result.assets[0]!.uri);
     try{
       if(file.size>32*1024*1024)throw new Error('too large');const backup=decodeBackup(await file.text());
-      Alert.alert('恢复音枢备份',`包含 ${backup.library.playlists.length} 个歌单、${backup.library.favorites.length} 首收藏和 ${backup.library.history.length} 条历史。${backup.settings?'包含播放/歌词/EQ和外观设置，将一并恢复。':'此旧备份无设置，保留当前设置。'}确认后替换当前音乐库和本机播放统计，播放队列不变；音频/图片/字体文件和连接凭据留在本机。`,[
+      Alert.alert('恢复音枢备份',`包含 ${backup.library.playlists.length} 个歌单、${backup.library.favorites.length} 首收藏、${backup.library.catalogFavorites?.length??0} 项目录收藏和 ${backup.library.history.length} 条历史。${backup.settings?'包含播放/歌词/EQ和外观设置，将一并恢复。':'此旧备份无设置，保留当前设置。'}确认后替换当前音乐库和本机播放统计，播放队列不变；音频/图片/字体文件和连接凭据留在本机。`,[
         {text:'取消',style:'cancel'},{text:'替换音乐库',style:'destructive',onPress:()=>{void perform(async()=>{await services.restoreBackup(backup.library,backup.statistics!,backup.settings);setMessage('音乐库与播放统计已恢复');});}},
       ]);
     }finally{if(file.exists)file.delete();}

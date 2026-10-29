@@ -1,8 +1,9 @@
 import {emptyLibrary,validateLibrary,type LibraryState,type LocalPlaylist,type TrackMatch,type LyricChoice} from './library.ts';
 import {cleanTrack} from './cleanTrack.ts';
 import {trackKey,validateTrack,type Track} from '../domain/track.ts';
+import {catalogKey,cleanCatalogFavorite,type CatalogFavorite} from './catalogFavorites.ts';
 
-export type SyncKind='favorite'|'playlist'|'match'|'lyricChoice';
+export type SyncKind='favorite'|'playlist'|'match'|'lyricChoice'|'catalogFavorite';
 export interface SyncRecord {id:string;kind:SyncKind;deleted:boolean;payload?:unknown}
 export interface SyncState {format:'nexus-music-sync';version:1;accountId:string;directory:string;deviceId:string;revision:number;records:readonly SyncRecord[]}
 export interface SyncConflict {id:string;kind:SyncKind;local?:SyncRecord;remote?:SyncRecord}
@@ -14,7 +15,7 @@ export class SyncError extends Error {
     super({account:'同步连接或目录已改变，请重新预览',format:'同步数据格式或强版本信息无效',conflict:'云端版本已改变，请重新预览并核对冲突',network:'同步连接失败，请检查服务端配置',cancelled:'同步已取消',localChanged:'本机音乐库已改变，请重新预览',choices:'请为每项冲突选择本机或云端版本',busy:'当前同步操作尚未结束',capacity:'同步数据超过容量限制，请保留原库并检查数据'}[kind]);this.kind=kind;
   }
 }
-const kinds:readonly SyncKind[]=['favorite','playlist','match','lyricChoice'];
+const kinds:readonly SyncKind[]=['favorite','playlist','match','lyricChoice','catalogFavorite'];
 const maxRecords=20000,maxEntries=100000;
 export const syncLimit=32*1024*1024;
 export function canonical(value:unknown):string {
@@ -32,6 +33,7 @@ function cleanRecord(input:SyncRecord):SyncRecord {
   let payload:unknown,id:string;
   try{
     switch(input.kind){
+      case 'catalogFavorite':{const value=cleanCatalogFavorite(input.payload);payload=value;id=catalogKey(value);break;}
       case 'favorite':{const value=input.payload as Track;validateTrack(value);payload=cleanTrack(value);id=trackKey(value.origin);break;}
       case 'playlist':{
         const value=input.payload as LocalPlaylist;validateLibrary({...emptyLibrary,playlists:[value]});
@@ -53,6 +55,7 @@ export function validateSyncState(input:unknown):SyncState {
   for(const item of records){if(ids.has(item.id))throw new SyncError('format');ids.add(item.id);if(item.kind==='playlist'&&!item.deleted)entries+=(item.payload as LocalPlaylist).entries.length;}
   if(entries>maxEntries)throw new SyncError('capacity');
   if(records.filter(item=>item.kind==='lyricChoice'&&!item.deleted).length>1000)throw new SyncError('capacity');
+  if(records.filter(item=>item.kind==='catalogFavorite'&&!item.deleted).length>5000)throw new SyncError('capacity');
   return clone({format:'nexus-music-sync',version:1,accountId:value.accountId,directory:value.directory,deviceId:value.deviceId,revision:value.revision,records:records.sort(order)} satisfies SyncState);
 }
 function utf8Length(text:string):number {
@@ -72,6 +75,7 @@ export function syncRecords(library:LibraryState):SyncRecord[]{
     ...library.playlists.map(value=>({id:identifier('playlist',value.id),kind:'playlist' as const,deleted:false,payload:value})),
     ...(library.matches??[]).map(value=>({id:identifier('match',trackKey(value.original.origin)),kind:'match' as const,deleted:false,payload:value})),
     ...(library.lyricChoices??[]).map(value=>({id:identifier('lyricChoice',trackKey(value.original.origin)),kind:'lyricChoice' as const,deleted:false,payload:value})),
+    ...(library.catalogFavorites??[]).map(value=>({id:identifier('catalogFavorite',catalogKey(value)),kind:'catalogFavorite' as const,deleted:false,payload:value})),
   ].map(cleanRecord).sort(order);
 }
 export function buildSyncState(library:LibraryState,deviceId:string,accountId:string,directory:string,previous?:SyncState):SyncState {
@@ -123,10 +127,12 @@ export function libraryFromSync(state:SyncState,current:LibraryState):LibrarySta
     return [...result,...records.values()];
   };
   const library:LibraryState={version:1,favorites:of('favorite',current.favorites,value=>trackKey(value.origin)),playlists:of('playlist',current.playlists,value=>value.id),history:current.history,matches:of('match',current.matches??[],value=>trackKey(value.original.origin)),lyricChoices:of('lyricChoice',current.lyricChoices??[],value=>trackKey(value.original.origin))};
+  if(current.catalogFavorites!==undefined||active.some(item=>item.kind==='catalogFavorite'))library.catalogFavorites=of('catalogFavorite',current.catalogFavorites??[],catalogKey);
   return validateLibrary(library);
 }
 export function describeSyncRecord(record:SyncRecord|undefined):string {
   if(!record||record.deleted)return '已删除';
+  if(record.kind==='catalogFavorite'){const value=record.payload as CatalogFavorite;return `${value.title} · ${{playlist:'收藏歌单',album:'收藏专辑',mv:'收藏MV'}[value.kind]} · ${value.platform}`;}
   if(record.kind==='playlist'){const value=record.payload as LocalPlaylist;return `${value.title} · ${value.entries.length} 首`;}
   const value=record.kind==='favorite'?record.payload as Track:(record.payload as TrackMatch|LyricChoice).original;
   if(record.kind==='match'){const match=record.payload as TrackMatch;return `${value.title} → ${match.target.title} · ${match.target.artist}`;}

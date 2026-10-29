@@ -1,3 +1,4 @@
+import {CatalogFavoriteButton} from './CatalogFavoriteButton.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator,Linking,Pressable,View,type ViewProps} from 'react-native';
 import {requireNativeView} from 'expo';
@@ -34,6 +35,7 @@ export function MVDetail({services,platform,video,onClose}:{services:Services;pl
  return <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}><View style={{flex:1,paddingTop:insets.top+space.sm,paddingBottom:insets.bottom,paddingLeft:insets.left+space.lg,paddingRight:insets.right+space.lg,gap:space.sm,backgroundColor:theme.palette.background[0]}}>
   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space.sm}}><Pressable testID="mv-back" accessibilityRole="button" accessibilityLabel="返回MV搜索结果" onPress={onClose} style={button}><Text style={{color:theme.palette.accent}}>返回搜索结果</Text></Pressable>{platform!=='mg'&&<Pressable testID="mv-refresh" accessibilityRole="button" accessibilityLabel="刷新MV页面" onPress={()=>setRevision(value=>value+1)} style={button}><Text style={{color:theme.palette.accent}}>刷新</Text></Pressable>}</View>
   <Text testID="mv-title" numberOfLines={2} style={{...typography.title,color:theme.palette.text}}>{video.title}</Text><Text testID="mv-source" style={{color:theme.palette.secondary}}>{names[platform]}{video.author?` · ${video.author}`:''}{video.durationSeconds!==undefined?` · ${videoDuration(video.durationSeconds)}`:''}</Text>
+  <CatalogFavoriteButton services={services} target={{...video,kind:'mv',platform}}/>
   <Page key={`${platform}:${video.id}:${revision}`} services={services} platform={platform} video={video}/>
  </View></Modal>;
 }

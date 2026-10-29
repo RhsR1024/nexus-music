@@ -1,3 +1,7 @@
+## 2026-10-29 本机目录采纳边界
+
+五参考HEAD再次核对，与下文固定提交相同。本批catalogFavorites模型、存储与UI自行实现，复用既有provider及已记录许可/维护边界，没有新增参考代码、依赖、原生补丁、商业业务或令牌。MV本机保存为音枢能力，不归因于Sollin；参考接口仍不作为Sollin实现证据。见[回执](2026-10-29_catalog-favorites-report.md)。
+
 ## 2026-10-29 MV公开目录与浏览边界
 
 五固定HEAD及既有许可/维护/Android边界复核；新增亲读Q-1515固定547ccfe的kw/musicSearch.js前95行，定向检索未发现专用MV模块，不冒称五参考新增MV实现审查。原创VideoProvider复用已有归属的公开搜索/签名适配，真实核验五目录与四官方页面；不复制静态设备标识、HTTP回退、运行时、原生补丁或私人材料，不推断Sollin后端。酷我歌曲时长不冒充MV时长，咪咕旧路由跳首页不采纳为详情。Apache/LX/lyswhut归属保留；见[回执](2026-10-29_mv-search-report.md)。

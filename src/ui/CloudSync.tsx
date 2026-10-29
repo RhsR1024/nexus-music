@@ -21,7 +21,7 @@ export function CloudSync({services}:{services:Services}){
   async function perform(action:()=>Promise<void>){setMessage('');try{await action();}catch(error){setMessage(error instanceof SyncError?error.message:'同步未确认完成，请重新预览并核对数据');}}
   const button=(label:string,onPress:()=>void,disabled=false,id?:string)=><Pressable accessibilityRole="button" testID={id} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={{padding:12,minHeight:44,borderRadius:14,backgroundColor:p.selected,opacity:disabled?.4:1}}><Text style={{color:p.accent}}>{label}</Text></Pressable>;
   const plan=state.preview?.plan,conflicts=plan?.conflicts??[],ready=!!plan&&conflicts.every(value=>choices[value.id]);
-  function confirm(){if(!ready)return;Alert.alert('确认同步音乐库？','将按预览合并收藏、歌单、音频匹配和歌词选择；冲突按所选版本处理。历史、统计、队列与凭据保留本机。',[{text:'取消',style:'cancel'},{text:'确认同步两端',onPress:()=>{void perform(()=>store.commit(choices));}}]);}
+  function confirm(){if(!ready)return;Alert.alert('确认同步音乐库？','将按预览合并歌曲收藏、目录收藏、歌单、音频匹配和歌词选择；冲突按所选版本处理。历史、统计、队列与凭据保留本机。',[{text:'取消',style:'cancel'},{text:'确认同步两端',onPress:()=>{void perform(()=>store.commit(choices));}}]);}
   const version=(record:SyncRecord|undefined)=>record&&!record.deleted?record:undefined;
   const playlistDetails=details?.kind==='playlist'?details.payload as LocalPlaylist:undefined;
   return <View style={{marginVertical:10}}>{button('WebDAV多设备同步',show,false,'cloud-sync-open')}
@@ -39,7 +39,7 @@ export function CloudSync({services}:{services:Services}){
           {plan&&<View testID="cloud-sync-summary" style={{gap:8,padding:12,borderWidth:1,borderColor:p.border,borderRadius:14}}><Text style={{color:p.text}}>待确认合并 · {conflicts.length} 项冲突</Text><Text style={{color:p.secondary}}>无冲突记录 {plan.records.filter(value=>!value.deleted).length} · 删除标记 {plan.records.filter(value=>value.deleted).length}</Text>{button('确认当前合并方案',confirm,busy||!saved||!ready,'cloud-sync-commit')}</View>}
         </View>}
         renderItem={({item,index})=><View style={{gap:10,padding:14,borderWidth:1,borderColor:p.border,borderRadius:14}}>
-          <Text style={{color:p.text,fontWeight:'700'}}>冲突 {index+1} · {item.kind==='playlist'?'歌单':item.kind==='favorite'?'收藏':item.kind==='match'?'音频匹配':'歌词选择'}</Text>
+          <Text style={{color:p.text,fontWeight:'700'}}>冲突 {index+1} · {item.kind==='catalogFavorite'?'目录收藏':item.kind==='playlist'?'歌单':item.kind==='favorite'?'收藏':item.kind==='match'?'音频匹配':'歌词选择'}</Text>
           <Text style={{color:p.text}}>本机：{describeSyncRecord(item.local)}</Text>{version(item.local)&&button('预览本机版本',()=>setDetails(item.local),busy)}
           <Text style={{color:p.text}}>云端：{describeSyncRecord(item.remote)}</Text>{version(item.remote)&&button('预览云端版本',()=>setDetails(item.remote),busy)}
           <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{button(`${choices[item.id]==='local'?'● ':''}采用本机版本`,()=>setChoices(value=>({...value,[item.id]:'local'})),busy,`cloud-sync-local-${index}`)}{button(`${choices[item.id]==='remote'?'● ':''}采用云端版本`,()=>setChoices(value=>({...value,[item.id]:'remote'})),busy,`cloud-sync-remote-${index}`)}</View>
