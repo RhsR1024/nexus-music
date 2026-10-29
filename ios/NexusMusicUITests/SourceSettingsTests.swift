@@ -646,11 +646,12 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testLiveAccountPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"wy") }
   func testLiveAccountAlbumEntry() throws { try liveAccountPlaylistEntry(provider:"wy",albums:true) }
+  func testLiveAccountMVEntry() throws { try liveAccountPlaylistEntry(provider:"wy",mvs:true) }
   func testLiveQQPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"tx") }
   func testLiveKugouPlaylistEntry() throws { try liveAccountPlaylistEntry(provider:"kg") }
   func testLiveKugouQrPhotoDenied() throws { try liveAccountPlaylistEntry(provider:"kg",photoMode:"deny") }
   func testLiveKugouQrPhotoSave() throws { try liveAccountPlaylistEntry(provider:"kg",photoMode:"allow") }
-  private func liveAccountPlaylistEntry(provider:String,photoMode:String?=nil,albums:Bool=false) throws {
+  private func liveAccountPlaylistEntry(provider:String,photoMode:String?=nil,albums:Bool=false,mvs:Bool=false) throws {
     let qq=provider=="tx",kg=provider=="kg"
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
@@ -679,9 +680,9 @@ final class SourceSettingsTests: XCTestCase {
     RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
     app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
     openSettings(app,page:"accounts")
-    let suffix=provider=="wy" ? "":"-"+provider,platform=qq ? "QQ":kg ? "Kugou":albums ? "NetEase album":"NetEase"
-    let login=app.buttons[albums ? "account-albums-login":"account-playlists-login"+suffix],required=app.staticTexts[albums ? "account-albums-login-required":"account-playlists-login-required"+suffix]
-    let load=app.buttons[albums ? "account-albums-load":"account-playlists-load"+suffix]
+    let suffix=provider=="wy" ? "":"-"+provider,platform=qq ? "QQ":kg ? "Kugou":mvs ? "NetEase MV":albums ? "NetEase album":"NetEase"
+    let prefix=mvs ? "account-mvs":albums ? "account-albums":"account-playlists"+suffix
+    let login=app.buttons[prefix+"-login"],required=app.staticTexts[prefix+"-login-required"],load=app.buttons[prefix+"-load"]
     reach(login);XCTAssertTrue(required.exists);XCTAssertFalse(load.exists);image("Real \(platform) playlist entry without a saved account")
     login.tap()
     if kg {

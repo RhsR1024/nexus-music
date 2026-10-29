@@ -1,3 +1,7 @@
+## 2026-10-29 网易视频目录与来源边界
+
+五固定HEAD已复核；采用已许可MIT镜像32531f1331fe9db7af8e7def33b4702e59275bfe的mv_sublist.js只读请求参数，Binaryify归属/许可保留。另看固定f4ed2c7的NeteasePotPlayer公开字段线索，该仓库未声明许可，不采用其实现/依赖/资产；只记录协议字段事实，不将它或MIT接口称为Sollin实现。共用保护/UI为音枢原创，授权结构仍未实服务验收，见[回执](2026-10-29_netease-account-mvs-report.md)。
+
 ## 2026-10-29 网易远端收藏专辑只读协议
 
 五固定HEAD/既有许可与维护边界复核，本批定向检索没有把它们虚称为远端专辑协议来源。额外亲读公开镜像IcyBlue17/NeteaseCloudMusicApiVercel固定32531f1331fe9db7af8e7def33b4702e59275bfe的module/album_sublist.js及LICENSE，MIT / Binaryify 2013-2022，许可和NOTICE保留。仅采用官方只读地址与分页字段，自写账号/取消/完整性/界面，不运行服务器、不采代理/凭据/依赖，也不推断Sollin后端；实际授权结构和服务仍需验收。见[来源与结果](2026-10-29_netease-account-albums-report.md)。

@@ -73,6 +73,7 @@ import {MusicAuthFlow} from '../providers/musicAuth.ts';
 import {AccountDailyClient} from '../providers/accountDaily.ts';
 import {AccountPlaylists} from '../providers/accountPlaylists.ts';
 import {AccountAlbums} from '../providers/accountAlbums.ts';
+import {AccountMVs} from '../providers/accountMVs.ts';
 import {QQPlaylists} from '../providers/qqPlaylists.ts';
 import {KugouPlaylists} from '../providers/kugouPlaylists.ts';
 import {KugouQrPhoto} from '../providers/kugouQrPhoto.ts';
@@ -130,6 +131,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const kugouQrPhoto=new KugouQrPhoto({login:kugouLogin,native:loginQrPhotoNative,uuid:Crypto.randomUUID});
   const accountPlaylists=new AccountPlaylists({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile,library,qq:new QQPlaylists({http:options.onlineHTTP??requestJSON,profile:qqProfile}),kugou:new KugouPlaylists({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value)})});
   const accountAlbums=new AccountAlbums({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile});
+  const accountMVs=new AccountMVs({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile});
   const accountDaily=new AccountDailyClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,kugou:new KugouDailyClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value)}),qq:qqDailyClient});
   const accountFm=new AccountFmClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
   musicAccounts.subscribe(()=>{accountDaily.clear();accountFm.clear();});
@@ -246,7 +248,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
-  return { accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { accountMVs, accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;
