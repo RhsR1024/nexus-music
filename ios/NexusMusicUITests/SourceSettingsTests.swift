@@ -4177,6 +4177,14 @@ final class SourceSettingsTests: XCTestCase {
     let removePhoto=app.buttons["visual-remove-photo"];reveal(removePhoto);removePhoto.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:10)
     app.terminate();app.launch();openSettings(app,page:"background");reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Persisted visual image settings and fallback";screenshot.lifetime = .keepAlways;add(screenshot)
+    // Content scrolling above must never dismiss this surface; the real
+    // handle must still own its separate downward dismissal gesture.
+    let handle=app.buttons["background-sheet-close"]
+    XCTAssertTrue(waitForHittable(handle,timeout:10))
+    let start=handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5))
+    start.press(forDuration:0.05,thenDragTo:start.withOffset(CGVector(dx:0,dy:150)))
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"theme-background-sheet").firstMatch.waitForNonExistence(timeout:10),"Only the handle drag should dismiss the background sheet")
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
   }
   // Explicitly selected local-only live validation. Keep all imported sources.
   func testLiveSourceCatalog() throws {

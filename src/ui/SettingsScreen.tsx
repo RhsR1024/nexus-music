@@ -5,7 +5,7 @@ import {LinearGradient} from 'expo-linear-gradient';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {AppearanceSheetModal,SheetModal} from './AdaptiveModal.tsx';
+import {AppearanceSheetHandle,AppearanceSheetModal,SheetModal} from './AdaptiveModal.tsx';
 import {appearanceSheetLayout,settingsInk,settingsSheet} from './tokens.ts';
 import {AppearanceSettings,BackgroundThemeActions,type AppearanceSection} from './AppearanceSettings.tsx';
 import {AppearanceOverview} from './AppearanceOverview.tsx';
@@ -139,7 +139,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:sheetDark?p.background[0]:settingsSheet.lightGradient[0],paddingHorizontal:appearanceSheet.section==='background'?16:22,paddingTop:appearanceSheet.section==='background'?appearanceSheetLayout.topPadding:18}}>
         {appearanceSheet.section==='background'&&<>
           {sheetDark?<LinearGradient testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" colors={[p.background[0],p.background[1],p.background[2]]} start={{x:0,y:0}} end={{x:0.55,y:1}} style={{position:'absolute',top:0,right:0,bottom:0,left:0}}/>:<View testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" style={{position:'absolute',top:0,right:0,bottom:0,left:0}}><Image source={require('../../assets/appearance-sheet-light.png')} resizeMode="stretch" style={{width:'100%',height:'100%'}}/></View>}
-          <Pressable testID="background-sheet-close" accessibilityRole="button" accessibilityLabel={titles.background} onPress={closeSheet} style={{width:44,height:44,alignSelf:'center',alignItems:'center',justifyContent:'center'}}><View style={{width:32,height:4,borderRadius:2,backgroundColor:p.secondary+'66'}}/></Pressable>
+          <AppearanceSheetHandle><Pressable testID="background-sheet-close" accessibilityRole="button" accessibilityLabel={titles.background} onPress={closeSheet} style={{width:44,height:44,alignSelf:'center',alignItems:'center',justifyContent:'center'}}><View style={{width:32,height:4,borderRadius:2,backgroundColor:p.secondary+'66'}}/></Pressable></AppearanceSheetHandle>
         </>}
         {appearanceSheet.section!=='background'&&sheetHeader}
         <ScrollView ref={node=>{if(appearanceSheet.section==='background')appearanceScroll.current=node;}} key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={appearanceSheet.section==='background'?event=>{appearanceOffset.current=event.nativeEvent.contentOffset.y;}:undefined} scrollEventThrottle={appearanceSheet.section==='background'?32:undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='background'&&sheetHeader}{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} accentFieldRef={appearanceSheet.section==='background'?accentField:undefined} onStyleSaved={()=>{
