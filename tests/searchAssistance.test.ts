@@ -26,16 +26,31 @@ test('QQ, Kuwo and Kugou parse keyword data rather than result links',async()=>{
  assert.deepEqual(await provider({status:1,errcode:0,data:{list:[{keywords:[{keyword:'Public Word'},{keyword:'Advertisement',jumpurl:'https://example.com'}]}]}}).read('kg','hot','',signal()),['Public Word']);
  await assert.rejects(provider({status:1,errcode:1001,data:[]}).read('kg','suggest','x',signal()));
 });
-test('Migu hot words exclude promotional deep links and retired suggestions never fetch a homepage',async()=>{
+test('Migu hot words exclude promotional deep links',async()=>{
  assert.deepEqual(await provider({code:'000000',data:{hotwords:[{hotwordList:[{word:'Song',resourceType:'song',id:'123'},{word:'Ad',resourceType:'song',id:'124',url:'mgmusic://advertisement'},{word:'No identity',resourceType:'song'}]}]}}).read('mg','hot','',signal()),['Song']);
- const p=new SearchAssistanceProvider({http:async()=>{assert.fail('Retired route must not be requested');},md5:async()=>'',deviceId:()=>''});
- await assert.rejects(p.read('mg','suggest','x',signal()),AssistanceUnavailableError);
+
 });
 test('all public requests omit account credentials; Kugou identity is per-request and cancellation wins',async()=>{
  const requests:{url:string;headers:Readonly<Record<string,string>>|undefined}[]=[];
  const p=new SearchAssistanceProvider({http:async(url,r)=>{assert.equal(r.credentials,'omit');assert.equal(r.headers?.Cookie,undefined);requests.push({url,headers:r.headers});return {status:1,data:{list:[]}};},md5:async(v)=>v==='nonce'?'a'.repeat(32):'b'.repeat(32),deviceId:()=> 'nonce',now:()=>1000});
  await p.read('kg','hot','',signal());assert.equal(requests[0]!.headers?.mid,'a'.repeat(32));assert.equal(requests[0]!.headers?.clienttime,'1');
  const aborted=new AbortController();aborted.abort();await assert.rejects(p.read('kg','hot','',aborted.signal));assert.equal(requests.length,1);
+});
+const miguSong=(id:string,name='Public Love')=>({songId:id,copyrightId:'copy-'+id,name,singers:[{name:'Public Artist'}]});
+test('Migu matching suggestions use only anonymous public metadata, bound words and never fetch the retired homepage',async()=>{
+ const calls:string[]=[];
+ const p=new SearchAssistanceProvider({http:async(url,r)=>{calls.push(url);assert.equal(r.credentials,'omit');assert.equal(r.headers?.Cookie,undefined);const u=new URL(url);assert.equal(u.hostname,'jadeite.migu.cn');assert.equal(u.pathname,'/music_search/v3/search/searchAll');assert.equal(u.searchParams.get('pageSize'),'5');assert.equal(u.searchParams.get('text'),'love');return{code:'000000',songResultData:{totalCount:12,resultList:[Array.from({length:7},(_,i)=>miguSong(String(i),'Love '+i))]}};},md5:async()=> 'a'.repeat(32),deviceId:()=> 'ephemeral'});
+ assert.deepEqual(await p.read('mg','suggest','love',signal()),Array.from({length:5},(_,i)=>'Love '+i+' - Public Artist'));assert.equal(calls.length,1);
+});
+test('Migu matching suggestions distinguish a true zero count from missing or inconsistent metadata',async()=>{
+ assert.deepEqual(await provider({code:'000000',songResultData:{totalCount:0,resultList:[]}}).read('mg','suggest','none',signal()),[]);
+ for(const value of [{code:'000000'},{code:'000000',songResultData:{totalCount:4,resultList:[]}},{code:'000000',songResultData:{totalCount:0,resultList:[miguSong('1')]}},{code:'000000',songResultData:{totalCount:1.5,resultList:[]}}])await assert.rejects(provider(value).read('mg','suggest','bad',signal()));
+ await assert.rejects(provider({code:'000000',songResultData:{totalCount:1,resultList:[miguSong('1','')]}}).read('mg','suggest','bad',signal()));
+});
+test('a cancelled Migu metadata read rejects even if its transport returns late',async()=>{
+ let finish:(v:unknown)=>void=()=>{};let started:()=>void=()=>{};const ready=new Promise<void>(r=>{started=r;});
+ const p=new SearchAssistanceProvider({http:async()=>new Promise(resolve=>{finish=resolve;started();}),md5:async()=> 'a'.repeat(32),deviceId:()=> 'ephemeral'}),controller=new AbortController();
+ const pending=p.read('mg','suggest','love',controller.signal);await ready;controller.abort();finish({code:'000000',songResultData:{totalCount:1,resultList:[miguSong('1')]}});await assert.rejects(pending,/取消/);
 });
 test('late assistance cannot replace a new query, mode or cleared screen',async()=>{
  const waiting:((s:readonly string[])=>void)[]=[];

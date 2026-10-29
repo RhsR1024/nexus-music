@@ -1,3 +1,7 @@
+## 2026-10-30 咪咕匹配建议适配
+
+五固定HEAD复核不变；本批仅组合自有OnlineProvider的既有匿名公开歌曲协议，未引入第三方新实现/依赖/原生补丁。源词为真实元数据标题/艺术家、页面明确匹配来源，旧咪咕联想跳首页仍不采用；原Apache/LX及五参考维护/Android边界不变，不推断Sollin后端，不声称专用官方联想服务已验。实际请求、两项真实UI与未验矩阵见[回执](2026-10-30_migu-matching-report.md)。
+
 ## 2026-10-29 公开热搜与输入联想
 
 五固定HEAD复核；Q-1515十个hotSearch/tipSearch模块全文与kg/util.js签名段定向阅读，连同LICENSE共12文件匹配固定对象。Apache/LX归属保留，原创匿名HTTPS、结构/去重、取消协调与正式UI；不复制静态标识、依赖或原生补丁。网易热搜独立核验替代官方路由、QQ采用新HotkeyService，酷狗生成临时mid，咪咕旧联想跳首页不采纳。wtf旧咪咕路由、Cy腾讯与悦音/Wayferar既有职责边界区分，不冒称全项目新模块审查；未推断Sollin接口。9项真实能力与未验矩阵见[回执](2026-10-29_search-assistance-report.md)。

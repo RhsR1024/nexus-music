@@ -104,10 +104,11 @@ export function Search({ services }: { services: Services }) {
   }
 
   const assistanceSections=assistance.groups.map(group=><View key={group.platform} style={styles.section}>
-      <Text accessibilityRole="header" style={styles.heading}>{platformNames[group.platform]}{assistance.mode==='hot'?'热搜词':'搜索建议'}</Text>
+      <Text accessibilityRole="header" style={styles.heading}>{platformNames[group.platform]}{assistance.mode==='hot'?'热搜词':group.platform==='mg'?'匹配建议':'搜索建议'}</Text>
+      {assistance.mode==='suggest'&&group.platform==='mg'&&<Text style={styles.caption}>根据公开歌曲匹配生成，点击后重新搜索。</Text>}
       {group.loading&&<ActivityIndicator accessibilityLabel="加载关键词" color={theme.palette.accent}/>}
       {group.error?<><Text style={styles.caption}>{group.error}</Text>{group.retryable&&<Pressable testID={`search-assistance-retry-${group.platform}`} accessibilityRole="button" accessibilityLabel={`重试${platformNames[group.platform]}关键词`} onPress={()=>{void services.searchAssistance.retry(group.platform);}} style={styles.sectionAction}><Text style={styles.link}>重试</Text></Pressable>}</>:!group.loading&&!group.items.length?<Text style={styles.caption}>{assistance.mode==='hot'?'暂无热搜词':'暂无搜索建议'}</Text>:null}
-      {group.items.map((word,index)=><Pressable key={word} testID={`search-public-${assistance.mode}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`${platformNames[group.platform]}${assistance.mode==='hot'?'热搜词':'搜索建议'}：${word}`} onPress={()=>submit(word)} style={styles.historyRow}><Text accessible={false} style={styles.caption}>{assistance.mode==='hot'?`${index+1}.`:'·'}</Text><Text style={styles.historyText}>{word}</Text></Pressable>)}
+      {group.items.map((word,index)=><Pressable key={word} testID={`search-public-${assistance.mode}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`${platformNames[group.platform]}${assistance.mode==='hot'?'热搜词':group.platform==='mg'?'匹配建议':'搜索建议'}：${word}`} onPress={()=>submit(word)} style={styles.historyRow}><Text accessible={false} style={styles.caption}>{assistance.mode==='hot'?`${index+1}.`:'·'}</Text><Text style={styles.historyText}>{word}</Text></Pressable>)}
     </View>);
 
   return <View>

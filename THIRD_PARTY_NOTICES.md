@@ -1,5 +1,7 @@
 ## Public search keywords
 
+Migu typed matching words now reuse NexusMusic's existing attributed `OnlineProvider` public metadata adapter. The new composition and UI label are original NexusMusic code; they do not adopt the retired Migu suggestion page or establish a dedicated official suggestion API or Sollin backend. Account state, media resolution and queue mutation are outside this reader.
+
 `src/providers/searchAssistance.ts` uses public keyword field/signing contracts checked against Q-1515/LX commit `547ccfe63ea5b8f734e6842c3b4c3b1225bbf39a`, `src/utils/musicSdk/{wy,tx,kw,kg,mg}/{hotSearch,tipSearch}.js` and `kg/util.js` (`signatureParams`). Apache 2.0/LX/lyswhut attribution below is retained. NexusMusic independently implements HTTPS transport, strict parsing, ephemeral anonymous identifiers, cancellation, UI and source isolation. NetEase hot search is independently verified on an alternative official route; the retired Migu suggestion route is not adopted. No reference runtime, static device identifiers, account tokens, dependencies or native patches are copied. These endpoints do not establish Sollin's implementation.
 
 ## Public MV catalogs

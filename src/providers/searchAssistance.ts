@@ -5,6 +5,7 @@ import type {OnlinePlatform} from '../domain/track.ts';
 import {requestJSON,queryURL,type HTTPClient} from './http.ts';
 import {weapiPayload} from './neteaseCrypto.ts';
 import {throwIfAborted} from './async.ts';
+import {OnlineProvider} from './online.ts';
 export type AssistanceMode='hot'|'suggest';
 type Row=Record<string,unknown>;
 const row=(v:unknown):Row=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
@@ -19,8 +20,9 @@ export function cleanSearchKeywords(values:unknown):readonly string[]{
 }
 export class SearchAssistanceProvider{
  private readonly http:HTTPClient;
+ private readonly songs:OnlineProvider;
  private readonly deps:{http?:HTTPClient;md5:(value:string)=>Promise<string>;deviceId:()=>string;now?:()=>number};
- constructor(deps:SearchAssistanceProvider['deps']){this.deps=deps;this.http=(u,r,s)=>(deps.http??requestJSON)(u,{...r,credentials:'omit'},s);}
+ constructor(deps:SearchAssistanceProvider['deps']){this.deps=deps;this.http=(u,r,s)=>(deps.http??requestJSON)(u,{...r,credentials:'omit'},s);this.songs=new OnlineProvider({http:this.http,md5:deps.md5,deviceId:deps.deviceId});}
  async read(platform:OnlinePlatform,mode:AssistanceMode,query:string,signal:AbortSignal):Promise<readonly string[]>{
   throwIfAborted(signal);query=query.trim();if(mode==='suggest'&&(!query||query.length>500))throw Error('关键词无效');
   let values:unknown;
@@ -54,11 +56,19 @@ export class SearchAssistanceProvider{
    if(mode==='suggest'){const list=row(Array.isArray(data)?data[0]:undefined).RecordDatas;values=Array.isArray(list)?list.map(v=>row(v).HintInfo):undefined;}
    else{const list=row(data).list;values=Array.isArray(list)?list.flatMap(v=>{const words=row(v).keywords;if(!Array.isArray(words))throw Error('关键词响应无效');return words.filter(w=>!row(w).jumpurl&&!row(w).url).map(w=>row(w).keyword);}):undefined;}
   }else{
-   // The pinned legacy suggest route redirects to an unrelated v5 homepage.
-   if(mode==='suggest')throw new AssistanceUnavailableError();
-   const response=row(await this.http('https://jadeite.migu.cn/music_search/v3/search/hotword',{},signal));if(response.code!=='000000')throw Error('关键词服务不可用');
-   const groups=row(response.data).hotwords,list=row(Array.isArray(groups)?groups[0]:undefined).hotwordList;
-   values=Array.isArray(list)?list.filter(v=>{const item=row(v);return item.resourceType==='song'&&typeof item.id==='string'&&/^\d+$/.test(item.id)&&!item.url;}).map(v=>row(v).word):undefined;
+   if(mode==='suggest'){
+    // The legacy suggest route redirects to an unrelated homepage. Generate
+    // NexusMusic's own matching queries from public song metadata instead.
+    // This private reader cannot resolve media, persist tracks or edit queues.
+    const page=await this.songs.search('mg',query,1,signal,5);
+    const total=page.total;
+    if(typeof total!=='number'||!Number.isSafeInteger(total)||total<0||total<page.items.length||total>0&&!page.items.length)throw Error('匹配词响应无效');
+    values=page.items.slice(0,5).map(track=>songLabel(track.title,track.artist));
+   }else{
+    const response=row(await this.http('https://jadeite.migu.cn/music_search/v3/search/hotword',{},signal));if(response.code!=='000000')throw Error('关键词服务不可用');
+    const groups=row(response.data).hotwords,list=row(Array.isArray(groups)?groups[0]:undefined).hotwordList;
+    values=Array.isArray(list)?list.filter(v=>{const item=row(v);return item.resourceType==='song'&&typeof item.id==='string'&&/^\d+$/.test(item.id)&&!item.url;}).map(v=>row(v).word):undefined;
+   }
   }
   throwIfAborted(signal);return cleanSearchKeywords(values);
  }

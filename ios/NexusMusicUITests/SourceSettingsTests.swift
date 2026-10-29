@@ -834,7 +834,9 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(qr.exists);image("Real Kugou anonymous login remains logged out after restart")
     XCTAssertFalse(app.buttons["暂停"].exists,"The paused real-audio playback intent must remain unchanged")
   }
-  func testLiveSearchAssistance() throws {
+  func testLiveSearchAssistance() throws { try exerciseSearchAssistance(platform:"wy",name:"网易云") }
+  func testLiveMiguSearchAssistance() throws { try exerciseSearchAssistance(platform:"mg",name:"咪咕") }
+  private func exerciseSearchAssistance(platform:String,name:String) throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
     func reach(_ item:XCUIElement){
@@ -849,28 +851,29 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
     let clearHistory=app.buttons["search-history-clear"]
     if clearHistory.exists{reach(clearHistory);clearHistory.tap()}
-    let wy=app.descendants(matching:.any).matching(identifier:"网易云").firstMatch;reach(wy);wy.tap()
-    let hot=app.buttons["search-public-hot-wy-0"];XCTAssertTrue(hot.waitForExistence(timeout:30));reach(hot)
+    let wy=app.descendants(matching:.any).matching(identifier:name).firstMatch;reach(wy);wy.tap()
+    let hot=app.buttons["search-public-hot-\(platform)-0"];XCTAssertTrue(hot.waitForExistence(timeout:30));reach(hot)
     let hotQuery=hot.label.components(separatedBy:"：").dropFirst().joined(separator:"：");XCTAssertFalse(hotQuery.isEmpty)
-    image("Real public hot keywords after empty history");hot.tap()
+    image("Real public \(name) hot keywords after empty history");hot.tap()
     let query=app.textFields["搜索歌曲或歌手"];XCTAssertEqual(query.value as? String,hotQuery)
-    XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:45));XCTAssertTrue(app.buttons["search-history-0"].waitForExistence(timeout:10)==false,"History is hidden while results are visible")
+    XCTAssertTrue(app.buttons["search-track-\(platform)-0"].waitForExistence(timeout:45));XCTAssertTrue(app.buttons["search-history-0"].waitForExistence(timeout:10)==false,"History is hidden while results are visible")
     let clear=app.buttons["search-clear"];reach(clear);clear.tap();reach(query);query.tap();for character in "love"{query.typeText(String(character))}
     let typed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@","love"),object:query);XCTAssertEqual(XCTWaiter.wait(for:[typed],timeout:10),.completed)
-    let suggestion=app.buttons["search-public-suggest-wy-0"]
+    let suggestion=app.buttons["search-public-suggest-\(platform)-0"]
     let fresh=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == true AND label CONTAINS[cd] %@","love"),object:suggestion);XCTAssertEqual(XCTWaiter.wait(for:[fresh],timeout:30),.completed)
     XCTAssertTrue(suggestion.isHittable,"Suggestions must be directly reachable beside the input without dismissing the keyboard");XCTAssertTrue(app.keyboards.firstMatch.exists)
     let suggestedQuery=suggestion.label.components(separatedBy:"：").dropFirst().joined(separator:"：");XCTAssertFalse(suggestedQuery.isEmpty)
-    image("Real public typed suggestions with keyboard");suggestion.tap()
-    XCTAssertEqual(query.value as? String,suggestedQuery);XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:45))
-    let heading=app.staticTexts["网易云搜索建议"];XCTAssertFalse(heading.exists);reach(query);query.tap();XCTAssertTrue(heading.waitForExistence(timeout:15),"Refocusing the submitted query must also offer public suggestions")
+    image("Real public \(name) typed suggestions with keyboard");suggestion.tap()
+    XCTAssertEqual(query.value as? String,suggestedQuery);XCTAssertTrue(app.buttons["search-track-\(platform)-0"].waitForExistence(timeout:45))
+    let heading=app.staticTexts[name+(platform=="mg" ? "匹配建议":"搜索建议")];XCTAssertFalse(heading.exists);reach(query);query.tap();XCTAssertTrue(heading.waitForExistence(timeout:15),"Refocusing the submitted query must also offer public suggestions")
     reach(clear);clear.tap();XCTAssertTrue(clearHistory.waitForExistence(timeout:10));reach(clearHistory);clearHistory.tap()
     app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
-    XCTAssertFalse(app.buttons["search-history-0"].exists);XCTAssertTrue(app.buttons["search-public-hot-wy-0"].waitForExistence(timeout:30))
-    image("Real public hot words after restart with cleared history")
+    let restoredSource=app.descendants(matching:.any).matching(identifier:name).firstMatch;reach(restoredSource);restoredSource.tap()
+    XCTAssertFalse(app.buttons["search-history-0"].exists);XCTAssertTrue(app.buttons["search-public-hot-\(platform)-0"].waitForExistence(timeout:30))
+    image("Real public \(name) hot words after restart with cleared history")
     player.tap();XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.exists);XCTAssertFalse(app.buttons["暂停"].exists)
     let paused=progress.value as? String;RunLoop.current.run(until:Date().addingTimeInterval(3));XCTAssertEqual(progress.value as? String,paused,"Keyword selection must not replace or start the authoritative music queue")
-    image("Real public assistance retains the paused original audio")
+    image("Real public \(name) assistance retains the paused original audio")
   }
   func testLiveCatalogFavorites() throws {
     let app=XCUIApplication();app.launch()
