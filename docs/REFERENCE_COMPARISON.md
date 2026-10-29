@@ -1,3 +1,7 @@
+## 2026-10-29 网易远端收藏专辑只读协议
+
+五固定HEAD/既有许可与维护边界复核，本批定向检索没有把它们虚称为远端专辑协议来源。额外亲读公开镜像IcyBlue17/NeteaseCloudMusicApiVercel固定32531f1331fe9db7af8e7def33b4702e59275bfe的module/album_sublist.js及LICENSE，MIT / Binaryify 2013-2022，许可和NOTICE保留。仅采用官方只读地址与分页字段，自写账号/取消/完整性/界面，不运行服务器、不采代理/凭据/依赖，也不推断Sollin后端；实际授权结构和服务仍需验收。见[来源与结果](2026-10-29_netease-account-albums-report.md)。
+
 ## 2026-10-29 本机目录采纳边界
 
 五参考HEAD再次核对，与下文固定提交相同。本批catalogFavorites模型、存储与UI自行实现，复用既有provider及已记录许可/维护边界，没有新增参考代码、依赖、原生补丁、商业业务或令牌。MV本机保存为音枢能力，不归因于Sollin；参考接口仍不作为Sollin实现证据。见[回执](2026-10-29_catalog-favorites-report.md)。
