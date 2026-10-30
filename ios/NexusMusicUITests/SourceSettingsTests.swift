@@ -1736,20 +1736,72 @@ final class SourceSettingsTests: XCTestCase {
   // versus file separation (E-1303). Downloads may finish before navigation,
   // so the settled-state wait tolerates either outcome and cleanup runs
   // through the actual single-row path. Opt-in: real network and LX source.
-  func testLiveDownloadBatch() throws {try runLiveDownloadBatch(exportNaming:false)}
-  func testLiveDownloadNaming() throws {try runLiveDownloadBatch(exportNaming:true)}
-  private func runLiveDownloadBatch(exportNaming:Bool) throws {
-    let app=XCUIApplication();app.launch()
-    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
-    func reach(_ item:XCUIElement){for _ in 0..<24 {if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(item.isHittable)}
-    if exportNaming {
+  private func prepareLiveDownloadSource(_ app:XCUIApplication) throws {
+    func reach(_ item:XCUIElement){for _ in 0..<30{if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(item.isHittable)}
       let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/live-source-index")!);let rows=try XCTUnwrap(JSONSerialization.jsonObject(with:bytes) as? [[String:Any]]);XCTAssertEqual(rows.count,1)
       openSettings(app,page:"sources");let oldSource=app.buttons["停用音源：统一音乐源"];if oldSource.exists{reach(oldSource);oldSource.tap()};let address=app.textFields["音源订阅地址"];reach(address);address.tap();for character in "http://127.0.0.1:18439/live-source-0.js"{address.typeText(String(character))};XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/live-source-0.js");address.typeText("\n");let submit=app.buttons["从地址导入"];reach(submit);submit.tap()
       let imported=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !(address.value as? String ?? "").contains("127.0.0.1") && address.isEnabled},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[imported],timeout:25),.completed)
       let sourceName=try XCTUnwrap(rows.first?["name"] as? String);let importedRow=app.descendants(matching:.any).matching(identifier:"选择音源："+sourceName).firstMatch
       if !importedRow.waitForExistence(timeout:20){let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual source import failure hierarchy";tree.lifetime = .keepAlways;add(tree);XCTFail("Actual source import must produce its production catalog row");return}
       reach(importedRow);importedRow.tap();let enable=app.buttons["启用"].firstMatch;reach(enable);enable.tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","完成 ")).firstMatch.waitForExistence(timeout:180))
+  }
+  func testLiveSongDownloadEntries() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    func reach(_ item:XCUIElement){for _ in 0..<40{if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(item.isHittable)}
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10));let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:3){play.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));let before=progress.value as? String ?? "";RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    openSettings(app,page:"background")
+    let reset=app.buttons["appearance-reset"];reach(reset);reset.tap()
+    let blush=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch;reach(blush);if !blush.isSelected{blush.tap()}
+    openSettings(app,page:"accent");let rose=app.descendants(matching:.any).matching(identifier:"accent-rose").firstMatch;reach(rose);if !rose.isSelected{rose.tap()}
+    try prepareLiveDownloadSource(app)
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    let clear=app.buttons["search-clear"];if clear.exists{clear.tap()};let query=app.textFields["搜索歌曲或歌手"];query.tap();for c in "Photograph Ed Sheeran"{query.typeText(String(c))};query.typeText("\n")
+    let first=app.buttons["search-track-wy-0"],second=app.buttons["search-track-wy-1"]
+    XCTAssertTrue(first.waitForExistence(timeout:45));XCTAssertTrue(second.waitForExistence(timeout:10));let title=String(first.label.dropFirst(2)),secondTitle=String(second.label.dropFirst(2));XCTAssertFalse(title.isEmpty)
+    let more=app.buttons["search-more-wy-0"];reach(more);more.tap();let download=app.buttons["下载"].firstMatch;XCTAssertTrue(download.waitForExistence(timeout:8));reach(download);image("Real public song download menu");download.tap()
+    let summary=app.staticTexts["download-submission-summary"];XCTAssertTrue(summary.waitForExistence(timeout:15));XCTAssertTrue(summary.label.contains("未受理 0 项"));image("Real single song download admission")
+    // Observe the matching canonical task, never a previously saved other song.
+    func matchingStatus()->XCUIElement?{
+      let remove=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND (label BEGINSWITH %@ OR label BEGINSWITH %@)","offline-remove-","删除离线文件："+title+" · ","移除记录："+title+" · ")).firstMatch
+      guard remove.exists else{return nil};let id=String(remove.identifier.dropFirst("offline-remove-".count));let status=app.descendants(matching:.any).matching(identifier:"offline-status-"+id).firstMatch
+      return status.exists ? status:nil
     }
+    if matchingStatus()==nil{let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual song task accessibility hierarchy";tree.lifetime = .keepAlways;add(tree)}
+    // A diagnostic run can leave this same public file. Remove only the
+    // focused task through the real confirmation, then verify a fresh command.
+    if summary.label.contains("已有 1 项") {
+      let status=try XCTUnwrap(matchingStatus());let id=String(status.identifier.dropFirst("offline-status-".count))
+      let remove=app.buttons["offline-remove-"+id];reach(remove);remove.tap();XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout:5));app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(remove,timeout:15))
+      let back=app.buttons["download-submission-back"];reach(back);back.tap();let again=app.buttons["下载"].firstMatch;reach(again);again.tap();XCTAssertTrue(summary.waitForExistence(timeout:15))
+    }
+    XCTAssertTrue(summary.label.contains("已受理 1 项"));image("Real fresh song download admission")
+    let completed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in matchingStatus()?.label.contains("已保存")==true},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[completed],timeout:240),.completed,"The real public source must save this exact song without a manual start")
+    image("Real single song automatically saved")
+    let firstStatus=try XCTUnwrap(matchingStatus()),firstTask=String(firstStatus.identifier.dropFirst("offline-status-".count))
+    // Remove only the second selected public test song left by an earlier run;
+    // the first saved task and the original Shape/Perfect files are retained.
+    let otherRemoval=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND identifier != %@ AND (label BEGINSWITH %@ OR label BEGINSWITH %@)","offline-remove-","offline-remove-"+firstTask,"删除离线文件："+secondTitle+" · ","移除记录："+secondTitle+" · ")).firstMatch
+    for _ in 0..<16{if otherRemoval.exists{break};app.swipeUp()}
+    if otherRemoval.exists{reach(otherRemoval);otherRemoval.tap();XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout:5));app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(otherRemoval,timeout:15))}
+    let back=app.buttons["download-submission-back"];reach(back);back.tap();app.buttons["收起歌曲更多操作"].tap()
+    reach(first);first.press(forDuration:1.1);second.tap();let batch=app.buttons["batch-action-下载"];reach(batch);batch.tap()
+    XCTAssertTrue(summary.waitForExistence(timeout:15));XCTAssertTrue(summary.label.contains("已有 1 项"));XCTAssertTrue(summary.label.contains("未受理 0 项"));XCTAssertTrue(app.staticTexts["download-submission-item-0"].exists);XCTAssertTrue(app.staticTexts["download-submission-item-1"].exists);image("Real batch song admission preserving saved task")
+    let settled=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@ AND (label == %@ OR label == %@)","offline-status-","等待下载","正在下载…")).firstMatch.exists},object:nil);XCTAssertEqual(XCTWaiter.wait(for:[settled],timeout:240),.completed);image("Real batch download settled canonical states")
+    reach(back);back.tap();player.tap();XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.isHittable);image("Real downloads keep original playback paused");app.buttons["收起播放页"].firstMatch.tap()
+  }
+  func testLiveDownloadBatch() throws {try runLiveDownloadBatch(exportNaming:false)}
+  func testLiveDownloadNaming() throws {try runLiveDownloadBatch(exportNaming:true)}
+  private func runLiveDownloadBatch(exportNaming:Bool) throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    func reach(_ item:XCUIElement){for _ in 0..<24 {if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(item.isHittable)}
+    if exportNaming {try prepareLiveDownloadSource(app)}
     let handle=app.buttons["player-drag-handle"].firstMatch
     if handle.waitForExistence(timeout:2) {if handle.isHittable {handle.tap()} else {handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()};_ = waitForGone(handle,timeout:8)}
     func saveCurrent(){

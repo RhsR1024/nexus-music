@@ -4,7 +4,7 @@ import {DownloadQualitySettings} from './DownloadQualitySettings.tsx';
 import {downloadBasename} from '../domain/downloadNaming.ts';
 import {exportOfflineAudio,OfflineExportUnavailable} from '../storage/offlineExport.ts';
 import {offlineAudioExportFiles} from './OfflineAudioExport.ts';
-import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
 import {Alert,Pressable,SectionList,Switch,TextInput,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
@@ -28,7 +28,7 @@ export function DownloadSettings({services,openTasks}:{services:Services;openTas
     <View style={{borderRadius:22,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,overflow:'hidden'}}>
       <Pressable testID="download-quality-open" accessibilityRole="button" accessibilityLabel="设置各平台下载音质" accessibilityState={{expanded:showQuality}} onPress={()=>setShowQuality(value=>!value)} style={{padding:18,flexDirection:'row',alignItems:'center',gap:14}}><Ionicons name="cloud-download-outline" size={24} color={p.accent}/><View style={{flex:1,gap:5}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>在线下载音质</Text><Text testID="download-quality-summary" style={{color:p.secondary,fontSize:13}}>{Object.keys(preferences.downloadQualities).length?`已分别设置 ${Object.keys(preferences.downloadQualities).length} 个平台`:`跟随播放设置 · ${preferences.quality}`}</Text></View></Pressable>
       <Pressable testID="settings-open-downloadTasks" accessibilityRole="button" accessibilityLabel="查看下载任务与文件" onPress={openTasks} style={{minHeight:82,padding:18,borderTopWidth:1,borderTopColor:p.border,flexDirection:'row',alignItems:'center',gap:14}}>
-        <Ionicons name="download-outline" size={24} color={p.accent}/><View style={{flex:1,gap:5}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>下载任务与文件</Text><Text style={{color:p.secondary,fontSize:13}}>{stats.pending} 个待处理 · {stats.files} 个已保存</Text></View><Ionicons name="chevron-forward" size={20} color={p.secondary}/>
+        <Ionicons name="download-outline" size={24} color={p.accent}/><View style={{flex:1,gap:5}}><Text style={{color:p.text,fontSize:17,fontWeight:'600'}}>下载任务与文件</Text><Text style={{color:p.secondary,fontSize:13}}>{stats.pending} 个未完成 · {stats.files} 个已保存</Text></View><Ionicons name="chevron-forward" size={20} color={p.secondary}/>
       </Pressable>
     </View>
     {showQuality&&<DownloadQualitySettings services={services}/>}
@@ -59,7 +59,7 @@ export function DownloadSettings({services,openTasks}:{services:Services;openTas
   </View>;
 }
 
-export function DownloadTasks({services}:{services:Services}){
+export function DownloadTasks({services,header,focusIds=[]}:{services:Services;header?:ReactNode;focusIds?:readonly string[]}){
   const {palette:p}=useTheme(),[message,setMessage]=useState(''),[exporting,setExporting]=useState(false),exportLock=useRef(false);
   const exportAbort=useRef<AbortController|null>(null),alive=useRef(true);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;exportAbort.current?.abort();};},[]);
@@ -72,7 +72,8 @@ export function DownloadTasks({services}:{services:Services}){
   const attachments=useSyncExternalStore(services.managedAttachments.subscribe,services.managedAttachments.getSnapshot);
   const deliveries=useSyncExternalStore(services.downloadDelivery.subscribe,services.downloadDelivery.getSnapshot);
   const destination=useSyncExternalStore(services.downloadDestination.subscribe,services.downloadDestination.getSnapshot);
-  const tasks=downloads.filter(item=>item.status!=='completed'),completed=downloads.filter(item=>item.status==='completed');
+  const focused=new Set(focusIds),ordered=focusIds.length?[...downloads.filter(item=>focused.has(item.id)),...downloads.filter(item=>!focused.has(item.id))]:downloads;
+  const tasks=ordered.filter(item=>item.status!=='completed'),completed=ordered.filter(item=>item.status==='completed');
   // Sollin E-1300: a page-scoped multi-select over the task list offering
   // pause/continue/cancel/retry/remove-records; completed files keep their
   // own delete path and are not part of this selection.
@@ -111,13 +112,13 @@ export function DownloadTasks({services}:{services:Services}){
     </View>
   </View>;
   return <SectionList testID="offline-task-list" sections={[{title:'下载任务',key:'pending',data:tasks},{title:'已完成文件',key:'completed',data:completed}]} keyExtractor={item=>item.id} renderItem={renderItem} stickySectionHeadersEnabled={false} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5} contentContainerStyle={{paddingHorizontal:22,paddingBottom:32}}
-    ListHeaderComponent={<View style={{gap:14,paddingVertical:12}}>
+    ListHeaderComponent={<View style={{gap:14,paddingVertical:12}}>{header}
       {selection.active&&<BatchSelectionBar testPrefix="offline-batch" unit="个任务" count={selectedIds.size} total={tasks.length}
         allSelected={tasks.length>0&&selectedIds.size===tasks.length}
         actions={['dl-pause','dl-resume','dl-cancel','dl-retry','dl-remove']}
         onSelectAll={()=>setSelection(selectionAll(selection,tasks.map(item=>item.id)))}
         onCancel={()=>setSelection(selectionNone)}
-        onAction={action=>runBatch(action==='dl-pause'?'pause':action==='dl-resume'?'resume':action==='dl-cancel'?'cancel':action==='dl-retry'?'retry':'remove')}/>}<Text testID="offline-task-summary" style={{color:p.secondary}}>{tasks.filter(item=>item.status==='downloading').length} 个正在下载 · {tasks.length} 个待处理 · {completed.length} 个已保存</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+        onAction={action=>runBatch(action==='dl-pause'?'pause':action==='dl-resume'?'resume':action==='dl-cancel'?'cancel':action==='dl-retry'?'retry':'remove')}/>}<Text testID="offline-task-summary" style={{color:p.secondary}}>{tasks.length} 个未完成（其中 {tasks.filter(item=>item.status==='downloading').length} 个下载中）· {completed.length} 个已保存</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
       {button('offline-pause-all','全部暂停','pause-circle-outline',()=>perform(()=>services.offlineDownloads.pauseAll()),!pauseable)}
       {button('offline-resume-all','全部继续','play-circle-outline',()=>perform(()=>services.offlineDownloads.resumeAll()),!resumable)}
       {button('offline-cancel-all','全部取消','close-circle-outline',()=>Alert.alert('取消全部未完成下载？','未完成任务将标记为下载已取消，可稍后重试或移除记录；已保存的音频保留。',[{text:'保留',style:'cancel'},{text:'取消任务',style:'destructive',onPress:()=>perform(()=>services.offlineDownloads.cancelAll())}]),tasks.every(item=>!['queued','downloading','paused'].includes(item.status)))}

@@ -16,6 +16,8 @@ import {trackRows,viewTrackRows,type TrackSort} from '../domain/trackList.ts';
 import {TrackListTools} from './TrackListTools.tsx';
 import {QishuiImport} from './QishuiImport.tsx';
 import {TrackActions} from './TrackActions.tsx';
+import type {DownloadSubmission} from '../app/downloadSubmission.ts';
+import {DownloadSubmissionModal} from './DownloadSubmission.tsx';
 import {BatchSelectionBar,type BatchAction} from './BatchSelectionBar.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {Toast,useToast} from './Toast.tsx';
@@ -38,6 +40,9 @@ export function Discovery({services,embedded=false,initialCollection,onClose,cat
   // Batch selection (Sollin §4): scoped to the loaded detail rows, with the
   // favorite store reading tap order and the queue reading list order.
   const [selection,setSelection]=useState<SelectionModel>(selectionNone),[picking,setPicking]=useState(false),[busy,setBusy]=useState(false);
+  const [downloadReport,setDownloadReport]=useState<DownloadSubmission|null>(null);
+  const downloadOwner=useRef<SelectionModel|null>(selection);downloadOwner.current=selection;
+  useEffect(()=>()=>{downloadOwner.current=null;},[]);
   const toast=useToast();
   const page=useRef(0),generation=useRef(0),pending=useRef(new AbortController()),importAbort=useRef(new AbortController());
   async function load(append=false){
@@ -91,11 +96,11 @@ export function Discovery({services,embedded=false,initialCollection,onClose,cat
       services.addTracksToQueue(listTracks,true);
       toast.show(`已添加 ${count} 首到下一首播放`);setSelection(selectionNone);
     }else if(action==='download'){
-      setBusy(true);
+      setBusy(true);const owner=selection,version=generation.current;
       try{
-        for(const track of listTracks)await services.offlineDownloads.enqueue(track);
-        toast.show(`已添加 ${count} 个下载任务`);setSelection(selectionNone);
-      }catch{toast.show('部分下载任务未创建，请重试');}
+        const report=await services.submitDownloads(listTracks);
+        if(downloadOwner.current===owner&&generation.current===version){setDownloadReport(report);if(report.entries.every(e=>e.disposition!=='failed'))setSelection(selectionNone);}
+      }catch{if(downloadOwner.current===owner&&generation.current===version)toast.show('下载提交未完成，请查看下载管理中的已有任务');}
       finally{setBusy(false);}
     }else if(action==='playlist'){setPicking(true);}
   }
@@ -154,7 +159,7 @@ export function Discovery({services,embedded=false,initialCollection,onClose,cat
       ListFooterComponent={<View style={{gap:12,paddingVertical:24}}>{loading&&<Text style={{color:theme.palette.secondary}}>正在获取平台数据…</Text>}{!!error&&<Text style={{color:theme.palette.accent}}>{error}</Text>}{!loading&&!error&&!items.length&&<Text style={{color:theme.palette.secondary}}>此平台暂未返回可展示内容</Text>}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading)}{more&&button('加载更多',()=>{void load(true);},loading)}</View>}/>
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
-  const overlays=<><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/>{artistAlbum&&<Discovery services={services} initialCollection={artistAlbum} onClose={()=>setArtistAlbum(null)}/>}</>;
+  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/>{artistAlbum&&<Discovery services={services} initialCollection={artistAlbum} onClose={()=>setArtistAlbum(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

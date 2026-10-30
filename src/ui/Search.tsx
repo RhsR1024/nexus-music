@@ -7,7 +7,7 @@ import {Cover} from './Cover.tsx';
 import {controls,space,catalogArtwork,radius} from './tokens.ts';
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {ActivityIndicator, Keyboard, Pressable, StyleSheet, View} from 'react-native';
 import type { Services } from '../app/services.ts';
 import type { OnlinePlatform, Track } from '../domain/track.ts';
@@ -20,6 +20,8 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {Toast,useToast} from './Toast.tsx';
 import {selectionAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionToggle,selectionNone,type SelectionModel} from '../domain/selection.ts';
 import {Ionicons} from '@expo/vector-icons';
+import type {DownloadSubmission} from '../app/downloadSubmission.ts';
+import {DownloadSubmissionModal} from './DownloadSubmission.tsx';
 export const platformNames: Readonly<Record<OnlinePlatform,string>> = {wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕'};
 
 const kindNames={song:'歌曲',playlist:'歌单',album:'专辑',artist:'艺术家',mv:'MV'} as const;
@@ -46,8 +48,12 @@ export function Search({ services }: { services: Services }) {
   // Batch selection (Sollin capture §4): scope is the loaded collection of one
   // platform group; count shows 已选 N / loaded total.
   const [selection,setSelection]=useState<GroupSelection|null>(null),[picking,setPicking]=useState(false),[busy,setBusy]=useState(false);
+  const [downloadReport,setDownloadReport]=useState<DownloadSubmission|null>(null);
+  const downloadOwner=useRef(selection);downloadOwner.current=selection;
+  const downloadScope=useRef('');downloadScope.current=JSON.stringify([kind,platform,state.query]);
+  useEffect(()=>()=>{downloadOwner.current=null;},[]);
   const toast=useToast();
-  useEffect(()=>{setSelection(null);setPicking(false);setMenuTrack(null);setCollection(null);setVideo(null);},[state.query,platform,kind]);
+  useEffect(()=>{setSelection(null);setPicking(false);setMenuTrack(null);setCollection(null);setVideo(null);setDownloadReport(null);},[state.query,platform,kind]);
 
   const draft=normalizeSearchQuery(query);
   const suggestions=draft&&draft!==state.query?suggestSearchQueries(history,draft):[];
@@ -94,11 +100,11 @@ export function Search({ services }: { services: Services }) {
       services.addTracksToQueue(listTracks,true);
       toast.show(`已添加 ${count} 首到下一首播放`);setSelection(null);
     }else if(action==='download'){
-      setBusy(true);
+      setBusy(true);const owner=selection,scope=downloadScope.current;
       try{
-        for(const track of listTracks)await services.offlineDownloads.enqueue(track);
-        toast.show(`已添加 ${count} 个下载任务`);setSelection(null);
-      }catch{toast.show('部分下载任务未创建，请重试');}
+        const report=await services.submitDownloads(listTracks);
+        if(downloadOwner.current===owner&&downloadScope.current===scope){setDownloadReport(report);if(report.entries.every(e=>e.disposition!=='failed'))setSelection(null);}
+      }catch{if(downloadOwner.current===owner&&downloadScope.current===scope)toast.show('下载提交未完成，请查看下载管理中的已有任务');}
       finally{setBusy(false);}
     }else if(action==='playlist'){setPicking(true);}
   }
@@ -189,6 +195,7 @@ export function Search({ services }: { services: Services }) {
     {video&&<MVDetail services={services} platform={video.platform} video={video.item} onClose={()=>setVideo(null)}/>}
     {collection&&<Discovery key={`${collection.platform}:${collection.collection.id}`} services={services} initialCollection={collection} onClose={()=>setCollection(null)}/>}
     <TrackActions services={services} track={menuTrack} prefix="search" onClose={()=>setMenuTrack(null)} extras/>
+    <DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/>
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 }
