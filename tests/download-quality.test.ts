@@ -9,6 +9,11 @@ import {createDownloadResolver} from '../src/providers/downloadResolver.ts';
 import type {LXTransport} from '../src/providers/multiSourceResolver.ts';
 import {cleanBackupSettings} from '../src/storage/backupSettings.ts';
 const song:Track={origin:{kind:'online',platform:'wy',id:'1'},title:'Domain input',artist:'Contract',durationMs:100000,metadata:{},qualities:[]};
+test('one-time download quality overrides platform defaults without changing them or persisting a match',async()=>{
+ const r=await registry(),preferences={quality:'flac' as const,autoMatch:false,downloadQualities:{wy:'128k' as const}},calls:string[]=[];
+ const resolver=createDownloadResolver({registry:r,transport:{request:async(_source,payload)=>{calls.push(JSON.stringify(payload));return'https://audio.example/public.mp3';}},matcher:{candidates:async()=>{throw Error('No matching required');}},library:{matchFor:()=>undefined,setMatch:async()=>{throw Error('Must not publish a playback match');}},preferences:()=>preferences,enrich:async t=>t,other:{resolve:async()=>{throw Error('No private client');}},hash:async v=>v});
+ const media=await resolver.resolve(song,new AbortController().signal,undefined,'320k');assert.equal(media.requestedQuality,'320k');assert.equal(media.quality,'320k');assert.equal(calls.length,1);assert.equal(preferences.downloadQualities.wy,'128k');assert.equal(preferences.quality,'flac');
+});
 async function registry(){const r=new SourceRegistry({initialize:async()=>['wy','tx'].map(platform=>({platform:platform as 'wy'|'tx',name:platform,actions:['musicUrl'],qualities:['flac','320k','128k']})),destroy(){}});r.register({id:'source',name:'contract',script:'contract'});await r.setEnabled('source',true);return r;}
 test('download policies validate, migrate, persist atomically and survive old portable backups',async()=>{
  for(const value of [null,[],{unknown:'128k'},{wy:'FLAC'},{wy:'private-url'},{wy:null}])assert.throws(()=>normalizeDownloadQualities(value));

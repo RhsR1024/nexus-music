@@ -27,7 +27,7 @@ const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
-const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|SongDownloadEntries|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence|AccountMVEntry|AccountAlbumEntry|AccountPlaylistEntry|QQPlaylistEntry|KugouPlaylistEntry|KugouQrPhoto(?:Denied|Save)|QQComputerPairing|PlaylistSearch|AlbumSearch|ArtistSearch|MVSearch|SearchAssistance|MiguSearchAssistance|CatalogFavorites)$/.test(target));
+const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|SongDownloadEntries|SongDownloadQualityChoice|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence|AccountMVEntry|AccountAlbumEntry|AccountPlaylistEntry|QQPlaylistEntry|KugouPlaylistEntry|KugouQrPhoto(?:Denied|Save)|QQComputerPairing|PlaylistSearch|AlbumSearch|ArtistSearch|MVSearch|SearchAssistance|MiguSearchAssistance|CatalogFavorites)$/.test(target));
 if(Boolean(process.env.NEXUS_UI_LOCAL_AUDIO)!==liveLocalUI||(liveLocalUI&&process.argv.slice(2).length!==1))throw new Error('Real local audio requires its single explicit live local target and audio path');
 const liveLocalPath=liveLocalUI?realpathSync(process.env.NEXUS_UI_LOCAL_AUDIO):null;
 const liveLocalFolderUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveLocalFolderScan'));
@@ -77,7 +77,7 @@ function seedLocalAudio() {
 seedLocalAudio();
 // Explicit local opt-in: serve unchanged private scripts only to the simulator.
 // These bytes are never imported by Metro or written into the app bundle.
-const liveSongDownloadUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveSongDownloadEntries'));
+const liveSongDownloadUI=process.argv.slice(2).some(target=>/\/testLiveSongDownload(?:Entries|QualityChoice)$/.test(target));
 const liveDownloadNamingUI=liveSongDownloadUI||process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNaming'));
 const liveCatalogUI=liveDownloadNamingUI||process.argv.slice(2).some(target=>/\/testLiveSource(?:Catalog|Playback|SearchStates)$/.test(target));
 const liveDownloadUI=liveSongDownloadUI||process.argv.slice(2).some(target=>/\/testLiveDownload(?:Batch|Naming)$/.test(target));
@@ -485,7 +485,7 @@ try {
   if(!liveStatisticsSyncUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveStatisticsSync');
   if(!liveCatalogUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceCatalog','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourcePlayback','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSourceSearchStates');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadBatch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadBatch');
-  if(!liveSongDownloadUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSongDownloadEntries');
+  for(const target of ['testLiveSongDownloadEntries','testLiveSongDownloadQualityChoice'])if(!process.argv.slice(2).some(value=>value.endsWith('/'+target)))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/'+target);
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNaming')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadNaming');
   if(!liveDownloadExportUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadNamingExport');
   if(!liveDownloadAttachmentsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadAttachments');

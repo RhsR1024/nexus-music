@@ -12,6 +12,8 @@ import {useTheme} from './theme.tsx';
 import {controls,radius,space,typography} from './tokens.ts';
 import {downloadableTrack,type DownloadSubmission} from '../app/downloadSubmission.ts';
 import {DownloadSubmissionView} from './DownloadSubmission.tsx';
+import {DownloadQualityChoice} from './DownloadQualityChoice.tsx';
+import type {Quality} from '../domain/quality.ts';
 
 // The sheet stays owned by the page that supplied the original track identity.
 // Playlist selection replaces its content instead of presenting a sibling modal.
@@ -23,8 +25,9 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [commenting,setCommenting]=useState(false),[matching,setMatching]=useState(false);
   const [adding,setAdding]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [choosingDownload,setChoosingDownload]=useState(false);
   const [downloadReport,setDownloadReport]=useState<DownloadSubmission|null>(null);
-  useEffect(()=>{setAdding(false);setCommenting(false);setMatching(false);setError('');setDownloadReport(null);setBusy(false);},[track]);
+  useEffect(()=>{setAdding(false);setCommenting(false);setMatching(false);setError('');setDownloadReport(null);setChoosingDownload(false);setBusy(false);},[track]);
   const current=useRef(track);current.current=track;
   useEffect(()=>()=>{current.current=null;},[]);
   const favorite=track?services.songFavorites.isFavorite(track):false;
@@ -34,14 +37,14 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
     catch{if(current.current===track)setError('收藏未保存，原数据保留；请重试');}
     finally{if(current.current===track)setBusy(false);}
   }
-  async function download(){
-    if(!track||busy)return;setBusy(true);setError('');const owner=track;
-    try{const report=await services.submitDownloads([owner]);if(current.current===owner)setDownloadReport(report);}
+  async function download(preferredQuality?:Quality){
+    if(!track||busy)return;if(!preferredQuality&&track.origin.kind==='online'&&!services.offlineDownloads.find(track)){setChoosingDownload(true);return;}setBusy(true);setError('');const owner=track;
+    try{const report=await services.submitDownloads([owner],preferredQuality?{preferredQuality}:undefined);if(current.current===owner){setChoosingDownload(false);setDownloadReport(report);}}
     finally{if(current.current===owner)setBusy(false);}
   }
   const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void)=><Pressable key={label} testID={`${prefix}-action-${label}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy} onPress={run} style={[styles.action,{backgroundColor:theme.palette.surface,opacity:busy?.5:1}]}><Ionicons name={icon} size={controls.icon} color={theme.palette.accent}/><Text style={[typography.body,{color:theme.palette.text,flex:1}]}>{label}</Text><Ionicons name="chevron-forward" size={18} color={theme.palette.secondary}/></Pressable>;
   return <SheetModal visible={!!track} animationType="slide" onRequestClose={onClose}>
-    {track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={onClose}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
+    {track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={onClose}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
       <Pressable accessibilityRole="button" accessibilityLabel="收起歌曲更多操作" onPress={onClose} style={styles.close}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable>
       <Text accessibilityRole="header" style={[typography.title,{color:theme.palette.text}]}>{track?.title??'歌曲操作'}</Text>
       <Text style={[typography.caption,{color:theme.palette.secondary}]}>{track?.artist}{track?.album?` · ${track.album}`:''}</Text>

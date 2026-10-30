@@ -1,5 +1,6 @@
 import {ArtistProvider} from '../providers/artists.ts';
 import {createDownloadSubmission} from './downloadSubmission.ts';
+import {createDownloadQualityProbe} from './downloadQualityProbe.ts';
 import {SearchAssistanceProvider} from '../providers/searchAssistance.ts';
 import {SearchAssistanceCoordinator} from '../providers/searchAssistanceCoordinator.ts';
 import {VideoProvider} from '../providers/videos.ts';
@@ -166,8 +167,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const downloadDestination=new DownloadDestinationSettings(requireNativeModule<DestinationNative>('NexusFiles'),preferences.getSnapshot,Crypto.randomUUID);
   await downloadDestination.restore().catch(()=>{recoveryWarnings.push('保存目录暂不可用，请在下载设置中重新选择；原音频保留。');});
   const attachmentFiles=createManagedAttachmentFiles();
-  const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal)=>{
-    const media=await downloadResolver.resolve(track,signal);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');
+  const offlineDownloads=new OfflineDownloadStore(repository,{resolve:async(track,signal,preferredQuality)=>{
+    const media=await downloadResolver.resolve(track,signal,undefined,preferredQuality);if(!/^https?:$/.test(new URL(media.url).protocol))throw new Error('此来源不支持离线保存');
     // Navidrome changes its signed salt/token on each resolve. Its existing
     // account/song/original cache identity is stable; other sources stay strict.
     return track.origin.kind==='navidrome'?{...media,resumeIdentity:media.cacheKey}:media;
@@ -252,8 +253,9 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
+  const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  return { submitDownloads, searchAssistance, accountMVs, accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

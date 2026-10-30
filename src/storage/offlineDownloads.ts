@@ -2,6 +2,7 @@ import {validateDestinationIntent,type DownloadDestinationIntent} from '../domai
 import {validateAttachmentPolicy,type DownloadAttachmentPolicy} from '../domain/downloadAttachmentPolicy.ts';
 import {trackKey, validateTrack, type Track} from '../domain/track.ts';
 import type {Repository} from './repository.ts';
+import {qualityOrder,type Quality} from '../domain/quality.ts';
 
 export type OfflineDownloadStatus = 'queued'|'downloading'|'paused'|'failed'|'cancelled'|'completed';
 export interface OfflineDownloadRecord {
@@ -16,6 +17,7 @@ export interface OfflineDownloadRecord {
   digest?:string;
   validator?:string;
   quality?:string;requestedQuality?:string;
+  preferredQuality?:Quality;
   error?:string;
   updatedAt:number;
 }
@@ -44,7 +46,7 @@ export class OfflineDownloadInUse extends Error {
   constructor(){super('当前播放文件不能删除');this.name='OfflineDownloadInUse';}
 }
 export interface OfflineDownloadOptions {
-  resolve(track:Track,signal:AbortSignal):Promise<OfflineDownloadMedia>;
+  resolve(track:Track,signal:AbortSignal,preferredQuality?:Quality):Promise<OfflineDownloadMedia>;
   files:OfflineDownloadFiles;
   uuid():string;
   now():number;
@@ -72,6 +74,7 @@ function validateRecord(value:unknown):OfflineDownloadRecord{
   validateTrack(row.track as Track);
   if(row.quality!==undefined&&typeof row.quality!=='string')throw new Error('离线下载音质无效');
   if(row.requestedQuality!==undefined&&typeof row.requestedQuality!=='string')throw new Error('离线下载首选音质无效');
+  if(row.preferredQuality!==undefined&&!qualityOrder.includes(row.preferredQuality as Quality))throw new Error('任务下载音质选择无效');
   if(row.error!==undefined&&typeof row.error!=='string')throw new Error('离线下载错误无效');
   return {...row,...(row.destination!==undefined?{destination:validateDestinationIntent(row.destination)}:{}),...(row.attachmentPolicy!==undefined?{attachmentPolicy:validateAttachmentPolicy(row.attachmentPolicy)}:{}),bytes:safeBytes,updatedAt:safeUpdatedAt} as OfflineDownloadRecord;
 }
@@ -149,11 +152,12 @@ export class OfflineDownloadStore {
     }
   }
   find(track:Track){const key=trackKey(track.origin);return this.items.find(item=>trackKey(item.track.origin)===key);}
-  async enqueue(track:Track){
-    validateTrack(track);return this.mutate(async()=>{const existing=this.find(track);if(existing)return existing;
+  async enqueue(track:Track,options?:{preferredQuality?:Quality}){
+    validateTrack(track);const preferredQuality=options?.preferredQuality;if(preferredQuality!==undefined&&(!qualityOrder.includes(preferredQuality)||track.origin.kind!=='online'))throw new Error('任务下载音质选择无效');
+    return this.mutate(async()=>{const existing=this.find(track);if(existing)return existing;
       if(this.items.length>=1000)throw new Error('离线下载最多保存1000首');
       const policy=this.options.captureAttachments?.(track),destination=this.options.captureDestination?.();
-      const record:OfflineDownloadRecord={...(destination?{destination:validateDestinationIntent(destination)}:{}),...(policy?{attachmentPolicy:validateAttachmentPolicy(policy)}:{}),id:this.options.uuid(),track,fileName:`${this.options.uuid()}.audio`,status:'queued',bytes:0,updatedAt:this.options.now()};
+      const record:OfflineDownloadRecord={...(preferredQuality?{preferredQuality}:{}),...(destination?{destination:validateDestinationIntent(destination)}:{}),...(policy?{attachmentPolicy:validateAttachmentPolicy(policy)}:{}),id:this.options.uuid(),track,fileName:`${this.options.uuid()}.audio`,status:'queued',bytes:0,updatedAt:this.options.now()};
       const next=[...this.items,record];await this.save(next);this.publish(next);return record;
     });
   }
@@ -174,7 +178,7 @@ export class OfflineDownloadStore {
         await this.options.files.setConcurrency?.(this.options.concurrency?.()??3);
         await this.options.files.configure?.(this.options.maxTotalBytes?.()??2*1024*1024*1024);
         const recovered=await this.options.files.recoverDownload?.(current.fileName,{signal:abort.signal,interruption});
-        const media=recovered===undefined?await this.options.resolve(current.track,abort.signal):undefined;if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
+        const media=recovered===undefined?await this.options.resolve(current.track,abort.signal,current.preferredQuality):undefined;if(abort.signal.aborted)throw new OfflineDownloadInterrupted(current.partialBytes??0);
         const offset=current.partialBytes??0;validator=current.validator;
         if(media)await this.update(id,{quality:media.quality,requestedQuality:media.requestedQuality});
         let bytes=recovered??await this.options.files.download(media!.url,current.fileName,media!.headers,{signal:abort.signal,interruption,resumeIdentity:media!.resumeIdentity,offset,validator,onValidator:value=>{validator=value;}});if(!Number.isSafeInteger(bytes)||bytes<=0)bytes=this.options.files.size(current.fileName);
