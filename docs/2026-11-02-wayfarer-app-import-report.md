@@ -59,7 +59,7 @@
 
 IPA 为 12,872,804 字节，SHA-256 `9c82f60cc319dffb4e514703bb67c4a631eb50d192fb2d23b5e804d60be8fd47`。164 个 ZIP 条目全部通过 CRC；138 个 archive/IPA payload 文件路径集合一致、逐文件 SHA-256 一致。`main.jsbundle`、可执行文件和 `Info.plist` 的摘要分别为 `ebcb9180a4d1c6ca5888d443d6626499615ef87bbbd46ec61739ca57d0cd391a`、`613011efd36039102276bd23523aa581c2608470ddbe8da419e0d91bcdf0cc29`、`dd9d3304202133385f743d3b89fc3af5f319faebaae0435cde36eb0b39e90452`。生产入口标记 `Wayfarer`、`_importWayfarer`、`library-data-message` 存在；`fixture-secret`、`private.invalid`、`matching-audio`、`WAYFARERMVYBSRDG`、`Nexus Wayfarer Fixture`、`WAYFARERFAVORITE`、`private-source-script` 和 `nexus-ui-test-online-adapter` 均未进入 IPA。机器可读验证为 `build/distribution/ipa-verification.json`，SHA-256 `2ed4d3843d00b871ef636c33f6c28433a5f708dbf53e7046645246875c739880`；同内容快照保存在 `build/distribution-history/9c82f60c…/`。
 
-精确阶段证据已复制到 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-wayfarer-import-52f7d77/`，包含本批文档、IPA/manifest/verification、成功/取消/失败 run 目录、6 个 XCResult、初始成功截图、检查/归档日志及当日清理回执。372 个 payload 文件共 112,356,180 字节在复制前后逐文件 SHA-256 一致，`SHA256SUMS` 372 行全部通过。exFAT 生成的 370 个 `._` AppleDouble 元数据文件保留且与 payload 分开记录；`transfer-receipt.json` 为 `payloadVerified=true`。
+精确阶段证据已复制到 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-wayfarer-import-52f7d77/`，包含本批文档、IPA/manifest/verification、成功/取消/失败 run 目录、6 个 XCResult、初始成功截图、检查/归档日志及当日清理回执。376 个 payload 文件共 113,764,938 字节在复制前后逐文件 SHA-256 一致，`SHA256SUMS` 376 行全部通过。exFAT 生成的 370 个 `._` AppleDouble 元数据文件保留且与 payload 分开记录；`transfer-receipt.json` 为 `payloadVerified=true`。
 
 ## 截图证据
 

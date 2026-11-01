@@ -5,7 +5,7 @@
 - [x] App 终止重启后两个歌单、`first/second/first` 顺序、重复行和收藏仍在；清理只针对唯一夹具。
 - [x] 每轮唯一 QQ MID 首次经启用 LX 合成源请求精确 `/matching-audio/<MID>.wav` 并播放到 PCM，排除缓存命中与模糊匹配；选择器取消专项通过。
 - [x] `npm run check` 948/948、完整 native、脚本/Swift/YAML/diff 检查通过；最终 Release 1/0/0，5PNG 来源 ready 并亲看。
-- [x] `52f7d77` clean unsigned archive、manifest/ZIP CRC、138项归档与IPA字节、隐私标记、签名/描述文件排除及 T7 372份 payload 逐文件哈希复核通过。
+- [x] `52f7d77` clean unsigned archive、manifest/ZIP CRC、138项归档与IPA字节、隐私标记、签名/描述文件排除及 T7 376份 payload 逐文件哈希复核通过。
 - [ ] 真实私人备份/真实跨平台源、弱网、iOS27、实体机、签名/安装、完整 F12/F13 与全项目继续。
 
 见[本批回执](2026-11-02-wayfarer-app-import-report.md)。本批关闭正式 App 的合成备份导入、持久化、精确 MID 播放纵向链路及清洁未签名构建，不把模拟器成功或未签名构建写成真实私人迁移完成。
