@@ -22,5 +22,10 @@
 - `npm run check`：类型检查通过，948/948。
 - `npm run test:native`：完整 native 套件通过，包括真实合成媒体解码、AVPlayer、系统媒体中心、缓存、WebDAV、DSP 与图片边界。
 - `npm run ios:build`：Xcode 26.3 / SDK 26.2 Release 模拟器构建成功，`BUILD SUCCEEDED`。
+- 功能提交 `55475d99cee390846c2d7fe292e1ba0a51727ce5` 的 `npm run ios:archive` 成功，`ARCHIVE SUCCEEDED`；清洁 manifest 为 `dirty:false`、`workingTreeChanges:[]`、arm64/iphoneos26.2、最低 iOS15.1、设备族 `[1,2]`、`signed:false`。
+- 未签名 IPA 为 12,872,747 字节，SHA-256 `ac8579ee5074df1febb65acc0766a2475f75f9ee78a7fc3e0a51a4c14edc0828`。164 项 ZIP CRC、archive/IPA 内 `main.jsbundle`、可执行文件与 `Info.plist` 字节、无签名/描述文件及测试/私有标记排除均通过。
+- 归档日志、IPA、manifest、验证摘要与本回执的独立副本位于 T7 `BuildArchive/2026-11-02-system-media-clean-55475d9/`；6 份源文件逐份 SHA-256 一致，`stage-receipt.json` 记录恢复路径，源文件未删除。
 
-本机 SystemMediaCLI 运行于 macOS，不能证明 iOS 27 灵动岛界面、后台控制、蓝牙/耳机路由、来电中断或签名行为。仍需用户 iPhone 15 Pro Max / iOS 27 真机录屏与后台功耗验收；云端 iOS 27、清洁未签名 IPA 和 Sollin strict review 在本阶段收尾后补记。
+IPA/APK Sollin strict review 分别保持 52 Evidence/17 WorkItems/109 events/43 Findings/43 Paths 和 3 Evidence/2 WorkItems/3 events/2 Findings/2 Paths，均为 0 错误/0 警告；本批复用既有系统媒体与队列证据，没有伪造新增 Sollin 采集。
+
+本机 SystemMediaCLI 运行于 macOS，不能证明 iOS 27 灵动岛界面、后台控制、蓝牙/耳机路由、来电中断或签名行为。仍需用户 iPhone 15 Pro Max / iOS 27 真机录屏与后台功耗验收；云端 iOS 27 终态在 push 后核对。
