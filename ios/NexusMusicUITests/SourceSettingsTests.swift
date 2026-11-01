@@ -633,7 +633,14 @@ final class SourceSettingsTests: XCTestCase {
     }
     func reach(_ element:XCUIElement,in container:XCUIElement?=nil) {
       for _ in 0..<16 {
-        if element.isHittable{return}
+        if element.isHittable {
+          // A partially visible control at the page-sheet edge can turn a tap
+          // into the native sheet-dismiss gesture.  Bring the whole target
+          // above the home-indicator band before interacting with it.
+          let safeBottom=min(container?.frame.maxY ?? app.frame.maxY,app.frame.maxY-64)-8
+          let safeTop=(container?.frame.minY ?? app.frame.minY)+8
+          if element.frame.minY>=safeTop&&element.frame.maxY<=safeBottom{return}
+        }
         if let container {container.swipeUp()} else if element.exists && element.frame.midY<app.frame.midY {app.swipeDown()} else {app.swipeUp()}
       }
       XCTAssertTrue(element.isHittable,"Expected visible QQ comment control: \(element.identifier)")
@@ -658,13 +665,31 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(loaded(),2)
     XCTAssertTrue(text("Synthetic QQ hot root").waitForExistence(timeout:10))
     XCTAssertTrue(text("热门评论").exists);XCTAssertTrue(text("最新评论").exists)
-    let reply=text("Synthetic QQ reply");reach(reply,in:list)
-    let original=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","QQ original reader：Synthetic QQ original long text")).firstMatch
-    XCTAssertTrue(original.waitForExistence(timeout:5),"QQ replies must retain the original root attribution")
-    let firstImage=XCTAttachment(screenshot:app.screenshot());firstImage.name="QQ comments hot latest reply and total";firstImage.lifetime = .keepAlways;add(firstImage)
+    let rootID="tx:1!qqroot:1!qqroot"
+    let expand=app.buttons["comment-replies-toggle-\(rootID)"]
+    reach(expand,in:list)
+    XCTAssertEqual(expand.label,"查看 41 条回复")
+    expand.tap()
+    XCTAssertTrue(text("Synthetic QQ full reply one").waitForExistence(timeout:10))
+    XCTAssertTrue(text("Synthetic QQ full reply two").exists)
+    XCTAssertTrue(text("QQ reply reader").exists)
+    XCTAssertTrue(text("QQ original reader：Synthetic QQ root").waitForExistence(timeout:5),"QQ replies must retain the selected root attribution")
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"identifier BEGINSWITH %@","comment-reply-region-")).firstMatch.exists)
+    let firstImage=XCTAttachment(screenshot:app.screenshot());firstImage.name="QQ comments first full reply page with identity and quote";firstImage.lifetime = .keepAlways;add(firstImage)
+    let moreReplies=app.buttons["加载更多回复"];reach(moreReplies,in:list);moreReplies.tap()
+    let replyError=text("回复暂时无法载入，请重试。已显示的回复已保留。")
+    XCTAssertTrue(replyError.waitForExistence(timeout:10))
+    XCTAssertTrue(text("Synthetic QQ full reply two").exists)
+    let replyFailureImage=XCTAttachment(screenshot:app.screenshot());replyFailureImage.name="QQ reply failure preserves the first page";replyFailureImage.lifetime = .keepAlways;add(replyFailureImage)
+    let retryReply=app.buttons["重试回复"];reach(retryReply,in:list);retryReply.tap()
+    XCTAssertTrue(text("Synthetic QQ full reply three").waitForExistence(timeout:10))
+    XCTAssertEqual(loaded(),2,"A reply page must not replace the latest-comment count")
+    let secondReplyImage=XCTAttachment(screenshot:app.screenshot());secondReplyImage.name="QQ reply retry appends the rank and sequence cursor page";secondReplyImage.lifetime = .keepAlways;add(secondReplyImage)
+    reach(expand,in:list);expand.tap()
+    XCTAssertTrue(text("Synthetic QQ full reply three").waitForNonExistence(timeout:5))
     let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
     let error=text("评论暂时无法载入，请重试。已显示的内容已保留。")
-    XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(text("Synthetic QQ reply").exists)
+    XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(text("Synthetic QQ root").exists)
     let retry=app.buttons["重试评论"];reach(retry,in:list);retry.tap()
     XCTAssertTrue(text("Synthetic QQ second page").waitForExistence(timeout:10))
     XCTAssertTrue(text("共 43 条评论").waitForExistence(timeout:10),"A later QQ page total must replace the earlier total")
@@ -673,8 +698,12 @@ final class SourceSettingsTests: XCTestCase {
     control("mode=error")
     let refresh=app.buttons["刷新评论"];XCTAssertTrue(refresh.isHittable);refresh.tap()
     XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(text("Synthetic QQ second page").exists)
+    control("mode=normal&replies=empty")
+    refresh.tap();XCTAssertTrue(expand.waitForExistence(timeout:10));reach(expand,in:list);expand.tap()
+    XCTAssertTrue(text("本次未取得可展示的回复。").waitForExistence(timeout:10))
+    let emptyRepliesImage=XCTAttachment(screenshot:app.screenshot());emptyRepliesImage.name="QQ explicit empty reply state";emptyRepliesImage.lifetime = .keepAlways;add(emptyRepliesImage)
     control("mode=empty")
-    reach(retry,in:list);retry.tap()
+    refresh.tap()
     XCTAssertTrue(text("本次未取得可展示的评论。").waitForExistence(timeout:10))
     XCTAssertTrue(text("共 0 条评论").exists);XCTAssertEqual(loaded(),0)
     let emptyImage=XCTAttachment(screenshot:app.screenshot());emptyImage.name="QQ comments true empty state after retained failure";emptyImage.lifetime = .keepAlways;add(emptyImage)
@@ -797,6 +826,27 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(latest.waitForExistence(timeout:5),"The live QQ list must keep the distinct latest section after its hot rows")
     image("Live anonymous QQ comments latest section")
     XCTAssertGreaterThan(app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comments-item-")).count,0)
+    let expandQuery=app.buttons.matching(NSPredicate(format:"label MATCHES %@","查看 [1-9][0-9]* 条回复"))
+    var visibleExpand:XCUIElement?
+    for _ in 0..<40 {
+      visibleExpand=expandQuery.allElementsBoundByIndex.first{$0.isHittable}
+      if visibleExpand != nil{break}
+      list.swipeDown()
+    }
+    if visibleExpand==nil {
+      for _ in 0..<40 {
+        visibleExpand=expandQuery.allElementsBoundByIndex.first{$0.isHittable}
+        if visibleExpand != nil{break}
+        list.swipeUp()
+      }
+    }
+    XCTAssertNotNil(visibleExpand,"The live QQ public list must expose a visible positive reply count")
+    visibleExpand!.tap()
+    let thread=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comment-replies-")).firstMatch
+    XCTAssertTrue(thread.waitForExistence(timeout:20),"The live QQ reply endpoint must publish a thread for the selected root")
+    let replyRow=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comment-reply-")).firstMatch
+    XCTAssertTrue(replyRow.waitForExistence(timeout:20),"A live QQ reply row must load; an empty thread container cannot prove endpoint success")
+    image("Live anonymous QQ full replies expanded")
     let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
     let retry=app.buttons["重试评论"]
     if retry.waitForExistence(timeout:5){retry.tap()}

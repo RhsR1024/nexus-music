@@ -1,3 +1,9 @@
+## 2026-11-02 F31 QQ 公开评论只读回复
+
+QQ 原曲评论已通过官方匿名现代公开接口补完整楼层展开：根评论严格绑定 songmid、数值歌曲 ID 与 root ID，`GetReplyCommentList` 以 `RankType:0` 读取20条服务页，下一页同时使用末行 `RankScore` 与 `SeqNo`。首屏总数必须匹配根 `ReplyCnt`；失败保留、同游标重试、空态、收起、取消、迟到隔离及500条UI上限沿用共享线程。真实侧观察总数4757，回复身份/引用和第二页均可读，全程不播放。实现、协议来源、失败修正与未验边界见[本批回执](docs/2026-11-02_qq-comment-replies-report.md)和[UI规格](docs/ui-spec/qq-comment-replies-2026-11-02.md)。
+
+最终`npm run check` 948/948、类型/脚本语法/diff检查通过；合成Release 1/0/0（`SourceUITests-1793559850209`，62.703秒）、真实匿名QQ Release 1/0/0（`SourceUITests-1793560098614`，106.966秒）。6张合成PNG和4张真实PNG逐张来源ready并亲看；真实公开用户内容只留本机忽略目录。两次失败为夹具错误期待`9/201`、服务实际返回`8/202`，原xcresult与failure-evidence保留；测试辅助增加完整控件安全区检查。复用E-033→F-032→P-032，无新增Sollin采集；完整F31、iOS27、实体机/签名/弱网/emoji字形/动效继续，不报总目标完成。归档、提交、push和队列终态在阶段收尾补记。
+
 ## 2026-11-02 F31 网易公开评论只读回复
 
 网易原曲评论已补匿名楼层展开：复用现有 Sheet，严格绑定原曲/根评论和平台返回的时间游标，20条分页、失败保留/同游标重试、空态、500条共享上限及有界2048根缓存。公开 v1 列表缺少回复数时不伪造数字，显示“查看回复”；后续楼层声明`totalCount=0`但仍有回复时保留首屏总数，不补造缺失条目。固定公开协议来源与许可、实现、失败修正及证据见[本批回执](docs/2026-11-02_netease-comment-replies-report.md)和[UI规格](docs/ui-spec/netease-comment-replies-2026-11-02.md)。

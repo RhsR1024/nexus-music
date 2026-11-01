@@ -15,8 +15,8 @@ export class PublicComments implements CommentReader {
  constructor(http:HTTPClient=requestJSON,crypto?:KugouCommentCrypto){this.http=http;this.crypto=crypto;this.wy=new NeteasePublicComments(http);this.qq=new QQPublicComments(http);this.migu=new MiguPublicComments(http);this.kuwo=new KuwoPublicComments(http);if(crypto)this.kugou=new KugouPublicComments(http,crypto);}
  session():CommentReader{return new PublicComments(this.http,this.crypto);}
  supports(track:Track){return !!this.kugou?.supports(track)||this.qq.supports(track)||this.migu.supports(track)||this.kuwo.supports(track)||this.wy.supports(track);}
- canExpand(track:Track,root:SongComment){return this.wy.supports(track)?this.wy.canExpand(track,root):((this.migu.supports(track)||!!this.kugou?.supports(track))&&(root.replyCount??0)>0);}
- replies(track:Track,root:SongComment,offset:number,signal:AbortSignal){if(this.wy.supports(track))return this.wy.replies(track,root,offset,signal);if(this.migu.supports(track))return this.migu.replies(track,root,offset,signal);if(this.kugou?.supports(track))return this.kugou.replies(track,root,offset,signal);throw Error('此评论暂不支持展开回复');}
+ canExpand(track:Track,root:SongComment){return this.qq.supports(track)?this.qq.canExpand(track,root):this.wy.supports(track)?this.wy.canExpand(track,root):((this.migu.supports(track)||!!this.kugou?.supports(track))&&(root.replyCount??0)>0);}
+ replies(track:Track,root:SongComment,offset:number,signal:AbortSignal){if(this.qq.supports(track))return this.qq.replies(track,root,offset,signal);if(this.wy.supports(track))return this.wy.replies(track,root,offset,signal);if(this.migu.supports(track))return this.migu.replies(track,root,offset,signal);if(this.kugou?.supports(track))return this.kugou.replies(track,root,offset,signal);throw Error('此评论暂不支持展开回复');}
  async page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>{
   if(this.qq.supports(track))return this.qq.page(track,offset,signal);
   if(this.migu.supports(track))return this.migu.page(track,offset,signal);

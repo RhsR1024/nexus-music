@@ -121,7 +121,7 @@ let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
 let wyRepliesNextPageFails=true;
-let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
+let qqCommentsMode='normal',qqCommentsNextPageFails=true,qqRepliesNextPageFails=true,qqRepliesMode='normal',miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
@@ -266,8 +266,9 @@ const server = createServer(async (req, res) => {
   if(req.url.startsWith('/qq-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
     if(mode&&['normal','empty','error'].includes(mode))qqCommentsMode=mode;
-    if(control.searchParams.has('reset'))qqCommentsNextPageFails=true;
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:qqCommentsMode,nextPageFails:qqCommentsNextPageFails}));return;
+    if(control.searchParams.has('reset')){qqCommentsNextPageFails=true;qqRepliesNextPageFails=true;qqRepliesMode='normal';}
+    const repliesMode=control.searchParams.get('replies');if(repliesMode&&['normal','empty'].includes(repliesMode))qqRepliesMode=repliesMode;
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:qqCommentsMode,nextPageFails:qqCommentsNextPageFails,repliesMode:qqRepliesMode,repliesNextPageFails:qqRepliesNextPageFails,replyPages:counts.qqReplies?.pages??[]}));return;
   }
   if(req.url.startsWith('/migu-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
@@ -362,19 +363,6 @@ const server = createServer(async (req, res) => {
       else {counts.comments.next++;res.end(JSON.stringify(counts.comments.next===1?{code:503}:{code:200,comments:[comment('3')],total:3,more:false}));}return;
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/song/lyric'){counts.lyrics??={wy:0,tx:0};counts.lyrics.wy++;res.end(JSON.stringify({ttml:'<tt>',lxlyric:' ',lyric:'',lrc:'[00:00.000]<0,500>Synthetic <500,500>rich lyric\n[00:30.000]<0,1000>Second rich line'}));return;}
-    if(parsed.hostname==='c.y.qq.com'&&parsed.pathname==='/base/fcgi-bin/fcg_global_comment_h5.fcg'){
-      const form=new URLSearchParams(request.body??''),page=Number(form.get('pagenum')??0),topid=form.get('topid');
-      counts.qqComments??={pages:[],errors:0,empty:0};counts.qqComments.pages.push(page);
-      if(qqCommentsMode==='error'){counts.qqComments.errors++;res.end(JSON.stringify({code:1}));return;}
-      if(qqCommentsMode==='empty'){counts.qqComments.empty++;res.end(JSON.stringify({code:0,topid:9068436,comment:{commenttotal:0,commentlist:[]},hot_comment:{commenttotal:0,commentlist:[]}}));return;}
-      const root='1!qqroot',longRoot='Synthetic QQ original long text '.repeat(8).trim();
-      const hot={commentid:'1!qqhot',rootcommentid:'1!qqhot',rootcommentcontent:'Synthetic QQ hot root',rootcommentnick:'QQ hot reader',nick:'QQ hot reader',time:1700000100,praisenum:9};
-      const rootRow={commentid:root,rootcommentid:root,rootcommentcontent:'Synthetic QQ root',rootcommentnick:'QQ root reader',nick:'QQ latest reader',time:1700000200,praisenum:7};
-      const reply={commentid:'1!qqreply',rootcommentid:root,rootcommentcontent:longRoot,rootcommentnick:'QQ original reader',nick:'QQ reply reader',time:1700000300,praisenum:4,middlecommentcontent:[{subcommentid:'1!qqreply',subcommentcontent:'Synthetic QQ reply',replynick:'@QQ replier'}]};
-      const page2={commentid:'1!qqpage2',rootcommentid:'1!qqpage2',rootcommentcontent:'Synthetic QQ second page',rootcommentnick:'QQ page two reader',nick:'QQ page two reader',time:1700000400,praisenum:2};
-      if(page===1&&qqCommentsNextPageFails){qqCommentsNextPageFails=false;counts.qqComments.errors++;res.end(JSON.stringify({code:503}));return;}
-      res.end(JSON.stringify({code:0,topid:Number(topid),comment:page===0?{commenttotal:41,commentlist:[rootRow,reply]}:{commenttotal:43,commentlist:[page2]},...(page===0?{hot_comment:{commenttotal:1,commentlist:[hot]}}:{})}));return;
-    }
     if(parsed.hostname==='app.c.nf.migu.cn'&&parsed.pathname==='/MIGUM3.0/user/comment/stack/101/v1.0'){
       const start=Number(parsed.searchParams.get('start'));counts.miguReplies??={starts:[],errors:[]};counts.miguReplies.starts.push(start);
       if(miguCommentsMode==='error'||(start===20&&miguRepliesNextPageFails)){miguRepliesNextPageFails=false;counts.miguReplies.errors.push(start);res.end(JSON.stringify({code:'500',data:{}}));return;}
@@ -429,6 +417,33 @@ const server = createServer(async (req, res) => {
     if(parsed.hostname==='music.163.com'){res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;}
     if(parsed.hostname==='u.y.qq.com'){
       const body=JSON.parse(request.body);
+      if(body.req_0?.method==='GetNewCommentList'){
+        const param=body.req_0.param,page=Number(param?.PageNum??0);
+        counts.qqComments??={pages:[],errors:0,empty:0};counts.qqComments.pages.push(page);
+        if(qqCommentsMode==='error'){counts.qqComments.errors++;res.end(JSON.stringify({code:0,req_0:{code:1,data:{SubCode:1}}}));return;}
+        if(qqCommentsMode==='empty'){counts.qqComments.empty++;res.end(JSON.stringify({code:0,req_0:{code:0,data:{SubCode:0,CommentList:{Total:0,HasMore:0,Comments:[]},CommentList2:{Total:0,HasMore:0,Comments:[]},TotalVer:'fixture-empty'}}}));return;}
+        if(page===1&&qqCommentsNextPageFails){qqCommentsNextPageFails=false;counts.qqComments.errors++;res.end(JSON.stringify({code:0,req_0:{code:1,data:{SubCode:1}}}));return;}
+        if(page===1&&param?.LastCommentSeqNo!=='101'){counts.qqComments.errors++;res.end(JSON.stringify({code:0,req_0:{code:1,data:{SubCode:1}}}));return;}
+        const root=(id,content,nick,seq,replyCount,extra={})=>({CmId:id,RootCmId:null,Content:content,Nick:nick,Location:'广东',PubTime:1700000000+Number(seq),PraiseNum:3,ReplyCnt:replyCount,SeqNo:seq,...extra});
+        const rootID='1!qqroot';
+        const hot=root('1!qqhot','Synthetic QQ hot root','QQ hot reader','90',2);
+        const latestRoot=root(rootID,'Synthetic QQ root','QQ latest reader','100',41);
+        const latestOther=root('1!qqlatest','Synthetic QQ latest second root','QQ second latest reader','101',0);
+        const page2=root('1!qqpage2','Synthetic QQ second page','QQ page two reader','102',0);
+        const commentList=page===0?{Total:41,HasMore:1,Comments:[latestRoot,latestOther]}:{Total:43,HasMore:0,Comments:[page2]};
+        res.end(JSON.stringify({code:0,req_0:{code:0,data:{SubCode:0,CommentList:commentList,CommentList2:page===0?{Total:1,HasMore:0,Comments:[hot]}:{Total:0,HasMore:0,Comments:[]},TotalVer:'fixture-v1'}}}));return;
+      }
+      if(body.req_0?.method==='GetReplyCommentList'){
+        const param=body.req_0.param,page=Number(param?.PageNum??0);
+        counts.qqReplies??={pages:[],errors:0,empty:0};counts.qqReplies.pages.push({page,rank:param?.LastRankScore,seq:param?.LastCommentSeqNo,root:param?.RootCmId});
+        if(param?.RootCmId!=='1!qqroot'||param?.RankType!==0){counts.qqReplies.errors++;res.end(JSON.stringify({code:0,req_0:{code:1,data:{SubCode:1}}}));return;}
+        if(qqRepliesMode==='empty'){counts.qqReplies.empty++;res.end(JSON.stringify({code:0,req_0:{code:0,data:{SubCode:0,CommentList:{Total:41,HasMore:0,Comments:[]}}}}));return;}
+        if(page===1&&qqRepliesNextPageFails){qqRepliesNextPageFails=false;counts.qqReplies.errors++;res.end(JSON.stringify({code:0,req_0:{code:1,data:{SubCode:1}}}));return;}
+        if(page===1&&(param?.LastRankScore!=='8'||param?.LastCommentSeqNo!=='202')){counts.qqReplies.errors++;res.end(JSON.stringify({code:0,req_0:{code:1,data:{SubCode:1}}}));return;}
+        const reply=(id,content,nick,rank,seq)=>({CmId:id,RootCmId:null,Content:content,Nick:nick,Location:'上海',PubTime:1700000200+Number(seq),PraiseNum:2,RankScore:rank,SeqNo:seq,RepliedComments:[{CmId:'1!qqroot',Nick:'QQ original reader',Content:'Synthetic QQ root'}]});
+        const commentList=page===0?{Total:41,HasMore:1,Comments:[reply('1!qqreply1','Synthetic QQ full reply one','QQ reply reader', '9','201'),reply('1!qqreply2','Synthetic QQ full reply two','QQ reply reader two','8','202')]}:{Total:0,HasMore:0,Comments:[reply('1!qqreply3','Synthetic QQ full reply three','QQ reply reader three','7','203')]};
+        res.end(JSON.stringify({code:0,req_0:{code:0,data:{SubCode:0,CommentList:commentList}}}));return;
+      }
       if(body.req?.module==='music.pf_song_detail_svr'){
         const mid=body.req.param?.song_mid;
         res.end(JSON.stringify({code:0,req:{code:0,data:{track_info:{id:9068436,mid}}}}));return;

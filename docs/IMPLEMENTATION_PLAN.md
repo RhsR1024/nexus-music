@@ -1,3 +1,9 @@
+## 2026-11-02 F31 QQ 公开评论只读回复
+
+`QQPublicComments`已接官方匿名现代公开评论列表与完整楼层：原曲MID解析数值ID，根评论只在同一歌曲会话登记后展开；楼层每页20条，下一页同时复用末行`RankScore`和`SeqNo`，首屏总数必须匹配根`ReplyCnt`，后续零总数不覆盖首屏有效值。回复独立作者头像/地区、引用、失败保留、同游标重试、空态、收起、取消、迟到隔离、去重及500条UI上限通过契约和共享Sheet接线。
+
+最终`npm run check` 948/948，TypeScript、`node --check scripts/test-ui.mjs`与`git diff --check`通过。合成Release `SourceUITests-1793559850209`为1/0/0、62.703秒，真实匿名QQ `SourceUITests-1793560098614`为1/0/0、106.966秒；6+4张PNG来源ready并亲看，真实公开内容不入Git，不启动播放。两次失败同源于夹具错误期待`9/201`，服务实际要求`8/202`；原结果与failure-evidence保留，辅助按完整安全区滚动后重测。复用E-033→F-032→P-032，无新增Sollin分析；完整F31、iOS27、实体机/签名/弱网/emoji字形和动效继续。见[回执](2026-11-02_qq-comment-replies-report.md)与[UI规格](ui-spec/qq-comment-replies-2026-11-02.md)。
+
 ## 2026-11-02 F31 网易公开评论只读回复
 
 - [x] 原曲/根评论严格绑定，匿名 HTTPS 楼层首屏与返回时间游标分页；未知回复数保留未知，后续总数0不覆盖首屏有效总数。
