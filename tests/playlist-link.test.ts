@@ -39,7 +39,28 @@ test('short links reject spoofed domains, credentials, ports, mismatch and inval
   for(const value of ['https://163cn.tv.attacker.invalid/AbCd','https://user:secret@163cn.tv/AbCd','https://163cn.tv:443/AbCd'])assert.throws(()=>parsePlaylistLink(value));
   await assert.rejects(()=>resolvePlaylistLink('https://163cn.tv/AbCd','tx',new AbortController().signal,async()=>{calls++;return'https://music.163.com/#/playlist?id=123';}),/分享链接与所选平台不同/);
   await assert.rejects(()=>resolvePlaylistLink('https://163cn.tv/AbCd','wy',new AbortController().signal,async()=>{calls++;return'https://attacker.invalid/#/playlist?id=123';}));
-  assert.equal(calls,2);
+  assert.equal(calls,1);
+});
+test('explicit default ports are rejected before URL normalization or short-link transport',async()=>{
+  let calls=0;
+  for(const protocol of ['http','https']){
+    for(const port of [protocol==='https'?'443':'80',protocol==='https'?'0443':'080','18439']){
+      assert.throws(()=>parsePlaylistLink(`${protocol}://music.163.com:${port}/playlist?id=123`),/分享链接无效/);
+      await assert.rejects(()=>resolvePlaylistLink(`${protocol}://163cn.tv:${port}/AbCd`,'wy',new AbortController().signal,async()=>{calls++;return'https://music.163.com/playlist?id=123';}),/分享链接无效/);
+    }
+  }
+  assert.equal(calls,0);
+  assert.deepEqual(parsePlaylistLink('https://music.163.com/playlist?id=123&note=12:30'),{platform:'wy',id:'123'});
+});
+test('short-link expanded destinations also reject explicitly ported official URLs',async()=>{
+  await assert.rejects(()=>resolvePlaylistLink('https://163cn.tv/AbCd','wy',new AbortController().signal,async()=>'https://music.163.com:443/playlist?id=123'),/分享链接无效/);
+});
+test('NetEase short links selected under another platform never start transport',async()=>{
+  let calls=0;
+  for(const platform of ['tx','kw','kg','mg'] as const){
+    await assert.rejects(()=>resolvePlaylistLink('https://163cn.tv/AbCd',platform,new AbortController().signal,async()=>{calls++;throw new Error('Must not run');}),/分享链接与所选平台不同/);
+  }
+  assert.equal(calls,0);
 });
 test('short-link expansion is bounded even when its transport ignores cancellation',async()=>{
   let childSignal:AbortSignal|undefined;

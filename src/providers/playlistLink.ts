@@ -12,10 +12,14 @@ function cleanedInput(input:string){
 function shareURL(input:string){
   const match=cleanedInput(input).match(/https?:\/\/[^\s<>"']+/i);
   if(!match)throw new Error('请输入平台公开歌单分享链接或选择平台后输入ID');
+  const candidate=match[0].replace(trailingPunctuation,'');
   let url:URL;
-  try{url=new URL(match[0].replace(trailingPunctuation,''));}catch{throw new Error('分享链接无效');}
+  try{url=new URL(candidate);}catch{throw new Error('分享链接无效');}
   if(url.username||url.password)throw new Error('分享链接不能包含账号信息');
-  if(!['http:','https:'].includes(url.protocol)||url.port)throw new Error('分享链接无效');
+  // URL normalizes default ports away. Check the original authority as well,
+  // before normalization can turn an explicitly ported link into an allowed one.
+  const authority=candidate.slice(candidate.indexOf('://')+3).split(/[/?#\\]/,1)[0]!;
+  if(!['http:','https:'].includes(url.protocol)||url.port||authority.includes(':'))throw new Error('分享链接无效');
   return url;
 }
 
@@ -49,6 +53,7 @@ export async function resolvePlaylistLink(input:string,platformHint:OnlinePlatfo
   catch(directError){
     const url=shareURL(input);
     if(!isShortLink(url))throw directError;
+    if(platformHint!=='wy')throw new Error('分享链接与所选平台不同');
     const expanded=await bounded(child=>expand(url.toString(),child),signal,timeoutMs);
     throwIfAborted(signal);
     return parsePlaylistLink(expanded,platformHint);

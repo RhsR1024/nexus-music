@@ -4626,6 +4626,14 @@ final class SourceSettingsTests: XCTestCase {
     reach(linkPreview);linkPreview.tap()
     XCTAssertTrue(app.staticTexts["尚未识别此分享链接，请展开链接或输入公开歌单ID"].waitForExistence(timeout:10))
     evidence("Invalid public playlist host stays on the discovery page with safe copy")
+    let requestsBeforePorts=integer("playlistLinkRequests",in:try controlState())
+    for ported in ["https://music.163.com:443/playlist?id=101","https://163cn.tv:443/AbCd","http://163cn.tv:80/AbCd"] {
+      replaceLink(ported);reach(linkPreview);linkPreview.tap()
+      XCTAssertTrue(app.staticTexts["分享链接无效"].waitForExistence(timeout:10))
+      XCTAssertFalse(app.buttons["刷新歌单"].exists)
+      XCTAssertEqual(integer("playlistLinkRequests",in:try controlState()),requestsBeforePorts,"Explicit ports must not start short-link transport")
+    }
+    evidence("Explicit default ports are rejected without short-link transport")
     _=try controlState("holdShortNext=1")
     replaceLink("分享 https://163cn.tv/AbCd，")
     reach(linkPreview);linkPreview.tap()

@@ -1,3 +1,7 @@
+## 2026-11-02 公开歌单默认端口回归修正
+
+修正 WHATWG URL 自动去掉`:443`/`:80`导致显式端口漏检：原始authority、短链输入与展开目标共用校验；网易短链在非网易平台下直接拒绝且不发请求。961/961检查、Swift parse/diff、IPA/APK strict review通过；正式Release `SourceUITests-1793573573210` 1/0/0、214.252秒，sourceUnchanged，新增端口拒绝/零请求截图provenance ready并亲看。已有取消、重试、分页及完整导入回归保持，清洁IPA与云端终态继续。见[本批回执](2026-11-02-playlist-default-port-regression-report.md)。本批不改变当前iPhone常态UI范围，不报全部F12/F13或项目完成。
+
 ## 2026-11-02 公开平台歌单链接导入鲁棒性
 
 - [x] 清理复制输入中的 HTML 实体、零宽字符和尾部标点；纯数字 ID 保持字符串，直接链接/ID 不发起短链请求。

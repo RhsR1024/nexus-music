@@ -1,3 +1,7 @@
+## 2026-11-02 公开歌单默认端口回归修正
+
+修正 WHATWG URL 自动去掉`:443`/`:80`导致显式端口漏检：原始authority、短链输入与展开目标共用校验；网易短链在非网易平台下直接拒绝且不发请求。961/961检查、Swift parse/diff、IPA/APK strict review通过；正式Release `SourceUITests-1793573573210` 1/0/0、214.252秒，sourceUnchanged，新增端口拒绝/零请求截图provenance ready并亲看。已有取消、重试、分页及完整导入回归保持，清洁IPA与云端终态继续。见[本批回执](2026-11-02-playlist-default-port-regression-report.md)。本批不改变当前iPhone常态UI范围，不报全部F12/F13或项目完成。
+
 ## 2026-11-02 公开歌单链接导入 clean archive
 
 功能提交`3afe637`的清洁未签名归档与该功能提交一致：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。IPA 12,877,854字节、SHA-256 `685be0e0457dc07a145863107c42aa2b7d05af74bc61566c1a34cf5c327cbae4`，manifest SHA-256 `17f4d950892f7ee3c150b75074d68603f4c2351e64f3eb4a4639b2464a275940`；164项ZIP CRC、138项archive/IPA payload逐文件一致。`main.jsbundle`/可执行/Info.plist摘要为`1a95c683…`/`a673bbdf…`/`dd9d3304…`，新解析器与状态标记存在，测试短链入口、本机端点、夹具秘密和私有路径排除；无签名或描述文件。机器回执为`build/logs/public-playlist-link-archive-verification.json`。本机SDK26.2、未签名和模拟器结果不替代iOS27、签名、实体机、弱网或动效。
