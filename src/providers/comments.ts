@@ -1,3 +1,4 @@
+import {QQPublicComments} from './qqComments.ts';
 import {trackKey,type Track} from '../domain/track.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {queryURL,requestJSON,type HTTPClient} from './http.ts';
@@ -15,10 +16,11 @@ function mapped(value:unknown):SongComment|undefined {
 }
 function unique(values:readonly SongComment[]){const seen=new Set<string>();return values.filter(v=>{if(seen.has(v.id))return false;seen.add(v.id);return true;});}
 export class PublicComments implements CommentReader {
- private http:HTTPClient;
- constructor(http:HTTPClient=requestJSON){this.http=http;}
- supports(track:Track){return track.origin.kind==='online'&&track.origin.platform==='wy'&&/^\d{1,30}$/.test(track.origin.id);}
+ private http:HTTPClient;private qq:QQPublicComments;
+ constructor(http:HTTPClient=requestJSON){this.http=http;this.qq=new QQPublicComments(http);}
+ supports(track:Track){return this.qq.supports(track)||(track.origin.kind==='online'&&track.origin.platform==='wy'&&/^\d{1,30}$/.test(track.origin.id));}
  async page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>{
+  if(this.qq.supports(track))return this.qq.page(track,offset,signal);
   if(!this.supports(track)||!Number.isSafeInteger(offset)||offset<0||offset>100000)throw Error('此歌曲暂不支持公开评论');
   const raw=row(await bounded(child=>this.http(queryURL(`https://music.163.com/api/v1/resource/comments/R_SO_4_${track.origin.id}`,{limit:20,offset}),{headers:{Referer:'https://music.163.com/'}},child),signal,12000));throwIfAborted(signal);
   if(raw.code!==200||!Array.isArray(raw.comments)||raw.comments.length>50||(raw.more!==undefined&&typeof raw.more!=='boolean')||(raw.hotComments!==undefined&&!Array.isArray(raw.hotComments)))throw Error('评论服务暂时不可用');

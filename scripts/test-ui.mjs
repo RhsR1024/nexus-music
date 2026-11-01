@@ -120,7 +120,8 @@ for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.si
 let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
-const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments'));
+let qqCommentsMode='normal',qqCommentsNextPageFails=true;
+const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
 const fixtureOnlineUI=matchingUI||discoveryUI||searchUI;
@@ -250,6 +251,12 @@ const server = createServer(async (req, res) => {
     if(control.searchParams.has('release'))for(const send of heldDiscoveryResponses.splice(0))send();
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length}));return;
   }
+  if(req.url.startsWith('/qq-comments-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
+    if(mode&&['normal','empty','error'].includes(mode))qqCommentsMode=mode;
+    if(control.searchParams.has('reset'))qqCommentsNextPageFails=true;
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:qqCommentsMode,nextPageFails:qqCommentsNextPageFails}));return;
+  }
   if(offlineUI&&req.url.startsWith('/offline-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('block'))blockOfflineStream=control.searchParams.get('block')==='1';
@@ -299,12 +306,30 @@ const server = createServer(async (req, res) => {
       else {counts.comments.next++;res.end(JSON.stringify(counts.comments.next===1?{code:503}:{code:200,comments:[comment('3')],total:3,more:false}));}return;
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/song/lyric'){counts.lyrics??={wy:0,tx:0};counts.lyrics.wy++;res.end(JSON.stringify({ttml:'<tt>',lxlyric:' ',lyric:'',lrc:'[00:00.000]<0,500>Synthetic <500,500>rich lyric\n[00:30.000]<0,1000>Second rich line'}));return;}
+    if(parsed.hostname==='c.y.qq.com'&&parsed.pathname==='/base/fcgi-bin/fcg_global_comment_h5.fcg'){
+      const form=new URLSearchParams(request.body??''),page=Number(form.get('pagenum')??0),topid=form.get('topid');
+      counts.qqComments??={pages:[],errors:0,empty:0};counts.qqComments.pages.push(page);
+      if(qqCommentsMode==='error'){counts.qqComments.errors++;res.end(JSON.stringify({code:1}));return;}
+      if(qqCommentsMode==='empty'){counts.qqComments.empty++;res.end(JSON.stringify({code:0,topid:9068436,comment:{commenttotal:0,commentlist:[]},hot_comment:{commenttotal:0,commentlist:[]}}));return;}
+      const root='1!qqroot',longRoot='Synthetic QQ original long text '.repeat(8).trim();
+      const hot={commentid:'1!qqhot',rootcommentid:'1!qqhot',rootcommentcontent:'Synthetic QQ hot root',rootcommentnick:'QQ hot reader',nick:'QQ hot reader',time:1700000100,praisenum:9};
+      const rootRow={commentid:root,rootcommentid:root,rootcommentcontent:'Synthetic QQ root',rootcommentnick:'QQ root reader',nick:'QQ latest reader',time:1700000200,praisenum:7};
+      const reply={commentid:'1!qqreply',rootcommentid:root,rootcommentcontent:longRoot,rootcommentnick:'QQ original reader',nick:'QQ reply reader',time:1700000300,praisenum:4,middlecommentcontent:[{subcommentid:'1!qqreply',subcommentcontent:'Synthetic QQ reply',replynick:'@QQ replier'}]};
+      const page2={commentid:'1!qqpage2',rootcommentid:'1!qqpage2',rootcommentcontent:'Synthetic QQ second page',rootcommentnick:'QQ page two reader',nick:'QQ page two reader',time:1700000400,praisenum:2};
+      if(page===1&&qqCommentsNextPageFails){qqCommentsNextPageFails=false;counts.qqComments.errors++;res.end(JSON.stringify({code:503}));return;}
+      res.end(JSON.stringify({code:0,topid:Number(topid),comment:page===0?{commenttotal:41,commentlist:[rootRow,reply]}:{commenttotal:43,commentlist:[page2]},...(page===0?{hot_comment:{commenttotal:1,commentlist:[hot]}}:{})}));return;
+    }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;}
     if(parsed.hostname==='u.y.qq.com'){
-      const body=JSON.parse(request.body);if(body.req){res.end(JSON.stringify({code:1}));return;}const param=body['music.search.SearchCgiService']?.param,page=param?.page_num??1;
+      const body=JSON.parse(request.body);
+      if(body.req?.module==='music.pf_song_detail_svr'){
+        const mid=body.req.param?.song_mid;
+        res.end(JSON.stringify({code:0,req:{code:0,data:{track_info:{id:9068436,mid}}}}));return;
+      }
+      if(body.req){res.end(JSON.stringify({code:1}));return;}const param=body['music.search.SearchCgiService']?.param,page=param?.page_num??1;
       const song=(mid,live=false)=>({mid,title:'Synthetic match tone'+(live?' (Live)':''),singer:[{name:'Fixture artist'}],album:{name:live?'Manual fixture':'Matched fixture'},interval:120,file:{media_mid:mid,size_flac:1000}});
-      res.end(JSON.stringify({code:0,'music.search.SearchCgiService':{code:0,data:{body:{song:{sum:2,list:page===1?[song(param?.query?.includes('slow')?'fixture-slow':'fixture-match'),song('fixture-live',true)]:[]}}}}}));return;
+      res.end(JSON.stringify({code:0,'music.search.SearchCgiService':{code:0,data:{body:{song:{sum:2,list:page===1?[song(param?.query?.includes('slow')?'fixture-slow':'fixturematch01'),song('fixture-live',true)]:[]}}}}}));return;
     }
     if(parsed.hostname==='search.kuwo.cn'){res.end(JSON.stringify({abslist:[],TOTAL:0}));return;}
     if(parsed.hostname==='songsearch.kugou.com'){res.end(JSON.stringify({error_code:0,data:{lists:[],total:0}}));return;}
@@ -498,11 +523,12 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePlatformRecommendations')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLivePlatformRecommendations');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQWebLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQWebLogin');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveKugouQrLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveKugouQrLogin');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQPublicComments');
   for(const variant of ['Large','Small'])if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadCover'+variant)))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadCover'+variant);
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');

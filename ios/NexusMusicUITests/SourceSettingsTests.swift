@@ -584,6 +584,110 @@ final class SourceSettingsTests: XCTestCase {
     waitForExpectations(timeout:10)
     XCTAssertFalse(app.buttons["暂停"].exists)
   }
+  func testPublicQQComments() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer { XCUIDevice.shared.orientation = .portrait }
+    let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
+    func control(_ query:String) {
+      let path="http://127.0.0.1:18439/qq-comments-fixture-control?"+query
+      XCTAssertNotNil(try? Data(contentsOf:URL(string:path)!),"QQ comment fixture control must be reachable")
+    }
+    func reach(_ element:XCUIElement,in container:XCUIElement?=nil) {
+      for _ in 0..<16 {
+        if element.isHittable{return}
+        if let container {container.swipeUp()} else if element.exists && element.frame.midY<app.frame.midY {app.swipeDown()} else {app.swipeUp()}
+      }
+      XCTAssertTrue(element.isHittable,"Expected visible QQ comment control: \(element.identifier)")
+    }
+    control("mode=normal&reset=1")
+    defer { control("mode=normal&reset=1") }
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10));reach(query)
+    let clear=app.buttons["search-clear"];if clear.exists{clear.tap()}
+    let platform=app.descendants(matching:.any).matching(identifier:"QQ音乐").firstMatch;reach(platform);platform.tap()
+    query.tap();for character in "Photograph Ed Sheeran"{query.typeText(String(character))};query.typeText("\n")
+    let result=app.buttons["search-track-tx-0"];XCTAssertTrue(result.waitForExistence(timeout:15))
+    let more=app.buttons["search-more-tx-0"];reach(more);more.tap()
+    let comments=app.buttons["search-action-歌曲评论"];XCTAssertTrue(comments.waitForExistence(timeout:5));reach(comments);comments.tap()
+    let title=app.descendants(matching:.any).matching(identifier:"comments-title").firstMatch
+    XCTAssertTrue(title.waitForExistence(timeout:15));XCTAssertTrue(title.label.contains("Synthetic match tone"))
+    XCTAssertTrue(app.staticTexts["共 41 条评论"].waitForExistence(timeout:10))
+    let list=app.descendants(matching:.any).matching(identifier:"comments-list").firstMatch
+    XCTAssertTrue(list.waitForExistence(timeout:5))
+    func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
+    func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
+    XCTAssertEqual(loaded(),2)
+    XCTAssertTrue(text("Synthetic QQ hot root").waitForExistence(timeout:10))
+    XCTAssertTrue(text("热门评论").exists);XCTAssertTrue(text("最新评论").exists)
+    let reply=text("Synthetic QQ reply");reach(reply,in:list)
+    let original=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","QQ original reader：Synthetic QQ original long text")).firstMatch
+    XCTAssertTrue(original.waitForExistence(timeout:5),"QQ replies must retain the original root attribution")
+    let firstImage=XCTAttachment(screenshot:app.screenshot());firstImage.name="QQ comments hot latest reply and total";firstImage.lifetime = .keepAlways;add(firstImage)
+    let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
+    let error=text("评论暂时无法载入，请重试。已显示的内容已保留。")
+    XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(text("Synthetic QQ reply").exists)
+    let retry=app.buttons["重试评论"];reach(retry,in:list);retry.tap()
+    XCTAssertTrue(text("Synthetic QQ second page").waitForExistence(timeout:10))
+    XCTAssertTrue(text("共 43 条评论").waitForExistence(timeout:10),"A later QQ page total must replace the earlier total")
+    XCTAssertEqual(loaded(),3)
+    let secondImage=XCTAttachment(screenshot:app.screenshot());secondImage.name="QQ comments retry loads the next real page and refreshed total";secondImage.lifetime = .keepAlways;add(secondImage)
+    control("mode=error")
+    let refresh=app.buttons["刷新评论"];XCTAssertTrue(refresh.isHittable);refresh.tap()
+    XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(text("Synthetic QQ second page").exists)
+    control("mode=empty")
+    reach(retry,in:list);retry.tap()
+    XCTAssertTrue(text("本次未取得可展示的评论。").waitForExistence(timeout:10))
+    XCTAssertTrue(text("共 0 条评论").exists);XCTAssertEqual(loaded(),0)
+    let emptyImage=XCTAttachment(screenshot:app.screenshot());emptyImage.name="QQ comments true empty state after retained failure";emptyImage.lifetime = .keepAlways;add(emptyImage)
+    app.buttons["收起歌曲评论"].tap()
+    XCTAssertFalse(app.buttons["暂停"].exists,"Reading QQ comments must not start playback")
+  }
+  func testLiveQQPublicComments() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer { XCUIDevice.shared.orientation = .portrait }
+    let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists,"The comments probe must start without active playback")
+    func reach(_ element:XCUIElement,in container:XCUIElement?=nil) {
+      for _ in 0..<20 {
+        if element.isHittable{return}
+        if let container {container.swipeUp()} else if element.exists && element.frame.midY<app.frame.midY {app.swipeDown()} else {app.swipeUp()}
+      }
+      XCTAssertTrue(element.isHittable,"Expected visible live QQ comment control: \(element.identifier)")
+    }
+    func image(_ name:String){let attachment=XCTAttachment(screenshot:app.screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)}
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10));reach(query)
+    let clear=app.buttons["search-clear"];if clear.exists{clear.tap()}
+    let platform=app.descendants(matching:.any).matching(identifier:"QQ音乐").firstMatch;reach(platform);platform.tap()
+    query.tap();for character in "Photograph Ed Sheeran"{query.typeText(String(character))};query.typeText("\n")
+    let result=app.buttons["search-track-tx-0"];XCTAssertTrue(result.waitForExistence(timeout:60),"Live QQ search must return the public Photograph row")
+    let more=app.buttons["search-more-tx-0"];reach(more);more.tap()
+    let comments=app.buttons["search-action-歌曲评论"];XCTAssertTrue(comments.waitForExistence(timeout:10));reach(comments);comments.tap()
+    let title=app.descendants(matching:.any).matching(identifier:"comments-title").firstMatch
+    XCTAssertTrue(title.waitForExistence(timeout:15));XCTAssertTrue(title.label.contains("Photograph"))
+    let total=app.staticTexts.matching(NSPredicate(format:"label MATCHES %@","共 [1-9][0-9]* 条评论")).firstMatch
+    XCTAssertTrue(total.waitForExistence(timeout:20),"The live QQ endpoint must expose a positive comment total")
+    let list=app.descendants(matching:.any).matching(identifier:"comments-list").firstMatch
+    XCTAssertTrue(list.waitForExistence(timeout:5))
+    func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
+    func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
+    let initial=loaded();XCTAssertGreaterThanOrEqual(initial,20)
+    image("Live anonymous QQ comments first page before section assertion")
+    XCTAssertTrue(text("热门评论").waitForExistence(timeout:20))
+    let latest=text("最新评论")
+    for _ in 0..<30 {if latest.exists{break};list.swipeUp()}
+    XCTAssertTrue(latest.waitForExistence(timeout:5),"The live QQ list must keep the distinct latest section after its hot rows")
+    image("Live anonymous QQ comments latest section")
+    XCTAssertGreaterThan(app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comments-item-")).count,0)
+    let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
+    let retry=app.buttons["重试评论"]
+    if retry.waitForExistence(timeout:5){retry.tap()}
+    let nextPage=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in loaded()>initial},object:list)
+    XCTAssertEqual(XCTWaiter.wait(for:[nextPage],timeout:45),.completed,"Live QQ load more must append a second page")
+    XCTAssertGreaterThanOrEqual(loaded(),initial+20)
+    image("Live anonymous QQ comments second page appended")
+    app.buttons["收起歌曲评论"].tap()
+    XCTAssertFalse(app.buttons["暂停"].exists,"Reading live QQ comments must not start playback")
+  }
   func testSourceHealth() throws {
     let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
     openSettings(app,page:"sources")
@@ -3363,7 +3467,7 @@ final class SourceSettingsTests: XCTestCase {
         let queuedTrack=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","1. Synthetic tone")).firstMatch
         XCTAssertTrue(queuedTrack.waitForExistence(timeout:5));XCTAssertTrue(queuedTrack.isHittable)
         XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"am2-lyrics-list").firstMatch.exists,"Content panels must be exclusive")
-        app.buttons["am2-content-comments"].tap();XCTAssertTrue(app.staticTexts["此来源暂不支持公开评论；当前支持网易云在线歌曲。"].waitForExistence(timeout:5))
+        app.buttons["am2-content-comments"].tap();XCTAssertTrue(app.staticTexts["此来源暂不支持公开评论；当前支持网易云、QQ音乐在线歌曲。"].waitForExistence(timeout:5))
         app.buttons["am2-return-cover"].tap();XCTAssertEqual(progress.value as? String,"0:06 / 2:00")
         app.buttons["am2-settings"].tap();XCTAssertTrue(app.buttons["自动展开歌词：开"].waitForExistence(timeout:5))
         app.buttons["am2-delay-minus"].tap();app.buttons["am2-delay-minus"].tap();XCTAssertEqual(app.staticTexts["am2-delay"].label,"等待 3 秒")
