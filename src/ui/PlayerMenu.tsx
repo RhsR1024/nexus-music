@@ -11,9 +11,9 @@ import {radius, space, typography} from './tokens.ts';
 
 const platformName:Record<string,string>={wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水'};
 
-export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onQueue,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,downloadLabel='下载'}:{
+export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onQueue,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,onDiagnostics,downloadLabel='下载'}:{
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
-  onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;downloadLabel?:string;
+  onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
 }){
   const theme=useTheme(),styles=makeStyles(theme),{share,sharing,error:shareError}=useSongShare(track);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -57,6 +57,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       {row('text-outline','歌词显示设置','字体与颜色',onLyricsSettings)}
       {row('speedometer-outline','播放倍速',`${preferences.rate}x`,onRate)}
       {row('moon-outline','睡眠定时器',sleepLabel,onSleep)}
+      {row('pulse-outline','播放链路诊断','匹配、选源、降档、解码',onDiagnostics)}
       {row('list-outline','队列与播放选项',`${queueCount} 首`,onQueue,true)}
     </View>
     <Text style={styles.section}>歌曲操作</Text>

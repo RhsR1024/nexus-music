@@ -1,3 +1,14 @@
+## 2026-11-01 J57 补缺：播放链路诊断
+
+- [x] 离线命中/未命中、匹配策略/候选/成功、逐源请求/超时/失败、降档、缓存身份和原生 ready 进入结构化、有界 trace；最多保留最近 6 次解析。
+- [x] generation 隔离迟到结果；暂停/换歌/失效/释放明确取消；原生 route failure 先留失败记录，再独立 generation 重试。
+- [x] URL/token、请求头、凭据、脚本输出和原始异常不进入诊断；ready 区分网络/缓存解码并明确不等于全曲或真机播放。
+- [x] 正式播放器更多菜单、空/运行/ready/error/cancelled UI、手动重试和返回导航已接。
+- [x] 934/934 检查、脚本语法/空白检查、完整 native、最终 Release 1/0/0、2PNG 来源 ready/亲看通过；Sollin IPA offline case-guard 与 strict review 为 0 错误/0 警告。
+- [ ] iOS 27 云端、真实 iPhone、真实源弱网/限流、冷/暖缓存、全平台/Navidrome/WebDAV、本机/系统媒体、小屏/动态字号/VoiceOver、动效、签名和全曲播放继续。
+
+见[实施回执](2026-11-01_playback-diagnostics-report.md)与[UI 场景](ui-spec/playback-diagnostics-2026-11-01.md)。这是 J57 的部分纵向增量，不把结构化 ready、模拟器成功或未签名包写成完整诊断/真实播放交付。
+
 ## 2026-11-01 发现详情随机入口独立验收
 
 Discovery共用按钮实际41pt已补为至少44pt并居中；正式真实来源Release专项1/0/0、276.608秒（`SourceUITests-1793538008347`），6首筛选→单曲→随机→自然曲终至Popular、下一曲PCM/进度、5/6随机及Shape顺序暂停重启通过。931检查、10PNG来源ready/联系表与关键图亲看；全部偏好/下载/源记录及6份音频哈希保持。B/C测试层级与Modal导航失败原证据保留。见[回执](2026-11-01_discovery-random-report.md)。本批清洁IPA/提交/云端终态收尾继续，完整F/J与签名/实体机/动效未完成。

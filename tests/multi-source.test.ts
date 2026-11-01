@@ -4,6 +4,7 @@ import { SourceRegistry, type SourceLifecycle } from '../src/providers/sourceReg
 import { MultiSourceResolver, RoutingError, type LXTransport } from '../src/providers/multiSourceResolver.ts';
 import { fallbackQualities, normalizeQuality } from '../src/domain/quality.ts';
 import type { LXSource } from '../src/providers/lx.ts';
+import type {PlaybackTraceEventInput} from '../src/playback/diagnostics.ts';
 import { track } from './fixtures.ts';
 
 const capabilities: readonly LXSource[] = [{ platform: 'wy', name: 'test', actions: ['musicUrl'], qualities: ['flac', '320k', '128k'] }];
@@ -59,10 +60,14 @@ test('downgrade occurs only after all eligible same-quality sources fail', async
     if (payload.info.type === 'flac') throw new Error('unavailable');
     return { url: 'https://example.test/audio' };
   } }, () => 'flac');
-  const media = await resolver.resolve(track, idleSignal());
+  const events:PlaybackTraceEventInput[]=[];
+  const media = await resolver.resolve(track, idleSignal(),new Set(),undefined,event=>events.push(event));
   assert.deepEqual(calls, ['a:flac', 'b:flac', 'a:320k']);
   assert.equal(media.requestedQuality, 'flac');
   assert.equal(media.quality, '320k');
+  assert.equal(events.filter(event=>event.status==='failed').length,2);
+  assert.ok(events.some(event=>event.status==='fallback'&&event.quality==='320k'));
+  assert.doesNotMatch(JSON.stringify(events),/example\.test|unavailable/);
 });
 
 test('alias normalization does not change script request argument', async () => {

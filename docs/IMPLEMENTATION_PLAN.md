@@ -1,3 +1,13 @@
+## 2026-11-01 J57 补缺：播放链路诊断
+
+`PlaybackController` 现为每次解析维护有界结构化 run，覆盖离线命中/未命中、手动/自动匹配、逐源请求失败/超时、最终选源与降档、cache identity 和原生 ready。最多保留最近 6 次；generation、AbortSignal 与旧 run 状态共同阻止迟到结果污染新播放。原生 route failure 会先结束失败 trace，再由其他路线以新 generation 重试，失败原始记录保持。
+
+正式服务链把永久离线命中/未命中放在匹配之前，并把本机、系统媒体、WebDAV、Navidrome 和 LX 明确分阶段。`NativePlaybackEngine` 的 ready 事件带 cached 标记；UI 区分网络/缓存文件解码并明确“ready 不等于整曲播放”。trace 对 URL/query/token、控制字符做清洗和截断，模型不接收请求头、凭据、脚本输出或 resolver 原始异常。播放器更多菜单已接正式诊断页和重新解析入口。
+
+934/934 检查、`node --check`、`git diff --check`、完整 native 套件和最终 Release `SourceUITests-1793544748938`（1/0/0、187.544 秒）通过；2PNG 来源 ready、亲看，manifest/source/bundle/server count 与日志哈希均已记录。r1 在旧 Swift 1676 行、进入诊断导航前失败，原结果保留；r2/r3 中间成功由后续 trace 上限/最终 UI 证据修正后的 r4 取代。详细证据见[回执](2026-11-01_playback-diagnostics-report.md)和[UI 场景](ui-spec/playback-diagnostics-2026-11-01.md)。
+
+R2/mobile-reverse 离线 scope 与 `ipa --review` 通过，52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。iOS 27 云端、真实 iPhone/锁屏后台/输出路由、真实源弱网、冷/暖缓存、完整来源矩阵、小屏/动态字号/VoiceOver、连续动效、签名及真实全曲仍开放；本批只补 J57 部分纵向实现，不机械提高项目完成百分比。
+
 ## 2026-11-01 发现详情随机入口独立验收
 
 Discovery共用按钮实际41pt已补为至少44pt并居中；正式真实来源Release专项1/0/0、276.608秒（`SourceUITests-1793538008347`），6首筛选→单曲→随机→自然曲终至Popular、下一曲PCM/进度、5/6随机及Shape顺序暂停重启通过。931检查、10PNG来源ready/联系表与关键图亲看；全部偏好/下载/源记录及6份音频哈希保持。B/C测试层级与Modal导航失败原证据保留。见[回执](2026-11-01_discovery-random-report.md)。本批清洁IPA/提交/云端终态收尾继续，完整F/J与签名/实体机/动效未完成。

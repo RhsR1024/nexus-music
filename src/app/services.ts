@@ -58,6 +58,7 @@ import { makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../
 import { trackKey } from '../domain/track.ts';
 import type { Track } from '../domain/track.ts';
 import {requestJSON,type HTTPClient} from '../providers/http.ts';
+import type {PlaybackTraceSink} from '../playback/diagnostics.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
 import { NavidromeClient } from '../providers/navidrome.ts';
 import { nativeSecrets } from '../storage/nativeSecrets.ts';
@@ -156,12 +157,13 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const qishui=new QishuiProvider(options.onlineHTTP);
   const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
-  const resolveTrack=async(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>)=>{
-    if(track.origin.kind==='webdav')return davMedia.resolve(track,signal);
-    if(track.origin.kind==='device')return deviceMedia.resolve(track);
-    if(track.origin.kind==='local')return localAudio.resolve(track);
-    if(track.origin.kind==='navidrome'){const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);return {...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};}
-    return matchedResolver.resolve(track,signal,excluded);
+  const resolveTrack=async(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>,trace?:PlaybackTraceSink)=>{
+    const mark=(title:string,sourceName:string)=>trace?.({stage:'source',status:'success',title,sourceName});
+    if(track.origin.kind==='webdav'){const media=await davMedia.resolve(track,signal);mark('读取 WebDAV 媒体','WebDAV');return media;}
+    if(track.origin.kind==='device'){const media=await deviceMedia.resolve(track);trace?.({stage:'source',status:'success',title:'读取系统媒体库条目',sourceName:'系统媒体库'});return media;}
+    if(track.origin.kind==='local'){const media=await localAudio.resolve(track);trace?.({stage:'source',status:'success',title:'读取本机音频文件',sourceName:'本机文件'});return media;}
+    if(track.origin.kind==='navidrome'){trace?.({stage:'source',status:'info',title:'向 Navidrome 请求原始媒体',sourceName:'Navidrome'});const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);const result={...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};trace?.({stage:'source',status:'success',title:'取得 Navidrome 原始媒体',sourceName:'Navidrome'});return result;}
+    return matchedResolver.resolve(track,signal,excluded,trace);
   };
   const downloadResolver=createDownloadResolver({registry,transport:nativeLX,matcher:matching,library,preferences:preferences.getSnapshot,enrich:(track,signal)=>online.enrich(track,signal),other:{resolve:resolveTrack},hash});
   let playbackController:ReturnType<typeof createPlaybackSession>['controller']|undefined;
@@ -179,10 +181,16 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
     return !!current&&trackKey(current.origin)===trackKey(track.origin);
   }});
   await restore('offlineDownloads.v1','离线下载',()=>offlineDownloads.restore());
-  const playback = createPlaybackSession({resolve:async(track,signal,excluded)=>{
-    const saved=await offlineDownloads.resolve(track);if(saved)return saved;
-    return resolveTrack(track,signal,excluded);
-  }}, preferences,{covers,library});
+  const resolvePlayback=async(track:Track,signal:AbortSignal,excluded:ReadonlySet<string>|undefined,trace?:PlaybackTraceSink)=>{
+    const saved=await offlineDownloads.resolve(track);
+    if(saved){
+      trace?.({stage:'offline',status:'success',title:'命中永久离线文件',detail:'本轮不会请求在线音源'});
+      return saved;
+    }
+    if(track.origin.kind==='online'||track.origin.kind==='imported')trace?.({stage:'offline',status:'info',title:'永久离线文件未命中',detail:'继续按当前播放规则解析'});
+    return resolveTrack(track,signal,excluded,trace);
+  };
+  const playback = createPlaybackSession({resolve:(track,signal,excluded)=>resolvePlayback(track,signal,excluded),resolveWithTrace:resolvePlayback}, preferences,{covers,library});
   playbackController=playback.controller;
   const accountFmStation=new AccountFmStation({client:accountFm,accounts:musicAccounts,playback:playback.controller,uuid:Crypto.randomUUID});
   musicAccounts.subscribe(()=>accountFmStation.stop());

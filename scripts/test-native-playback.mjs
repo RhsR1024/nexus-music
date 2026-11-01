@@ -2,7 +2,7 @@ import {silentMP3} from './fixtures/silent-mp3.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import { spawn,execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { copyFileSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -45,11 +45,17 @@ try {
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`);
   await play(`http://127.0.0.1:${server.address().port}/tone.wav`,.5);
   for(const format of ['tone-aac.m4a','tone-16.flac','tone-24.flac','tone-tagged.mp3'])await play(pathToFileURL(resolve(`build/tests/${format}`)).href,.25);
-  for(const format of ['tone.wav','tone.aac','tone.aiff','tone-aac.m4a','tone-16.flac','tone-24.flac','tone-tagged.mp3']){
-    const source=resolve(`build/tests/${format}`),opaque=source+'.audio',before=createHash('sha256').update(readFileSync(source)).digest('hex');
-    copyFileSync(source,opaque);await play(pathToFileURL(opaque).href,.25);
-    assert.equal(createHash('sha256').update(readFileSync(opaque)).digest('hex'),before,'Playback aliases must not change the durable download bytes');
-  }
+  // The alias uses a hard link from the durable download to the caches
+  // directory, so both must share a volume. build/tests may intentionally live
+  // on an external SSD; place the opaque fixtures on the cache volume instead.
+  const opaqueRoot=mkdtempSync(resolve(process.env.HOME,'Library/Caches/native-playback-test-'));
+  try {
+    for(const format of ['tone.wav','tone.aac','tone.aiff','tone-aac.m4a','tone-16.flac','tone-24.flac','tone-tagged.mp3']){
+      const source=resolve(`build/tests/${format}`),opaque=resolve(opaqueRoot,format+'.audio'),before=createHash('sha256').update(readFileSync(source)).digest('hex');
+      copyFileSync(source,opaque);await play(pathToFileURL(opaque).href,.25);
+      assert.equal(createHash('sha256').update(readFileSync(opaque)).digest('hex'),before,'Playback aliases must not change the durable download bytes');
+    }
+  } finally { rmSync(opaqueRoot,{recursive:true,force:true}); }
   const aliasDirectory=resolve(process.env.HOME,'Library/Caches/NexusPlaybackAliases');
   assert.equal(readdirSync(aliasDirectory).filter(name=>name.startsWith('nexus-playback-')).length,0,'Stopping the engine must release its temporary playback alias');
   const cacheKey=createHash('sha256').update(randomUUID()).digest('hex');

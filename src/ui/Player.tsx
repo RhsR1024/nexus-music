@@ -23,6 +23,7 @@ import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
+import { PlaybackDiagnostics } from './PlaybackDiagnostics.tsx';
 import { RatePanel, SleepPanel } from './PlaybackSheets.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type PropsWithChildren } from 'react';
@@ -73,7 +74,7 @@ export function Player({ services }: { services: Services }) {
   const [choosingLyric,setChoosingLyric]=useState(false),[classicLyricRequest,setClassicLyricRequest]=useState(0);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
-  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'globalFont'|'lyricFont'|'download'|'similar'>('menu');
+  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'globalFont'|'lyricFont'|'download'|'similar'|'diagnostics'>('menu');
   const [panel,setPanel]=useState<'rate'|'sleep'|null>(null),[panelReturnsToMenu,setPanelReturnsToMenu]=useState(false);
   const closePanel=()=>{setPanel(null);if(panelReturnsToMenu){setPanelReturnsToMenu(false);setDetailPanel('menu');setTimeout(()=>setDetails(true),320);}};
   const [download,setDownload]=useState<{track:Track;returnPanel:'menu'|'content'|null;submitting:boolean;report?:DownloadSubmission;error?:string}|null>(null),downloadSerial=useRef(0);
@@ -238,10 +239,13 @@ export function Player({ services }: { services: Services }) {
           {detailPanel==='style'?<>
             {button('收起播放界面样式',()=>{if(styleReturnsToMenu.current)setDetailPanel('menu');else closeDetails();})}
             <Text style={styles.title}>播放界面样式</Text>{skinSelector}
+          </>:detailPanel==='diagnostics'?<>
+            {button('返回播放选项',()=>setDetailPanel('menu'))}
+            <PlaybackDiagnostics services={services}/>
           </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
             {button(detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置',()=>setDetailPanel(detailPanel==='lyrics'?'menu':'lyrics'))}
             <Text style={styles.title}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text>{detailPanel==='lyrics'&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>{closeDetails();setTimeout(()=>setChoosingLyric(true),320);}} style={styles.button}><Text style={styles.buttonText}>选择歌词来源</Text></Pressable>}<FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
-          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onSimilar={supportsSimilarSongs(actualMatch??entry.track)?()=>{setSimilarTrack(actualMatch??entry.track);setDetailPanel('similar');}:undefined} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])} onDownload={downloadableTrack(entry.track)?saveOffline:undefined} downloadLabel={offline?.status==='completed'?'已下载':offline?.status==='downloading'?'下载中':'下载'}/>:<>
+          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onSimilar={supportsSimilarSongs(actualMatch??entry.track)?()=>{setSimilarTrack(actualMatch??entry.track);setDetailPanel('similar');}:undefined} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])} onDownload={downloadableTrack(entry.track)?saveOffline:undefined} onDiagnostics={()=>setDetailPanel('diagnostics')} downloadLabel={offline?.status==='completed'?'已下载':offline?.status==='downloading'?'下载中':'下载'}/>:<>
             {button('收起播放选项',closeDetails)}
             {button('返回播放选项',()=>setDetailPanel('menu'))}
             <Text style={styles.title}>队列与播放选项</Text>{detailContent}

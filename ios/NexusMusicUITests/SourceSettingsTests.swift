@@ -1623,8 +1623,8 @@ final class SourceSettingsTests: XCTestCase {
     // The real provider parsing, LX host, routing, storage and PCM backend still run.
     let app=XCUIApplication();app.launch()
     // This test verifies both automatic matching and the preference lifecycle.
-    // Start from a known enabled state because the persistent simulator can
-    // retain an earlier interrupted run that stopped after turning it off.
+    // Start from known matching and quality preferences because the persistent
+    // simulator can retain an earlier interrupted run.
     openSettings(app,page:"playback")
     let initialAutomatic=app.buttons["automatic-online-matching"]
     for _ in 0..<40 {if initialAutomatic.isHittable{break};app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.72)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)))}
@@ -1634,6 +1634,11 @@ final class SourceSettingsTests: XCTestCase {
       expectation(for:NSPredicate(format:"label == %@","普通在线歌曲自动匹配：开启"),evaluatedWith:initialAutomatic);waitForExpectations(timeout:5)
     }
     XCTAssertEqual(initialAutomatic.label,"普通在线歌曲自动匹配：开启")
+    let preferredQuality=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","flac")).firstMatch
+    for _ in 0..<20 {if preferredQuality.isHittable{break};if preferredQuality.exists{let above=preferredQuality.frame.midY<app.frame.midY;if above{app.swipeDown()}else{app.swipeUp()}}else{app.swipeUp()}}
+    XCTAssertTrue(preferredQuality.isHittable)
+    if !preferredQuality.isSelected{preferredQuality.tap()}
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:preferredQuality)],timeout:10),.completed)
     func openMatchDetails(){
       for _ in 0..<8 {if app.buttons["更多播放控制"].isHittable{break};app.swipeDown()}
       let more=app.buttons["更多播放控制"];XCTAssertTrue(more.isHittable);more.tap()
@@ -1674,6 +1679,16 @@ final class SourceSettingsTests: XCTestCase {
     }
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
     XCTAssertTrue(app.staticTexts["偏好 flac · 成功请求档位 flac（非实际文件格式证明）"].exists)
+    let diagnosticsMore=app.buttons["更多播放控制"];for _ in 0..<8 {if diagnosticsMore.isHittable{break};app.swipeDown()};XCTAssertTrue(diagnosticsMore.isHittable);diagnosticsMore.tap()
+    let diagnosticsRow=app.buttons["播放链路诊断"];XCTAssertTrue(diagnosticsRow.waitForExistence(timeout:5));diagnosticsRow.tap()
+    XCTAssertTrue(app.staticTexts["playback-diagnostics-title"].waitForExistence(timeout:5))
+    let diagnosticEvents=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","playback-diagnostic-event-"))
+    XCTAssertGreaterThan(diagnosticEvents.count,0,"A real playback must expose structured resolver/source/native stages")
+    XCTAssertTrue(app.staticTexts["解码 · 原生媒体已就绪"].waitForExistence(timeout:5))
+    XCTAssertGreaterThan(app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","playback-diagnostic-event-native-success-")).count,0)
+    XCTAssertTrue(app.buttons["playback-diagnostics-retry"].exists)
+    let diagnosticImage=XCTAttachment(screenshot:app.screenshot());diagnosticImage.name="Real playback trace with source and native stages";diagnosticImage.lifetime = .keepAlways;add(diagnosticImage)
+    app.buttons["返回播放选项"].tap();XCTAssertTrue(app.buttons["队列与播放选项"].waitForExistence(timeout:5));app.buttons["收起播放选项"].tap()
     let matchButton=app.buttons["匹配歌曲"];for _ in 0..<8 {if matchButton.isHittable{break};app.swipeUp()};XCTAssertTrue(matchButton.isHittable);matchButton.tap();app.buttons["取消指定版本，恢复自动"].tap()
     assertMatchStatus("保留原曲，可选择其他录音版本",timeout:10)
     for _ in 0..<4 {if app.buttons["播放"].firstMatch.isHittable{break};app.swipeUp()};app.buttons["播放"].firstMatch.tap()

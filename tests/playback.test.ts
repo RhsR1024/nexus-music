@@ -209,6 +209,54 @@ test('single-track failures surface the error without skipping', async () => {
   assert.equal(state.queue.currentId,'a');
 });
 
+test('playback diagnostics record bounded structured resolution and native-ready stages without URLs or resolver errors',async()=>{
+  let clock=1000;
+  const backend:PlaybackBackend={stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}};
+  const controller=new PlaybackController({
+    resolve:async()=>{throw Error('default path must not be used');},
+    resolveWithTrace:async(_track,_signal,_excluded,trace)=>{
+      trace({stage:'source',status:'failed',title:'音源 A 请求失败',sourceName:'来源 A',quality:'flac',detail:'https://private.test/audio?token=PRIVATE'});
+      trace({stage:'source',status:'fallback',title:'选定音源 B · 320k',sourceName:'来源 B',quality:'320k',detail:'偏好 flac，已降档'});
+      return {url:'https://private.test/audio?token=PRIVATE',sourceId:'b',sourceName:'来源 B',requestedQuality:'flac',quality:'320k',routeKey:'route-b',cacheKey:'cache-key'};
+    },
+  },backend,makeQueue([entry('a')]),()=>++clock);
+  await controller.play();
+  controller.onReady(controller.getSnapshot().token!,{cached:true,duration:120});
+  const run=controller.getSnapshot().diagnostics.at(-1)!;
+  assert.equal(run.status,'ready');
+  assert.ok(run.events.some(event=>event.stage==='source'&&event.status==='failed'));
+  assert.ok(run.events.some(event=>event.stage==='source'&&event.status==='fallback'&&event.quality==='320k'));
+  assert.ok(run.events.some(event=>event.stage==='cache'&&event.title.includes('缓存')));
+  assert.ok(run.events.some(event=>event.stage==='native'&&event.detail?.includes('缓存文件解码成功')));
+  const serialized=JSON.stringify(run);
+  assert.doesNotMatch(serialized,/private\.test|PRIVATE|token=/);
+  assert.ok(run.events.length<=8,'one resolution run must remain bounded at this stage');
+});
+
+test('native route rejection preserves the failed trace and starts a separately identified retry',async()=>{
+  let generation=0;
+  const controller=new PlaybackController({resolve:async()=>({url:`https://example.test/${++generation}.mp3`,routeKey:`route-${generation}`})},
+    {stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}},makeQueue([entry('a')]));
+  await controller.play();
+  const first=controller.getSnapshot().token!;
+  await controller.onError(first);
+  const runs=controller.getSnapshot().diagnostics;
+  assert.equal(runs.length,2);
+  assert.equal(runs[0]!.status,'error');
+  assert.equal(runs[1]!.status,'running');
+  assert.notEqual(runs[0]!.generation,runs[1]!.generation);
+});
+
+test('playback diagnostics retain exactly the six latest resolution runs',async()=>{
+  let generation=0;
+  const controller=new PlaybackController({resolve:async()=>({url:`https://example.test/${++generation}.mp3`})},
+    {stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}},makeQueue([entry('a')]));
+  for(let index=0;index<7;index++)await controller.play();
+  const runs=controller.getSnapshot().diagnostics;
+  assert.equal(runs.length,6);
+  assert.deepEqual(runs.map(run=>run.generation),[2,3,4,5,6,7]);
+});
+
 test('runaway skipping is capped and ends in a visible error', async () => {
   const backend:PlaybackBackend={stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}};
   const queue=makeQueue(Array.from({length:20},(_,index)=>entry(`a${index}`)));

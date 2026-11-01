@@ -200,7 +200,7 @@ final class NativePlaybackEngine {
               guard let self, self.player.currentItem === item, self.entryID == id else { return }
               if item.status == .failed { if self.retryCorruptCache() { return }; self.wantsPlay = false; self.player.pause(); self.invalidateCachedPlayback(); self.report("error") }
               else if item.status == .readyToPlay {
-                self.report("ready")
+                self.report("ready", ["cached": self.cachedPlayback])
                 if self.initialSeekPending && self.initialPosition > 0 {
                   let duration=item.duration.seconds
                   let position=duration.isFinite ? min(self.initialPosition,duration) : self.initialPosition
@@ -305,7 +305,7 @@ final class NativePlaybackEngine {
     preampDB = min(12, max(-12, preamp)); eqEnabled = enabled; gains = values.map { min(12, max(-12, $0)) }
     dsp?.configure(enabled: enabled, gains: gains.map(NSNumber.init(value:)), preampDB: preampDB)
   }
-  private func report(_ kind: String) {
+  private func report(_ kind: String, _ extra: [String: Any] = [:]) {
     let clock = ProcessInfo.processInfo.systemUptime
     if wasActuallyPlaying { listenedSeconds += max(0, clock - listeningClock) }
     listeningClock = clock
@@ -316,7 +316,7 @@ final class NativePlaybackEngine {
     emit("playback", ["kind": kind, "entryId": entryID, "generation": generation,
       "position": seconds.isFinite ? seconds : 0, "duration": duration.isFinite ? duration : 0,
       "playing": player.rate > 0, "buffering": player.timeControlStatus == .waitingToPlayAtSpecifiedRate,
-      "listeningSession": listeningSession, "listenedMs": listenedSeconds * 1000])
+      "listeningSession": listeningSession, "listenedMs": listenedSeconds * 1000].merging(extra) { _, latest in latest })
     updateNowPlaying()
   }
   private func updateNowPlaying() {

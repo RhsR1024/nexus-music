@@ -1,3 +1,11 @@
+## 2026-11-01 J57 播放链路诊断纵向增量
+
+播放器更多菜单已接正式“播放链路诊断”：离线命中/未命中、跨平台匹配、逐源请求/超时、降档、缓存身份和 AVPlayer ready 均进入有界结构化 trace；最多保留最近 6 次解析，generation 隔离迟到结果，原生 route failure 保留失败记录后独立重试。trace 清洗 URL/token、请求头、凭据、脚本输出与原始异常；ready 明确区分网络媒体和缓存文件解码，不冒充全曲或真机播放。
+
+`npm run check` 934/934、脚本语法/空白检查及完整 native 套件通过；最终 Release `SourceUITests-1793544748938` 为 1/0/0、187.544 秒，2PNG 来源 ready 并亲看。精确源码、diff、fixture、bundle、日志、截图哈希与失败历史见[回执](docs/2026-11-01_playback-diagnostics-report.md)和[UI 规格](docs/ui-spec/playback-diagnostics-2026-11-01.md)。
+
+R2/mobile-reverse 离线 case-guard 与 `ipa --review` 通过，严格 review 为 52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。iOS 27 云端、真实 iPhone、真实源弱网、冷/暖缓存、全来源矩阵、小屏/动效、签名/描述文件和全曲播放继续；本批只记 J57 部分纵向增量，不报功能或全项目完成。clean IPA、normal push 与 Actions 终态在阶段收尾补记。
+
 ## 2026-11-01 汽水公开歌单 App 导入与重启回归
 
 正式音乐库组件已完成汽水公开歌单读取拒绝、取消→同游标重试、两页完整预览、追加保存、原序/重复项/待匹配展示及 App 重启持久化。修复 `createServices` 未向 `QishuiProvider` 注入 HTTP client 的真实装配遗漏。931 项检查通过，最终合成 HTTP Release `SourceUITests-1793540640449` 为 1/0/0、259.133 秒，5PNG 逐张亲看；服务计数明确 `cursor=0,0,1` 且 `held=1`。原 manifest 因测试后设备关机/子进程缺 `simctl` 缺少安装包快照，使用同一 UUID 事后恢复并独立记录；不覆盖原文件，也不把恢复包写成原次同步 capture。见[回执](docs/2026-11-01_qishui-public-playlist-import-report.md)与[UI 规格](docs/ui-spec/qishui-import-2026-11-01.md)。

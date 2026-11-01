@@ -109,7 +109,7 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
     if(event.playing===true&&Number(event.position)>0&&current.intent==='playing'&&token.generation===current.token?.generation&&token.entryId===current.queue.currentId&&lastPlayedGeneration!==token.generation){
       lastPlayedGeneration=token.generation;const track=currentEntry(current.queue)?.track;if(track)for(const listener of playedListeners)listener(track);
     }
-    if (event.kind === 'ready') controller.onReady(token);
+    if (event.kind === 'ready') controller.onReady(token,{cached:event.cached===true,duration:Number(event.duration)});
     if (event.kind === 'error') void controller.onError(token);
     if (event.kind === 'ended' && controller.getSnapshot().intent === 'playing' && controller.getSnapshot().token?.generation === token.generation && controller.getSnapshot().queue.currentId === token.entryId) {
       if (preferences.getSnapshot().repeat === 'one') void controller.play(); else next();

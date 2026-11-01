@@ -1,3 +1,11 @@
+## 2026-11-01 J57 播放链路诊断本地回归
+
+`npm run check` **934/934**、`node --check scripts/test-ui.mjs`、`node --check scripts/test-native-playback.mjs`、`git diff --check` 及完整 `bash scripts/test-native.sh` 通过。最终 Release `SourceUITests-1793544748938.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、187.544 秒；测试从正式匹配播放进入更多菜单，验证诊断 trace、精确 native-ready 事件和重试入口后返回原流程。2PNG 均来源 ready、亲看；诊断截图底部 ready 行被视口裁切，但 XCTest 有精确文本和 native-success testID 断言。
+
+精确日志目录 `build/logs/playback-diagnostics-matching-20261101-225253-r4/`、截图目录 `build/ui-screenshots/playback-diagnostics-20261101-225253-r4/`；manifest 为 Release/exit0/sourceUnchanged，base `69c9316`，源码 digest `6cf1a863…`、diff `4f632b30…`、fixture `83ad352d…`、安装 bundle `15d79b71…`、JS `727e3b7d…`，夹具收到 4 次匹配音频请求。完整文件哈希、失败历史与复现见[回执](2026-11-01_playback-diagnostics-report.md)。
+
+R2/mobile-reverse offline case-guard 与 `ipa --review` 通过，52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。clean IPA、T7 独立副本、normal push 和 iOS 27 Actions 终态在阶段收尾补记；本机 SDK26.2/iOS26.3.1、未签名包和合成匹配音频不替代云端、签名、实体机、弱网或真实全曲。
+
 ## 2026-11-01 汽水公开歌单正式 App 回归
 
 `npm run check` **931/931**、`node --check scripts/test-ui.mjs`、`git diff --check` 通过。最终合成 HTTP Release `SourceUITests-1793540640449.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、259.133 秒，验证长数字 ID、取消/重试、两页完整预览、追加保存、三行原序/重复项/待匹配及重启持久化；5PNG 逐张亲看。精确 xcresult `Info.plist` SHA-256 `ce121bab877601b8be7d065fc0cb9d0758209e27b01aa1fcaee97379d30a8754`，源码运行前后 digest 均为 `94fc477e16f50c99e44fe2dcb340aa0adc735d9955993aa89025cf6f7d5f7a64`，diff SHA-256 `0875d82903030dccb1a22df03336ff49d17ccd63a44bcc9e87f21f3eecdd289b`。服务计数为 `cursor=0,0,1`、`held=1`、Qishui host 3 次请求。

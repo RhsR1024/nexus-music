@@ -8,7 +8,7 @@ import type {CrossPlatformMatcher} from './crossPlatformMatcher.ts';
 import {MatchedResolver} from './matchedResolver.ts';
 import {MultiSourceResolver,type LXTransport} from './multiSourceResolver.ts';
 import type {SourceRegistry} from './sourceRegistry.ts';
-export interface DownloadResolver extends MediaResolver {resolve(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>,preferredQuality?:Quality):Promise<ResolvedMedia&{requestedQuality?:Quality}>}
+export interface DownloadResolver {resolve(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>,preferredQuality?:Quality):Promise<ResolvedMedia>}
 interface DownloadResolutionPreferences extends DownloadQualityPreferences {quality:Quality;autoMatch:boolean}
 /** Capture one policy per request; downloads never publish a playback match. */
 export function createDownloadResolver(deps:{registry:SourceRegistry;transport:LXTransport;matcher:Pick<CrossPlatformMatcher,'candidates'>;library:Pick<LibraryStore,'matchFor'|'setMatch'>;preferences:()=>DownloadResolutionPreferences;enrich:(track:Track,signal:AbortSignal)=>Promise<Track>;other:MediaResolver;hash:(value:string)=>Promise<string>}):DownloadResolver{

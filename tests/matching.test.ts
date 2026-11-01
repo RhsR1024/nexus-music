@@ -8,6 +8,7 @@ import {LibraryStore} from '../src/storage/library.ts';
 import {decodeBackup,encodeBackup} from '../src/storage/backup.ts';
 import type {Quality} from '../src/domain/quality.ts';
 import type {RoutedMedia} from '../src/providers/multiSourceResolver.ts';
+import type {PlaybackTraceEventInput} from '../src/playback/diagnostics.ts';
 const original:Track={origin:{kind:'imported',platform:'qishui',id:'12345678901234567890'},title:'Synthetic',artist:'Fixture',durationMs:100000,metadata:{},qualities:[]};
 const target=(platform:'wy'|'tx'='wy'):Track=>({...original,origin:{kind:'online',platform,id:'1'}});
 const library=()=>new LibraryStore({get:async()=>undefined,put:async()=>{}},()=> 'uuid');
@@ -42,7 +43,10 @@ test('cross-platform playback tries preferred quality globally and isolates deco
     throw Error('no audio');
   }};
   const resolver=new MatchedResolver({router,library:store,matcher:{candidates:async()=>({items:[{track:target('wy'),...scoreCandidate(original,target('wy'))},{track:target('tx'),...scoreCandidate(original,target('tx'))}],failedPlatforms:[]})},available:()=>['wy','tx'],quality:()=> 'flac',hash:async value=>value});
-  const result=await resolver.resolve(original,new AbortController().signal);assert.deepEqual(attempts,['wy:flac','tx:flac']);assert.equal(store.matchFor(original)?.target.origin.kind,'online');
+  const traceEvents:PlaybackTraceEventInput[]=[];
+  const result=await resolver.resolve(original,new AbortController().signal,new Set(),event=>traceEvents.push(event));assert.deepEqual(attempts,['wy:flac','tx:flac']);assert.equal(store.matchFor(original)?.target.origin.kind,'online');
+  assert.ok(traceEvents.some(event=>event.stage==='match'&&event.status==='success'&&event.platform==='tx'));
+  assert.doesNotMatch(JSON.stringify(traceEvents),/example\.test|audio/);
   attempts.length=0;const next=await resolver.resolve(original,new AbortController().signal,new Set([result.routeKey!]));assert.equal(next.quality,'320k');assert.equal(JSON.parse(next.cacheKey!)[1],trackKey(target('wy').origin));assert.equal(original.origin.kind,'imported');
 });
 test('explicit manual version selection does not silently switch to automatic candidates',async()=>{
