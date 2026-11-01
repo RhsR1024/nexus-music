@@ -66,3 +66,17 @@ exFAT 对每个条目生成 AppleDouble `._*` sidecar 并改变 POSIX mode；sou
 当前 `build/DeviceDerivedData`、最近两组 UI 结果、公开采集图片/摘要和仍未满
 14 天的诊断证据继续留在本机；已运行整夜的模拟器设备与 reverse-skill
 Evidence/scope 没有迁移或删除。
+
+## 2026-11-01 clean emoji IPA 独立归档
+
+功能提交后在 clean `main` 重新归档，并把 clean IPA、SHA 文件、archive
+manifest 和真实验证 JSON 复制到
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-comment-emoji-clean-window/`。
+IPA 为 12,843,556 字节，源与 T7 副本 SHA-256 均为
+`26291bbb63624fb79e650cac5838c4a06c2eea8726f18a8ffa07ae4921d9d24a`；
+manifest 为 `dirty:false`，两处 SHA-256 均为
+`7c948a8727c386671bb599f0d8e45a127226865fa03fc27cef15da73b612f1a7`。
+验证文件自身 SHA-256 为
+`01524e57832403b0143b197914b1c070e7106d25380639f030522cd890585aef`。
+前一 dirty 包 `7a32…f511` 的本机内容哈希快照同时复核通过。该独立归档不改变
+未签名、无 provisioning profile、0 签名身份和未完成实体机验收的事实。

@@ -1,6 +1,6 @@
-## 2026-11-01 评论 emoji 分段未签名归档
+## 2026-11-01 评论 emoji 分段未签名 clean 归档
 
-`npm run ios:archive` 成功，archive manifest 基于 `8d87811` 加本批未提交源码（`dirty: true`）；Xcode 26.3/17C529、arm64/iphoneos26.2、最低 iOS 15.1、iPhone+iPad。IPA 12,843,556 字节，SHA-256 `7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511`；ZIP CRC、164 项、生产 bundle、本批 emoji 实现及测试适配器排除通过。`codesign` 明确未签名，bundle 无签名/描述文件。为阻止后续公共 distribution 覆盖最后可取包，归档脚本现按 IPA 内容哈希保存阶段快照；本包同时在 T7 独立保留。上一本机 `c834…` 包已被旧公共路径覆盖，不能继续声明该路径可取，只能保留历史回执引用。iOS 27 云端、实体机/签名与动效仍待。
+功能提交 `27a1a327117215d67fb86e60677aa2fcecbc7479` 后，`npm run ios:archive` 以 `dirty: false`、空 `workingTreeChanges` 成功；Xcode 26.3/17C529、arm64/iphoneos26.2、最低 iOS 15.1、iPhone+iPad。clean IPA 12,843,556 字节，SHA-256 `26291bbb63624fb79e650cac5838c4a06c2eea8726f18a8ffa07ae4921d9d24a`，archive manifest SHA-256 `7c948a8727c386671bb599f0d8e45a127226865fa03fc27cef15da73b612f1a7`；ZIP CRC、164 项、生产 bundle、本批 emoji 实现及测试适配器排除通过。`codesign` 明确未签名，bundle 无签名/描述文件，`security find-identity` 仍为 0。T7 独立副本位于 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-comment-emoji-clean-window/`；此前 dirty 包 `7a32…f511` 由内容哈希快照保留。上一更早 `c834…` 包已被旧公共路径覆盖，不能继续声明该路径可取，只能保留历史回执引用。iOS 27 云端、实体机/签名与动效仍待。
 
 ## 2026-10-25 批次5A main推送与CI队列快照
 

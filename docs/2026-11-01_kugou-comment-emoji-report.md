@@ -45,7 +45,11 @@
 
 ZIP CRC 通过，共 164 项；arm64 主程序、生产 `main.jsbundle`、`com.nexusmusic.app`、最低 iOS 15.1 与 iPhone/iPad 设备族正确。bundle 含本批 `AppleColorEmoji` 实现，不含 UI 测试适配器或酷狗夹具控制标记。`codesign` 返回 `code object is not signed at all`，bundle 内没有 `_CodeSignature` 或 `embedded.mobileprovision`；这不构成签名或实体机通过。
 
-本阶段 IPA/manifest/日志独立保留在本机 `build/distribution-history/7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511/` 与 T7 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-comment-emoji-window/`。归档脚本现会在覆盖公共 distribution 路径前按 IPA 内容哈希保存独立快照，避免后续阶段再次覆盖最后可取包。
+初始 dirty IPA/manifest/日志独立保留在本机 `build/distribution-history/7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511/` 与 T7 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-comment-emoji-window/`。归档脚本现会在覆盖公共 distribution 路径前按 IPA 内容哈希保存独立快照，避免后续阶段再次覆盖最后可取包。
+
+功能提交 `27a1a327117215d67fb86e60677aa2fcecbc7479` 后，在 clean `main` 上再次归档成功。archive manifest 为 `dirty: false`、空 `workingTreeChanges`，提交、Xcode 26.3/17C529、arm64/iphoneos26.2、最低 iOS 15.1 与 iPhone+iPad 均一致。clean IPA 仍为 12,843,556 字节，SHA-256 `26291bbb63624fb79e650cac5838c4a06c2eea8726f18a8ffa07ae4921d9d24a`；manifest SHA-256 为 `7c948a8727c386671bb599f0d8e45a127226865fa03fc27cef15da73b612f1a7`。ZIP CRC 通过且仍为 164 项，生产 bundle 含 `AppleColorEmoji`、不含酷狗夹具控制或 UI 测试标记；`codesign` 返回未签名，bundle 无 `_CodeSignature`/描述文件，签名身份仍为 0。
+
+clean IPA、SHA 文件、manifest 与 `verification.json` 已独立复制到 T7 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-comment-emoji-clean-window/`；目标与本机源内容哈希一致，验证 JSON SHA-256 为 `01524e57832403b0143b197914b1c070e7106d25380639f030522cd890585aef`。前一 dirty IPA 的同路径快照重新核验仍为 `7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511`。
 
 ## 复用与未完成
 
