@@ -40,6 +40,10 @@
 
 本轮候选源码 run manifest 为 `build/logs/run-manifest.json`，源码 digest `490bf1401686dc1772ee38dacd5aae54ca2f3cb42422924cc20dbc1c9441be25`，diff SHA-256 `6e8bd1884d1a5cb69d8e5f5c9a77320ff470f24d1052b613c58a2d32ac398d39`，执行前后源码未变。
 
+## 交付与云端队列
+
+功能/测试/回执源码提交 `bb99750fd1795ef70515b4cff703889fdeafa9f9` 已正常 push，本地与远端 `main` 完整 SHA 一致。推送后 GitHub Actions 实核为 `41265859952`（`b0ab553`）运行中、`41278846667`（`bb99750`）单一排队，符合 1 running / 1 queued；未取消运行中任务，也未重派旧提交。该云端终态尚未取得，不能替代本机 App 结果或写成云端通过。
+
 ## 失败与修正
 
 - 合成夹具首次使用含连字符的 QQ MID，被生产白名单拒绝；改为合法 songmid 后重跑。失败结果不计通过。
