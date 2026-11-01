@@ -1,3 +1,7 @@
+## 2026-11-01 发现详情随机入口独立验收
+
+Discovery共用按钮实际41pt已补为至少44pt并居中；正式真实来源Release专项1/0/0、276.608秒（`SourceUITests-1793538008347`），6首筛选→单曲→随机→自然曲终至Popular、下一曲PCM/进度、5/6随机及Shape顺序暂停重启通过。931检查、10PNG来源ready/联系表与关键图亲看；全部偏好/下载/源记录及6份音频哈希保持。B/C测试层级与Modal导航失败原证据保留。见[回执](docs/2026-11-01_discovery-random-report.md)。本批清洁IPA/提交/云端终态收尾继续，完整F/J与签名/实体机/动效未完成。
+
 ## 2026-11-01 咪咕回复清洁交付
 
 功能提交`f738d8e`，931检查、合成2/0/0及真实1/0/0、16PNG来源ready/亲看；clean IPA SHA-256 `dce1218cd3fc65f5df022d9ead3b8458020b41cb9ca6166567f861c7b64c38e3`，12,850,360字节、arm64/iphoneos26.2/iOS15.1/[1,2]、unsigned/无描述文件，T7独立副本摘要一致。见[回执](docs/2026-11-01_migu-comment-replies-report.md)。完整F31/F/J及云端/签名/实体机/动效继续。

@@ -2245,6 +2245,51 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testLiveSimilarSongs() throws {try exerciseLiveSimilarSongs()}
   func testLiveSimilarControls() throws {try exerciseLiveSimilarSongs(controls:true)}
+  func testLiveDiscoveryRandom() throws {
+    let app=XCUIApplication();app.launch()
+    func reach(_ item:XCUIElement){for _ in 0..<40{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5))}
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    let player=app.buttons["打开播放页"].firstMatch
+    func pauseActual(_ title:String){
+      XCTAssertTrue(app.staticTexts[title].firstMatch.waitForExistence(timeout:20))
+      let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:2){play.tap()}
+      XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:120))
+      let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch,before=progress.value as? String ?? ""
+      RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before)
+      app.buttons["暂停"].firstMatch.tap()
+    }
+    func queueOpen(){let jar=app.buttons["查看播放队列"];reach(jar);jar.tap();let open=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(open);open.tap();XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"queue-mode-off").firstMatch.waitForExistence(timeout:10))}
+    func queueClosePlayer(){let close=app.buttons["收起队列"];reach(close);close.tap();let options=app.buttons["收起播放选项"].firstMatch;reach(options);options.tap();let collapse=app.buttons["收起播放页"].firstMatch;reach(collapse);collapse.tap()}
+    func restoreOriginal(){openSettings(app,page:"downloads");let tasks=app.buttons["settings-open-downloadTasks"];reach(tasks);tasks.tap();let original=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND label BEGINSWITH %@","offline-remove-","删除离线文件：Shape of You · ")).firstMatch;reach(original);let id=String(original.identifier.dropFirst("offline-remove-".count)),play=app.buttons["offline-play-"+id];reach(play);play.tap();player.tap();pauseActual("Shape of You");app.buttons["收起播放页"].firstMatch.tap()}
+    restoreOriginal();try prepareLiveDownloadSource(app)
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let type=app.descendants(matching:.any).matching(identifier:"search-kind-playlist").firstMatch;reach(type);type.tap();app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    let clear=app.buttons["search-clear"];if clear.exists{reach(clear);clear.tap()}
+    let query=app.textFields["搜索歌单"];reach(query);query.tap();for c in "欧美热歌榜"{query.typeText(String(c))};query.typeText("\n")
+    let official=app.buttons.matching(NSPredicate(format:"label CONTAINS %@ AND label CONTAINS %@","网易云欧美热歌榜","作者网易云音乐")).firstMatch
+    XCTAssertTrue(official.waitForExistence(timeout:60));reach(official);official.tap()
+    let first=app.otherElements["discovery-track-0"];XCTAssertTrue(first.waitForExistence(timeout:45))
+    let filter=app.textFields["搜索已加载歌曲歌手专辑"];reach(filter);filter.tap();for c in "The Weeknd"{filter.typeText(String(c))};filter.typeText("\n")
+    let scope=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","筛选显示 ")).firstMatch;reach(scope)
+    let words=scope.label.components(separatedBy:" "),n=try XCTUnwrap(words.count>1 ? Int(words[1]):nil);XCTAssertGreaterThan(n,1)
+    reach(first);image("Real discovery filtered songs and stable row controls");let title=String(app.buttons["discovery-more-0"].label.dropFirst("更多操作：".count));XCTAssertFalse(title.isEmpty)
+    func leaveDetail(){let back=app.buttons["返回搜索结果"];reach(back);back.tap();XCTAssertTrue(waitForHittable(player,timeout:10))}
+    func reopenFilteredDetail(){reach(official);official.tap();XCTAssertTrue(first.waitForExistence(timeout:45));reach(filter);filter.tap();for c in "The Weeknd"{filter.typeText(String(c))};filter.typeText("\n");reach(scope);XCTAssertTrue(scope.label.hasPrefix("筛选显示 "+String(n)+" 首"))}
+    let all=app.buttons["播放已加载歌曲"];reach(all);XCTAssertGreaterThanOrEqual(all.frame.height,44);image("Real discovery filtered public playlist before play all");all.tap();leaveDetail();player.tap();pauseActual(title)
+    queueOpen();let off=app.descendants(matching:.any).matching(identifier:"queue-mode-off").firstMatch,one=app.descendants(matching:.any).matching(identifier:"queue-mode-one").firstMatch,random=app.descendants(matching:.any).matching(identifier:"queue-mode-shuffle").firstMatch
+    XCTAssertTrue(off.isSelected);XCTAssertTrue(app.staticTexts["· 1/"+String(n)].firstMatch.exists)
+    reach(one);one.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in one.isSelected},object:nil)],timeout:10),.completed);image("Real single repeat before discovery random");queueClosePlayer()
+    reopenFilteredDetail();let shuffle=app.buttons["随机播放已加载"];reach(shuffle);XCTAssertGreaterThanOrEqual(shuffle.frame.height,44);image("Real discovery random accessible button");shuffle.tap();leaveDetail();player.tap();pauseActual(title);image("Real discovery random starts actual first song")
+    queueOpen();XCTAssertTrue(random.isSelected);XCTAssertFalse(one.isSelected);XCTAssertTrue(app.staticTexts["· 1/"+String(n)].firstMatch.exists);image("Real discovery random queue excludes single repeat");queueClosePlayer();player.tap()
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch;reach(progress);progress.coordinate(withNormalizedOffset:CGVector(dx:0.985,dy:0.5)).tap()
+    func nearEnd()->Bool{let pieces=(progress.value as? String ?? "").components(separatedBy:" / ");guard pieces.count==2 else{return false};func seconds(_ value:String)->Int{let p=value.components(separatedBy:":").compactMap(Int.init);return p.count==2 ? p[0]*60+p[1]:0};let duration=seconds(pieces[1]);return duration>30 && seconds(pieces[0])>=duration-6}
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in nearEnd()},object:nil)],timeout:10),.completed);image("Real discovery random paused near natural end")
+    app.buttons["播放"].firstMatch.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.staticTexts[title].firstMatch.exists},object:nil)],timeout:60),.completed)
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:120));let before=progress.value as? String ?? "";RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before);app.buttons["暂停"].firstMatch.tap();image("Real discovery natural end advances to actual next song")
+    queueOpen();XCTAssertTrue(random.isSelected);XCTAssertFalse(one.isSelected);XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label MATCHES %@","^· (?:[2-9]|[1-9][0-9]+)/"+String(n)+"$")).firstMatch.exists);image("Real discovery advanced random queue")
+    reach(off);off.tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in off.isSelected},object:nil)],timeout:10),.completed);queueClosePlayer()
+    restoreOriginal();app.terminate();app.launch();player.tap();XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.exists);queueOpen();XCTAssertTrue(off.isSelected);image("Real discovery random original paused state restored after restart");queueClosePlayer()
+  }
   private func exerciseLiveSimilarSongs(controls:Bool=false) throws {
     let app=XCUIApplication();app.launch()
     func reach(_ item:XCUIElement){for _ in 0..<40{if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(item.isHittable)}
