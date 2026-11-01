@@ -64,3 +64,11 @@ test('failed refresh cancels pending replies without leaving the retained thread
  session.select(song);while(session.getSnapshot().loading)await tick();session.toggleReplies(root);while(!signal)await tick();fail=true;await session.load(true);assert.equal(signal.aborted,true);assert.equal(session.getSnapshot().threads.root!.loading,false);assert.ok(session.getSnapshot().error);
  replying.resolve({items:[comment('stale')],nextOffset:1,hasMore:false});await tick();assert.equal(session.getSnapshot().threads.root!.items.length,0);await session.loadReplies(root,true);assert.equal(session.getSnapshot().threads.root!.items[0]!.id,'stale');session.dispose();
 });
+test('reply threads stop at 500 rows and closing cancels in-flight replies',async()=>{
+ const root={...comment('root'),replyCount:1000};let calls=0;
+ const session=new CommentSession({supports:()=>true,page:async()=>page([root],1),replies:async(_t,_r,offset)=>{calls++;return{items:Array.from({length:20},(_,i)=>comment(String(offset+i))),nextOffset:offset+20,hasMore:true};}});
+ session.select(song);while(session.getSnapshot().loading)await tick();session.toggleReplies(root);while(session.getSnapshot().threads.root!.loading)await tick();while(session.getSnapshot().threads.root!.hasMore)await session.loadReplies(root);
+ assert.equal(session.getSnapshot().threads.root!.items.length,500);assert.equal(session.getSnapshot().threads.root!.limited,true);await session.loadReplies(root);assert.equal(calls,25);session.dispose();
+ const late=deferred<import('../src/providers/comments.ts').CommentThreadPage>();let signal:AbortSignal|undefined;
+ const closing=new CommentSession({supports:()=>true,page:async()=>page([root],1),replies:async(_t,_r,_o,s)=>{signal=s;return late.promise;}});closing.select(song);while(closing.getSnapshot().loading)await tick();closing.toggleReplies(root);while(!signal)await tick();closing.close();assert.equal(signal.aborted,true);late.resolve({items:[comment('late')],nextOffset:1,hasMore:false});await tick();assert.deepEqual(closing.getSnapshot().threads,{});closing.dispose();
+});

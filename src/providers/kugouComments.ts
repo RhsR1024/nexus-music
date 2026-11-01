@@ -41,7 +41,7 @@ export class KugouPublicComments {
   const total=count(raw.count),values=raw.list,childrenID=numeric(raw.childrenid),items=comments(values);
   if(raw.err_code!==0||raw.current_page!==page||total===undefined||!childrenID||!Array.isArray(values)||values.length>20||values.length>total||(audioID&&childrenID!==audioID))throw Error('评论服务暂时不可用');
   const song=audioID??hash;
-  for(const item of items){if(this.children.size>=1000)this.children.delete(this.children.keys().next().value!);this.children.set(item.id,{song,id:childrenID});}
+  for(const item of items){if(this.children.size>=2048)this.children.delete(this.children.keys().next().value!);this.children.set(item.id,{song,id:childrenID});}
   return{items,total,nextOffset:offset+20,hasMore:values.length>0&&offset+20<total};
  }
  async page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>{

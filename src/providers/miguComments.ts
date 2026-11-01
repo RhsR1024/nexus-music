@@ -1,5 +1,5 @@
 import {trackKey,type Track} from '../domain/track.ts';
-import type {CommentPage,SongComment} from './comments.ts';
+import type {CommentPage,CommentThreadPage,SongComment} from './comments.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {queryURL,type HTTPClient} from './http.ts';
 
@@ -11,10 +11,10 @@ const songID=(track:Track)=>track.origin.kind==='online'&&track.origin.platform=
 
 function time(value:unknown){
  if(typeof value!=='string')return;
- const match=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(value);if(!match)return;
- const [year,month,day,hour,minute]=match.slice(1).map(Number);
- const calendar=Date.UTC(year!,month!-1,day!,hour!,minute!),check=new Date(calendar);
- if(check.getUTCFullYear()!==year||check.getUTCMonth()!==month!-1||check.getUTCDate()!==day||check.getUTCHours()!==hour||check.getUTCMinutes()!==minute)return;
+ const match=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);if(!match)return;
+ const [year,month,day,hour,minute]=match.slice(1,6).map(Number),second=Number(match[6]??0);
+ const calendar=Date.UTC(year!,month!-1,day!,hour!,minute!,second),check=new Date(calendar);
+ if(check.getUTCFullYear()!==year||check.getUTCMonth()!==month!-1||check.getUTCDate()!==day||check.getUTCHours()!==hour||check.getUTCMinutes()!==minute||check.getUTCSeconds()!==second)return;
  const milliseconds=calendar-8*60*60*1000;return milliseconds>=0&&milliseconds<=8640000000000000?milliseconds:undefined;
 }
 
@@ -22,8 +22,8 @@ function comment(value:unknown):SongComment|undefined{
  const item=row(value),id=opaque(item.commentId),content=visible(item.commentInfo,10000);if(!id||!content)return;
  const user=row(item.user),replies=Array.isArray(item.replyComments)?item.replyComments.slice(0,50).map(row):[],latest=replies.find(reply=>visible(reply.replyInfo,10000))??replies[0];
  const replyContent=visible(latest?.replyInfo,10000),replyUser=visible(row(latest?.user).nickName,200);
- const timestamp=time(item.commentTime),likes=count(row(item.opNumItem).thumbNum);
- return{id:`mg:${id}`,content,userName:visible(user.nickName,200)||'匿名用户',...(timestamp!==undefined?{time:timestamp}:{}),...(likes!==undefined?{likes}:{}),...(replyContent?{reply:{userName:replyUser||'匿名用户',content:replyContent}}:{})};
+ const timestamp=time(item.commentTime),likes=count(row(item.opNumItem).thumbNum),replyCount=count(item.replyTotalCount);
+ return{id:`mg:${id}`,content,userName:visible(user.nickName,200)||'匿名用户',...(timestamp!==undefined?{time:timestamp}:{}),...(likes!==undefined?{likes}:{}),...(replyCount!==undefined?{replyCount}:{}),...(replyContent?{reply:{userName:replyUser||'匿名用户',content:replyContent}}:{})};
 }
 
 function comments(values:unknown){
@@ -33,9 +33,20 @@ function comments(values:unknown){
  if(values.length&&!items.length)throw Error('评论响应无效');return items;
 }
 
+function replies(values:unknown,rootID:string):SongComment[]{
+ if(!Array.isArray(values)||values.length>20)throw Error('回复响应无效');
+ const seen=new Set<string>(),items:SongComment[]=[];
+ for(const raw of values){
+  const item=row(raw),id=opaque(item.replyId),content=visible(item.replyInfo,10000);if(!id||!content||seen.has(id))continue;seen.add(id);
+  const timestamp=time(item.replyTime),likes=count(row(item.opNumItem).thumbNum),target=visible(item.targetComment,10000),targetUser=visible(row(item.targetUser).nickName,200);
+  items.push({id:`mg:${rootID}:reply:${id}`,content,userName:visible(row(item.user).nickName,200)||'匿名用户',...(timestamp!==undefined?{time:timestamp}:{}),...(likes!==undefined?{likes}:{}),...(target?{reply:{userName:targetUser||'匿名用户',content:target}}:{})});
+ }
+ if(values.length&&!items.length)throw Error('回复响应无效');return items;
+}
+
 interface CursorState { total?:number;cursors:Map<number,string> }
 export class MiguPublicComments {
- private http:HTTPClient;private states=new Map<string,CursorState>();
+ private http:HTTPClient;private states=new Map<string,CursorState>();private roots=new Map<string,string>();
  constructor(http:HTTPClient){this.http=http;}
  supports(track:Track){return !!songID(track);}
  async page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>{
@@ -58,9 +69,22 @@ export class MiguPublicComments {
    if(offset===0)this.states.delete(key);
    const state=this.states.get(key)??{cursors:new Map<number,string>()};state.total=total;
    if(last){state.cursors.set(nextOffset,last);while(state.cursors.size>200)state.cursors.delete(state.cursors.keys().next().value!);}
+   for(const root of [...hot,...items]){if(this.roots.size>=2048)this.roots.delete(this.roots.keys().next().value!);this.roots.set(root.id,key);}
    this.states.set(key,state);
    if(this.states.size>100)this.states.delete(this.states.keys().next().value!);
    return{hot,items,total,nextOffset,hasMore:values.length>0&&nextOffset<total};
   },signal,12000);
  }
+ async replies(track:Track,root:SongComment,offset:number,signal:AbortSignal):Promise<CommentThreadPage>{
+  const resourceId=songID(track),rootID=root.id.startsWith('mg:')?opaque(root.id.slice(3)):undefined;
+  if(!resourceId||!rootID||this.roots.get(root.id)!==trackKey(track.origin)||!Number.isSafeInteger(offset)||offset<0||offset>100000||offset%20!==0)throw Error('此评论暂不支持展开回复');
+  return bounded(async child=>{
+   const url=queryURL(`https://app.c.nf.migu.cn/MIGUM3.0/user/comment/stack/${encodeURIComponent(rootID)}/v1.0`,{pageSize:20,queryType:2,resourceId,resourceType:2,start:offset});
+   const raw=row(await this.http(url,{credentials:'omit',headers:{'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1'}},child));throwIfAborted(child);
+   const data=row(raw.data),main=row(data.mainCommentItem),total=count(data.replyTotalCount),values=main.replyComments;
+   if(raw.code!=='000000'||opaque(main.commentId)!==rootID||opaque(main.targetResourceId)!==resourceId||String(main.targetResourceType)!=='2'||total===undefined||count(main.replyTotalCount)!==total||!Array.isArray(values)||values.length>20||values.length>total)throw Error('回复服务暂时不可用');
+   const nextOffset=offset+20;return{items:replies(values,rootID),total,nextOffset,hasMore:values.length>0&&nextOffset<total};
+  },signal,12000);
+ }
+
 }

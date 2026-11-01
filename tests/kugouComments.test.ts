@@ -62,3 +62,15 @@ test('Kugou rejects foreign metadata, private sources, injection and invalid pag
 test('Kugou failed paging retains old rows and retries the same page in a scoped session',async()=>{
  let fail=false;const pages:number[]=[];const reader=new PublicComments(async url=>{const u=new URL(url),p=Number(u.searchParams.get('p'));if(u.pathname.endsWith('topliked'))return response([],p,0);pages.push(p);if(fail)throw Error('private-marker');return response([entry(String(p))],p,45);},crypto),session=new CommentSession(reader);session.select(song);while(session.getSnapshot().loading)await new Promise(r=>setImmediate(r));fail=true;await session.load();assert.equal(session.getSnapshot().items.length,1);assert.doesNotMatch(session.getSnapshot().error!,/private-marker/);fail=false;await session.retry();assert.equal(session.getSnapshot().items.length,2);assert.deepEqual(pages,[1,2,2]);session.dispose();
 });
+
+test('Kugou retains hot and first latest reply roots after all 1000 visible latest comments',async()=>{
+ let replyCalls=0;const reader=new PublicComments(async url=>{
+  const u=new URL(url),page=Number(u.searchParams.get('p'));
+  if(u.pathname.startsWith('/r/v1/rank/'))return response(u.pathname.endsWith('topliked')?[entry('9000')]:Array.from({length:20},(_,i)=>entry(String((page-1)*20+i+1))),page,1000);
+  replyCalls++;return {...replyResponse([],page,0),tid:u.searchParams.get('tid')};
+ },crypto);
+ const initial=await reader.page(song,0,signal());
+ for(let offset=20;offset<1000;offset+=20)await reader.page(song,offset,signal());
+ for(const root of [initial.hot[0]!,initial.items[0]!])assert.equal((await reader.replies(song,root,0,signal())).items.length,0);
+ assert.equal(replyCalls,2);
+});

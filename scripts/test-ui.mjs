@@ -120,7 +120,7 @@ for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.si
 let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
-let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
+let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
@@ -260,8 +260,9 @@ const server = createServer(async (req, res) => {
   if(req.url.startsWith('/migu-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
     if(mode&&['normal','empty','error'].includes(mode))miguCommentsMode=mode;
-    if(control.searchParams.has('reset'))miguCommentsNextPageFails=true;
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:miguCommentsMode,nextPageFails:miguCommentsNextPageFails}));return;
+    const repliesMode=control.searchParams.get('replies');if(repliesMode&&['normal','empty'].includes(repliesMode))miguRepliesMode=repliesMode;
+    if(control.searchParams.has('reset')){miguCommentsNextPageFails=true;miguRepliesNextPageFails=true;miguRepliesMode='normal';}
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:miguCommentsMode,nextPageFails:miguCommentsNextPageFails,repliesMode:miguRepliesMode}));return;
   }
   if(req.url.startsWith('/kuwo-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
@@ -337,6 +338,14 @@ const server = createServer(async (req, res) => {
       if(page===1&&qqCommentsNextPageFails){qqCommentsNextPageFails=false;counts.qqComments.errors++;res.end(JSON.stringify({code:503}));return;}
       res.end(JSON.stringify({code:0,topid:Number(topid),comment:page===0?{commenttotal:41,commentlist:[rootRow,reply]}:{commenttotal:43,commentlist:[page2]},...(page===0?{hot_comment:{commenttotal:1,commentlist:[hot]}}:{})}));return;
     }
+    if(parsed.hostname==='app.c.nf.migu.cn'&&parsed.pathname==='/MIGUM3.0/user/comment/stack/101/v1.0'){
+      const start=Number(parsed.searchParams.get('start'));counts.miguReplies??={starts:[],errors:[]};counts.miguReplies.starts.push(start);
+      if(miguCommentsMode==='error'||(start===20&&miguRepliesNextPageFails)){miguRepliesNextPageFails=false;counts.miguReplies.errors.push(start);res.end(JSON.stringify({code:'500',data:{}}));return;}
+      const reply=(id,content,extra={})=>({replyId:id,replyInfo:content,replyTime:'2024-01-03 04:05:06',user:{nickName:`Migu reply reader ${id}`},opNumItem:{thumbNum:2},...extra});
+      const values=miguCommentsMode==='empty'||miguRepliesMode==='empty'?[]:start===0?[reply('201','Synthetic Migu full reply one',{targetComment:'Synthetic Migu quoted target',targetUser:{nickName:'Migu target reader'}}),reply('202','Synthetic Migu full reply two')]:[reply('203','Synthetic Migu full reply three'),reply('204','Synthetic Migu full reply four')];
+      const total=miguCommentsMode==='empty'||miguRepliesMode==='empty'?0:41;
+      res.end(JSON.stringify({code:'000000',data:{replyTotalCount:total,mainCommentItem:{commentId:'101',targetResourceId:parsed.searchParams.get('resourceId'),targetResourceType:'2',replyTotalCount:total,replyComments:values}}}));return;
+    }
     if(parsed.hostname==='app.c.nf.migu.cn'&&parsed.pathname==='/MIGUM3.0/user/comment/stack/v1.0'){
       const cursor=parsed.searchParams.get('commentId')??'',resource=parsed.searchParams.get('resourceId');
       counts.miguComments??={pages:[],errors:0,empty:0,resources:[]};counts.miguComments.pages.push(cursor?'next':'first');counts.miguComments.resources.push(resource);
@@ -344,7 +353,7 @@ const server = createServer(async (req, res) => {
       if(miguCommentsMode==='empty'){counts.miguComments.empty++;res.end(JSON.stringify({code:'000000',data:{commentNums:'0',cfgHotCount:'0',comments:[],hotComments:[],targetInfo:{title:'Shape of You',subTitle:'Ed Sheeran'}}}));return;}
       const item=(id,content,extra={})=>({commentId:id,commentInfo:content,commentTime:'2024-01-02 03:04',opNumItem:{thumbNum:3},user:{nickName:`Migu reader ${id}`},replyTotalCount:0,replyComments:[],...extra});
       const hot=item('900','Synthetic Migu hot');
-      const root=item('101','Synthetic Migu root',{opNumItem:{thumbNum:7}});
+      const root=item('101','Synthetic Migu root',{opNumItem:{thumbNum:7},replyTotalCount:41});
       const reply=item('102','Synthetic Migu original long text '.repeat(8).trim(),{replyTotalCount:1,replyComments:[{replyId:'1021',replyInfo:'Synthetic Migu reply',replyTime:'2024-01-03 04:05',user:{nickName:'Migu reply reader'}}]});
       const page2=item('103','Synthetic Migu second page');
       if(cursor&&miguCommentsNextPageFails){miguCommentsNextPageFails=false;counts.miguComments.errors++;res.end(JSON.stringify({code:'500',data:{}}));return;}

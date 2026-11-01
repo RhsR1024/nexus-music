@@ -728,6 +728,26 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(reply.waitForExistence(timeout:5))
     XCTAssertTrue(text("热门评论").exists);XCTAssertTrue(text("最新评论").exists)
     let firstImage=XCTAttachment(screenshot:app.screenshot());firstImage.name="Migu comments hot latest long text and total";firstImage.lifetime = .keepAlways;add(firstImage)
+    let expand=app.buttons["查看 41 条回复"];reach(expand,in:list);expand.tap()
+    XCTAssertTrue(text("Synthetic Migu full reply one").waitForExistence(timeout:10))
+    XCTAssertTrue(text("Synthetic Migu full reply two").exists)
+    XCTAssertTrue(text("Migu target reader：Synthetic Migu quoted target").exists)
+    let fullReplies=XCTAttachment(screenshot:app.screenshot());fullReplies.name="Migu comments full replies and target quotation";fullReplies.lifetime = .keepAlways;add(fullReplies)
+    let moreReplies=app.buttons["加载更多回复"];reach(moreReplies,in:list);moreReplies.tap()
+    XCTAssertTrue(text("回复暂时无法载入，请重试。已显示的回复已保留。").waitForExistence(timeout:10))
+    XCTAssertTrue(text("Synthetic Migu full reply two").exists)
+    let failedReplies=XCTAttachment(screenshot:app.screenshot());failedReplies.name="Migu comments reply error retains existing rows";failedReplies.lifetime = .keepAlways;add(failedReplies)
+    let retryReply=app.buttons["重试回复"];reach(retryReply,in:list);retryReply.tap()
+    XCTAssertTrue(text("Synthetic Migu full reply three").waitForExistence(timeout:10))
+    XCTAssertTrue(text("Synthetic Migu full reply four").exists)
+    control("replies=empty")
+    let replyRefresh=app.buttons["刷新评论"];XCTAssertTrue(replyRefresh.isHittable);replyRefresh.tap()
+    let reopen=app.buttons["查看 41 条回复"];XCTAssertTrue(reopen.waitForExistence(timeout:10))
+    for _ in 0..<12 {if reopen.isHittable{break};list.swipeDown()}
+    XCTAssertTrue(reopen.isHittable);reopen.tap()
+    XCTAssertTrue(text("本次未取得可展示的回复。").waitForExistence(timeout:10))
+    let emptyReplies=XCTAttachment(screenshot:app.screenshot());emptyReplies.name="Migu comments explicit empty reply thread";emptyReplies.lifetime = .keepAlways;add(emptyReplies)
+    control("replies=normal");replyRefresh.tap();XCTAssertTrue(reopen.waitForExistence(timeout:10))
     let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
     let error=text("评论暂时无法载入，请重试。已显示的内容已保留。")
     XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(reply.exists)
@@ -782,6 +802,18 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<30 {if latest.isHittable{break};list.swipeUp()}
     XCTAssertTrue(latest.isHittable,"The live Migu latest section must actually be visible after scrolling past hot rows")
     image("Live anonymous Migu comments latest section")
+    let expandQuery=app.buttons.matching(NSPredicate(format:"label MATCHES %@","查看 [1-9][0-9]* 条回复"))
+    var visibleExpand:XCUIElement?
+    for _ in 0..<30 {
+      visibleExpand=expandQuery.allElementsBoundByIndex.first{$0.isHittable}
+      if visibleExpand != nil{break}
+      list.swipeDown()
+    }
+    XCTAssertNotNil(visibleExpand,"A real Migu comment must expose a visible positive reply count")
+    visibleExpand!.tap()
+    let replyRow=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comment-reply-")).firstMatch
+    XCTAssertTrue(replyRow.waitForExistence(timeout:20),"The live endpoint must publish an actual reply row, not an empty container")
+    image("Live anonymous Migu full replies expanded")
     let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
     let retry=app.buttons["重试评论"]
     if retry.waitForExistence(timeout:5){retry.tap()}
