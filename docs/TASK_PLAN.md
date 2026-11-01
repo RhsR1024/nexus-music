@@ -6,8 +6,8 @@
 - [x] 正式播放器更多菜单、空/运行/ready/error/cancelled UI、手动重试和返回导航已接。
 - [x] 最近 6 次 run 可生成有界分享摘要；导出前再次清洗地址和控制字符、屏蔽常见凭据键值，并明确 ready 不等于全曲/真机验收。
 - [x] 935/935 检查、脚本语法/空白检查、完整 native、最终 Release `SourceUITests-1793546584894` 1/0/0（200.876 秒）、系统分享实际打开/取消、2PNG 来源 ready/亲看通过；Sollin IPA offline case-guard 与 strict review 为 0 错误/0 警告。
-- [x] `bd904fe` clean unsigned archive 成功，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]；IPA `45628ee9…` 的 ZIP CRC、archive/IPA 字节一致、T7 独立副本及生产 bundle/夹具排除通过。
-- [ ] 本批分享增量 clean IPA、push/CI 与 T7 归档，以及 iOS 27 云端、真实 iPhone、真实源弱网/限流、冷/暖缓存、全平台/Navidrome/WebDAV、本机/系统媒体、小屏/动态字号/VoiceOver、动效、签名和全曲播放继续。
+- [x] `53bc294` clean unsigned archive 成功，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]；IPA `868c88db…` 的 164项 ZIP CRC、archive/IPA 字节一致、生产分享标记/测试夹具与凭据排除、内容快照及 T7 独立副本通过；产品提交已push并核对远端main一致。
+- [ ] iOS 27 `41321953872` 云端终态、真实 iPhone、真实源弱网/限流、冷/暖缓存、全平台/Navidrome/WebDAV、本机/系统媒体、小屏/动态字号/VoiceOver、动效、签名和全曲播放继续。
 
 见[实施回执](2026-11-01_playback-diagnostics-report.md)与[UI 场景](ui-spec/playback-diagnostics-2026-11-01.md)。这是 J57 的部分纵向增量，不把结构化 ready、模拟器成功或未签名包写成完整诊断/真实播放交付。
 

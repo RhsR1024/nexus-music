@@ -65,6 +65,14 @@ manifest 记录 `configuration: Release`、`exitCode: 0`、`sourceUnchanged: tru
 
 ## Clean unsigned archive
 
+- 分享增量在 clean `53bc2948a5eae2cf76ed7e7c7a5d3afe430520b0` 上归档成功，Xcode 输出 `ARCHIVE SUCCEEDED`。manifest 记录 `dirty:false`、`workingTreeChanges:[]`、arm64、`iphoneos26.2`、最低 iOS15.1、设备族`[1,2]`、`signed:false`；manifest SHA-256 为 `c98d22092bc0ab381c76277bb8cc4d238c4e86e5aae763eadce0be8e40a1592d`。
+- IPA 为 12,862,490 字节、SHA-256 `868c88dbec80225bc3f6faa2ba8a86844b2abae0f29f013f0fe433bbbe461e45`；164 项 ZIP CRC 全部通过。archive 与 IPA 内 `main.jsbundle`、arm64 可执行和 `Info.plist` 逐字节一致，SHA-256 分别为 `1074f3b891930321c97b8d050e5ba431a0fba40a342bb6c899af536fa82b8089`、`4eb3b2fa2f98a21e56bb3d6aa0767b75fc0fa2ac833f4721777abc51bcf85391`、`dd9d3304202133385f743d3b89fc3af5f319faebaae0435cde36eb0b39e90452`。
+- 生产 Hermes bundle 可检出“播放链路诊断”“分享诊断摘要”“音枢播放链路诊断”“原生媒体已就绪”和稳定 testID；`PRIVATE_TOKEN`、私有 URL、测试适配器、matched fixture 地址均不存在。包里没有 `_CodeSignature` 或 `embedded.mobileprovision`，`codesign` 明确返回未签名；因此仍不能证明 Apple 签名或真机可安装。
+- 机器验证摘要保存在 `build/distribution/ipa-verification.json`；内容哈希快照为 `build/distribution-history/868c88dbec80225bc3f6faa2ba8a86844b2abae0f29f013f0fe433bbbe461e45/`。独立 T7 副本为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-playback-diagnostics-share-clean-53bc294/`，源、快照和副本的 IPA/manifest/验证摘要逐项一致。
+- 产品提交已正常push，`git ls-remote` 与本地 HEAD 均为 `53bc294`。推送后 `41314376539/69c9316` 仍在运行，`41321953872/53bc294` 为唯一 pending，符合最多1运行/1排队；在本次回执时尚无该提交的iOS27终态。
+
+以下 `bd904fe` 是分享入口加入前的 clean archive 基线，保留用于历史追溯：
+
 - `npm run ios:archive` 在 `bd904fe406c704966cd748ab41df829f292dd32f` 上以退出码 0 完成，Xcode 输出 `ARCHIVE SUCCEEDED`。`build-manifest.json` 记录 `dirty:false`、`workingTreeChanges:[]`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed:false`。
 - IPA 为 12,859,396 字节，SHA-256 `45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19`。ZIP 共 164 项且 CRC 全部通过。
 - 从 IPA 直接读取的 `main.jsbundle`、arm64 可执行文件和 `Info.plist` 与 xcarchive 内对应文件逐字节一致。SHA-256 分别为 `37a0a27187285b143ebfcacaf517a27b577e67999a1855b7deeaee9d1f49e42f`、`4eb3b2fa2f98a21e56bb3d6aa0767b75fc0fa2ac833f4721777abc51bcf85391`、`dd9d3304202133385f743d3b89fc3af5f319faebaae0435cde36eb0b39e90452`；archive `Info.plist` SHA-256 为 `b25f5bc1bd5c5d6617840daae933184dacdb17d273d3c74db1927966db276786`。

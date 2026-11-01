@@ -10,7 +10,7 @@
 
 R2/mobile-reverse 离线 scope 与 `ipa --review` 通过，52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。iOS 27 云端、真实 iPhone/锁屏后台/输出路由、真实源弱网、冷/暖缓存、完整来源矩阵、小屏/动态字号/VoiceOver、连续动效、签名及真实全曲仍开放；本批只补 J57 部分纵向实现，不机械提高项目完成百分比。
 
-分享增量把最近 6 次 run 按新到旧格式化，导出边界再次执行字段清洗并识别常见 authorization/token/password/secret 键值，系统分享直接使用文本而不创建含私人路径的临时文件。正式 UI 加入“分享诊断摘要”，测试实际打开/取消原生分享面板并验证返回后的诊断页和原匹配流程；纯函数测试构造含 URL 和凭据标记的 8 次 run，确认只输出最新 6 次且全部脱敏。复核为 935/935；最终 Release `SourceUITests-1793546584894` 为 1/0/0、200.876 秒，`sourceUnchanged=true`、安装 bundle `39f4984e…`、xcresult Info `c10fd988…`。clean IPA、push/CI 与 iOS27 终态另行收尾。
+分享增量把最近 6 次 run 按新到旧格式化，导出边界再次执行字段清洗并识别常见 authorization/token/password/secret 键值，系统分享直接使用文本而不创建含私人路径的临时文件。正式 UI 加入“分享诊断摘要”，测试实际打开/取消原生分享面板并验证返回后的诊断页和原匹配流程；纯函数测试构造含 URL 和凭据标记的 8 次 run，确认只输出最新 6 次且全部脱敏。复核为 935/935；最终 Release `SourceUITests-1793546584894` 为 1/0/0、200.876 秒，`sourceUnchanged=true`、安装 bundle `39f4984e…`、xcresult Info `c10fd988…`。产品提交 `53bc294` 已push并核对远端main一致；clean unsigned IPA为12,862,490字节、SHA-256 `868c88db…`，manifest dirty=false/changes=[]、arm64/SDK26.2/iOS15.1/[1,2]、ZIP CRC/归档字节一致、正式分享标记及测试/私有/签名资源排除通过，内容快照和T7独立副本已核对。push后`41314376539`仍在运行、`41321953872`为唯一pending；iOS27实际终态继续收尾。
 
 ## 2026-11-01 发现详情随机入口独立验收
 

@@ -2,6 +2,8 @@
 
 分享摘要补缺：`npm run check` **935/935**，最终 Release `SourceUITests-1793546584894.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、200.876 秒；系统分享面板实际打开/取消，返回诊断页后继续原匹配、换歌、重启流程。run manifest 记录 exit 0、`sourceUnchanged=true`，源码 digest `267281c2…`、安装 bundle `39f4984e…`、xcresult Info `c10fd988…`。精确日志 `build/logs/playback-diagnostics-share-20261101-232900/`、2PNG `build/ui-screenshots/playback-diagnostics-share-20261101-232900/` 均来源 ready 并亲看。分享文本纯函数额外覆盖 8→6 截断及 URL/credentials 脱敏。
 
+`53bc294` 已正常push并实核远端main一致；clean signed=false archive manifest 对应同一提交，`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`。IPA 12,862,490 字节、SHA-256 `868c88dbec80225bc3f6faa2ba8a86844b2abae0f29f013f0fe433bbbe461e45`；164 项 ZIP CRC、archive/IPA 内 JS/可执行/Info.plist 字节、正式分享标记和测试/私有资源排除均通过，包内无签名或描述文件。验证摘要与内容快照在 `build/distribution/ipa-verification.json`、`build/distribution-history/868c88db…/`，独立T7副本路径见[回执](2026-11-01_playback-diagnostics-report.md)。iOS27 `41321953872` 为唯一pending，`41314376539/69c9316` 仍运行，实际终态待核。
+
 `npm run check` **934/934**、`node --check scripts/test-ui.mjs`、`node --check scripts/test-native-playback.mjs`、`git diff --check` 及完整 `bash scripts/test-native.sh` 通过。最终 Release `SourceUITests-1793544748938.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、187.544 秒；测试从正式匹配播放进入更多菜单，验证诊断 trace、精确 native-ready 事件和重试入口后返回原流程。2PNG 均来源 ready、亲看；诊断截图底部 ready 行被视口裁切，但 XCTest 有精确文本和 native-success testID 断言。
 
 精确日志目录 `build/logs/playback-diagnostics-matching-20261101-225253-r4/`、截图目录 `build/ui-screenshots/playback-diagnostics-20261101-225253-r4/`；manifest 为 Release/exit0/sourceUnchanged，base `69c9316`，源码 digest `6cf1a863…`、diff `4f632b30…`、fixture `83ad352d…`、安装 bundle `15d79b71…`、JS `727e3b7d…`，夹具收到 4 次匹配音频请求。完整文件哈希、失败历史与复现见[回执](2026-11-01_playback-diagnostics-report.md)。

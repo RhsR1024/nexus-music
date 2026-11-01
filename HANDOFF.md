@@ -4,7 +4,7 @@
 
 `npm run check` 934/934、脚本语法/空白检查及完整 native 套件通过；最终 Release `SourceUITests-1793544748938` 为 1/0/0、187.544 秒，2PNG 来源 ready 并亲看。精确源码、diff、fixture、bundle、日志、截图哈希与失败历史见[回执](docs/2026-11-01_playback-diagnostics-report.md)和[UI 规格](docs/ui-spec/playback-diagnostics-2026-11-01.md)。
 
-诊断页补入“分享诊断摘要”：最近 6 次 run 按新到旧生成有界文本，导出边界再次屏蔽 URL 与常见凭据键值，并保留 ready 不等于全曲/真机验收的边界。`npm run check` 935/935；最终 Release `SourceUITests-1793546584894` 为 1/0/0、200.876 秒，真实系统分享面板打开、取消后回到诊断页并继续原有匹配/换歌/重启断言。`sourceUnchanged=true`，安装 bundle 为 `39f4984e…`，xcresult Info SHA-256 为 `c10fd988…`；2PNG 来源 ready 并亲看。该增量仍待 clean IPA、push 与 iOS27 实际终态。
+诊断页补入“分享诊断摘要”：最近 6 次 run 按新到旧生成有界文本，导出边界再次屏蔽 URL 与常见凭据键值，并保留 ready 不等于全曲/真机验收的边界。`npm run check` 935/935；最终 Release `SourceUITests-1793546584894` 为 1/0/0、200.876 秒，真实系统分享面板打开、取消后回到诊断页并继续原有匹配/换歌/重启断言。`sourceUnchanged=true`，安装 bundle 为 `39f4984e…`，xcresult Info SHA-256 为 `c10fd988…`；2PNG 来源 ready 并亲看。产品提交 `53bc294` 已正常push并实核远端main一致；清洁unsigned归档 manifest 对应同一提交且 `dirty:false`/`workingTreeChanges:[]`，arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、未签名。IPA 12,862,490字节、SHA-256 `868c88db…`，164项ZIP CRC、archive/IPA内JS/可执行/Info.plist字节及正式分享标记均与归档一致，测试适配器、私有URL/凭据、`_CodeSignature`和描述文件排除；内容快照及T7独立副本已逐字节核对。iOS27 run `41321953872` 当前为唯一pending，前面只有 `41314376539` 运行中，队列1运行/1排队，实际终态继续核对。
 
 `bd904fe` clean unsigned archive 成功：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2、最低 iOS15.1、设备族`[1,2]`、未签名且无描述文件。IPA 12,859,396 字节、SHA-256 `45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19`；164 项 ZIP CRC、archive/IPA 内 JS/可执行/Info.plist 字节、生产 bundle 和测试夹具排除均通过。内容哈希快照与 T7 独立副本已逐字节核对。
 
