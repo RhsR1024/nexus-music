@@ -942,6 +942,19 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(reply.waitForExistence(timeout:5),"Quoted reply copy must keep its complete original label")
     XCTAssertTrue(text("热门评论").exists);XCTAssertTrue(text("最新评论").exists)
     let firstImage=XCTAttachment(screenshot:app.screenshot());firstImage.name="Kugou comments standard emoji hot latest long text and total";firstImage.lifetime = .keepAlways;add(firstImage)
+    let expand=app.buttons["查看 41 条回复"];reach(expand,in:list)
+    let replyCountImage=XCTAttachment(screenshot:app.screenshot());replyCountImage.name="Kugou comments reply count control";replyCountImage.lifetime = .keepAlways;add(replyCountImage)
+    expand.tap()
+    XCTAssertTrue(text("Synthetic Kugou full reply one").waitForExistence(timeout:10))
+    XCTAssertTrue(text("Synthetic Kugou full reply two").exists)
+    let replyImage=XCTAttachment(screenshot:app.screenshot());replyImage.name="Kugou comments full replies expanded";replyImage.lifetime = .keepAlways;add(replyImage)
+    let moreReplies=app.buttons["加载更多回复"];reach(moreReplies,in:list);moreReplies.tap()
+    let replyError=text("回复暂时无法载入，请重试。已显示的回复已保留。")
+    XCTAssertTrue(replyError.waitForExistence(timeout:10));XCTAssertTrue(text("Synthetic Kugou full reply two").exists)
+    let replyErrorImage=XCTAttachment(screenshot:app.screenshot());replyErrorImage.name="Kugou comments reply failure preserves existing replies";replyErrorImage.lifetime = .keepAlways;add(replyErrorImage)
+    let retryReply=app.buttons["重试回复"];reach(retryReply,in:list);retryReply.tap()
+    XCTAssertTrue(text("Synthetic Kugou full reply three").waitForExistence(timeout:10))
+    XCTAssertTrue(text("Synthetic Kugou full reply four").exists)
     let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
     let error=text("评论暂时无法载入，请重试。已显示的内容已保留。")
     XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(reply.exists)
@@ -996,6 +1009,20 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<40 {if latest.isHittable{break};list.swipeUp()}
     XCTAssertTrue(latest.isHittable,"The live Kugou latest section must actually be visible after scrolling past hot rows")
     image("Live anonymous Kugou comments latest section")
+    let expandQuery=app.buttons.matching(NSPredicate(format:"label MATCHES %@","查看 [1-9][0-9]* 条回复"))
+    var visibleExpand:XCUIElement?
+    for _ in 0..<40 {
+      visibleExpand=expandQuery.allElementsBoundByIndex.first{$0.isHittable}
+      if visibleExpand != nil{break}
+      list.swipeUp()
+    }
+    XCTAssertNotNil(visibleExpand,"The live Kugou comment page must expose a real visible public reply count")
+    visibleExpand!.tap()
+    let thread=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comment-replies-")).firstMatch
+    XCTAssertTrue(thread.waitForExistence(timeout:20),"The live Kugou reply endpoint must publish a reply thread")
+    let replyRow=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comment-reply-")).firstMatch
+    XCTAssertTrue(replyRow.waitForExistence(timeout:20),"A live reply row must load; an empty thread container cannot prove endpoint success")
+    image("Live anonymous Kugou full replies expanded")
     let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
     let retry=app.buttons["重试评论"]
     if retry.waitForExistence(timeout:5){retry.tap()}

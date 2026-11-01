@@ -1,5 +1,5 @@
 import type {Track} from '../domain/track.ts';
-import type {CommentPage,SongComment} from './comments.ts';
+import type {CommentPage,CommentThreadPage,SongComment} from './comments.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {queryURL,type HTTPClient} from './http.ts';
 
@@ -19,7 +19,8 @@ function comment(value:unknown):SongComment|undefined{
  const v=row(value),id=numeric(v.id);let content=visible(v.content,10000);if(!id||!content)return;
  if(Array.isArray(v.atlist))for(const raw of v.atlist.slice(0,50)){const at=row(raw),key=numeric(at.id),name=visible(at.name,200);if(key&&name)content=content.replaceAll(`[at=${key}]`,`@${name} `);}
  const parent=visible(v.pcontent,10000),seconds=count(v.addtimestamp),likes=count(row(v.like).likenum);
- return{id:`kg:${id}`,content:visible(content,10000),userName:visible(v.user_name,200)||'匿名用户',...(seconds!==undefined&&seconds<=8640000000000?{time:seconds*1000}:{}),...(likes!==undefined?{likes}:{}),...(parent?{reply:{userName:visible(v.puser,200)||'匿名用户',content:parent}}:{})};
+ const replyCount=count(v.reply_num);
+ return{id:`kg:${id}`,content:visible(content,10000),userName:visible(v.user_name,200)||'匿名用户',...(seconds!==undefined&&seconds<=8640000000000?{time:seconds*1000}:{}),...(likes!==undefined?{likes}:{}),...(replyCount!==undefined?{replyCount}:{}),...(parent?{reply:{userName:visible(v.puser,200)||'匿名用户',content:parent}}:{})};
 }
 function comments(values:unknown){
  if(!Array.isArray(values)||values.length>20)throw Error('评论响应无效');
@@ -28,7 +29,7 @@ function comments(values:unknown){
  if(values.length&&!items.length)throw Error('评论响应无效');return items;
 }
 export class KugouPublicComments {
- private http:HTTPClient;private crypto:KugouCommentCrypto;
+ private http:HTTPClient;private crypto:KugouCommentCrypto;private children=new Map<string,{song:string;id:string}>();
  constructor(http:HTTPClient,crypto:KugouCommentCrypto){this.http=http;this.crypto=crypto;}
  supports(track:Track){return !!identity(track);}
  private async read(track:Track,offset:number,hot:boolean,signal:AbortSignal){
@@ -37,12 +38,25 @@ export class KugouPublicComments {
   const params={dfid:'0',mid,clienttime:String(now),uuid:'0',extdata:hash,appid:'1005',code:'fc4be23b4e972707f36b8a828a93ba8a',schash:hash,clientver:'11409',p:String(page),clienttoken:'',pagesize:'20',ver:'10',kugouid:'0'},salt='OIlwieks28dk2k092lksi2UIkp';
   const signature=await this.crypto.md5(salt+Object.entries(params).map(([k,v])=>`${k}=${v}`).sort().join('')+salt);throwIfAborted(signal);if(!hex(signature))throw Error('评论请求暂不可用');
   const raw=row(await this.http(queryURL(`https://gateway.kugou.com/r/v1/rank/${hot?'topliked':'newest'}`,{...params,signature}),{credentials:'omit',headers:{'x-router':'m.comment.service.kugou.com','User-Agent':'Mozilla/5.0'}},signal));throwIfAborted(signal);
-  const total=count(raw.count),values=raw.list;
-  if(raw.err_code!==0||raw.current_page!==page||total===undefined||!Array.isArray(values)||values.length>20||values.length>total||(audioID&&numeric(raw.childrenid)!==audioID))throw Error('评论服务暂时不可用');
-  return{items:comments(values),total,nextOffset:offset+20,hasMore:values.length>0&&offset+20<total};
+  const total=count(raw.count),values=raw.list,childrenID=numeric(raw.childrenid),items=comments(values);
+  if(raw.err_code!==0||raw.current_page!==page||total===undefined||!childrenID||!Array.isArray(values)||values.length>20||values.length>total||(audioID&&childrenID!==audioID))throw Error('评论服务暂时不可用');
+  const song=audioID??hash;
+  for(const item of items){if(this.children.size>=1000)this.children.delete(this.children.keys().next().value!);this.children.set(item.id,{song,id:childrenID});}
+  return{items,total,nextOffset:offset+20,hasMore:values.length>0&&offset+20<total};
  }
  async page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>{
   if(!this.supports(track)||!Number.isSafeInteger(offset)||offset<0||offset>100000||offset%20!==0)throw Error('此歌曲暂不支持公开评论');
   return bounded(async child=>{const [latest,hot]=await Promise.all([this.read(track,offset,false,child),offset===0?this.read(track,0,true,child):Promise.resolve(undefined)]);throwIfAborted(child);return{hot:hot?.items??[],items:latest.items,total:latest.total,nextOffset:latest.nextOffset,hasMore:latest.hasMore};},signal,12000);
+ }
+ async replies(track:Track,root:SongComment,offset:number,signal:AbortSignal):Promise<CommentThreadPage>{
+  const songIdentity=identity(track),tid=/^kg:([1-9]\d{0,39})$/.exec(root.id)?.[1],children=this.children.get(root.id);
+  if(!songIdentity||!tid||!children||children.song!==(songIdentity.audioID??songIdentity.hash)||!Number.isSafeInteger(offset)||offset<0||offset>100000||offset%20!==0)throw Error('此评论暂不支持展开回复');
+  const childrenID=children.id;
+  return bounded(async child=>{
+   const page=offset/20+1,raw=row(await this.http(queryURL('https://gateway.kugou.com/index.php',{r:'commentsv2/getReplyWithLike',code:'fc4be23b4e972707f36b8a828a93ba8a',p:page,pagesize:20,ver:'1.01',clientver:'8373',kugouid:'0',need_show_image:0,appid:'1001',childrenid:childrenID,tid}),{credentials:'omit',headers:{'x-router':'m.comment.service.kugou.com','User-Agent':'Android712-AndroidPhone-8983-18-0-COMMENT-wifi'}},child));throwIfAborted(child);
+   const total=count(raw.comments_num),values=raw.list;
+   if(raw.err_code!==0||raw.current_page!==page||numeric(raw.childrenid)!==childrenID||numeric(raw.tid)!==tid||total===undefined||!Array.isArray(values)||values.length>20||values.length>total)throw Error('回复服务暂时不可用');
+   const nextOffset=offset+20;return{items:comments(values),total,nextOffset,hasMore:values.length>0&&nextOffset<total};
+  },signal,12000);
  }
 }

@@ -31,3 +31,36 @@ test('comment session enforces a bounded displayed list and does not issue dupli
 test('refresh failure with a fully loaded page retries refresh, without losing the old page',async()=>{
  let fail=false,calls=0;const session=new CommentSession({supports:()=>true,page:async(_t,offset)=>{calls++;assert.equal(offset,0);if(fail)throw Error('unavailable');return page([comment(String(calls))],1);}});session.select(song);while(session.getSnapshot().loading)await tick();fail=true;await session.load(true);assert.equal(session.getSnapshot().items[0]!.id,'1');assert.equal(session.getSnapshot().hasMore,false);fail=false;await session.retry();assert.equal(calls,3);assert.equal(session.getSnapshot().items[0]!.id,'3');session.dispose();
 });
+test('comment session expands only supported reply roots, pages without duplicates, and preserves replies on failure',async()=>{
+ const root={...comment('root'),replyCount:3},replies=[{...comment('r1'),content:'Reply one'},{...comment('r2'),content:'Reply two'}];let fail=false,offsets:number[]=[];const session=new CommentSession({supports:()=>true,page:async()=>page([root],1),replies:async(_track,_root,offset)=>{offsets.push(offset);if(fail)throw Error('private reply failure');return{items:offset===0?replies:[{...comment('r1'),content:'Duplicate'},{...comment('r3'),content:'Reply three'}],total:3,nextOffset:offset+2,hasMore:offset===0};}});
+ session.select(song);while(session.getSnapshot().loading)await tick();assert.equal(session.canExpand(root),true);session.toggleReplies(root);while(session.getSnapshot().threads.root!.loading)await tick();assert.deepEqual(session.getSnapshot().threads.root!.items.map(item=>item.id),['r1','r2']);assert.equal(session.getSnapshot().threads.root!.hasMore,true);
+ fail=true;await session.loadReplies(root);assert.equal(session.getSnapshot().threads.root!.items.length,2);assert.match(session.getSnapshot().threads.root!.error!,/已显示的回复已保留/);fail=false;await session.loadReplies(root);assert.deepEqual(session.getSnapshot().threads.root!.items.map(item=>item.id),['r1','r2','r3']);assert.equal(session.getSnapshot().threads.root!.limited,false);assert.deepEqual(offsets,[0,2,2]);
+ session.toggleReplies(root);assert.equal(session.getSnapshot().threads.root!.expanded,false);session.dispose();
+});
+test('switching songs cancels reply work and a stale reply cannot replace the new thread state',async()=>{
+ const rootA={...comment('root-a'),replyCount:1},rootB={...comment('root-b'),replyCount:1},late=deferred<import('../src/providers/comments.ts').CommentThreadPage>();let signalA:AbortSignal|undefined;
+ const session=new CommentSession({supports:()=>true,page:async track=>page([track.origin.id==='1'?rootA:rootB],1),replies:async(track,_root,_offset,signal)=>{if(track.origin.id==='1'){signalA=signal;return late.promise;}return{items:[comment('new-reply')],nextOffset:1,hasMore:false};}});
+ session.select({...song,origin:{...song.origin,id:'1'}});while(session.getSnapshot().loading)await tick();session.toggleReplies(rootA);while(!signalA)await tick();session.select({...song,origin:{...song.origin,id:'2'}});while(session.getSnapshot().loading)await tick();assert.equal(signalA!.aborted,true);late.resolve({items:[comment('old-reply')],nextOffset:1,hasMore:false});await tick();assert.equal(session.getSnapshot().threads['root-a'],undefined);assert.equal(session.getSnapshot().items[0]!.id,'root-b');session.dispose();
+});
+test('collapsing a loading reply thread cancels it and a late result cannot reopen it',async()=>{
+ const root={...comment('root'),replyCount:1},late=deferred<import('../src/providers/comments.ts').CommentThreadPage>();let signal:AbortSignal|undefined;
+ const session=new CommentSession({supports:()=>true,page:async()=>page([root],1),replies:async(_track,_root,_offset,nextSignal)=>{signal=nextSignal;return late.promise;}});
+ session.select(song);while(session.getSnapshot().loading)await tick();session.toggleReplies(root);while(!signal)await tick();session.toggleReplies(root);assert.equal(signal!.aborted,true);assert.equal(session.getSnapshot().threads.root!.expanded,false);assert.equal(session.getSnapshot().threads.root!.loading,false);
+ late.resolve({items:[comment('late')],nextOffset:1,hasMore:false});await tick();assert.equal(session.getSnapshot().threads.root!.expanded,false);assert.equal(session.getSnapshot().threads.root!.items.length,0);session.dispose();
+});
+test('comment paging preserves concurrent thread results in either completion order',async()=>{
+ for(const repliesFirst of [true,false]){
+  const root={...comment('root'),replyCount:2},paging=deferred<CommentPage>(),replying=deferred<import('../src/providers/comments.ts').CommentThreadPage>();
+  const session=new CommentSession({supports:()=>true,page:async(_t,offset)=>offset===0?page([root],1,true):paging.promise,replies:async()=>replying.promise});
+  session.select(song);while(session.getSnapshot().loading)await tick();session.toggleReplies(root);const pending=session.load();
+  const replyPage={items:[comment('reply'),comment('reply')],nextOffset:2,hasMore:false};
+  if(repliesFirst){replying.resolve(replyPage);await tick();paging.resolve(page([comment('next')],2));}else{paging.resolve(page([comment('next')],2));await pending;replying.resolve(replyPage);}
+  await pending;while(session.getSnapshot().threads.root!.loading)await tick();assert.deepEqual(session.getSnapshot().threads.root!.items.map(row=>row.id),['reply']);assert.equal(session.getSnapshot().items.length,2);session.dispose();
+ }
+});
+test('failed refresh cancels pending replies without leaving the retained thread loading',async()=>{
+ const root={...comment('root'),replyCount:2},replying=deferred<import('../src/providers/comments.ts').CommentThreadPage>();let fail=false,signal:AbortSignal|undefined;
+ const session=new CommentSession({supports:()=>true,page:async()=>{if(fail)throw Error('offline');return page([root],1);},replies:async(_t,_r,_o,s)=>{signal=s;return replying.promise;}});
+ session.select(song);while(session.getSnapshot().loading)await tick();session.toggleReplies(root);while(!signal)await tick();fail=true;await session.load(true);assert.equal(signal.aborted,true);assert.equal(session.getSnapshot().threads.root!.loading,false);assert.ok(session.getSnapshot().error);
+ replying.resolve({items:[comment('stale')],nextOffset:1,hasMore:false});await tick();assert.equal(session.getSnapshot().threads.root!.items.length,0);await session.loadReplies(root,true);assert.equal(session.getSnapshot().threads.root!.items[0]!.id,'stale');session.dispose();
+});

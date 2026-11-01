@@ -1,3 +1,9 @@
+## 2026-11-01 酷狗回复最终候选
+
+923 项检查通过，最终合成 `SourceUITests-1793532877000` 与真实匿名 `SourceUITests-1793533187681` 均 1/0/0；6+4PNG 来源 ready 且亲看，真实测试要求实际回复行。提交前 dirty IPA 为 12,848,459 字节，SHA-256 `37dd354ac8f06f107bd988bfefc0e0a56d3f655af944c5fc134f7e6726ab8735`，arm64/iphoneos26.2/iOS15.1/设备族1,2，unsigned、无 provisioning profile，生产 bundle 与测试夹具排除通过。严格 review 为 52E/17WI/106事件/43F/43P、0错误/0警告。详细证据与限制见[回执](2026-11-01_kugou-comment-replies-report.md)。iOS27、实体机、签名、emoji 字形与动效仍独立待验。
+
+旧 run `41290756098` / `8d87811` 已失败，job `124810973050` 的22项20过/2失败仍为旧两平台评论提示断言；当前运行 `41297682460` / `27a1a32` 已含既有修正，不重复修改或重派旧版本。
+
 ## 2026-11-01 评论 emoji 分段未签名 clean 归档
 
 功能提交 `27a1a327117215d67fb86e60677aa2fcecbc7479` 后，`npm run ios:archive` 以 `dirty: false`、空 `workingTreeChanges` 成功；Xcode 26.3/17C529、arm64/iphoneos26.2、最低 iOS 15.1、iPhone+iPad。clean IPA 12,843,556 字节，SHA-256 `26291bbb63624fb79e650cac5838c4a06c2eea8726f18a8ffa07ae4921d9d24a`，archive manifest SHA-256 `7c948a8727c386671bb599f0d8e45a127226865fa03fc27cef15da73b612f1a7`；ZIP CRC、164 项、生产 bundle、本批 emoji 实现及测试适配器排除通过。`codesign` 明确未签名，bundle 无签名/描述文件，`security find-identity` 仍为 0。T7 独立副本位于 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-comment-emoji-clean-window/`；此前 dirty 包 `7a32…f511` 由内容哈希快照保留。上一更早 `c834…` 包已被旧公共路径覆盖，不能继续声明该路径可取，只能保留历史回执引用。iOS 27 云端、实体机/签名与动效仍待。

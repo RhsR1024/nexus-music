@@ -120,7 +120,7 @@ for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.si
 let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
-let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true;
+let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
@@ -272,8 +272,8 @@ const server = createServer(async (req, res) => {
   if(req.url.startsWith('/kugou-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
     if(mode&&['normal','empty','error'].includes(mode))kugouCommentsMode=mode;
-    if(control.searchParams.has('reset'))kugouCommentsNextPageFails=true;
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:kugouCommentsMode,nextPageFails:kugouCommentsNextPageFails}));return;
+    if(control.searchParams.has('reset')){kugouCommentsNextPageFails=true;kugouRepliesNextPageFails=true;}
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:kugouCommentsMode,nextPageFails:kugouCommentsNextPageFails,repliesNextPageFails:kugouRepliesNextPageFails}));return;
   }
   if(offlineUI&&req.url.startsWith('/offline-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
@@ -366,9 +366,18 @@ const server = createServer(async (req, res) => {
       if(kugouCommentsMode==='error'){counts.kugouComments.errors++;res.end(JSON.stringify({err_code:1}));return;}
       if(kugouCommentsMode==='empty'){counts.kugouComments.empty++;res.end(JSON.stringify({err_code:0,current_page:page,childrenid:24748592,list:[],count:0}));return;}
       if(!hot&&page===2&&kugouCommentsNextPageFails){kugouCommentsNextPageFails=false;counts.kugouComments.errors++;res.end(JSON.stringify({err_code:1}));return;}
-      const item=(id,content,extra={})=>({id,content,user_name:`Kugou reader ${id}`,addtimestamp:1700000000,like:{likenum:3},...extra});
-      const list=hot?[item('900','Synthetic Kugou hot 🎵👩‍💻❤️👨‍👩‍👧‍👦')]:page===1?[item('101','Synthetic Kugou root'),item('102','Synthetic Kugou original long text '.repeat(8).trim(),{pcontent:'Synthetic Kugou original quoted text 🚀',puser:'Kugou original reader'})]:[item('103','Synthetic Kugou second page')];
+      const item=(id,content,extra={})=>({id,content,user_name:`Kugou reader ${id}`,addtimestamp:1700000000,like:{likenum:3},reply_num:0,...extra});
+      const list=hot?[item('900','Synthetic Kugou hot 🎵👩‍💻❤️👨‍👩‍👧‍👦')]:page===1?[item('101','Synthetic Kugou root',{reply_num:41}),item('102','Synthetic Kugou original long text '.repeat(8).trim(),{pcontent:'Synthetic Kugou original quoted text 🚀',puser:'Kugou original reader'})]:[item('103','Synthetic Kugou second page')];
       res.end(JSON.stringify({err_code:0,current_page:page,childrenid:24748592,list,count:page===1?41:43}));return;
+    }
+    if(parsed.hostname==='gateway.kugou.com'&&parsed.pathname==='/index.php'&&parsed.searchParams.get('r')==='commentsv2/getReplyWithLike'){
+      const page=Number(parsed.searchParams.get('p')??0);counts.kugouReplies??={pages:[],errors:[],empty:0};counts.kugouReplies.pages.push(page);
+      if(kugouCommentsMode==='error'){counts.kugouReplies.errors.push(page);res.end(JSON.stringify({err_code:1}));return;}
+      if(kugouCommentsMode==='empty'){counts.kugouReplies.empty++;res.end(JSON.stringify({err_code:0,current_page:page,childrenid:24748592,tid:'101',list:[],comments_num:0}));return;}
+      if(page===2&&kugouRepliesNextPageFails){kugouRepliesNextPageFails=false;counts.kugouReplies.errors.push(page);res.end(JSON.stringify({err_code:1}));return;}
+      const reply=(id,content)=>({id,content,user_name:`Kugou reply reader ${id}`,addtimestamp:1700000100,like:{likenum:2},reply_num:0});
+      const list=page===1?[reply('201','Synthetic Kugou full reply one'),reply('202','Synthetic Kugou full reply two')]:[reply('203','Synthetic Kugou full reply three'),reply('204','Synthetic Kugou full reply four')];
+      res.end(JSON.stringify({err_code:0,current_page:page,childrenid:24748592,tid:'101',list,comments_num:41}));return;
     }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;}

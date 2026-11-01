@@ -80,3 +80,13 @@ manifest 为 `dirty:false`，两处 SHA-256 均为
 `01524e57832403b0143b197914b1c070e7106d25380639f030522cd890585aef`。
 前一 dirty 包 `7a32…f511` 的本机内容哈希快照同时复核通过。该独立归档不改变
 未签名、无 provisioning profile、0 签名身份和未完成实体机验收的事实。
+
+## 2026-11-01 Downloads 闲置 Xcode 完整归档迁移
+
+按用户最新授权，先核实 T7 真实挂载、可写及进程持有情况，再迁移 `~/Downloads/Xcode.app`；当前工具链仍使用 `/Users/ningli/WorkSpace/Tools/Xcode/Xcode.app`。两者 Info.plist 均为 Xcode26.3/build24587。没有改动活动工具链、模拟器或当前构建目录。
+
+因 T7 为 exFAT，应用内部符号链接与 POSIX 元数据采用 `/usr/bin/tar --acls --xattrs` 封存，而不是直接复制成不能运行的目录。目标为 `/Volumes/T7 Touch/NexusMusic/DeveloperArchive/2026-11-01-inactive-xcode/Xcode.app.tar`，归档 12,008,667,136 字节，SHA-256 `ba0a82b2c5a4b1afaea2094fe788bb6cd0b67e50df15a84237054ccab2b23a19`。逐项核验 159,281 个条目（123,225 个文件、逻辑内容 12,179,490,758 字节），文件 SHA-256、权限、目录及符号链接目标均匹配，0 缺失/不符；元数据封装保留于归档，未声称完成实际恢复启动测试。完整清单 SHA-256 为 `def1f4bd52419b57e310882aebd435076eada8b3f3266753e4b74cf101c56bb5`。
+
+核验通过后只回收已保存在归档中的内盘源副本，T7 完整内容保留。直接回收 4,001,255,424 字节（约 3.73GiB），回收后内盘可用 37,357,867,008 字节（约 34.79GiB）。下载目录留下 `Xcode.app.T7-archive.txt`，包含归档、哈希与恢复到空 Mac 文件系统目录的命令；不得把 `.tar` 冒充可直接执行的 `.app`。
+
+精确回执为 `build/logs/cleanup-20261101-inactive-xcode.json` 及目标旁 `receipt.json`；逐文件清单为目标旁 `contents-verification.json`。本轮未丢弃个人内容、逆向证据、失败原始结果或最新两组有效阶段。`ios/._build` 仅迁入忽略目录 `build/metadata-preserved-20261101/`，Git 新增 `._*` 排除；最新两组 UI、IPA 内容哈希快照和当前设备增量缓存继续保留。
