@@ -35,3 +35,4 @@ test('external scene inputs bind actual files, both snapshots and required asset
   }
 });
 test('reference capture cannot omit external scene provenance',t=>{const c=capture(t);c.manifest.buildArguments=['-only-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect'];assert.equal(c.check().ready,false);});
+test('skipping a reference target does not require scene inputs for ordinary captures',t=>{const c=capture(t);c.manifest.buildArguments=['-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect','-only-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments'];assert.equal(c.check().ready,true);});

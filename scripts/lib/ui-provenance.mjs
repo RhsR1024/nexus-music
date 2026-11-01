@@ -33,7 +33,7 @@ export function verifyCaptureEvidence(manifestPath,indexPath,candidatePath){
     if(!snapshot?.files||!Object.keys(snapshot.files).length||!Object.values(snapshot.files).every(value=>isHash(value)||value==='missing')||!isHash(snapshot.digest)||digest(snapshot.files)!==snapshot.digest)failures.push(`${name} digest is missing or inconsistent`);
   };
   checkSnapshot('sourceBefore',manifest.sourceBefore);checkSnapshot('sourceAfter',manifest.sourceAfter);checkSnapshot('installedBundle',manifest.installedBundle);
-  if(manifest.buildArguments?.some(argument=>argument.endsWith('/testVisualLabClassicReferenceDirect'))&&!manifest.externalInputs)failures.push('reference capture requires external input provenance');
+  if(manifest.buildArguments?.some(argument=>argument.startsWith('-only-testing:')&&argument.endsWith('/testVisualLabClassicReferenceDirect'))&&!manifest.externalInputs)failures.push('reference capture requires external input provenance');
   if(manifest.externalInputs){
     checkSnapshot('externalBefore',manifest.externalInputs.before);checkSnapshot('externalAfter',manifest.externalInputs.after);
     const {before,after,unchanged,requiredPaths}=manifest.externalInputs;

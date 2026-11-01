@@ -1,10 +1,11 @@
 import {QQPublicComments} from './qqComments.ts';
+import {MiguPublicComments} from './miguComments.ts';
 import {trackKey,type Track} from '../domain/track.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {queryURL,requestJSON,type HTTPClient} from './http.ts';
 export interface SongComment {id:string;content:string;userName:string;time?:number;likes?:number;reply?:{userName:string;content:string}}
 export interface CommentPage {hot:readonly SongComment[];items:readonly SongComment[];total?:number;nextOffset:number;hasMore:boolean}
-export interface CommentReader {supports(track:Track):boolean;page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>}
+export interface CommentReader {session?():CommentReader;supports(track:Track):boolean;page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>}
 const row=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const text=(v:unknown,max:number)=>typeof v==='string'?v.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g,'').slice(0,max):'';
 const integer=(v:unknown)=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0?v:undefined;
@@ -16,11 +17,13 @@ function mapped(value:unknown):SongComment|undefined {
 }
 function unique(values:readonly SongComment[]){const seen=new Set<string>();return values.filter(v=>{if(seen.has(v.id))return false;seen.add(v.id);return true;});}
 export class PublicComments implements CommentReader {
- private http:HTTPClient;private qq:QQPublicComments;
- constructor(http:HTTPClient=requestJSON){this.http=http;this.qq=new QQPublicComments(http);}
- supports(track:Track){return this.qq.supports(track)||(track.origin.kind==='online'&&track.origin.platform==='wy'&&/^\d{1,30}$/.test(track.origin.id));}
+ private http:HTTPClient;private qq:QQPublicComments;private migu:MiguPublicComments;
+ constructor(http:HTTPClient=requestJSON){this.http=http;this.qq=new QQPublicComments(http);this.migu=new MiguPublicComments(http);}
+ session():CommentReader{return new PublicComments(this.http);}
+ supports(track:Track){return this.qq.supports(track)||this.migu.supports(track)||(track.origin.kind==='online'&&track.origin.platform==='wy'&&/^\d{1,30}$/.test(track.origin.id));}
  async page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>{
   if(this.qq.supports(track))return this.qq.page(track,offset,signal);
+  if(this.migu.supports(track))return this.migu.page(track,offset,signal);
   if(!this.supports(track)||!Number.isSafeInteger(offset)||offset<0||offset>100000)throw Error('此歌曲暂不支持公开评论');
   const raw=row(await bounded(child=>this.http(queryURL(`https://music.163.com/api/v1/resource/comments/R_SO_4_${track.origin.id}`,{limit:20,offset}),{headers:{Referer:'https://music.163.com/'}},child),signal,12000));throwIfAborted(signal);
   if(raw.code!==200||!Array.isArray(raw.comments)||raw.comments.length>50||(raw.more!==undefined&&typeof raw.more!=='boolean')||(raw.hotComments!==undefined&&!Array.isArray(raw.hotComments)))throw Error('评论服务暂时不可用');
@@ -34,7 +37,7 @@ const empty=():CommentSnapshot=>({key:'',hot:[],items:[],offset:0,hasMore:false,
 export class CommentSession {
  private value=empty();private generation=0;private pending?:AbortController;private failedRefresh=false;private listeners=new Set<()=>void>();
  private reader:CommentReader;
- constructor(reader:CommentReader){this.reader=reader;}
+ constructor(reader:CommentReader){this.reader=reader.session?.()??reader;}
  getSnapshot=()=>this.value;
  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
  private publish(value:CommentSnapshot){this.value=value;for(const listener of this.listeners)listener();}
