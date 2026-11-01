@@ -4,6 +4,25 @@ cd "$(dirname "$0")/.."
 source scripts/environment.sh
 if test -n "${ENTRY_FILE:-}"; then echo 'Device archive requires the production entry; unset ENTRY_FILE.' >&2; exit 1; fi
 mkdir -p build/distribution build/logs
+
+# Keep each successful IPA as an immutable-by-content stage snapshot before a
+# later archive replaces the common distribution path. The hash-named snapshot
+# deduplicates no-op rebuilds and leaves retention decisions to explicit cleanup.
+preserve_current_distribution() {
+  local ipa="build/distribution/NexusMusic-unsigned.ipa"
+  test -f "$ipa" || return 0
+  local sha snapshot
+  sha=$(/usr/bin/shasum -a 256 "$ipa" | /usr/bin/awk '{print $1}')
+  snapshot="build/distribution-history/$sha"
+  if test ! -d "$snapshot"; then
+    mkdir -p "$snapshot"
+    /bin/cp -p "$ipa" "$snapshot/NexusMusic-unsigned.ipa"
+    test -f build/distribution/NexusMusic-unsigned.ipa.sha256 && /bin/cp -p build/distribution/NexusMusic-unsigned.ipa.sha256 "$snapshot/NexusMusic-unsigned.ipa.sha256"
+    test -f build/distribution/build-manifest.json && /bin/cp -p build/distribution/build-manifest.json "$snapshot/build-manifest.json"
+  fi
+}
+preserve_current_distribution
+
 node scripts/build-manifest.mjs
 xcodebuild -workspace ios/app.xcworkspace -scheme app -configuration Release \
   -sdk iphoneos -destination 'generic/platform=iOS' \

@@ -35,3 +35,34 @@ exFAT 对每个条目生成 AppleDouble `._*` sidecar 并改变 POSIX mode；sou
 - `build/logs/cleanup-20261101-t7-derived-data.json`
 
 未移动七个含内部 symlink 的小型 `build/local-folder-native-20261025-*` 目录、当前 KuGou PNG/摘要、本机 `DeviceDerivedData`、工具链、当前工作树及 reverse-skill Evidence。T7 未挂载时不得在 `/Volumes` 下伪造同名目录；后续清理仍按临时文件 7 天、普通日志 14 天、已解决故障完整结果 30 天轮换。
+
+## 2026-11-01 评论 emoji 阶段追加
+
+评论 emoji 批次完成后，未签名 IPA `7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511`（12,843,556 字节）已连同 SHA 文件、archive manifest、归档日志和复核哈希迁移到 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-comment-emoji-window/`。本机 `build/distribution-history/7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511/` 也保留同一内容哈希快照。
+
+公共 `build/distribution` 在本批归档前仍指向旧的 T7 legacy evidence 路径，脚本按既有逻辑覆盖了该公共 IPA；历史 `c834…` 的摘要仍可查，但旧字节不能再由原路径取得。现已在 `scripts/archive-unsigned.sh` 中增加覆盖前按 IPA 内容哈希保存 `build/distribution-history/<sha>/` 的步骤，后续成功阶段不会再被公共路径覆盖。本步没有删除用户数据、reverse-skill Evidence、未解决失败证据或最新阶段包。
+
+## 2026-11-01 已完成 emoji UI 缓存迁移
+
+评论 emoji 阶段的三组 Release UI 均已完成且没有 Xcode、测试或复制进程持有
+`build/DerivedData-local-2026-11-01-emoji`。该缓存共 7,016 个条目、
+1,120,749,964 字节，复制到
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-emoji-ui-derived-data/root/build/DerivedData-local-2026-11-01-emoji`
+后按文件类型、符号链接目标、大小和 SHA-256 逐项比较，缺失/多余/不符均为 0。
+本机已核验重复缓存移除，原路径继续通过同名 symlink 读取，内盘释放
+1,124,962,304 字节。
+
+随后迁移六项已完成下载到
+`/Volumes/T7 Touch/NexusMusic/DeveloperArchive/2026-11-01-local-downloads/`：
+当前工具链已由 `WorkSpace/Tools/Xcode` 提供的冗余 `Xcode_26.3_Universal.xip`，
+以及 2026-10-16 至 10-18 的五份旧 iOS 构建诊断 ZIP。六项共 5,150,842,160
+字节，逐文件 SHA-256 一致；原 `~/Downloads` 路径全部保留为 T7 symlink，
+没有直接删除这些下载。精确清单保存在 Git 忽略目录：
+
+- `build/logs/cleanup-20261101-emoji-derived-data-precopy.json`
+- `build/logs/cleanup-20261101-local-downloads-precopy.json`
+
+两步完成后内盘可用空间为 32,143,605,760 字节（`df -h` 约 30 GiB）。
+当前 `build/DeviceDerivedData`、最近两组 UI 结果、公开采集图片/摘要和仍未满
+14 天的诊断证据继续留在本机；已运行整夜的模拟器设备与 reverse-skill
+Evidence/scope 没有迁移或删除。

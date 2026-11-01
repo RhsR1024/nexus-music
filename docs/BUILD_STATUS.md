@@ -1,3 +1,7 @@
+## 2026-11-01 评论 emoji 分段未签名归档
+
+`npm run ios:archive` 成功，archive manifest 基于 `8d87811` 加本批未提交源码（`dirty: true`）；Xcode 26.3/17C529、arm64/iphoneos26.2、最低 iOS 15.1、iPhone+iPad。IPA 12,843,556 字节，SHA-256 `7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511`；ZIP CRC、164 项、生产 bundle、本批 emoji 实现及测试适配器排除通过。`codesign` 明确未签名，bundle 无签名/描述文件。为阻止后续公共 distribution 覆盖最后可取包，归档脚本现按 IPA 内容哈希保存阶段快照；本包同时在 T7 独立保留。上一本机 `c834…` 包已被旧公共路径覆盖，不能继续声明该路径可取，只能保留历史回执引用。iOS 27 云端、实体机/签名与动效仍待。
+
 ## 2026-10-25 批次5A main推送与CI队列快照
 
 功能74ff975及回执893952f已正常快进push到origin/main，远端SHA核对一致；分支codex/local-audio-index同时保留。GitHub集成创建PR返回403，实际没有创建PR；按既有阶段授权完成普通main推送，未force push。原主检出已快进到同一代码，原有SourceSettingsTests.swift的5增/2删逐行保留且仍未提交；本地恢复补丁及回执留在受管工作树build/local-music-live-20261025。

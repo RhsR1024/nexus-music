@@ -1,3 +1,9 @@
+## 2026-11-01 F31 补缺：评论标准 Unicode 表情分段
+
+新增纯函数 `splitEmojiText`，将评论正文与引用回复中的普通文字和完整 emoji cluster 分段；完整序列覆盖 VS16、ZWJ 家庭/职业、肤色、区域旗帜、tag-sequence 旗帜与 keycap。视觉 emoji run 仅在 iOS 指定 `AppleColorEmoji`，普通文字继承用户字体，顶层无障碍 label 保持完整原文。合成服务加入精确 emoji label 覆盖，夹具控制请求改为异步等待，原加载更多失败与旧行保留断言未缩减。
+
+914 项检查通过；合成 `SourceUITests-1793525993209`、真实酷狗 `SourceUITests-1793526181969` 和综合 CI 路径 `SourceUITests-1793527124557` 均 1/0/0。综合路径修正了产品新增酷我、酷狗、咪咕后的过期完整提示；上一 CI 两个失败由同一内部路径造成，不是两个独立缺陷。未签名 IPA 为 arm64/iphoneos26.2、最低 iOS 15.1、iPhone+iPad，生产 bundle 与测试适配器排除通过，SHA-256 `7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511`；归档脚本会在覆盖前保留内容哈希快照。本机模拟器对 system font 与显式 `AppleColorEmoji` 的原生诊断均缺字，可视字形仍未验；iOS 27、实体机、签名、动效及完整 F31 继续。见[回执](2026-11-01_kugou-comment-emoji-report.md)与[场景](ui-spec/comments-emoji-2026-11-01.md)。
+
 ## 2026-11-01 F31 补缺：酷狗公开评论
 
 新增独立 `KugouPublicComments`：只接受原曲合法 32 位 hash（可带数值 ID），每次请求生成临时随机 mid，经现有 Expo Crypto MD5 签名后走官方 `gateway.kugou.com` 网关；固定 `x-router`、标准证书校验、匿名 `kugouid=0`/空 token/`credentials: omit`。热门与首屏最新并行读取，后续按服务页 20 条推进；严格核对 `err_code`、`current_page`、总数、列表上限、原曲 childrenid 与文本/时间/引用字段。`PublicComments` 只在注入密码学能力时启用酷狗，正式 Services 使用现有 Crypto，独立评论会话保留依赖。

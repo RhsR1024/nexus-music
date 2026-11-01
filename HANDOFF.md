@@ -1,3 +1,9 @@
+## 2026-11-01 F31 补缺：评论标准 Unicode 表情分段
+
+评论正文现将普通文字与完整 emoji cluster 分段，仅表情 run 使用 iOS `AppleColorEmoji`；ZWJ、肤色、旗帜、tag-sequence 旗帜、keycap 与 VS16 均保持完整，顶部无障碍 label 保留原文。合成、真实酷狗及综合 CI 路径 Release UI 分别 1/0/0，914 项检查通过；综合旧提示断言的两个假重复失败已按真实唯一根因修正。见[回执](docs/2026-11-01_kugou-comment-emoji-report.md)。
+
+本机模拟器对 system font 与显式 `AppleColorEmoji` 的原生诊断均缺字，故不宣称可视 emoji 字形完成。Sollin 严格复审保持 52E/17WI/106事件/43F/43P、0错误/0警告。未签名 IPA 为 12,843,556 字节，SHA-256 `7a32aef8ba2e96bf7e5bbfb420e7bdbcdeac38ca0b5228f4fd0c281ed570f511`，arm64/iphoneos26.2/iOS15.1/iPhone+iPad，无签名或 provisioning profile；归档脚本已加入内容哈希阶段快照，避免覆盖上一可取 IPA。仍为 0 签名身份；iOS 27 云端、实体机、签名、录屏/动效及完整 F31 范围继续，不报全项目完成。
+
 ## 2026-11-01 F31 补缺：酷狗公开评论
 
 酷狗原曲 hash 的匿名官方 HTTPS 网关、热门/最新、20 条服务页推进、总数、日期/点赞计数、长文本、引用根评论归属及失败保留/重试已接入共享评论 Sheet。912 项检查通过；五平台合成回归 5/0/0（`SourceUITests-1793515510913`），真实匿名服务 1/0/0、71.516 秒（`SourceUITests-1793515901320`），两组共 6PNG 来源 ready 并亲看。见[回执](docs/2026-11-01_kugou-public-comments-report.md)。

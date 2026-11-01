@@ -1,6 +1,6 @@
 import {Text} from './Typography.tsx';
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
-import {Pressable,SectionList,View} from 'react-native';
+import {Platform,Pressable,SectionList,Text as NativeText,View,type StyleProp,type TextStyle} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import {SheetModal} from './AdaptiveModal.tsx';
@@ -8,13 +8,19 @@ import {CommentSession,type SongComment} from '../providers/comments.ts';
 import type {Track} from '../domain/track.ts';
 import type {Services} from '../app/services.ts';
 import {useTheme} from './theme.tsx';
+import {splitEmojiText} from './emojiText.ts';
+
+function CommentCopy({children,style}:{children:string;style:StyleProp<TextStyle>}){
+ const emojiFont=Platform.OS==='ios'?'AppleColorEmoji':undefined;
+ return <Text selectable accessibilityLabel={children} style={style}>{splitEmojiText(children).map((run,index)=><NativeText key={index} style={run.emoji&&emojiFont?{fontFamily:emojiFont}:undefined}>{run.text}</NativeText>)}</Text>;
+}
 
 export function CommentsModal({services,track,onClose,embedded=false}:{services:Services;track:Track|null;onClose:()=>void;embedded?:boolean}){
  const {palette:p}=useTheme(),session=useMemo(()=>new CommentSession(services.comments),[services.comments]),state=useSyncExternalStore(session.subscribe,session.getSnapshot);
  useEffect(()=>{if(track)session.select(track);else session.close();return()=>session.close();},[track,session]);
  const sections=useMemo(()=>[{title:'热门评论',data:state.hot},{title:'最新评论',data:state.items}].filter(section=>section.data.length>0),[state.hot,state.items]);
  const button=(title:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={action} style={{padding:14,borderRadius:14,backgroundColor:p.selected,opacity:disabled?.5:1}}><Text style={{color:p.accent}}>{title}</Text></Pressable>;
- const comment=(item:SongComment)=><View testID={`comments-item-${item.id}`} style={{paddingVertical:16,gap:8,borderBottomWidth:1,borderColor:p.border}}><Text style={{color:p.text,fontWeight:'600'}}>{item.userName}</Text><Text selectable style={{color:p.text,lineHeight:24}}>{item.content}</Text>{item.reply&&<View style={{backgroundColor:p.selected,padding:10,borderRadius:8}}><Text style={{color:p.secondary,lineHeight:21}}>{item.reply.userName}：{item.reply.content}</Text></View>}<Text style={{color:p.secondary,fontSize:12}}>{item.time!==undefined?new Date(item.time).toLocaleDateString():''}{item.likes!==undefined?`　${item.likes} 赞`:''}</Text></View>;
+ const comment=(item:SongComment)=><View testID={`comments-item-${item.id}`} style={{paddingVertical:16,gap:8,borderBottomWidth:1,borderColor:p.border}}><Text style={{color:p.text,fontWeight:'600'}}>{item.userName}</Text><CommentCopy style={{color:p.text,lineHeight:24}}>{item.content}</CommentCopy>{item.reply&&<View style={{backgroundColor:p.selected,padding:10,borderRadius:8}}><CommentCopy style={{color:p.secondary,lineHeight:21}}>{`${item.reply.userName}：${item.reply.content}`}</CommentCopy></View>}<Text style={{color:p.secondary,fontSize:12}}>{item.time!==undefined?new Date(item.time).toLocaleDateString():''}{item.likes!==undefined?`　${item.likes} 赞`:''}</Text></View>;
  const close=()=>{session.close();onClose();};
  const content=<View testID="comments-content" style={{flex:1,paddingHorizontal:18,paddingTop:12,backgroundColor:p.background[0]}}>
   <View testID="comments-header" style={{flexDirection:'row',alignItems:'center',gap:8,paddingBottom:8}}>

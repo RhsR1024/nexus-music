@@ -902,7 +902,12 @@ final class SourceSettingsTests: XCTestCase {
     let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
     func control(_ query:String) {
       let path="http://127.0.0.1:18439/kugou-comments-fixture-control?"+query
-      XCTAssertNotNil(try? Data(contentsOf:URL(string:path)!),"Kugou comment fixture control must be reachable")
+      let reached=expectation(description:"Kugou comment fixture control \(query)")
+      URLSession.shared.dataTask(with:URL(string:path)!){data,_,_ in
+        XCTAssertNotNil(data,"Kugou comment fixture control must be reachable")
+        reached.fulfill()
+      }.resume()
+      XCTAssertEqual(XCTWaiter.wait(for:[reached],timeout:5),.completed)
     }
     func reach(_ element:XCUIElement,in container:XCUIElement?=nil) {
       for _ in 0..<16 {
@@ -929,13 +934,14 @@ final class SourceSettingsTests: XCTestCase {
     func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
     func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
     XCTAssertEqual(loaded(),2)
-    XCTAssertTrue(text("Synthetic Kugou hot").waitForExistence(timeout:10))
+    let emojiComment=text("Synthetic Kugou hot 🎵👩‍💻❤️👨‍👩‍👧‍👦")
+    XCTAssertTrue(emojiComment.waitForExistence(timeout:10),"The full original comment label must retain every emoji cluster")
     let root=text("Synthetic Kugou original long text Synthetic Kugou original long text Synthetic Kugou original long text Synthetic Kugou original long text Synthetic Kugou original long text Synthetic Kugou original long text Synthetic Kugou original long text Synthetic Kugou original long text")
     XCTAssertTrue(root.waitForExistence(timeout:5))
-    let reply=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","Kugou original reader：Synthetic Kugou original quoted text")).firstMatch
-    XCTAssertTrue(reply.waitForExistence(timeout:5))
+    let reply=text("Kugou original reader：Synthetic Kugou original quoted text 🚀")
+    XCTAssertTrue(reply.waitForExistence(timeout:5),"Quoted reply copy must keep its complete original label")
     XCTAssertTrue(text("热门评论").exists);XCTAssertTrue(text("最新评论").exists)
-    let firstImage=XCTAttachment(screenshot:app.screenshot());firstImage.name="Kugou comments hot latest long text and total";firstImage.lifetime = .keepAlways;add(firstImage)
+    let firstImage=XCTAttachment(screenshot:app.screenshot());firstImage.name="Kugou comments standard emoji hot latest long text and total";firstImage.lifetime = .keepAlways;add(firstImage)
     let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
     let error=text("评论暂时无法载入，请重试。已显示的内容已保留。")
     XCTAssertTrue(error.waitForExistence(timeout:10));XCTAssertTrue(reply.exists)
@@ -3779,7 +3785,7 @@ final class SourceSettingsTests: XCTestCase {
         let queuedTrack=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","1. Synthetic tone")).firstMatch
         XCTAssertTrue(queuedTrack.waitForExistence(timeout:5));XCTAssertTrue(queuedTrack.isHittable)
         XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"am2-lyrics-list").firstMatch.exists,"Content panels must be exclusive")
-        app.buttons["am2-content-comments"].tap();XCTAssertTrue(app.staticTexts["此来源暂不支持公开评论；当前支持网易云、QQ音乐在线歌曲。"].waitForExistence(timeout:5))
+        app.buttons["am2-content-comments"].tap();XCTAssertTrue(app.staticTexts["此来源暂不支持公开评论；当前支持网易云、QQ音乐、酷我、酷狗、咪咕在线歌曲。"].waitForExistence(timeout:5))
         app.buttons["am2-return-cover"].tap();XCTAssertEqual(progress.value as? String,"0:06 / 2:00")
         app.buttons["am2-settings"].tap();XCTAssertTrue(app.buttons["自动展开歌词：开"].waitForExistence(timeout:5))
         app.buttons["am2-delay-minus"].tap();app.buttons["am2-delay-minus"].tap();XCTAssertEqual(app.staticTexts["am2-delay"].label,"等待 3 秒")
