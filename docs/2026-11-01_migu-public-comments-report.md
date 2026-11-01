@@ -43,3 +43,7 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testLiveMiguPubli
 ```
 
 合成协议场景与真实服务场景分别运行，使用新输出目录及精确 xcresult 绑定源码。真实评论内容只留本机忽略目录，不提交仓库。
+
+## 交付回执
+
+功能提交 `f980513cbb65aa215e89ac5c5f2a592256920113` 已正常 push 至 `RhsR1024/nexus-music` 的 main，远端完整 SHA 一致。CI `41280665387` 排队，前一 QQ 评论 `41278846667` 运行中；实际 1 运行/1 排队，未取消或重派。上一歌曲分享 `41265859952` 已 success，不作为本提交云端通过证据。项目总目标仍 active，后续继续 F31 可用平台与原 F/J 依赖满足项。
