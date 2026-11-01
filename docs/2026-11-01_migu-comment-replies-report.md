@@ -43,3 +43,9 @@ UI/归档及最终提交结果将在实际完成后追加；当前不能仅以�
 ## 提交前本地 IPA
 
 unsigned IPA归档成功：12,850,360字节，SHA-256 `ea41e9c659c6a2a8b3a3b33b7bed8bba73cd8b51b239b6a47452a5817d25357e`；独立ZIP CRC、包内/归档二进制摘要、arm64/iphoneos26.2/iOS15.1/iPhone+iPad、无签名/描述文件及生产bundle/合成夹具排除核对通过。这是提交前dirty构建，不能标clean。独立检查初始按UTF-8查找中文提示未命中，确认Hermes使用UTF-16LE后按真实编码核验通过，产品未修改。
+
+## 清洁提交归档
+
+功能提交 `f738d8ee92632116c522d971372d5ead4a72781a` 后clean archive成功，manifest `dirty:false`、工作树变更为空；IPA 12,850,360字节，SHA-256 `dce1218cd3fc65f5df022d9ead3b8458020b41cb9ca6166567f861c7b64c38e3`，manifest SHA-256 `07f77f452660d5b38d1115e16b201705585b64e73005ea7d4ccbebac76dc1904`。独立CRC/arm64/iphoneos26.2/iOS15.1/[1,2]/unsigned/无描述文件/生产实现及夹具排除检查全部通过。Hermes中文提示按UTF-16LE验证。四份交付文件复制至T7 `BuildArchive/2026-11-01-migu-replies-clean-f738d8e/` 后逐文件SHA一致，旧dirty包由内容哈希快照保留。
+
+阶段空间检查：T7真实USB外置挂载、exFAT及写入回读通过；内盘约35.0GiB、T7约697.1GiB可用。本轮无额外删除/迁移，保留当前缓存、最新两阶段与未解决证据；本机小型回执 `build/logs/cleanup-20261101-migu-replies.json`，副本随T7归档。清洁包不代替iOS27、签名或实体机。
