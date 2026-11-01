@@ -1,5 +1,6 @@
+import {useSongShare} from './useSongShare.ts';
 import {useSyncExternalStore} from 'react';
-import {Alert, Pressable, Share, StyleSheet, View} from 'react-native';
+import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
@@ -14,7 +15,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
   onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;downloadLabel?:string;
 }){
-  const theme=useTheme(),styles=makeStyles(theme);
+  const theme=useTheme(),styles=makeStyles(theme),{share,sharing,error:shareError}=useSongShare(track);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
@@ -23,21 +24,20 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
   const platform=track.origin.kind==='online'?platformName[track.origin.platform]:track.origin.kind==='imported'?'汽水':'本地';
   const subtitle=[track.artist,track.album,platform].filter(Boolean).join(' · ');
   const toggleFavorite=()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
-  const share=()=>{void Share.share({message:`${track.title} — ${track.artist}`}).catch(()=>{});};
   const card=(icon:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,active=false)=>(
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={active?{text:'已收藏'}:undefined} onPress={action} style={styles.card}>
+    <Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={active?{text:'已收藏'}:undefined} onPress={action} style={styles.card}>
       <View style={[styles.tile,{width:40,height:40,borderRadius:12}]}><Ionicons name={icon} size={22} color={theme.palette.accent}/></View>
       <Text style={styles.cardLabel}>{label}</Text>
     </Pressable>);
   const row=(icon:React.ComponentProps<typeof Ionicons>['name'],label:string,value:string,action:()=>void,last=false)=>(
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={[styles.row,last?null:styles.rowBorder]}>
+    <Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={[styles.row,last?null:styles.rowBorder]}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={19} color={theme.palette.accent}/></View>
       <Text style={styles.rowTitle}>{label}</Text>
       <Text numberOfLines={1} style={styles.rowValue}>{value}</Text>
       <Ionicons name="chevron-forward" size={16} color={theme.palette.secondary}/>
     </Pressable>);
   return <View style={styles.root}>
-    <View style={styles.topBar}><Pressable accessibilityRole="button" accessibilityLabel="收起播放选项" onPress={onClose} style={styles.close}><Text style={styles.closeText}>收起</Text></Pressable></View>
+    <View style={styles.topBar}><Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel="收起播放选项" onPress={onClose} style={styles.close}><Text style={styles.closeText}>收起</Text></Pressable></View>
     <View style={styles.header}>
       <Cover services={services} track={track} size={56}/>
       <View style={{flex:1,minWidth:0}}>
@@ -49,7 +49,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       {card(favorite?'heart':'heart-outline','收藏',toggleFavorite,favorite)}
       {card('play-skip-forward-outline','下一首',()=>services.playback.next())}
       {card('add','歌单',onPlaylist)}
-      {onDownload?card('download-outline',downloadLabel,onDownload):card('share-outline','分享',share)}
+      {onDownload?card('download-outline',downloadLabel,onDownload):card('share-outline','分享',()=>{void share();})}
     </View>
     <Text style={styles.section}>播放设置</Text>
     <View style={styles.group}>
@@ -61,11 +61,12 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
     </View>
     <Text style={styles.section}>歌曲操作</Text>
     <View style={styles.group}>
-      {row('share-outline','分享歌曲','分享',share)}
+      {row('share-outline','分享歌曲',sharing?'正在打开':'分享',()=>{void share();})}
       {row('add-circle-outline','添加到歌单','选择歌单',onPlaylist,true)}
     </View>
     {track.origin.kind==='online'&&<><Text style={styles.section}>发现</Text>
     <View style={styles.group}>{onSimilar&&row('radio-outline','相似歌曲','公开推荐',onSimilar)}{row('chatbubble-outline','热门评论','查看',onComments,true)}</View></>}
+    {!!shareError&&<Text accessibilityRole="alert" style={{color:theme.palette.accent}}>{shareError}</Text>}
   </View>;
 }
 

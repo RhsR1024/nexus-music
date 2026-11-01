@@ -1,3 +1,4 @@
+import {useSongShare} from './useSongShare.ts';
 import {SimilarSongs} from './SimilarSongs.tsx';
 import {supportsSimilarSongs} from '../providers/similarSongs.ts';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
@@ -23,7 +24,7 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
   services:Services;track:Track|null;onClose:()=>void;prefix:string;
   extras?:boolean;
 }){
-  const theme=useTheme();
+  const theme=useTheme(),{share,sharing,error:shareError}=useSongShare(track);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [commenting,setCommenting]=useState(false),[matching,setMatching]=useState(false);
   const [adding,setAdding]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -44,7 +45,7 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
     try{const report=await services.submitDownloads([owner],preferredQuality?{preferredQuality}:undefined);if(current.current===owner){setChoosingDownload(false);setDownloadReport(report);}}
     finally{if(current.current===owner)setBusy(false);}
   }
-  const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void)=><Pressable key={label} testID={`${prefix}-action-${label}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy} onPress={run} style={[styles.action,{backgroundColor:theme.palette.surface,opacity:busy?.5:1}]}><Ionicons name={icon} size={controls.icon} color={theme.palette.accent}/><Text style={[typography.body,{color:theme.palette.text,flex:1}]}>{label}</Text><Ionicons name="chevron-forward" size={18} color={theme.palette.secondary}/></Pressable>;
+  const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void)=><Pressable key={label} testID={`${prefix}-action-${label}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.action,{backgroundColor:theme.palette.surface,opacity:busy||sharing?.5:1}]}><Ionicons name={icon} size={controls.icon} color={theme.palette.accent}/><Text style={[typography.body,{color:theme.palette.text,flex:1}]}>{label}</Text><Ionicons name="chevron-forward" size={18} color={theme.palette.secondary}/></Pressable>;
   return <SheetModal visible={!!track} animationType="slide" onRequestClose={onClose}>
     {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{onClose();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={onClose}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
       <Pressable accessibilityRole="button" accessibilityLabel="收起歌曲更多操作" onPress={onClose} style={styles.close}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable>
@@ -55,12 +56,13 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
         {action('加入队列','list',()=>{services.addToQueue(track);onClose();})}
         {action(favorite?'取消本地收藏':'本地收藏',favorite?'heart':'heart-outline',()=>{void saveFavorite();})}
         {action('加入歌单','albums-outline',()=>setAdding(true))}
+        {action('分享歌曲','share-outline',()=>{setError('');void share();})}
         {downloadableTrack(track)&&action('下载','download-outline',()=>{void download();})}
         {supportsSimilarSongs(track)&&action('相似歌曲','radio-outline',()=>setSimilar(true))}
         {extras&&action('歌曲评论','chatbubble-outline',()=>setCommenting(true))}
         {extras&&action('匹配歌曲','search-outline',()=>setMatching(true))}
       </View>}
-      {!!error&&<Text accessibilityLiveRegion="polite" style={{color:theme.palette.accent}}>{error}</Text>}
+      {!!(error||shareError)&&<Text accessibilityLiveRegion="polite" style={{color:theme.palette.accent}}>{error||shareError}</Text>}
     </ScrollView>}
     <MatchModal services={services} track={matching?track:null} onClose={()=>setMatching(false)}/>
   </SheetModal>;
