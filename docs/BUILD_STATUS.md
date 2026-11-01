@@ -4,7 +4,9 @@
 
 主用例和取消专项均 `exitCode=0`、`sourceUnchanged=true`，源码 digest 均为 `382b7f201b4305fbfc48d4f6cfebfc978eccc3fe904f4050b6115e78cf3de595`。主用例安装 bundle `912e4f7a…`、JS `667eed00…`、xcresult Info `c1cc08af…`、run manifest `4848d5e3…`；取消专项 Info `2232df7d…`、manifest `af4da165…`。`npm run check` 948/948、完整 native、脚本/Swift/YAML/diff检查通过。固定 MID 重复运行命中缓存造成的测试假失败已由每轮唯一 MID 修正，r2 原 xcresult/failure-evidence 保留。完整哈希、失败历史与边界见[本批回执](2026-11-02-wayfarer-app-import-report.md)。
 
-真实私人备份、真实跨平台源/弱网、iOS27、实体机、签名/安装继续；本批未新增 Sollin 分析或采集，合成 App 与未签名构建不替代真实迁移验收。
+功能提交 `52f7d77` 的清洁未签名归档与 HEAD/远端一致：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。IPA 12,872,804字节、SHA-256 `9c82f60cc319dffb4e514703bb67c4a631eb50d192fb2d23b5e804d60be8fd47`；164项ZIP CRC，archive/IPA 138个payload文件逐项字节一致，`main.jsbundle`/可执行/Info.plist摘要分别为 `ebcb9180…`、`613011ef…`、`dd9d3304…`。生产入口标记存在，Wayfarer夹具、私有URL/令牌、测试适配器、签名与描述文件均排除。内容快照在`build/distribution-history/9c82f60c…/`，`ipa-verification.json` SHA-256 `2ed4d384…`。
+
+T7 独立阶段副本为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-wayfarer-import-52f7d77/`：372份payload、112,356,180字节逐份 SHA-256 一致，`SHA256SUMS` 372行复核0错误；exFAT生成的370份`._`元数据保留并在`transfer-receipt.json`区分，不改写payload。真实私人备份、真实跨平台源/弱网、iOS27、实体机、签名/安装继续；本批未新增 Sollin 分析或采集，合成 App 与未签名构建不替代真实迁移验收。
 
 ## 2026-11-02 M10 进程终止后的原生后台下载
 

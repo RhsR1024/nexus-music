@@ -4,6 +4,8 @@
 
 测试夹具每轮生成唯一纯字母数字 QQ MID，fixture-state 返回该次预期音频路径；正式播放链首次请求该路径并进入 PCM，确定性区分本次解析与旧缓存。另以 Files 选择器取消专项验证退出路径。最终主用例 `SourceUITests-1793567530426`、取消专项 `SourceUITests-1793567947710` 均 1/0/0，`sourceUnchanged=true`；948/948 检查、完整 native、5PNG provenance/亲看通过。固定 MID 首版在重复运行中命中缓存并暴露错误断言，修复只隔离测试状态，不放宽生产 MID 校验。证据见[本批回执](2026-11-02-wayfarer-app-import-report.md)。
 
+功能提交`52f7d77`的 clean unsigned archive 已验证 manifest 与 HEAD 一致且工作区清洁、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、未签名且无描述文件。IPA 12,872,804字节、SHA-256 `9c82f60c…`；164项ZIP CRC，138个归档/IPA payload文件逐项字节一致，`fixture-secret`、`private.invalid`、`matching-audio`及 Wayfarer夹具标记均排除。内容快照和精确证据复制至 T7 `2026-11-02-wayfarer-import-52f7d77`，372个payload文件/112,356,180字节逐一 SHA-256 复核一致。
+
 真实私人备份、真实源匹配/弱网、iOS27、实体机、签名/安装与完整迁移矩阵继续；M10/F12/F13 不据此关闭。
 
 ## 2026-11-02 M10 进程终止后的原生后台下载

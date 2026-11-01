@@ -4,7 +4,9 @@
 
 最终 Release `SourceUITests-1793567530426` 为 1/0/0、259.384 秒，Files 选择器取消专项 `SourceUITests-1793567947710` 为 1/0/0、27.286 秒；两次 `sourceUnchanged=true`，源码 digest 均为 `382b7f20…`。`npm run check` 948/948、完整 native、脚本/Swift/YAML/diff检查通过；5PNG 来源 ready、逐张亲看。初始固定 MID 在第二次运行时因缓存导致“已就绪但无新请求”，最终改为每轮唯一 MID并由 fixture 返回预期路径，确定性排除缓存与模糊替换。详细证据、失败历史、哈希和隐私边界见[本批回执](docs/2026-11-02-wayfarer-app-import-report.md)。
 
-真实私人备份 `resource/wayfarer_music-backup.json` 保持忽略，SHA-256 `bd5f4fc4…`；本批不回写或提交私人源、设置、账号、URL。清洁 IPA、提交/push、iOS27 云端、真实私人备份、实体机/签名与弱网仍待，不报漫途/F12/F13 或全项目完成。
+功能提交 `52f7d77` 已正常 push。其清洁未签名归档对应同一提交，manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`；IPA 12,872,804 字节、SHA-256 `9c82f60c…`，164 项 ZIP CRC、138 个归档/IPA 文件逐项字节、隐私标记排除及无签名/描述文件检查通过。T7 阶段副本 `BuildArchive/2026-11-02-wayfarer-import-52f7d77/` 的 372 份 payload、112,356,180 字节逐份 SHA-256 一致。
+
+真实私人备份 `resource/wayfarer_music-backup.json` 保持忽略，SHA-256 `bd5f4fc4…`；本批不回写或提交私人源、设置、账号、URL。iOS27 云端、真实私人备份、实体机/签名与弱网仍待，不报漫途/F12/F13 或全项目完成。
 
 ## 2026-11-02 M10 进程终止后的原生后台下载
 

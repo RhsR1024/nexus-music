@@ -53,6 +53,14 @@
 - UI 日志 SHA-256 为 `4cd5445609aaea4a725a864ea064f54fb4ad77fb31652a0d450196dd8a95d473`；
 - xcresult `Info.plist` SHA-256 为 `2232df7d5ee89d72f24b991c3ff958fe6cf542120160ce19bf188d309b539542`。
 
+## 清洁未签名归档与 T7 阶段副本
+
+功能提交 `52f7d77a6dc363e3f788a8c34dd42137f1010bb3` 使用 `npm run ios:archive` 成功生成未签名设备归档。manifest SHA-256 为 `c4ace7f36ffc2b4245183335a860734ff83448f3a0fe928a2e874c2a85b2904e`，`commit` 与 HEAD 一致、`dirty=false`、`workingTreeChanges=[]`；归档为 arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，`signed=false`，包内没有 `_CodeSignature` 或 provisioning profile。
+
+IPA 为 12,872,804 字节，SHA-256 `9c82f60cc319dffb4e514703bb67c4a631eb50d192fb2d23b5e804d60be8fd47`。164 个 ZIP 条目全部通过 CRC；138 个 archive/IPA payload 文件路径集合一致、逐文件 SHA-256 一致。`main.jsbundle`、可执行文件和 `Info.plist` 的摘要分别为 `ebcb9180a4d1c6ca5888d443d6626499615ef87bbbd46ec61739ca57d0cd391a`、`613011efd36039102276bd23523aa581c2608470ddbe8da419e0d91bcdf0cc29`、`dd9d3304202133385f743d3b89fc3af5f319faebaae0435cde36eb0b39e90452`。生产入口标记 `Wayfarer`、`_importWayfarer`、`library-data-message` 存在；`fixture-secret`、`private.invalid`、`matching-audio`、`WAYFARERMVYBSRDG`、`Nexus Wayfarer Fixture`、`WAYFARERFAVORITE`、`private-source-script` 和 `nexus-ui-test-online-adapter` 均未进入 IPA。机器可读验证为 `build/distribution/ipa-verification.json`，SHA-256 `2ed4d3843d00b871ef636c33f6c28433a5f708dbf53e7046645246875c739880`；同内容快照保存在 `build/distribution-history/9c82f60c…/`。
+
+精确阶段证据已复制到 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-wayfarer-import-52f7d77/`，包含本批文档、IPA/manifest/verification、成功/取消/失败 run 目录、6 个 XCResult、初始成功截图、检查/归档日志及当日清理回执。372 个 payload 文件共 112,356,180 字节在复制前后逐文件 SHA-256 一致，`SHA256SUMS` 372 行全部通过。exFAT 生成的 370 个 `._` AppleDouble 元数据文件保留且与 payload 分开记录；`transfer-receipt.json` 为 `payloadVerified=true`。
+
 ## 截图证据
 
 5 张 1290×2796 PNG 位于 `build/wayfarer-app-import-r3-20261102/screens/`，逐张来源核验为 `ready=true`，并已人工查看：
@@ -79,7 +87,7 @@
 - 仓库忽略的真实备份 `resource/wayfarer_music-backup.json` 未加入 Git：4,558,239 字节，SHA-256 `bd5f4fc4e25390b0c34a34af5edd52193c2a3a925097f38ba40d547f93d60460`。
 - UI 测试只生成合成标题、账号、设置、URL 和令牌；预览及保存断言确认 `fixture-secret` 与私有源配置不可见。
 - 本批没有新增 Sollin 逆向分析或采集，因此没有新增 reverse-skill case；既有离线 scope、Evidence 和寻址边界不变。
-- 本批证明模拟器中的正式 App 导入、持久化和合成 LX 播放链，不证明真实私人漫途备份、真实跨平台音源、iOS 27 云端、实体机、签名/安装、弱网或长期播放稳定。
+- 本批证明模拟器中的正式 App 导入、持久化、合成 LX 播放链及清洁未签名构建，不证明真实私人漫途备份、真实跨平台音源、iOS 27 云端、实体机、签名/安装、弱网或长期播放稳定。
 
 ## 复现
 
