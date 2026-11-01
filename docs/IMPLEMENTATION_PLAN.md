@@ -1,3 +1,7 @@
+## 2026-11-02 F31 五平台真实矩阵与SDK头像修正
+
+`commentMediaURL`对精确公开SDK端点保留有界`b=sdk/k/s`，其他query/fragment丢弃；原生Cover缓存依公开描述符区分作者。根/回复归属、危险/重复参数及缓存测试纳入940检查，最终五平台真实UI5/0/0。旧iOS27录像控制失败约15秒，stderr历史缺失；本批60秒就绪、失败诊断和URLSession控制已本机回归，托管环境确认继续。见[回执](2026-11-02_comment-live-matrix-and-avatar-query-report.md)，完整范围不变。
+
 ## 2026-11-02 F31 评论作者身份增量
 
 五平台公开评论接头像，网易云/QQ/酷狗接可选地区；缺失不造，头像失败首字符回退，根/回复身份层级统一。最终复核修正 QQ 回复借用根头像/地区与地区控制字符遗漏，937/937完整检查通过。真实咪咕、合成咪咕及网易云 Release UI 各1/0/0，来源与截图摘要见[本批回执](2026-11-02_comment-author-identities-report.md)。UI后最终QQ parser修正由完整契约验证，不冒充同一源码UI。复用E-033→F-032→P-032、IPA/APK gate与strict review通过，无新Sollin采集或像素/动效完成声明。完整F31、其他平台真实矩阵、emoji字形、签名/实体机与iOS27终态继续；功能提交`d192894`已push，clean unsigned IPA `8cfef1d0…`、manifest clean、164项CRC/归档字节/隐私排除与T7独立副本已通过；云端`41327658103`为最新唯一pending、旧`41314376539`保持运行。

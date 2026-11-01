@@ -20,6 +20,14 @@ test('comment identity fields accept only bounded public media URLs and plain re
  assert.equal(commentRegion('   '),undefined);
  assert.equal(commentRegion('x'.repeat(100))!.length,80);
 });
+test('QQ public avatar descriptors keep only bounded identity fields on the exact endpoint',()=>{
+ const base='https://thirdqq.qlogo.cn/g',query='b=sdk&k=Public_fixture-1&s=140';
+ assert.equal(commentMediaURL(`${base}?${query}&kti=transient&t=123&token=private#fragment`),`${base}?${query}`);
+ assert.equal(commentMediaURL(`${base}?s=140&k=Public_fixture-1&b=sdk`),`${base}?${query}`);
+ for(const query of ['b=sdk&k=one&k=two&s=140','b=sdk&b=sdk&k=one&s=140','b=sdk&k=one&s=140&s=40','b=other&k=one&s=140','b=sdk&k=one&s=9999','b=sdk&k=%0A&s=140',`b=sdk&k=${'a'.repeat(129)}&s=140`,'b=sdk&k=one'])assert.equal(commentMediaURL(`${base}?${query}`),undefined);
+ for(const base of ['https://thirdqq.qlogo.cn.evil.invalid/g','https://thirdqq.qlogo.cn:8443/g','https://thirdqq.qlogo.cn/other'])assert.equal(commentMediaURL(`${base}?${query}`),base);
+ assert.equal(commentMediaURL(`https://user@thirdqq.qlogo.cn/g?${query}`),undefined);
+});
 test('comments reject broken schema/service errors and never represent a failed response as an empty success',async()=>{
  for(const response of [{code:301,comments:[]},{code:200},{code:200,comments:[],more:'true'},{code:200,comments:Array(51).fill({})}]){const provider=new PublicComments(async()=>response);await assert.rejects(provider.page(song,0,new AbortController().signal));}
  const provider=new PublicComments(async()=>({code:200,comments:[],more:true,total:0}));assert.equal((await provider.page(song,0,new AbortController().signal)).hasMore,false);

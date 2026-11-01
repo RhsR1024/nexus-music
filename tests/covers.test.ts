@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import {CoverService} from '../src/providers/covers.ts';
 import {SourceRegistry} from '../src/providers/sourceRegistry.ts';
 import type {Track} from '../src/domain/track.ts';
+import {commentMediaURL} from '../src/providers/commentFields.ts';
+test('QQ public comment authors retain separate native cover cache identities',async()=>{
+ const calls:{key:string;url:string}[]=[],registry=new SourceRegistry({initialize:async()=>[],destroy(){}});
+ const service=new CoverService({fetchCover:async(key,url)=>{calls.push({key,url});return'file:///fixture.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async value=>value,registry,{request:async()=>''},async()=> '');
+ for(const key of ['Public_author_one','Public_author_two'])await service.loadURL(commentMediaURL(`https://thirdqq.qlogo.cn/g?b=sdk&k=${key}&s=140&kti=private`)!,new AbortController().signal);
+ assert.notEqual(calls[0]!.key,calls[1]!.key);
+ assert.ok(calls.every(call=>call.url.includes('k=Public_author_')&&!call.url.includes('kti')&&!call.key.includes('private')));
+});
 test('cover cache identities isolate private accounts and never use signed URLs as keys',async()=>{
   const keys:string[]=[];const registry=new SourceRegistry({initialize:async()=>[],destroy(){}});
   const service=new CoverService({fetchCover:async(key)=>{keys.push(key);return'file:///fixture.jpg';},clearCovers:async()=>{},coverStatistics:async()=>({bytes:0,files:0})},async identity=>identity,registry,{request:async()=>''},async(account,id)=>`https://server.invalid/cover?id=${id}&token=private`);

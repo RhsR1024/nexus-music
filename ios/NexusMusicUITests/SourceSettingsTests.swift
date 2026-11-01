@@ -655,6 +655,54 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["收起歌曲评论"].tap()
     XCTAssertFalse(app.buttons["暂停"].exists,"Reading QQ comments must not start playback")
   }
+  func testLiveNeteasePublicComments() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer { XCUIDevice.shared.orientation = .portrait }
+    let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists,"The comments probe must start without active playback")
+    func reach(_ element:XCUIElement,in container:XCUIElement?=nil) {
+      for _ in 0..<20 {
+        if element.isHittable{return}
+        if let container {container.swipeUp()} else if element.exists && element.frame.midY<app.frame.midY {app.swipeDown()} else {app.swipeUp()}
+      }
+      XCTAssertTrue(element.isHittable,"Expected visible live Netease comment control: \(element.identifier)")
+    }
+    func image(_ name:String){let attachment=XCTAttachment(screenshot:app.screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)}
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10));reach(query)
+    let clear=app.buttons["search-clear"];if clear.exists{clear.tap()}
+    let platform=app.descendants(matching:.any).matching(identifier:"网易云").firstMatch;reach(platform);platform.tap()
+    query.tap();for character in "Shape of You Ed Sheeran"{query.typeText(String(character))};query.typeText("\n")
+    let result=app.buttons["search-track-wy-0"];XCTAssertTrue(result.waitForExistence(timeout:60),"Live Netease search must return the public Shape of You row")
+    let more=app.buttons["search-more-wy-0"];reach(more);more.tap()
+    let comments=app.buttons["search-action-歌曲评论"];XCTAssertTrue(comments.waitForExistence(timeout:10));reach(comments);comments.tap()
+    let title=app.descendants(matching:.any).matching(identifier:"comments-title").firstMatch
+    XCTAssertTrue(title.waitForExistence(timeout:15));XCTAssertTrue(title.label.contains("Shape of You"))
+    let total=app.staticTexts.matching(NSPredicate(format:"label MATCHES %@","共 [1-9][0-9]* 条评论")).firstMatch
+    XCTAssertTrue(total.waitForExistence(timeout:20),"The live Netease endpoint must expose a positive comment total")
+    let list=app.descendants(matching:.any).matching(identifier:"comments-list").firstMatch
+    XCTAssertTrue(list.waitForExistence(timeout:5))
+    func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
+    func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
+    let initial=loaded();XCTAssertGreaterThanOrEqual(initial,20)
+    let renderedAvatar=app.images.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND identifier ENDSWITH %@","comments-avatar-","-image")).firstMatch
+    XCTAssertTrue(renderedAvatar.waitForExistence(timeout:20),"A live public author image must load; the fallback container alone is insufficient")
+    image("Live anonymous Netease comments first page before section assertion")
+    XCTAssertTrue(text("热门评论").waitForExistence(timeout:20))
+    let latest=text("最新评论")
+    for _ in 0..<30 {if latest.exists{break};list.swipeUp()}
+    XCTAssertTrue(latest.waitForExistence(timeout:5),"The live Netease list must keep the distinct latest section after its hot rows")
+    image("Live anonymous Netease comments latest section")
+    XCTAssertGreaterThan(app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comments-item-")).count,0)
+    let load=app.buttons["加载更多评论"];reach(load,in:list);load.tap()
+    let retry=app.buttons["重试评论"]
+    if retry.waitForExistence(timeout:5){retry.tap()}
+    let nextPage=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in loaded()>initial},object:list)
+    XCTAssertEqual(XCTWaiter.wait(for:[nextPage],timeout:45),.completed,"Live Netease load more must append a second page")
+    XCTAssertGreaterThanOrEqual(loaded(),initial+20)
+    image("Live anonymous Netease comments second page appended")
+    app.buttons["收起歌曲评论"].tap()
+    XCTAssertFalse(app.buttons["暂停"].exists,"Reading live Netease comments must not start playback")
+  }
   func testLiveQQPublicComments() throws {
     XCUIDevice.shared.orientation = .portrait
     defer { XCUIDevice.shared.orientation = .portrait }
@@ -684,6 +732,8 @@ final class SourceSettingsTests: XCTestCase {
     func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
     func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
     let initial=loaded();XCTAssertGreaterThanOrEqual(initial,20)
+    let renderedAvatar=app.images.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND identifier ENDSWITH %@","comments-avatar-","-image")).firstMatch
+    XCTAssertTrue(renderedAvatar.waitForExistence(timeout:20),"A live public author image must load; the fallback container alone is insufficient")
     image("Live anonymous QQ comments first page before section assertion")
     XCTAssertTrue(text("热门评论").waitForExistence(timeout:20))
     let latest=text("最新评论")
@@ -809,6 +859,8 @@ final class SourceSettingsTests: XCTestCase {
     func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
     func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
     let initial=loaded();XCTAssertGreaterThanOrEqual(initial,20)
+    let renderedAvatar=app.images.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND identifier ENDSWITH %@","comments-avatar-","-image")).firstMatch
+    XCTAssertTrue(renderedAvatar.waitForExistence(timeout:20),"A live public author image must load; the fallback container alone is insufficient")
     let avatar=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comments-avatar-")).firstMatch
     XCTAssertTrue(avatar.waitForExistence(timeout:20),"The live Migu comments must expose a displayable author avatar")
     image("Live anonymous Migu comments first page")
@@ -927,6 +979,8 @@ final class SourceSettingsTests: XCTestCase {
     func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
     func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
     let initial=loaded();XCTAssertGreaterThanOrEqual(initial,20)
+    let renderedAvatar=app.images.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND identifier ENDSWITH %@","comments-avatar-","-image")).firstMatch
+    XCTAssertTrue(renderedAvatar.waitForExistence(timeout:20),"A live public author image must load; the fallback container alone is insufficient")
     image("Live anonymous Kuwo comments first page")
     XCTAssertTrue(text("热门评论").waitForExistence(timeout:20))
     let latest=text("最新评论")
@@ -1050,6 +1104,8 @@ final class SourceSettingsTests: XCTestCase {
     func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
     func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
     let initial=loaded();XCTAssertGreaterThan(initial,0)
+    let renderedAvatar=app.images.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND identifier ENDSWITH %@","comments-avatar-","-image")).firstMatch
+    XCTAssertTrue(renderedAvatar.waitForExistence(timeout:20),"A live public author image must load; the fallback container alone is insufficient")
     image("Live anonymous Kugou comments first page")
     XCTAssertTrue(text("热门评论").waitForExistence(timeout:20))
     let latest=text("最新评论")
@@ -4071,8 +4127,23 @@ final class SourceSettingsTests: XCTestCase {
     defer{XCUIDevice.shared.orientation = .portrait}
     let app=XCUIApplication();app.launch();app.activate()
     func themeState(_ query:String="") throws -> [String:Any] {
-      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/theme-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
-      return try JSONSerialization.jsonObject(with:bytes) as? [String:Any] ?? [:]
+      let done=expectation(description:"Theme fixture control \(query)")
+      var result:Result<Data,Error>?
+      var request=URLRequest(url:URL(string:"http://127.0.0.1:18439/theme-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
+      request.timeoutInterval=90
+      let task=URLSession.shared.dataTask(with:request){data,response,error in
+        defer{done.fulfill()}
+        if let error {result = .failure(error);return}
+        guard let response=response as? HTTPURLResponse,response.statusCode==200,let data else {
+          result = .failure(NSError(domain:"ThemeFixtureControl",code:(response as? HTTPURLResponse)?.statusCode ?? -1));return
+        }
+        result = .success(data)
+      }
+      task.resume()
+      let completed=XCTWaiter.wait(for:[done],timeout:95)
+      if completed != .completed {task.cancel();throw NSError(domain:"ThemeFixtureControlTimeout",code:-1)}
+      guard let result else {throw NSError(domain:"ThemeFixtureControlEmpty",code:-1)}
+      return try JSONSerialization.jsonObject(with:result.get()) as? [String:Any] ?? [:]
     }
     func themeControl(_ query:String="") throws -> Int {
       (try themeState(query))["held"] as? Int ?? -1

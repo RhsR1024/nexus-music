@@ -48,3 +48,9 @@ test('QQ reply identity never inherits root avatar or location',async()=>{
  const reader=new PublicComments(async()=>response([{...entry('1!reply','1!root'),middlecommentcontent:[{subcommentid:'1!reply',subcommentcontent:'Reply',replynick:'Responder'}]}]));
  const page=await reader.page(song,0,signal());assert.equal(page.items[0]!.userName,'Responder');assert.equal(page.items[0]!.avatar,undefined);assert.equal(page.items[0]!.region,undefined);
 });
+test('QQ parser retains distinct public SDK avatar descriptors while dropping transport fields',async()=>{
+ const root={...entry(),avatarurl:'https://thirdqq.qlogo.cn/g?b=sdk&k=Public_root&s=140&kti=transient'};
+ const reply={...entry('reply','root'),middlecommentcontent:[{subcommentid:'reply',subcommentcontent:'Reply',replynick:'Responder',avatarurl:'https://thirdqq.qlogo.cn/g?s=140&k=Public_reply&b=sdk&t=123'}]};
+ const page=await new PublicComments(async()=>response([root,reply])).page(song,0,signal());
+ assert.deepEqual(page.items.map(item=>item.avatar),['https://thirdqq.qlogo.cn/g?b=sdk&k=Public_root&s=140','https://thirdqq.qlogo.cn/g?b=sdk&k=Public_reply&s=140']);
+});

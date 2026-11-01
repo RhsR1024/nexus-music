@@ -227,12 +227,20 @@ const server = createServer(async (req, res) => {
       const file=resolve('build/logs',`ambient-transition-${transitionVersion}.mp4`);
       themeRecorder=spawn('xcrun',['simctl','io',process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D','recordVideo','--codec=h264',file],{stdio:['ignore','ignore','pipe']});
       const recorder=themeRecorder;
+      let recorderOutput='';
+      const recorderStartedAt=Date.now();
       try{await new Promise((resolve,reject)=>{
-        const timer=setTimeout(()=>reject(new Error('Simulator video did not start')),15000);
+        // The iOS 27 hosted simulator exceeded the old 15s readiness budget.
+        // This barrier runs before the production cover timeout starts.
+        const timer=setTimeout(()=>reject(new Error('Simulator video readiness exceeded 60s')),60000);
         const finish=error=>{clearTimeout(timer);error?reject(error):resolve();};
         recorder.once('error',finish);recorder.once('exit',()=>finish(new Error('Simulator video exited before readiness')));
-        recorder.stderr.on('data',data=>{if(data.toString().includes('Recording started'))finish();});
-      });}catch{recorder.kill('SIGINT');themeRecorder=undefined;res.writeHead(500);res.end();return;}
+        recorder.stderr.on('data',data=>{recorderOutput=(recorderOutput+data.toString()).slice(-8192);if(recorderOutput.includes('Recording started'))finish();});
+      });}catch(error){
+        counts.recorderFailure={message:String(error),elapsedMs:Date.now()-recorderStartedAt,stderr:recorderOutput,exitCode:recorder.exitCode,signalCode:recorder.signalCode};
+        recorder.kill('SIGINT');themeRecorder=undefined;res.writeHead(500);res.end(JSON.stringify({error:'Simulator video readiness failed'}));return;
+      }
+      counts.recorderStartupMs=Date.now()-recorderStartedAt;
       // Opt-in fault injection proves recorder readiness cannot consume a
       // production cover request's timeout. Only this isolated fixture uses it.
       const readyDelay=Number(process.env.NEXUS_UI_THEME_RECORD_READY_DELAY_MS??0);
@@ -614,6 +622,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePlatformRecommendations')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLivePlatformRecommendations');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQWebLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQWebLogin');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveKugouQrLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveKugouQrLogin');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveNeteasePublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveNeteasePublicComments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQPublicComments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguPublicComments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveKuwoPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveKuwoPublicComments');
