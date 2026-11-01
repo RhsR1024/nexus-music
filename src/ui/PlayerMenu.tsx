@@ -10,9 +10,9 @@ import {radius, space, typography} from './tokens.ts';
 
 const platformName:Record<string,string>={wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水'};
 
-export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onQueue,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,downloadLabel='下载'}:{
+export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onQueue,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,downloadLabel='下载'}:{
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
-  onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;downloadLabel?:string;
+  onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;downloadLabel?:string;
 }){
   const theme=useTheme(),styles=makeStyles(theme);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -65,7 +65,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       {row('add-circle-outline','添加到歌单','选择歌单',onPlaylist,true)}
     </View>
     {track.origin.kind==='online'&&<><Text style={styles.section}>发现</Text>
-    <View style={styles.group}>{row('chatbubble-outline','热门评论','查看',onComments,true)}</View></>}
+    <View style={styles.group}>{onSimilar&&row('radio-outline','相似歌曲','公开推荐',onSimilar)}{row('chatbubble-outline','热门评论','查看',onComments,true)}</View></>}
   </View>;
 }
 
