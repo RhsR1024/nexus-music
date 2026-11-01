@@ -120,8 +120,8 @@ for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.si
 let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
-let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true;
-const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments'));
+let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true;
+const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
 const fixtureOnlineUI=matchingUI||discoveryUI||searchUI;
@@ -269,6 +269,12 @@ const server = createServer(async (req, res) => {
     if(control.searchParams.has('reset'))kuwoCommentsNextPageFails=true;
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:kuwoCommentsMode,nextPageFails:kuwoCommentsNextPageFails}));return;
   }
+  if(req.url.startsWith('/kugou-comments-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
+    if(mode&&['normal','empty','error'].includes(mode))kugouCommentsMode=mode;
+    if(control.searchParams.has('reset'))kugouCommentsNextPageFails=true;
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({mode:kugouCommentsMode,nextPageFails:kugouCommentsNextPageFails}));return;
+  }
   if(offlineUI&&req.url.startsWith('/offline-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('block'))blockOfflineStream=control.searchParams.get('block')==='1';
@@ -354,6 +360,16 @@ const server = createServer(async (req, res) => {
       const values=hot?[item('900','Synthetic Kuwo hot')]:start===0?[item('101','Synthetic Kuwo root'),item('102','Synthetic Kuwo original long text '.repeat(8).trim(),{child_comments:[{id:'1021',msg:'Synthetic Kuwo reply',u_name:'Kuwo reply reader'}]})]:[item('103','Synthetic Kuwo second page')];
       res.end(JSON.stringify({code:'200',result:'ok',comments:hot?[]:values,hot_comments:hot?values:[],comments_counts:start?'43':'41',hot_comments_counts:hot?1:0,offset:start+20}));return;
     }
+    if(parsed.hostname==='gateway.kugou.com'&&parsed.pathname.startsWith('/r/v1/rank/')){
+      const hot=parsed.pathname.endsWith('/topliked'),page=Number(parsed.searchParams.get('p'));
+      counts.kugouComments??={pages:[],errors:0,empty:0};counts.kugouComments.pages.push({hot,page});
+      if(kugouCommentsMode==='error'){counts.kugouComments.errors++;res.end(JSON.stringify({err_code:1}));return;}
+      if(kugouCommentsMode==='empty'){counts.kugouComments.empty++;res.end(JSON.stringify({err_code:0,current_page:page,childrenid:24748592,list:[],count:0}));return;}
+      if(!hot&&page===2&&kugouCommentsNextPageFails){kugouCommentsNextPageFails=false;counts.kugouComments.errors++;res.end(JSON.stringify({err_code:1}));return;}
+      const item=(id,content,extra={})=>({id,content,user_name:`Kugou reader ${id}`,addtimestamp:1700000000,like:{likenum:3},...extra});
+      const list=hot?[item('900','Synthetic Kugou hot')]:page===1?[item('101','Synthetic Kugou root'),item('102','Synthetic Kugou original long text '.repeat(8).trim(),{pcontent:'Synthetic Kugou original quoted text',puser:'Kugou original reader'})]:[item('103','Synthetic Kugou second page')];
+      res.end(JSON.stringify({err_code:0,current_page:page,childrenid:24748592,list,count:page===1?41:43}));return;
+    }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;}
     if(parsed.hostname==='u.y.qq.com'){
@@ -367,7 +383,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({code:0,'music.search.SearchCgiService':{code:0,data:{body:{song:{sum:2,list:page===1?[song(param?.query?.includes('slow')?'fixture-slow':'fixturematch01'),song('fixture-live',true)]:[]}}}}}));return;
     }
     if(parsed.hostname==='search.kuwo.cn'){if(parsed.searchParams.get('all')==='Shape of You'){res.end(JSON.stringify({abslist:[{MUSICRID:'MUSIC_26445261',SONGNAME:'Shape of You',ARTIST:'Fixture artist'}],TOTAL:1}));return;}res.end(JSON.stringify({abslist:[],TOTAL:0}));return;}
-    if(parsed.hostname==='songsearch.kugou.com'){res.end(JSON.stringify({error_code:0,data:{lists:[],total:0}}));return;}
+    if(parsed.hostname==='songsearch.kugou.com'){if(parsed.searchParams.get('keyword')==='Shape of You'){res.end(JSON.stringify({error_code:0,data:{lists:[{FileHash:'B6A303C9CDA8E6C4C0B2FB0B23A570C6',Audioid:24748592,OriSongName:'Shape of You',SingerName:'Fixture artist'}],total:1}}));return;}res.end(JSON.stringify({error_code:0,data:{lists:[],total:0}}));return;}
     if(parsed.hostname==='jadeite.migu.cn'){
       if(parsed.searchParams.get('text')==='Shape of You'){res.end(JSON.stringify({code:'000000',songResultData:{resultList:[{songId:'1104719773',copyrightId:'6005753HF0D',name:'Shape of You',singers:[{name:'Ed Sheeran'}],audioFormats:[]}],totalCount:1}}));return;}
       res.end(JSON.stringify({code:'000000',songResultData:{resultList:[],totalCount:0}}));return;
@@ -564,11 +580,12 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQPublicComments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguPublicComments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveKuwoPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveKuwoPublicComments');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveKugouPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveKugouPublicComments');
   for(const variant of ['Large','Small'])if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadCover'+variant)))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveDownloadCover'+variant);
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');

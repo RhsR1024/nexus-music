@@ -1,3 +1,11 @@
+## 2026-11-01 F31 补缺：酷狗公开评论
+
+新增独立 `KugouPublicComments`：只接受原曲合法 32 位 hash（可带数值 ID），每次请求生成临时随机 mid，经现有 Expo Crypto MD5 签名后走官方 `gateway.kugou.com` 网关；固定 `x-router`、标准证书校验、匿名 `kugouid=0`/空 token/`credentials: omit`。热门与首屏最新并行读取，后续按服务页 20 条推进；严格核对 `err_code`、`current_page`、总数、列表上限、原曲 childrenid 与文本/时间/引用字段。`PublicComments` 只在注入密码学能力时启用酷狗，正式 Services 使用现有 Crypto，独立评论会话保留依赖。
+
+912 项检查通过；五平台合成回归 `SourceUITests-1793515510913` 为 5/0/0，真实匿名服务 `SourceUITests-1793515901320` 为 1/0/0、71.516 秒；6PNG 来源 ready 并亲看。复用 E-033→F-032→P-032，严格 review 为 52E/17WI/105事件/43F/43P、0错误/0警告，无新增 Sollin 采集。
+
+清洁未签名 archive 已验证 arm64、iphoneos26.2、iOS15.1、iPhone/iPad 与生产 bundle；IPA SHA-256 为 `c834c86106221dc90b42c4528b10e50e1f03a772d8ec846e5b6ba93a990eca4b`，无签名或 provisioning profile。完整回复/写操作、账号态/失效、表情字形、弱网限流、Android/实体机/签名/动效及云端终态仍开放。构建证据按[T7 回执](2026-11-01_t7-build-archive-receipt.md)迁移，原路径保持可取。
+
 ## 2026-11-01 F31 补缺：酷我公开评论
 
 酷我原曲数值 ID 的匿名 HTTPS、热门/最新独立读取、服务端 offset 校验、总数、日期/点赞计数、长文本/子回复预览及失败保留/重试已接共享 Sheet。906 检查、四平台合成回归 4/0/0（`SourceUITests-1793514523786`）、真实酷我 1/0/0、87.994 秒（`SourceUITests-1793514870319`），6PNG 亲看/来源 ready；见[回执](2026-11-01_kuwo-public-comments-report.md)。

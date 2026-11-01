@@ -1,3 +1,11 @@
+## 2026-11-01 F31 补缺：酷狗公开评论
+
+酷狗原曲 hash 的匿名官方 HTTPS 网关、热门/最新、20 条服务页推进、总数、日期/点赞计数、长文本、引用根评论归属及失败保留/重试已接入共享评论 Sheet。912 项检查通过；五平台合成回归 5/0/0（`SourceUITests-1793515510913`），真实匿名服务 1/0/0、71.516 秒（`SourceUITests-1793515901320`），两组共 6PNG 来源 ready 并亲看。见[回执](docs/2026-11-01_kugou-public-comments-report.md)。
+
+E-033→F-032→P-032 复用，严格复审为 52E/17WI/105事件/43F/43P、0错误/0警告，无新增 Sollin 采集。本地清洁未签名 archive 为 arm64/iphoneos26.2、iOS15.1、iPhone+iPad，IPA SHA-256 `c834c86106221dc90b42c4528b10e50e1f03a772d8ec846e5b6ba93a990eca4b`；没有签名身份或 provisioning profile。完整回复/写操作、表情字形、弱网限流、Android/实体机/签名/动效及云端终态仍待，不报 F31 或全项目完成。
+
+每日空间检查已把旧构建证据、中间诊断结果、最新两组 xcresult 与旧模拟器 DerivedData 经字节核验后迁至 T7，原路径保持 symlink；当前设备 DerivedData 留在本机，内盘可用空间恢复至约 30.2GiB。见[T7 归档回执](docs/2026-11-01_t7-build-archive-receipt.md)。
+
 ## 2026-11-01 F31 补缺：酷我公开评论
 
 功能提交 `d1a70cbff6ffd343f898689196611b6c1bbd81c7` 已正常 push，远端 SHA 一致；CI `41281715592` pending，QQ `41278846667` 运行中，实核 1运行/1排队。咪咕 pending `41280665387` 被 single 队列自动替换为 cancelled，不计云端通过，未取消运行中任务或重派旧版。
