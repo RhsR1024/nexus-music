@@ -31,3 +31,9 @@ v1 热门/最新通常不提供 `showFloorComment.replyCount`，而公开楼层�
 合成 manifest 的source digest为`e61236c9…`、安装bundle为`13c429ac…`、xcresult Info为`a34044a8…`；4PNG逐张 provenance ready并亲看联系表，服务器计数明确收到`-1,2000,2000,-1`、一次失败和一次空根。真实最终manifest `sourceUnchanged=true`、source `e897b291…`、bundle `3d855686…`、Info `bc2af8ac…`；2PNG逐张 provenance ready并亲看，真实热门回复和引用布局、作者图片、收起按钮及无播放状态可见。
 
 场景和几何边界见[本批 UI 规格](ui-spec/netease-comment-replies-2026-11-02.md)。本批沿用 Sheet 的36pt/28pt头像、14pt嵌套线和至少44pt按钮，不做像素/动效完成声明。iOS 27、真实 iPhone、签名、弱网/限流、长楼层压力、QQ/酷我完整回复及账号写操作继续独立验收。
+
+## 归档与交付
+
+产品提交 `c5fff74c8ae6d376c8b605a04f0ab7c5c22724bd` 已正常 push，远端 main 实核一致。清洁 unsigned archive 由提交后 `dirty:false`/`workingTreeChanges:[]` 的同一树生成：arm64、iphoneos26.2、最低 iOS15.1、设备族 `[1,2]`、未签名且无 provisioning profile。IPA 12,868,006字节，SHA-256 `f0797978fe144102f2c3a0cd9598b081c4ecd32f4325d1f508d6e902f6a18315`；manifest SHA-256 `26e839996b8792de4c8e794c386c2169cac3605a5cbb5abd20bc8075e5e1345b`，164项ZIP CRC、archive/IPA内JS/可执行/Info.plist字节、正式楼层端点/toggle标记和生产隔离均通过。
+
+T7独立证据阶段 `2026-11-02-netease-replies-c5fff74-r2` 的首批229个文件/29,015,333逻辑字节逐文件SHA-256一致，随后追加7个清洁IPA/manifest/日志文件并再次逐文件核验；原始证据保留，个人文件未删除。IPA/APK strict review均为0 errors/0 warnings，无新增Sollin采集。push后`41327658103`保持运行、新`41337444805`为唯一pending；旧pending由`queue:single`自动替换为cancelled，不重派旧版。iOS27终态、实体机、签名和完整F31继续。
