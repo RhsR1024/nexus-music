@@ -61,3 +61,13 @@ NEXUS_UI_RUN_DIR=build/logs/comment-matrix-reproduction \
 ## 提交前 unsigned IPA
 
 本地 `npm run ios:archive` 成功，日志 `build/logs/archive-comment-qq-query-precommit-20261102.log`。dirty候选IPA为12,865,223字节、SHA-256 `e03d35b81ddbcc33caa5ed41ad0690e986f07259a3e6dbf1fb32e418465de66c`，manifest摘要 `a1b6f35d3ebad2845da9bb079f32248b925d45d6b41e5306864a5dd172bd4c44`；arm64/iphoneos26.2/最低iOS15.1/设备族[1,2]、未签名。164项ZIP CRC、archive/IPA内JS/可执行/Info.plist字节、生产SDK端点标记和测试/私有/签名材料排除均通过。验证回执 `build/logs/comments-query-archive-verification-dirty-20261102.json`，提交后的clean包独立记录。
+
+## clean交付与队列核对
+
+功能提交 `bc9b0e6558f22afb316d325b0e5b6e599b5694fd` 已正常push，远端main一致。提交后clean IPA为12,865,223字节、SHA-256 `94ff2e52f2492625ea14000f1c4d9f071d4e9086d4bdcf701e587b9a43a32189`；manifest `dirty:false`、`workingTreeChanges:[]`，摘要 `310e99f5b4edabe83e44c365aae34b5f688735d5c27ee315a69d57bc88e94f34`。arm64/SDK26.2/iOS15.1/[1,2]、unsigned，164项CRC、归档字节、正式bundle与私有/测试/签名材料排除全部通过。日志与回执为 `archive-comment-qq-query-clean-20261102.log`、`comments-query-archive-verification-clean-20261102.json`，均位于 `build/logs/`；内容快照 `build/distribution-history/94ff2e52f2492625ea14000f1c4d9f071d4e9086d4bdcf701e587b9a43a32189/` 已核对。
+
+T7独立阶段目录 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-comment-query-clean-bc9b0e6/` 保留IPA/manifest、三轮xcresult、PNG及来源索引、原始公开响应、旧CI必要诊断和录像。最初455份文件逐份SHA-256核验，补入收尾磁盘回执后为456份、278,252,507内容字节；`receipt.json` SHA-256 `922b78f27e82c6c1db9da8e3897d3d7a3c468a9a71c86ec99fead72daa21504a`。源文件仍保留，没有以迁移名义移除当前证据；stage及收尾回执分别为 `build/logs/cleanup-20261102-comment-query-stage.json` 与 `build/logs/cleanup-20261102-comment-query-close.json`。
+
+收尾时无活动xcodebuild/录像/提取，内盘约38GiB、T7约643GiB；没有新增个人文件删除，运行中的应用缓存继续延后。最新两个有效阶段、未解决故障必要原始证据和reverse-skill样本/scope/Evidence及哈希引用均保持。
+
+push后实核 **run41327658103/d192894运行中，run41332998933/bc9b0e6为唯一pending**，满足至多1运行/1排队；没有手动取消或重派。后续文档收尾不改变产品源码，也不触发独立CI。新运行终态、旧托管录像底层原因、签名/实体机、emoji可视字形与完整F/J仍待，不能将clean unsigned包或本机回归写成全项目完成。

@@ -2,6 +2,8 @@
 
 940检查与最终真实评论Release矩阵5/0/0（`SourceUITests-1793554215133`）通过。旧run41314376539为核心21/1，唯一全局背景用例在录像就绪控制处约15秒后失败；compact及13PNG已取得并核验，旧stderr缺失，底层迟滞原因未确定。加固后的本机背景570.374秒、164帧/8中间帧验证通过；新云端和本批IPA/提交收尾见[精确回执](2026-11-02_comment-live-matrix-and-avatar-query-report.md)，不把本机成功写成iOS27通过。
 
+产品`bc9b0e6`已push，clean unsigned IPA SHA-256 `94ff2e52f2492625ea14000f1c4d9f071d4e9086d4bdcf701e587b9a43a32189`，manifest clean、SDK26.2/arm64/iOS15.1/[1,2]、164项CRC与T7独立副本通过。push后41327658103运行、41332998933/bc9b0e6唯一pending；阶段终态未提前计通过。
+
 ## 2026-11-02 F31 评论作者身份增量
 
 五平台公开评论接头像，网易云/QQ/酷狗接可选地区；缺失不造，头像失败首字符回退，根/回复身份层级统一。最终复核修正 QQ 回复借用根头像/地区与地区控制字符遗漏，937/937完整检查通过。真实咪咕、合成咪咕及网易云 Release UI 各1/0/0，来源与截图摘要见[本批回执](2026-11-02_comment-author-identities-report.md)。UI后最终QQ parser修正由完整契约验证，不冒充同一源码UI。复用E-033→F-032→P-032、IPA/APK gate与strict review通过，无新Sollin采集或像素/动效完成声明。完整F31、其他平台真实矩阵、emoji字形、签名/实体机与iOS27终态继续；功能提交`d192894`已push，clean unsigned IPA `8cfef1d0…`、manifest clean、164项CRC/归档字节/隐私排除与T7独立副本已通过；云端`41327658103`为最新唯一pending、旧`41314376539`保持运行。
