@@ -553,6 +553,32 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["Synthetic hot comment"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["Synthetic comment 1"].exists)
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"comments-avatar-1").firstMatch.exists)
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"comments-region-1").firstMatch.exists)
+    let replyList=app.descendants(matching:.any).matching(identifier:"comments-list").firstMatch
+    func reachReply(_ element:XCUIElement) {
+      for _ in 0..<18 {if element.isHittable{return};if element.exists && element.frame.midY<app.frame.midY{replyList.swipeDown()}else{replyList.swipeUp()}}
+      XCTAssertTrue(element.isHittable)
+    }
+    func replyImage(_ name:String){let image=XCTAttachment(screenshot:app.screenshot());image.name=name;image.lifetime = .keepAlways;add(image)}
+    let expand=app.buttons["comment-replies-toggle-9"];reachReply(expand)
+    XCTAssertEqual(expand.label,"查看回复","An absent platform count must remain unknown")
+    expand.tap()
+    XCTAssertTrue(app.staticTexts["Synthetic WY full reply one"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["Synthetic WY full reply two"].exists)
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label == %@","WY target reader：Synthetic WY quoted target")).firstMatch.exists)
+    replyImage("Netease replies unknown count and quoted first page")
+    let moreReplies=app.buttons["加载更多回复"];reachReply(moreReplies);moreReplies.tap()
+    XCTAssertTrue(app.staticTexts["回复暂时无法载入，请重试。已显示的回复已保留。"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["Synthetic WY full reply two"].exists)
+    replyImage("Netease reply failure retains loaded rows")
+    let retryReply=app.buttons["重试回复"];reachReply(retryReply);retryReply.tap()
+    XCTAssertTrue(app.staticTexts["Synthetic WY full reply three"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["Synthetic WY full reply four"].exists)
+    replyImage("Netease reply retry appends returned time cursor page")
+    reachReply(expand);expand.tap()
+    let emptyReply=app.buttons["comment-replies-toggle-1"];reachReply(emptyReply);emptyReply.tap()
+    XCTAssertTrue(app.staticTexts["本次未取得可展示的回复。"].waitForExistence(timeout:10))
+    replyImage("Netease explicit empty reply thread")
+    reachReply(emptyReply);emptyReply.tap()
     let more=app.buttons["加载更多评论"];for _ in 0..<6 {if more.isHittable{break};app.swipeUp()};more.tap()
     let retry=app.buttons["重试评论"];XCTAssertTrue(retry.waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["Synthetic comment 2"].exists);retry.tap()
     XCTAssertTrue(app.staticTexts["Synthetic comment 3"].waitForExistence(timeout:10));XCTAssertFalse(app.buttons["加载更多评论"].exists)
@@ -702,6 +728,36 @@ final class SourceSettingsTests: XCTestCase {
     image("Live anonymous Netease comments second page appended")
     app.buttons["收起歌曲评论"].tap()
     XCTAssertFalse(app.buttons["暂停"].exists,"Reading live Netease comments must not start playback")
+  }
+  func testLiveNeteaseCommentReplies() throws {
+    XCUIDevice.shared.orientation = .portrait
+    defer { XCUIDevice.shared.orientation = .portrait }
+    let app=XCUIApplication();app.launch();XCTAssertFalse(app.buttons["暂停"].exists)
+    func reach(_ element:XCUIElement,in list:XCUIElement?=nil) {
+      for _ in 0..<20 {if element.isHittable{return};if element.exists && element.frame.midY<app.frame.midY{if let list{list.swipeDown()}else{app.swipeDown()}}else{if let list{list.swipeUp()}else{app.swipeUp()}}}
+      XCTAssertTrue(element.isHittable)
+    }
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let query=app.textFields["搜索歌曲或歌手"];XCTAssertTrue(query.waitForExistence(timeout:10));reach(query)
+    let clear=app.buttons["search-clear"];if clear.exists{clear.tap()}
+    let platform=app.descendants(matching:.any).matching(identifier:"网易云").firstMatch;reach(platform);platform.tap()
+    query.tap();for character in "Shape of You Ed Sheeran"{query.typeText(String(character))};query.typeText("\n")
+    let result=app.buttons["search-track-wy-0"];XCTAssertTrue(result.waitForExistence(timeout:60))
+    let more=app.buttons["search-more-wy-0"];reach(more);more.tap()
+    let comments=app.buttons["search-action-歌曲评论"];XCTAssertTrue(comments.waitForExistence(timeout:10));reach(comments);comments.tap()
+    let title=app.descendants(matching:.any).matching(identifier:"comments-title").firstMatch
+    XCTAssertTrue(title.waitForExistence(timeout:15));XCTAssertTrue(title.label.contains("Shape of You"))
+    let list=app.descendants(matching:.any).matching(identifier:"comments-list").firstMatch
+    let expand=app.buttons["comment-replies-toggle-281570024"];XCTAssertTrue(expand.waitForExistence(timeout:30));reach(expand,in:list)
+    XCTAssertEqual(expand.label,"查看回复");image("Live Netease original hot root before floor expansion");expand.tap()
+    let reply=app.descendants(matching:.any).matching(identifier:"comment-reply-1334279682").firstMatch
+    XCTAssertTrue(reply.waitForExistence(timeout:30),"Anonymous floor must return a real reply under the selected original root")
+    let avatar=app.images.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND identifier ENDSWITH %@","comment-reply-avatar-","-image")).firstMatch
+    XCTAssertTrue(avatar.waitForExistence(timeout:20),"At least one real reply author image must render")
+    image("Live Netease anonymous floor replies and author identities")
+    reach(expand,in:list);expand.tap();XCTAssertFalse(reply.exists)
+    app.buttons["收起歌曲评论"].tap();XCTAssertFalse(app.buttons["暂停"].exists)
   }
   func testLiveQQPublicComments() throws {
     XCUIDevice.shared.orientation = .portrait

@@ -1,3 +1,13 @@
+## 2026-11-02 F31 网易公开评论只读回复
+
+- [x] 原曲/根评论严格绑定，匿名 HTTPS 楼层首屏与返回时间游标分页；未知回复数保留未知，后续总数0不覆盖首屏有效总数。
+- [x] 子回复归属、响应结构/上限/游标前进、失败保留、同游标重试、空态、取消、去重及有界根缓存通过契约测试。
+- [x] `npm run check` 948/948；合成 Release 3/0/0，真实 Shape of You Release 1/0/0；合成4PNG、真实2PNG来源 ready并亲看。
+- [x] 固定公开协议来源/许可与 E-033→F-032→P-032 复用记录；无新增 Sollin 采集；IPA/APK strict review通过。
+- [ ] 完整 F31、QQ/酷我完整回复、账号写操作、iOS27、真实设备、签名、弱网/限流、长楼层压力和连续动效继续。
+
+见[本批回执](2026-11-02_netease-comment-replies-report.md)与[UI规格](ui-spec/netease-comment-replies-2026-11-02.md)。本批只关闭网易公开只读回复增量。
+
 ## 2026-11-02 F31 五平台真实矩阵与SDK头像修正
 
 `commentMediaURL`对精确公开SDK端点保留有界`b=sdk/k/s`，其他query/fragment丢弃；原生Cover缓存依公开描述符区分作者。根/回复归属、危险/重复参数及缓存测试纳入940检查，最终五平台真实UI5/0/0。旧iOS27录像控制失败约15秒，stderr历史缺失；本批60秒就绪、失败诊断和URLSession控制已本机回归，托管环境确认继续。见[回执](2026-11-02_comment-live-matrix-and-avatar-query-report.md)，完整范围不变。

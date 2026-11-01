@@ -1,42 +1,28 @@
+import {NeteasePublicComments} from './neteaseComments.ts';
 import {QQPublicComments} from './qqComments.ts';
 import {MiguPublicComments} from './miguComments.ts';
 import {KuwoPublicComments} from './kuwoComments.ts';
 import {KugouPublicComments,type KugouCommentCrypto} from './kugouComments.ts';
 import {trackKey,type Track} from '../domain/track.ts';
 import {bounded,throwIfAborted} from './async.ts';
-import {queryURL,requestJSON,type HTTPClient} from './http.ts';
-import {commentMediaURL,commentRegion} from './commentFields.ts';
+import {requestJSON,type HTTPClient} from './http.ts';
 export interface SongComment {id:string;content:string;userName:string;avatar?:string;region?:string;time?:number;likes?:number;replyCount?:number;reply?:{userName:string;content:string}}
 export interface CommentPage {hot:readonly SongComment[];items:readonly SongComment[];total?:number;nextOffset:number;hasMore:boolean}
 export interface CommentThreadPage {items:readonly SongComment[];total?:number;nextOffset:number;hasMore:boolean}
-export interface CommentReader {session?():CommentReader;supports(track:Track):boolean;page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>;replies?(track:Track,root:SongComment,offset:number,signal:AbortSignal):Promise<CommentThreadPage>}
-const row=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
-const text=(v:unknown,max:number)=>typeof v==='string'?v.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g,'').slice(0,max):'';
-const integer=(v:unknown)=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0?v:undefined;
-const id=(v:unknown)=>typeof v==='string'&&/^\d{1,40}$/.test(v)?v:typeof v==='number'&&Number.isSafeInteger(v)&&v>=0?String(v):undefined;
-function mapped(value:unknown):SongComment|undefined {
- const v=row(value),key=id(v.commentId),content=text(v.content,10000).trim();if(!key||!content)return;
- const user=row(v.user),reply=row(Array.isArray(v.beReplied)?v.beReplied[0]:undefined),replyContent=text(reply.content,10000).trim(),timestamp=integer(v.time),avatar=commentMediaURL(user.avatarUrl),region=commentRegion(row(v.ipLocation).location);
- return{id:key,content,userName:text(user.nickname,200)||'匿名用户',...(avatar?{avatar}:{}),...(region?{region}:{}),...(timestamp!==undefined&&timestamp<=8640000000000000?{time:timestamp}:{}),...(integer(v.likedCount)!==undefined?{likes:integer(v.likedCount)}:{}),...(replyContent?{reply:{userName:text(row(reply.user).nickname,200)||'匿名用户',content:replyContent}}:{})};
-}
-function unique(values:readonly SongComment[]){const seen=new Set<string>();return values.filter(v=>{if(seen.has(v.id))return false;seen.add(v.id);return true;});}
+export interface CommentReader {session?():CommentReader;supports(track:Track):boolean;canExpand?(track:Track,root:SongComment):boolean;page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>;replies?(track:Track,root:SongComment,offset:number,signal:AbortSignal):Promise<CommentThreadPage>}
 export class PublicComments implements CommentReader {
- private http:HTTPClient;private qq:QQPublicComments;private migu:MiguPublicComments;private kuwo:KuwoPublicComments;private kugou?:KugouPublicComments;private crypto?:KugouCommentCrypto;
- constructor(http:HTTPClient=requestJSON,crypto?:KugouCommentCrypto){this.http=http;this.crypto=crypto;this.qq=new QQPublicComments(http);this.migu=new MiguPublicComments(http);this.kuwo=new KuwoPublicComments(http);if(crypto)this.kugou=new KugouPublicComments(http,crypto);}
+ private http:HTTPClient;private wy:NeteasePublicComments;private qq:QQPublicComments;private migu:MiguPublicComments;private kuwo:KuwoPublicComments;private kugou?:KugouPublicComments;private crypto?:KugouCommentCrypto;
+ constructor(http:HTTPClient=requestJSON,crypto?:KugouCommentCrypto){this.http=http;this.crypto=crypto;this.wy=new NeteasePublicComments(http);this.qq=new QQPublicComments(http);this.migu=new MiguPublicComments(http);this.kuwo=new KuwoPublicComments(http);if(crypto)this.kugou=new KugouPublicComments(http,crypto);}
  session():CommentReader{return new PublicComments(this.http,this.crypto);}
- supports(track:Track){return !!this.kugou?.supports(track)||this.qq.supports(track)||this.migu.supports(track)||this.kuwo.supports(track)||(track.origin.kind==='online'&&track.origin.platform==='wy'&&/^\d{1,30}$/.test(track.origin.id));}
- replies(track:Track,root:SongComment,offset:number,signal:AbortSignal){if(this.migu.supports(track))return this.migu.replies(track,root,offset,signal);if(this.kugou?.supports(track))return this.kugou.replies(track,root,offset,signal);throw Error('此评论暂不支持展开回复');}
+ supports(track:Track){return !!this.kugou?.supports(track)||this.qq.supports(track)||this.migu.supports(track)||this.kuwo.supports(track)||this.wy.supports(track);}
+ canExpand(track:Track,root:SongComment){return this.wy.supports(track)?this.wy.canExpand(track,root):((this.migu.supports(track)||!!this.kugou?.supports(track))&&(root.replyCount??0)>0);}
+ replies(track:Track,root:SongComment,offset:number,signal:AbortSignal){if(this.wy.supports(track))return this.wy.replies(track,root,offset,signal);if(this.migu.supports(track))return this.migu.replies(track,root,offset,signal);if(this.kugou?.supports(track))return this.kugou.replies(track,root,offset,signal);throw Error('此评论暂不支持展开回复');}
  async page(track:Track,offset:number,signal:AbortSignal):Promise<CommentPage>{
   if(this.qq.supports(track))return this.qq.page(track,offset,signal);
   if(this.migu.supports(track))return this.migu.page(track,offset,signal);
   if(this.kuwo.supports(track))return this.kuwo.page(track,offset,signal);
   if(this.kugou?.supports(track))return this.kugou.page(track,offset,signal);
-  if(!this.supports(track)||!Number.isSafeInteger(offset)||offset<0||offset>100000)throw Error('此歌曲暂不支持公开评论');
-  const raw=row(await bounded(child=>this.http(queryURL(`https://music.163.com/api/v1/resource/comments/R_SO_4_${track.origin.id}`,{limit:20,offset}),{headers:{Referer:'https://music.163.com/'}},child),signal,12000));throwIfAborted(signal);
-  if(raw.code!==200||!Array.isArray(raw.comments)||raw.comments.length>50||(raw.more!==undefined&&typeof raw.more!=='boolean')||(raw.hotComments!==undefined&&!Array.isArray(raw.hotComments)))throw Error('评论服务暂时不可用');
-  const items=unique(raw.comments.map(mapped).filter((v):v is SongComment=>!!v)),hot=offset===0&&Array.isArray(raw.hotComments)?unique(raw.hotComments.slice(0,50).map(mapped).filter((v):v is SongComment=>!!v)):[],total=integer(raw.total);
-  const nextOffset=offset+raw.comments.length;
-  return{hot,items,...(total!==undefined?{total}:{}),nextOffset,hasMore:raw.more===true&&raw.comments.length>0&&(total===undefined||nextOffset<total)};
+  return this.wy.page(track,offset,signal);
  }
 }
 export interface CommentThreadSnapshot {items:readonly SongComment[];offset:number;hasMore:boolean;loading:boolean;expanded:boolean;error?:string;limited:boolean}
@@ -54,7 +40,7 @@ export class CommentSession {
  cancel(){this.generation++;this.pending?.abort();this.pending=undefined;for(const abort of this.pendingThreads.values())abort.abort();this.pendingThreads.clear();if(this.value.loading||Object.values(this.value.threads).some(thread=>thread.loading)){this.publish({...this.value,loading:false,threads:Object.fromEntries(Object.entries(this.value.threads).map(([key,thread])=>[key,{...thread,loading:false}]))});}}
  close(){this.cancel();this.publish(empty());}
  retry(){return this.load(this.failedRefresh);}
- canExpand(comment:SongComment){return !!this.reader.replies&&(comment.replyCount??0)>0;}
+ canExpand(comment:SongComment){return !!this.reader.replies&&!!this.value.track&&(this.reader.canExpand?.(this.value.track,comment)??(comment.replyCount??0)>0);}
  toggleReplies(comment:SongComment){
   const old=this.value;if(!old.track||!this.canExpand(comment))return;
   const thread=old.threads[comment.id]??emptyThread();

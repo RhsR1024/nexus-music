@@ -120,6 +120,7 @@ for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.si
 let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 const counts={requests:{},authFailures:0,authSuccesses:0};
+let wyRepliesNextPageFails=true;
 let qqCommentsMode='normal',qqCommentsNextPageFails=true,miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
 const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
@@ -344,6 +345,15 @@ const server = createServer(async (req, res) => {
       const tracks=['one','two'].map((word,index)=>({id:String(9101+index),name:`Synthetic discovery ${word}`,ar:[{name:'Fixture artist'}],al:{name:'Synthetic discovery album',picUrl:'http://127.0.0.1:18439/discovery-cover.png'},dt:120000}));
       const send=()=>{if(!res.destroyed)res.end(JSON.stringify({code:200,playlist:{name:'Synthetic discovery playlist',trackIds:tracks.map(({id})=>({id})),tracks}}));};
       if(holdDiscoveryDetail){holdDiscoveryDetail=false;heldDiscoveryResponses.push(send);counts.discovery.held=(counts.discovery.held??0)+1;}else send();return;
+    }
+    if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/resource/comment/floor/get'){
+      const root=parsed.searchParams.get('parentCommentId'),time=parsed.searchParams.get('time');
+      counts.wyReplies??={times:[],errors:0,empty:0};counts.wyReplies.times.push(time);
+      if(root==='9'&&time==='2000'&&wyRepliesNextPageFails){wyRepliesNextPageFails=false;counts.wyReplies.errors++;res.end(JSON.stringify({code:503}));return;}
+      const reply=(id,content)=>({commentId:id,parentCommentId:root,content,user:{nickname:'WY reply reader',avatarUrl:'http://cdn.example/wy-reply.jpg'},ipLocation:{location:'上海'},time:1500,likedCount:2,beReplied:[{content:'Synthetic WY quoted target',user:{nickname:'WY target reader'}}]});
+      const values=root==='9'?(time==='-1'?[reply('201','Synthetic WY full reply one'),reply('202','Synthetic WY full reply two')]:[reply('203','Synthetic WY full reply three'),reply('204','Synthetic WY full reply four')]):[];
+      if(root!=='9')counts.wyReplies.empty++;
+      res.end(JSON.stringify({code:200,data:{ownerComment:{commentId:root},comments:values,bestComments:[],totalCount:root==='9'&&time==='-1'?4:0,hasMore:root==='9'&&time==='-1',time:time==='-1'?2000:3000}}));return;
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname.includes('/api/v1/resource/comments/')){
       const offset=Number(parsed.searchParams.get('offset')??0);counts.comments??={first:0,next:0};
@@ -622,6 +632,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePlatformRecommendations')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLivePlatformRecommendations');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQWebLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQWebLogin');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveKugouQrLogin')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveKugouQrLogin');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveNeteaseCommentReplies')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveNeteaseCommentReplies');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveNeteasePublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveNeteasePublicComments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveQQPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveQQPublicComments');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguPublicComments')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguPublicComments');
