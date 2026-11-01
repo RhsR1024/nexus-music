@@ -38,3 +38,8 @@ B/C/D累计只读状态对比19→19记录：变化仅library.v1、playbackStats
 931业务/类型检查、脚本语法及diff空白检查通过。该结果仅为本机SDK26.2/iOS26.3.1模拟器与本次真实公开源，不替代iOS27云端、签名、实体机、耳听、全平台/弱网与连续动效。清洁IPA/提交/远端队列在阶段收尾补记。
 
 采纳后功能case严格哈希review为395E/3WI/125事件/101F/99P，0错误/0警告；只追加本项目消费记录，原始Evidence未变。六份闲置安装包完整迁至T7、保留原路径与恢复清单，归档1,617,545,915字节；详见[T7回执](2026-11-01_t7-build-archive-receipt.md)。
+
+
+## 阶段归档
+
+功能提交为`802e7ba9a6167e94d9476f53053ebab70628b867`。干净unsigned IPA为12,849,880字节，SHA-256`b9a04724bab61ffc1c3695b0ab69de00c2f1f4b5b814e7d78464a6c90abbfbcf`，manifest SHA-256`08dd35950341824959b917690e93d3752bf118990b38baa1dd70d4fd780b5870`；CRC、arm64/iphoneos26.2/iOS15.1/设备族[1,2]、无签名/无描述文件、生产随机文案存在及测试夹具排除通过。内容哈希快照保存在`build/distribution-history/b9a04724…/`，T7独立副本为`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-discovery-random-clean-802e7ba/`，IPA SHA一致。本机路径与T7副本均保留，未清理当前阶段证据。
