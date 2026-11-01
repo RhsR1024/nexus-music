@@ -4,7 +4,9 @@
 
 `npm run check` 934/934、脚本语法/空白检查及完整 native 套件通过；最终 Release `SourceUITests-1793544748938` 为 1/0/0、187.544 秒，2PNG 来源 ready 并亲看。精确源码、diff、fixture、bundle、日志、截图哈希与失败历史见[回执](docs/2026-11-01_playback-diagnostics-report.md)和[UI 规格](docs/ui-spec/playback-diagnostics-2026-11-01.md)。
 
-R2/mobile-reverse 离线 case-guard 与 `ipa --review` 通过，严格 review 为 52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。iOS 27 云端、真实 iPhone、真实源弱网、冷/暖缓存、全来源矩阵、小屏/动效、签名/描述文件和全曲播放继续；本批只记 J57 部分纵向增量，不报功能或全项目完成。clean IPA、normal push 与 Actions 终态在阶段收尾补记。
+`bd904fe` clean unsigned archive 成功：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2、最低 iOS15.1、设备族`[1,2]`、未签名且无描述文件。IPA 12,859,396 字节、SHA-256 `45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19`；164 项 ZIP CRC、archive/IPA 内 JS/可执行/Info.plist 字节、生产 bundle 和测试夹具排除均通过。内容哈希快照与 T7 独立副本已逐字节核对。
+
+R2/mobile-reverse 离线 case-guard 与 `ipa --review` 通过，严格 review 为 52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。iOS 27 云端、真实 iPhone、真实源弱网、冷/暖缓存、全来源矩阵、小屏/动效、签名/描述文件和全曲播放继续；本批只记 J57 部分纵向增量，不报功能或全项目完成。normal push 与 Actions 终态在阶段收尾补记。
 
 ## 2026-11-01 汽水公开歌单 App 导入与重启回归
 

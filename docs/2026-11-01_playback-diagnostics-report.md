@@ -40,6 +40,15 @@ manifest 记录 `configuration: Release`、`exitCode: 0`、`sourceUnchanged: tru
 
 两张截图均通过 `verifyCaptureEvidence`，`ready:true` 且无失败。已亲看正式播放页和诊断页：可见“永久离线文件未命中”“原曲优先，自动匹配作为回退”“匹配版本已取得音频”“播放地址已确定”“已绑定原生媒体缓存身份”和“原生媒体已就绪”的阶段顺序。诊断页底部 native-ready 行受当前视口裁切，截图中只露出部分；该行由 XCTest 对精确无障碍元素及 native-success testID 实际验证，不能把截图的裁切解释成缺失或整页像素验收通过。
 
+## Clean unsigned archive
+
+- `npm run ios:archive` 在 `bd904fe406c704966cd748ab41df829f292dd32f` 上以退出码 0 完成，Xcode 输出 `ARCHIVE SUCCEEDED`。`build-manifest.json` 记录 `dirty:false`、`workingTreeChanges:[]`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed:false`。
+- IPA 为 12,859,396 字节，SHA-256 `45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19`。ZIP 共 164 项且 CRC 全部通过。
+- 从 IPA 直接读取的 `main.jsbundle`、arm64 可执行文件和 `Info.plist` 与 xcarchive 内对应文件逐字节一致。SHA-256 分别为 `37a0a27187285b143ebfcacaf517a27b577e67999a1855b7deeaee9d1f49e42f`、`4eb3b2fa2f98a21e56bb3d6aa0767b75fc0fa2ac833f4721777abc51bcf85391`、`dd9d3304202133385f743d3b89fc3af5f319faebaae0435cde36eb0b39e90452`；archive `Info.plist` SHA-256 为 `b25f5bc1bd5c5d6617840daae933184dacdb17d273d3c74db1927966db276786`。
+- 生产 bundle 的精确测试适配器、matched fixture 和 `PRIVATE_TOKEN` 标记均不存在；bundle 没有 `_CodeSignature` 或 `embedded.mobileprovision`，`codesign` 也明确报告未签名。该结果只证明未签名设备包的生产内容与元数据一致，不证明 Apple 签名或真机可安装。
+- 内容哈希快照保存在 `build/distribution-history/45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19/`。独立副本保存在 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-playback-diagnostics-clean-bd904fe/`，包含 IPA、SHA-256、manifest 和机器可读验证摘要；两处 IPA 摘要一致。
+- 当日检查内盘可用约 34 GiB、T7 可用约 695 GiB。构建完成后没有活动 Xcode/归档进程，本轮没有删除或搬走既有证据；`build/logs/cleanup-2026-11-01-ios27-j57.json` 记录保留决定和最新阶段引用。
+
 ## 失败与保留
 
 - `SourceUITests-1793543519652` 在旧 Swift 第 1676 行、进入诊断导航前失败；原始 `run-manifest.json` 和日志保留。最终测试补上稳定 flac 前置、实际频谱等待和正式菜单导航，未降低原播放链路断言。

@@ -4,7 +4,9 @@
 
 精确日志目录 `build/logs/playback-diagnostics-matching-20261101-225253-r4/`、截图目录 `build/ui-screenshots/playback-diagnostics-20261101-225253-r4/`；manifest 为 Release/exit0/sourceUnchanged，base `69c9316`，源码 digest `6cf1a863…`、diff `4f632b30…`、fixture `83ad352d…`、安装 bundle `15d79b71…`、JS `727e3b7d…`，夹具收到 4 次匹配音频请求。完整文件哈希、失败历史与复现见[回执](2026-11-01_playback-diagnostics-report.md)。
 
-R2/mobile-reverse offline case-guard 与 `ipa --review` 通过，52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。clean IPA、T7 独立副本、normal push 和 iOS 27 Actions 终态在阶段收尾补记；本机 SDK26.2/iOS26.3.1、未签名包和合成匹配音频不替代云端、签名、实体机、弱网或真实全曲。
+`bd904fe` clean unsigned archive 成功：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2、最低 iOS15.1、设备族`[1,2]`、`signed:false`。IPA 12,859,396 字节，SHA-256 `45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19`；164 项 ZIP CRC 通过，archive 与 IPA 内 `main.jsbundle`/可执行/Info.plist 字节一致，生产 bundle 不含本批测试适配器、matched fixture 或 `PRIVATE_TOKEN`，bundle 无签名和描述文件。archive Info/app Info/JS/可执行 SHA-256 分别为 `b25f5bc1…`、`dd9d3304…`、`37a0a271…`、`4eb3b2fa…`。内容哈希快照为 `build/distribution-history/45628ee9…/`，T7 独立副本为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-playback-diagnostics-clean-bd904fe/`，两边 IPA 摘要一致。当日清理检查内盘约 34GiB、T7 约 695GiB，无活动构建，未删除或搬走既有证据，`build/logs/cleanup-2026-11-01-ios27-j57.json`仅记录保留决定。
+
+R2/mobile-reverse offline case-guard 与 `ipa --review` 通过，52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。normal push 和 iOS 27 Actions 终态在阶段收尾补记；本机 SDK26.2/iOS26.3.1、未签名包和合成匹配音频不替代云端、签名、实体机、弱网或真实全曲。
 
 ## 2026-11-01 汽水公开歌单正式 App 回归
 

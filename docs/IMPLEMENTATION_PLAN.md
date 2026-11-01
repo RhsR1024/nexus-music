@@ -6,6 +6,8 @@
 
 934/934 检查、`node --check`、`git diff --check`、完整 native 套件和最终 Release `SourceUITests-1793544748938`（1/0/0、187.544 秒）通过；2PNG 来源 ready、亲看，manifest/source/bundle/server count 与日志哈希均已记录。r1 在旧 Swift 1676 行、进入诊断导航前失败，原结果保留；r2/r3 中间成功由后续 trace 上限/最终 UI 证据修正后的 r4 取代。详细证据见[回执](2026-11-01_playback-diagnostics-report.md)和[UI 场景](ui-spec/playback-diagnostics-2026-11-01.md)。
 
+`bd904fe` clean unsigned archive 成功，manifest `dirty:false`、arm64/iphoneos26.2、最低 iOS15.1、设备族`[1,2]`、未签名且无描述文件。IPA SHA-256 `45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19`；ZIP CRC、archive/IPA 内 JS/可执行/Info.plist 字节一致、生产 bundle 与测试夹具排除均通过。内容哈希快照和 T7 独立副本已逐字节核对。
+
 R2/mobile-reverse 离线 scope 与 `ipa --review` 通过，52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。iOS 27 云端、真实 iPhone/锁屏后台/输出路由、真实源弱网、冷/暖缓存、完整来源矩阵、小屏/动态字号/VoiceOver、连续动效、签名及真实全曲仍开放；本批只补 J57 部分纵向实现，不机械提高项目完成百分比。
 
 ## 2026-11-01 发现详情随机入口独立验收
