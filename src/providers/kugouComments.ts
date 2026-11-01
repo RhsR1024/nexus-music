@@ -2,6 +2,7 @@ import type {Track} from '../domain/track.ts';
 import type {CommentPage,CommentThreadPage,SongComment} from './comments.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {queryURL,type HTTPClient} from './http.ts';
+import {commentMediaURL,commentRegion} from './commentFields.ts';
 
 export interface KugouCommentCrypto {md5:(value:string)=>Promise<string>;nonce:()=>string;now?:()=>number}
 const row=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
@@ -19,8 +20,8 @@ function comment(value:unknown):SongComment|undefined{
  const v=row(value),id=numeric(v.id);let content=visible(v.content,10000);if(!id||!content)return;
  if(Array.isArray(v.atlist))for(const raw of v.atlist.slice(0,50)){const at=row(raw),key=numeric(at.id),name=visible(at.name,200);if(key&&name)content=content.replaceAll(`[at=${key}]`,`@${name} `);}
  const parent=visible(v.pcontent,10000),seconds=count(v.addtimestamp),likes=count(row(v.like).likenum);
- const replyCount=count(v.reply_num);
- return{id:`kg:${id}`,content:visible(content,10000),userName:visible(v.user_name,200)||'匿名用户',...(seconds!==undefined&&seconds<=8640000000000?{time:seconds*1000}:{}),...(likes!==undefined?{likes}:{}),...(replyCount!==undefined?{replyCount}:{}),...(parent?{reply:{userName:visible(v.puser,200)||'匿名用户',content:parent}}:{})};
+ const replyCount=count(v.reply_num),avatar=commentMediaURL(v.user_pic),region=commentRegion(visible(v.location,80));
+ return{id:`kg:${id}`,content:visible(content,10000),userName:visible(v.user_name,200)||'匿名用户',...(avatar?{avatar}:{}),...(region?{region}:{}),...(seconds!==undefined&&seconds<=8640000000000?{time:seconds*1000}:{}),...(likes!==undefined?{likes}:{}),...(replyCount!==undefined?{replyCount}:{}),...(parent?{reply:{userName:visible(v.puser,200)||'匿名用户',content:parent}}:{})};
 }
 function comments(values:unknown){
  if(!Array.isArray(values)||values.length>20)throw Error('评论响应无效');

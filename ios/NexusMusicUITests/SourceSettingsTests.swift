@@ -551,6 +551,8 @@ final class SourceSettingsTests: XCTestCase {
     let menuImage=XCTAttachment(screenshot:app.screenshot());menuImage.name="Search shared song actions";menuImage.lifetime = .keepAlways;add(menuImage)
     let comments=app.buttons["歌曲评论"].firstMatch;for _ in 0..<6 {if comments.isHittable{break};app.swipeUp()};comments.tap()
     XCTAssertTrue(app.staticTexts["Synthetic hot comment"].waitForExistence(timeout:15));XCTAssertTrue(app.staticTexts["Synthetic comment 1"].exists)
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"comments-avatar-1").firstMatch.exists)
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"comments-region-1").firstMatch.exists)
     let more=app.buttons["加载更多评论"];for _ in 0..<6 {if more.isHittable{break};app.swipeUp()};more.tap()
     let retry=app.buttons["重试评论"];XCTAssertTrue(retry.waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts["Synthetic comment 2"].exists);retry.tap()
     XCTAssertTrue(app.staticTexts["Synthetic comment 3"].waitForExistence(timeout:10));XCTAssertFalse(app.buttons["加载更多评论"].exists)
@@ -807,6 +809,8 @@ final class SourceSettingsTests: XCTestCase {
     func loaded() -> Int {Int(((list.value as? String) ?? "").filter{$0.isNumber}) ?? -1}
     func text(_ label:String) -> XCUIElement {app.staticTexts.matching(NSPredicate(format:"label == %@",label)).firstMatch}
     let initial=loaded();XCTAssertGreaterThanOrEqual(initial,20)
+    let avatar=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","comments-avatar-")).firstMatch
+    XCTAssertTrue(avatar.waitForExistence(timeout:20),"The live Migu comments must expose a displayable author avatar")
     image("Live anonymous Migu comments first page")
     XCTAssertTrue(text("热门评论").waitForExistence(timeout:20))
     let latest=text("最新评论")

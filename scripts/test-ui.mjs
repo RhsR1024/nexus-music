@@ -339,7 +339,7 @@ const server = createServer(async (req, res) => {
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname.includes('/api/v1/resource/comments/')){
       const offset=Number(parsed.searchParams.get('offset')??0);counts.comments??={first:0,next:0};
-      const comment=id=>({commentId:id,content:`Synthetic comment ${id}`,user:{nickname:'Fixture reader'},time:1000,likedCount:3});
+      const comment=id=>({commentId:id,content:`Synthetic comment ${id}`,user:{nickname:'Fixture reader',avatarUrl:`http://cdn.example/avatar-${id}.jpg?token=private`},ipLocation:{location:'上海'},time:1000,likedCount:3});
       if(offset===0){counts.comments.first++;res.end(JSON.stringify({code:200,hotComments:[{...comment('9'),content:'Synthetic hot comment'}],comments:[comment('1'),comment('2')],total:3,more:true}));}
       else {counts.comments.next++;res.end(JSON.stringify(counts.comments.next===1?{code:503}:{code:200,comments:[comment('3')],total:3,more:false}));}return;
     }

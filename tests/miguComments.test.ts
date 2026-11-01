@@ -13,9 +13,9 @@ test('Migu comments use anonymous HTTPS, separate hot rows and preserve replies 
  const input=song(),before=structuredClone(input);let calls=0;
  const reader=new PublicComments(async(url,request)=>{
   calls++;const parsed=new URL(url);assert.equal(parsed.origin,'https://app.c.nf.migu.cn');assert.equal(parsed.pathname,'/MIGUM3.0/user/comment/stack/v1.0');assert.equal(parsed.searchParams.get('resourceId'),input.origin.id);assert.equal(parsed.searchParams.get('commentId'),'');assert.equal(parsed.searchParams.get('queryType'),'1');assert.equal(request.credentials,'omit');assert.ok(!JSON.stringify(request).includes('marker'));
-  return response([entry('1',{commentInfo:'Root\ncomment',opNumItem:{thumbNum:7},replyComments:[{replyInfo:'Synthetic reply',user:{nickName:'Reply reader'}}]})]);
+  return response([entry('1',{commentInfo:'Root\ncomment',opNumItem:{thumbNum:7},user:{nickName:'Fixture reader',middleIcon:'http://cdn.example/migu.jpg?token=private'},replyComments:[{replyInfo:'Synthetic reply',user:{nickName:'Reply reader'}}]})]);
  });
- const page=await reader.page(input,0,signal());assert.equal(calls,1);assert.equal(page.items.length,1);assert.equal(page.items[0]!.id,'mg:1');assert.equal(page.items[0]!.content,'Root\ncomment');assert.equal(page.items[0]!.time,Date.UTC(2024,0,1,19,4));assert.equal(page.items[0]!.likes,7);assert.deepEqual(page.items[0]!.reply,{userName:'Reply reader',content:'Synthetic reply'});assert.equal(page.hot.length,1);assert.equal(page.total,41);assert.equal(page.hasMore,true);assert.deepEqual(input,before);
+ const page=await reader.page(input,0,signal());assert.equal(calls,1);assert.equal(page.items.length,1);assert.equal(page.items[0]!.id,'mg:1');assert.equal(page.items[0]!.content,'Root\ncomment');assert.equal(page.items[0]!.avatar,'https://cdn.example/migu.jpg');assert.equal(page.items[0]!.time,Date.UTC(2024,0,1,19,4));assert.equal(page.items[0]!.likes,7);assert.deepEqual(page.items[0]!.reply,{userName:'Reply reader',content:'Synthetic reply'});assert.equal(page.hot.length,1);assert.equal(page.total,41);assert.equal(page.hasMore,true);assert.deepEqual(input,before);
 });
 
 test('Migu cursor pages are isolated by original song and remain bound to the previous page',async()=>{

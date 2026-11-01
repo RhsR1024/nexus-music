@@ -4,13 +4,13 @@ import {PublicComments} from '../src/providers/comments.ts';
 import type {Track} from '../src/domain/track.ts';
 import {deferred} from './fixtures.ts';
 const song:Track={origin:{kind:'online',platform:'tx',id:'001yhApD1cXC5w'},title:'Public song',artist:'Public artist',metadata:{id:'9068436',url:'https://private.invalid/?token=marker',headers:{Cookie:'marker'}},qualities:[]};
-const entry=(commentid='1!thread-A*',rootcommentid=commentid)=>({commentid,rootcommentid,rootcommentcontent:'Root\\ntext [em]e400823[/em]',rootcommentnick:'Original',nick:'Latest',time:1700000000,praisenum:3});
+const entry=(commentid='1!thread-A*',rootcommentid=commentid)=>({commentid,rootcommentid,rootcommentcontent:'Root\\ntext [em]e400823[/em]',rootcommentnick:'Original',nick:'Latest',time:1700000000,praisenum:3,avatarurl:'http://y.gtimg.cn/music/photo/avatar.jpg?sign=private',Location:'广东'});
 const response=(rows:unknown[]=[entry()],total=41)=>({code:0,topid:9068436,comment:{commenttotal:total,commentlist:rows},hot_comment:{commenttotal:1,commentlist:[entry('1!hot')]}});
 const signal=()=>new AbortController().signal;
 test('QQ comments use numeric song identity anonymously, preserve opaque IDs and attribute replies separately',async()=>{
  const before=structuredClone(song);let calls=0;
- const reader=new PublicComments(async(url,request)=>{calls++;assert.equal(url,'https://c.y.qq.com/base/fcgi-bin/fcg_global_comment_h5.fcg');assert.equal(request.credentials,'omit');assert.ok(!JSON.stringify(request).includes('marker'));const p=new URLSearchParams(request.body);assert.equal(p.get('topid'),'9068436');assert.equal(p.get('uin'),'0');assert.equal(p.get('pagenum'),'0');return response([{...entry('1!reply','1!root'),middlecommentcontent:[{subcommentid:'1!reply',subcommentcontent:'Reply',replynick:'@Responder'}]}]);});
- const page=await reader.page(song,0,signal());assert.equal(calls,1);assert.equal(page.items[0]!.id,'tx:1!root:1!reply');assert.equal(page.items[0]!.content,'Reply');assert.equal(page.items[0]!.userName,'Responder');assert.equal(page.items[0]!.reply!.userName,'Original');assert.equal(page.items[0]!.reply!.content,'Root\ntext [表情]');assert.equal(page.items[0]!.time,1700000000000);assert.equal(page.hot.length,1);assert.equal(page.hasMore,true);assert.deepEqual(song,before);
+ const reader=new PublicComments(async(url,request)=>{calls++;assert.equal(url,'https://c.y.qq.com/base/fcgi-bin/fcg_global_comment_h5.fcg');assert.equal(request.credentials,'omit');assert.ok(!JSON.stringify(request).includes('marker'));const p=new URLSearchParams(request.body);assert.equal(p.get('topid'),'9068436');assert.equal(p.get('uin'),'0');assert.equal(p.get('pagenum'),'0');return response([{...entry('1!reply','1!root'),middlecommentcontent:[{subcommentid:'1!reply',subcommentcontent:'Reply',replynick:'@Responder',avatarurl:'https://y.gtimg.cn/music/photo/reply.jpg',location:'上海'}]}]);});
+ const page=await reader.page(song,0,signal());assert.equal(calls,1);assert.equal(page.items[0]!.id,'tx:1!root:1!reply');assert.equal(page.items[0]!.content,'Reply');assert.equal(page.items[0]!.userName,'Responder');assert.equal(page.items[0]!.avatar,'https://y.gtimg.cn/music/photo/reply.jpg');assert.equal(page.items[0]!.region,'上海');assert.equal(page.items[0]!.reply!.userName,'Original');assert.equal(page.items[0]!.reply!.content,'Root\ntext [表情]');assert.equal(page.items[0]!.time,1700000000000);assert.equal(page.hot.length,1);assert.equal(page.hasMore,true);assert.deepEqual(song,before);
 });
 test('QQ partial pages advance by page size, deduplicate rows and omit repeated hot sections',async()=>{
  const reader=new PublicComments(async(_url,request)=>{assert.equal(new URLSearchParams(request.body).get('pagenum'),'1');return response([entry(),entry()],41);});
@@ -42,4 +42,9 @@ test('QQ blocks private origins, route injection and invalid cursors before issu
 test('QQ retains a surviving reply to a removed root and omits unbound root time and likes',async()=>{
  const reader=new PublicComments(async()=>response([{...entry('1!reply','1!root'),rootcommentcontent:'',middlecommentcontent:[{subcommentid:'1!reply',subcommentcontent:'Surviving reply',replynick:'Reply author'}]},{...entry('1!unmatched','1!root'),rootcommentnick:''}],2));
  const page=await reader.page(song,0,signal());assert.equal(page.items[0]!.content,'Surviving reply');assert.equal(page.items[0]!.reply,undefined);assert.equal(page.items[1]!.userName,'匿名用户');assert.equal(page.items[1]!.time,undefined);assert.equal(page.items[1]!.likes,undefined);
+});
+
+test('QQ reply identity never inherits root avatar or location',async()=>{
+ const reader=new PublicComments(async()=>response([{...entry('1!reply','1!root'),middlecommentcontent:[{subcommentid:'1!reply',subcommentcontent:'Reply',replynick:'Responder'}]}]));
+ const page=await reader.page(song,0,signal());assert.equal(page.items[0]!.userName,'Responder');assert.equal(page.items[0]!.avatar,undefined);assert.equal(page.items[0]!.region,undefined);
 });

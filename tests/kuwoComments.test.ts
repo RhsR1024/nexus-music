@@ -4,14 +4,14 @@ import {PublicComments,CommentSession} from '../src/providers/comments.ts';
 import type {Track} from '../src/domain/track.ts';
 import {deferred} from './fixtures.ts';
 const song:Track={origin:{kind:'online',platform:'kw',id:'26445261'},title:'Public song',artist:'Public artist',metadata:{headers:{Cookie:'private-marker'},url:'https://private.invalid/token'},qualities:[]};
-const entry=(id='12345678901234567890',extra={})=>({id,msg:'Synthetic root\ntext',u_name:'Fixture reader',time:'1700000000',like_num:'7',...extra});
+const entry=(id='12345678901234567890',extra={})=>({id,msg:'Synthetic root\ntext',u_name:'Fixture reader',u_pic:'http://img.kuwo.cn/avatar.jpg?token=private',time:'1700000000',like_num:'7',...extra});
 const response=(hot:boolean,rows:unknown[]=[entry()],total=41,offset=20)=>({code:'200',result:'ok',comments:hot?[]:rows,hot_comments:hot?rows:[],comments_counts:hot?999:total,hot_comments_counts:hot?total:0,offset});
 const signal=()=>new AbortController().signal;
 
 test('Kuwo reads anonymous HTTPS latest and hot with independent totals and child attribution',async()=>{
  const input=structuredClone(song),calls:string[]=[];
  const reader=new PublicComments(async(url,request)=>{const p=new URL(url);assert.equal(p.origin,'https://ncomment.kuwo.cn');assert.equal(p.pathname,'/com.s');assert.equal(p.searchParams.get('sid'),song.origin.id);assert.equal(p.searchParams.get('uid'),'0');assert.equal(request.credentials,'omit');assert.ok(!JSON.stringify(request).includes('private-marker'));const hot=p.searchParams.get('type')==='get_rec_comment';calls.push(p.searchParams.get('type')!);return response(hot,[entry(hot?'2':undefined,{child_comments:[{msg:'Preview reply',u_name:'Reply reader'}]})],hot?1:41);});
- const page=await reader.page(song,0,signal());assert.deepEqual(calls.sort(),['get_comment','get_rec_comment']);assert.equal(page.total,41);assert.equal(page.nextOffset,20);assert.equal(page.hasMore,true);assert.equal(page.hot[0]!.id,'kw:2');assert.equal(page.items[0]!.id,'kw:12345678901234567890');assert.equal(page.items[0]!.time,1700000000000);assert.equal(page.items[0]!.likes,7);assert.deepEqual(page.items[0]!.reply,{userName:'Reply reader',content:'Preview reply'});assert.deepEqual(song,input);
+ const page=await reader.page(song,0,signal());assert.deepEqual(calls.sort(),['get_comment','get_rec_comment']);assert.equal(page.total,41);assert.equal(page.nextOffset,20);assert.equal(page.hasMore,true);assert.equal(page.hot[0]!.id,'kw:2');assert.equal(page.items[0]!.id,'kw:12345678901234567890');assert.equal(page.items[0]!.avatar,'https://img.kuwo.cn/avatar.jpg');assert.equal(page.items[0]!.time,1700000000000);assert.equal(page.items[0]!.likes,7);assert.deepEqual(page.items[0]!.reply,{userName:'Reply reader',content:'Preview reply'});assert.deepEqual(song,input);
 });
 test('Kuwo respects advancing server offsets and fetches hot only on the first page',async()=>{
  const starts:string[]=[];const reader=new PublicComments(async url=>{const p=new URL(url);starts.push(p.searchParams.get('start')!);assert.equal(p.searchParams.get('type'),'get_comment');return response(false,[entry('1'),entry('1')],50,47);});

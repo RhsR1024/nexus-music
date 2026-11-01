@@ -2,6 +2,7 @@ import type {Track} from '../domain/track.ts';
 import type {CommentPage,SongComment} from './comments.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {queryURL,type HTTPClient} from './http.ts';
+import {commentMediaURL} from './commentFields.ts';
 
 const row=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const visible=(v:unknown,max:number)=>typeof v==='string'?v.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g,'').slice(0,max).trim():'';
@@ -10,7 +11,8 @@ const id=(v:unknown)=>typeof v==='string'&&/^[1-9]\d{0,39}$/.test(v)?v:typeof v=
 function comment(value:unknown):SongComment|undefined{
  const v=row(value),key=id(v.id),content=visible(v.msg,10000);if(!key||!content)return;
  const replies=Array.isArray(v.child_comments)?v.child_comments.slice(0,50).map(row):[],reply=replies.find(v=>visible(v.msg,10000)),seconds=count(v.time),likes=count(v.like_num);
- return{id:`kw:${key}`,content,userName:visible(v.u_name,200)||'匿名用户',...(seconds!==undefined&&seconds<=8640000000000?{time:seconds*1000}:{}),...(likes!==undefined?{likes}:{}),...(reply?{reply:{userName:visible(reply.u_name,200)||'匿名用户',content:visible(reply.msg,10000)}}:{})};
+ const avatar=commentMediaURL(v.u_pic);
+ return{id:`kw:${key}`,content,userName:visible(v.u_name,200)||'匿名用户',...(avatar?{avatar}:{}),...(seconds!==undefined&&seconds<=8640000000000?{time:seconds*1000}:{}),...(likes!==undefined?{likes}:{}),...(reply?{reply:{userName:visible(reply.u_name,200)||'匿名用户',content:visible(reply.msg,10000)}}:{})};
 }
 function comments(value:unknown):SongComment[]{
  if(!Array.isArray(value)||value.length>20)throw Error('评论响应无效');

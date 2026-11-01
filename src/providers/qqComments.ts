@@ -2,6 +2,7 @@ import type {Track} from '../domain/track.ts';
 import type {CommentPage,SongComment} from './comments.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import type {HTTPClient} from './http.ts';
+import {commentMediaURL,commentRegion} from './commentFields.ts';
 const row=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const visible=(v:unknown,max:number)=>typeof v==='string'?v.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g,'').replace(/\\n/g,'\n').replace(/\[em\]e\d{1,8}\[\/em\]/g,'[表情]').slice(0,max).trim():'';
 const count=(v:unknown)=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0?v:typeof v==='string'&&/^\d{1,15}$/.test(v)&&Number.isSafeInteger(Number(v))?Number(v):undefined;
@@ -15,7 +16,8 @@ function comment(value:unknown):SongComment|undefined{
  if(!body&&!original)return;
  const author=visible(isReply?latest?.replynick:v.rootcommentnick,200)||(key===root?visible(v.nick,200):'')||'匿名用户';
  const seconds=count(v.time),likes=isReply||key===root?count(v.praisenum):undefined,time=seconds!==undefined&&seconds<=8640000000000&&(isReply||key===root)?seconds*1000:undefined;
- return{id:`tx:${root}:${key}`,content:body||original,userName:author.replace(/^@/,'')||'匿名用户',...(time!==undefined?{time}:{}),...(likes!==undefined?{likes}:{}),...(isReply&&original?{reply:{userName:visible(v.rootcommentnick,200)||'匿名用户',content:original}}:{})};
+ const identity=isReply?latest:v,avatar=commentMediaURL(identity?.avatarurl??identity?.Avatar),region=commentRegion(identity?.Location??identity?.location);
+ return{id:`tx:${root}:${key}`,content:body||original,userName:author.replace(/^@/,'')||'匿名用户',...(avatar?{avatar}:{}),...(region?{region}:{}),...(time!==undefined?{time}:{}),...(likes!==undefined?{likes}:{}),...(isReply&&original?{reply:{userName:visible(v.rootcommentnick,200)||'匿名用户',content:original}}:{})};
 }
 function comments(values:unknown):SongComment[]{
  if(!Array.isArray(values)||values.length>50)throw Error('评论响应无效');

@@ -1,3 +1,7 @@
+## 2026-11-02 F31 评论作者身份增量
+
+五平台公开评论接头像，网易云/QQ/酷狗接可选地区；缺失不造，头像失败首字符回退，根/回复身份层级统一。最终复核修正 QQ 回复借用根头像/地区与地区控制字符遗漏，937/937完整检查通过。真实咪咕、合成咪咕及网易云 Release UI 各1/0/0，来源与截图摘要见[本批回执](2026-11-02_comment-author-identities-report.md)。UI后最终QQ parser修正由完整契约验证，不冒充同一源码UI。复用E-033→F-032→P-032、IPA/APK gate与strict review通过，无新Sollin采集或像素/动效完成声明。完整F31、其他平台真实矩阵、emoji字形、签名/实体机与iOS27终态继续；本批IPA/提交收尾以回执补记为准。
+
 ## 2026-11-01 J57 播放链路诊断本地回归
 
 分享摘要补缺：`npm run check` **935/935**，最终 Release `SourceUITests-1793546584894.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、200.876 秒；系统分享面板实际打开/取消，返回诊断页后继续原匹配、换歌、重启流程。run manifest 记录 exit 0、`sourceUnchanged=true`，源码 digest `267281c2…`、安装 bundle `39f4984e…`、xcresult Info `c10fd988…`。精确日志 `build/logs/playback-diagnostics-share-20261101-232900/`、2PNG `build/ui-screenshots/playback-diagnostics-share-20261101-232900/` 均来源 ready 并亲看。分享文本纯函数额外覆盖 8→6 截断及 URL/credentials 脱敏。

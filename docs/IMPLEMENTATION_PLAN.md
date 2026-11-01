@@ -1,3 +1,7 @@
+## 2026-11-02 F31 评论作者身份增量
+
+五平台公开评论接头像，网易云/QQ/酷狗接可选地区；缺失不造，头像失败首字符回退，根/回复身份层级统一。最终复核修正 QQ 回复借用根头像/地区与地区控制字符遗漏，937/937完整检查通过。真实咪咕、合成咪咕及网易云 Release UI 各1/0/0，来源与截图摘要见[本批回执](2026-11-02_comment-author-identities-report.md)。UI后最终QQ parser修正由完整契约验证，不冒充同一源码UI。复用E-033→F-032→P-032、IPA/APK gate与strict review通过，无新Sollin采集或像素/动效完成声明。完整F31、其他平台真实矩阵、emoji字形、签名/实体机与iOS27终态继续；本批IPA/提交收尾以回执补记为准。
+
 ## 2026-11-01 J57 补缺：播放链路诊断
 
 `PlaybackController` 现为每次解析维护有界结构化 run，覆盖离线命中/未命中、手动/自动匹配、逐源请求失败/超时、最终选源与降档、cache identity 和原生 ready。最多保留最近 6 次；generation、AbortSignal 与旧 run 状态共同阻止迟到结果污染新播放。原生 route failure 会先结束失败 trace，再由其他路线以新 generation 重试，失败原始记录保持。

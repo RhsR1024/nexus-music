@@ -2,6 +2,7 @@ import {trackKey,type Track} from '../domain/track.ts';
 import type {CommentPage,CommentThreadPage,SongComment} from './comments.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {queryURL,type HTTPClient} from './http.ts';
+import {commentMediaURL} from './commentFields.ts';
 
 const row=(value:unknown):Record<string,unknown>=>value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
 const visible=(value:unknown,max:number)=>typeof value==='string'?value.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g,'').slice(0,max).trim():'';
@@ -22,8 +23,8 @@ function comment(value:unknown):SongComment|undefined{
  const item=row(value),id=opaque(item.commentId),content=visible(item.commentInfo,10000);if(!id||!content)return;
  const user=row(item.user),replies=Array.isArray(item.replyComments)?item.replyComments.slice(0,50).map(row):[],latest=replies.find(reply=>visible(reply.replyInfo,10000))??replies[0];
  const replyContent=visible(latest?.replyInfo,10000),replyUser=visible(row(latest?.user).nickName,200);
- const timestamp=time(item.commentTime),likes=count(row(item.opNumItem).thumbNum),replyCount=count(item.replyTotalCount);
- return{id:`mg:${id}`,content,userName:visible(user.nickName,200)||'匿名用户',...(timestamp!==undefined?{time:timestamp}:{}),...(likes!==undefined?{likes}:{}),...(replyCount!==undefined?{replyCount}:{}),...(replyContent?{reply:{userName:replyUser||'匿名用户',content:replyContent}}:{})};
+ const timestamp=time(item.commentTime),likes=count(row(item.opNumItem).thumbNum),replyCount=count(item.replyTotalCount),avatar=commentMediaURL(user.middleIcon??user.bigIcon??user.smallIcon);
+ return{id:`mg:${id}`,content,userName:visible(user.nickName,200)||'匿名用户',...(avatar?{avatar}:{}),...(timestamp!==undefined?{time:timestamp}:{}),...(likes!==undefined?{likes}:{}),...(replyCount!==undefined?{replyCount}:{}),...(replyContent?{reply:{userName:replyUser||'匿名用户',content:replyContent}}:{})};
 }
 
 function comments(values:unknown){
@@ -38,8 +39,8 @@ function replies(values:unknown,rootID:string):SongComment[]{
  const seen=new Set<string>(),items:SongComment[]=[];
  for(const raw of values){
   const item=row(raw),id=opaque(item.replyId),content=visible(item.replyInfo,10000);if(!id||!content||seen.has(id))continue;seen.add(id);
-  const timestamp=time(item.replyTime),likes=count(row(item.opNumItem).thumbNum),target=visible(item.targetComment,10000),targetUser=visible(row(item.targetUser).nickName,200);
-  items.push({id:`mg:${rootID}:reply:${id}`,content,userName:visible(row(item.user).nickName,200)||'匿名用户',...(timestamp!==undefined?{time:timestamp}:{}),...(likes!==undefined?{likes}:{}),...(target?{reply:{userName:targetUser||'匿名用户',content:target}}:{})});
+  const user=row(item.user),timestamp=time(item.replyTime),likes=count(row(item.opNumItem).thumbNum),target=visible(item.targetComment,10000),targetUser=visible(row(item.targetUser).nickName,200),avatar=commentMediaURL(user.middleIcon??user.bigIcon??user.smallIcon);
+  items.push({id:`mg:${rootID}:reply:${id}`,content,userName:visible(user.nickName,200)||'匿名用户',...(avatar?{avatar}:{}),...(timestamp!==undefined?{time:timestamp}:{}),...(likes!==undefined?{likes}:{}),...(target?{reply:{userName:targetUser||'匿名用户',content:target}}:{})});
  }
  if(values.length&&!items.length)throw Error('回复响应无效');return items;
 }

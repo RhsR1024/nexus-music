@@ -1,5 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {PublicComments,CommentSession,type CommentPage,type SongComment} from '../src/providers/comments.ts';
+import {commentMediaURL,commentRegion} from '../src/providers/commentFields.ts';
 import {parseProviderJSON} from '../src/providers/http.ts';
 import {deferred,track} from './fixtures.ts';
 const song={...track,origin:{kind:'online' as const,platform:'wy' as const,id:'12345678901234567890'}};
@@ -7,9 +8,17 @@ const comment=(id:string):SongComment=>({id,content:`Text ${id}`,userName:'Fixtu
 const page=(items:SongComment[],nextOffset:number,hasMore=false):CommentPage=>({hot:[],items,nextOffset,hasMore});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 test('public comments use exact original WY identity, preserve long IDs and separate hot rows from pagination',async()=>{
- let called='';const provider=new PublicComments(async url=>{called=url;return parseProviderJSON('{"code":200,"total":100,"more":true,"hotComments":[{"commentId":99999999999999999999,"content":"Hot","user":{"nickname":"Reader"}}],"comments":[{"commentId":12345678901234567890,"content":"Text","user":{"nickname":"Visitor"},"likedCount":3,"time":1000,"beReplied":[{"user":{"nickname":"Reply"},"content":"Reply text"}]},{"commentId":2,"content":""},{"commentId":12345678901234567890,"content":"Duplicate"}]}');});
- const result=await provider.page(song,0,new AbortController().signal);assert.match(called,/R_SO_4_12345678901234567890\?/);assert.equal(result.hot[0]!.id,'99999999999999999999');assert.equal(result.items[0]!.id,song.origin.id);assert.equal(result.nextOffset,3);assert.equal(result.items.length,1);assert.equal(result.hasMore,true);assert.equal(result.items[0]!.reply!.content,'Reply text');
+ let called='';const provider=new PublicComments(async url=>{called=url;return parseProviderJSON('{"code":200,"total":100,"more":true,"hotComments":[{"commentId":99999999999999999999,"content":"Hot","user":{"nickname":"Reader"}}],"comments":[{"commentId":12345678901234567890,"content":"Text","user":{"nickname":"Visitor","avatarUrl":"http://cdn.example/avatar.jpg?token=private"},"ipLocation":{"location":"上海"},"likedCount":3,"time":1000,"beReplied":[{"user":{"nickname":"Reply"},"content":"Reply text"}]},{"commentId":2,"content":""},{"commentId":12345678901234567890,"content":"Duplicate"}]}');});
+ const result=await provider.page(song,0,new AbortController().signal);assert.match(called,/R_SO_4_12345678901234567890\?/);assert.equal(result.hot[0]!.id,'99999999999999999999');assert.equal(result.items[0]!.id,song.origin.id);assert.equal(result.items[0]!.avatar,'https://cdn.example/avatar.jpg');assert.equal(result.items[0]!.region,'上海');assert.equal(result.nextOffset,3);assert.equal(result.items.length,1);assert.equal(result.hasMore,true);assert.equal(result.items[0]!.reply!.content,'Reply text');
  for(const origin of [{kind:'online',platform:'tx',id:'123'},{kind:'online',platform:'wy',id:'wy_123'},{kind:'imported',platform:'qishui',id:'123'}]){const other={...song,origin}as typeof song;assert.equal(provider.supports(other),false);await assert.rejects(provider.page(other,0,new AbortController().signal));}
+});
+test('comment identity fields accept only bounded public media URLs and plain regions',()=>{
+ assert.equal(commentMediaURL('//cdn.example/a.jpg?token=private#fragment'),'https://cdn.example/a.jpg');
+ assert.equal(commentMediaURL('https://cdn.example/a.jpg'),'https://cdn.example/a.jpg');
+ for(const value of ['javascript:alert(1)','https://user:pass@cdn.example/a.jpg','https://cdn.example/\nheader',`https://cdn.example/${'a'.repeat(2050)}`,42])assert.equal(commentMediaURL(value),undefined);
+ assert.equal(commentRegion('  Shanghai\u0000\n\u0001 Pudong\u0002  '),'Shanghai Pudong');
+ assert.equal(commentRegion('   '),undefined);
+ assert.equal(commentRegion('x'.repeat(100))!.length,80);
 });
 test('comments reject broken schema/service errors and never represent a failed response as an empty success',async()=>{
  for(const response of [{code:301,comments:[]},{code:200},{code:200,comments:[],more:'true'},{code:200,comments:Array(51).fill({})}]){const provider=new PublicComments(async()=>response);await assert.rejects(provider.page(song,0,new AbortController().signal));}
