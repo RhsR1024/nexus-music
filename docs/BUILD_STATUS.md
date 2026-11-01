@@ -1,3 +1,7 @@
+## 2026-11-01 酷狗回复 clean IPA
+
+`e115305` clean archive 已通过：`dirty:false`、arm64/iphoneos26.2、最低 iOS15.1、设备族1,2，IPA 12,848,459 字节、SHA-256 `246f0c69ceb59720fbc991240f69965bfc0f1d0d79bf987f88e7624cecdf0c2a`；无签名/描述文件，生产 bundle 与夹具排除通过，T7 独立副本逐字节摘要一致。manifest SHA-256 `0a9a557a852f1c4e196513f837fc02d71bff530ddbed0db9062fa926523198e6`。细节与仍待的云端/实体机/签名/动效见[回执](2026-11-01_kugou-comment-replies-report.md)。
+
 ## 2026-11-01 酷狗回复最终候选
 
 923 项检查通过，最终合成 `SourceUITests-1793532877000` 与真实匿名 `SourceUITests-1793533187681` 均 1/0/0；6+4PNG 来源 ready 且亲看，真实测试要求实际回复行。提交前 dirty IPA 为 12,848,459 字节，SHA-256 `37dd354ac8f06f107bd988bfefc0e0a56d3f655af944c5fc134f7e6726ab8735`，arm64/iphoneos26.2/iOS15.1/设备族1,2，unsigned、无 provisioning profile，生产 bundle 与测试夹具排除通过。严格 review 为 52E/17WI/106事件/43F/43P、0错误/0警告。详细证据与限制见[回执](2026-11-01_kugou-comment-replies-report.md)。iOS27、实体机、签名、emoji 字形与动效仍独立待验。

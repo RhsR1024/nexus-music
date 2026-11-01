@@ -51,3 +51,7 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testLiveKugouPubl
 - `kugou-replies-race-live-20261101`：index SHA-256 `7c9e3f16f176279b221e728067fdb9e4bb88a9dba05088974025146e33495863`；manifest SHA-256 `a1843cca09d0dc9346dd69bdccc8ce9aded7d2637addc7858b7ca9972c4f9f4b`。
 
 最终候选本地 unsigned IPA 已重新归档并独立检查：12,848,459 字节，SHA-256 `37dd354ac8f06f107bd988bfefc0e0a56d3f655af944c5fc134f7e6726ab8735`；arm64/iphoneos26.2、最低 iOS 15.1、iPhone+iPad，ZIP CRC 正常、无签名或 provisioning profile。生产 bundle 含回复读取实现，不含测试 adapter、夹具控制或合成回复文案。此为提交前 dirty 构建，不能写成 clean；前一 `90e771…ec99` 包已由归档脚本保存至内容哈希快照。
+
+## clean 提交归档
+
+功能提交 `e11530570674eb371661edbf116642af47be318c` 后在 clean 工作树重新归档：manifest `dirty:false`、空 `workingTreeChanges`；IPA 12,848,459 字节，SHA-256 `246f0c69ceb59720fbc991240f69965bfc0f1d0d79bf987f88e7624cecdf0c2a`，manifest SHA-256 `0a9a557a852f1c4e196513f837fc02d71bff530ddbed0db9062fa926523198e6`。独立检查确认 arm64/iphoneos26.2、iOS15.1、iPhone+iPad、unsigned、无描述文件，生产回复实现存在而合成夹具被排除。IPA、SHA 文件、manifest 与核验 JSON 已复制到 T7 `BuildArchive/2026-11-01-kugou-replies-clean-e115305/`，源/目标文件摘要一致。旧 dirty 包继续由内容哈希快照保留；clean IPA 不能替代 iOS27 云端、签名或实体机验收。

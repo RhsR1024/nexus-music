@@ -90,3 +90,5 @@ manifest 为 `dirty:false`，两处 SHA-256 均为
 核验通过后只回收已保存在归档中的内盘源副本，T7 完整内容保留。直接回收 4,001,255,424 字节（约 3.73GiB），回收后内盘可用 37,357,867,008 字节（约 34.79GiB）。下载目录留下 `Xcode.app.T7-archive.txt`，包含归档、哈希与恢复到空 Mac 文件系统目录的命令；不得把 `.tar` 冒充可直接执行的 `.app`。
 
 精确回执为 `build/logs/cleanup-20261101-inactive-xcode.json` 及目标旁 `receipt.json`；逐文件清单为目标旁 `contents-verification.json`。本轮未丢弃个人内容、逆向证据、失败原始结果或最新两组有效阶段。`ios/._build` 仅迁入忽略目录 `build/metadata-preserved-20261101/`，Git 新增 `._*` 排除；最新两组 UI、IPA 内容哈希快照和当前设备增量缓存继续保留。
+
+酷狗回复 clean 阶段产物追加：`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-01-kugou-replies-clean-e115305/` 保留 IPA/SHA/manifest/核验JSON，IPA摘要 `246f0c69ceb59720fbc991240f69965bfc0f1d0d79bf987f88e7624cecdf0c2a`，manifest摘要 `0a9a557a852f1c4e196513f837fc02d71bff530ddbed0db9062fa926523198e6`，源/目标一致；原 dirty IPA 由 `build/distribution-history/37dd354ac8f06f107bd988bfefc0e0a56d3f655af944c5fc134f7e6726ab8735/` 保留，前一 emoji clean 阶段独立包保留。
