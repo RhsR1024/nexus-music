@@ -40,3 +40,13 @@ Sollin 范围继续限定本机离线样本；路由回执 `work/master-route-20
 无使用者的 CocoaPods 下载缓存完整归档至 `/Volumes/T7 Touch/NexusMusic/DeveloperArchive/2026-11-02-cocoapods-cache/CocoaPods.tar`，17,225条目、1,392,008,366文件内容字节。逐文件SHA-256、目录类型/权限/符号链接及源清单二次核对后回收内盘副本；T7保留全部内容，无个人文件删除。归档SHA-256 `9b2e10daac786b5c9e3126e2d3070fec06a0aba5ce42d3cf038d3bcccfe1b2a1`；恢复时在无pod install活动下将tar解到 `~/Library/Caches`，源旁 `CocoaPods.T7-archive.txt` 与 `build/logs/cleanup-20261102-cocoapods-cache.json` 保留回执。当前内盘约30GiB；同时设备构建仍有占用变化，不把df净差冒充缓存净释放量。当前工具链/模拟器/DerivedData/逆向证据未动，T7另一个Xcode提取仍在运行，不作为可用工具链。
 
 提交前 dirty IPA SHA-256 `8fc7eb9a9a385fdd896cc0f837e07b3d3f7b75409d9b46b81d0bf1dd5b58d676`，arm64/iphoneos26.2/最低iOS15.1/[1,2]，未签名。完整归档日志 `build/logs/archive-comment-identities-precommit-20261102.log`；包验证回执 `build/logs/comments-identities-archive-verification-dirty-20261102.json`。源码与文档diff、私有资源排除在提交前复核，最终clean包另记。
+
+## 提交与 clean 交付
+
+功能提交 `d1928944593749975677afe838d17372249d821d` 已正常 push 并核对远端 main。提交后 clean IPA 为12,865,345字节、SHA-256 `8cfef1d0b3ae564ede6e7584566d2682cdb272d8aa6831c7209f20a945b8ceff`；manifest `dirty:false`/`workingTreeChanges:[]`，摘要 `cc7dcffa3b81aeace6c0104e1da2f6f03b5003adc1601b904a8f5d0f98137576`，arm64/iphoneos26.2/最低iOS15.1/[1,2]、unsigned。164项ZIP CRC、archive/IPA中JS/可执行/Info.plist字节、正式评论身份标记、测试/私有/签名材料排除均通过。原 dirty 包由内容哈希快照保留。
+
+clean IPA、manifest、校验/证据索引和清理回执已复制到 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-comment-identities-clean-d192894/` 并逐文件核对SHA-256；本机 `build/distribution-history/8cfef1d0b3ae564ede6e7584566d2682cdb272d8aa6831c7209f20a945b8ceff/` 保留内容快照。机器回执为 `build/logs/comments-identities-archive-verification-clean-20261102.json`、`build/logs/cleanup-20261102-comment-identities-stage.json`。
+
+产品 push 后实核云端 `41327658103`/`d192894` 为唯一pending，`41314376539`/`69c9316`仍运行，旧pending `41321953872` 自动取消。未手动取消/重派任何旧任务。再次IPA/APK strict review均0错误/0警告。本批云端实际终态、签名和实体机继续；clean包仅证明所列源码的本地设备SDK归档。
+
+每日空间维护追加：无活动使用者、已确认可重建的 WorkBuddy BundleMigration 缓存（4,501条目、1,521,251,585文件内容字节）完整封存到 `/Volumes/T7 Touch/NexusMusic/DeveloperArchive/2026-11-02-workbuddy-migration-cache/`，逐项类型/权限/大小/SHA-256与符号链接核验后回收内盘副本；归档摘要 `8201e9ddec6c7a315892d5efd2f2d966feb492979f5eced6911e6523293d2b8c`，回执 `build/logs/cleanup-20261102-workbuddy-migration-cache.json`。内盘可用现约35GiB。项目外个人内容仍完整保留在T7，未直接删除；Xcode外置提取继续运行且未被清理或当成当前工具链。
