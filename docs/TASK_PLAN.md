@@ -1,3 +1,14 @@
+## 2026-11-02 M10 进程终止后的原生后台下载
+
+- [x] 从正式 App UI 发起真实原生 `URLSession` 下载，等待服务器保持真实部分响应后终止 App 进程。
+- [x] 在 UI/JS 进程已退出时释放响应，以独立 `fullFinished=1` 证明完整非 Range 响应在进程终止期间写完。
+- [x] 重启 App 后验证原生 journal 认领、摘要校验和“播放离线文件”可用；显式暂停跨重启、条件 Range 恢复及离线播放的原断言继续通过。
+- [x] `npm run check` 948/948、完整 native 和 Release XCUITest 1/0/0通过；服务器 `full=2/resumed=1/blocked=0/heldFull=2/fullFinished=1`，终止前、重启认领和 Range 完成截图已亲看。
+- [x] `eb52efe` clean unsigned archive、manifest/ZIP CRC/归档字节、隐私与测试标记排除、T7逐文件哈希复核通过。
+- [ ] 真实 iPhone 的系统终止/重新调度、长时弱网与低电量/功耗继续；签名/描述文件/设备安装仍缺条件。
+
+见[本批回执](2026-11-02-background-download-termination-report.md)。本批关闭模拟器中的终止后完成与重启认领证据缺口；M10/F22 整体仍开放，不把模拟器、未签名包或编译成功写成真机后台交付。
+
 ## 2026-11-02 F31 酷我公开评论回复协议核验
 
 - [x] 按 `js-reverse` 路由核对九个官方移动 bundle、当前桌面评论模块、两个匿名根列表端点和公开页面运行观察。

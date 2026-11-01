@@ -1,3 +1,11 @@
+## 2026-11-02 M10 进程终止后的原生后台下载
+
+正式 App 从公开 UI 发起真实原生 `URLSession` 下载。测试服务器只发送部分响应后，测试终止 App 进程并释放响应；服务端独立 `fullFinished=1` 证明完整响应在 UI/JS 进程已退出时写完。重启 App 后，现有原生 journal 认领完成文件、摘要校验通过并显示“播放离线文件”。同一用例随后继续验证显式暂停跨进程重启、条件 Range 续传与离线播放；最终计数为 `full=2/resumed=1/blocked=0/heldFull=2/fullFinished=1`。
+
+本批只改 UI 测试与合成服务器计数，不修改产品下载策略。`npm run check` 948/948、完整 native、Release `SourceUITests-1793564362296` 1/0/0（350.283 秒）及 `sourceUnchanged=true` 通过；终止前、重启认领、Range 完成 3PNG 来源 ready 并亲看。`eb52efe` clean unsigned IPA 为 12,872,747 字节、SHA-256 `0f489379…`，manifest/ZIP CRC/归档字节/隐私测试标记排除及 T7 逐文件复核通过。见[回执](2026-11-02-background-download-termination-report.md)。
+
+模拟器进程终止不同于真实 iPhone 的系统重新调度；长时弱网、低电量/功耗、后台音频路由、签名与安装继续独立验收。M10/F22 仍为未完成工作包，不提高保守代码或完整交付完成率。
+
 ## 2026-11-02 F31 酷我公开评论回复协议核验
 
 `KuwoPublicComments` 的现有匿名根评论、热门/最新、offset 校验、总数、日期/点赞与单条回复预览保持。公开 bundle 和匿名响应只证明 `get_comment`/`get_rec_comment` 根列表及预览，不能证明完整回复 endpoint；缺少根绑定、回复页游标、总数、`has_more` 和行 schema 时不实现分页请求。

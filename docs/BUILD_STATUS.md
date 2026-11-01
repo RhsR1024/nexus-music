@@ -1,3 +1,9 @@
+## 2026-11-02 M10 进程终止后的原生后台下载
+
+功能提交 `eb52efeb87bb1f61b02ccbc4fa4dd2d44364367f` 的 Release 目标 XCUITest `build/SourceUITests-1793564362296.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、350.283 秒，设备为 iPhone 15 Pro Max / iOS 26.3.1 模拟器（x86_64）。测试在真实原生 `URLSession` 接收部分响应时终止 App，服务器在进程退出后写完并由独立 `fullFinished=1` 证明；重启后现有 journal、摘要校验和“播放离线文件”显示通过，显式暂停/跨重启/条件 Range 继续也保持。run manifest 为 `exitCode=0`、`sourceUnchanged=true`，服务器最终 `full=2/resumed=1/blocked=0/heldFull=2/fullFinished=1`。
+
+`npm run check` 948/948、完整 native 通过。3PNG 来源 ready 并亲看；xcresult Info、summary、日志、run manifest、计数和三图 SHA-256 见[本批回执](2026-11-02-background-download-termination-report.md)。清洁未签名 archive 对应同一提交，manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`；IPA 12,872,747字节、SHA-256 `0f4893794ecd478df5748a99ba8b3a8eace5ce1dfa6dc9e48e6b3d7bea757b73`，164项ZIP CRC、归档字节、测试/私有标记及描述文件/签名排除通过。T7 `BuildArchive/2026-11-02-background-termination-eb52efe/` 的56份payload、24,422,519字节逐份哈希一致，恢复清单保留。真实iPhone系统终止调度、长时弱网/低电量/功耗、签名和安装仍未验；本机模拟器与未签名包不替代真机结果。
+
 ## 2026-11-02 五平台矩阵及旧iOS27录像失败诊断
 
 940检查与最终真实评论Release矩阵5/0/0（`SourceUITests-1793554215133`）通过。旧run41314376539为核心21/1，唯一全局背景用例在录像就绪控制处约15秒后失败；compact及13PNG已取得并核验，旧stderr缺失，底层迟滞原因未确定。加固后的本机背景570.374秒、164帧/8中间帧验证通过；新云端和本批IPA/提交收尾见[精确回执](2026-11-02_comment-live-matrix-and-avatar-query-report.md)，不把本机成功写成iOS27通过。

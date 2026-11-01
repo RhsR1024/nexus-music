@@ -1,3 +1,11 @@
+## 2026-11-02 M10 进程终止后的原生后台下载
+
+补强 M10/F22 的系统后台下载证据。正式 App 通过公开 UI 发起真实原生 `URLSession` 下载；测试服务器先保持真实部分响应，测试随后终止 App 进程并释放响应，独立 `fullFinished=1` 证明传输在 UI/JS 进程已退出时完成。重启 App 后，现有原生 journal 认领文件、摘要校验通过并显示“播放离线文件”；同一用例继续通过显式暂停跨重启与条件 Range 续传，服务器最终 `full=2/resumed=1/blocked=0/heldFull=2/fullFinished=1`，离线播放未访问受阻网络。产品代码未改，只补强测试与验收。
+
+`npm run check` 948/948、完整 native 和 Release 目标 XCUITest `SourceUITests-1793564362296` 1/0/0、350.283 秒通过；模拟器为 iPhone 15 Pro Max / iOS 26.3.1，run manifest `sourceUnchanged=true`。新增实现与边界见[本批回执](docs/2026-11-02-background-download-termination-report.md)。
+
+功能提交`eb52efe`的清洁未签名归档成功：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、未签名且无描述文件。IPA 12,872,747字节、SHA-256 `0f4893794ecd478df5748a99ba8b3a8eace5ce1dfa6dc9e48e6b3d7bea757b73`，164项ZIP CRC、归档字节与隐私/测试标记排除通过；T7阶段56份payload、24,422,519字节逐份哈希一致。真实iPhone系统终止调度、长时弱网/低电量/功耗、音频路由、签名和安装仍待，M10/F22不报完成。push、云端iOS27与阶段清理在收尾补记。
+
 ## 2026-11-02 S10 系统媒体传输命令即时执行
 
 修复系统 Now Playing 的播放恢复、暂停切换和定位在命令返回成功时仍只等待 JS 事件的问题。`NativePlaybackEngine` 现在先操作当前 `AVPlayer`，再发送保留 `entryId`、媒体项 ID 与 generation 的 `remote` 事件同步 JS；上一首/下一首仍只触发同一 `PlaybackController` 队列，没有新增原生队列或第二播放器。暂停代次、停止后 `noSuchContent`、迟到解析隔离及封面/收藏身份保持不变。
