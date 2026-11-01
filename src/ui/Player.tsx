@@ -26,6 +26,10 @@ import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObjec
 import {Alert, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent, useWindowDimensions} from 'react-native';
 const layoutLabels={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'} as const;
 const isPaperPanel=(panel:string)=>panel==='menu';
+import {DownloadQualityChoice} from './DownloadQualityChoice.tsx';
+import {DownloadSubmissionView} from './DownloadSubmission.tsx';
+import {downloadableTrack,type DownloadSubmission} from '../app/downloadSubmission.ts';
+import {normalizeQuality,qualityOrder,type Quality} from '../domain/quality.ts';
 import {Modal,SheetModal} from './AdaptiveModal.tsx';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
@@ -57,16 +61,21 @@ export function Player({ services }: { services: Services }) {
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   // Multi-source fallback may land below the preferred quality; say so instead
   // of letting the request tier read as the requested one.
-  const qualityNotice = currentEntry(state.queue)?.track.origin.kind!=='local' && state.media?.quality && state.media.quality !== preferences.quality ? `，已降级为 ${state.media.quality}` : '';
+  const reportedQuality=normalizeQuality(state.media?.quality??'');
+  const qualityNotice = currentEntry(state.queue)?.track.origin.kind!=='local' && reportedQuality && qualityOrder.indexOf(reportedQuality)>qualityOrder.indexOf(preferences.quality) ? `，已降级为 ${reportedQuality}` : '';
   const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
+  useSyncExternalStore(services.offlineDownloads.subscribe,services.offlineDownloads.getSnapshot);
   const [commenting,setCommenting]=useState<Track|null>(null);
   const [choosingLyric,setChoosingLyric]=useState(false),[classicLyricRequest,setClassicLyricRequest]=useState(0);
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
-  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'globalFont'|'lyricFont'>('menu');
+  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'globalFont'|'lyricFont'|'download'>('menu');
   const [panel,setPanel]=useState<'rate'|'sleep'|null>(null),[panelReturnsToMenu,setPanelReturnsToMenu]=useState(false);
   const closePanel=()=>{setPanel(null);if(panelReturnsToMenu){setPanelReturnsToMenu(false);setDetailPanel('menu');setTimeout(()=>setDetails(true),320);}};
+  const [download,setDownload]=useState<{track:Track;returnPanel:'menu'|'content'|null;submitting:boolean;report?:DownloadSubmission;error?:string}|null>(null),downloadSerial=useRef(0);
+  useEffect(()=>{downloadSerial.current++;setDownload(null);if(detailPanel==='download')setDetails(false);},[open,state.queue.currentId]);
+  useEffect(()=>()=>{downloadSerial.current++;},[]);
   const styleReturnsToMenu=useRef(true);
   const miniTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
   const dismissTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
@@ -83,8 +92,18 @@ export function Player({ services }: { services: Services }) {
   const actualMatch=state.media?.matchedTrack,lyricTrack=actualMatch??(entry.track.origin.kind==='imported'?match?.target:match?.method==='manual'&&!state.media?match.target:undefined)??entry.track;
   const toggle = () => { if (state.intent === 'playing') controller.pause(); else void controller.play(); };
   const offline=services.offlineDownloads.find(entry.track);
-  const saveOffline=()=>{void services.offlineDownloads.enqueue(entry.track).then(item=>services.offlineDownloads.start(item.id)).catch(()=>Alert.alert('离线保存失败','当前来源无法保存或存储空间不足，原有数据保留。'));};
-  const closeDetails=()=>setDetails(false);
+  const submitDownload=async(track:Track,returnPanel:'menu'|'content'|null,preferredQuality?:Quality)=>{
+    const serial=++downloadSerial.current;setDownload({track,returnPanel,submitting:true});
+    try{const report=await services.submitDownloads([track],preferredQuality?{preferredQuality}:undefined);if(serial===downloadSerial.current)setDownload({track,returnPanel,submitting:false,report});}
+    catch{if(serial===downloadSerial.current)setDownload({track,returnPanel,submitting:false,error:'下载提交未完成，请在下载管理检查已有任务。'});}
+  };
+  const saveOffline=()=>{
+    if(!downloadableTrack(entry.track))return;
+    const track=entry.track,returnPanel=details&&(detailPanel==='menu'||detailPanel==='content')?detailPanel:null;downloadSerial.current++;setDetailPanel('download');setDetails(true);
+    if(track.origin.kind==='online'&&!services.offlineDownloads.find(track))setDownload({track,returnPanel,submitting:false});else void submitDownload(track,returnPanel);
+  };
+  const returnFromDownload=()=>{const panel=download?.returnPanel;downloadSerial.current++;if(panel){setDownload(null);setDetailPanel(panel);}else setDetails(false);};
+  const closeDetails=()=>{downloadSerial.current++;setDetails(false);};
   const button = (label: string, action: () => void) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.button}><Text style={styles.buttonText}>{label}</Text></Pressable>;
   // Start the pageSheet dismissal before the player tree changes shape. iOS can
   // leave an empty sheet intercepting touches when the presented content is
@@ -98,7 +117,7 @@ export function Player({ services }: { services: Services }) {
         <Spectrum services={services} />
         {(entry.track.origin.kind==='imported'||entry.track.origin.kind==='online')&&<View style={styles.row}><Text style={styles.caption}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
         {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)}/>}
-        <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
+        <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}{downloadableTrack(entry.track)&&button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
         <View style={styles.row}>{button(`播放倍速 ${preferences.rate}x`,()=>setPanel('rate'))}{button('睡眠定时器',()=>setPanel('sleep'))}</View>
         <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
         <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityState={{disabled:!timeline.seekable}} accessibilityValue={{ min: 0, max: Math.floor(timeline.duration), now: Math.floor(timeline.position) }}
@@ -181,7 +200,7 @@ export function Player({ services }: { services: Services }) {
     <ClassicLyricChrome services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
   </>;
   const classicTools=<View style={{gap:12,marginTop:12}}>
-    <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
+    <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{downloadableTrack(entry.track)&&button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
     <Text style={styles.caption}>{localQuality??`偏好 ${preferences.quality} · 成功请求档位 ${state.media?.quality??'待解析'}${qualityNotice}（非实际文件格式证明）`}</Text>
     <Spectrum services={services}/>
     <View style={styles.row}>{button('−15秒',()=>controller.seek(state.position-15))}{button('＋15秒',()=>controller.seek(state.position+15))}{button(`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle});})}{button('匹配歌曲',()=>setMatching(entry.track))}</View>
@@ -210,21 +229,21 @@ export function Player({ services }: { services: Services }) {
         {open&&preferences.playerLayout!=='classic'&&<ModernPlayer services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onQueue={()=>{setDetailPanel('content');setDetails(true);}} onComments={()=>setCommenting(actualMatch??entry.track)}/>}
         {preferences.playerLayout==='classic'&&classicTools}
       </PlayerScroll>}</View>
-      <SheetModal visible={details&&open} animationType="slide" onRequestClose={closeDetails}>
+      <SheetModal visible={details&&open} animationType="slide" onRequestClose={closeDetails} onDismiss={()=>{if(detailPanel==='download')setDownload(null);}}>
         {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
-        <ScrollView key={detailPanel} style={[styles.root,isPaperPanel(detailPanel)&&{backgroundColor:theme.palette.background[0]}]} contentContainerStyle={isPaperPanel(detailPanel)?{flexGrow:1}:styles.content}>
+        {detailPanel==='download'&&download?(download.report?<DownloadSubmissionView services={services} report={download.report} backLabel={download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页'} onClose={returnFromDownload}/>:download.track.origin.kind==='online'&&!download.submitting&&!download.error?<DownloadQualityChoice services={services} track={download.track} busy={false} backLabel={download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页'} onBack={returnFromDownload} onConfirm={q=>{void submitDownload(download.track,download.returnPanel,q);}}/>:<View style={{flex:1,padding:24,gap:16}}>{button(download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页',returnFromDownload)}<Text style={styles.title}>{download.track.title}</Text><Text accessibilityRole={download.error?'alert':undefined} style={styles.caption}>{download.error??'正在提交下载任务…'}</Text></View>):<ScrollView testID="player-details-scroll" key={detailPanel} style={[styles.root,isPaperPanel(detailPanel)&&{backgroundColor:theme.palette.background[0]}]} contentContainerStyle={isPaperPanel(detailPanel)?{flexGrow:1}:styles.content}>
           {detailPanel==='style'?<>
             {button('收起播放界面样式',()=>{if(styleReturnsToMenu.current)setDetailPanel('menu');else closeDetails();})}
             <Text style={styles.title}>播放界面样式</Text>{skinSelector}
           </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
             {button(detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置',()=>setDetailPanel(detailPanel==='lyrics'?'menu':'lyrics'))}
             <Text style={styles.title}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text>{detailPanel==='lyrics'&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>{closeDetails();setTimeout(()=>setChoosingLyric(true),320);}} style={styles.button}><Text style={styles.buttonText}>选择歌词来源</Text></Pressable>}<FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
-          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])} onDownload={saveOffline} downloadLabel={offline?.status==='completed'?'已下载':offline?.status==='downloading'?'下载中':'下载'}/>:<>
+          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])} onDownload={downloadableTrack(entry.track)?saveOffline:undefined} downloadLabel={offline?.status==='completed'?'已下载':offline?.status==='downloading'?'下载中':'下载'}/>:<>
             {button('收起播放选项',closeDetails)}
             {button('返回播放选项',()=>setDetailPanel('menu'))}
             <Text style={styles.title}>队列与播放选项</Text>{detailContent}
           </>}
-        </ScrollView>
+        </ScrollView>}
       </SheetModal>
       {open&&panel&&<View style={{position:'absolute',left:0,right:0,top:0,bottom:0}}>
         <Pressable accessibilityRole="button" accessibilityLabel="关闭面板" onPress={()=>{setPanelReturnsToMenu(false);setPanel(null);}} style={{flex:1,backgroundColor:'rgba(24,18,16,0.28)'}}/>

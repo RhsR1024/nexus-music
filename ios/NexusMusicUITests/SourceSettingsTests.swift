@@ -22,6 +22,11 @@ final class SourceSettingsTests: XCTestCase {
     let gone=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:element)
     return XCTWaiter.wait(for:[gone],timeout:timeout) == .completed
   }
+  private func finishPlayerDownload(_ app:XCUIApplication){
+    let confirm=app.buttons["download-choice-confirm"]
+    if confirm.waitForExistence(timeout:3){XCTAssertTrue(confirm.isEnabled);confirm.tap()}
+    let back=app.buttons["download-submission-back"];XCTAssertTrue(back.waitForExistence(timeout:20));back.tap();XCTAssertTrue(waitForGone(back,timeout:10))
+  }
   private func openSettings(_ app:XCUIApplication,page:String){
     for id in ["background-sheet-close","theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{
       let close=app.buttons[id]
@@ -368,7 +373,7 @@ final class SourceSettingsTests: XCTestCase {
     let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch;XCTAssertTrue(account.waitForExistence(timeout:10));reveal(account);account.tap()
     let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch;XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();app.buttons["播放全部"].tap()
     let mini=app.buttons["打开播放页"];XCTAssertTrue(mini.waitForExistence(timeout:10));mini.tap()
-    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15));let save=app.buttons["保存离线"];reveal(save);_=try control(pauseWindow:true);save.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15));let save=app.buttons["保存离线"];reveal(save);_=try control(pauseWindow:true);save.tap();finishPlayerDownload(app)
     let pause=app.buttons["暂停"].firstMatch;reveal(pause);pause.tap();let close=app.buttons["收起播放页"];reveal(close);close.tap()
     openSettings(app,page:"downloads")
     let limit=app.descendants(matching:.any).matching(identifier:"offline-limit-1024").firstMatch;reveal(limit);limit.tap()
@@ -1745,6 +1750,39 @@ final class SourceSettingsTests: XCTestCase {
       if !importedRow.waitForExistence(timeout:20){let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual source import failure hierarchy";tree.lifetime = .keepAlways;add(tree);XCTFail("Actual source import must produce its production catalog row");return}
       reach(importedRow);importedRow.tap();let enable=app.buttons["启用"].firstMatch;reach(enable);enable.tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","完成 ")).firstMatch.waitForExistence(timeout:180))
   }
+  func testLivePlayerDownloadQualityChoice() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
+    func reach(_ item:XCUIElement){for _ in 0..<40{if item.isHittable{break};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(item.isHittable)}
+    func pauseActual(_ title:String){
+      XCTAssertTrue(app.staticTexts[title].firstMatch.waitForExistence(timeout:15));let play=app.buttons["播放"].firstMatch;if play.waitForExistence(timeout:2){play.tap()}
+      XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:90));let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch,before=progress.value as? String ?? "";RunLoop.current.run(until:Date().addingTimeInterval(4));XCTAssertNotEqual(progress.value as? String,before);app.buttons["暂停"].firstMatch.tap()
+    }
+    let player=app.buttons["打开播放页"].firstMatch,tasks=app.buttons["settings-open-downloadTasks"]
+    func restoreOriginal(){openSettings(app,page:"downloads");reach(tasks);tasks.tap();let original=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND label BEGINSWITH %@","offline-remove-","删除离线文件：Shape of You · ")).firstMatch;reach(original);let originalID=String(original.identifier.dropFirst("offline-remove-".count)),originalPlay=app.buttons["offline-play-"+originalID];reach(originalPlay);originalPlay.tap();player.tap();pauseActual("Shape of You");app.buttons["收起播放页"].firstMatch.tap()}
+    restoreOriginal()
+    try prepareLiveDownloadSource(app)
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap()
+    let clear=app.buttons["search-clear"];if clear.exists{clear.tap()};let query=app.textFields["搜索歌曲或歌手"];query.tap();for c in "Photograph Ed Sheeran"{query.typeText(String(c))};query.typeText("\n")
+    let row=app.buttons["search-track-wy-0"];XCTAssertTrue(row.waitForExistence(timeout:45));reach(row);let title=String(row.label.dropFirst(2));row.tap();XCTAssertTrue(player.waitForExistence(timeout:20));player.tap();pauseActual(title)
+    let more=app.buttons["更多播放控制"];reach(more);more.tap();let existing=app.buttons.matching(NSPredicate(format:"label == %@ OR label == %@","已下载","下载")).firstMatch;XCTAssertTrue(existing.waitForExistence(timeout:10));reach(existing);image("Real player menu download entry");existing.tap()
+    let summary=app.staticTexts["download-submission-summary"],back=app.buttons["download-submission-back"]
+    if summary.waitForExistence(timeout:3){
+      XCTAssertTrue(summary.label.contains("已有 1 项"));let remove=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND label BEGINSWITH %@","offline-remove-","删除离线文件："+title+" · ")).firstMatch;reach(remove);let removedID=remove.identifier;remove.tap();XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout:5));app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(app.buttons[removedID],timeout:15));reach(back);back.tap();let again=app.buttons["下载"].firstMatch;reach(again);again.tap()
+    }
+    let choice=app.descendants(matching:.any).matching(identifier:"download-choice-320k").firstMatch;XCTAssertTrue(choice.waitForExistence(timeout:15));reach(choice);choice.tap();image("Real player one-time quality choices")
+    let probe=app.buttons["download-choice-probe"];reach(probe);probe.tap();let result=app.staticTexts["download-choice-probe-result"];XCTAssertTrue(result.waitForExistence(timeout:120));XCTAssertTrue(result.label.contains("请求 320k"));image("Real player quality routing probe")
+    let confirm=app.buttons["download-choice-confirm"];reach(confirm);confirm.tap();XCTAssertTrue(summary.waitForExistence(timeout:15));XCTAssertTrue(summary.label.contains("已受理 1 项"));image("Real player download admission in original sheet")
+    let removal=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND (label BEGINSWITH %@ OR label BEGINSWITH %@)","offline-remove-","删除离线文件："+title+" · ","移除记录："+title+" · ")).firstMatch;XCTAssertTrue(removal.waitForExistence(timeout:10));let task=String(removal.identifier.dropFirst("offline-remove-".count)),status=app.descendants(matching:.any).matching(identifier:"offline-status-"+task).firstMatch
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in status.exists && status.label.contains("已保存")},object:nil)],timeout:240),.completed)
+    let captured=app.descendants(matching:.any).matching(identifier:"offline-choice-"+task).firstMatch;XCTAssertTrue(captured.exists);XCTAssertTrue(captured.label.contains("本次首选 320k"));image("Real player task actually saved with quality")
+    reach(back);back.tap();XCTAssertTrue(app.buttons["已下载"].waitForExistence(timeout:10));image("Real download returns to player menu");app.buttons["收起播放选项"].tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.staticTexts[title].firstMatch.exists);image("Real player download preserves paused song")
+    let saved=app.buttons["已保存离线"];reach(saved);saved.tap();XCTAssertTrue(summary.waitForExistence(timeout:15));XCTAssertTrue(summary.label.contains("已有 1 项"));image("Real player body save opens same canonical task");reach(back);back.tap();XCTAssertTrue(waitForGone(back,timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));let queue=app.buttons["查看播放队列"];reach(queue);queue.tap();let queueSave=app.descendants(matching:.any).matching(identifier:"player-details-scroll").firstMatch.buttons["已保存离线"];reach(queueSave);queueSave.tap();XCTAssertTrue(summary.waitForExistence(timeout:15));XCTAssertEqual(back.label,"返回队列与播放选项");image("Real queue panel save reuses canonical task");reach(back);back.tap();XCTAssertTrue(app.staticTexts["队列与播放选项"].waitForExistence(timeout:10));image("Real download returns to queue options");let queueClose=app.buttons["收起播放选项"].firstMatch;reach(queueClose);queueClose.tap();let collapse=app.buttons["收起播放页"];reach(collapse);collapse.tap()
+    // Restore the original public sample by an explicit normal play action;
+    // those deliberate plays are separate from the download command.
+    restoreOriginal()
+    app.terminate();app.launch();openSettings(app,page:"downloads");reach(tasks);tasks.tap();let restored=app.descendants(matching:.any).matching(identifier:"offline-choice-"+task).firstMatch;reach(restored);XCTAssertTrue(restored.label.contains("本次首选 320k"));image("Real player requested quality survives restart")
+  }
   func testLiveSongDownloadEntries() throws {try exerciseLiveSongDownloads()}
   func testLiveSongDownloadQualityChoice() throws {try exerciseLiveSongDownloads(qualityChoice:true)}
   private func exerciseLiveSongDownloads(qualityChoice:Bool=false) throws {
@@ -1823,7 +1861,7 @@ final class SourceSettingsTests: XCTestCase {
     if handle.waitForExistence(timeout:2) {if handle.isHittable {handle.tap()} else {handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()};_ = waitForGone(handle,timeout:8)}
     func saveCurrent(){
       XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:30));app.buttons["打开播放页"].firstMatch.tap()
-      let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap()
+      let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap();finishPlayerDownload(app)
       XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:8));app.buttons["收起播放页"].firstMatch.tap()
     }
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
@@ -1858,7 +1896,7 @@ final class SourceSettingsTests: XCTestCase {
         let resolved=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in resolvedBanner()},object:nil)
         if XCTWaiter.wait(for:[resolved],timeout:120) == .completed {
           settled=rowTitle
-          let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap()
+          let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap();finishPlayerDownload(app)
           XCTAssertTrue(app.buttons["收起播放页"].waitForExistence(timeout:8));app.buttons["收起播放页"].firstMatch.tap()
           return settled
         }
@@ -1955,7 +1993,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:15));app.buttons["打开播放页"].firstMatch.tap()
     XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:30),"Fixture stream must play before saving")
     func saveCurrent(){
-      let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reveal(save);save.tap()
+      let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reveal(save);save.tap();finishPlayerDownload(app)
       RunLoop.current.run(until:Date().addingTimeInterval(1))
     }
     saveCurrent()
@@ -2233,7 +2271,7 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"downloads");tap("settings-open-downloadTasks");let count=app.staticTexts["offline-task-summary"];XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertTrue(count.label.contains("2 个已保存"))
     let remove=app.buttons["删除离线文件：Shape of You · Ed Sheeran"];reach(remove);remove.tap();XCTAssertTrue(app.alerts["删除离线文件？"].waitForExistence(timeout:5));app.alerts.buttons["删除"].tap()
     XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","1 个已保存"),object:count)],timeout:20),.completed)
-    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let save=app.buttons["保存离线"];reach(save);save.tap();let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
+    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let save=app.buttons["保存离线"];reach(save);save.tap();finishPlayerDownload(app);let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
     openSettings(app,page:"downloads");tap("settings-open-downloadTasks");XCTAssertTrue(count.waitForExistence(timeout:15))
     XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","2 个已保存"),object:count)],timeout:240),.completed);image("Real download with independent preference saved")
     openSettings(app,page:"playback");reach(playback320);XCTAssertTrue(playback320.isSelected);image("Real download preserves playback preference")
@@ -2282,7 +2320,7 @@ final class SourceSettingsTests: XCTestCase {
     let allow=app.alerts.buttons.matching(NSPredicate(format:"label IN %@",["允许","Allow"])).firstMatch;if allow.waitForExistence(timeout:2){allow.tap()};summary("Nexus UITest Fixtures");image("Real destination selected actual writable folder")
     app.terminate();app.launch();openSettings(app,page:"downloads");reach(app.staticTexts["download-destination-summary"]);summary("Nexus UITest Fixtures");image("Real destination bookmark retained after restart")
     tap("settings-open-downloadTasks");let count=app.staticTexts["offline-task-summary"];XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertTrue(count.label.contains("2 个已保存"));let remove=app.buttons["删除离线文件：Shape of You · Ed Sheeran"];reach(remove);remove.tap();XCTAssertTrue(app.alerts["删除离线文件？"].waitForExistence(timeout:5));app.alerts.buttons["删除"].tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","1 个已保存"),object:count)],timeout:20),.completed)
-    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let save=app.buttons["保存离线"];reach(save);save.tap();let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
+    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let save=app.buttons["保存离线"];reach(save);save.tap();finishPlayerDownload(app);let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
     openSettings(app,page:"downloads");tap("settings-open-downloadTasks");let saved=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已另存 4 个文件")).firstMatch;XCTAssertTrue(saved.waitForExistence(timeout:240));reach(saved);image("Real destination automatic four file copy after actual download")
     let record=String(saved.identifier.dropFirst("offline-delivery-".count));tap("offline-delivery-save-"+record);let name=app.staticTexts["offline-delivery-name-"+record];XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@"," (2).mp3"),object:name)],timeout:90),.completed);reach(name);image("Real destination collision group uses second suffix")
     app.terminate();app.launch();openSettings(app,page:"downloads");tap("settings-open-downloadTasks");XCTAssertTrue(name.waitForExistence(timeout:15));XCTAssertTrue(name.label.contains(" (2).mp3"));reach(name);image("Real destination completed copy retained without recopy")
@@ -2301,7 +2339,7 @@ final class SourceSettingsTests: XCTestCase {
     tap("download-cover-open");tap("download-cover-platform-wy");tap("download-cover-size-256");image("Real managed download attachment policy before enqueue");tap("download-cover-open");tap("settings-open-downloadTasks")
     let count=app.staticTexts["offline-task-summary"];XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertTrue(count.label.contains("2 个已保存"))
     let remove=app.buttons["删除离线文件：Shape of You · Ed Sheeran"];reach(remove);remove.tap();XCTAssertTrue(app.alerts["删除离线文件？"].waitForExistence(timeout:5));app.alerts.buttons["删除"].tap();XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","1 个已保存"),object:count)],timeout:20),.completed)
-    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let saveOffline=app.buttons["保存离线"];reach(saveOffline);saveOffline.tap();let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
+    let player=app.buttons["打开播放页"].firstMatch;reach(player);player.tap();let saveOffline=app.buttons["保存离线"];reach(saveOffline);saveOffline.tap();finishPlayerDownload(app);let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap()
     openSettings(app,page:"downloads");tap("settings-open-downloadTasks");XCTAssertTrue(count.waitForExistence(timeout:15));XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"label CONTAINS %@","2 个已保存"),object:count)],timeout:240),.completed)
     let ready=app.staticTexts.matching(NSPredicate(format:"label == %@","附加文件 · 已保存")).firstMatch;XCTAssertTrue(ready.waitForExistence(timeout:90));reach(ready);image("Real managed companions saved after actual audio download")
     app.terminate();app.launch();openSettings(app,page:"downloads");tap("settings-open-downloadTasks");XCTAssertTrue(ready.waitForExistence(timeout:15));reach(ready);image("Real managed companions retained after restart")

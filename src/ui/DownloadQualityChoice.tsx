@@ -7,7 +7,7 @@ import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {controls,radius,space,typography} from './tokens.ts';
 
-export function DownloadQualityChoice({services,track,busy,onBack,onConfirm}:{services:Services;track:Track;busy:boolean;onBack:()=>void;onConfirm:(quality:Quality)=>void}){
+export function DownloadQualityChoice({services,track,busy,onBack,onConfirm,backLabel='返回歌曲操作'}:{services:Services;track:Track;busy:boolean;onBack:()=>void;onConfirm:(quality:Quality)=>void;backLabel?:string}){
  const {palette:p}=useTheme(),sources=useSyncExternalStore(services.registry.subscribe,services.registry.getSnapshot),preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
  const platform=track.origin.kind==='online'?track.origin.platform:undefined;
  const declared=new Set(sources.filter(source=>services.registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(c=>c.platform===platform&&c.actions.includes('musicUrl')).flatMap(c=>c.qualities.map(normalizeQuality).filter((q):q is Quality=>q!==undefined))));
@@ -26,7 +26,7 @@ export function DownloadQualityChoice({services,track,busy,onBack,onConfirm}:{se
  const locked=busy||checking,estimate=choice?track.qualities.find(q=>normalizeQuality(q.id)===choice)?.sizeBytes:undefined;
  const button=(id:string,label:string,action:()=>void,disabled=false)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={action} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:p.surface,opacity:disabled?0.5:1}}><Text style={{...typography.body,color:p.accent}}>{label}</Text></Pressable>;
  return <ScrollView style={{backgroundColor:p.background[0]}} contentContainerStyle={{padding:space.lg,gap:space.md,paddingBottom:space.xl}}>
-  {button('download-choice-back','返回歌曲操作',onBack)}
+  {button('download-choice-back',backLabel,onBack)}
   <Text accessibilityRole="header" style={{...typography.title,color:p.text}}>选择本次下载音质</Text><Text style={{...typography.body,color:p.text}}>{track.title} · {track.artist}</Text>
   <Text style={{...typography.caption,color:p.secondary}}>档位由已启用音源声明。检测会请求解析，实际下载时会重新取址；来源标记不保证文件编码或码率。</Text>
   <View style={{gap:space.sm}}>{qualities.map(q=><Pressable key={q} testID={`download-choice-${q}`} accessibilityRole="radio" accessibilityLabel={`本次下载 ${q}`} accessibilityState={{selected:choice===q,disabled:locked}} disabled={locked} onPress={()=>choose(q)} style={{minHeight:controls.hit,padding:space.md,borderRadius:radius.md,backgroundColor:choice===q?p.selected:p.surface}}><Text style={{...typography.body,color:choice===q?p.accent:p.text}}>{q} · 音源声明</Text></Pressable>)}</View>
