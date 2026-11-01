@@ -1,3 +1,9 @@
+## 2026-11-02 S10 系统媒体传输命令即时执行
+
+修复系统 Now Playing 的播放恢复、暂停切换和定位在命令返回成功时仍只等待 JS 事件的问题。`NativePlaybackEngine` 现在先操作当前 `AVPlayer`，再发送保留 `entryId`、媒体项 ID 与 generation 的 `remote` 事件同步 JS；上一首/下一首仍只触发同一 `PlaybackController` 队列，没有新增原生队列或第二播放器。暂停代次、停止后 `noSuchContent`、迟到解析隔离及封面/收藏身份保持不变。
+
+系统媒体 CLI 等待真实合成 WAV ready 后实读 Now Playing 播放速率、playback state、elapsed position 与命令身份，覆盖 play、toggle 双向、seek、next/previous 及停止后拒绝。`npm run check` 948/948、完整 native 和 Xcode26.3/SDK26.2 Release 模拟器构建通过。另在 `tsconfig.json` 显式排除本机忽略的 `work/` 原始逆向 bundle，避免其压缩 JS 被产品类型检查误扫。清洁 IPA、Sollin strict review、push、云端 iOS27 和真机验收在阶段收尾补记；macOS CLI/编译不替代灵动岛、后台、路由、中断、签名或功耗。
+
 ## 2026-11-02 F31 酷我公开评论回复协议核验
 
 酷我匿名公开根评论已确认可读，移动响应可带`child_comments`/`child_comment_count`，桌面响应可带单个`reply`预览；九个官方移动 bundle、当前桌面评论模块及公开页面运行均没有暴露可复现的完整回复列表请求。缺少歌曲/根评论绑定、回复页码或游标、总数、`has_more`和行 schema，故`KuwoPublicComments`继续保留根列表与单条预览，`CommentsModal`不 dispatch 到未验证完整回复请求。只有取得新的固定官方公开契约后才重开，不猜测 endpoint，也不把登录态/原生 bridge 当作公开协议。

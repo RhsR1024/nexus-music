@@ -1,6 +1,6 @@
 # 0026 系统 Now Playing 与灵动岛媒体面板
 
-日期：2026-10-16。状态：需求和技术边界确定，待补齐实现/双构建及真机验收。关联 F06/F37、J30/J59、TASK_PLAN S10。
+日期：2026-10-16。状态：标准系统媒体元数据、封面、收藏及播放控制已实现并通过本地契约；清洁 IPA、云端 iOS27 与真机验收继续。关联 F06/F37、J30/J59、TASK_PLAN S10。
 
 ## 用户目标
 
@@ -59,6 +59,6 @@
 
 ## 当前实施与验证
 
-原创SystemMediaSession已连接生产nativeSession/LibraryStore/CoverService：实际录音用于封面/标题，收藏绑定原曲；等待原生load接受后发布，换曲/停止取消旧请求，暂停不废弃当前媒体项。Swift受限本地图片解码后发布MPMediaItemArtwork/专辑/媒体类型，停播清理元数据和命令；远控携带媒体项身份，like按isNegative表达期望状态，落库后回写isActive，外部App内收藏变化同步。原生暂停立即生效，JS拒绝已换项的迟到控制。没有新增扩展/第二播放器/逐帧React循环。
+原创SystemMediaSession已连接生产nativeSession/LibraryStore/CoverService：实际录音用于封面/标题，收藏绑定原曲；等待原生load接受后发布，换曲/停止取消旧请求，暂停不废弃当前媒体项。Swift受限本地图片解码后发布MPMediaItemArtwork/专辑/媒体类型，停播清理元数据和命令；远控携带媒体项身份，like按isNegative表达期望状态，落库后回写isActive，外部App内收藏变化同步。原生暂停立即生效；播放恢复、暂停切换和定位也先作用于当前AVPlayer，再发送带媒体项身份/generation的事件同步JS状态，上一首/下一首仍只由唯一队列控制器推进。JS拒绝已换项的迟到控制。没有新增扩展/第二播放器/逐帧React循环。
 
-本地235项业务/类型检查、完整native格式/DSP/缓存/WebDAV与独立SystemMediaCLI均通过。后者实际读取MPNowPlayingInfoCenter、MPMediaItemArtwork及MPRemoteCommandCenter状态，验证空项/停止、封面迟到、暂停代次、收藏状态和命令身份/路径边界；不是只验证自建字典。但该CLI运行在macOS，本地iOS App回归、arm64 IPA与本批云端iOS27继续分别验证。系统收藏入口是否可见、后台面板外观/路由与真实iPhone仍未验收。
+2026-11-02 `npm run check` 948/948、完整native格式/DSP/缓存/WebDAV与独立SystemMediaCLI通过，本地iOS Release编译成功。CLI实际读取MPNowPlayingInfoCenter、MPMediaItemArtwork及MPRemoteCommandCenter状态，验证空项/停止、封面迟到、暂停代次、播放速率、暂停切换、实际定位、收藏状态和命令身份/路径边界；不是只验证自建字典。但该CLI运行在macOS，arm64清洁IPA与本批云端iOS27继续分别验证。系统收藏入口是否可见、后台面板外观/路由与真实iPhone仍未验收。

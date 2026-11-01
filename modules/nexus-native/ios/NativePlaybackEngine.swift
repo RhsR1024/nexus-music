@@ -91,11 +91,17 @@ final class NativePlaybackEngine {
     if !Thread.isMainThread { return DispatchQueue.main.sync { self.handleSystemCommand(action, seconds: seconds, favorite: favorite) } }
     guard !entryID.isEmpty, !systemItemID.isEmpty else { return .noSuchContent }
     if action == "pause" || (action == "toggle" && wantsPlay) { remotePause(); return .success }
-    var body: [String: Any] = ["action": action == "toggle" ? "play" : action, "entryId": entryID, "itemID": systemItemID, "generation": generation]
+    // Resume and seek must affect the loaded AVPlayer before the system command
+    // returns. The tagged JS event below still reconciles the authoritative
+    // queue/controller state, but a suspended bridge must not leave a system
+    // command acknowledged with no media change.
+    if action == "play" || action == "toggle" { play(entryID, generation) }
     if action == "seek" {
       guard let seconds, seconds.isFinite, seconds >= 0 else { return .commandFailed }
-      body["seconds"] = seconds
+      seek(seconds, entryID, generation)
     }
+    var body: [String: Any] = ["action": action == "toggle" ? "play" : action, "entryId": entryID, "itemID": systemItemID, "generation": generation]
+    if action == "seek", let seconds { body["seconds"] = seconds }
     if action == "favorite" { guard let favorite else { return .commandFailed }; body["favorite"] = favorite }
     emit("remote", body); return .success
   }
