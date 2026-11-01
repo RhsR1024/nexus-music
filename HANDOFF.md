@@ -1,3 +1,11 @@
+## 2026-11-02 漫途版本1备份正式 App 导入与精确 MID 播放
+
+已有 Wayfarer v1 解析、预览和原子追加链路已通过正式 App Files 选择器验收。合成备份覆盖 2 个歌单、4 条歌单歌曲、1 首收藏、1 条不支持来源、2 个源/连接配置及设置：预览取消不写入；确认后保留 `first/second/first` 顺序和重复项，汽水长 ID 保持“待匹配”，不支持来源省略；终止重启后歌单和收藏仍在。导入 QQ MID 在启用 LX 合成源后首次请求本次唯一音频路径并播放到 PCM，测试结束后只清理夹具数据。
+
+最终 Release `SourceUITests-1793567530426` 为 1/0/0、259.384 秒，Files 选择器取消专项 `SourceUITests-1793567947710` 为 1/0/0、27.286 秒；两次 `sourceUnchanged=true`，源码 digest 均为 `382b7f20…`。`npm run check` 948/948、完整 native、脚本/Swift/YAML/diff检查通过；5PNG 来源 ready、逐张亲看。初始固定 MID 在第二次运行时因缓存导致“已就绪但无新请求”，最终改为每轮唯一 MID并由 fixture 返回预期路径，确定性排除缓存与模糊替换。详细证据、失败历史、哈希和隐私边界见[本批回执](docs/2026-11-02-wayfarer-app-import-report.md)。
+
+真实私人备份 `resource/wayfarer_music-backup.json` 保持忽略，SHA-256 `bd5f4fc4…`；本批不回写或提交私人源、设置、账号、URL。清洁 IPA、提交/push、iOS27 云端、真实私人备份、实体机/签名与弱网仍待，不报漫途/F12/F13 或全项目完成。
+
 ## 2026-11-02 M10 进程终止后的原生后台下载
 
 补强 M10/F22 的系统后台下载证据。正式 App 通过公开 UI 发起真实原生 `URLSession` 下载；测试服务器先保持真实部分响应，测试随后终止 App 进程并释放响应，独立 `fullFinished=1` 证明传输在 UI/JS 进程已退出时完成。重启 App 后，现有原生 journal 认领文件、摘要校验通过并显示“播放离线文件”；同一用例继续通过显式暂停跨重启与条件 Range 续传，服务器最终 `full=2/resumed=1/blocked=0/heldFull=2/fullFinished=1`，离线播放未访问受阻网络。产品代码未改，只补强测试与验收。

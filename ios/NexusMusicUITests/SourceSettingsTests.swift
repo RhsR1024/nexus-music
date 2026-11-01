@@ -4704,6 +4704,124 @@ final class SourceSettingsTests: XCTestCase {
     }
     XCTAssertTrue(button.waitForExistence(timeout:5))
   }
+  func testWayfarerAppImport() throws {
+    let app=XCUIApplication();app.launch()
+    let firstTitle="Nexus Wayfarer Fixture A",secondTitle="Nexus Wayfarer Fixture B",favoriteTitle="Wayfarer Favorite"
+    func image(_ name:String){let value=XCTAttachment(screenshot:XCUIScreen.main.screenshot());value.name=name;value.lifetime = .keepAlways;add(value)}
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<40 {
+        if waitForHittable(element,timeout:0.3){return}
+        let above=element.exists && !element.frame.isEmpty && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.3:0.72)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.72:0.3)))
+      }
+      XCTAssertTrue(waitForHittable(element,timeout:3),"Expected visible Wayfarer control: \(element.identifier)")
+    }
+    func tab(_ name:String){
+      let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-"+name).firstMatch
+      let item=rail.exists ? rail:app.descendants(matching:.any).matching(identifier:"tab-"+name).firstMatch
+      XCTAssertTrue(item.waitForExistence(timeout:15));XCTAssertTrue(waitForHittable(item,timeout:10));item.tap()
+      let selected=XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:item)
+      XCTAssertEqual(XCTWaiter.wait(for:[selected],timeout:5),.completed,"\(name) tab must actually become selected")
+    }
+    func playlist(_ title:String)->XCUIElement{app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",title)).firstMatch}
+    func openPlaylistList(){tab("library");let lists=app.buttons["我的歌单"];XCTAssertTrue(lists.waitForExistence(timeout:10));reveal(lists);lists.tap()}
+    func removeFixturePlaylists(){
+      openPlaylistList()
+      for _ in 0..<6 {
+        let existing=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",firstTitle)).firstMatch
+        let other=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",secondTitle)).firstMatch
+        let target=existing.exists ? existing:other
+        if !target.waitForExistence(timeout:2){break}
+        reveal(target);target.tap();let remove=app.buttons["删除歌单"];reveal(remove);remove.tap();app.alerts.buttons["删除"].tap()
+        XCTAssertTrue(waitForGone(target,timeout:10))
+      }
+    }
+    func ensureMatchingSource(){
+      openSettings(app,page:"sources")
+      let disable=app.buttons["停用音源：Nexus Matching Fixture"]
+      if disable.waitForExistence(timeout:3){XCTAssertTrue(disable.isEnabled);return}
+      let enable=app.buttons["启用音源：Nexus Matching Fixture"]
+      if enable.waitForExistence(timeout:3){reveal(enable);enable.tap();XCTAssertTrue(app.buttons["停用音源：Nexus Matching Fixture"].waitForExistence(timeout:20));return}
+      let address=app.textFields["音源订阅地址"];reveal(address);address.tap()
+      for character in "http://127.0.0.1:18439/matching-source.js"{address.typeText(String(character))}
+      address.typeText("\n");app.buttons["从地址导入"].tap()
+      XCTAssertTrue(enable.waitForExistence(timeout:20));reveal(enable);enable.tap()
+      XCTAssertTrue(disable.waitForExistence(timeout:20));XCTAssertTrue(app.staticTexts["已启用"].firstMatch.waitForExistence(timeout:10))
+    }
+    func selectBackup(){
+      let importer=app.buttons["导入漫途版本1备份"];XCTAssertTrue(importer.waitForExistence(timeout:15));reveal(importer);importer.tap()
+      let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+      XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+      selectLocalFixture("Nexus Wayfarer Fixture",in:app)
+    }
+    func verifyPlaylist(_ title:String,_ expected:[String]){
+      let row=playlist(title);XCTAssertTrue(row.waitForExistence(timeout:10));reveal(row);row.tap()
+      XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout:10))
+      let rows=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@ OR label BEGINSWITH %@ OR label BEGINSWITH %@",expected[0],expected[1],expected.count>2 ? expected[2]:expected[1]))
+      XCTAssertTrue(rows.firstMatch.waitForExistence(timeout:10))
+      let values=rows.allElementsBoundByIndex.map(\.label)
+      let actual=values.prefix(expected.count).map{value in expected.first(where:value.hasPrefix) ?? value}
+      XCTAssertEqual(Array(actual),expected)
+      for index in 1..<min(values.count,expected.count){XCTAssertLessThan(rows.element(boundBy:index-1).frame.minY,rows.element(boundBy:index).frame.minY)}
+    }
+
+    removeFixturePlaylists()
+    tab("library")
+    selectBackup()
+    let alert=app.alerts["导入漫途备份"]
+    XCTAssertTrue(alert.waitForExistence(timeout:15))
+    XCTAssertTrue(alert.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","2 个歌单、4 条歌单歌曲、1 首收藏")).firstMatch.exists)
+    XCTAssertTrue(alert.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","1 条未支持来源将跳过")).firstMatch.exists)
+    XCTAssertTrue(alert.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","忽略 2 个连接/音源配置及全部设置")).firstMatch.exists)
+    XCTAssertFalse(alert.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","fixture-secret")).firstMatch.exists)
+    image("Wayfarer preview before import")
+    alert.buttons["取消"].tap();XCTAssertTrue(waitForGone(alert,timeout:5))
+    openPlaylistList();XCTAssertFalse(playlist(firstTitle).exists);XCTAssertFalse(playlist(secondTitle).exists)
+
+    tab("library")
+    selectBackup()
+    XCTAssertTrue(alert.waitForExistence(timeout:15));alert.buttons["追加导入"].tap()
+    let message=app.staticTexts["library-data-message"]
+    XCTAssertTrue(message.waitForExistence(timeout:15));XCTAssertEqual(message.label,"漫途导入完成：2 个歌单、4 条歌曲")
+    image("Wayfarer import appended without private source configuration")
+
+    ensureMatchingSource()
+    openPlaylistList()
+    XCTAssertEqual(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",firstTitle)).count,1)
+    XCTAssertEqual(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",secondTitle)).count,1)
+    verifyPlaylist(firstTitle,["Wayfarer first","Wayfarer second","Wayfarer first"])
+    let back=app.buttons["返回歌单列表"];reveal(back);back.tap()
+    let qishui=playlist(secondTitle);reveal(qishui);qishui.tap()
+    let qishuiRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Wayfarer Qishui")).firstMatch
+    XCTAssertTrue(qishuiRow.waitForExistence(timeout:10));XCTAssertTrue(qishuiRow.label.contains("汽水 · 待匹配"))
+    XCTAssertFalse(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Wayfarer unsupported")).firstMatch.exists)
+    image("Wayfarer playlists preserve order duplicates and unsupported count")
+
+    app.terminate();app.launch();openPlaylistList()
+    XCTAssertTrue(playlist(firstTitle).waitForExistence(timeout:10));XCTAssertTrue(playlist(secondTitle).exists)
+    verifyPlaylist(firstTitle,["Wayfarer first","Wayfarer second","Wayfarer first"])
+    let favorite=app.buttons["更多操作："+favoriteTitle];tab("library");let favorites=app.buttons["我的收藏"];reveal(favorites);favorites.tap()
+    reveal(favorite);XCTAssertTrue(favorite.exists,"Imported favorite must persist after relaunch")
+    image("Wayfarer favorite persists after relaunch")
+
+    openPlaylistList();let persisted=playlist(firstTitle);reveal(persisted);persisted.tap()
+    let tx=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Wayfarer second")).firstMatch
+    XCTAssertTrue(tx.waitForExistence(timeout:10));reveal(tx);tx.tap()
+    XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:15));app.buttons["打开播放页"].tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60),"An imported QQ MID must enrich and play through the enabled LX source")
+    let stateData=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/wayfarer-fixture-state")!)
+    let state=try XCTUnwrap(JSONSerialization.jsonObject(with:stateData) as? [String:Any])
+    let media=try XCTUnwrap(state["matchAudio"] as? [String:Int])
+    let expectedAudio=try XCTUnwrap(state["expectedMatchingAudio"] as? String)
+    XCTAssertGreaterThan(media[expectedAudio] ?? 0,0,"Playback must request this run's exact imported MID, not cached audio or a fuzzy replacement")
+    image("Wayfarer imported track resolved to PCM")
+    app.buttons["收起播放页"].tap()
+
+    removeFixturePlaylists()
+    tab("library");let favoritesTab=app.buttons["我的收藏"];reveal(favoritesTab);favoritesTab.tap()
+    let removable=app.buttons["更多操作："+favoriteTitle]
+    if removable.waitForExistence(timeout:3){reveal(removable);removable.tap();let unfavorite=app.buttons["取消本地收藏"];XCTAssertTrue(unfavorite.waitForExistence(timeout:5));unfavorite.tap();XCTAssertTrue(waitForGone(removable,timeout:10))}
+  }
   func testQishuiPublicPlaylistImport() throws {
     let app=XCUIApplication();app.launch()
     let fixtureID="90071992547409931234",fixtureTitle="Nexus Qishui Fixture 20261101"

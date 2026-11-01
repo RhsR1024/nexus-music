@@ -41,7 +41,7 @@ if(liveImagePath&&(basename(liveImagePath)!=='Shape-cover.jpg'||statSync(liveIma
 const liveInputPaths=[...liveLocalPaths,...(liveImagePath?[liveImagePath]:[])];
 const liveLocalSnapshot=liveLocalPath?externalInputSnapshot(liveInputPaths):null;
 if(liveLocalPaths.some(path=>!/\.mp3$/i.test(path)||statSync(path).size<100000||statSync(path).size>30000000))throw new Error('Real local audio must be a complete MP3 of 100 KB–30 MB');
-let localFixtureDirectory;
+let localFixtureDirectory,wayfarerFixtureAudioPath;
 function seedLocalAudio() {
   if(localFixtureDirectory)return;
   try {
@@ -59,13 +59,41 @@ function seedLocalAudio() {
     writeFileSync(resolve(localFixtureDirectory,'Nexus Visual Fixture.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64'));
     const list=Array.from({length:1000},(_,i)=>({id:`wy_${i<2?'90071992547409931234':i}`,name:i<2?'Duplicate fixture':`Fixture song ${i}`,singer:'Synthetic artist',source:'wy',interval:i<2?'03:00':'01:00',meta:{songId:i<2?'90071992547409931234':String(i),albumName:i<2?'Repeated album':'Bulk album'}}));
     writeFileSync(resolve(localFixtureDirectory,'Nexus Playlist Fixture.json'),JSON.stringify({type:'playListPart_v2',data:{name:'Nexus list fixture',list}}));
+    const wayfarerFixtureTrackId=`WAYFARER${Date.now().toString(36).toUpperCase()}`;
+    wayfarerFixtureAudioPath=`/matching-audio/${wayfarerFixtureTrackId}.wav`;
+    const wayfarerTrack=(id,providerId,title,durationMs=120000)=>({
+      id:`${providerId}:${id}`,providerId,title,artist:'Fixture artist',album:'Synthetic Wayfarer album',durationMs,
+      artworkUri:'https://private.invalid/cover?token=fixture-secret',sourceKind:'url',sourceUri:'https://private.invalid/media?password=fixture-secret',
+      sourceUserAgent:'fixture-secret',sourceResolvedQuality:'flac',sourceResolvedProviderId:'private-source',
+    });
+    const wayfarer={
+      version:1,createdAtMs:1,
+      sources:[
+        {id:'private-source',endpoint:'https://private.invalid',username:'fixture-user',password:'fixture-secret',script:'private-source-script'},
+        {id:'private-source-two',apiKey:'fixture-secret',rootPath:'/private/root'},
+      ],
+      settings:{password:'fixture-secret',sourceScript:'private-source-script',androidOnly:true},
+      favorites:{ids:['lx:tx:WAYFARERFAVORITE'],tracks:[wayfarerTrack('WAYFARERFAVORITE','lx:tx','Wayfarer Favorite')]},
+      playlists:[
+        {id:'private-playlist-a',title:'Nexus Wayfarer Fixture A',subtitle:'private',tracks:[
+          wayfarerTrack('1001','lx:wy','Wayfarer first'),
+          wayfarerTrack(wayfarerFixtureTrackId,'lx:tx','Wayfarer second'),
+          wayfarerTrack('1001','lx:wy','Wayfarer first'),
+        ]},
+        {id:'private-playlist-b',title:'Nexus Wayfarer Fixture B',subtitle:'private',tracks:[
+          wayfarerTrack('90071992547409931234','lx:qishui','Wayfarer Qishui'),
+          wayfarerTrack('private','lx:unsupported','Wayfarer unsupported'),
+        ]},
+      ],
+    };
+    writeFileSync(resolve(localFixtureDirectory,'Nexus Wayfarer Fixture.json'),JSON.stringify(wayfarer));
     const lxmc={type:'playListPart_v2',data:{name:'Nexus LXMC fixture',list:[
       {id:'2829_abcdef',name:'KG fixture',singer:'Synthetic artist',source:'kg',interval:'4:00',meta:{songId:'2829',hash:'abcdef',qualitys:[{type:'128k',size:'3.56M',hash:'h1'}],_qualitys:{'128k':{size:'3.56M',hash:'h1'}}}},
       {id:'tx_MID',name:'TX fixture',singer:'Synthetic artist',source:'tx',interval:'3:02',meta:{songId:'MID',id:'9007199254740993123',strMediaMid:'MID_HI',qualitys:[{type:'320k',size:'9.99M'}]}},
       {id:'kg_2829_abcdef',name:'KG fixture',singer:'Synthetic artist',source:'kg',interval:'4:00',meta:{songId:'2829',hash:'abcdef'}},
     ]}};
     writeFileSync(resolve(localFixtureDirectory,'Nexus LXMC Fixture.lxmc'),gzipSync(Buffer.from(JSON.stringify(lxmc))));
-    for(const name of ['Synthetic Tagged Tone.mp3','Nexus Fixture.ttf','Nexus Visual Fixture.png','Nexus Playlist Fixture.json','Nexus LXMC Fixture.lxmc']){
+    for(const name of ['Synthetic Tagged Tone.mp3','Nexus Fixture.ttf','Nexus Visual Fixture.png','Nexus Playlist Fixture.json','Nexus Wayfarer Fixture.json','Nexus LXMC Fixture.lxmc']){
       const path=resolve(localFixtureDirectory,name);if(!existsSync(path)||statSync(path).size===0)throw new Error(`Fixture not written: ${name}`);
     }
     console.log(`[ui-fixtures] ${localFixtureDirectory}`);
@@ -122,7 +150,7 @@ const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new M
 const counts={requests:{},authFailures:0,authSuccesses:0};
 let wyRepliesNextPageFails=true;
 let qqCommentsMode='normal',qqCommentsNextPageFails=true,qqRepliesNextPageFails=true,qqRepliesMode='normal',miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
-const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments'));
+const matchingUI=process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments')||target.endsWith('/testWayfarerAppImport'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
@@ -304,6 +332,10 @@ const server = createServer(async (req, res) => {
   }
   if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
   if(req.url==='/health-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(healthScript);return;}
+  if(req.url==='/wayfarer-fixture-state'){
+    res.setHeader('Content-Type','application/json');
+    res.end(JSON.stringify({matchAudio:counts.matchAudio??{},online:counts.online??{},expectedMatchingAudio:wayfarerFixtureAudioPath}));return;
+  }
   if(req.url.startsWith('/matching-audio/')){
     if(!matchingUI){res.writeHead(404);res.end();return;}
     counts.matchAudio??={};counts.matchAudio[req.url]=(counts.matchAudio[req.url]??0)+1;
@@ -657,7 +689,7 @@ try {
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');

@@ -61,6 +61,6 @@ export function LibraryDataTools({services}:{services:Services}){
     {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
     <QishuiImport services={services}/>
     <Text style={{color:p.secondary,fontSize:12,lineHeight:21}}>备份包含音乐库、实际播放统计及播放/歌词/EQ/外观设置；不含密码、JS音源、音频/图片/字体文件。旧备份无设置时保留当前设置。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
-    {!!message&&<Text accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
+    {!!message&&<Text testID="library-data-message" accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
   </View>;
 }

@@ -1,3 +1,11 @@
+## 2026-11-02 漫途迁移正式 App 导入本地验收
+
+最终 Release `SourceUITests-1793567530426.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、259.384 秒；Files 选择器取消专项 `SourceUITests-1793567947710.xcresult` 为 1/0/0、27.286 秒，设备为 iPhone 15 Pro Max / iOS 26.3.1 模拟器（x86_64）。主用例从正式 Files 选择器读取合成 v1 备份，验证取消不写入、2 个歌单/4 条歌单歌曲/1 首收藏、1 条不支持来源与 2 个源配置忽略、追加、原序/重复项、汽水待匹配、重启持久化及本次唯一 QQ MID 的精确 PCM 播放。5PNG 1290×2796 均来源 ready 并逐张亲看。
+
+主用例和取消专项均 `exitCode=0`、`sourceUnchanged=true`，源码 digest 均为 `382b7f201b4305fbfc48d4f6cfebfc978eccc3fe904f4050b6115e78cf3de595`。主用例安装 bundle `912e4f7a…`、JS `667eed00…`、xcresult Info `c1cc08af…`、run manifest `4848d5e3…`；取消专项 Info `2232df7d…`、manifest `af4da165…`。`npm run check` 948/948、完整 native、脚本/Swift/YAML/diff检查通过。固定 MID 重复运行命中缓存造成的测试假失败已由每轮唯一 MID 修正，r2 原 xcresult/failure-evidence 保留。完整哈希、失败历史与边界见[本批回执](2026-11-02-wayfarer-app-import-report.md)。
+
+真实私人备份、真实跨平台源/弱网、iOS27、实体机、签名/安装继续；本批未新增 Sollin 分析或采集，合成 App 与未签名构建不替代真实迁移验收。
+
 ## 2026-11-02 M10 进程终止后的原生后台下载
 
 功能提交 `eb52efeb87bb1f61b02ccbc4fa4dd2d44364367f` 的 Release 目标 XCUITest `build/SourceUITests-1793564362296.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、350.283 秒，设备为 iPhone 15 Pro Max / iOS 26.3.1 模拟器（x86_64）。测试在真实原生 `URLSession` 接收部分响应时终止 App，服务器在进程退出后写完并由独立 `fullFinished=1` 证明；重启后现有 journal、摘要校验和“播放离线文件”显示通过，显式暂停/跨重启/条件 Range 继续也保持。run manifest 为 `exitCode=0`、`sourceUnchanged=true`，服务器最终 `full=2/resumed=1/blocked=0/heldFull=2/fullFinished=1`。
