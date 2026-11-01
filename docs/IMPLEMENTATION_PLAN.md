@@ -1,3 +1,11 @@
+## 2026-11-02 F31 酷我公开评论回复协议核验
+
+`KuwoPublicComments` 的现有匿名根评论、热门/最新、offset 校验、总数、日期/点赞与单条回复预览保持。公开 bundle 和匿名响应只证明 `get_comment`/`get_rec_comment` 根列表及预览，不能证明完整回复 endpoint；缺少根绑定、回复页游标、总数、`has_more` 和行 schema 时不实现分页请求。
+
+本批严格执行 `js-reverse` 路由与离线 case；IPA/APK `--review` 均 PASS 且各为 0错误/0警告，既有 `E-033→F-032→P-032` 复用，无新增 Sollin 采集。酷我 case strict review 为 PASS、0错误/0警告，4 Evidence、6 WorkItems、6 timeline events、1 Finding、1 Path。详见[脱敏回执](2026-11-02_kuwo-comment-replies-protocol-report.md)。
+
+没有产品代码或 UI 改动，因此只做文档链接、diff、隐私排除和远程核对，不重跑完整业务/UI/归档。酷我完整回复状态为 `blocked_pending_verified_reply_protocol`；完整 F31、其他平台楼层、账号写操作、iOS27、实体机/签名、弱网/限流、emoji 字形及连续动效继续。
+
 ## 2026-11-02 F31 QQ 公开评论只读回复
 
 `QQPublicComments`已接官方匿名现代公开评论列表与完整楼层：原曲MID解析数值ID，根评论只在同一歌曲会话登记后展开；楼层每页20条，下一页同时复用末行`RankScore`和`SeqNo`，首屏总数必须匹配根`ReplyCnt`，后续零总数不覆盖首屏有效值。回复独立作者头像/地区、引用、失败保留、同游标重试、空态、收起、取消、迟到隔离、去重及500条UI上限通过契约和共享Sheet接线。

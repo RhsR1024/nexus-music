@@ -1,3 +1,15 @@
+## 2026-11-02 F31 酷我公开评论回复协议核验
+
+- [x] 按 `js-reverse` 路由核对九个官方移动 bundle、当前桌面评论模块、两个匿名根列表端点和公开页面运行观察。
+- [x] 确认匿名根评论与单条回复预览可读；官方公开证据没有提供完整回复请求、歌曲/根评论绑定、分页游标、总数、`has_more`或行 schema。
+- [x] 产品保留现有根列表与首条预览，不向未验证 endpoint 发起完整回复请求；不用登录态、Cookie、原生 bridge 或猜测替代公开协议证据。
+- [x] Case strict review PASS，0错误/0警告；4 Evidence、6 WorkItems、6 timeline events、1 Finding、1 Path；IPA/APK `--review` 均 PASS、0错误/0警告；复用 E-033→F-032→P-032，无新增 Sollin 采集。
+- [x] 仓库只记录脱敏字段、状态、来源哈希与结论；真实用户内容、截图和原始响应留在本机忽略目录。
+- [ ] 酷我完整回复为 `blocked_pending_verified_reply_protocol`；待新的固定官方匿名公开契约同时证明请求方法、根绑定、分页与总数边界后再实施。
+- [ ] 完整F31、其他平台独立楼层、账号写操作、iOS27、真实设备、签名、弱网/限流、emoji字形和连续动效继续。
+
+见[酷我公开评论回复协议核验回执](2026-11-02_kuwo-comment-replies-protocol-report.md)。本批只关闭协议调查，不增加评论功能完成量。
+
 ## 2026-11-02 F31 QQ 公开评论只读回复
 
 - [x] 原曲 MID/数值 ID/根评论严格绑定；匿名现代公开接口展开完整楼层，20条服务分页并以 `RankScore + SeqNo` 双游标推进。
