@@ -390,6 +390,35 @@ final class SourceSettingsTests: XCTestCase {
     let limit=app.descendants(matching:.any).matching(identifier:"offline-limit-1024").firstMatch;reveal(limit);limit.tap()
     let tasks=app.buttons["settings-open-downloadTasks"];reveal(tasks);tasks.tap()
     XCTAssertTrue(app.staticTexts["settings-title-downloadTasks"].waitForExistence(timeout:5));XCTAssertTrue(app.staticTexts["offline-section-pending"].exists)
+    let activePause=app.buttons["暂停下载"];XCTAssertTrue(activePause.waitForExistence(timeout:15),"A real native download must be active before process termination")
+    let heldAt=Date().addingTimeInterval(20);var heldBeforeTermination=false
+    repeat {
+      if ((try? control())?["heldFull"] ?? 0) >= 1 {heldBeforeTermination=true;break}
+      RunLoop.current.run(until:Date().addingTimeInterval(1))
+    } while Date()<heldAt
+    XCTAssertTrue(heldBeforeTermination,"The fixture must hold a progressing partial response before process termination")
+    let active=XCTAttachment(screenshot:app.screenshot());active.name="Real background URLSession active before process termination";active.lifetime = .keepAlways;add(active)
+    // Kill the UI/JS owner while the HTTP response is held. Releasing the
+    // response from the test runner then proves that the native background
+    // URLSession, rather than the foreground polling loop, completes the file.
+    app.terminate();_=try control(pauseWindow:false)
+    let finishedAt=Date().addingTimeInterval(90);var finished=false
+    repeat {
+      if ((try? control())?["fullFinished"] ?? 0) >= 1 {finished=true;break}
+      RunLoop.current.run(until:Date().addingTimeInterval(2))
+    } while Date()<finishedAt
+    XCTAssertTrue(finished,"The real HTTP response must finish while the app process is terminated")
+    app.launch();openSettings(app,page:"downloads");reveal(tasks);tasks.tap()
+    let backgroundSaved=app.buttons["播放离线文件"];XCTAssertTrue(backgroundSaved.waitForExistence(timeout:90),"The relaunched app must adopt the completed native background file and verify its digest")
+    let completed=XCTAttachment(screenshot:app.screenshot());completed.name="Native background download adopted after process termination";completed.lifetime = .keepAlways;add(completed)
+    let backgroundRemove=app.buttons["删除离线文件：Synthetic tone · Fixture artist"];reveal(backgroundRemove);backgroundRemove.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["暂无已下载音频"].waitForExistence(timeout:15))
+
+    // Repeat through the public UI to prove the independent explicit-pause
+    // and conditional-Range paths still work after terminated-process adoption.
+    openSettings(app,page:"downloads");app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    XCTAssertTrue(account.waitForExistence(timeout:10));reveal(account);account.tap();XCTAssertTrue(album.waitForExistence(timeout:15));album.tap();app.buttons["播放全部"].tap();XCTAssertTrue(mini.waitForExistence(timeout:10));mini.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15))
+    reveal(save);_=try control(pauseWindow:true);save.tap();finishPlayerDownload(app)
+    reveal(pause);pause.tap();reveal(close);close.tap();openSettings(app,page:"downloads");reveal(tasks);tasks.tap()
     let pauseDownload=app.buttons["暂停下载"];XCTAssertTrue(pauseDownload.waitForExistence(timeout:10));reveal(pauseDownload);pauseDownload.tap()
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已暂停 · ")).firstMatch.waitForExistence(timeout:15))
     let held=try control();XCTAssertGreaterThanOrEqual(held["heldFull"] ?? 0,1,"The server must hold a real partial download before pause")
@@ -401,7 +430,7 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["全部继续"].tap()
     let playSaved=app.buttons["播放离线文件"];XCTAssertTrue(playSaved.waitForExistence(timeout:70));reveal(playSaved)
     let counters=try control();XCTAssertGreaterThanOrEqual(counters["full"] ?? 0,1);XCTAssertGreaterThanOrEqual(counters["resumed"] ?? 0,1,"Resume must issue an actual conditional Range request")
-    let completed=XCTAttachment(screenshot:app.screenshot());completed.name="Completed offline file after conditional Range resume";completed.lifetime = .keepAlways;add(completed)
+    let resumedCompleted=XCTAttachment(screenshot:app.screenshot());resumedCompleted.name="Completed offline file after conditional Range resume";resumedCompleted.lifetime = .keepAlways;add(resumedCompleted)
     _=try control(true);app.terminate();app.launch()
     openSettings(app,page:"storage");let clear=app.buttons["清理临时音频、封面和歌词缓存"];reveal(clear);clear.tap();let clearAlert=app.alerts["清理临时缓存？"];XCTAssertTrue(clearAlert.waitForExistence(timeout:5));clearAlert.buttons["清理"].tap()
     XCTAssertTrue(app.staticTexts["0.0 MB · 0 个完整文件"].waitForExistence(timeout:10),"Temporary cache must be empty before proving offline playback")

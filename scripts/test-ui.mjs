@@ -155,7 +155,7 @@ if(themeAudioPath){
 }
 const offlineUI=process.argv.slice(2).some(target=>['/testDownloadSettingsAndOfflinePlayback','/testDownloadTaskBatchActions'].some(suffix=>target.endsWith(suffix)));
 let blockOfflineStream=false,holdOfflineFull=false;
-const offlineCounts={full:0,resumed:0,blocked:0,heldFull:0};
+const offlineCounts={full:0,resumed:0,blocked:0,heldFull:0,fullFinished:0};
 let qishuiHoldFirst=false;
 const heldQishuiResponses=[];
 let holdDiscoveryDetail=false;
@@ -536,7 +536,7 @@ const server = createServer(async (req, res) => {
       if(range){res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${navidromeAudio.length}`);}
       // Keep a real, progressing partial response until the test pauses it.
       // Ordinary playback Range requests and resumed downloads retain full speed.
-      let cursor=start,held=false;const timer=setInterval(()=>{const waiting=holdOfflineFull&&!range&&cursor-start>=262144;if(waiting&&!held){held=true;offlineCounts.heldFull++;}const next=Math.min(cursor+(waiting?1:32768),end+1);res.write(navidromeAudio.subarray(cursor,next));cursor=next;if(cursor>end){clearInterval(timer);res.end();}},100);
+      let cursor=start,held=false;const timer=setInterval(()=>{const waiting=holdOfflineFull&&!range&&cursor-start>=262144;if(waiting&&!held){held=true;offlineCounts.heldFull++;}const next=Math.min(cursor+(waiting?1:32768),end+1);res.write(navidromeAudio.subarray(cursor,next));cursor=next;if(cursor>end){clearInterval(timer);if(!range)offlineCounts.fullFinished++;res.end();}},100);
       res.once('close',()=>clearInterval(timer));return;
     }
     const audio=navidromeAudio;
