@@ -153,7 +153,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const matching=new CrossPlatformMatcher(online);
   const comments=new PublicComments(options.onlineHTTP,{md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
   const sourceHealth=new SourceHealth({registry,open:createSourceDiagnostics(catalog,loadNativeDiagnosticLX(),Crypto.randomUUID),online,probe:loadAudioProbe(Crypto.randomUUID)});
-  const qishui=new QishuiProvider();
+  const qishui=new QishuiProvider(options.onlineHTTP);
   const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
   const resolveTrack=async(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>)=>{

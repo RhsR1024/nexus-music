@@ -1,3 +1,9 @@
+## 2026-11-01 汽水公开歌单 App 导入与重启回归
+
+正式音乐库组件已完成汽水公开歌单读取拒绝、取消→同游标重试、两页完整预览、追加保存、原序/重复项/待匹配展示及 App 重启持久化。修复 `createServices` 未向 `QishuiProvider` 注入 HTTP client 的真实装配遗漏。931 项检查通过，最终合成 HTTP Release `SourceUITests-1793540640449` 为 1/0/0、259.133 秒，5PNG 逐张亲看；服务计数明确 `cursor=0,0,1` 且 `held=1`。原 manifest 因测试后设备关机/子进程缺 `simctl` 缺少安装包快照，使用同一 UUID 事后恢复并独立记录；不覆盖原文件，也不把恢复包写成原次同步 capture。见[回执](docs/2026-11-01_qishui-public-playlist-import-report.md)与[UI 规格](docs/ui-spec/qishui-import-2026-11-01.md)。
+
+IPA/APK 严格 review 及 Android 既有外置 case 复审均为 0 错误/0 警告，无新增 Sollin 采集。跨平台匹配实音、真实可变/私有歌单、弱网矩阵、实体机/签名/录屏动效和 iOS 27 云端终态继续；不报 F12/F13 或全项目完成。
+
 ## 2026-11-01 发现详情随机入口独立验收
 
 Discovery共用按钮实际41pt已补为至少44pt并居中；正式真实来源Release专项1/0/0、276.608秒（`SourceUITests-1793538008347`），6首筛选→单曲→随机→自然曲终至Popular、下一曲PCM/进度、5/6随机及Shape顺序暂停重启通过。931检查、10PNG来源ready/联系表与关键图亲看；全部偏好/下载/源记录及6份音频哈希保持。B/C测试层级与Modal导航失败原证据保留。见[回执](docs/2026-11-01_discovery-random-report.md)。clean IPA（b9a04724…，12,849,880字节，arm64/iphoneos26.2/iOS15.1/[1,2]，未签名/无描述文件）及T7独立副本已通过；normal push/云端终态继续，完整F/J与签名/实体机/动效未完成。

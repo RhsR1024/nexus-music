@@ -1,3 +1,11 @@
+## 2026-11-01 汽水公开歌单正式 App 回归
+
+`npm run check` **931/931**、`node --check scripts/test-ui.mjs`、`git diff --check` 通过。最终合成 HTTP Release `SourceUITests-1793540640449.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、259.133 秒，验证长数字 ID、取消/重试、两页完整预览、追加保存、三行原序/重复项/待匹配及重启持久化；5PNG 逐张亲看。精确 xcresult `Info.plist` SHA-256 `ce121bab877601b8be7d065fc0cb9d0758209e27b01aa1fcaee97379d30a8754`，源码运行前后 digest 均为 `94fc477e16f50c99e44fe2dcb340aa0adc735d9955993aa89025cf6f7d5f7a64`，diff SHA-256 `0875d82903030dccb1a22df03336ff49d17ccd63a44bcc9e87f21f3eecdd289b`。服务计数为 `cursor=0,0,1`、`held=1`、Qishui host 3 次请求。
+
+原始 run manifest 因测试后设备关机且 WorkBuddy 子进程缺 `simctl`，安装包快照记为 unavailable，原文件 SHA-256 `1cb0b9618667eca0acab718ab195c6909b50b7a472b2e30a226a65c960065e06`；之后用同一模拟器 UUID 未重建/未重装取得独立恢复 manifest `b9bc96affbb14e7ea22fc565c1294c75392348b938c257afaf7e400a6cfeaa84`，5/5 截图 `verifyCaptureEvidence` ready，恢复事实和限制已写入 `provenance-review.json`。A/B/C/D 四轮失败及修正、UI 场景和完整边界见[回执](2026-11-01_qishui-public-playlist-import-report.md)。
+
+本机为 iOS 26.3.1 模拟器，合成 HTTP 不替代真实汽水服务、跨平台匹配实音、iOS 27、签名或实体机。clean unsigned IPA、diff/隐私排除、push/CI 与 T7 归档待本批后续。
+
 ## 2026-11-01 发现详情随机入口独立验收
 
 Discovery共用按钮实际41pt已补为至少44pt并居中；正式真实来源Release专项1/0/0、276.608秒（`SourceUITests-1793538008347`），6首筛选→单曲→随机→自然曲终至Popular、下一曲PCM/进度、5/6随机及Shape顺序暂停重启通过。931检查、10PNG来源ready/联系表与关键图亲看；全部偏好/下载/源记录及6份音频哈希保持。B/C测试层级与Modal导航失败原证据保留。见[回执](2026-11-01_discovery-random-report.md)。clean IPA为12,849,880字节、SHA-256`b9a04724bab61ffc1c3695b0ab69de00c2f1f4b5b814e7d78464a6c90abbfbcf`，arm64/iphoneos26.2/iOS15.1/[1,2]、未签名/无描述文件；T7独立副本摘要一致。normal push/云端终态继续，完整F/J与签名/实体机/动效未完成。

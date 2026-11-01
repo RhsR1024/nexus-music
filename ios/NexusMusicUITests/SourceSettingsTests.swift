@@ -4465,17 +4465,122 @@ final class SourceSettingsTests: XCTestCase {
     }
     XCTAssertTrue(button.waitForExistence(timeout:5))
   }
-  func testQishuiImportEntry() throws {
+  func testQishuiPublicPlaylistImport() throws {
     let app=XCUIApplication();app.launch()
-    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
-    let button=app.buttons["导入汽水公开歌单"]
-    XCTAssertTrue(button.waitForExistence(timeout:15))
-    for _ in 0..<10 {if button.isHittable{break};app.swipeUp()}
-    button.tap()
-    XCTAssertTrue(app.textFields["汽水公开歌单链接或ID"].waitForExistence(timeout:10))
-    XCTAssertFalse(app.buttons["读取并预览汽水歌单"].isEnabled)
-    app.buttons["收起汽水导入"].tap()
-    XCTAssertTrue(button.waitForExistence(timeout:5))
+    let fixtureID="90071992547409931234",fixtureTitle="Nexus Qishui Fixture 20261101"
+    func control(_ query:String){
+      let path="http://127.0.0.1:18439/qishui-fixture-control?"+query
+      XCTAssertNotNil(try? Data(contentsOf:URL(string:path)!),"Qishui fixture control must be reachable")
+    }
+    func tab(_ name:String){
+      let item=app.descendants(matching:.any).matching(identifier:"tab-"+name).firstMatch
+      XCTAssertTrue(item.waitForExistence(timeout:15));item.tap()
+      func selected()->Bool{
+        let deadline=Date().addingTimeInterval(2)
+        repeat{
+          if item.isSelected{return true}
+          RunLoop.current.run(until:Date().addingTimeInterval(0.1))
+        }while Date()<deadline
+        return item.isSelected
+      }
+      if !selected(){XCTAssertTrue(item.isHittable);item.tap()}
+      XCTAssertTrue(selected(),"Library tab must actually become selected")
+    }
+    func reveal(_ element:XCUIElement,up:Bool=true){
+      for _ in 0..<32 {
+        if element.isHittable{return}
+        if element.exists && !element.frame.isEmpty{
+          let above=element.frame.midY<app.frame.midY
+          app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.3)))
+        }else{app.swipeUp()}
+      }
+      XCTAssertTrue(element.isHittable,"Expected visible Qishui control: \(element.identifier)")
+    }
+    func image(_ name:String){
+      let attachment=XCTAttachment(screenshot:app.screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)
+    }
+    func openPlaylistList(){
+      tab("library")
+      let lists=app.buttons["我的歌单"]
+      XCTAssertTrue(lists.waitForExistence(timeout:10));reveal(lists);lists.tap()
+    }
+    func removeFixturePlaylistIfPresent(){
+      let existing=app.buttons[fixtureTitle+" · 3首"]
+      if existing.waitForExistence(timeout:3){
+        reveal(existing);existing.tap()
+        let remove=app.buttons["删除歌单"];reveal(remove);remove.tap();app.alerts.buttons["删除"].tap()
+        XCTAssertTrue(waitForGone(existing,timeout:10),"Only the previous synthetic Qishui playlist must be removed")
+      }
+    }
+    control("reset=1")
+    defer{control("reset=1")}
+    openPlaylistList()
+    removeFixturePlaylistIfPresent()
+
+    let importButton=app.buttons["导入汽水公开歌单"]
+    XCTAssertTrue(importButton.waitForExistence(timeout:15));reveal(importButton)
+    XCTAssertGreaterThanOrEqual(importButton.frame.height,44,"Qishui import entry must expose a 44pt target")
+    control("hold=1");importButton.tap()
+    let input=app.textFields["汽水公开歌单链接或ID"]
+    XCTAssertTrue(input.waitForExistence(timeout:10));input.tap()
+    for character in fixtureID{input.typeText(String(character))};input.typeText("\n")
+    let close=app.buttons["收起汽水导入"],read=app.buttons["读取并预览汽水歌单"]
+    XCTAssertTrue(read.waitForExistence(timeout:5));XCTAssertTrue(read.isEnabled)
+    XCTAssertGreaterThanOrEqual(close.frame.height,44);XCTAssertGreaterThanOrEqual(read.frame.height,44)
+    image("Qishui import entered long numeric playlist ID")
+    read.tap()
+    let cancel=app.buttons["取消汽水读取"]
+    XCTAssertTrue(cancel.waitForExistence(timeout:10),"A held first page must expose cancellation")
+    XCTAssertGreaterThanOrEqual(cancel.frame.height,44)
+    cancel.tap();control("release=1")
+    let enabled=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:read)
+    XCTAssertEqual(XCTWaiter.wait(for:[enabled],timeout:10),.completed,"Cancel must restore the read action")
+    read.tap()
+    let summary=app.descendants(matching:.any).matching(identifier:"qishui-import-summary").firstMatch
+    XCTAssertTrue(summary.waitForExistence(timeout:15),"Both synthetic service pages must complete before preview")
+    XCTAssertEqual(summary.label,"完整读取 3 条 · 保留重复项 · 作为新歌单追加")
+    XCTAssertTrue(app.staticTexts["Synthetic Qishui one"].exists)
+    XCTAssertTrue(app.staticTexts["Synthetic Qishui two"].exists)
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"qishui-preview-2").firstMatch.exists)
+    let title=app.textFields["汽水导入歌单名称"]
+    XCTAssertTrue(title.waitForExistence(timeout:5));replaceText(title,with:fixtureTitle,in:app)
+    let confirm=app.buttons["确认追加汽水歌单"]
+    XCTAssertGreaterThanOrEqual(confirm.frame.height,44)
+    image("Qishui complete two-page preview with duplicate retained")
+    confirm.tap()
+    let saved=app.descendants(matching:.any).matching(identifier:"qishui-import-message").firstMatch
+    XCTAssertTrue(saved.waitForExistence(timeout:10))
+    XCTAssertEqual(saved.label,"已追加导入 3 条，原始歌曲保留；播放时匹配其他平台。")
+    image("Qishui playlist appended and saved")
+    close.tap();XCTAssertTrue(importButton.waitForExistence(timeout:10))
+
+    openPlaylistList()
+    let playlist=app.buttons[fixtureTitle+" · 3首"]
+    XCTAssertTrue(playlist.waitForExistence(timeout:10));reveal(playlist);playlist.tap()
+    XCTAssertTrue(app.staticTexts[fixtureTitle].waitForExistence(timeout:10))
+    func playlistRows()->XCUIElementQuery{app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Synthetic Qishui"))}
+    func verifyPlaylistRows(_ context:String){
+      XCTAssertTrue(playlistRows().firstMatch.waitForExistence(timeout:10),context)
+      let rows=playlistRows().allElementsBoundByIndex
+      XCTAssertEqual(rows.count,3,context)
+      XCTAssertTrue(rows[0].label.hasPrefix("Synthetic Qishui one"),context)
+      XCTAssertTrue(rows[1].label.hasPrefix("Synthetic Qishui two"),context)
+      XCTAssertTrue(rows[2].label.hasPrefix("Synthetic Qishui one"),context)
+      XCTAssertLessThan(rows[0].frame.minY,rows[1].frame.minY,context+" one before two")
+      XCTAssertLessThan(rows[1].frame.minY,rows[2].frame.minY,context+" repeated row remains last")
+      for row in rows{XCTAssertTrue(row.label.contains("Fixture artist · 汽水 · 待匹配"),context)}
+    }
+    verifyPlaylistRows("Imported playlist must preserve order, duplicate rows and pending matching")
+    image("Imported Qishui playlist preserves order duplicate and pending matching")
+
+    app.terminate();app.launch()
+    openPlaylistList()
+    let persisted=app.buttons[fixtureTitle+" · 3首"]
+    XCTAssertTrue(persisted.waitForExistence(timeout:10));reveal(persisted);persisted.tap()
+    verifyPlaylistRows("Imported playlist must persist order, duplicate rows and pending matching")
+    image("Qishui imported playlist persists across relaunch")
+    let remove=app.buttons["删除歌单"];reveal(remove);remove.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertTrue(waitForGone(persisted,timeout:10),"The test must remove only its synthetic Qishui playlist")
   }
   func testGraphicalEQPresetPersistence() throws {
     let app=XCUIApplication();app.launch()

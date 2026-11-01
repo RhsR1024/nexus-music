@@ -2,6 +2,14 @@
 
 Discovery共用按钮实际41pt已补为至少44pt并居中；正式真实来源Release专项1/0/0、276.608秒（`SourceUITests-1793538008347`），6首筛选→单曲→随机→自然曲终至Popular、下一曲PCM/进度、5/6随机及Shape顺序暂停重启通过。931检查、10PNG来源ready/联系表与关键图亲看；全部偏好/下载/源记录及6份音频哈希保持。B/C测试层级与Modal导航失败原证据保留。见[回执](2026-11-01_discovery-random-report.md)。本批清洁IPA/提交/云端终态收尾继续，完整F/J与签名/实体机/动效未完成。
 
+## 2026-11-01 F12/F13 补缺：汽水公开歌单正式 App 导入
+
+`QishuiImport` 已接正式 `QishuiProvider.complete` 与 `LibraryStore.createPlaylist`：长数字 ID、取消/重试、两页完整读取、声明总数校验、追加保存、原序/重复项保留及重启恢复均有最终 App 证据。`createServices(options)` 现将注入的 HTTP client 传给 `QishuiProvider`，修复此前 e2e 绕过夹具访问真实网络的问题；默认生产调用保持不变。
+
+931 项检查通过，最终合成 HTTP Release `SourceUITests-1793540640449` 为 1/0/0、259.133 秒；5PNG 亲看，服务计数为 `cursor=0,0,1`、`held=1`。四轮失败分别修正 tab 选中、真实滚动、HTTP 注入和歌单行元素类型，原始结果保留。详细证据见[回执](2026-11-01_qishui-public-playlist-import-report.md)与[UI 场景](ui-spec/qishui-import-2026-11-01.md)。
+
+IPA/APK strict review 与既有 Android 外置 case 复审均 0 错误/0 警告，无新增 Sollin 采集。跨平台匹配实音、真实服务、弱网、Android/实体机/签名/动效及 iOS 27 云端继续；本批代码/交付百分比不因测试数自动上调。
+
 ## 2026-11-01 F31 补缺：咪咕公开评论回复展开
 
 咪咕原曲根评论接只读回复计数、展开、20条服务分页、目标引用与严格原曲/根ID/总数校验；共享线程明确空态、失败保留/同游标重试和500条上限。修复咪咕/酷狗1000条最新加热门时最早根被缓存淘汰，两平台改有界2048并各验50页×20条。931检查、最终合成咪咕/酷狗2/0/0（`SourceUITests-1793535614005`）、真实匿名咪咕1/0/0、63.274秒（`SourceUITests-1793535813780`），16PNG来源ready并亲看；见[回执](2026-11-01_migu-comment-replies-report.md)。
