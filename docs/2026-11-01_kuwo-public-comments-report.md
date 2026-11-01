@@ -33,3 +33,7 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testLiveKuwoPubli
 ```
 
 每轮以新目录和精确 xcresult 绑定源码/原生/JS 包，导出截图后校验并亲看。真实评论内容只留本机忽略目录，不提交仓库。
+
+## 交付回执
+
+功能提交 `d1a70cbff6ffd343f898689196611b6c1bbd81c7` 已正常 push 到 `RhsR1024/nexus-music` main，远端 SHA 一致。CI `41281715592` pending，QQ `41278846667` 仍运行，实核 1运行/1排队；旧咪咕 `41280665387` 由 single 策略自动取消，不计云端成功。未取消运行中任务或重派旧版。下一继续酷狗官方网关适配；其匿名两页最新实际 18/20、合计38个不同 ID，热门20，只是本机协议预检，不当产品接入证明。项目总目标保持 active。
