@@ -1,3 +1,9 @@
+## 2026-11-02 公开平台歌单链接导入鲁棒性
+
+公开歌单导入补上输入清理、官方网易短链的有界展开、取消/迟到隔离、页面读取取消、错误分类和空态。直接链接与 ID 不联网；短链 transport 不携带凭据；欺骗域、显式端口、平台不匹配和含账号信息的 URL 被拒绝。刷新或分页失败保留已加载歌曲及筛选，完整导入失败明确原音乐库保留。
+
+最终 `npm run check` 958/958、完整 native、脚本/Swift/YAML/diff检查通过；Release `SourceUITests-1793571403934` 1/0/0、185.134秒、`sourceUnchanged=true`，15PNG provenance ready并亲看。功能提交`3afe637`已push，clean unsigned IPA `685be0e0…`（12,877,854字节）、manifest clean、164项CRC、138项archive/IPA字节和测试/隐私标记排除通过。复用E-053→F-044→P-044/WI-018，IPA/APK strict review 0错误/0警告，无新增Sollin采集。真实弱网矩阵、iOS27、实体机/签名和动效仍待；详见[回执](2026-11-02-public-playlist-link-import-report.md)与[UI规格](ui-spec/playlist-link-import-2026-11-02.md)。
+
 ## 2026-11-02 漫途版本1备份正式 App 导入与精确 MID 播放
 
 正式 `LibraryDataTools.importWayfarer` 经 Files 选择器接收合成 v1 备份。预览只发布 2 个歌单、4 条歌单歌曲、1 首收藏、1 条不支持来源和忽略计数；源/连接/设置字段不进入可见模型。确认调用正式原子追加，保留歌单顺序、重复项、QQ/网易身份和汽水“待匹配”，重启后歌单及收藏持久化。

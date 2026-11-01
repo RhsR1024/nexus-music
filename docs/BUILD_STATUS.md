@@ -1,3 +1,7 @@
+## 2026-11-02 公开歌单链接导入 clean archive
+
+功能提交`3afe637`的清洁未签名归档与该功能提交一致：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。IPA 12,877,854字节、SHA-256 `685be0e0457dc07a145863107c42aa2b7d05af74bc61566c1a34cf5c327cbae4`，manifest SHA-256 `17f4d950892f7ee3c150b75074d68603f4c2351e64f3eb4a4639b2464a275940`；164项ZIP CRC、138项archive/IPA payload逐文件一致。`main.jsbundle`/可执行/Info.plist摘要为`1a95c683…`/`a673bbdf…`/`dd9d3304…`，新解析器与状态标记存在，测试短链入口、本机端点、夹具秘密和私有路径排除；无签名或描述文件。机器回执为`build/logs/public-playlist-link-archive-verification.json`。本机SDK26.2、未签名和模拟器结果不替代iOS27、签名、实体机、弱网或动效。
+
 ## 2026-11-02 漫途迁移正式 App 导入本地验收
 
 最终 Release `SourceUITests-1793567530426.xcresult` 为 **1 通过 / 0 失败 / 0 跳过**、259.384 秒；Files 选择器取消专项 `SourceUITests-1793567947710.xcresult` 为 1/0/0、27.286 秒，设备为 iPhone 15 Pro Max / iOS 26.3.1 模拟器（x86_64）。主用例从正式 Files 选择器读取合成 v1 备份，验证取消不写入、2 个歌单/4 条歌单歌曲/1 首收藏、1 条不支持来源与 2 个源配置忽略、追加、原序/重复项、汽水待匹配、重启持久化及本次唯一 QQ MID 的精确 PCM 播放。5PNG 1290×2796 均来源 ready 并逐张亲看。
