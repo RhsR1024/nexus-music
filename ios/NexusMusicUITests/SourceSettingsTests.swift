@@ -27,6 +27,17 @@ final class SourceSettingsTests: XCTestCase {
     if confirm.waitForExistence(timeout:3){XCTAssertTrue(confirm.isEnabled);confirm.tap()}
     let back=app.buttons["download-submission-back"];XCTAssertTrue(back.waitForExistence(timeout:20));back.tap();XCTAssertTrue(waitForGone(back,timeout:10))
   }
+  private func cancelPlaybackDiagnosticsShare(_ name:String){
+    let host=XCUIApplication(),service=XCUIApplication(bundleIdentifier:"com.apple.SharingUIService")
+    let caption=service.descendants(matching:.any).matching(identifier:"LP.CaptionBar.BottomCaption").firstMatch
+    XCTAssertTrue(caption.waitForExistence(timeout:15),"The sanitized diagnostics must open the native share sheet")
+    let screenshot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());screenshot.name=name;screenshot.lifetime = .keepAlways;add(screenshot)
+    let tree=XCTAttachment(string:service.debugDescription+"\nHOST\n"+host.debugDescription);tree.name=name+" hierarchy";tree.lifetime = .keepAlways;add(tree)
+    let frame=service.windows.firstMatch.frame
+    XCTAssertGreaterThan(frame.minY,host.frame.height*0.2)
+    host.coordinate(withNormalizedOffset:CGVector(dx:0,dy:0)).withOffset(CGVector(dx:host.frame.width-22,dy:frame.minY-40)).tap()
+    XCTAssertTrue(waitForGone(caption,timeout:10))
+  }
   private func openSettings(_ app:XCUIApplication,page:String){
     for id in ["background-sheet-close","theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{
       let close=app.buttons[id]
@@ -1687,6 +1698,9 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["解码 · 原生媒体已就绪"].waitForExistence(timeout:5))
     XCTAssertGreaterThan(app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","playback-diagnostic-event-native-success-")).count,0)
     XCTAssertTrue(app.buttons["playback-diagnostics-retry"].exists)
+    let diagnosticsShare=app.buttons["playback-diagnostics-share"];XCTAssertTrue(diagnosticsShare.exists);diagnosticsShare.tap()
+    cancelPlaybackDiagnosticsShare("Real sanitized playback diagnostics native share preview")
+    XCTAssertTrue(diagnosticsShare.waitForExistence(timeout:5));XCTAssertTrue(diagnosticsShare.isEnabled)
     let diagnosticImage=XCTAttachment(screenshot:app.screenshot());diagnosticImage.name="Real playback trace with source and native stages";diagnosticImage.lifetime = .keepAlways;add(diagnosticImage)
     app.buttons["返回播放选项"].tap();XCTAssertTrue(app.buttons["队列与播放选项"].waitForExistence(timeout:5));app.buttons["收起播放选项"].tap()
     let matchButton=app.buttons["匹配歌曲"];for _ in 0..<8 {if matchButton.isHittable{break};app.swipeUp()};XCTAssertTrue(matchButton.isHittable);matchButton.tap();app.buttons["取消指定版本，恢复自动"].tap()

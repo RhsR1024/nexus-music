@@ -1,8 +1,8 @@
 ## 2026-11-01 J57 补缺：播放链路诊断
 
-正式播放器已接结构化、有界播放诊断：离线命中/未命中、手动/自动匹配、逐源请求/超时/失败、最终选源与降档、cache identity 和 AVPlayer ready 按 generation 串成最近 6 次解析。暂停/换歌/失效/释放取消旧 run，原生 route failure 保留后独立重试；URL/token、请求头、凭据、脚本输出和原始异常不进入记录，ready 区分网络/缓存解码且不冒充全曲播放。
+正式播放器已接结构化、有界播放诊断：离线命中/未命中、手动/自动匹配、逐源请求/超时/失败、最终选源与降档、cache identity 和 AVPlayer ready 按 generation 串成最近 6 次解析。暂停/换歌/失效/释放取消旧 run，原生 route failure 保留后独立重试；URL/token、请求头、凭据、脚本输出和原始异常不进入记录，ready 区分网络/缓存解码且不冒充全曲播放。诊断页可把最近 6 次解析按新到旧生成脱敏摘要，经真实系统分享面板交给排障接收方。
 
-934/934 检查、完整 native、最终 Release 1/0/0（187.544 秒）和 2PNG 来源 ready/亲看通过。R2 offline case-guard/strict review 为 52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。见[回执](2026-11-01_playback-diagnostics-report.md)与[场景](ui-spec/playback-diagnostics-2026-11-01.md)。iOS 27、真实 iPhone、真实源弱网/限流、冷/暖缓存、全来源矩阵、小屏/VoiceOver/动效、签名与真实全曲继续；只记 J57 部分纵向增量。
+935/935 检查、完整 native、最终 Release `SourceUITests-1793546584894` 1/0/0（200.876 秒）、`sourceUnchanged=true` 和 2PNG 来源 ready/亲看通过；系统分享实际打开/取消并回到诊断页。R2 offline case-guard/strict review 为 52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。见[回执](2026-11-01_playback-diagnostics-report.md)与[场景](ui-spec/playback-diagnostics-2026-11-01.md)。iOS 27、真实 iPhone、真实源弱网/限流、冷/暖缓存、全来源矩阵、小屏/VoiceOver/动效、签名与真实全曲继续；只记 J57 部分纵向增量。
 
 ## 2026-11-01 F31 补缺：酷我公开评论
 

@@ -1,8 +1,9 @@
-import {useSyncExternalStore} from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import {useState,useSyncExternalStore} from 'react';
+import {Pressable, Share, StyleSheet, View} from 'react-native';
 import type {Services} from '../app/services.ts';
 import {currentEntry} from '../domain/queue.ts';
 import type {PlaybackTraceEvent, PlaybackTraceRun, PlaybackTraceStage} from '../playback/diagnostics.ts';
+import {formatPlaybackDiagnosticsReport} from '../playback/diagnostics.ts';
 import {useTheme,type Theme} from './theme.tsx';
 import {Text} from './Typography.tsx';
 
@@ -18,15 +19,25 @@ export function PlaybackDiagnostics({services}:{services:Services}){
   const theme=useTheme(),styles=makeStyles(theme);
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const entry=currentEntry(state.queue),runs=state.diagnostics.slice(-6).reverse();
+  const [shareError,setShareError]=useState('');
   const retry=()=>{
     if(!entry)return;
     services.playback.controller.invalidateMediaFor(entry.track);
     void services.playback.controller.play();
   };
+  const share=async()=>{
+    setShareError('');
+    try{await Share.share({message:formatPlaybackDiagnosticsReport(state.diagnostics),title:'音枢播放链路诊断'});}
+    catch{setShareError('未能打开系统分享，请重试。');}
+  };
   return <View style={styles.root}>
     <Text testID="playback-diagnostics-title" accessibilityRole="header" style={styles.title}>播放链路诊断</Text>
     <Text style={styles.caption}>记录本次播放的结构化阶段：匹配、离线命中、逐源请求、降档、缓存身份和原生解码。最多保留最近 6 次解析；不记录音频地址、请求头、凭据、脚本输出或异常原文。</Text>
-    {entry&&<Pressable testID="playback-diagnostics-retry" accessibilityRole="button" accessibilityLabel="重新解析当前歌曲并采集链路" onPress={retry} style={styles.action}><Text style={styles.actionText}>{state.phase==='resolving'?'重新从当前进度解析':'重新解析当前歌曲'}</Text></Pressable>}
+    {(entry||runs.length>0)&&<View style={styles.actions}>
+      {entry&&<Pressable testID="playback-diagnostics-retry" accessibilityRole="button" accessibilityLabel="重新解析当前歌曲并采集链路" onPress={retry} style={styles.action}><Text style={styles.actionText}>{state.phase==='resolving'?'重新从当前进度解析':'重新解析当前歌曲'}</Text></Pressable>}
+      {runs.length>0&&<Pressable testID="playback-diagnostics-share" accessibilityRole="button" accessibilityLabel="分享脱敏的播放链路诊断摘要" onPress={()=>{void share();}} style={styles.action}><Text style={styles.actionText}>分享诊断摘要</Text></Pressable>}
+    </View>}
+    {!!shareError&&<Text accessibilityRole="alert" style={styles.error}>{shareError}</Text>}
     {!runs.length&&<View style={styles.empty}><Text style={styles.emptyTitle}>还没有播放解析记录</Text><Text style={styles.caption}>播放一首在线、匹配、私服或本机歌曲后，这里会显示真实链路。已恢复但尚未解析的暂停队列不会伪造记录。</Text></View>}
     {runs.map(run=><View key={run.id} testID={`playback-diagnostic-run-${run.generation}`} style={styles.card}>
       <View style={styles.runHeader}>
@@ -51,8 +62,10 @@ const makeStyles=(theme:Theme)=>StyleSheet.create({
   root:{gap:14},
   title:{fontSize:24,lineHeight:31,fontWeight:'600',color:theme.palette.text},
   caption:{fontSize:12,lineHeight:19,color:theme.palette.secondary},
-  action:{minHeight:46,borderRadius:13,paddingHorizontal:15,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.selected},
+  actions:{flexDirection:'row',flexWrap:'wrap',gap:10},
+  action:{minHeight:46,flexGrow:1,borderRadius:13,paddingHorizontal:15,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.selected},
   actionText:{fontSize:13,fontWeight:'600',color:theme.palette.accent},
+  error:{fontSize:12,lineHeight:19,color:theme.palette.accent},
   empty:{padding:18,borderRadius:16,borderWidth:1,borderColor:theme.palette.border,gap:6},
   emptyTitle:{fontSize:15,fontWeight:'600',color:theme.palette.text},
   card:{borderRadius:18,borderWidth:StyleSheet.hairlineWidth,borderColor:theme.palette.border,backgroundColor:theme.palette.surface,overflow:'hidden'},

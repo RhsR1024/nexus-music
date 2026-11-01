@@ -16,22 +16,44 @@
 | 降档 | 偏好档位全部候选失败后取得更低档位 | 事件状态为“降级”，文案同时显示偏好和实际档位 | 不以 UI 文案代替真实文件格式证明 |
 | 缓存身份 | 路由结果带 cacheKey | “已绑定原生媒体缓存身份”，区分仅缓存播放和可检查命中 | 缓存 id 不展示完整内部敏感字段 |
 | 原生就绪 | AVPlayer 发出 ready | “原生媒体已就绪”，明确网络媒体或缓存文件解码成功；有有效时长时展示秒数 | XCTest 精确识别事件；ready 不等于全曲已播放 |
+| 分享摘要 | 至少一次解析 run 已存在 | “重新解析当前歌曲”旁显示“分享诊断摘要”；点击后打开 iOS 系统分享面板 | XCTest 确认系统面板出现并取消；分享由用户主动触发，不创建临时私密文件 |
 | 路由失败/重试 | 原生路线失败且 controller 仍可换路线 | 失败 run 保留为“失败”，新 generation 以“采集中”出现 | 旧失败不因后续成功被抹除 |
 | 取消 | 新播放、暂停、队列切换、媒体失效或释放 | 运行记录收敛为“已取消”，不再追加迟到事件 | 新 generation 与旧事件隔离 |
 
 ## 视觉与可达性
 
-- 页面顺序为返回按钮、24pt 标题、说明、重新解析按钮、最多六张运行卡和“ready 边界”说明；运行卡首行为歌曲/歌手/代次与状态徽章，事件使用 48pt 时间列和弹性正文。
-- 重新解析按钮最小高度 46pt；所有事件保留文字状态，不依赖红/绿颜色单独表达。标题使用系统标题语义，返回、重试和事件使用稳定 testID。
+- 页面顺序为返回按钮、24pt 标题、说明、操作行、最多六张运行卡和“ready 边界”说明；运行卡首行为歌曲/歌手/代次与状态徽章，事件使用 48pt 时间列和弹性正文。
+- 操作行水平排列“重新解析当前歌曲”和“分享诊断摘要”，允许窄屏换行；两个按钮最小高度均为 46pt、弹性分配可用宽度。
+- 无运行记录时不显示分享入口；分享失败显示文字告警，正常取消系统面板不会改变或清空已有 run。
+- 所有事件保留文字状态，不依赖红/绿颜色单独表达。标题使用系统标题语义，返回、重试、分享和事件使用稳定 testID。
 - 默认主题下的表面、细线、强调色和文字层级来自现有主题令牌；没有引入散落颜色常量或新图标体系。
 
 ## 2026-11-01 截图证据
 
-最终 Release `SourceUITests-1793544748938`，iPhone 15 Pro Max / iOS 26.3.1 模拟器 / x86_64 / 默认浅色主题。
+分享入口加入前的基线为 Release `SourceUITests-1793544748938`，iPhone 15 Pro Max / iOS 26.3.1 模拟器 / x86_64 / 默认浅色主题。最终候选为 Release `SourceUITests-1793546584894`：**1 通过 / 0 失败 / 0 跳过**，200.876 秒，`sourceUnchanged:true`、exit 0。
 
-- `001-Screenshot-of-Target-Application...png`：正式播放页与真实 synthetic match 播放上下文。
-- `002-Real-playback-trace-with-source-and-native-stages.png`：诊断页从离线未命中、自动匹配、匹配成功、地址确定、缓存身份到原生就绪的纵向记录。
+- `001-Real-playback-trace-with-source-and-native-stages.png`：取消系统分享面板后回到诊断页，可见两个 46pt 操作按钮，以及从离线未命中、自动匹配、匹配成功、地址确定、缓存身份到原生就绪的纵向记录。
+- `002-Real-sanitized-playback-diagnostics-native-share-preview.png`：系统分享面板实际打开；可见“音枢播放链路诊断”标题和取消路径。系统按隐私策略模糊正文预览，不能据此读取或宣称外部发送了内容。
 
-两张 PNG 均来源 ready、已亲看。`002` 的首屏底部只露出“原生媒体已就绪”部分，完整 native-ready 验收来自 XCTest 对精确文字和 `playback-diagnostic-event-native-success-*` 的实际断言；本规格不把该静态截图记为完整可见、滚动到底或动效通过。
+最终精确目录：
+
+```text
+build/logs/playback-diagnostics-share-20261101-232900/
+build/ui-screenshots/playback-diagnostics-share-20261101-232900/
+```
+
+| 文件 | SHA-256 |
+| --- | --- |
+| `run-manifest.json` | `0a1db592dde37a53d951d7e65573154fb9fad561c82b49c96040406eddcada31` |
+| `ui-catalog.log` | `b6c4d19bdc4a55ad3b1b7cb2462c09e8481610b689804817d39acebd1dbf85cd` |
+| `ui-summary.json` | `60ebf57cc4fbf8ab246082dd2e29e7734064fc4f9b472316774046ad1a1031b6` |
+| `ui-server-counts.json` | `11960097126b92c394463460648d77041317b6103dabd010402d3e3229992a24` |
+| screenshot 001 | `7ce0f154e94de12911bc4f89265a07539900cd5f3d545af2845e8678dac2d607` |
+| screenshot 002 | `231a70e60b47285b988028d24135b699103e86add6301579eb52ce1539eb9a53` |
+| screenshot `index.json` | `90061d05378bae17de380a6745e9a14642efc806481a294d70dd3af3e6940f53` |
+
+manifest 绑定源码 digest `267281c277162527e5ff65fde38627d162428764bb8db7607d251349aa83b24b` 和安装 bundle digest `39f4984e7166011fdce6a8a4e841daea1d5d1b74f0798d125363345569991c19`；xcresult `Info.plist` SHA-256 为 `c10fd98857000081a6a70b91af10cd9fcea68155d6f239637aa2505506e375cf`。
+
+两张 PNG 均来源 ready、已亲看。诊断页首屏底部只露出“原生媒体已就绪”部分，完整 native-ready 验收来自 XCTest 对精确文字和 `playback-diagnostic-event-native-success-*` 的实际断言；本规格不把该静态截图记为完整可见、滚动到底或动效通过。
 
 本批没有 new Sollin 视觉采集，不主张与参考 App 像素等价。小屏、动态字号、VoiceOver、横竖屏/分屏、真实手机与连续动画仍单列待验。

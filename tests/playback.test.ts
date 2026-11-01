@@ -257,6 +257,40 @@ test('playback diagnostics retain exactly the six latest resolution runs',async(
   assert.deepEqual(runs.map(run=>run.generation),[2,3,4,5,6,7]);
 });
 
+test('playback diagnostics share report is newest-first, bounded, and sanitized at the export boundary',async()=>{
+  const {formatPlaybackDiagnosticsReport}=await import('../src/playback/diagnostics.ts');
+  const runs=Array.from({length:8},(_,index)=>({
+    version:1 as const,
+    id:`run-${index}`,
+    entryId:`entry-${index}`,
+    generation:index,
+    trackTitle:`Track ${index} https://private.test/song?token=PRIVATE`,
+    trackArtist:`Artist ${index}`,
+    startedAt:1000,
+    finishedAt:1500,
+    status:'ready' as const,
+    events:[{
+      sequence:0,
+      at:1400,
+      stage:'source' as const,
+      status:'success' as const,
+      title:'Native URL https://private.test/audio?token=PRIVATE',
+      detail:'file:///Users/private/audio.mp3\ncredentials=PRIVATE_TOKEN',
+      sourceId:'private-source-id',
+      sourceName:'Fixture',
+      platform:'wy',
+      quality:'320k',
+    }],
+  }));
+  const report=formatPlaybackDiagnosticsReport(runs,new Date('2026-11-01T00:00:00.000Z'));
+  assert.match(report,/\[1\] Track 7/);
+  assert.match(report,/\[6\] Track 2/);
+  assert.doesNotMatch(report,/Track 0|Track 1/);
+  assert.doesNotMatch(report,/private\.test|PRIVATE_TOKEN|private-source-id|Users\/private/);
+  assert.match(report,/\[地址隐藏\]/);
+  assert.match(report,/2026-11-01T00:00:00\.000Z/);
+});
+
 test('runaway skipping is capped and ends in a visible error', async () => {
   const backend:PlaybackBackend={stop:()=>{},pause:()=>{},load:()=>{},play:()=>{}};
   const queue=makeQueue(Array.from({length:20},(_,index)=>entry(`a${index}`)));

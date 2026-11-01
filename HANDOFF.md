@@ -4,6 +4,8 @@
 
 `npm run check` 934/934、脚本语法/空白检查及完整 native 套件通过；最终 Release `SourceUITests-1793544748938` 为 1/0/0、187.544 秒，2PNG 来源 ready 并亲看。精确源码、diff、fixture、bundle、日志、截图哈希与失败历史见[回执](docs/2026-11-01_playback-diagnostics-report.md)和[UI 规格](docs/ui-spec/playback-diagnostics-2026-11-01.md)。
 
+诊断页补入“分享诊断摘要”：最近 6 次 run 按新到旧生成有界文本，导出边界再次屏蔽 URL 与常见凭据键值，并保留 ready 不等于全曲/真机验收的边界。`npm run check` 935/935；最终 Release `SourceUITests-1793546584894` 为 1/0/0、200.876 秒，真实系统分享面板打开、取消后回到诊断页并继续原有匹配/换歌/重启断言。`sourceUnchanged=true`，安装 bundle 为 `39f4984e…`，xcresult Info SHA-256 为 `c10fd988…`；2PNG 来源 ready 并亲看。该增量仍待 clean IPA、push 与 iOS27 实际终态。
+
 `bd904fe` clean unsigned archive 成功：manifest `dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2、最低 iOS15.1、设备族`[1,2]`、未签名且无描述文件。IPA 12,859,396 字节、SHA-256 `45628ee9f872a0a5bfa81245a8ecb08f5e44752a4bb37160b0b552ad7810bd19`；164 项 ZIP CRC、archive/IPA 内 JS/可执行/Info.plist 字节、生产 bundle 和测试夹具排除均通过。内容哈希快照与 T7 独立副本已逐字节核对。
 
 R2/mobile-reverse 离线 case-guard 与 `ipa --review` 通过，严格 review 为 52E/17WI/107事件/43F/43P、0错误/0警告，无新增 Sollin 采集。iOS 27 云端、真实 iPhone、真实源弱网、冷/暖缓存、全来源矩阵、小屏/动效、签名/描述文件和全曲播放继续；本批只记 J57 部分纵向增量，不报功能或全项目完成。normal push 与 Actions 终态在阶段收尾补记。

@@ -40,6 +40,29 @@ manifest 记录 `configuration: Release`、`exitCode: 0`、`sourceUnchanged: tru
 
 两张截图均通过 `verifyCaptureEvidence`，`ready:true` 且无失败。已亲看正式播放页和诊断页：可见“永久离线文件未命中”“原曲优先，自动匹配作为回退”“匹配版本已取得音频”“播放地址已确定”“已绑定原生媒体缓存身份”和“原生媒体已就绪”的阶段顺序。诊断页底部 native-ready 行受当前视口裁切，截图中只露出部分；该行由 XCTest 对精确无障碍元素及 native-success testID 实际验证，不能把截图的裁切解释成缺失或整页像素验收通过。
 
+## 分享摘要补缺
+
+- 诊断页在“重新解析当前歌曲”旁新增“分享诊断摘要”，两按钮最小高度 46pt，窄屏允许换行；无 run 时不显示分享入口。
+- `formatPlaybackDiagnosticsReport` 只取最近 6 次 run，按新到旧输出歌曲/歌手/代次、run 状态、相对时间和结构化阶段；生成文本不包含内部 `sourceId`。
+- 导出边界会再次过滤控制字符、完整 URL、Bearer/authorization/token/password/secret/credentials 键值，并截断各字段。这里仍不是完整日志上传，分享按钮由用户主动触发。
+- 报告明确 ready 只证明本次媒体容器已通过原生加载准备，不证明全曲、耳听音质、真机、签名或后台通过。
+- `npm run check`：类型检查及 **935/935** 项测试通过，0 失败、0 取消、0 跳过。新增测试用 8 次 run 验证只输出最新 6 次，注入 URL、文件路径和凭据标记后确认导出结果全部脱敏。
+- 最终 Release `build/SourceUITests-1793546584894.xcresult`：**1 通过 / 0 失败 / 0 跳过**，200.876 秒。测试从正式在线匹配与原生 ready 流程进入诊断页，实际点击“分享诊断摘要”，确认系统分享面板出现且标题为“音枢播放链路诊断”，取消后分享按钮和诊断页恢复，再继续原有匹配切换、重试和重启断言。
+- UI 证据目录 `build/ui-screenshots/playback-diagnostics-share-20261101-232900/`；2 张 PNG 均来源 ready、已亲看。分享面板截图中的正文预览由系统隐私策略模糊，可见中文标题和 Copy/保存到“文件”等系统动作，不把系统模糊区域解释为数据提交。
+- 精确日志/摘要目录 `build/logs/playback-diagnostics-share-20261101-232900/`。manifest 记录 Release、exit 0、`sourceUnchanged:true`、基线 `d6a4c7a`、源码 digest `267281c277162527e5ff65fde38627d162428764bb8db7607d251349aa83b24b`、安装 bundle digest `39f4984e7166011fdce6a8a4e841daea1d5d1b74f0798d125363345569991c19`；xcresult Info SHA-256 为 `c10fd98857000081a6a70b91af10cd9fcea68155d6f239637aa2505506e375cf`。
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| `run-manifest.json` | 162396 | `0a1db592dde37a53d951d7e65573154fb9fad561c82b49c96040406eddcada31` |
+| `ui-catalog.log` | 2873648 | `b6c4d19bdc4a55ad3b1b7cb2462c09e8481610b689804817d39acebd1dbf85cd` |
+| `ui-summary.json` | 982 | `60ebf57cc4fbf8ab246082dd2e29e7734064fc4f9b472316774046ad1a1031b6` |
+| `ui-server-counts.json` | 367 | `11960097126b92c394463460648d77041317b6103dabd010402d3e3229992a24` |
+| screenshot 001 | 377968 | `7ce0f154e94de12911bc4f89265a07539900cd5f3d545af2845e8678dac2d607` |
+| screenshot 002 | 696297 | `231a70e60b47285b988028d24135b699103e86add6301579eb52ce1539eb9a53` |
+| screenshot `index.json` | 1152 | `90061d05378bae17de380a6745e9a14642efc806481a294d70dd3af3e6940f53` |
+
+上面“934/934、187.544 秒、`SourceUITests-1793544748938`”是分享入口加入前的基线证据，保留用于历史追溯；当前候选以本节 **935/935、200.876 秒、`SourceUITests-1793546584894`** 为准。
+
 ## Clean unsigned archive
 
 - `npm run ios:archive` 在 `bd904fe406c704966cd748ab41df829f292dd32f` 上以退出码 0 完成，Xcode 输出 `ARCHIVE SUCCEEDED`。`build-manifest.json` 记录 `dirty:false`、`workingTreeChanges:[]`、arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed:false`。
