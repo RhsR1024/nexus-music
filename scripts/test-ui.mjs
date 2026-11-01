@@ -192,6 +192,8 @@ let amLongQueue=false;
 let pagerDiscovery=false,pagerReplacement=false,pagerFailNext=false;
 const pagerPages=[];
 const heldDiscoveryResponses=[];
+let discoveryDetailMode='normal',playlistLinkMode='normal',holdNextPlaylistLink=false,playlistLinkRequests=0;
+const heldPlaylistLinkResponses=[];
 const transitionVersion=String(Date.now()),heldThemeResponses=[],releasedThemeColors=new Set();
 let transitionFixture=false,themeRecorder;
 
@@ -288,8 +290,12 @@ const server = createServer(async (req, res) => {
     if(control.searchParams.has('pager'))pagerDiscovery=true;
     if(control.searchParams.has('replace'))pagerReplacement=true;
     if(control.searchParams.has('failNext'))pagerFailNext=true;
+    const detail=control.searchParams.get('detail');if(detail&&['normal','empty','error'].includes(detail))discoveryDetailMode=detail;
+    const link=control.searchParams.get('shortLink');if(link&&['normal','connection','error'].includes(link))playlistLinkMode=link;
+    if(control.searchParams.has('holdShortNext'))holdNextPlaylistLink=true;
     if(control.searchParams.has('release'))for(const send of heldDiscoveryResponses.splice(0))send();
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length}));return;
+    if(control.searchParams.has('releaseShort'))for(const send of heldPlaylistLinkResponses.splice(0))send();
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length,heldShort:heldPlaylistLinkResponses.length,playlistLinkRequests}));return;
   }
   if(req.url.startsWith('/qq-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
@@ -342,6 +348,19 @@ const server = createServer(async (req, res) => {
     res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),matchingAudio.length-1):matchingAudio.length-1;if(start>=matchingAudio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${matchingAudio.length}`);res.end(matchingAudio.subarray(start,end+1));}else res.end(matchingAudio);return;
   }
+  if(req.url==='/nexus-ui-test-playlist-link-expander'){
+    if(!discoveryUI){res.writeHead(404);res.end();return;}
+    const chunks=[];for await(const chunk of req)chunks.push(chunk);
+    const parsed=JSON.parse(Buffer.concat(chunks).toString());
+    if(typeof parsed.url!=='string'||new URL(parsed.url).hostname!=='163cn.tv'){res.writeHead(400);res.end();return;}
+    playlistLinkRequests++;counts.playlistLink={requests:playlistLinkRequests};
+    if(playlistLinkMode==='error'){res.writeHead(503);res.end();return;}
+    res.setHeader('Content-Type','application/json');
+    if(playlistLinkMode==='connection'){res.end(JSON.stringify({connectionError:true}));return;}
+    const send=()=>{if(!res.destroyed)res.end(JSON.stringify({url:'https://music.163.com/#/playlist?id=101'}));};
+    if(holdNextPlaylistLink){holdNextPlaylistLink=false;heldPlaylistLinkResponses.push(send);counts.playlistLink.held=(counts.playlistLink.held??0)+1;}else send();
+    return;
+  }
   if(req.url==='/nexus-ui-test-online-adapter'){
     if(!fixtureOnlineUI){res.writeHead(404);res.end();return;}
     const chunks=[];for await(const chunk of req)chunks.push(chunk);const {url,request}=JSON.parse(Buffer.concat(chunks).toString());const parsed=new URL(url);
@@ -375,8 +394,10 @@ const server = createServer(async (req, res) => {
     }
     if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/v6/playlist/detail'){
       counts.discovery??={lists:0,details:0};counts.discovery.details++;
+      if(discoveryDetailMode==='error'){res.end(JSON.stringify({code:503}));return;}
       const tracks=['one','two'].map((word,index)=>({id:String(9101+index),name:`Synthetic discovery ${word}`,ar:[{name:'Fixture artist'}],al:{name:'Synthetic discovery album',picUrl:'http://127.0.0.1:18439/discovery-cover.png'},dt:120000}));
-      const send=()=>{if(!res.destroyed)res.end(JSON.stringify({code:200,playlist:{name:'Synthetic discovery playlist',trackIds:tracks.map(({id})=>({id})),tracks}}));};
+      const selected=discoveryDetailMode==='empty'?[]:tracks;
+      const send=()=>{if(!res.destroyed)res.end(JSON.stringify({code:200,playlist:{name:'Synthetic discovery playlist',trackIds:selected.map(({id})=>({id})),tracks:selected}}));};
       if(holdDiscoveryDetail){holdDiscoveryDetail=false;heldDiscoveryResponses.push(send);counts.discovery.held=(counts.discovery.held??0)+1;}else send();return;
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/resource/comment/floor/get'){

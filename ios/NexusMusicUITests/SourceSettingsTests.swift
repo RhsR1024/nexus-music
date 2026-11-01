@@ -4603,17 +4603,66 @@ final class SourceSettingsTests: XCTestCase {
     func action(_ name:String)->XCUIElement{app.buttons["discovery-action-"+name]}
     func actions(){reach(more);more.tap();XCTAssertTrue(panel.waitForExistence(timeout:10));for name in ["下一首","加入队列","加入歌单"]{XCTAssertTrue(action(name).waitForExistence(timeout:10));XCTAssertTrue(action(name).isHittable)}}
     let name="Nexus discovery actions "+String(UUID().uuidString.prefix(8))
-    tab("discover");detail()
-    func control(_ query:String="") throws -> Int {
+    func controlState(_ query:String="") throws -> [String:Any] {
       let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/discovery-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
-      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Int])?["held"] ?? -1
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Any]) ?? [:]
     }
-    _=try control("holdNext=1");defer{_=try? control("release=1")}
+    func integer(_ key:String,in value:[String:Any])->Int{(value[key] as? NSNumber)?.intValue ?? -1}
+    func control(_ query:String="") throws -> Int {
+      integer("held",in:try controlState(query))
+    }
+    tab("discover")
+    let toolsButton=app.buttons["展开歌单导入"];reach(toolsButton);toolsButton.tap()
+    let linkInput=app.descendants(matching:.any).matching(identifier:"discovery-link-input").firstMatch
+    XCTAssertTrue(linkInput.waitForExistence(timeout:10))
+    let linkPreview=app.buttons["discovery-link-preview"]
+    func replaceLink(_ value:String){
+      linkInput.tap();linkInput.press(forDuration:1.1)
+      let selectAll=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
+      XCTAssertTrue(selectAll.waitForExistence(timeout:5));selectAll.tap()
+      linkInput.typeText(value);linkInput.typeText("\n");XCTAssertEqual(linkInput.value as? String,value)
+    }
+    linkInput.tap();linkInput.typeText("https://music.163.com.attacker.invalid/playlist?id=101");linkInput.typeText("\n")
+    reach(linkPreview);linkPreview.tap()
+    XCTAssertTrue(app.staticTexts["尚未识别此分享链接，请展开链接或输入公开歌单ID"].waitForExistence(timeout:10))
+    evidence("Invalid public playlist host stays on the discovery page with safe copy")
+    _=try controlState("holdShortNext=1")
+    replaceLink("分享 https://163cn.tv/AbCd，")
+    reach(linkPreview);linkPreview.tap()
+    let linkCancel=app.buttons["discovery-link-cancel"]
+    XCTAssertTrue(linkCancel.waitForExistence(timeout:10))
+    let shortHeld=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? integer("heldShort",in:controlState()))==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[shortHeld],timeout:10),.completed)
+    evidence("Official short link is resolving and can be cancelled")
+    linkCancel.tap();XCTAssertTrue(app.staticTexts["已取消解析。"].waitForExistence(timeout:5))
+    XCTAssertEqual(integer("heldShort",in:try controlState("releaseShort=1")),0)
+    XCTAssertFalse(app.buttons["刷新歌单"].waitForExistence(timeout:1),"A released late short link must not replace the current page after cancellation")
+    _=try controlState("shortLink=connection")
+    reach(linkPreview);linkPreview.tap()
+    XCTAssertTrue(app.staticTexts["短链接网络连接失败，请展开完整链接或重试。"].waitForExistence(timeout:10))
+    evidence("Short-link connection failure is explicit, redacted and retryable")
+    _=try controlState("shortLink=normal")
+    reach(linkPreview);linkPreview.tap()
+    XCTAssertTrue(app.buttons["刷新歌单"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["网易 · 已加载 2 / 2 首"].waitForExistence(timeout:10))
     let importButton=app.buttons["导入完整歌单到音乐库"]
+    let refresh=app.buttons["刷新歌单"]
+    _=try controlState("detail=empty")
+    reach(refresh);refresh.tap()
+    XCTAssertTrue(app.staticTexts["此歌单为空，无法导入。"].waitForExistence(timeout:10))
+    let emptyImport=app.buttons["discovery-import-full"]
+    XCTAssertTrue(emptyImport.waitForExistence(timeout:5));XCTAssertFalse(emptyImport.isEnabled)
+    evidence("Empty public playlist is explicit and full import is disabled")
+    _=try controlState("detail=normal")
+    reach(refresh);refresh.tap()
+    XCTAssertTrue(app.buttons["更多操作：Synthetic discovery one"].waitForExistence(timeout:10))
+    XCTAssertFalse(app.staticTexts["此歌单为空，无法导入。"].exists)
+    let back=app.buttons["返回歌单广场"];reach(back);back.tap();detail()
+    _=try control("holdNext=1");defer{_=try? control("release=1")}
     reach(importButton);importButton.tap();XCTAssertTrue(app.buttons["取消读取"].waitForExistence(timeout:10))
     let held=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? control())==1},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[held],timeout:10),.completed,"The original full-read request must be held before navigating")
-    let back=app.buttons["返回歌单广场"];reach(back);back.tap();detail()
+    reach(back);back.tap();detail()
     XCTAssertTrue(importButton.waitForExistence(timeout:5),"Returning to detail must restore the full-read action after cancelling its previous request")
     guard importButton.exists else{throw NSError(domain:"Discovery cancelled read state",code:1)}
     XCTAssertTrue(importButton.isEnabled);XCTAssertFalse(app.buttons["取消读取"].exists)
@@ -4621,19 +4670,19 @@ final class SourceSettingsTests: XCTestCase {
     importButton.tap();XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:10));app.alerts.buttons["取消"].tap();evidence("Discovery navigation cancels full read and allows a fresh import preview")
     reach(back);back.tap();let kuwo=app.descendants(matching:.any).matching(identifier:"酷我").firstMatch;reach(kuwo);kuwo.tap();detail()
     reach(importButton);importButton.tap()
-    let incomplete=app.staticTexts["歌曲数量与平台声明不符，未导入不完整歌单"]
+    let incomplete=app.staticTexts["歌曲数量与平台声明不符，未导入不完整歌单 原音乐库保留。"]
     XCTAssertTrue(incomplete.waitForExistence(timeout:10));XCTAssertFalse(app.alerts["导入公开歌单"].exists);XCTAssertTrue(importButton.isEnabled);XCTAssertTrue(more.exists == false)
     evidence("Truncated provider playlist stays visible and cannot present an import confirmation")
     _=try control("completePlaylist=1");importButton.tap();XCTAssertTrue(app.alerts["导入公开歌单"].waitForExistence(timeout:10));XCTAssertTrue(app.alerts.staticTexts.containing(NSPredicate(format:"label CONTAINS %@","2 首")).firstMatch.exists);app.alerts.buttons["取消"].tap()
     // Original fixture uses the provider's real 100-item page boundary. Filter
     // the loaded rows so both pagination controls remain reachable on phones.
-    _=try control("pager=1");let refresh=app.buttons["刷新歌单"];reach(refresh);refresh.tap()
+    _=try control("pager=1");reach(refresh);refresh.tap()
     func count(_ value:String){XCTAssertTrue(app.staticTexts["酷我 · 已加载 "+value+" 首"].waitForExistence(timeout:10))}
     count("100 / 101")
     let filter=app.textFields["搜索已加载歌曲歌手专辑"];reach(filter);filter.tap();filter.typeText("Recovery marker\n")
     let markerOne=app.buttons.containing(NSPredicate(format:"label CONTAINS %@","Recovery marker one")).firstMatch
     let markerTwo=app.buttons.containing(NSPredicate(format:"label CONTAINS %@","Recovery marker two")).firstMatch
-    let failure=app.staticTexts["此平台暂时无法读取，请重试或选择其他平台；已加载内容保留。"]
+    let failure=app.staticTexts["此平台暂时无法读取，请重试或选择其他平台。已加载内容保留。"]
     let next=app.buttons["加载更多"],retry=app.buttons["重试"]
     _=try control("failNext=1");reach(next);next.tap();XCTAssertTrue(failure.waitForExistence(timeout:10));count("100 / 101");XCTAssertTrue(markerOne.exists);XCTAssertFalse(markerTwo.exists)
     evidence("Append failure preserves loaded count and filtered songs")

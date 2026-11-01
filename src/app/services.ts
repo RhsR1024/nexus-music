@@ -56,7 +56,7 @@ import { OnlineProvider } from '../providers/online.ts';
 import { SearchCoordinator,PagedSearchCoordinator } from '../providers/searchCoordinator.ts';
 import { makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
-import type { Track } from '../domain/track.ts';
+import type { OnlinePlatform,Track } from '../domain/track.ts';
 import {requestJSON,type HTTPClient} from '../providers/http.ts';
 import type {PlaybackTraceSink} from '../playback/diagnostics.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
@@ -94,8 +94,9 @@ import {KugouLoginCoordinator} from '../providers/kugouLoginCoordinator.ts';
 import {QQAccountProfileClient} from '../providers/qqAccountProfile.ts';
 import {loadNativeMusicAuth} from '../providers/nativeMusicAuth.ts';
 import {NeteaseAccountProfileClient} from '../providers/neteaseAccountProfile.ts';
+import {resolvePlaylistLink,type PlaylistLinkExpander} from '../providers/playlistLink.ts';
 
-export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
+export async function createServices(options:{onlineHTTP?:HTTPClient;playlistLinkExpander?:PlaylistLinkExpander}={}) {
   const repository = await openRepository();
   const recoveryWarnings:string[]=[];
   const restore=async(key:string,label:string,run:()=>Promise<void>)=>{const ok=await restoreRecord(repository,key,run,Crypto.randomUUID);if(!ok)recoveryWarnings.push(`${label}数据无法读取，原始记录已隔离保留，其他功能继续可用。`);return ok;};
@@ -264,7 +265,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient}={}) {
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;
