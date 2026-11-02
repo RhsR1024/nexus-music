@@ -2,7 +2,7 @@
 
 正式App有效seq优选与派生第二段30秒定位已验证；修复全部歌词、舞台活动组和经典行仍用JS两次点击的缺陷，复用既有原生LyricGesture，保留偏移、单击不定位和暂停意图。最终seq Release `SourceUITests-1793590412749` 1/0/0、176.862秒；旧坏TTML→LRC回退独立 `SourceUITests-1793590732249` 1/0/0、157.240秒，同源且sourceUnchanged=true，5PNG provenance ready并亲看。973/973、Node/Swift/YAML/diff通过；R1搜索输入前提失败、R2真实定位失败原证据保留，无新增Sollin结论或strict review声明。
 
-功能提交`a66a230` clean unsigned IPA为12,889,094字节、SHA-256 `45decc82…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节与测试/私人/签名排除通过。T7阶段480份/142,133,067字节逐份哈希一致，源原件及最新两个有效阶段保留；内盘53.39GiB可用，无新增删除/个人文件移动。正常push及iOS27新队列实核随后记录；真实TTML库、完整格式、VoiceOver实际操作、实体机/签名、云端终态和全部其余F/J继续。见[本批回执](2026-11-02-ttml-seq-gesture-app-report.md)。
+功能提交`a66a230` clean unsigned IPA为12,889,094字节、SHA-256 `45decc82…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节与测试/私人/签名排除通过。T7阶段480份/142,133,067字节逐份哈希一致，源原件及最新两个有效阶段保留；内盘53.39GiB可用，无新增删除/个人文件移动。`3a310ab`已正常push并实核远端一致；最新`41385318840`唯一pending、旧`41378728355`继续，1运行/1排队，未取消/重派。真实TTML库、完整格式、VoiceOver实际操作、实体机/签名、云端终态和全部其余F/J继续。见[本批回执](2026-11-02-ttml-seq-gesture-app-report.md)。
 
 ## 2026-11-02 TTML 顺序时间容器
 

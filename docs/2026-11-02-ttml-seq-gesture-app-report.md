@@ -58,3 +58,7 @@ T7真实挂载与写读探针通过。阶段`/Volumes/T7 Touch/NexusMusic/BuildA
 提交前远端main实读为`df95a37`；2026-11-02 03:46Z核对iOS27为`41378728355`/`2abb0b6`运行、`41381592614`/`38af8c4`唯一pending，1运行/1排队。未取消运行中或重派旧提交。当前workflow增加独立seq专项；push后新队列与远端另行实核，不把待执行视为通过。
 
 本批补齐合成有效seq的App端到端和三处歌词手势缺陷。真实TTML库矩阵、完整TTML2、实体机时间轴/性能/VoiceOver、签名和iOS27终态继续，S4/J35–42与总项目仍未完成。
+
+## push与实际队列回执
+
+`df95a37..3a310ab`已普通快进push，远端main实读为`3a310ab6f3909b32543e2e5328eacecee418962e`。首次SSH连接关闭，第二次普通push成功；无force push。2026-11-02 03:51:53Z，公开Actions页嵌入的workflowRuns实核`41378728355`/`2abb0b6`继续运行，`41385318840`/`3a310ab`为唯一pending，1运行/1排队。旧pending自动替换，未取消运行中、未手动重派。该新运行包含本批产品/测试/workflow，终态继续；此后仅文档回执提交遵守现有Markdown忽略规则。机器快照为`build/logs/ttml-seq-e2e-ci-postpush.json`。
