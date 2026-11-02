@@ -1,3 +1,9 @@
+## 2026-11-02 AMLL TTML 命名空间时间配置
+
+`parseTTML` 现在只在根节点精确声明 AMLL 命名空间时使用媒体绝对时间，支持 `1.456`、`00:13.120`、`1:02.123`、`10s` 等形式；普通 TTML 保持父相对时间，AMLL `timeContainer="seq"` 明确拒绝。独立背景声使用最近区段作为边界，背景翻译/罗马音归属背景行；零时长空白跨度只连接词，ruby 注音明确拒绝并由归一化选择其他歌词。全部改动继续使用原有 XML/时间/行词安全预算。
+
+固定提交`b411e06e`的3,389个真实库候选中确定性抽取12个，最终11个支持、1个ruby预期拒绝；独立Python oracle核对416行、3,749词、29背景词和4个夹紧词，支持样本无序词降级0。978/978检查通过；正式Release三组各1/0/0，覆盖AMLL 10/30秒、标准seq和坏TTML→LRC回退，8PNG provenance ready并亲看。功能提交`ce0b19d`的clean unsigned IPA为12,889,220字节、SHA-256`1e974ad0…`；arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记与隐私/签名排除通过。T7阶段213份/41,985,390字节逐份哈希一致；内盘约53.17GiB，零删除/零个人搬移。真实歌词库App音轨、实体机/VoiceOver、完整TTML2/ruby绘制、签名、iOS27终态和全部其余F/J继续。无新增Sollin证据或strict review声明。见[本批回执](2026-11-02-amll-ttml-profile-report.md)。
+
 ## 2026-11-02 有效seq TTML端到端与歌词手势修复
 
 正式App有效seq优选与派生第二段30秒定位已验证；修复全部歌词、舞台活动组和经典行仍用JS两次点击的缺陷，复用既有原生LyricGesture，保留偏移、单击不定位和暂停意图。最终seq Release `SourceUITests-1793590412749` 1/0/0、176.862秒；旧坏TTML→LRC回退独立 `SourceUITests-1793590732249` 1/0/0、157.240秒，同源且sourceUnchanged=true，5PNG provenance ready并亲看。973/973、Node/Swift/YAML/diff通过；R1搜索输入前提失败、R2真实定位失败原证据保留，无新增Sollin结论或strict review声明。

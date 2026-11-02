@@ -1,3 +1,13 @@
+## 2026-11-02 J37 AMLL 真实库解析矩阵
+
+- [x] 精确 AMLL 命名空间媒体绝对时间，普通 TTML/seq 行为保持隔离；背景声/翻译/罗马音、区段夹紧、零时长空白与 ruby 回退覆盖。
+- [x] 固定库 12 样本中 11 支持、1 ruby 预期拒绝；独立 oracle 核对 416 行/3,749 词/29 背景词/4 夹紧词。
+- [x] 正式 App 合成端到端 AMLL、标准 seq、坏 TTML→LRC 各 1/0/0，8PNG 来源 ready 并亲看。
+- [x] clean unsigned IPA、T7 逐文件核验、空间与隐私回执完成。
+- [ ] 真实库歌曲音轨 App 渲染、实体机/VoiceOver、完整 TTML2/ruby 绘制、签名和 iOS27 终态。
+
+见[本批回执](2026-11-02-amll-ttml-profile-report.md)。J37/S4 仍保持 B 状态，不从解析样本或合成 App 提升为完整交付。
+
 ## 2026-11-02 有效seq TTML端到端与歌词手势修复
 
 正式App有效seq优选与派生第二段30秒定位已验证；修复全部歌词、舞台活动组和经典行仍用JS两次点击的缺陷，复用既有原生LyricGesture，保留偏移、单击不定位和暂停意图。最终seq Release `SourceUITests-1793590412749` 1/0/0、176.862秒；旧坏TTML→LRC回退独立 `SourceUITests-1793590732249` 1/0/0、157.240秒，同源且sourceUnchanged=true，5PNG provenance ready并亲看。973/973、Node/Swift/YAML/diff通过；R1搜索输入前提失败、R2真实定位失败原证据保留，无新增Sollin结论或strict review声明。
