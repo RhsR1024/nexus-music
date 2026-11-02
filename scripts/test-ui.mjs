@@ -150,9 +150,11 @@ const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new M
 const counts={requests:{},authFailures:0,authSuccesses:0};
 let wyRepliesNextPageFails=true;
 let qqCommentsMode='normal',qqCommentsNextPageFails=true,qqRepliesNextPageFails=true,qqRepliesMode='normal',miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
+const amllLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testAMLLProfileLyrics'));
 const sequentialLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testSequentialTTMLLyrics'));
-if(sequentialLyricsUI&&process.argv.slice(2).length!==1)throw new Error('Sequential TTML requires its single explicit target so malformed-TTML fallback coverage stays separate');
-const matchingUI=sequentialLyricsUI||process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments')||target.endsWith('/testWayfarerAppImport'));
+const timedLyricsUI=amllLyricsUI||sequentialLyricsUI;
+if(timedLyricsUI&&process.argv.slice(2).length!==1)throw new Error('Timed TTML requires its single explicit target so malformed-TTML fallback coverage stays separate');
+const matchingUI=timedLyricsUI||process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments')||target.endsWith('/testWayfarerAppImport'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
@@ -420,10 +422,10 @@ const server = createServer(async (req, res) => {
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/song/lyric'){
       counts.lyrics??={wy:0,tx:0};counts.lyrics.wy++;
-      if(sequentialLyricsUI){
-        counts.lyrics.ttmlSeq=(counts.lyrics.ttmlSeq??0)+1;
+      if(timedLyricsUI){
+        const counter=amllLyricsUI?'ttmlAmll':'ttmlSeq';counts.lyrics[counter]=(counts.lyrics[counter]??0)+1;
         res.end(JSON.stringify({
-          ttml:'<tt xmlns="http://www.w3.org/ns/ttml"><body><div timeContainer="seq"><p timeContainer="seq" dur="30s"><span dur="500ms">Synthetic </span><span dur="29500ms">rich lyric</span></p><p dur="30s">Second rich line</p></div></body></tt>',
+          ttml:amllLyricsUI?'<tt xmlns="http://www.w3.org/ns/ttml" xmlns:amll="http://www.example.com/ns/amll"><body dur="120s"><div begin="10" end="60"><p begin="00:10" end="30"><span begin="10" end="10.5">Synthetic </span><span begin="10.5" end="30">rich lyric</span></p><p begin="00:30" end="60"><span begin="30" end="60">Second rich line</span></p></div></body></tt>':'<tt xmlns="http://www.w3.org/ns/ttml"><body><div timeContainer="seq"><p timeContainer="seq" dur="30s"><span dur="500ms">Synthetic </span><span dur="29500ms">rich lyric</span></p><p dur="30s">Second rich line</p></div></body></tt>',
           lrc:'[00:00.000]Sequential TTML fallback must not be selected',
         }));return;
       }
@@ -738,6 +740,7 @@ try {
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
   if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
+  if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
@@ -750,8 +753,8 @@ try {
   const child = spawn('xcodebuild', args, { stdio: ['ignore', log, log] });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
   process.exitCode = code ?? 1;
-  if(code===0&&sequentialLyricsUI&&!(counts.lyrics?.ttmlSeq>0)){
-    console.error('Sequential TTML fixture was not requested; cached lyrics cannot prove this case');
+  if(code===0&&timedLyricsUI&&!(counts.lyrics?.[amllLyricsUI?'ttmlAmll':'ttmlSeq']>0)){
+    console.error('Timed TTML fixture was not requested; cached lyrics cannot prove this case');
     process.exitCode=1;
   }
   Object.assign(runManifest,{finishedAt:new Date().toISOString(),exitCode:process.exitCode,sourceAfter:sourceSnapshot(),installedBundle:installedBundleSnapshot(runManifest.simulator),resultInfoSha256:existsSync(resolve(resultPath,'Info.plist'))?fileSha256(resolve(resultPath,'Info.plist')):null});

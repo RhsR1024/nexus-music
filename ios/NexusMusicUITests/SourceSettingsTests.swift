@@ -480,7 +480,11 @@ final class SourceSettingsTests: XCTestCase {
   func testSequentialTTMLLyrics() throws {
     try verifyCrossPlatformLyrics(sequentialTTML:true)
   }
-  private func verifyCrossPlatformLyrics(sequentialTTML:Bool) throws {
+  func testAMLLProfileLyrics() throws {
+    try verifyCrossPlatformLyrics(sequentialTTML:true,absoluteTTML:true)
+  }
+  private func verifyCrossPlatformLyrics(sequentialTTML:Bool,absoluteTTML:Bool=false) throws {
+    let firstSeek=absoluteTTML ? "0:10 / 2:00":"0:00 / 2:00"
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<12 {if element.isHittable{break};if element.exists {let above=element.frame.midY < app.frame.midY; if above {app.swipeDown()} else {app.swipeUp()}} else if up {app.swipeUp()} else {app.swipeDown()}};XCTAssertTrue(element.isHittable)}
     // The preceding core tests intentionally leave the persisted player skin
@@ -554,7 +558,7 @@ final class SourceSettingsTests: XCTestCase {
       let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch,before=progress.value as? String
       stageGroup.tap();XCTAssertEqual(progress.value as? String,before,"One stage tap must not seek")
       stageGroup.doubleTap()
-      expectation(for:NSPredicate(format:"value == %@","0:00 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:10)
+      expectation(for:NSPredicate(format:"value == %@",firstSeek),evaluatedWith:progress);waitForExpectations(timeout:10)
       XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Stage double tap must keep paused intent")
     }
     let stageImage=XCTAttachment(screenshot:app.screenshot());stageImage.name="Stage real timed group";stageImage.lifetime = .keepAlways;add(stageImage)
@@ -582,11 +586,11 @@ final class SourceSettingsTests: XCTestCase {
       let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
       expectation(for:NSPredicate(format:"value == %@","0:30 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:10)
       XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Seeking a sequential paragraph must preserve paused intent")
-      let sequentialImage=XCTAttachment(screenshot:app.screenshot());sequentialImage.name="Sequential TTML second paragraph seeks to thirty seconds";sequentialImage.lifetime = .keepAlways;add(sequentialImage)
+      let sequentialImage=XCTAttachment(screenshot:app.screenshot());sequentialImage.name=absoluteTTML ? "AMLL TTML absolute paragraph seeks to thirty seconds":"Sequential TTML second paragraph seeks to thirty seconds";sequentialImage.lifetime = .keepAlways;add(sequentialImage)
       let firstClassic=app.buttons["Synthetic rich lyric"].firstMatch;reach(firstClassic,up:false)
       firstClassic.tap();XCTAssertEqual(progress.value as? String,"0:30 / 2:00","One classic-lyric tap must not seek")
       firstClassic.doubleTap()
-      expectation(for:NSPredicate(format:"value == %@","0:00 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:10)
+      expectation(for:NSPredicate(format:"value == %@",firstSeek),evaluatedWith:progress);waitForExpectations(timeout:10)
       firstClassic.press(forDuration:0.7);XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10));app.buttons["收起全部歌词"].tap()
       XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Classic double tap and long press must keep paused intent")
     }

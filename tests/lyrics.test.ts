@@ -96,3 +96,42 @@ test('TTML default tick rate follows an explicitly provided effective frame rate
   const parsed=parseTTML('<tt xmlns:ttp="urn:test" ttp:frameRate="25" ttp:frameRateMultiplier="2 1"><body><p begin="50t" end="100t">test</p></body></tt>');
   assert.equal(parsed.lines[0]!.startMs,1000);assert.equal(parsed.lines[0]!.endMs,2000);
 });
+
+const amll=(content:string)=>`<tt xmlns:a="http://www.example.com/ns/amll"><body dur="120s">${content}</body></tt>`;
+test('standard TTML background auxiliary text stays on the background voice',()=>{
+  const parsed=parseTTML('<tt><body><p begin="10s" end="20s"><span begin="1s" end="2s">Main</span><span ttm:role="x-bg" begin="3s" end="4s">Echo<span ttm:role="x-translation">背景译</span></span><span ttm:role="x-translation">主译</span></p></body></tt>');
+  assert.deepEqual(parsed.lines.map(line=>[line.startMs,line.endMs,line.translation]),[[11000,12000,'主译'],[13000,14000,'背景译']]);
+});
+test('AMLL profile media clocks do not accumulate paragraph or section offsets',()=>{
+  const parsed=parseTTML(amll('<div begin="10" end="70"><p begin="00:12.1" end="15"><span begin="12.1" end="00:13.12">A</span><span begin="00:13.12" end="00:15.000">B</span></p><p begin="01:01.123" end="01:02">C</p></div>'));
+  assert.deepEqual(parsed.lines.map(line=>[line.startMs,line.endMs]),[[12100,15000],[61123,62000]]);
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>[word.startMs,word.endMs]),[[12100,13120],[13120,15000]]);
+  const suffix=parseTTML(amll('<p begin="10s" end="12s"><span begin="10s" end="11s">D</span></p>'));
+  assert.equal(suffix.lines[0]!.startMs,10000);
+  const standard=parseTTML('<tt><body><p begin="10s" end="15s"><span begin="1s" end="2s">D</span></p></body></tt>');
+  assert.equal(standard.lines[0]!.startMs,11000,'Standard TTML stays parent-relative');
+});
+test('AMLL profile background keeps independent timing and its own auxiliary text',()=>{
+  const parsed=parseTTML(amll('<div begin="10" end="20"><p begin="12" end="14" ttm:agent="v1"><span begin="12" end="14">Main</span><span ttm:role="x-translation">主译</span><span ttm:role="x-roman">main</span><span ttm:role="x-bg" begin="15" end="18"><span begin="15" end="18">Echo</span><span ttm:role="x-translation">背景译</span><span ttm:role="x-roman">echo</span></span></p></div>'));
+  assert.deepEqual(parsed.lines.map(line=>[line.text,line.startMs,line.endMs,line.background??false,line.translation,line.romanization]),[['Main',12000,14000,false,'主译','main'],['Echo',15000,18000,true,'背景译','echo']]);
+  assert.equal(parsed.lines[1]!.agent,'v1');
+  assert.throws(()=>parseTTML(amll('<div end="20"><p begin="12" end="14"><span ttm:role="x-bg" begin="21" end="22">Bad</span></p></div>')));
+});
+test('AMLL profile zero-timed whitespace joins words without a zero-second lyric',()=>{
+  const parsed=parseTTML(amll('<p begin="12" end="14"><span begin="12" end="13">A</span><span begin="00:00.000" end="00:00.000"> </span><span begin="13" end="14">B</span></p>'));
+  assert.equal(parsed.lines[0]!.text,'A B');assert.equal(parsed.lines[0]!.startMs,12000);assert.equal(parsed.lines[0]!.words?.length,2);
+});
+test('AMLL profile detection and bounds never relax standard TTML or XML budgets',()=>{
+  for(const value of ['01:60','60:01','00:01.1234','-1','NaN','90000','1f']){
+    assert.throws(()=>parseTTML(amll(`<p begin="${value}" end="120">Bad</p>`)),value);
+  }
+  assert.throws(()=>parseTTML(amll('<p timeContainer="seq" dur="1s">Unsupported mixed profile</p>')));
+  assert.throws(()=>parseTTML(amll('<div begin="10"><p begin="9" end="12">Outside section</p></div>')));
+  assert.throws(()=>parseTTML('<tt xmlns:a="wrong"><body><p begin="12.1" end="14">Bad</p></body></tt>'));
+  assert.throws(()=>parseTTML('<!DOCTYPE tt><tt xmlns:a="http://www.example.com/ns/amll"/>'));
+  const rich=normalizeLyrics({ttml:amll('<p begin="12" end="14">Selected</p>'),lrc:'[00:00]Fallback'});
+  assert.equal(rich.document.lines[0]!.text,'Selected');assert.equal(rich.document.lines[0]!.startMs,12000);
+  const ruby=amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="text" begin="12" end="14">zi</span></span></p>');
+  assert.throws(()=>parseTTML(ruby),/注音布局/);
+  assert.equal(normalizeLyrics({ttml:ruby,lrc:'[00:12]Readable fallback'}).document.lines[0]!.text,'Readable fallback');
+});

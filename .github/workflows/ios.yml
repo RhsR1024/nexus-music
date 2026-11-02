@@ -97,6 +97,12 @@ jobs:
           fi
           cp build/logs/ttml-seq-app/ui-catalog.log build/logs/ui-ttml-seq.log
           cp build/logs/ttml-seq-app/ui-server-counts.json build/logs/ui-ttml-seq-counts.json
+          if ! NEXUS_UI_RUN_DIR=build/logs/ttml-amll-app node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics 2>&1 | tee build/logs/ui-ttml-amll-runner.log; then
+            tail -n 100 build/logs/ttml-amll-app/ui-catalog.log
+            exit 1
+          fi
+          cp build/logs/ttml-amll-app/ui-catalog.log build/logs/ui-ttml-amll.log
+          cp build/logs/ttml-amll-app/ui-server-counts.json build/logs/ui-ttml-amll-counts.json
       - name: Verify offline download resume and playback with server unavailable
         shell: bash
         run: |
