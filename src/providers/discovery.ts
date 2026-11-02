@@ -3,6 +3,13 @@ import {onlineTrack} from './online.ts';
 import {parseProviderJSON,queryURL,requestJSON,requestText,type TextHTTPClient,type HTTPClient} from './http.ts';
 import {throwIfAborted} from './async.ts';
 import {qqSignature} from './qqSignature.ts';
+import {
+  mergeStyleRecommendations,
+  normalizeStyleSelection,
+  type StyleRecommendationResult,
+  type StyleTag,
+  type StyleTagPlaylists,
+} from '../domain/styleRecommendation.ts';
 type Row=Record<string,unknown>;
 const row=(value:unknown):Row=>value&&typeof value==='object'&&!Array.isArray(value)?value as Row:{};
 const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
@@ -74,6 +81,26 @@ export class DiscoveryProvider {
       hasMore=next!==undefined?next>page:!!nextURL&&Number(nextURL.match(/[?&]pageNumber=(\d+)/)?.[1]??0)>page;
     }
     return{items,hasMore,page};
+  }
+  async styleRecommendations(platform:OnlinePlatform,tags:readonly StyleTag[],signal:AbortSignal,perTagLimit=20):Promise<StyleRecommendationResult>{
+    const selected=normalizeStyleSelection(tags);
+    throwIfAborted(signal);
+    const results=await Promise.all(selected.map(async tag=>{
+      try{
+        const page=await this.playlists(platform,1,tag.id,signal,perTagLimit);
+        throwIfAborted(signal);
+        return{tag,items:page.items};
+      }catch(error){
+        if(signal.aborted)throw error;
+        return{tag,error};
+      }
+    }));
+    throwIfAborted(signal);
+    const successes=results.flatMap(result=>'items'in result?[{tag:result.tag,items:result.items}as StyleTagPlaylists]:[]);
+    return{
+      items:mergeStyleRecommendations(platform,successes),
+      failedTags:results.flatMap(result=>result.error?[result.tag]:[]),
+    };
   }
   async rankings(platform:OnlinePlatform,signal:AbortSignal):Promise<readonly BrowseItem[]>{
     if(platform==='wy'){const raw=row(await this.http('https://music.163.com/api/toplist',{},signal));if(raw.code!==200||!Array.isArray(raw.list))throw new Error('榜单响应无效');return list(raw.list).map(v=>{const x=row(v);return item(x.id,x.name,x.coverImgUrl,x.description,x.trackCount);});}

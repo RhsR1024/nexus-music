@@ -22,6 +22,7 @@ import {BatchSelectionBar,type BatchAction} from './BatchSelectionBar.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {Toast,useToast} from './Toast.tsx';
 import {selectionToggleAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
+import {StyleRecommendationSheet} from './StyleRecommendationSheet.tsx';
 type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易'],['tx','QQ'],['kw','酷我'],['kg','酷狗'],['mg','咪咕']]as const;
@@ -31,6 +32,7 @@ export function Discovery({services,embedded=false,initialCollection,onClose,cat
   const theme=useTheme(),{width,fontScale}=useWindowDimensions();
   const [contentWidth,setContentWidth]=useState<number>();
   const [tools,setTools]=useState(false),[descriptionOpen,setDescriptionOpen]=useState(false);
+  const [styleOpen,setStyleOpen]=useState(false);
   const [query,setQuery]=useState(''),[sort,setSort]=useState<TrackSort>('original');
   const [total,setTotal]=useState<number>();
   const [artistAlbums,setArtistAlbums]=useState(false),[artistAlbum,setArtistAlbum]=useState<DiscoveryTarget|null>(null),[artistInfo,setArtistInfo]=useState<Partial<ArtistItem>>({}),[popular,setPopular]=useState(false);
@@ -145,6 +147,11 @@ export function Discovery({services,embedded=false,initialCollection,onClose,cat
       <Text accessibilityRole="header" style={{fontSize:40,fontWeight:'800',color:theme.palette.text,letterSpacing:-1}}>发现</Text>
       <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{platforms.map(([id,name])=><Pressable key={id} accessibilityRole="radio" accessibilityLabel={name} accessibilityState={{selected:platform===id}} onPress={()=>{setPlatform(id);setCategory(undefined);setView({kind:'playlists'});}} style={{paddingHorizontal:15,paddingVertical:11,borderRadius:22,backgroundColor:platform===id?theme.palette.selected:theme.palette.surface}}><Text style={{color:platform===id?theme.palette.accent:theme.palette.secondary,fontWeight:platform===id?'700':'400'}}>{name}</Text></Pressable>)}</View>
       <View style={{flexDirection:'row',gap:8}}>{([['playlists','精选歌单'],['rankings','榜单'],['categories','分类']]as const).map(([kind,label])=><Pressable key={kind} accessibilityRole="tab" accessibilityState={{selected:view.kind===kind}} onPress={()=>setView({kind})} style={{flex:1,padding:14,borderRadius:24,backgroundColor:view.kind===kind?theme.palette.selected:'transparent',alignItems:'center'}}><Text style={{color:view.kind===kind?theme.palette.text:theme.palette.secondary,fontWeight:'600',fontSize:16}}>{label}</Text></Pressable>)}</View>
+      <Pressable testID="discovery-style-recommendation" accessibilityRole="button" accessibilityLabel="定制风格化推荐" accessibilityHint="从公开分类中选择最多五个标签" onPress={()=>setStyleOpen(true)} style={{minHeight:76,flexDirection:'row',alignItems:'center',gap:14,padding:16,borderRadius:22,backgroundColor:theme.palette.surface}}>
+        <View style={{width:42,height:42,borderRadius:21,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.selected}}><Ionicons name="sparkles" size={22} color={theme.palette.accent}/></View>
+        <View style={{flex:1,gap:4}}><Text style={{fontSize:17,fontWeight:'700',color:theme.palette.text}}>定制风格化推荐</Text><Text style={{color:theme.palette.secondary,lineHeight:19}}>选择曲风、语种、情感、主题或场景，最多 5 个公开标签</Text></View>
+        <Ionicons name="chevron-forward" size={21} color={theme.palette.accent}/>
+      </Pressable>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Text style={{color:theme.palette.text,fontSize:23,fontWeight:'700'}}>{view.kind==='rankings'?'排行榜':view.kind==='categories'?'选择喜欢的风格':'发现好歌单'}</Text><Pressable accessibilityRole="button" accessibilityLabel="展开歌单导入" onPress={()=>setTools(value=>!value)} style={{padding:10}}><Text style={{color:theme.palette.accent}}>歌单导入</Text></Pressable></View>
       {(tools||!embedded)&&<View style={{gap:12,padding:16,borderRadius:22,backgroundColor:theme.palette.surface}}>
         <TextInput testID="discovery-link-input" accessibilityLabel="公开歌单分享链接或ID" placeholder="分享链接或当前平台歌单ID" placeholderTextColor={theme.palette.secondary} value={link} editable={!linkLoading} onChangeText={value=>{setLink(value);linkGeneration.current++;linkAbort.current.abort();setLinkLoading(false);setMessage('');}} autoCorrect={false} autoCapitalize="none" style={{color:theme.palette.text,padding:14,borderRadius:12,borderWidth:1,borderColor:theme.palette.border}}/>
@@ -172,7 +179,7 @@ export function Discovery({services,embedded=false,initialCollection,onClose,cat
       ListFooterComponent={<View style={{gap:12,paddingVertical:24}}>{loading&&<Text style={{color:theme.palette.secondary}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:theme.palette.accent}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:theme.palette.secondary}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&view.kind!=='detail'&&<Text style={{color:theme.palette.secondary}}>此平台暂未返回可展示内容</Text>}{loading&&view.kind==='detail'&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading)}</View>}/>
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
-  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/>{artistAlbum&&<Discovery services={services} initialCollection={artistAlbum} onClose={()=>setArtistAlbum(null)}/>}</>;
+  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{artistAlbum&&<Discovery services={services} initialCollection={artistAlbum} onClose={()=>setArtistAlbum(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

@@ -79,3 +79,30 @@ test('complete import rejects a late terminal response after cancellation even i
   const p=new DiscoveryProvider(sha,async()=>{controller.abort();return{title:'Fixture',total:1,musiclist:[{id:'1',name:'One',artist:'Fixture'}]};});
   await assert.rejects(p.complete('kw','123',controller.signal),{name:'AbortError'});
 });
+test('style recommendation reads each selected public category and preserves successful groups on failure',async()=>{
+  const signal=new AbortController().signal;
+  const p=new DiscoveryProvider(sha,async url=>{
+    const category=new URL(url).searchParams.get('cat');
+    if(category==='电子')throw new TypeError('Network request failed');
+    return{code:200,more:false,playlists:[
+      {id:'shared',name:'Shared fixture',trackCount:2},
+      {id:category==='说唱'?'rap-only':'mood-only',name:`${category} fixture`,trackCount:1},
+    ]};
+  });
+  const result=await p.styleRecommendations('wy',[
+    {id:'说唱',name:'说唱',dimension:'genre'},
+    {id:'伤感',name:'伤感',dimension:'mood'},
+    {id:'电子',name:'电子',dimension:'genre'},
+  ],signal);
+  assert.deepEqual(result.failedTags.map(value=>value.name),['电子']);
+  assert.deepEqual(result.items.map(value=>value.playlist.id),['shared','rap-only','mood-only']);
+  assert.deepEqual(result.items[0]?.matchedTags.map(value=>value.name),['说唱','伤感']);
+});
+test('style recommendation rejects duplicate-beyond-limit or pre-cancelled selections before transport',async()=>{
+  let calls=0;
+  const p=new DiscoveryProvider(sha,async()=>{calls++;return{code:200,more:false,playlists:[]};});
+  await assert.rejects(p.styleRecommendations('wy',Array.from({length:6},(_,index)=>({id:String(index),name:String(index),dimension:'genre' as const})),new AbortController().signal),/最多选择/);
+  const controller=new AbortController();controller.abort();
+  await assert.rejects(p.styleRecommendations('wy',[{id:'one',name:'one',dimension:'genre'}],controller.signal),{name:'AbortError'});
+  assert.equal(calls,0);
+});

@@ -156,7 +156,7 @@ const sequentialLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/te
 const timedLyricsUI=amllLyricsUI||sequentialLyricsUI;
 if(timedLyricsUI&&process.argv.slice(2).length!==1)throw new Error('Timed TTML requires its single explicit target so malformed-TTML fallback coverage stays separate');
 const matchingUI=timedLyricsUI||process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments')||target.endsWith('/testWayfarerAppImport'));
-const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
+const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions')||target.endsWith('/testStyleRecommendation'));
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates')||target.endsWith('/testUnifiedSongAlbumArtistSearch')||target.endsWith('/testUnifiedSearchAggregateFivePlatformMatrix'));
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
 const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI;
@@ -206,6 +206,8 @@ const pagerPages=[];
 const heldDiscoveryResponses=[];
 let discoveryDetailMode='normal',playlistLinkMode='normal',holdNextPlaylistLink=false,playlistLinkRequests=0;
 const heldPlaylistLinkResponses=[];
+let styleCategoryMode='normal',stylePlaylistMode='normal',holdNextStyleCategories=false,holdStylePlaylists=false;
+const failedStyleTags=new Set(),heldStyleCategoryResponses=[],heldStylePlaylistResponses=[];
 const transitionVersion=String(Date.now()),heldThemeResponses=[],releasedThemeColors=new Set();
 let transitionFixture=false,themeRecorder;
 
@@ -305,9 +307,15 @@ const server = createServer(async (req, res) => {
     const detail=control.searchParams.get('detail');if(detail&&['normal','empty','error'].includes(detail))discoveryDetailMode=detail;
     const link=control.searchParams.get('shortLink');if(link&&['normal','connection','error'].includes(link))playlistLinkMode=link;
     if(control.searchParams.has('holdShortNext'))holdNextPlaylistLink=true;
+    const categories=control.searchParams.get('styleCategories');if(categories&&['normal','error','empty'].includes(categories))styleCategoryMode=categories;
+    const playlists=control.searchParams.get('stylePlaylists');if(playlists&&['normal','empty','error'].includes(playlists))stylePlaylistMode=playlists;
+    if(control.searchParams.has('holdStyleCategories'))holdNextStyleCategories=true;
+    if(control.searchParams.has('holdStylePlaylists'))holdStylePlaylists=control.searchParams.get('holdStylePlaylists')!=='0';
+    const failures=control.searchParams.get('failStyleTags');if(failures!==null){failedStyleTags.clear();for(const tag of failures.split(',').filter(Boolean))failedStyleTags.add(tag);}
     if(control.searchParams.has('release'))for(const send of heldDiscoveryResponses.splice(0))send();
     if(control.searchParams.has('releaseShort'))for(const send of heldPlaylistLinkResponses.splice(0))send();
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length,heldShort:heldPlaylistLinkResponses.length,playlistLinkRequests}));return;
+    if(control.searchParams.has('releaseStyle'))for(const send of [...heldStyleCategoryResponses.splice(0),...heldStylePlaylistResponses.splice(0)])send();
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({held:heldDiscoveryResponses.length,heldShort:heldPlaylistLinkResponses.length,playlistLinkRequests,heldStyleCategories:heldStyleCategoryResponses.length,heldStylePlaylists:heldStylePlaylistResponses.length,categoryMode:styleCategoryMode,playlistMode:stylePlaylistMode,failedStyleTags:[...failedStyleTags]}));return;
   }
   if(req.url.startsWith('/qq-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
@@ -407,16 +415,41 @@ const server = createServer(async (req, res) => {
       }
       res.end(JSON.stringify({title:'Synthetic completeness playlist',total:truncateDiscoveryPlaylist?3:2,musiclist:['one','two'].map((word,index)=>({id:String(9201+index),name:`Synthetic completeness ${word}`,artist:'Fixture artist',album:'Fixture album',duration:120}))}));return;
     }
+    if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/playlist/catalogue'){
+      counts.discovery??={lists:0,details:0};counts.discovery.styleCategoryRequests=(counts.discovery.styleCategoryRequests??0)+1;
+      if(styleCategoryMode==='error'){res.end(JSON.stringify({code:503}));return;}
+      if(styleCategoryMode==='empty'){res.end(JSON.stringify({code:200,categories:{},sub:[]}));return;}
+      const body={code:200,categories:{'0':'语种','1':'风格','2':'场景','3':'情感','4':'主题'},sub:[
+        {name:'华语',category:0},{name:'流行',category:1},{name:'说唱',category:1},{name:'电子',category:1},{name:'民谣',category:1},{name:'金属',category:1},
+        {name:'伤感',category:3},{name:'治愈',category:3},{name:'校园',category:4},{name:'夜晚',category:2},{name:'学习',category:2},
+      ]};
+      const send=()=>{if(!res.destroyed)res.end(JSON.stringify(body));};
+      if(holdNextStyleCategories){holdNextStyleCategories=false;heldStyleCategoryResponses.push(send);counts.discovery.styleCategoryHeld=(counts.discovery.styleCategoryHeld??0)+1;}else send();return;
+    }
     if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/playlist/list'){
       counts.discovery??={lists:0,details:0};counts.discovery.lists++;
+      const category=parsed.searchParams.get('cat');
+      if(category&&category!=='全部'){
+        counts.discovery.stylePlaylistRequests=(counts.discovery.stylePlaylistRequests??0)+1;
+        if(stylePlaylistMode==='empty'){res.end(JSON.stringify({code:200,more:false,playlists:[]}));return;}
+        if(stylePlaylistMode==='error'||failedStyleTags.has(category)){res.end(JSON.stringify({code:503}));return;}
+        const all=[
+          {id:'201',name:'Synthetic shared playlist',description:'Original shared fixture',trackCount:3,coverImgUrl:'http://127.0.0.1:18439/discovery-cover.png'},
+          {id:`tag-${category}`,name:`Synthetic ${category} playlist`,description:'Original tag fixture',trackCount:2,coverImgUrl:'http://127.0.0.1:18439/discovery-cover.png'},
+        ];
+        const playlists=['流行','说唱','华语','治愈','夜晚'].includes(category)?all:[all[1]];
+        const send=()=>{if(!res.destroyed)res.end(JSON.stringify({code:200,more:false,playlists}));};
+        if(holdStylePlaylists){heldStylePlaylistResponses.push(send);counts.discovery.stylePlaylistHeld=(counts.discovery.stylePlaylistHeld??0)+1;}else send();return;
+      }
       res.end(JSON.stringify({code:200,more:false,playlists:[{id:'101',name:'Synthetic discovery playlist',description:'Original UI fixture',trackCount:2,coverImgUrl:'http://127.0.0.1:18439/discovery-cover.png'}]}));return;
     }
     if(discoveryUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/api/v6/playlist/detail'){
       counts.discovery??={lists:0,details:0};counts.discovery.details++;
       if(discoveryDetailMode==='error'){res.end(JSON.stringify({code:503}));return;}
+      const title=parsed.searchParams.get('id')==='201'?'Synthetic shared playlist':'Synthetic discovery playlist';
       const tracks=['one','two'].map((word,index)=>({id:String(9101+index),name:`Synthetic discovery ${word}`,ar:[{name:'Fixture artist'}],al:{name:'Synthetic discovery album',picUrl:'http://127.0.0.1:18439/discovery-cover.png'},dt:120000}));
       const selected=discoveryDetailMode==='empty'?[]:tracks;
-      const send=()=>{if(!res.destroyed)res.end(JSON.stringify({code:200,playlist:{name:'Synthetic discovery playlist',trackIds:selected.map(({id})=>({id})),tracks:selected}}));};
+      const send=()=>{if(!res.destroyed)res.end(JSON.stringify({code:200,playlist:{name:title,trackIds:selected.map(({id})=>({id})),tracks:selected}}));};
       if(holdDiscoveryDetail){holdDiscoveryDetail=false;heldDiscoveryResponses.push(send);counts.discovery.held=(counts.discovery.held??0)+1;}else send();return;
     }
     if(parsed.hostname==='music.163.com'&&parsed.pathname==='/api/resource/comment/floor/get'){
@@ -813,7 +846,7 @@ try {
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
   if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');

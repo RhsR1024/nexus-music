@@ -5220,6 +5220,134 @@ final class SourceSettingsTests: XCTestCase {
     let restored=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@",initial ?? ""),object:control)
     XCTAssertEqual(XCTWaiter.wait(for:[restored],timeout:10),.completed)
   }
+  func testStyleRecommendation() throws {
+    let app=XCUIApplication();app.launch()
+    func element(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:id).firstMatch}
+    func tab(_ name:String){
+      let item=element("tab-"+name);XCTAssertTrue(item.waitForExistence(timeout:15));item.tap()
+    }
+    func reach(_ target:XCUIElement){
+      for _ in 0..<24 {
+        if target.exists&&target.isHittable{return}
+        let above=target.exists && !target.frame.isEmpty && target.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.28:0.78))
+          .press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.78:0.28)))
+      }
+      XCTAssertTrue(target.exists&&target.isHittable,"Expected visible style control: \(target.identifier)")
+    }
+    func evidence(_ name:String){
+      let attachment=XCTAttachment(screenshot:XCUIScreen.main.screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)
+    }
+    func controlState(_ query:String="") throws -> [String:Any]{
+      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/discovery-fixture-control"+(query.isEmpty ? "":"?"+query))!)
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Any]) ?? [:]
+    }
+    func integer(_ key:String,in value:[String:Any])->Int{(value[key] as? NSNumber)?.intValue ?? -1}
+    func control(_ query:String="") throws -> Int{integer("heldStylePlaylists",in:try controlState(query))}
+    func dimension(_ id:String)->XCUIElement{element("style-dimension-"+id)}
+    func choose(_ value:String,dimension name:String){
+      let item=element("style-tag-\(name)-\(value)");reach(item);XCTAssertTrue(item.isEnabled);item.tap()
+    }
+    let count=element("style-selected-count")
+
+    tab("discover")
+    let entry=app.buttons["discovery-style-recommendation"]
+    XCTAssertTrue(entry.waitForExistence(timeout:20));reach(entry)
+    evidence("Discover exposes the bounded public-category style recommendation entry")
+    _=try controlState("holdStyleCategories=1")
+    entry.tap()
+    XCTAssertTrue(element("style-recommendation-sheet").waitForExistence(timeout:10))
+    XCTAssertEqual(count.label,"已选 0/5")
+    XCTAssertTrue(app.staticTexts["正在读取公开分类…"].waitForExistence(timeout:10))
+    let cancelCategories=element("style-category-cancel")
+    XCTAssertTrue(cancelCategories.waitForExistence(timeout:10));reach(cancelCategories);cancelCategories.tap()
+    XCTAssertTrue(app.staticTexts["分类读取已取消，可重试。"].waitForExistence(timeout:10))
+    evidence("Category loading exposes cancellation and a retryable state")
+    _=try controlState("styleCategories=normal&releaseStyle=1")
+    let retryCategories=element("style-category-retry")
+    XCTAssertTrue(retryCategories.waitForExistence(timeout:5));reach(retryCategories);retryCategories.tap()
+    for (id,value) in [("genre","曲风"),("language","语种"),("mood","情感"),("theme","主题"),("scene","场景")] {
+      let control=dimension(id)
+      XCTAssertTrue(control.waitForExistence(timeout:15),"The five public dimensions must load")
+      XCTAssertTrue(control.label.hasPrefix(value))
+      XCTAssertTrue(control.isEnabled)
+    }
+    XCTAssertTrue(dimension("genre").isSelected)
+    XCTAssertEqual(count.label,"已选 0/5")
+    evidence("Five public style dimensions and the zero-selection limit")
+
+    choose("说唱",dimension:"genre")
+    XCTAssertEqual(count.label,"已选 1/5")
+    reach(dimension("mood"));dimension("mood").tap();choose("治愈",dimension:"mood")
+    reach(dimension("scene"));dimension("scene").tap();choose("夜晚",dimension:"scene")
+    XCTAssertEqual(count.label,"已选 3/5")
+    evidence("Genre, mood and scene selections share one explainable five-tag budget")
+    let remove=element("style-selected-scene-夜晚");reach(remove);remove.tap();XCTAssertEqual(count.label,"已选 2/5")
+    let clear=element("style-clear");reach(clear);clear.tap();XCTAssertEqual(count.label,"已选 0/5")
+    XCTAssertFalse(element("style-generate-button").isEnabled,"Generation requires at least one tag")
+
+    reach(dimension("genre"));dimension("genre").tap();choose("流行",dimension:"genre")
+    reach(dimension("language"));dimension("language").tap();choose("华语",dimension:"language")
+    reach(dimension("mood"));dimension("mood").tap();choose("伤感",dimension:"mood")
+    reach(dimension("theme"));dimension("theme").tap();choose("校园",dimension:"theme")
+    reach(dimension("scene"));dimension("scene").tap();choose("夜晚",dimension:"scene")
+    XCTAssertEqual(count.label,"已选 5/5")
+    reach(dimension("genre"));dimension("genre").tap()
+    let sixth=element("style-tag-genre-电子");reach(sixth);XCTAssertFalse(sixth.isEnabled)
+    evidence("The sixth unique tag is disabled without hiding the current dimension")
+    reach(clear);clear.tap();XCTAssertEqual(count.label,"已选 0/5")
+
+    reach(dimension("genre"));dimension("genre").tap();choose("说唱",dimension:"genre")
+    _=try controlState("stylePlaylists=error")
+    let generate=element("style-generate-button");reach(generate);generate.tap()
+    XCTAssertTrue(app.staticTexts["1 个标签读取失败，请重试生成。"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["未完成：说唱"].waitForExistence(timeout:10))
+    _=try controlState("stylePlaylists=empty")
+    reach(generate);generate.tap()
+    XCTAssertTrue(app.staticTexts["没有找到匹配的公开歌单，请调整标签后重试。"].waitForExistence(timeout:10))
+    evidence("Generation separates transport failure from an empty public result")
+
+    _=try controlState("stylePlaylists=normal&holdStylePlaylists=1")
+    reach(generate);generate.tap()
+    let cancelGeneration=element("style-generate-cancel")
+    XCTAssertTrue(cancelGeneration.waitForExistence(timeout:10))
+    let held=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in ((try? control()) ?? 0) >= 1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[held],timeout:10),.completed)
+    evidence("A held public-category request is visibly cancellable")
+    cancelGeneration.tap()
+    XCTAssertTrue(app.staticTexts["已取消生成，可调整标签后重试。"].waitForExistence(timeout:10))
+    _=try controlState("holdStylePlaylists=0&releaseStyle=1")
+    XCTAssertFalse(element("style-result-0").waitForExistence(timeout:1),"A cancelled category response must not publish results")
+
+    reach(clear);clear.tap()
+    reach(dimension("genre"));dimension("genre").tap();choose("说唱",dimension:"genre");choose("电子",dimension:"genre")
+    reach(dimension("mood"));dimension("mood").tap();choose("治愈",dimension:"mood")
+    reach(dimension("scene"));dimension("scene").tap();choose("夜晚",dimension:"scene")
+    XCTAssertEqual(count.label,"已选 4/5")
+    _=try controlState("stylePlaylists=normal&failStyleTags=电子")
+    reach(generate);generate.tap()
+    XCTAssertTrue(app.staticTexts["1 个标签读取失败，其余结果已保留。"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["未完成：电子"].waitForExistence(timeout:10))
+    let first=element("style-result-0")
+    XCTAssertTrue(first.waitForExistence(timeout:10))
+    XCTAssertTrue(first.label.contains("Synthetic shared playlist"))
+    XCTAssertTrue(first.label.contains("命中说唱、治愈、夜晚"))
+    XCTAssertEqual(app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@","style-result-")).count,4)
+    evidence("Partial failure keeps deduplicated ranked results and all matched reasons")
+
+    reach(first);first.tap()
+    XCTAssertTrue(app.staticTexts["Synthetic shared playlist"].waitForExistence(timeout:20))
+    XCTAssertTrue(app.staticTexts["网易 · 已加载 2 / 2 首"].waitForExistence(timeout:10))
+    evidence("A recommendation opens the existing public playlist detail")
+    let back=app.buttons["返回歌单广场"];reach(back);back.tap()
+    XCTAssertTrue(entry.waitForExistence(timeout:10))
+
+    reach(entry);entry.tap()
+    XCTAssertTrue(element("style-recommendation-sheet").waitForExistence(timeout:10))
+    XCTAssertTrue(count.waitForExistence(timeout:10));XCTAssertEqual(count.label,"已选 0/5")
+    let close=app.buttons["关闭风格化推荐"];XCTAssertTrue(close.waitForExistence(timeout:10));close.tap()
+    XCTAssertTrue(waitForGone(element("style-recommendation-sheet"),timeout:10))
+  }
   func testDiscoverySongActions() throws {
     let app=XCUIApplication();app.launch()
     func tab(_ name:String){let item=app.descendants(matching:.any).matching(identifier:"tab-"+name).firstMatch;XCTAssertTrue(item.waitForExistence(timeout:15));item.tap()}
