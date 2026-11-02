@@ -157,7 +157,7 @@ const timedLyricsUI=amllLyricsUI||sequentialLyricsUI;
 if(timedLyricsUI&&process.argv.slice(2).length!==1)throw new Error('Timed TTML requires its single explicit target so malformed-TTML fallback coverage stays separate');
 const matchingUI=timedLyricsUI||process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments')||target.endsWith('/testWayfarerAppImport'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
-const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates')||target.endsWith('/testUnifiedSongAlbumArtistSearch'));
+const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates')||target.endsWith('/testUnifiedSongAlbumArtistSearch')||target.endsWith('/testUnifiedSearchAggregateFivePlatformMatrix'));
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
 const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI;
 const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
@@ -165,7 +165,7 @@ lx.on('request',async({source,action})=>{
   if(action!=='musicUrl')throw new Error('unsupported fixture action');
   return 'http://127.0.0.1:18439/unified-search-audio/'+source+'.wav';
 });
-lx.send('inited',{sources:{wy:{name:'Unified Search WY',actions:['musicUrl'],qualitys:['128k']}}});`;
+lx.send('inited',{sources:{wy:{name:'Unified Search WY',actions:['musicUrl'],qualitys:['128k']},tx:{name:'Unified Search TX',actions:['musicUrl'],qualitys:['128k']},kw:{name:'Unified Search KW',actions:['musicUrl'],qualitys:['128k']},kg:{name:'Unified Search KG',actions:['musicUrl'],qualitys:['128k']},mg:{name:'Unified Search MG',actions:['musicUrl'],qualitys:['128k']}}});`;
 const navidromeNavigationUI=process.argv.slice(2).some(target=>target.endsWith('/testNavidromeBrowseHistory'));
 const structuredLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testStructuredNavidromeLyrics'));
 const classicReferenceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicReferenceDirect'));
@@ -506,17 +506,18 @@ const server = createServer(async (req, res) => {
       if(parsed.pathname==='/api/search/get/web'&&req.method==='POST'){
         const body=new URLSearchParams(request.body??''),type=body.get('type'),query=body.get('s'),offset=Number(body.get('offset')??0);
         if(type==='10'){
-          res.end(JSON.stringify({code:200,result:{albumCount:1,albums:[{id:'2001',name:'Unified fixture album',artist:{name:'Fixture artist'},size:12,publishTime:0}]}}));return;
+          res.end(JSON.stringify({code:200,result:{albumCount:1,albums:[{id:query==='Unified aggregate fixture'?'2101':'2001',name:query==='Unified aggregate fixture'?'Unified aggregate album WY':'Unified fixture album',artist:{name:'Fixture artist'},size:12,publishTime:0}]}}));return;
         }
         if(type==='100'){
-          res.end(JSON.stringify({code:200,result:{artistCount:1,artists:[{id:'3001',name:'Unified fixture artist',musicSize:20,albumSize:2}]}}));return;
+          res.end(JSON.stringify({code:200,result:{artistCount:1,artists:[{id:query==='Unified aggregate fixture'?'3101':'3001',name:query==='Unified aggregate fixture'?'Unified aggregate artist WY':'Unified fixture artist',musicSize:20,albumSize:2}]}}));return;
         }
         if(type==='1000'){
           res.end(JSON.stringify({code:200,result:{playlistCount:1,playlists:[{id:'4001',name:'Unified fixture playlist',creator:{nickname:'Fixture editor'},trackCount:8}]}}));return;
         }
-        if(query==='Unified fixture'){
-          const songs=offset===0?[{id:'1001',name:'Unified fixture song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:120000},{id:'1002',name:'Unified second song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:121000}]:offset===30?[{id:'1031',name:'Unified second page song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:122000}]:[];
-          res.end(JSON.stringify({code:200,result:{songCount:61,songs}}));return;
+        if(query==='Unified fixture'||query==='Unified aggregate fixture'){
+          const aggregate=query==='Unified aggregate fixture';
+          const songs=offset===0?aggregate?[{id:'1101',name:'Unified aggregate song WY',ar:[{name:'Fixture artist'}],al:{name:'Unified aggregate album WY'},dt:120000}]:[{id:'1001',name:'Unified fixture song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:120000},{id:'1002',name:'Unified second song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:121000}]:!aggregate&&offset===30?[{id:'1031',name:'Unified second page song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:122000}]:[];
+          res.end(JSON.stringify({code:200,result:{songCount:aggregate?1:61,songs}}));return;
         }
       }
       res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;
@@ -554,14 +555,40 @@ const server = createServer(async (req, res) => {
         const mid=body.req.param?.song_mid;
         res.end(JSON.stringify({code:0,req:{code:0,data:{track_info:{id:9068436,mid}}}}));return;
       }
-      if(body.req){res.end(JSON.stringify({code:1}));return;}const param=body['music.search.SearchCgiService']?.param,page=param?.page_num??1;
+      if(body.req&&body.req.module!=='music.search.SearchCgiService'){res.end(JSON.stringify({code:1}));return;}
+      const wrappedSearch=body.req?.module==='music.search.SearchCgiService',service=body['music.search.SearchCgiService'],param=wrappedSearch?body.req.param:service?.param,page=param?.page_num??1,searchType=param?.search_type,aggregate=param?.query==='Unified aggregate fixture';
+      const searchResponse=payload=>wrappedSearch?{code:0,req:payload}:{code:0,'music.search.SearchCgiService':payload};
+      if(aggregate&&searchType===2){res.end(JSON.stringify(searchResponse({code:0,data:{body:{album:{sum:1,list:[{albumMID:'tx-aggregate-album',albumName:'Unified aggregate album TX',singerName:'Fixture artist',song_count:8,albumPic:'https://example.com/tx-album.jpg'}]}}}})));return;}
+      if(aggregate&&searchType===1){res.end(JSON.stringify(searchResponse({code:0,data:{body:{singer:{sum:1,list:[{singerMID:'tx-aggregate-artist',singerName:'Unified aggregate artist TX',songNum:20,albumNum:2}]}}}})));return;}
       const song=(mid,live=false)=>({mid,title:'Synthetic match tone'+(live?' (Live)':''),singer:[{name:'Fixture artist'}],album:{name:live?'Manual fixture':'Matched fixture'},interval:120,file:{media_mid:mid,size_flac:1000}});
-      res.end(JSON.stringify({code:0,'music.search.SearchCgiService':{code:0,data:{body:{song:{sum:2,list:page===1?[song(param?.query?.includes('slow')?'fixture-slow':'fixturematch01'),song('fixture-live',true)]:[]}}}}}));return;
+      const aggregateSong={id:'tx-aggregate-song-id',mid:'tx-aggregate-song',title:'Unified aggregate song TX',singer:[{name:'Fixture artist'}],album:{mid:'tx-aggregate-album',name:'Unified aggregate album TX'},interval:120,file:{media_mid:'tx-aggregate-song',size_128mp3:1000}};
+      res.end(JSON.stringify(searchResponse({code:0,data:{body:{song:{sum:aggregate?1:2,list:page===1?aggregate?[aggregateSong]:[song(param?.query?.includes('slow')?'fixture-slow':'fixturematch01'),song('fixture-live',true)]:[]}}}})));return;
     }
-    if(parsed.hostname==='search.kuwo.cn'){if(parsed.searchParams.get('all')==='Shape of You'){res.end(JSON.stringify({abslist:[{MUSICRID:'MUSIC_26445261',SONGNAME:'Shape of You',ARTIST:'Fixture artist'}],TOTAL:1}));return;}res.end(JSON.stringify({abslist:[],TOTAL:0}));return;}
-    if(parsed.hostname==='songsearch.kugou.com'){if(parsed.searchParams.get('keyword')==='Shape of You'){res.end(JSON.stringify({error_code:0,data:{lists:[{FileHash:'B6A303C9CDA8E6C4C0B2FB0B23A570C6',Audioid:24748592,OriSongName:'Shape of You',SingerName:'Fixture artist'}],total:1}}));return;}res.end(JSON.stringify({error_code:0,data:{lists:[],total:0}}));return;}
+    if(parsed.hostname==='search.kuwo.cn'){
+      const aggregate=parsed.searchParams.get('all')==='Unified aggregate fixture';
+      if(parsed.searchParams.get('all')==='Shape of You'){res.end(JSON.stringify({abslist:[{MUSICRID:'MUSIC_26445261',SONGNAME:'Shape of You',ARTIST:'Fixture artist'}],TOTAL:1}));return;}
+      if(aggregate&&parsed.searchParams.get('ft')==='album'){res.end(JSON.stringify({albumlist:[{albumid:'kw-aggregate-album',name:'Unified aggregate album KW',artist:'Fixture artist',musiccnt:'6'}],total:'1'}));return;}
+      if(aggregate&&parsed.searchParams.get('ft')==='artist'){res.end(JSON.stringify({abslist:[{ARTISTID:'kw-aggregate-artist',ARTIST:'Unified aggregate artist KW',SONGNUM:'10',ALBUMNUM:'1'}],TOTAL:'1'}));return;}
+      if(aggregate){res.end(JSON.stringify({abslist:[{MUSICRID:'MUSIC_kw-aggregate-song',SONGNAME:'Unified aggregate song KW',ARTIST:'Fixture artist',ALBUM:'Unified aggregate album KW'}],TOTAL:1}));return;}
+      res.end(JSON.stringify({abslist:[],TOTAL:0}));return;
+    }
+    if(parsed.hostname==='songsearch.kugou.com'){
+      if(parsed.searchParams.get('keyword')==='Shape of You'){res.end(JSON.stringify({error_code:0,data:{lists:[{FileHash:'B6A303C9CDA8E6C4C0B2FB0B23A570C6',Audioid:24748592,OriSongName:'Shape of You',SingerName:'Fixture artist'}],total:1}}));return;}
+      if(parsed.searchParams.get('keyword')==='Unified aggregate fixture'){res.end(JSON.stringify({error_code:0,data:{lists:[{FileHash:'kg-aggregate-song-hash',Audioid:24748600,OriSongName:'Unified aggregate song KG',SingerName:'Fixture artist',AlbumName:'Unified aggregate album KG'}],total:1}}));return;}
+      res.end(JSON.stringify({error_code:0,data:{lists:[],total:0}}));return;
+    }
+    if(parsed.hostname==='msearch.kugou.com'&&parsed.searchParams.get('keyword')==='Unified aggregate fixture'){
+      if(parsed.pathname==='/api/v3/search/album'){res.end(JSON.stringify({errcode:0,data:{total:1,info:[{albumid:'kg-aggregate-album',albumname:'Unified aggregate album KG',singername:'Fixture artist',songcount:5}]}}));return;}
+      if(parsed.pathname==='/api/v3/search/singer'){res.end(JSON.stringify({status:1,errcode:0,data:[{singerid:'kg-aggregate-artist',singername:'Unified aggregate artist KG',songcount:8}]}));return;}
+    }
     if(parsed.hostname==='jadeite.migu.cn'){
       if(parsed.searchParams.get('text')==='Shape of You'){res.end(JSON.stringify({code:'000000',songResultData:{resultList:[{songId:'1104719773',copyrightId:'6005753HF0D',name:'Shape of You',singers:[{name:'Ed Sheeran'}],audioFormats:[]}],totalCount:1}}));return;}
+      if(parsed.searchParams.get('text')==='Unified aggregate fixture'){
+        const searchSwitch=JSON.parse(parsed.searchParams.get('searchSwitch'));
+        if(searchSwitch.song){res.end(JSON.stringify({code:'000000',songResultData:{resultList:[[{songId:'mg-aggregate-song',copyrightId:'mg-aggregate-copyright',name:'Unified aggregate song MG',singers:[{name:'Fixture artist'}],audioFormats:[]}]],totalCount:1}}));return;}
+        if(searchSwitch.album){res.end(JSON.stringify({code:'000000',albumResultData:{result:[{id:'mg-aggregate-album',name:'Unified aggregate album MG',singer:'Fixture artist'}],totalCount:1}}));return;}
+        if(searchSwitch.singer){res.end(JSON.stringify({code:'000000',singerResultData:{result:[{id:'mg-aggregate-artist',name:'Unified aggregate artist MG',songCount:7,albumCount:1}],totalCount:1}}));return;}
+      }
       res.end(JSON.stringify({code:'000000',songResultData:{resultList:[],totalCount:0}}));return;
     }
     res.writeHead(400);res.end();return;
@@ -776,7 +803,7 @@ try {
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
   if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');

@@ -830,6 +830,68 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"sources")
     removeUnifiedSourceIfPresent()
   }
+  func testUnifiedSearchAggregateFivePlatformMatrix() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reach(_ element:XCUIElement){
+      for _ in 0..<24 {
+        if waitForHittable(element,timeout:0.2){return}
+        if element.exists && element.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}
+      }
+      XCTAssertTrue(waitForHittable(element,timeout:5))
+    }
+    func removeUnifiedSourceIfPresent(){
+      let previous=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Unified Search Fixture").firstMatch
+      if !previous.exists{return}
+      reach(previous);previous.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+      XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
+    }
+    openSettings(app,page:"sources")
+    removeUnifiedSourceIfPresent()
+    let source=app.textFields["音源订阅地址"]
+    XCTAssertTrue(source.waitForExistence(timeout:10));reach(source);source.tap()
+    for character in "http://127.0.0.1:18439/unified-search-source.js"{source.typeText(String(character))}
+    source.typeText("\n")
+    let importSource=app.buttons["从地址导入"];reach(importSource);importSource.tap()
+    let enable=app.buttons["启用音源：Nexus Unified Search Fixture"]
+    XCTAssertTrue(enable.waitForExistence(timeout:15));reach(enable);enable.tap()
+    XCTAssertTrue(app.buttons["停用音源：Nexus Unified Search Fixture"].waitForExistence(timeout:10))
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let clearHistory=app.buttons["search-history-clear"]
+    if clearHistory.exists{clearHistory.tap();XCTAssertTrue(clearHistory.waitForNonExistence(timeout:5))}
+    let allKind=app.descendants(matching:.any).matching(identifier:"search-kind-all").firstMatch
+    XCTAssertTrue(allKind.waitForExistence(timeout:10));reach(allKind);allKind.tap()
+    let aggregate=app.descendants(matching:.any).matching(identifier:"聚合").firstMatch
+    XCTAssertTrue(aggregate.waitForExistence(timeout:10));reach(aggregate);aggregate.tap()
+    let field=app.textFields["搜索歌曲、专辑或艺术家"]
+    XCTAssertTrue(field.waitForExistence(timeout:10));reach(field);field.tap()
+    for character in "Unified aggregate fixture"{field.typeText(String(character))}
+    XCTAssertEqual(field.value as? String,"Unified aggregate fixture")
+    let run=app.buttons["run-online-search"];reach(run);run.tap()
+    let expected:[(String,String)]=[("wy","网易云"),("tx","QQ音乐"),("kw","酷我"),("kg","酷狗"),("mg","咪咕")]
+    for (platform,name) in expected {
+      for type in ["song","album","artist"] {
+        let row=app.buttons["unified-\(type)-\(platform)-0"]
+        XCTAssertTrue(row.waitForExistence(timeout:25),"Missing \(name) \(type) aggregate preview")
+      }
+      XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","来源：\(name)")).firstMatch.exists,"Missing source identity for \(name)")
+    }
+    image("Unified aggregate search renders songs albums and artists for all five platforms")
+    let miguArtist=app.buttons["unified-artist-mg-0"]
+    reach(miguArtist)
+    XCTAssertEqual(miguArtist.label,"打开艺术家：Unified aggregate artist MG，咪咕，7 首歌曲 · 1 张专辑")
+    image("Unified aggregate search reaches the final platform with independent entity identities")
+
+    let qqSong=app.buttons["unified-song-tx-0"]
+    reach(qqSong);qqSong.tap()
+    let player=app.buttons["打开播放页"].firstMatch
+    XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    XCTAssertTrue(app.staticTexts["Unified aggregate song TX"].firstMatch.waitForExistence(timeout:10),"A non-NetEase aggregate preview must use the existing authoritative queue")
+    app.buttons["收起播放页"].firstMatch.tap()
+
+    openSettings(app,page:"sources")
+    removeUnifiedSourceIfPresent()
+  }
   func testPublicComments() throws {
     XCUIDevice.shared.orientation = .portrait
     defer { XCUIDevice.shared.orientation = .portrait }

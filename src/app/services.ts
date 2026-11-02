@@ -57,7 +57,7 @@ import { SearchCoordinator,PagedSearchCoordinator } from '../providers/searchCoo
 import { makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
 import type { OnlinePlatform,Track } from '../domain/track.ts';
-import {requestJSON,type HTTPClient} from '../providers/http.ts';
+import {requestJSON,type HTTPClient,type TextHTTPClient} from '../providers/http.ts';
 import type {PlaybackTraceSink} from '../playback/diagnostics.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
 import { NavidromeClient } from '../providers/navidrome.ts';
@@ -96,7 +96,7 @@ import {loadNativeMusicAuth} from '../providers/nativeMusicAuth.ts';
 import {NeteaseAccountProfileClient} from '../providers/neteaseAccountProfile.ts';
 import {resolvePlaylistLink,type PlaylistLinkExpander} from '../providers/playlistLink.ts';
 
-export async function createServices(options:{onlineHTTP?:HTTPClient;playlistLinkExpander?:PlaylistLinkExpander}={}) {
+export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextHTTP?:TextHTTPClient;playlistLinkExpander?:PlaylistLinkExpander}={}) {
   const repository = await openRepository();
   const recoveryWarnings:string[]=[];
   const restore=async(key:string,label:string,run:()=>Promise<void>)=>{const ok=await restoreRecord(repository,key,run,Crypto.randomUUID);if(!ok)recoveryWarnings.push(`${label}数据无法读取，原始记录已隔离保留，其他功能继续可用。`);return ok;};
@@ -225,11 +225,11 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;playlistLin
   const discovery=new DiscoveryProvider(value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),options.onlineHTTP);
   const search = new SearchCoordinator(online);
   const searchAssistance=new SearchAssistanceCoordinator(new SearchAssistanceProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),deviceId:Crypto.randomUUID}));
-  const artists=new ArtistProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
+  const artists=new ArtistProvider({http:options.onlineHTTP,textHTTP:options.onlineTextHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
   const artistSearch=new PagedSearchCoordinator(artists,item=>item.id);
   const videos=new VideoProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
   const videoSearch=new PagedSearchCoordinator(videos,item=>item.id);
-  const albums=new AlbumProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
+  const albums=new AlbumProvider({http:options.onlineHTTP,textHTTP:options.onlineTextHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
   const albumSearch=new PagedSearchCoordinator(albums,item=>item.id);
   const playlistSearch=new PagedSearchCoordinator<PlaylistSearchItem>(new PlaylistSearchProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),deviceId:Crypto.randomUUID}),item=>item.id);
   const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},options.onlineHTTP,decodeKRC,decodeQRC);
