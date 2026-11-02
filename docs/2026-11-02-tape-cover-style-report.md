@@ -40,4 +40,23 @@
 
 ## 归档与云端
 
-清洁未签名归档、git 提交、远端队列和 T7 回执在后续核验后补录；补录前不把本功能记为完整交付。
+产品提交 `6785769` 已正常 push，远端 `main` 实核为
+`67857694dcafaa203c3c2ddbfe46e61d7993405a`。clean unsigned archive 的 manifest
+记录 `dirty:false`、`workingTreeChanges:[]`、同一 HEAD、
+arm64/iphoneos26.2/iOS15.1/设备族 `[1,2]`、`signed:false`。IPA 为 12,903,359
+字节、SHA-256
+`1054d323d971c22f15cab79bf7697d05c6003867d629254f74737286eedcc15a`。
+
+独立归档/IPA 核验 `ready=true`，27 项检查全部通过：ZIP CRC 无错误；57 个普通
+payload 与 archive 的文件路径和逐文件字节一致；81 个 exFAT `._*` 元数据条目另行
+计数；arm64、最低 iOS 15.1、设备族 `[1,2]`、bundle identity 及无签名/描述文件
+契约通过；UI 测试 bundle、夹具账号/端点/口令、私人备份文件名、私钥和源映射排除
+通过。核验回执 SHA-256
+`c86c01497538e2b7eaa4b47fd95d76727914caabb5ae58d4b25928e08c297d2b`，manifest
+SHA-256 `78c4b7de9fb4eb8c7611c0e35a6f8a239a5d61ff6e7113f8f56e38810fc641e4`。
+
+push 后 `41449172204` 继续运行，`41455717983`/`6785769` 为本提交的唯一 pending；
+实核队列为 1 运行 / 1 排队，未手动取消运行中任务或重派旧版本。
+
+iOS 27 GitHub Actions 的终态、实体 iPhone、VoiceOver 实际手势、动态字号、小屏、
+连续动效/性能、签名/安装/续签，以及真实私人服务与真实用户媒体仍继续独立验收。

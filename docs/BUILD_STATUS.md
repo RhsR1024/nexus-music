@@ -1,3 +1,11 @@
+## 2026-11-02 粉调磁带封面 clean unsigned archive
+
+产品提交 `6785769` 的 `npm run ios:archive` 成功。manifest 记录 `dirty:false`、`workingTreeChanges:[]`、同一 HEAD、arm64/iphoneos26.2/iOS15.1/设备族 `[1,2]`、`signed:false`，SHA-256 `78c4b7de9fb4eb8c7611c0e35a6f8a239a5d61ff6e7113f8f56e38810fc641e4`。
+
+IPA 为 12,903,359 字节、SHA-256 `1054d323d971c22f15cab79bf7697d05c6003867d629254f74737286eedcc15a`。独立核验回执 `build/logs/tape-cover-archive-verification-6785769.json` 为 `ready=true`、SHA-256 `c86c01497538e2b7eaa4b47fd95d76727914caabb5ae58d4b25928e08c297d2b`，27/27 检查通过：57 个普通 payload 路径集合和字节与 archive 一致，81 个 exFAT `._*` 元数据另计；ZIP CRC、bundle identity、最低系统、设备族、未签名/无描述文件、UI测试/夹具/私人备份/私钥/源映射排除均通过。首次失败回执因核验器对嵌套 `._*` 过滤不足而保留；随后一次 Python 版本兼容调用错误未生成回执，修正后同一产物全量通过。
+
+正式 Release `SourceUITests-1793625940527` 为1/0/0、约278秒、`sourceUnchanged=true`；8PNG provenance ready并亲看。产品提交已push且远端main实核一致；push后`41449172204`继续运行，`41455717983`/`6785769`为唯一pending，实核队列1运行/1排队，未手动取消或重派。iOS27终态、实体机、签名与真实媒体继续，模拟器/未签名包不替代这些验收。见[回执](2026-11-02-tape-cover-style-report.md)。
+
 ## 2026-11-02 咪咕官方 MV 分享页 clean unsigned archive
 
 产品提交`8053354`的`npm run ios:archive`成功，manifest记录`dirty:false`、`workingTreeChanges:[]`、commit同一HEAD、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。manifest SHA-256 `361ab93df2f831e6f04acc8622d64044869661af89f9ed157775608304cf9b18`。

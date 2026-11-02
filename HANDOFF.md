@@ -1,3 +1,13 @@
+## 2026-11-02 粉调磁带封面样式
+
+外观设置新增默认关闭的“磁带封面”。开启后，经典、封面沉浸、声波核、AM 与 AM2 的主要封面显示当前主题强调色的磁带外壳、双卷盘、定位点和 `SIDE A`；封面加载、失败回退和歌曲身份继续复用既有 `Cover`。迷你播放器、列表缩略图、写真、黑胶与歌词舞台不套用该装饰。需求来源为用户补充项 `U`，磁带隐喻是音枢原创实现，不宣称来自 Sollin IPA 观测。
+
+偏好、主题导入导出与云备份显式保留 `tapeStyle`；旧配置缺少该字段时保留接收设备当前值。实现仅增加静态 React Native 视图，不增加图片资源、远程素材、动画、第二队列或播放状态。设计边界见[UI规格](docs/ui-spec/tape-style-2026-11-02.md)。
+
+`npm run check` 为982/982，完整 native、Swift/Node/YAML/diff 与 `ios:build` 通过。正式 Release `SourceUITests-1793625940527` 为1/0/0、约278秒，`sourceUnchanged=true`；8张1290×2796 PNG provenance ready并逐张亲看，覆盖五类主要播放器的真实加载 raster 封面、关闭恢复、重启保持和迷你播放器隔离。产品提交 `6785769` 已正常push并实核远端main一致。clean unsigned IPA为12,903,359字节、SHA-256 `1054d323…`；独立27项核验确认manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、57个普通payload字节一致、81个exFAT元数据另计、ZIP CRC、隐私/测试/签名排除均通过。push后`41449172204`继续运行，`41455717983`/`6785769`为唯一pending，实核队列1运行/1排队；未手动取消或重派。
+
+iOS27云端终态、实体iPhone、VoiceOver/动态字号/小屏、连续动效/性能、真实私人服务与用户媒体、签名/安装/续签及T7阶段回执继续；本批不关闭完整外观、Sollin J43/J46、F/J总表或项目。详见[本批回执](docs/2026-11-02-tape-cover-style-report.md)。
+
 ## 2026-11-02 咪咕官方 MV 分享页详情
 
 产品提交 `8053354` 将咪咕 MV 从“暂不支持”改为精确白名单官方匿名分享页 `https://h5.nf.migu.cn/app/v4/p/share/mv/index.html?id=<numeric-id>`，恢复正式详情页刷新，并把咪咕纳入现有独立 WebKit MV 容器；不解析临时 HLS/MP4、Cookie、设备标识、会话或凭据，MV 仍不进入权威音乐队列。`PublicMVPolicy` 只接受精确 HTTPS host/path 和唯一数字 `id`，拒绝额外参数、fragment、畸形 ID、私网及跨平台导航。

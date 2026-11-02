@@ -1,3 +1,15 @@
+## 2026-11-02 粉调磁带封面样式
+
+`AppearanceOptions` 新增 `tapeStyle:boolean`，默认关闭并进入版本化偏好存储。新的 `PlayerCover` 在至少112pt时按开关选择 `TapeCover`，否则继续使用原 `Cover`；经典、封面沉浸、声波核、AM 与 AM2 的主要封面均通过该边界接入。迷你封面、列表缩略图、写真、黑胶和歌词舞台保留原组件。
+
+`TapeCover` 以当前主题强调色绘制外壳，以静态 `View` 绘制双卷盘、定位点、侧条和 `SIDE A`；内部仍调用原 `Cover`，因此图片加载、取消、失败与回退行为不变。`tapeCoverLayout()` 对占位、圆角、内边距、卷盘带和卷盘直径做边界收紧，外壳尺寸与原主封面完全一致，启用/关闭不会移动播放控件。`useSyncExternalStore` 让外观开关在当前播放器立即生效。
+
+主题配置和云备份原先使用严格字段白名单。`tapeStyle` 作为兼容性 optional field 读取/写出：新导出包含它，旧文件缺少它时保留接收设备当前值；显式错误类型仍由 `validatePreferences` 拒绝。
+
+`npm run check` 982/982、完整 `npm run test:native`、Swift parse、工作流 YAML、Node syntax、diff 与 `npm run ios:build` 通过。正式 Release `SourceUITests-1793625940527` 为1/0/0、约278秒，manifest `exitCode=0/sourceUnchanged=true`，源码 digest `63efa46d…`、安装 bundle `e56883a5…`。8张1290×2796 PNG由正式 Navidrome 合成服务加载真实 raster 封面，provenance ready并逐张亲看；验证五种主要播放器、关闭恢复、重启保持与迷你播放器隔离。
+
+`6785769` clean unsigned archive 对应同一提交，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 12,903,359字节、SHA-256 `1054d323…`。独立27项核验确认ZIP CRC、57个普通payload路径/字节、81个exFAT元数据计数及测试/私人/签名排除；最终回执SHA-256 `c86c0149…`。提交已push并实核远端main；`41449172204`继续运行、`41455717983`/`6785769`唯一pending，队列1运行/1排队。iOS27终态、实体机、VoiceOver/字号/小屏、连续动效/性能、真实媒体和签名继续。来源为用户补充 `U`，无新增Sollin采集或视觉语义声明。见[回执](2026-11-02-tape-cover-style-report.md)。
+
 ## 2026-11-02 咪咕官方 MV 分享页详情
 
 `VideoProvider.publicPage("mg", ...)` 不再抛出 `PublicMVPageUnavailableError`，而是从经核验的公开 MV 数值标识生成 `https://h5.nf.migu.cn/app/v4/p/share/mv/index.html?id=<numeric-id>`。该路径不发起咪咕媒体 API 请求，不解析临时 HLS/MP4、Cookie、设备标识、会话或凭据。`MVDetail` 对咪咕恢复现有刷新按钮；刷新仅重建独立 WebKit 页面代次，返回仍保留原搜索上下文。MV 继续与权威音乐队列分离。
