@@ -1,3 +1,11 @@
+## 2026-11-02 Navidrome 浏览历史与上下文恢复
+
+`NavidromeBrowser` 将四个一级分类和详情父层保存在组件会话内存：items、标题、搜索草稿/已提交查询、歌单名草稿、offset、可见页、more和错误均可恢复；刷新回第一页，分页失败同offset重试。取消/代次/AbortController隔离迟到结果，账户切换、移除、重连和卸载清空缓存；只保存白名单Track元数据，不持久化凭据、客户端、URL或音频。
+
+正式导航Release `SourceUITests-1793577102182` 1/0/0、580.834秒；原综合回归 `SourceUITests-1793577857813` 1/0/0、651.540秒，均`sourceUnchanged=true`且源码/安装bundle digest一致。967/967检查、Node/Swift/YAML/diff检查通过，5PNG来源ready并亲看。首轮唯一失败为AX对空搜索框暴露占位文字，原结果保留，最终仍禁止旧查询残留。
+
+本批为音枢自有OpenSubsonic导航补强，没有新增Sollin采集、证据结论、第三方源码或原生依赖；复用原客户端、唯一播放队列、本地收藏与账户存储边界。clean unsigned IPA、push与iOS27本批终态待补录；真实私人服务、弱网、实体机、签名、大字号/VoiceOver与完整F15/S8继续。详见[回执](2026-11-02-navidrome-browse-history-report.md)。
+
 ## 2026-11-02 公开歌单默认端口回归修正
 
 修正 WHATWG URL 自动去掉`:443`/`:80`导致显式端口漏检：原始authority、短链输入与展开目标共用校验；网易短链在非网易平台下直接拒绝且不发请求。961/961检查、Swift parse/diff、IPA/APK strict review通过；正式Release `SourceUITests-1793573573210` 1/0/0、214.252秒，sourceUnchanged，新增端口拒绝/零请求截图provenance ready并亲看。已有取消、重试、分页及完整导入回归保持。`36cc893`已push，clean unsigned IPA `4274b3f7…`（12,877,762字节）、manifest clean、164项CRC/138项文件一致；测试与私人资源排除，Hermes保留1条既有构建路径，见回执的明确限制。iOS27为41347977881运行/41360300631唯一pending，终态继续。见[本批回执](2026-11-02-playlist-default-port-regression-report.md)。本批不改变当前iPhone常态UI范围，不报全部F12/F13或项目完成。

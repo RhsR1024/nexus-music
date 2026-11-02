@@ -3690,6 +3690,57 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
     openSettings(app,page:"skins");let classic=element("player-layout-classic");reveal(classic);classic.tap()
   }
+  func testNavidromeBrowseHistory() throws {
+    let app=XCUIApplication();app.launch()
+    func reach(_ element:XCUIElement){
+      for _ in 0..<65 {
+        if element.exists && element.isHittable {return}
+        if element.exists && element.frame.midY.isFinite && element.frame.midY<app.frame.midY {app.swipeDown()} else {app.swipeUp()}
+      }
+      XCTAssertTrue(element.isHittable,"Navigation control must be reachable: \(element)")
+    }
+    func tap(_ label:String){let e=app.buttons[label].firstMatch;XCTAssertTrue(e.waitForExistence(timeout:10));reach(e);let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:e);XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:15),.completed);e.tap()}
+    func item(_ kind:String,_ id:String)->XCUIElement {app.buttons["navidrome-item-\(kind)-\(id)"].firstMatch}
+    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func type(_ e:XCUIElement,_ value:String){reach(e);e.tap();if let old=e.value as? String,!old.isEmpty && !old.contains("服务器") && !old.contains("用户名"){e.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:old.count))};for c in value{e.typeText(String(c))};e.typeText("\n")}
+    func connect(_ username:String){
+      openSettings(app,page:"sources")
+      let prior=app.buttons["移除连接：\(username)"]
+      if prior.exists{reach(prior);prior.tap();app.alerts.buttons["移除"].tap()}
+      type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439")
+      type(app.textFields["Navidrome用户名"],username);type(app.secureTextFields["Navidrome密码"],"fixture-password")
+      tap("验证并保存连接");XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
+      app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+      let entry=app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch;reach(entry);entry.tap()
+      let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-\(username)").firstMatch;XCTAssertTrue(account.waitForExistence(timeout:10));reach(account);account.tap()
+    }
+    connect("fixture-browser")
+    tap("歌手");XCTAssertTrue(item("artist","browser-artist-0").waitForExistence(timeout:15));tap("下一页歌曲/项目")
+    let artist=item("artist","browser-artist-60");XCTAssertTrue(artist.waitForExistence(timeout:10));reach(artist);artist.tap()
+    XCTAssertTrue(item("album","browser-album-0").waitForExistence(timeout:15));tap("下一页歌曲/项目")
+    let album=item("album","browser-album-60");reach(album);album.tap()
+    XCTAssertTrue(app.buttons["播放全部"].waitForExistence(timeout:15));tap("下一页歌曲/项目")
+    let star=app.buttons["服务端星标"].firstMatch;reach(star);star.tap()
+    XCTAssertTrue(app.buttons["取消服务端星标"].firstMatch.waitForExistence(timeout:15));XCTAssertFalse(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Browser song 0")).firstMatch.exists)
+    image("Navidrome acknowledged server star retains the current song page")
+    let song=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Browser song 50")).firstMatch;reach(song);song.tap()
+    tap("打开播放页");XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:30));tap("暂停");tap("收起播放页")
+    tap("返回Browser artist detail");XCTAssertTrue(item("album","browser-album-60").waitForExistence(timeout:10));XCTAssertFalse(item("album","browser-album-0").exists)
+    image("Navidrome returned to loaded second album page after PCM playback")
+    tap("返回歌手");XCTAssertTrue(item("artist","browser-artist-60").waitForExistence(timeout:10));XCTAssertFalse(item("artist","browser-artist-0").exists)
+    tap("加载更多");XCTAssertTrue(item("artist","browser-artist-119").waitForExistence(timeout:15))
+    let last=item("artist","browser-artist-119");reach(last);last.tap();XCTAssertTrue(app.buttons["返回歌手"].waitForExistence(timeout:10));tap("返回歌手")
+    XCTAssertTrue(item("artist","browser-artist-119").waitForExistence(timeout:10));image("Navidrome returned to third artist page with 120 items retained")
+    tap("歌曲");let search=app.textFields["搜索私人曲库"];XCTAssertTrue(search.waitForExistence(timeout:10));type(search,"Browser query");tap("加载更多")
+    XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Browser song 50")).firstMatch.waitForExistence(timeout:10))
+    tap("服务端歌单");XCTAssertTrue(item("playlist","browser-list-0").waitForExistence(timeout:10));tap("下一页歌曲/项目")
+    let playlist=item("playlist","browser-list-60");reach(playlist);playlist.tap();XCTAssertTrue(app.buttons["返回服务端歌单"].waitForExistence(timeout:10));tap("返回服务端歌单")
+    XCTAssertTrue(item("playlist","browser-list-60").waitForExistence(timeout:10));tap("歌曲");XCTAssertEqual(search.value as? String,"Browser query")
+    XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Browser song 50")).firstMatch.exists);image("Navidrome search and loaded song page restored after playlist browsing")
+    connect("fixture-browser-two");XCTAssertTrue(item("album","browser-album-0").waitForExistence(timeout:10));XCTAssertFalse(app.buttons["返回歌手"].exists);XCTAssertFalse(app.buttons["返回Browser artist detail"].exists)
+    tap("歌曲");let cleared=search.value as? String;XCTAssertTrue(cleared==""||cleared=="搜索自己的歌曲、歌手","An empty iOS field may expose its placeholder as the AX value; it must never retain the old query");image("Navidrome account switch clears saved navigation and search")
+    for username in ["fixture-browser","fixture-browser-two"] {openSettings(app,page:"sources");let remove=app.buttons["移除连接：\(username)"];reach(remove);remove.tap();app.alerts.buttons["移除"].tap()}
+  }
   func testZNavidromePlaybackAndCredentials() throws {
     let app=XCUIApplication();app.launch()
     // Colour scores are only meaningful under the shipping default theme. A

@@ -1,3 +1,11 @@
+## 2026-11-02 Navidrome 浏览历史本地验收
+
+最终导航 Release `SourceUITests-1793577102182.xcresult` 为1通过/0失败/0跳过、580.834秒；旧 Navidrome 综合回归 `SourceUITests-1793577857813.xcresult` 同源1/0/0、651.540秒。两次 `exitCode=0`、`sourceUnchanged=true`，源码 digest `5ea1ca973007f722df13ec81beddd9c09594c049df8057f2fe3ed9b3a287e36d`、安装 bundle `f0291dc47d5b95dce1a2a5578be7b80ebbb8b97739d26546083e5e73903c90ae`。导航 run manifest/xcresult Info/截图索引摘要分别为`6da32aef…`/`061f40c3…`/`62ef4be4…`；综合回归为`5df631ba…`/`adf79b14…`。
+
+正式导航覆盖四分类/两级详情返回、服务端星标页保持、原生PCM后恢复第二页、第三页120项、提交搜索与服务端歌单上下文及第二账户清空旧栈/查询；服务器21次认证成功/0失败并仅清理两个合成账户。5PNG逐张`verifyCaptureEvidence` ready且亲看。综合回归继续覆盖私人曲库凭据、4次流/4次歌词、多皮肤暂停/定位/队列、mini持久化、统计和连接移除，13次认证成功/0失败。完整哈希与失败历史见[本批回执](2026-11-02-navidrome-browse-history-report.md)。
+
+967/967检查、Node/Swift/YAML/diff检查通过。初轮`SourceUITests-1793576224837`为0/1/0、555.378秒，唯一断言把iOS AX空搜索框的占位文字误当旧值；原xcresult/failure-evidence/console保留，整轮不计通过。本机现约56.4GiB、T7约607.3GiB可用；收尾清理回执记录零内容删除。clean unsigned IPA、push和云端终态待执行，不报完整F15/S8、私有服务、实体机、签名或项目完成。
+
 ## 2026-11-02 闲置安装日志完整迁移
 
 按用户全盘维护授权，将无使用者、3月起未修改的5份安装日志完整迁至T7，24,372,591,788字节（22.70GiB），源/目标逐份SHA-256核验后保留原路径链接与恢复回执，日志内容未丢弃。内盘实测净增21.04GiB，收尾约55.96GiB；当前工具链、构建及受保护证据保持。旧CI41341222840失败的compact日志已取并核验，但第二组中途截断，真实根因仍待完整诊断，未猜测修补；596MB诊断包超连接器512MiB上限。41347977881继续运行、41360300631唯一pending。详见[维护与诊断回执](2026-11-02-disk-install-log-migration-report.md)。本批文档-only，不增加功能完成度，持续目标未完成。

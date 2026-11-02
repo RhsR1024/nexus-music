@@ -1,3 +1,15 @@
+## 2026-11-02 Navidrome 浏览历史与上下文恢复
+
+- [x] 歌手→专辑→歌曲及服务端歌单详情逐层返回；已加载父层、offset、50项可见页、标题、搜索草稿/提交查询和歌单名称草稿在分类切换后恢复，返回已加载父层不重读。
+- [x] 账户切换/移除/重连清空缓存；导航、分页、失败重试与卸载使用取消和generation隔离迟到结果；取消的client获取不联网，失败保留内容并在同一offset重试。
+- [x] 服务端星标确认后同步本会话保存页且保持可见页，不修改本地收藏或队列；重命名同步已保存歌单标题，其他写入沿原刷新路径。
+- [x] `npm run check`967/967、Node/Swift/YAML/diff检查通过；导航Release1/0/0（580.834秒）与旧Navidrome综合回归同源1/0/0（651.540秒），均`sourceUnchanged=true`。
+- [x] 5PNG来源`ready`并亲看；正式App验证真实合成PCM、播放器多皮肤、重启、账户清空/清理，服务器认证21/13次成功且均0失败。
+- [x] 初轮AX占位文字误判失败原结果、附件和根因保留；最终断言只允许空串或精确占位，旧查询仍禁止。
+- [ ] clean unsigned IPA、提交/push、iOS27本批终态；真实私人服务器、弱网/限流、实体机、签名/安装、大字号/VoiceOver、完整手势/动效及完整F15/S8继续。
+
+见[本批回执](2026-11-02-navidrome-browse-history-report.md)与[UI规格](ui-spec/navidrome-browse-history-2026-11-02.md)。本批只关闭音枢自有的会话内层级导航与上下文恢复增量，不声称完整私人曲库或项目完成。
+
 ## 2026-11-02 公开歌单默认端口回归修正
 
 修正 WHATWG URL 自动去掉`:443`/`:80`导致显式端口漏检：原始authority、短链输入与展开目标共用校验；网易短链在非网易平台下直接拒绝且不发请求。961/961检查、Swift parse/diff、IPA/APK strict review通过；正式Release `SourceUITests-1793573573210` 1/0/0、214.252秒，sourceUnchanged，新增端口拒绝/零请求截图provenance ready并亲看。已有取消、重试、分页及完整导入回归保持。`36cc893`已push，clean unsigned IPA `4274b3f7…`（12,877,762字节）、manifest clean、164项CRC/138项文件一致；测试与私人资源排除，Hermes保留1条既有构建路径，见回执的明确限制。iOS27为41347977881运行/41360300631唯一pending，终态继续。见[本批回执](2026-11-02-playlist-default-port-regression-report.md)。本批不改变当前iPhone常态UI范围，不报全部F12/F13或项目完成。

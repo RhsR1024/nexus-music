@@ -155,6 +155,7 @@ const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDisco
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
 const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI;
+const navidromeNavigationUI=process.argv.slice(2).some(target=>target.endsWith('/testNavidromeBrowseHistory'));
 const structuredLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testStructuredNavidromeLyrics'));
 const classicReferenceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicReferenceDirect'));
 const vinylReferenceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabVinylReferenceDirect'));
@@ -571,7 +572,7 @@ const server = createServer(async (req, res) => {
   const url=new URL(req.url,'http://127.0.0.1'),chunks=[];
   for await(const chunk of req)chunks.push(chunk);
   const params=req.method==='POST'?new URLSearchParams(Buffer.concat(chunks).toString()):url.searchParams;
-  const authenticated=(params.get('u')==='fixture-user'||params.get('u')==='fixture-photo'||coverThemeUI&&params.get('u')==='fixture-theme')&&params.get('t')===createHash('md5').update('fixture-password'+params.get('s')).digest('hex');
+  const authenticated=(params.get('u')==='fixture-user'||params.get('u')==='fixture-photo'||navidromeNavigationUI&&['fixture-browser','fixture-browser-two'].includes(params.get('u'))||coverThemeUI&&params.get('u')==='fixture-theme')&&params.get('t')===createHash('md5').update('fixture-password'+params.get('s')).digest('hex');
   if(authenticated)counts.authSuccesses++;else counts.authFailures++;
   const respond=body=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({'subsonic-response':{status:'ok',version:'1.16.1',...body}}));};
   if(!authenticated){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({'subsonic-response':{status:'failed',error:{code:40,message:'fixture auth failure'}}}));return;}
@@ -621,6 +622,18 @@ const server = createServer(async (req, res) => {
       res.once('close',()=>{event('close');const index=heldThemeResponses.indexOf(held);if(index>=0)heldThemeResponses.splice(index,1);});return;
     }
     res.setHeader('Content-Type','image/png');res.end(Buffer.from(coverThemeUI&&params.get('u')==='fixture-theme'?themeCovers[params.get('id')]??themeCovers.red:themeCovers.multi,'base64'));return;
+  }
+  if(navidromeNavigationUI&&['fixture-browser','fixture-browser-two'].includes(params.get('u'))){
+    counts.ndBrowser??={methods:{},streams:[]};counts.ndBrowser.methods[method]=(counts.ndBrowser.methods[method]??0)+1;
+    const albums=Array.from({length:65},(_,i)=>({id:`browser-album-${i}`,name:`Browser album ${i}`,artist:'Browser artist'}));
+    const songs=Array.from({length:120},(_,i)=>({...song(),id:`browser-song-${i}`,title:`Browser song ${i}`,coverArt:undefined}));
+    if(method==='getAlbumList2'){respond({albumList2:{album:albums.slice(Number(params.get('offset')??0),Number(params.get('offset')??0)+50)}});return;}
+    if(method==='getArtists'){respond({artists:{index:[{artist:Array.from({length:120},(_,i)=>({id:`browser-artist-${i}`,name:`Browser artist ${i}`}))}]}});return;}
+    if(method==='getArtist'){respond({artist:{id:params.get('id'),name:'Browser artist detail',album:albums}});return;}
+    if(method==='getAlbum'){respond({album:{id:params.get('id'),name:'Browser album detail',song:songs}});return;}
+    if(method==='search3'){const offset=Number(params.get('songOffset')??0);respond({searchResult3:{song:songs.slice(offset,offset+50)}});return;}
+    if(method==='getPlaylists'){respond({playlists:{playlist:Array.from({length:120},(_,i)=>({id:`browser-list-${i}`,name:`Browser list ${i}`,owner:'Fixture owner'}))}});return;}
+    if(method==='getPlaylist'){respond({playlist:{id:params.get('id'),name:'Browser playlist detail',entry:songs}});return;}
   }
   if(method==='ping')respond({type:'Navidrome',serverVersion:'0.64.0'});
   else if(method==='getOpenSubsonicExtensions')respond({openSubsonicExtensions:[{name:'songLyrics',versions:[1]}]});
@@ -711,6 +724,7 @@ try {
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
   if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
+  if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');
