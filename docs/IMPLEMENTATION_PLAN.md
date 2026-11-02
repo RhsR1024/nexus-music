@@ -1,3 +1,11 @@
+## 2026-11-02 J25 五平台统一搜索矩阵
+
+统一搜索新增五平台歌曲/专辑/艺术家确定性矩阵，正式统一页在网易云、QQ、酷我、酷狗、咪咕各显示三类预览；咪咕艺术家身份与QQ歌曲权威队列打开通过。独立Release `SourceUITests-1793605506843`为1/0/0、131.460秒，`sourceUnchanged=true`，源码digest`981904c2…`、安装bundle`75ac9e78…`；原单平台回归`SourceUITests-1793605767609`同源1/0/0、110.772秒。978/978、完整native、Node/Swift/YAML/diff和完整Release build通过，2张矩阵PNG与5张回归PNG provenance ready并亲看。QQ `req.module`与酷我文本传输两轮失败原件保留后修复，r3/r4独立通过。
+
+真实匿名公开契约探针为15/15：网易云3/283、3/539、3/38；QQ3/1012、3/600、3/38；酷我3/695、3/349、3/57；酷狗11/480、3/500、3/缺失总数；咪咕13/141、3/150、1/1。机器回执`build/logs/online-search.json` SHA-256`8c58bfbc…`。该结果只证明公开provider契约可读；五平台UI通过来自确定性fixture矩阵，不冒充真实五平台逐页网络UI。
+
+功能提交`ac11314`的clean unsigned IPA为12,899,335字节、SHA-256`098da9d615004e35cbd04cc2694c047fd8a7d6453e7e4d1286024e7c6a3f0032`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA逐文件字节、生产标记及测试/私人/签名排除通过。首轮归档探针误按UTF-8查找Hermes中文文案，原失败回执保留，修正为ASCII UTF-8/中文UTF-16LE双编码后通过。T7阶段副本逐普通文件哈希核验，源证据保留；本批未删除项目内容或迁移个人文件。J25来源为`U`，无新增Sollin证据/strict review；真实五平台逐页网络UI、实体机/VoiceOver、弱网、动效、签名/安装和iOS27终态继续，不报完整J25/F/J或全项目完成。见[五平台矩阵回执](2026-11-02-unified-search-five-platform-matrix-report.md)与[UI规格](ui-spec/unified-search-2026-11-02.md)。
+
 ## 2026-11-02 J25 统一歌曲/专辑/艺术家搜索
 
 `Search` 新增正式“全部”页签。统一查询只驱动歌曲、专辑、艺术家三个既有协调器，按平台和类型分组，每块最多预览两项并提供“查看全部”；协调器原有的查询、加载、错误、重试、总数和分页状态全部保留。歌曲预览走现有权威 `services.playTracks`，专辑/艺术家打开既有 `Discovery`，不新增第二队列、详情页或结果缓存。类型切换只补发缺失的当前查询/平台，往返独立页与统一页不会重置已载入结果；歌单、MV 与 Navidrome 私人搜索边界保持原状。

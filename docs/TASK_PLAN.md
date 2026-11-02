@@ -1,3 +1,15 @@
+## 2026-11-02 J25 五平台统一搜索矩阵
+
+- [x] 五平台歌曲/专辑/艺术家确定性 UI 矩阵通过；网易云、QQ、酷我、酷狗、咪咕各显示三类预览，咪咕艺术家身份和 QQ 歌曲权威队列打开通过。
+- [x] Release `SourceUITests-1793605506843` 1/0/0、131.460秒；原单平台回归 `SourceUITests-1793605767609` 同源1/0/0、110.772秒；两次 `sourceUnchanged=true`。
+- [x] 2张矩阵PNG与5张回归PNG provenance ready并亲看；r1 QQ `req.module`、r2 酷我文本传输失败原件保留后独立 r3/r4 通过。
+- [x] 真实匿名五平台公开契约探针15/15；该结果与确定性UI矩阵分开记录，不声称真实五平台逐页UI网络通过。
+- [x] 978/978、完整native、Node/Swift/YAML/diff、完整Release build和`ac11314` clean unsigned IPA验证通过；归档编码探针首轮失败原件保留。
+- [x] T7阶段副本逐普通文件哈希核验，源证据保留；本批未删除项目内容或迁移个人文件。
+- [ ] 真实五平台逐页网络UI、真实iPhone、VoiceOver/动态字号/小屏、弱网/限流、连续转场录屏、签名/安装、iOS27终态与完整J25/F/J。
+
+见[阶段回执](2026-11-02-unified-search-five-platform-matrix-report.md)与[UI规格](ui-spec/unified-search-2026-11-02.md)。J25 来源为 `U`，不新增 Sollin 证据或 strict review 声明。
+
 ## 2026-11-02 J25 统一歌曲/专辑/艺术家搜索
 
 - [x] 正式搜索新增“全部”页签；歌曲、专辑、艺术家按所选平台或聚合平台并列搜索，按“平台 → 类型”分组，每块最多预览两项并标明已载入数/目录总数。
