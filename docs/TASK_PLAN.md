@@ -10,7 +10,7 @@
 - [x] 提交产品/测试/初始文档；从 clean 工作区重新生成 unsigned archive，独立核验 manifest commit、`dirty=false`、archive/IPA 字节、ZIP CRC、架构/SDK/系统/设备族、未签名及生产/隐私排除。
 - [x] clean IPA `4b73df48…03a4b`与验证回执`308e92a0…14b6`、精确xcresult、截图、日志、补丁及文档复制至 T7 `2026-11-03-amll-ruby-ec03fbf`；134个普通文件/98,482,069字节逐项比较通过，源证据保留且零删除/零个人文件搬移。
 - [x] 正常 push、核对 remote 与 Actions 队列；首次推送后`origin/main=2310103`，`41521043387`运行、`41548304374`/`2310103`唯一pending，即1运行/1排队，未使用force或手动取消/重派。
-- [ ] 最新文档状态提交对应的 iOS 27 终态；失败时按紧凑递归产物定位真实根因。
+- [ ] `41548304374`/`2310103`实际iOS27终态；`2310103` push包含`ec03fbf`产品代码，后续Markdown-only提交按`paths-ignore`不另派运行，失败时按紧凑递归产物定位真实根因。
 - [ ] 实体 iPhone VoiceOver、真实歌词库、动态字号/小屏、复杂 AMLL/标准 ruby 布局、签名/安装/续签和 iOS 27 总体终态。
 
 见[专项回执](2026-11-03-amll-ruby-rendering-report.md)与[UI规格](ui-spec/amll-ruby-2026-11-03.md)。本批不关闭完整 TTML2、S4/J35–42、iOS 27 或项目总目标。

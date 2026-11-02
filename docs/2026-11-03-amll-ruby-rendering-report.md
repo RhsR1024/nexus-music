@@ -46,7 +46,7 @@
 
 精确 IPA、archive、manifest、验证回执与日志、`SourceUITests-1793661968282.xcresult`、4 张截图与 provenance、提交补丁和阶段文档已复制到 T7 `NexusMusic/BuildArchive/2026-11-03-amll-ruby-ec03fbf/`。首次传输的 `copy-comparison.json` 与 `transfer-receipt.json` 记录 134 个普通文件、98,482,069 字节，全部源/目标 SHA-256 和目录比较通过，回执 SHA-256 `d3aaa0543a4fcc43d0607807207fee1a7e24705b851111a9b0053b1af23e03e8`；源证据保留，`deleted=0`、`movedUserFiles=0`，活动构建进程为 0。
 
-产品提交 `ec03fbf` 与记录提交 `2310103` 已从 `70c0b13` 正常 push，未使用 force；推送前重新获取远端，推送后 `ls-remote` 实测 `origin/main=2310103c7ae40df2a70b466613a1955dfed6eff0`。首次推送后 Actions 快照为运行 `41521043387`/`9fb541a`、唯一 pending `41548304374`/`2310103`，即 1 运行/1 排队；未手动取消或重派旧版本。状态记录提交会让 `queue:single`把它替换成同一产品内容的新最新 pending，其终态仍待返回。
+产品提交 `ec03fbf` 与记录提交 `2310103` 已从 `70c0b13` 正常 push，未使用 force；推送前重新获取远端，推送后 `ls-remote` 实测 `origin/main=2310103c7ae40df2a70b466613a1955dfed6eff0`。首次推送后 Actions 快照为运行 `41521043387`/`9fb541a`、唯一 pending `41548304374`/`2310103`，即 1 运行/1 排队；未手动取消或重派旧版本。后续 `88d1e01` 及状态说明只改 Markdown，按工作流 `paths-ignore` 被排除，不会另派运行；更新后的远端仍保留这条包含 `ec03fbf` 产品代码的唯一 pending，其终态待返回。
 
 当前明确未覆盖：
 
