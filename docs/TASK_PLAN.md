@@ -7,6 +7,7 @@
 - [x] `60a638a` clean unsigned archive、manifest、ZIP CRC、151项archive/IPA逐字节、架构/SDK/最低系统/设备族、生产入口隔离及测试/私人/签名排除通过；IPA`d6b8526a…9978d`。
 - [x] reverse-skill离线strict review PASS，56E/21WI/119 timeline/47F/47P、0错误/0警告；无新增采集或私有探测。
 - [x] 已正常push并实核远端main；旧pending由`queue:single`自动替换，当前`41521043387`运行、`41540983547`/`60a638a`唯一pending，1运行/1排队。
+- [x] T7阶段`2026-11-03-ci-diagnostics-60a638a`保存IPA/archive、专项xcresult、日志、strict review、补丁和文档；299个普通文件/100,376,064字节校验0失败，来源目标18组比较0差异，源证据保留且零删除/零个人文件搬移。
 - [ ] `41521043387`及`41540983547`的实际iOS27终态；若新运行失败，先从递归紧凑产物取得嵌套`ui-summary.json`/`ui-catalog.log`，再定位真实根因。
 
 见[本批回执](2026-11-03-ios27-compact-diag-artifact-report.md)。本批只加固失败诊断，不增加产品功能完成度，也不替代实体机、签名或iOS27通过。

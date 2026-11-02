@@ -6,7 +6,7 @@
 
 clean unsigned archive的manifest与`60a638a`一致且工作区清洁，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`；IPA 17,827,502字节、SHA-256`d6b8526aaec09bc1ecd046cbe32a5a726ab25fb3a0fef195ea330a62efa9978d`。独立核验`ready=true`：178 ZIP项CRC、151项archive/IPA逐字节、bundle identity、测试/私人/签名排除通过；reverse-skill离线strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告。
 
-`60a638a`已正常push，推送时远端main一致；本条随后只追加文档记录。旧pending`41536098207`由`queue:single`自动取消，`41540983547`/`60a638a`成为唯一pending；`41521043387`/`9fb541a`继续运行，实核1运行/1排队，未手动取消或重派。iOS27终态、实体机、签名/安装/续签及全部产品计划余项继续。详见[本批回执](docs/2026-11-03-ios27-compact-diag-artifact-report.md)。
+`60a638a`已正常push，推送时远端main一致；本条随后只追加文档记录。旧pending`41536098207`由`queue:single`自动取消，`41540983547`/`60a638a`成为唯一pending；`41521043387`/`9fb541a`继续运行，实核1运行/1排队，未手动取消或重派。T7阶段`2026-11-03-ci-diagnostics-60a638a`已保存IPA/archive、专项xcresult、日志、strict review、补丁和文档；299个普通文件/100,376,064字节SHA-256复核0失败，18组来源目标比较0差异，源证据保留且零删除/零个人文件搬移。iOS27终态、实体机、签名/安装/续签及全部产品计划余项继续。详见[本批回执](docs/2026-11-03-ios27-compact-diag-artifact-report.md)。
 
 ## 2026-11-03 动态背景低电量模式门控
 

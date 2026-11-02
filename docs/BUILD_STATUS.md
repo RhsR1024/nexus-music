@@ -4,7 +4,7 @@
 
 本地`npm run check`990/990、Node/YAML/diff和正式Release`SourceUITests-1793659369901`的TTML专项1/0/0通过，`sourceUnchanged=true`；工具实际处理`ECONNRESET`一次并记录`clientAborts=1`。clean unsigned manifest与`60a638a`一致且工作区清洁，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`，manifest SHA-256`6a3b2fa04b2da038f2f0e6c9b21cd927383560526336ec48ab9a29500ea27206`。
 
-IPA为17,827,502字节、SHA-256`d6b8526aaec09bc1ecd046cbe32a5a726ab25fb3a0fef195ea330a62efa9978d`；独立回执`ready=true`，178 ZIP项CRC、151项archive/IPA逐字节、bundle identity、未签名和测试/私人资源排除通过。reverse-skill离线strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告。远端main已一致；`41521043387`运行、`41540983547`/`60a638a`唯一pending，实核1运行/1排队。iOS27终态与真机/签名仍待。
+IPA为17,827,502字节、SHA-256`d6b8526aaec09bc1ecd046cbe32a5a726ab25fb3a0fef195ea330a62efa9978d`；独立回执`ready=true`，178 ZIP项CRC、151项archive/IPA逐字节、bundle identity、未签名和测试/私人资源排除通过。reverse-skill离线strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告。产品提交推送时远端main一致；`41521043387`运行、`41540983547`/`60a638a`唯一pending，实核1运行/1排队。T7阶段`2026-11-03-ci-diagnostics-60a638a`的299项/100,376,064字节校验0失败，18组来源目标比较零差异，源证据保留。iOS27终态与真机/签名仍待。
 
 ## 2026-11-03 动态背景低电量模式门控 clean unsigned archive
 

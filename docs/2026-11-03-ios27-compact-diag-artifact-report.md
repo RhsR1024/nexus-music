@@ -35,3 +35,5 @@ IPA 为 17,827,502 字节、SHA-256 `d6b8526aaec09bc1ecd046cbe32a5a726ab25fb3a0f
 `60a638a` 已正常 push，推送时远端 `main` 一致；本回执随后只追加文档。push 后旧 pending `41536098207`（`430754d`）由 `queue: single` 自动取消，新提交 `41540983547` 成为唯一 pending；`41521043387`（`9fb541a`）继续运行。实核队列为 1 运行 / 1 排队，没有手动取消或重派。
 
 后续仍需等待 `41521043387` 终态并确认 `41540983547` 实际执行。新的紧凑产物只能改善失败诊断覆盖，不能被写成 iOS 27 通过或产品缺陷已修复。
+
+本批有效产物已保存到 T7 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-03-ci-diagnostics-60a638a/`，包含 IPA、archive、manifest、专项 xcresult、测试日志、验证、strict review、提交补丁和文档快照。复制后 299 个普通文件、100,376,064 字节的 `SHA256SUMS` 复核 0 失败；18 组目录/文件来源与目标逐项比较 0 missing/extra/mismatch，源证据保留，删除与个人文件搬移均为 0。`transfer-receipt.json` SHA-256 为 `2f9a807550210cfe0931d32576bc9bb0fde5937dc22d5c59765c81b5ecdb2198`。
