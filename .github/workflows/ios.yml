@@ -148,10 +148,15 @@ jobs:
           name: ios-test-logs-${{ github.sha }}
           path: |
             build/logs/*.log
+            build/logs/**/*.log
             build/logs/*summary*.json
+            build/logs/**/*summary*.json
             build/logs/*counts*.json
+            build/logs/**/*counts*.json
             build/logs/*.verification.txt
+            build/logs/**/*.verification.txt
             build/logs/*.csv
+            build/logs/**/*.csv
           if-no-files-found: ignore
           retention-days: 7
       - name: Upload failure screenshots and text

@@ -240,7 +240,13 @@ const photoCoverRequests=counts.photoCoverRequests={};
 const photoSongs=()=>photoArtworkKinds.map(kind=>({...song(),id:`photo-${kind}-${photoArtworkVersion}`,title:`${kind} artwork tone`,coverArt:`photo-${kind}-${photoArtworkVersion}`}));
 const song=()=>({id:referenceScene?'fixture-classic-reference-v2-'+referenceScene.id:structuredLyricsUI?'fixture-classic-structured-sparse-v1':classicUI?(classicShortUI?'fixture-classic-two-lines-v1':'fixture-classic-three-lines-v1'):'fixture-song-120s-v2',title:classicUI?'嗜好':'Synthetic tone',artist:classicUI?'颜人中':'Fixture artist',album:'Synthetic album',coverArt:referenceScene?'fixture-cover-reference-v2-'+referenceScene.id:'fixture-cover-motion-v1',duration:navidromeDuration,suffix:themeAudioPath?'mp3':'wav',...(starred?{starred:'2026-01-01T00:00:00Z'}:{})});
 const amQueueSongs=()=>[song(),...Array.from({length:7},(_,index)=>({...song(),id:`fixture-long-${index+2}`,title:`Synthetic tone ${index+2}`}))];
-const server = createServer(async (req, res) => {
+const isClientAbort = error => {
+  const code=error?.code??'';
+  const message=String(error?.message??error);
+  return ['ECONNRESET','ECONNABORTED','ERR_STREAM_PREMATURE_CLOSE'].includes(code)||['aborted','premature close'].includes(message.toLowerCase());
+};
+const handleRequest = async (req, res) => {
+  try {
   if(accountFmUI&&req.url?.startsWith('/account-fm-fixture-control')){
     res.setHeader('Content-Type','application/json');
     res.setHeader('Cache-Control','no-store');
@@ -834,6 +840,33 @@ const server = createServer(async (req, res) => {
   else if(method==='getArtists')respond({artists:{index:[]}});
   else if(method==='getPlaylists')respond({playlists:{playlist:[]}});
   else respond({});
+  } catch (error) {
+    if (isClientAbort(error)) {
+      counts.clientAborts=(counts.clientAborts??0)+1;
+      counts.lastClientAbort={code:error?.code??null,message:String(error?.message??error),url:req.url??null};
+      if(!res.destroyed&&!res.writableEnded)res.end();
+      return;
+    }
+    counts.fixtureRequestFailures=(counts.fixtureRequestFailures??0)+1;
+    counts.lastFixtureRequestFailure={message:String(error?.stack??error),url:req.url??null};
+    console.error(`Fixture request failed for ${req.url??'<unknown>'}: ${error?.stack??error}`);
+    if(!res.headersSent)res.writeHead(500,{'Content-Type':'application/json'});
+    if(!res.destroyed&&!res.writableEnded)res.end(JSON.stringify({error:'fixture request failed'}));
+    if(!process.exitCode)process.exitCode=1;
+  }
+};
+const server = createServer((req, res) => { void handleRequest(req, res); });
+server.on('clientError',(error,socket)=>{
+  if(isClientAbort(error)){
+    counts.clientAborts=(counts.clientAborts??0)+1;
+    counts.lastClientAbort={code:error?.code??null,message:String(error?.message??error),url:null};
+  } else {
+    counts.fixtureRequestFailures=(counts.fixtureRequestFailures??0)+1;
+    counts.lastFixtureRequestFailure={message:String(error?.stack??error),url:null};
+    console.error(`Fixture HTTP client error: ${error?.stack??error}`);
+    if(!process.exitCode)process.exitCode=1;
+  }
+  socket.destroy();
 });
 // The real local-file test never uses fixture HTTP routes. Give its harness an
 // ephemeral port so an unrelated online regression can keep its fixed port.
