@@ -2,7 +2,7 @@
 
 正式播放设置已嵌入 Apple `AVRoutePickerView`，入口以“选择音频输出”无障碍按钮暴露，触控区至少 44pt，系统负责 AirPlay/蓝牙/耳机设备列表。`nexus-native` 登记主题色并引入 `AVKit`，不改动权威播放器或路由策略。`npm run check` 967/967、完整 native、Swift/Node/diff、Pods 与完整 iOS build 通过；正式 Release `SourceUITests-1793585640904` 为1/0/0、62.135秒、`sourceUnchanged=true`，3PNG provenance ready并亲看。IPA/APK strict review 在新增 E-054→F-045→P-045 后均通过且无警告。
 
-功能提交`a5082ef`的清洁未签名归档manifest与HEAD一致、`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。IPA 12,886,731字节、SHA-256 `c3c49b956723ea5fc74deca1162da5108719d20f43a937db098ccdbc76fbbe2f`；164项ZIP CRC、archive/IPA 138个普通文件逐项一致，生产Hermes/native路由标记存在，测试/私人标记、签名和描述文件排除。验证回执SHA-256 `2c678d81…`；内容快照在`build/distribution-history/c3c49b95…/`，T7阶段14份/20,401,184字节逐份一致。推送前队列0运行/1 pending，push与iOS27终态随后补录。实际设备路由切换、断开/中断、实体机、签名和iOS27仍待验，见[回执](2026-11-02-system-audio-output-route-report.md)。
+功能提交`a5082ef`的清洁未签名归档manifest与HEAD一致、`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。IPA 12,886,731字节、SHA-256 `c3c49b956723ea5fc74deca1162da5108719d20f43a937db098ccdbc76fbbe2f`；164项ZIP CRC、archive/IPA 138个普通文件逐项一致，生产Hermes/native路由标记存在，测试/私人标记、签名和描述文件排除。验证回执SHA-256 `2c678d81…`；内容快照在`build/distribution-history/c3c49b95…/`，T7阶段14份/20,401,184字节逐份一致。`3d45827..2abb0b6`已正常push并实核远端main一致；queue single以`41378728355`/`2abb0b6`替换旧pending，旧`41360300631`/`36cc893`继续，核对为1运行/1排队，iOS27终态待返回。实际设备路由切换、断开/中断、实体机、签名和iOS27仍待验，见[回执](2026-11-02-system-audio-output-route-report.md)。
 
 ## 2026-11-02 公开 MV 媒体与全屏生命周期
 

@@ -56,4 +56,4 @@ run manifest 的 `exitCode=0`、`sourceUnchanged=true`；源码 digest `5480bf2a
 
 内容快照为 `build/distribution-history/c3c49b956723ea5fc74deca1162da5108719d20f43a937db098ccdbc76fbbe2f/`，其中 IPA、checksum、manifest、验证回执逐份复核一致。T7 阶段归档为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-system-audio-output-route-c3c49b95/`：14 份 IPA、验证、构建日志、xcresult 摘要、UI manifest/index 与 3PNG 共 **20,401,184 字节**，逐份 SHA-256 一致；复本回执 SHA-256 为 `7ed5e174a6f484f35d74e4f0ce258b3c9e93cdfb1b1aa69df5d0cb2db997226b`，本机原始证据全部保留。
 
-推送前远端同工作流/分支实测为 0 运行 / 1 pending（`41375349982`），未取消或重派旧运行。当前阶段收尾无活动构建/提取；内盘约 **53.95 GiB**、T7 约 **606.62 GiB** 可用，未删除或移动内容，清理决定见 `build/logs/cleanup-2026-11-02-system-audio-output-route.json`。正常 push 后的实际 HEAD、替换后的队列和新运行终态在交付收尾补录。
+推送前远端同工作流/分支实测为 0 运行 / 1 pending（`41375349982`）。正常 push `3d45827..2abb0b6` 后，远端 `main` 与本地交付提交 `2abb0b6bffda2c8e9218f22a0a7ecac314ee75bc` 一致；`queue: single` 已用运行 `41378728355`/`2abb0b6` 替换旧 pending，旧运行 `41360300631`/`36cc893` 继续。核对时同工作流/分支为 1 running / 1 pending，没有取消或重派。当前阶段收尾无活动构建/提取；内盘约 **53.95 GiB**、T7 约 **606.62 GiB** 可用，未删除或移动内容，清理决定见 `build/logs/cleanup-2026-11-02-system-audio-output-route.json`。新运行终态待返回，未提前记 iOS27 通过。
