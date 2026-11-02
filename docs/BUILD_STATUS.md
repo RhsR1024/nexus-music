@@ -1,8 +1,8 @@
 ## 2026-11-03 动态背景低电量模式门控 clean unsigned archive
 
-产品提交`e3666a1`完成动态背景Low Power Mode生命周期门控。990/990、完整native与diff通过；正式Release`SourceUITests-1793649933674`为2/0/0、`sourceUnchanged=true`，动态背景开关往返61.118秒、全局封面跨页575.506秒。25PNG全部匹配索引哈希，4张代表图人工亲看；iOS26.3.1模拟器没有Low Power Mode开关，系统切换与功耗未验。
+产品提交`e3666a1`接入动态背景Low Power Mode门控，后续`430754d`修正Ambient与React模糊封面在停车时清零相位的问题，并统一原生`MotionTimeline`。990/990、完整native、Swift解析与diff通过；最终Release`SourceUITests-1793656409883`为2/0/0、`sourceUnchanged=true`，动态背景开关往返61.158秒、全局封面跨页579.942秒。25PNG全部匹配索引哈希与provenance，4张代表图人工亲看；iOS26.3.1模拟器没有Low Power Mode开关，系统切换与功耗未验。
 
-`npm run ios:archive`的manifest对应同一HEAD、`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`，SHA-256`fff361d0…f4b1`。IPA为17,826,862字节、SHA-256`8030f37b04a8332394a7794cdc554395f2fea5ed7e3f2208814c125b7929f895`；独立回执`ready=true`，178项ZIP CRC、151项archive/IPA普通文件逐字节、生产`onPowerStateChange`/`isLowPowerModeEnabled`/`NSProcessInfoPowerStateDidChange`标记及测试/私人/签名排除通过。
+`npm run ios:archive`的manifest对应`430754d`、`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`，SHA-256`909d5964…0135f`。IPA为17,827,501字节、SHA-256`d18dac5a70e3b9ca5ebc2846f906238642cbba09944d1534719fc30a92b12c3e`；独立回执`ready=true`，178项ZIP CRC、151项archive/IPA文件（63非元数据+88 AppleDouble）逐字节、生产`onPowerStateChange`/`isLowPowerModeEnabled`/`NSProcessInfoPowerStateDidChange`标记及测试/私人/签名排除通过。
 
 严格`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告；无新增Sollin采集、目标运行或私有请求。实体机/可用设备Low Power Mode切换、恢复、重启保持、真实功耗、VoiceOver/字号/小屏、签名/安装和iOS27终态继续。见[本批回执](2026-11-03-dynamic-background-power-gating-report.md)。
 

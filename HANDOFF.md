@@ -1,12 +1,12 @@
 ## 2026-11-03 动态背景低电量模式门控
 
-动态背景补齐 Low Power Mode 生命周期门控。原生`MotionPolicy`统一要求动画已请求、视图已挂载、App前台、Reduce Motion关闭且低电量模式关闭；Ambient/Mesh同时观察前后台、Reduce Motion与`NSProcessInfoPowerStateDidChange`。`NexusNative`向React暴露只读初始值和变化事件，React Ambient、Mesh及模糊封面位移共用同一门控。条件关闭时保留当前相位，恢复时从停车位置继续。
+动态背景补齐 Low Power Mode 生命周期门控。原生`MotionPolicy`统一要求动画已请求、视图已挂载、App前台、Reduce Motion关闭且低电量模式关闭；Ambient/Mesh同时观察前后台、Reduce Motion与`NSProcessInfoPowerStateDidChange`。`NexusNative`向React暴露只读初始值和变化事件，React Ambient、Mesh及模糊封面位移共用同一门控。`e3666a1`先接入门控，`430754d`再修正停车路径：Ambient、Mesh与React模糊封面现在都保留当前值、方向和剩余时长，恢复后从停车位置继续。
 
-产品提交`e3666a1e229aa8d6ed24646d802a9458ea8977b4`含7文件、`+114/-8`；990/990、完整native、diff均通过。正式Release`SourceUITests-1793649933674`为2/0/0：`testBackgroundMotionSwitchRoundTrip`61.118秒、`testGlobalCoverThemeChangesAcrossPages`575.506秒，iPhone15ProMax/iOS26.3.1模拟器，`sourceUnchanged=true`；25张1290×2796 PNG全部匹配索引哈希，其中4张代表图人工亲看，其余不报人工验收。
+`430754d`测试修正另一错误假设：内部动画时间线不会跨进程持久化。最终Release`SourceUITests-1793656409883`为2/0/0：`testBackgroundMotionSwitchRoundTrip`61.158秒、`testGlobalCoverThemeChangesAcrossPages`579.942秒，iPhone15ProMax/iOS26.3.1模拟器，`sourceUnchanged=true`；同一进程14点逐字节停车、重启后身份/调色/亮度/稳定冻结画面通过。25张1290×2796 PNG全部匹配索引哈希与provenance，其中4张代表图人工亲看，其余不报人工验收。990/990、完整native、Swift解析与diff通过。
 
-clean unsigned manifest与HEAD一致且工作区清洁，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,826,862字节、SHA-256`8030f37b04a8332394a7794cdc554395f2fea5ed7e3f2208814c125b7929f895`。独立核验`ready=true`，178 ZIP项CRC、151项archive/IPA普通文件逐字节、生产低电量标记及测试/私人/签名排除通过。离线`ipa --review`复用E-024→F-023→P-023与E-032→F-031→P-031，为56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增样本或目标观察。
+clean unsigned manifest与HEAD一致且工作区清洁，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,827,501字节、SHA-256`d18dac5a70e3b9ca5ebc2846f906238642cbba09944d1534719fc30a92b12c3e`。独立核验`ready=true`，178 ZIP项CRC、151项archive/IPA文件（63非元数据+88 AppleDouble）逐字节、生产低电量标记及测试/私人/签名排除通过。离线`ipa --review`复用E-024→F-023→P-023与E-032→F-031→P-031，为56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增样本或目标观察。
 
-iOS26.3.1模拟器没有可用Battery/Low Power Mode开关，系统切换、恢复、重启保持和真实功耗必须由实体机/可用设备补验；本批只证明策略、原生事件接线、正式Release回归及clean包，不关闭J47、完整动态背景、F/J或项目。详见[专项回执](docs/2026-11-03-dynamic-background-power-gating-report.md)。
+实体iPhone15ProMax已运行iOS27.0/build`24A437`并开启Developer Mode，但本机无有效签名身份/描述文件且App未安装，真实系统Low Power Mode切换、功耗、系统重启、VoiceOver/字号/小屏、签名/安装/续签仍开放。产品提交`430754d`已正常push；Actions终态与T7归档继续。本批不关闭J47、完整动态背景、F/J或项目。详见[专项回执](docs/2026-11-03-dynamic-background-power-gating-report.md)。
 
 ## 2026-11-03 合成授权网易云私人FM正式 App 纵向验收
 

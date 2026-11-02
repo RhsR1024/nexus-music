@@ -2,12 +2,13 @@
 
 - [x] 原生`MotionPolicy`统一约束动画请求、视图挂载、App前台、Reduce Motion与Low Power Mode；Ambient/Mesh观察系统电量变化并保留停车/恢复相位。
 - [x] `NexusNative`暴露只读低电量状态和变化事件，React Ambient、Mesh与模糊封面位移共用门控；不增加轮询、第二播放器或持久化镜像状态。
-- [x] `npm run check`990/990、完整native、diff通过；门控单测覆盖六种条件组合。
-- [x] 正式Release`SourceUITests-1793649933674`为2/0/0、61.118秒/575.506秒、`sourceUnchanged=true`；动态背景开关往返与全局封面跨页回归通过。
-- [x] 25张1290×2796 PNG与索引哈希一致；4张代表图人工亲看，其余只做尺寸/哈希/关联检查，不报逐张人工验收。
-- [x] 产品提交后clean unsigned archive、独立IPA/ZIP/逐文件/生产标记/隐私/签名检查通过；IPA`8030f37b…9f895`。
+- [x] 最终`430754d`让Ambient、Mesh与React模糊封面从停车位置继续；只有封面URI变化才重置React相位，不把内部时钟误写成跨进程状态。
+- [x] `npm run check`990/990、完整native、Swift解析与diff通过；门控单测覆盖六种条件组合。
+- [x] 正式Release`SourceUITests-1793656409883`为2/0/0、61.158秒/579.942秒、`sourceUnchanged=true`；同进程停车与重启后的身份/调色/稳定冻结断言通过。
+- [x] 25张1290×2796 PNG与索引哈希及provenance一致；4张代表图人工亲看，其余只做尺寸/哈希/关联检查，不报逐张人工验收。
+- [x] 产品提交后clean unsigned archive、独立IPA/ZIP/逐文件/生产标记/隐私/签名检查通过；151项文件含63非元数据与88 AppleDouble，IPA`d18dac5a…c3e`。
 - [x] reverse-skill离线门禁复用`E-024→F-023→P-023`与`E-032→F-031→P-031`；strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集或目标观察。
-- [ ] 实体机/可用设备的系统Low Power Mode开关、恢复、重启保持、帧率、CPU/GPU/电量/发热、VoiceOver/动态字号/小屏、签名/安装/续签与iOS27终态。
+- [ ] 实体机/可用设备的系统Low Power Mode开关、恢复、跨进程保持、帧率、CPU/GPU/电量/发热、VoiceOver/动态字号/小屏、签名/安装/续签与iOS27终态。实体iPhone15ProMax运行iOS27.0/build`24A437`，但无有效签名身份/描述文件且App未安装。
 
 见[本批回执](2026-11-03-dynamic-background-power-gating-report.md)。本批不关闭J47、完整动态背景、F/J或项目。
 

@@ -1,12 +1,12 @@
 ## 2026-11-03 动态背景低电量模式门控
 
-原有Ambient/Mesh只检查请求、挂载、前后台和Reduce Motion。本批在[MeshField.swift](../modules/nexus-native/ios/MeshField.swift)新增纯值`MotionPolicy`，把Low Power Mode加入同一求值，并在两类原生视图观察`NSProcessInfoPowerStateDidChange`。状态关闭时现有display link/Timeline时钟停车；重新开放时从累计相位继续。
+原有Ambient/Mesh只检查请求、挂载、前后台和Reduce Motion。`e3666a1`在[MeshField.swift](../modules/nexus-native/ios/MeshField.swift)新增纯值`MotionPolicy`，把Low Power Mode加入同一求值，并在两类原生视图观察`NSProcessInfoPowerStateDidChange`。最终`430754d`统一`MotionTimeline`，修正Ambient停车清零与React模糊封面重置为0的问题；状态关闭时保留当前值和方向，重新开放时完成原方向的剩余运动。
 
 `NexusNativeModule`增加只读`isLowPowerModeEnabled()`和`onPowerStateChange`，按React Native Expo订阅启停原生通知，并在模块销毁时清理。`useLowPowerMode()`把相同状态提供给`VisualBackground`，使Ambient、Mesh及模糊封面位移与原生层保持同一边界。实现不轮询、不把PCM逐帧送入React，也不保存与系统状态平行的偏好。
 
-990/990检查、完整native与diff通过。正式Release`SourceUITests-1793649933674`为2/0/0，覆盖既有动态背景开关往返及全局封面跨页/PCM；25张截图哈希全部匹配，4张代表图亲看。产品提交`e3666a1`的clean unsigned IPA为17,826,862字节、SHA-256`8030f37b…9f895`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、未签名，178项ZIP CRC与151项archive/IPA普通文件逐字节、生产低电量标记及隐私/测试/签名排除通过。严格`ipa --review`沿用离线背景链路，0错误/0警告。
+990/990检查、完整native、Swift解析与diff通过。最终Release`SourceUITests-1793656409883`为2/0/0，覆盖动态背景开关往返、全局封面跨页/PCM、同进程14点停车和重启后的身份/调色/稳定冻结；25张截图哈希及provenance全部匹配，4张代表图亲看。产品提交`430754d`的clean unsigned IPA为17,827,501字节、SHA-256`d18dac5a…c3e`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、未签名，178项ZIP CRC与151项archive/IPA文件（63非元数据+88 AppleDouble）逐字节、生产低电量标记及隐私/测试/签名排除通过。严格`ipa --review`沿用离线背景链路，0错误/0警告。
 
-iOS26.3.1模拟器没有可用Battery/Low Power Mode开关，因此系统切换、恢复/重启、真实功耗、VoiceOver/小屏、实体机、签名和iOS27仍开放。见[回执](2026-11-03-dynamic-background-power-gating-report.md)；J47与项目未完成。
+iOS26.3.1模拟器没有可用Battery/Low Power Mode开关；内部动画时钟也不承诺跨进程持久化。实体iPhone15ProMax运行iOS27.0/build`24A437`，但无有效签名身份/描述文件且App未安装，因此系统切换、真实功耗、实体机安装、VoiceOver/小屏、签名和iOS27 Actions仍开放。见[回执](2026-11-03-dynamic-background-power-gating-report.md)；J47与项目未完成。
 
 ## 2026-11-03 合成授权网易云私人FM正式 App 纵向验收
 

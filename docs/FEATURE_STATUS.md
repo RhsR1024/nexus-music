@@ -1,11 +1,11 @@
 ## 2026-11-03 动态背景低电量模式门控
 
 - [x] Ambient、Mesh、React背景和模糊封面位移共用门控：动画请求、视图挂载、App前台、Reduce Motion关闭、Low Power Mode关闭。
-- [x] 原生视图观察系统电量变化，`NexusNative`提供只读状态与订阅事件；停车保留相位，恢复不跳回墙钟。
-- [x] 990/990、完整native与diff通过；正式Release`SourceUITests-1793649933674`为2/0/0，`sourceUnchanged=true`。
-- [x] 25PNG哈希/尺寸/关联检查通过，4张代表图人工亲看；clean unsigned IPA、151项archive/IPA字节、生产标记及隐私/签名排除通过。
+- [x] 原生视图观察系统电量变化，`NexusNative`提供只读状态与订阅事件；Ambient、Mesh与React模糊封面均从停车位置继续，只有封面URI变化才重置React相位。
+- [x] 990/990、完整native、Swift解析与diff通过；正式Release`SourceUITests-1793656409883`为2/0/0，`sourceUnchanged=true`。
+- [x] 25PNG哈希/尺寸/provenance检查通过，4张代表图人工亲看；clean unsigned IPA、151项archive/IPA文件（63非元数据+88 AppleDouble）、生产标记及隐私/签名排除通过。
 - [x] reverse-skill离线门禁0错误/0警告，无新增采集或目标观察。
-- [ ] iOS26.3.1模拟器缺少Battery/Low Power Mode开关；实体机/可用设备的切换、恢复、重启保持、真实功耗、VoiceOver/字号/小屏、签名与iOS27终态。
+- [ ] iOS26.3.1模拟器缺少Battery/Low Power Mode开关；实体iPhone15ProMax运行iOS27.0/build`24A437`，但无有效签名身份/描述文件且App未安装，系统切换、真实功耗、VoiceOver/字号/小屏、签名与iOS27终态仍开放。
 
 见[本批回执](2026-11-03-dynamic-background-power-gating-report.md)。J47仍为B状态，本批不关闭完整动态背景、F/J或项目。
 
