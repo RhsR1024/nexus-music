@@ -1,3 +1,15 @@
+## 2026-11-03 软件图标选择与严格失败边界
+
+设置新增“外观与界面 → 软件图标”，提供珊瑚主图标和暖橙、青柠、海蓝、暮紫、石墨五个原创替代图标。系统 `alternateIconName` 是唯一状态源；原生 Expo 模块只接受五个 `NexusAlt*` 名称及主图标 `nil`，在主队列执行，拒绝未知/不支持/忙请求，失败保留实际系统状态，不另建 React 或云备份偏好。Xcode、五份 asset catalog、编译 plist、设置导航和正式 UI 测试均已接线。
+
+`npm run check` 985/985、完整 `npm run test:native` 与 `npm run ios:build` 通过。正式 Release `SourceUITests-1793638301715` 为2 passed / 0 failed / 1 skipped：SpringBoard 主图标入口与分组设置导航通过；替代图标用例在证明 iOS 26.3.1 模拟器 `LaunchServices/CoreServicesUIUpcallEmbedded` POSIX `EIO/EAGAIN` 原生失败后跳过，严格错误 UI 已亲看。五张1290×2796 PNG中主图标入口、失败态和设置总览完成人检；实际切换、重启保持、恢复主图标与实体 SpringBoard 仍未验证，不能写成通过。
+
+逆向离线门禁沿用 `E-055 → F-046 → P-046 → WI-020`，固定 IPA SHA-256 `c2ee2deb…bc07`；`ipa --review` 为55E/20WI/118 timeline/46F/46P、0错误/0警告。没有复制参考 SVG/命名/偏好键，也没有新增采集或私有探测。
+
+产品提交`7380079`已正常push并实核远端main一致。clean unsigned manifest为`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,811,639字节、SHA-256`8cf4607d2ccfb06421e16fe7a0afc6b70bf9a6a8c89120d1c432f0fba53f9344`。ZIP CRC、133项archive/IPA普通文件逐字节、18项exFAT元数据计数、五图标`Assets.car`/两份`CFBundleIcons`声明及测试/私人/签名排除通过。push后`41455717983`/`6785769`继续运行，`41489113091`/`7380079`为唯一pending，实核1运行/1排队，未手动取消或重派。
+
+实体 iPhone/可用iOS27的替代图标切换、确认/取消、重启、恢复和SpringBoard行为，VoiceOver/动态字号、签名/安装/续签继续。本批不关闭完整外观、J43/J46、F/J或项目。详见[专项回执](docs/2026-11-03-app-icon-settings-report.md)与[UI场景](docs/ui-spec/app-icons-2026-11-02.md)。
+
 ## 2026-11-02 粉调磁带封面样式
 
 外观设置新增默认关闭的“磁带封面”。开启后，经典、封面沉浸、声波核、AM 与 AM2 的主要封面显示当前主题强调色的磁带外壳、双卷盘、定位点和 `SIDE A`；封面加载、失败回退和歌曲身份继续复用既有 `Cover`。迷你播放器、列表缩略图、写真、黑胶与歌词舞台不套用该装饰。需求来源为用户补充项 `U`，磁带隐喻是音枢原创实现，不宣称来自 Sollin IPA 观测。

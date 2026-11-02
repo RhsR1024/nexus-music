@@ -1,3 +1,17 @@
+## 2026-11-03 软件图标选择
+
+- [x] 外观设置新增“软件图标”正式入口，提供珊瑚主图标和五个原创替代图标；系统值是唯一状态源，不新增 React/云备份偏好。
+- [x] 原生模块使用五名称白名单、主图标`nil`、主队列、忙碌拒绝和严格非乐观错误；Xcode、asset catalog、Expo注册及设置导航接线。
+- [x] `npm run check` 985/985、完整 native 与 Release `ios:build`通过。
+- [x] 正式Release`SourceUITests-1793638301715`为2/0/1 skipped；主图标SpringBoard入口与分组设置导航通过，替代切换在iOS26.3.1模拟器证明原生`EIO/EAGAIN`失败后跳过并显示严格错误。
+- [x] 5张1290×2796 PNG生成；主图标入口、失败态和设置总览亲看。实际切换、重启保持、恢复和实体SpringBoard不计通过。
+- [x] reverse-skill离线case guard、prerequisite与`ipa --review` PASS，55E/20WI/118 timeline/46F/46P、0错误/0警告；无新增采集或私有探测。
+- [x] `7380079` clean unsigned archive、manifest、ZIP CRC、133项archive/IPA字节、五替代图标plist/`Assets.car`、arm64/SDK26.2/iOS15.1/[1,2]与隐私/签名排除通过。
+- [x] 产品提交已push并实核远端main；`41455717983`运行、`41489113091`唯一pending，队列1运行/1排队。
+- [ ] `41489113091` iOS27终态；实体iPhone/可用iOS27的切换、确认/取消、重启、恢复和SpringBoard，VoiceOver/动态字号、签名/安装/续签。
+
+见[本批回执](2026-11-03-app-icon-settings-report.md)与[UI场景](ui-spec/app-icons-2026-11-02.md)。本批只完成图标选择器和构建增量，不关闭完整外观、J43/J46、F/J或项目。
+
 ## 2026-11-02 粉调磁带封面样式
 
 - [x] 外观设置新增默认关闭的 `tapeStyle`；经典、沉浸、声波核、AM、AM2 主封面套用主题强调色磁带壳，迷你播放器、列表和其他播放器皮肤保持原样。

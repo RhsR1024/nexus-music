@@ -1,3 +1,15 @@
+## 2026-11-03 软件图标选择
+
+`AppearanceOverview`新增“软件图标”真实入口，`SettingsScreen`复用既有Sheet打开三列选择器。`src/domain/appIcons.ts`锁定`primary/orange/green/blue/purple/graphite`与五个原生替代名称；`AppIconSettings`读取系统快照，忙碌时禁用选择，成功后采用原生返回值，失败时保留原选择并显示严格错误。系统当前图标是唯一权威状态，没有新增React偏好、第二队列或云备份字段。
+
+`NexusAppIconModule`在Expo主队列执行`supportsAlternateIcons`、`alternateIconName`和`setAlternateIconName`。未知名称、不支持、重复请求和其他系统错误均拒绝Promise；只对已知瞬态POSIX`EIO/EAGAIN`做有限重试。五份1024 RGB替代图标从项目已有珊瑚主体标记生成，不复制参考素材、并行命名、通道或偏好键；六份256 RGB预览只服务正式设置页。
+
+`npm run check`985/985、完整native与Release`ios:build`通过。正式Release`SourceUITests-1793638301715`为2/0/1 skipped：主图标SpringBoard入口、设置导航与草稿回归通过；替代图标用例在iPhone 15 Pro Max/iOS Simulator 26.3.1上证明`LaunchServices/CoreServicesUIUpcallEmbedded` POSIX`EIO/EAGAIN`原生失败后跳过。5张1290×2796 PNG生成，主图标入口、严格失败态和设置总览亲看；实际切换、重启保持、主图标恢复、实体SpringBoard、取消时序、VoiceOver和动态字号仍开放。
+
+IPA strict review为55E/20WI/118 timeline/46F/46P、0错误/0警告，沿用`E-055 → F-046 → P-046 → WI-020`；离线边界没有目标运行时、真机或视觉等价结论。产品提交`7380079` clean unsigned manifest为`dirty:false`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,811,639字节、SHA-256`8cf4607d…9344`，ZIP CRC、133项archive/IPA普通文件字节、18项exFAT元数据、五替代图标`Assets.car`/两份`CFBundleIcons`及隐私/签名排除通过。
+
+`7380079`已push并实核远端一致；`41455717983`继续运行、`41489113091`唯一pending，队列1运行/1排队。iOS27终态、实体iPhone/可用iOS27的切换/确认/取消/重启/恢复/SpringBoard、VoiceOver/动态字号、签名/安装/续签继续。见[回执](2026-11-03-app-icon-settings-report.md)与[UI场景](ui-spec/app-icons-2026-11-02.md)；本批不关闭完整外观、J43/J46、F/J或项目。
+
 ## 2026-11-02 粉调磁带封面样式
 
 `AppearanceOptions` 新增 `tapeStyle:boolean`，默认关闭并进入版本化偏好存储。新的 `PlayerCover` 在至少112pt时按开关选择 `TapeCover`，否则继续使用原 `Cover`；经典、封面沉浸、声波核、AM 与 AM2 的主要封面均通过该边界接入。迷你封面、列表缩略图、写真、黑胶和歌词舞台保留原组件。
