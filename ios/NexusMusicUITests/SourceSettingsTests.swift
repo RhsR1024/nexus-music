@@ -114,11 +114,10 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["收起播放选项"].firstMatch.waitForExistence(timeout:5))
     app.buttons["收起播放选项"].firstMatch.tap()
   }
-  private func replaceText(_ field:XCUIElement,with value:String,in app:XCUIApplication){
-    field.tap();field.press(forDuration:1.1)
-    let selectAll=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
-    XCTAssertTrue(selectAll.waitForExistence(timeout:5),"Replace the full field using the actual selection menu, independent of its insertion point")
-    selectAll.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
+  private func replaceText(_ field:XCUIElement,with value:String){
+    field.tap()
+    field.typeKey("a",modifierFlags:.command)
+    field.typeText(value);field.typeText("\n")
     XCTAssertEqual(field.value as? String,value)
   }
   private func selectClassicSourcePlayback(in app:XCUIApplication) {
@@ -2333,7 +2332,7 @@ final class SourceSettingsTests: XCTestCase {
     let suffix=String(Int(Date().timeIntervalSince1970)),original="Sync original "+suffix,local="Sync local "+suffix,cloud="Sync cloud "+suffix,folder="nexus-sync-"+suffix+"/"
     let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in original{input.typeText(String(character))};input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
     sync();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","同步连接：Sync fixture")).firstMatch;reveal(connection);connection.tap()
-    let directory=app.textFields["多设备同步相对目录"];reveal(directory);replaceText(directory,with:folder,in:app)
+    let directory=app.textFields["多设备同步相对目录"];reveal(directory);replaceText(directory,with:folder)
     let save=app.buttons["cloud-sync-save"];reveal(save);save.tap();XCTAssertTrue(app.staticTexts["同步目录已保存，请读取合并预览"].waitForExistence(timeout:5));let preview=app.buttons["cloud-sync-preview"];reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15));confirm();app.buttons["收起多设备同步"].tap()
     let edit=try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/remote-edit")!,encoding:.utf8);XCTAssertEqual(edit,"ok")
     for _ in 0..<8{app.swipeDown()};let originalRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",original+" ·")).firstMatch;reveal(originalRow);originalRow.tap();let rename=app.textFields["音枢歌单名称"];reveal(rename);rename.tap();rename.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:(rename.value as? String)?.count ?? 0));for character in local{rename.typeText(String(character))};rename.typeText("\n");XCTAssertEqual(rename.value as? String,local);let saveInfo=app.buttons["保存信息"];reveal(saveInfo);XCTAssertTrue(saveInfo.isEnabled);saveInfo.tap();XCTAssertTrue(app.staticTexts[local].waitForExistence(timeout:10),"The saved title must update before leaving the editor");app.buttons["返回歌单列表"].tap()
@@ -2368,7 +2367,7 @@ final class SourceSettingsTests: XCTestCase {
     let suffix=String(Int(Date().timeIntervalSince1970)),kept="Cloud kept "+suffix,later="Cloud later "+suffix,backupPath="nexus-backup-"+suffix+"/"
     makePlaylist(kept);cloud()
     let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","备份连接：Backup fixture")).firstMatch;XCTAssertTrue(connection.waitForExistence(timeout:5));connection.tap()
-    let directory=app.textFields["云备份相对目录"];replaceText(directory,with:backupPath,in:app)
+    let directory=app.textFields["云备份相对目录"];replaceText(directory,with:backupPath)
     app.buttons["cloud-backup-save"].tap();XCTAssertTrue(app.staticTexts["备份目录已保存"].waitForExistence(timeout:5));app.buttons["cloud-backup-upload"].tap()
     XCTAssertTrue(app.staticTexts["备份已上传并通过回读摘要与格式校验"].waitForExistence(timeout:20));app.buttons["收起云备份"].tap();app.terminate();app.launch()
     library();makePlaylist(later);cloud();XCTAssertEqual(app.textFields["云备份相对目录"].value as? String,backupPath)
@@ -3331,7 +3330,7 @@ final class SourceSettingsTests: XCTestCase {
     let account="Public statistics "+String(Int(Date().timeIntervalSince1970)),folder="public-statistics/"
     for (field,value) in [(address,"http://127.0.0.1:18439/backup-dav/"),(app.textFields["WebDAV用户名"],"fixture-user")]{reach(field);field.tap();for c in value{field.typeText(String(c))};field.typeText("\n");XCTAssertEqual(field.value as? String,value)}
     let password=app.secureTextFields["WebDAV密码"];reach(password);password.tap();for c in "fixture-password"{password.typeText(String(c))};password.typeText("\n");let label=app.textFields["WebDAV连接名称"];reach(label);label.tap();for c in account{label.typeText(String(c))};label.typeText("\n");XCTAssertEqual(label.value as? String,account);reach(app.buttons["验证并保存WebDAV"]);app.buttons["验证并保存WebDAV"].tap();XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));image("Real statistics public WebDAV connection");let closeDAV=app.buttons["收起WebDAV"];XCTAssertTrue(waitForHittable(closeDAV,timeout:10));closeDAV.tap();XCTAssertTrue(closeDAV.waitForNonExistence(timeout:10));_=dismissPasswordSuggestion(in:app)
-    cloud();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","统计连接："+account)).firstMatch;reach(connection);connection.tap();let directory=app.textFields["统计同步相对目录"];reach(directory);replaceText(directory,with:folder,in:app);action("statistics-cloud-save");message("统计目录已保存")
+    cloud();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","统计连接："+account)).firstMatch;reach(connection);connection.tap();let directory=app.textFields["统计同步相对目录"];reach(directory);replaceText(directory,with:folder);action("statistics-cloud-save");message("统计目录已保存")
     action("statistics-cloud-refresh");message("云端暂无听歌统计")
     action("statistics-cloud-upload");XCTAssertTrue(app.alerts["上传听歌统计？"].waitForExistence(timeout:15));image("Real statistics upload confirmation");app.alerts.buttons["取消"].tap();message("上传预览已取消，云端未写入");XCTAssertEqual(try probe()["puts"] as? Int,0)
     action("statistics-cloud-upload");XCTAssertTrue(app.alerts["上传听歌统计？"].waitForExistence(timeout:15));app.alerts.buttons["继续上传统计"].tap();message("听歌统计已上传并回读验证（修订 #1）");image("Real statistics uploaded revision one");XCTAssertEqual(try probe()["playCount"] as? Int,1);app.buttons["收起统计同步"].tap()
@@ -3370,7 +3369,7 @@ final class SourceSettingsTests: XCTestCase {
     let address=app.textFields["WebDAV服务器根目录"];if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()};let prior=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","移除WebDAV连接：Public backup")).firstMatch;if prior.exists{tap(prior);app.alerts.buttons["移除"].tap();message("WebDAV连接与凭据已移除")}
     for (input,value) in [(address,"http://127.0.0.1:18439/backup-dav/"),(app.textFields["WebDAV用户名"],"fixture-user")]{tap(input);for c in value{input.typeText(String(c))};input.typeText("\n");XCTAssertEqual(input.value as? String,value)}
     let password=app.secureTextFields["WebDAV密码"];tap(password);for c in "fixture-password"{password.typeText(String(c))};password.typeText("\n");let label=app.textFields["WebDAV连接名称"];tap(label);for c in presetName{label.typeText(String(c))};label.typeText("\n");XCTAssertEqual(label.value as? String,presetName);tap(app.buttons["验证并保存WebDAV"]);XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));let closeDAV=app.buttons["收起WebDAV"];XCTAssertTrue(waitForHittable(closeDAV,timeout:10));closeDAV.tap();XCTAssertTrue(closeDAV.waitForNonExistence(timeout:10));_=dismissPasswordSuggestion(in:app)
-    cloud();let account=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","备份连接："+presetName)).firstMatch;tap(account);let directory=app.textFields["云备份相对目录"];reach(directory);replaceText(directory,with:"public-settings-backup-"+String(Int(Date().timeIntervalSince1970))+"/",in:app);tap(app.buttons["cloud-backup-save"]);message("备份目录已保存");tap(app.buttons["cloud-backup-upload"]);message("备份已上传并通过回读摘要与格式校验");image("Real backup settings uploaded");app.buttons["收起云备份"].tap()
+    cloud();let account=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","备份连接："+presetName)).firstMatch;tap(account);let directory=app.textFields["云备份相对目录"];reach(directory);replaceText(directory,with:"public-settings-backup-"+String(Int(Date().timeIntervalSince1970))+"/");tap(app.buttons["cloud-backup-save"]);message("备份目录已保存");tap(app.buttons["cloud-backup-upload"]);message("备份已上传并通过回读摘要与格式校验");image("Real backup settings uploaded");app.buttons["收起云备份"].tap()
     quality("flac");offsets(0);openSettings(app,page:"typography");tap(app.buttons["lyric-align-left"]);openSettings(app,page:"equalizer");tap(app.buttons["删除预设"+presetName]);tap(app.buttons["eq-builtin-0"]);if enabled.value as? String == "1"{tap(enabled)}
     cloud();tap(app.buttons["cloud-backup-list"]);message("已读取 1 个JSON备份");tap(app.buttons["cloud-backup-preview-0"]);message("设置：包含 · EQ预设 1 · 单曲歌词偏移 1");image("Real backup settings verified preview");tap(app.buttons["cloud-backup-restore"]);XCTAssertTrue(app.alerts["恢复云端备份？"].waitForExistence(timeout:5));image("Real backup cloud settings confirmation");app.alerts.buttons["确认恢复云备份"].tap();message("本机音乐库与播放统计已恢复");app.buttons["收起云备份"].tap()
     openSettings(app,page:"playback");let restoredQuality=radio("128k");reach(restoredQuality);XCTAssertTrue(restoredQuality.isSelected);image("Real backup playback preference restored");offsets(100,verify:true)
@@ -5043,10 +5042,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(linkInput.waitForExistence(timeout:10))
     let linkPreview=app.buttons["discovery-link-preview"]
     func replaceLink(_ value:String){
-      linkInput.tap();linkInput.press(forDuration:1.1)
-      let selectAll=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
-      XCTAssertTrue(selectAll.waitForExistence(timeout:5));selectAll.tap()
-      linkInput.typeText(value);linkInput.typeText("\n");XCTAssertEqual(linkInput.value as? String,value)
+      replaceText(linkInput,with:value)
     }
     linkInput.tap();linkInput.typeText("https://music.163.com.attacker.invalid/playlist?id=101");linkInput.typeText("\n")
     reach(linkPreview);linkPreview.tap()
@@ -5383,7 +5379,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["Synthetic Qishui two"].exists)
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"qishui-preview-2").firstMatch.exists)
     let title=app.textFields["汽水导入歌单名称"]
-    XCTAssertTrue(title.waitForExistence(timeout:5));replaceText(title,with:fixtureTitle,in:app)
+    XCTAssertTrue(title.waitForExistence(timeout:5));replaceText(title,with:fixtureTitle)
     let confirm=app.buttons["确认追加汽水歌单"]
     XCTAssertGreaterThanOrEqual(confirm.frame.height,44)
     image("Qishui complete two-page preview with duplicate retained")
