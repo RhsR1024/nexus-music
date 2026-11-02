@@ -1,3 +1,11 @@
+## 2026-11-02 系统音频输出路由入口
+
+`NexusRoutePickerView` 以 Apple `AVRoutePickerView` 作为唯一系统路由 UI；RN 正式设置卡片仅提供入口和主题色，不实现设备枚举、凭据存储、第二音频会话或第二队列。`NexusNative` 同时登记 `RoutePicker` 的 `tint`/`activeTint`，Podspec 引入 `AVKit`。无障碍包装提供“选择音频输出”、44pt 最小尺寸和 VoiceOver 激活，系统子按钮继续承担真实路由面板呈现。
+
+反向门禁按固定 mobile-reverse 路由执行，新增 E-054→F-045→P-045/WI-019；IPA 严格 review 为 54E/19WI/113事件/45F/45P，APK 为 3E/2WI/3事件/2F/2P，均0错误/0警告。967/967检查、完整 native、Swift/Node/diff、Pods 与完整 Release build 通过；正式 Release `SourceUITests-1793585640904` 为1/0/0、62.135秒，`sourceUnchanged=true`，验证正常设置视口、完整 44pt 原生控件、前后台和终止重启后的可达性，3PNG provenance ready并亲看。
+
+本批没有选择任何模拟器输出设备。真实 AirPlay/蓝牙/耳机设备列表、切换/断开、来电与音频会话中断、实体iPhone、签名/安装和 iOS27 继续开放；系统控件渲染、SDK26.2 与未签名包不能替代这些结果。见[回执](2026-11-02-system-audio-output-route-report.md)与[UI规格](ui-spec/system-audio-output-route-2026-11-02.md)。
+
 ## 2026-11-02 公开 MV 媒体与全屏生命周期
 
 `NexusPublicMVView` 将 `WKWebView.requestMediaPlaybackState` 限定在可见、前台、已提交文档，按秒轮询并在暂停/隐藏/后台时停止；文档 generation 隔离旧回调，销毁时清理轮询、全屏观察和加载。`WKMediaPlaybackState` 与 `fullscreenState` 经现有 `onState` 事件交给 `MVDetail`，不引入媒体 URL、网页内容、Cookie 或第二播放器。

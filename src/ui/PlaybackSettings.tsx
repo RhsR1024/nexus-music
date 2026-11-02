@@ -1,9 +1,12 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {Pressable, View} from 'react-native';
+import {Pressable, View, type ViewProps} from 'react-native';
+import {requireNativeView} from 'expo';
 import type {Services} from '../app/services.ts';
 import {GainSlider} from './EqualizerGraph.tsx';
 import {useTheme} from './theme.tsx';
+import {controls,radius,space} from './tokens.ts';
+const NativeRoutePicker=requireNativeView<ViewProps&{tint:string;activeTint:string}>('NexusNative','RoutePicker');
 export function PlaybackSettings({services}:{services:Services}) {
   const {palette:p}=useTheme(),settings=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
   const [minutes,setMinutes]=useState('30'),[now,setNow]=useState(Date.now()),[error,setError]=useState('');
@@ -17,6 +20,15 @@ export function PlaybackSettings({services}:{services:Services}) {
     <Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>原曲当前音质不可用时，先尝试其他平台的可靠同版本，再降音质。手动指定的版本优先，原始收藏和歌单保留。</Text>
     <GainSlider testID="app-volume" label="App 音量" format={value=>`${Math.round((value+12)/24*100)}%`} value={settings.volume*24-12} onChange={value=>{void services.preferences.update({volume:(value+12)/24}).catch(()=>setError('音量未保存'));}}/>
     <Text style={{color:p.secondary,fontSize:12}}>App 内相对音量；设备音量使用 iPhone 音量键调整。</Text>
+    <View testID="system-audio-output" style={{minHeight:72,padding:space.md,borderRadius:radius.lg,backgroundColor:p.selected,flexDirection:'row',alignItems:'center',gap:space.md}}>
+      <View style={{flex:1,gap:space.xs}}>
+        <Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>系统音频输出</Text>
+        <Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>AirPlay、蓝牙和耳机设备由 iOS 提供。</Text>
+      </View>
+      <View style={{width:Math.max(controls.hit,48),height:Math.max(controls.hit,48),borderRadius:radius.full,backgroundColor:p.surface,alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+        <NativeRoutePicker tint={p.text} activeTint={p.accent} pointerEvents="auto" style={{width:48,height:48}}/>
+      </View>
+    </View>
     <Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>睡眠定时</Text>
     <Text testID="sleep-status" style={{color:p.secondary}}>{sleep.mode==='off'?'未开启':sleep.mode==='track'?'本曲播放结束后停止':`剩余 ${Math.max(0,Math.ceil((sleep.deadline-now)/60000))} 分钟`}</Text>
     <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{[15,30,60,90].map(value=><View key={value}>{button(`${value}分钟`,()=>set(value*60))}</View>)}</View>

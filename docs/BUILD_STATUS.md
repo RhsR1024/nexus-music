@@ -1,3 +1,7 @@
+## 2026-11-02 系统音频输出路由入口
+
+正式播放设置已嵌入 Apple `AVRoutePickerView`，入口以“选择音频输出”无障碍按钮暴露，触控区至少 44pt，系统负责 AirPlay/蓝牙/耳机设备列表。`nexus-native` 登记主题色并引入 `AVKit`，不改动权威播放器或路由策略。`npm run check` 967/967、完整 native、Swift/Node/diff、Pods 与完整 iOS build 通过；正式 Release `SourceUITests-1793585640904` 为1/0/0、62.135秒、`sourceUnchanged=true`，3PNG provenance ready并亲看。IPA/APK strict review 在新增 E-054→F-045→P-045 后均通过且无警告。实际设备路由切换、断开/中断、实体机、签名和 iOS27 仍待验。清洁 IPA、push 与 CI 随后补录，见[回执](2026-11-02-system-audio-output-route-report.md)。
+
 ## 2026-11-02 公开 MV 媒体与全屏生命周期
 
 公开 MV 原生 WebKit 页面已在可见前台文档中轮询有界媒体状态，后台/隐藏/暂停时停止；状态与 `fullscreenState` 经现有 native event 显示，不改变权威音乐队列或持久状态。真实酷狗公开页面由可见控件进入 WebKit `playing`，系统原生 AV 全屏可打开/退出；系统层期间根 WebView 仍报告 `inline`，本批明确区分系统原生全屏与 WebKit `fullscreenState`。Home 后媒体为 `suspended` 或 `paused` 且不自动续播，音乐保持同暂停进度和队列。

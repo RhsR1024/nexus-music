@@ -343,6 +343,36 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the settings tab must return to the settings root")
   }
+  func testSystemAudioOutputRouteControl() throws {
+    let app=XCUIApplication();app.launch()
+    func revealRoute(){
+      openSettings(app,page:"playback")
+      let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-playback").firstMatch
+      XCTAssertTrue(viewport.waitForExistence(timeout:10))
+      let route=app.buttons["audio-output-route-picker"]
+      XCTAssertTrue(route.waitForExistence(timeout:10),"The native AVRoutePickerView must be exposed as a button")
+      for _ in 0..<24 {
+        let frame=route.frame,window=viewport.frame
+        if route.isHittable && frame.minY>=window.minY+8 && frame.maxY<=window.maxY-8 {break}
+        let above=route.exists && frame.midY<window.midY
+        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25)))
+      }
+      let frame=route.frame,window=viewport.frame
+      XCTAssertTrue(route.isHittable,"The system route control must be reachable in the normal playback settings viewport")
+      XCTAssertTrue(window.contains(frame),"The full route-picker hit target must be visible without clipping")
+      XCTAssertGreaterThanOrEqual(frame.width,44)
+      XCTAssertGreaterThanOrEqual(frame.height,44)
+      XCTAssertEqual(route.label,"选择音频输出")
+      XCTAssertTrue(app.staticTexts["系统音频输出"].exists)
+      XCTAssertTrue(app.staticTexts["AirPlay、蓝牙和耳机设备由 iOS 提供。"].exists)
+    }
+    revealRoute()
+    let initial=XCTAttachment(screenshot:app.screenshot());initial.name="System AV route picker in normal playback settings";initial.lifetime = .keepAlways;add(initial)
+    XCUIDevice.shared.press(.home);app.activate();revealRoute()
+    let restored=XCTAttachment(screenshot:app.screenshot());restored.name="System AV route picker restored after foreground";restored.lifetime = .keepAlways;add(restored)
+    app.terminate();app.launch();revealRoute()
+    let relaunched=XCTAttachment(screenshot:app.screenshot());relaunched.name="System AV route picker reachable after relaunch";relaunched.lifetime = .keepAlways;add(relaunched)
+  }
   func testDownloadSettingsAndOfflinePlayback() throws {
     let app=XCUIApplication();app.launch()
     func reveal(_ element:XCUIElement){

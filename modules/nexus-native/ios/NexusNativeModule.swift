@@ -35,6 +35,11 @@ public final class NexusNativeModule: Module {
       ViewName("PhotoMask")
       OnViewDidUpdateProps { (view: NexusPhotoMaskView) in view.applyMask() }
     }
+    View(NexusRoutePickerView.self) {
+      ViewName("RoutePicker")
+      Prop("tint") { (view: NexusRoutePickerView, value: String) in view.setTint(value) }
+      Prop("activeTint") { (view: NexusRoutePickerView, value: String) in view.setActiveTint(value) }
+    }
     View(NexusLyricGestureView.self) {
       ViewName("LyricGesture")
       Events("onDoubleTap", "onLongPress")
