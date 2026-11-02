@@ -1,3 +1,13 @@
+## 2026-11-02 咪咕官方 MV 分享页详情
+
+`VideoProvider.publicPage("mg", ...)` 不再抛出 `PublicMVPageUnavailableError`，而是从经核验的公开 MV 数值标识生成 `https://h5.nf.migu.cn/app/v4/p/share/mv/index.html?id=<numeric-id>`。该路径不发起咪咕媒体 API 请求，不解析临时 HLS/MP4、Cookie、设备标识、会话或凭据。`MVDetail` 对咪咕恢复现有刷新按钮；刷新仅重建独立 WebKit 页面代次，返回仍保留原搜索上下文。MV 继续与权威音乐队列分离。
+
+`PublicMVPolicy` 对初始页面和同站导航实施精确 HTTPS host/path、唯一数字 `id` 和 query 数量校验；额外参数、fragment、畸形 ID、私网、旧/v5地址和跨平台页面拒绝。原生白名单接受同站官方 MV 页，不允许跳到咪咕其他服务页。
+
+最终 Release `SourceUITests-1793623216513` 为1/0/0、219.732秒，manifest `exitCode=0`、`sourceUnchanged=true`，源码 digest `96856510…`、安装 bundle `813cc756…`；11张1290×2796 PNG provenance ready并亲看关键两图，真实咪咕官方页面显示MV标题、作者、时长，刷新后同源同标题。云备份iOS27文本替换回归 `1793621671370` 与Navidrome设置页签回归 `1793622026059` 各1/0/0，均同源码/安装digest。`npm run check` 980/980、完整native与`ios:build`通过。
+
+`8053354` clean unsigned archive manifest为`dirty:false`、`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 12,899,521字节、SHA-256 `648ae07a…`。164项ZIP CRC及138个archive/IPA普通文件逐项字节、官方分享标记、测试/私人/签名材料排除通过。IPA/APK strict review均PASS且0错误/0警告，沿用Sollin E-1028/E-1030/E-1052→F-042→P-040，无新增采集。页面加载/刷新通过不等于视频起播、声音、全屏、弱网、iOS27、签名或实体机通过；详见[专项回执](2026-11-02-migu-official-mv-detail-report.md)。
+
 ## 2026-11-02 iOS 27 发现页初始链接种子输入修复
 
 `41406504201`/`a279581`的iOS作业在`SourceSettingsTests.testDiscoverySongActions()`失败。失败时AX层级记录输入值为`htps://music.163.c...`，首字符丢失使应用留在“请输入平台公开歌单分享链接或选择平台后输入ID”，未出现预期的无效域名提示。紧凑失败证据ZIP SHA-256为`51b55e280d32101dff04ede83efe7c769babd2b6e0d44ca80fc35c0180d9ead2`。

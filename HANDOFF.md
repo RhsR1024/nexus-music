@@ -1,3 +1,11 @@
+## 2026-11-02 咪咕官方 MV 分享页详情
+
+产品提交 `8053354` 将咪咕 MV 从“暂不支持”改为精确白名单官方匿名分享页 `https://h5.nf.migu.cn/app/v4/p/share/mv/index.html?id=<numeric-id>`，恢复正式详情页刷新，并把咪咕纳入现有独立 WebKit MV 容器；不解析临时 HLS/MP4、Cookie、设备标识、会话或凭据，MV 仍不进入权威音乐队列。`PublicMVPolicy` 只接受精确 HTTPS host/path 和唯一数字 `id`，拒绝额外参数、fragment、畸形 ID、私网及跨平台导航。
+
+`npm run check` 980/980、完整 native 与 `ios:build` 通过。最终 Migu/MV Release `SourceUITests-1793623216513` 为1/0/0、219.732秒，11PNG provenance ready并亲看两张咪咕关键图，页面实际显示官方网页标题、作者、时长且刷新保持同源同标题。云备份文本替换回归 `1793621671370` 1/0/0、Navidrome iOS27页签回归 `1793622026059` 1/0/0，均使用同一源码/安装digest。只证明官方详情页加载/刷新，不证明视频起播、声音、全屏、弱网或真机。
+
+clean unsigned archive对应产品提交，manifest `dirty:false`/`workingTreeChanges:[]`、arm64/SDK26.2/iOS15.1/[1,2]、`signed:false`；IPA 12,899,521字节、SHA-256 `648ae07add5b894916e84642096b880f3c036c3733e1e5cab17a64c32099d1a3`，164项ZIP CRC、138个archive/IPA普通文件逐项字节、生产分享标记及测试/私人/签名排除通过。IPA/APK strict review均PASS、0错误/0警告，复用既有Sollin E-1028/E-1030/E-1052→F-042→P-040，无新增采集或私有探测。详见[专项回执](docs/2026-11-02-migu-official-mv-detail-report.md)。实体iPhone、VoiceOver/动态字号/小屏、弱网/限流、真实媒体生命周期、签名/安装/续签及iOS27云端终态继续，完整目标未关闭。
+
 ## 2026-11-02 iOS 27 发现页初始链接种子输入修复
 
 `41406504201`/`a279581`的唯一失败来自`testDiscoverySongActions()`首次输入仍直接调用`typeText`，iOS27丢了首字符并形成`htps://music.163.c...`；应用实际显示“请输入平台公开歌单分享链接…”而不是预期的安全无效域名提示。失败层级、实际输入和空提示保存在`build/ci-41406504201/evidence/`，原始证据ZIP SHA-256为`51b55e28…`。修复只在测试中把该种子输入改为复用既有`replaceLink`，产品代码不变。

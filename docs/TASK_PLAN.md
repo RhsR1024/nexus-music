@@ -1,3 +1,17 @@
+## 2026-11-02 咪咕官方 MV 分享页详情
+
+- [x] 咪咕数值 MV 标识改为精确白名单官方匿名分享页，删除“暂不支持”生产错误；不解析或保存临时媒体 URL、Cookie、设备标识、会话和凭据。
+- [x] 咪咕详情恢复现有刷新按钮；`PublicMVPolicy` 只接受精确 HTTPS host/path 和唯一数字 `id`，拒绝额外 query、fragment、畸形 ID、私网与跨平台导航。
+- [x] `npm run check` 980/980、完整 native、Swift parse、`npm run ios:build` 通过。
+- [x] 最终 Migu/MV Release `SourceUITests-1793623216513` 为1/0/0、219.732秒、`sourceUnchanged=true`；11PNG provenance ready并亲看，官方标题/作者/时长及刷新保持通过。
+- [x] 云备份文本替换回归 `SourceUITests-1793621671370` 与 Navidrome页签回归 `SourceUITests-1793622026059` 各1/0/0；同源码/安装digest。
+- [x] `8053354` clean unsigned manifest、arm64/SDK26.2/iOS15.1/[1,2]、164项ZIP CRC、138项archive/IPA逐文件、生产标记、隐私排除与未签名检查通过；IPA SHA-256 `648ae07a…`。
+- [x] IPA/APK strict review均PASS、0错误/0警告；复用既有E-1028/E-1030/E-1052→F-042→P-040，无新增Sollin采集。
+- [ ] push、clean T7阶段副本与云端iOS27终态。
+- [ ] 咪咕真实视频起播、声音、网页/系统全屏、退出、弱网/限流、后台竞争、实体iPhone、VoiceOver/动态字号/小屏、签名/安装/续签和功耗继续。
+
+见[专项回执](2026-11-02-migu-official-mv-detail-report.md)。本批只关闭咪咕官方详情页加载/刷新缺口，不关闭完整MV、五类型搜索或项目总目标。
+
 ## 2026-11-02 iOS 27 发现页初始链接种子输入修复
 
 - [x] 从`41406504201`/`a279581`失败层级确认`testDiscoverySongActions()`实际输入为`htps://music.163.c...`，首字符丢失导致应用显示空输入提示；失败ZIP SHA-256为`51b55e28…`。

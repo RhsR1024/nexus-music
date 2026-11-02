@@ -1,3 +1,11 @@
+## 2026-11-02 咪咕官方 MV 分享页 clean unsigned archive
+
+产品提交`8053354`的`npm run ios:archive`成功，manifest记录`dirty:false`、`workingTreeChanges:[]`、commit同一HEAD、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。manifest SHA-256 `361ab93df2f831e6f04acc8622d64044869661af89f9ed157775608304cf9b18`。
+
+IPA为12,899,521字节、SHA-256 `648ae07add5b894916e84642096b880f3c036c3733e1e5cab17a64c32099d1a3`。独立回执`build/logs/migu-mv-archive-verification-8053354.json` SHA-256 `017c1e9edf454206649e639eb079ef24ce3457bedf7fde9ab61d7470b163702c`、`ready=true`。164项ZIP CRC全部通过，138个archive/IPA普通文件路径集合和字节一致，0 missing/extra/changed；JS/原生官方分享标记存在，测试/私人/签名材料排除，包内完全未签名且无描述文件。
+
+最终Migu/MV Release `1793623216513`为1/0/0、219.732秒，`sourceUnchanged=true`；云备份`1793621671370`与Navidrome页签`1793622026059`各1/0/0。只证明iOS26.3.1模拟器与unsigned archive，不证明iOS27、签名、实体机或真实咪咕视频/声音/全屏。详见[专项回执](2026-11-02-migu-official-mv-detail-report.md)。
+
 ## 2026-11-02 iOS 27 发现页初始链接种子输入修复
 
 `ea134a9`的clean unsigned archive在`npm run ios:archive`中输出`ARCHIVE SUCCEEDED`。manifest对应同一提交，`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed=false`。IPA为12,900,214字节、SHA-256`3ecd59c0e5eaef1273674b1987edd3fd56e89fb3bb6da7066e09d2ad42917613`，manifest SHA-256`ae469a3339348b4b312988514c4c62b10e145cc6c902e62e85efb1c1ff902407`。
