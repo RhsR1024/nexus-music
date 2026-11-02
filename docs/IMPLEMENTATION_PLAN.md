@@ -1,3 +1,11 @@
+## 2026-11-02 J26 App 与系统输出音量分离
+
+播放设置继续用现有偏好保存音枢 App 相对音量，并新增公共 `MPVolumeView` 的系统输出音量卡片。系统音量与当前扬声器/耳机/蓝牙/AirPlay 路由只由 iOS 管理；Nexus 不持久化镜像值、不枚举设备、不创建第二个音频会话。真机外层 adjustable 元素向系统 slider 转发增减；模拟器没有系统滑块时显示并暴露明确不可用说明，避免内部不可见 slider 暴露伪 0%。
+
+最终 Release `SourceUITests-1793598879537` 为 1/0/0、169.709秒，`sourceUnchanged=true`。正式设置中真实合成流进入 PCM 后暂停，App 音量80%→30%跨 Home 和进程重启保持，暂停时间及权威队列“1首”不变，最终恢复100%并清理夹具；2PNG provenance ready并亲看。978/978、完整 native、Pods、Swift/Node/diff和最终 Release build通过。r7 执行通过但截图暴露不可见 slider 空白，原证据保留后修正并重跑 r8。
+
+功能提交`02e96bd`的清洁未签名 IPA为12,894,336字节、SHA-256`2a404ba8…`；arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节一致，生产 `DeviceVolume` 标记存在，测试/私人/签名资源排除。T7阶段229份/42,962,837字节（含exFAT `._*` 元数据）逐份哈希一致。实体系统音量变化、实际 VoiceOver 手势、输出路由切换/断开、音频会话中断、iOS27、签名/安装和实体机继续；J26/F29整体未关闭。见[回执](2026-11-02-device-volume-control-report.md)与[UI规格](ui-spec/device-volume-control-2026-11-02.md)。
+
 ## 2026-11-02 AMLL TTML 命名空间时间配置
 
 `parseTTML` 现在只在根节点精确声明 AMLL 命名空间时使用媒体绝对时间，支持 `1.456`、`00:13.120`、`1:02.123`、`10s` 等形式；普通 TTML 保持父相对时间，AMLL `timeContainer="seq"` 明确拒绝。独立背景声使用最近区段作为边界，背景翻译/罗马音归属背景行；零时长空白跨度只连接词，ruby 注音明确拒绝并由归一化选择其他歌词。全部改动继续使用原有 XML/时间/行词安全预算。

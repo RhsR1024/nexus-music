@@ -1,3 +1,11 @@
+## 2026-11-02 J26 App 与系统输出音量分离
+
+正式播放设置现在把音枢 App 相对音量与当前 iOS 输出设备的系统音量分开。真机由公共 `MPVolumeView` 显示系统滑块，外层提供至少 44pt 的 adjustable 无障碍元素；音量、路由和输出设备保持系统所有，不写入偏好、不枚举设备、不创建第二播放器。模拟器不提供系统滑块时显示并暴露明确不可用说明，不伪造 0% 系统音量。
+
+最终 Release `SourceUITests-1793598879537` 为1/0/0、169.709秒，`sourceUnchanged=true`；源码 digest `ababbd4f…`、安装 bundle `cbeac737…`、JS bundle `8d6d51e2…`、xcresult Info `85c372b3…`。测试用真实解码合成流暂停后验证 App 音量30%跨 Home/终止重启、暂停时间和“1首”权威队列保持，再恢复到100%并清理夹具。2PNG逐张 provenance ready并亲看；r7 `SourceUITests-1793598350996` 执行成功但视觉证据不足，原 xcresult与附件保留。
+
+978/978、完整 native、Pods、Swift/Node/diff和最终`ios:build`通过。功能提交`02e96bd`的clean unsigned IPA为12,894,336字节、SHA-256 `2a404ba8cfbce0fba73647f8f624c397eedb7f0c23aedcb5d696c87769715d9e`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记及测试/私人/签名排除通过。T7阶段`2026-11-02-device-volume-control-02e96bd/`共229份/42,962,837字节（含exFAT `._*` 元数据）逐份一致；内盘约52.3GiB、T7约606GiB，本批零删除/零个人搬移。实体系统音量、VoiceOver手势、耳机/蓝牙/AirPlay、路由断开/中断、iOS27、签名和实体机仍待，J26/F29未完成。见[本批回执](2026-11-02-device-volume-control-report.md)。
+
 ## 2026-11-02 AMLL TTML 命名空间时间配置
 
 仅对精确 AMLL 命名空间启用媒体绝对时间，普通 TTML 保持父相对语义；新增缩短秒/分秒时钟，拒绝AMLL `seq`混用，背景声/翻译/罗马音按区段边界保留，ruby注音明确拒绝回退。固定库3,389候选中抽取12个真实样本，11个支持、1个ruby预期拒绝；独立oracle核对416行/3,749词/29背景词/4个边界夹紧词，无序词降级为0。978/978检查通过；最终Release AMLL、标准seq、坏TTML→LRC三组各1/0/0，8PNG provenance ready并亲看。
