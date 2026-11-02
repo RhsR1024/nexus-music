@@ -1,3 +1,17 @@
+## 2026-11-03 AMLL/标准 TTML 注音解析与原生绘制
+
+`src/lyrics/ttml.ts` 不再整体拒绝 `tts:ruby`。AMLL 分支要求 `container` 位于 `par` 上下文，其中恰有一个 `base` 和一个 `textContainer`，后者恰有一个 `text`；基础与注解文字分别经有界 XML 文本提取，注解值限制为去空白后非空、最多 512 字符且不含控制字符。标准 TTML `<ruby>` 把 `<rb>`/普通子节点累积为基础，`<rt>` 生成注音，`<rp>` 忽略，`rtc` 与其他不完整结构拒绝。注解只成为 `LyricWord.ruby`，原始行文字仍只拼接基础演唱内容。
+
+`lyricSpokenText()` 为既有行级可访问控件追加去重后的注音，避免把读音插入可见歌词。`Lyrics.tsx` 的经典、全部歌词、AM2 与舞台视图共用该标签；非当前行不再简单删除 `words`，而是把含注音单词的时间停到一天上限，从而保留注音元数据并关闭旧行动画。无注音行保持原轻量路径。
+
+`NativeLyricLine.tsx` 按主歌词字号为含注音行预留 9–12pt 注音字号对应的紧凑 inset。`NexusLyricsModule.swift` 在基础 TextKit 绘制前后单独处理注音位置：横向以基础字形范围居中并夹紧，纵向放入预留顶部；长注音按可用宽度缩小但保持最小 7pt。前一次 `CTRubyAnnotation` 实测不绘制，因此最终实现采用实际可见的手动绘制，不用属性测试替代截图。
+
+单元测试覆盖 AMLL 两注音顺序、标准 ruby、`rp`、可见文本/注解分离、无障碍读法与三类拒绝。`npm run check` 991/991，完整原生测试退出 0。正式 Release `SourceUITests-1793661968282` 为 1/0/0，`sourceUnchanged=true`，截图 `kanji` 位于“漢字”上方，并读到 `注音：kanji`；fixture 计数 `wy=2/tx=4/ttmlAmll=2`，安装 bundle digest `c0162847423db883b8a1965803390de698d137e4058bfd566991a44b3464359f`。
+
+precommit dirty IPA SHA-256 为 `b433beb38b1a8e185bcf6e2e292528fc12e6e0f27885af1da9cefdf0eaae07df`，manifest SHA-256 为 `49a69a9cc46030f1f00c0958908f82025198a902c480b5a6c8b166bb5afe61ef`；IPA/archive/manifest 已先复制至 T7 预提交阶段并验证。产品提交仍须从 clean tree 重建正式 unsigned archive，不能沿用 dirty 包。
+
+当前只实现 AMLL 一个基础配一个注解容器及标准 ruby 的基础解析，并由全部歌词行复用上方单行注音绘制。不支持 `rtc`、多并列注音、跨行/wrapping ruby、右侧/行间位置、完整 TTML2 样式级联和真实库复杂字体排版；标准结构只有单测，UI 渲染夹具为 AMLL。实体机 VoiceOver、真实歌词库、动态字号/小屏、签名和 iOS 27 仍开放。见[回执](2026-11-03-amll-ruby-rendering-report.md)与[UI规格](ui-spec/amll-ruby-2026-11-03.md)。
+
 ## 2026-11-03 动态背景低电量模式门控
 
 原有Ambient/Mesh只检查请求、挂载、前后台和Reduce Motion。`e3666a1`在[MeshField.swift](../modules/nexus-native/ios/MeshField.swift)新增纯值`MotionPolicy`，把Low Power Mode加入同一求值，并在两类原生视图观察`NSProcessInfoPowerStateDidChange`。最终`430754d`统一`MotionTimeline`，修正Ambient停车清零与React模糊封面重置为0的问题；状态关闭时保留当前值和方向，重新开放时完成原方向的剩余运动。

@@ -1,3 +1,11 @@
+## 2026-11-03 AMLL/标准 TTML 注音解析与原生绘制
+
+歌词解析已支持 AMLL 的严格 `container/base/textContainer/text` 注音结构和标准 TTML `<ruby><rb/><rt/><rp/>`。注音只保存在 `LyricWord.ruby`，不混入演唱文字；畸形、缺基础文字、游离文字、`rtc` 分组等结构拒绝并回退。无障碍标签追加去重后的 `注音：...`，非当前歌词行保留注音元数据但停车逐字时间，避免旧行继续消费动画。
+
+原生 TextKit 路径先保留紧凑上方 inset，再按基础字形范围手动绘制注音；试验证明 `CTRubyAnnotation` 在当前路径不绘制，因此以可截图的实际绘制为准。`npm run check` 991/991、完整 native 和正式 Release `SourceUITests-1793661968282` 均通过；专项为 1/0/0、`sourceUnchanged=true`，`kanji` 实际位于“漢字”上方，XCTest 同时读到 `注音：kanji`。固定截图 SHA-256 为 `3611de59…6315`，日志与安装 bundle digest 见[专项回执](docs/2026-11-03-amll-ruby-rendering-report.md)。
+
+提交前可构建 archive 故意处于 dirty 状态，IPA SHA-256 `b433beb3…07df`；已先复制 IPA、archive 和 manifest 到 T7 `2026-11-03-amll-ruby-precommit-70c0b13` 并核验，随后才允许 clean archive 覆盖公共 distribution 路径。当前边界为 AMLL 单基础/单注解容器、标准 ruby 解析和同一上方小字绘制；不支持 `rtc`、复杂并列/换行、完整 TTML2 ruby 排版或右侧/行间注音。标准结构有单测，App 渲染夹具使用 AMLL。实体机 VoiceOver、真实歌词库、签名/安装及 iOS 27 终态继续。
+
 ## 2026-11-03 iOS 27 紧凑失败诊断与递归日志上传
 
 `78018c7`/`41510740220` 在第 11 步 `testSequentialTTMLLyrics` 失败。现有紧凑产物只显示 Node`aborted`/`ECONNRESET`，没有嵌套 XCTest summary/catalog；完整诊断`13182872453`为756,359,033字节，超过下载通道512 MiB上限，匿名API及备用浏览器/桌面通道不可用，因此没有把连接中断误判为某条测试断言或产品缺陷。

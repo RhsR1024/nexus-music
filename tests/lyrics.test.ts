@@ -2,7 +2,7 @@ import {normalizeLyrics} from '../src/lyrics/normalize.ts';
 import {parseTTML} from '../src/lyrics/ttml.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {parseLyrics,activeLyric,mergeLyrics} from '../src/lyrics/parser.ts';
+import {parseLyrics,activeLyric,mergeLyrics,lyricSpokenText} from '../src/lyrics/parser.ts';
 test('LRC preserves multiple timestamps, blank timed lines and millisecond precision',()=>{
   const parsed=parseLyrics('[ar:fixture]\n[00:01.2][00:05.123]Repeated\n[00:03.00]\n[00:99.00]bad');
   assert.deepEqual(parsed.lines.map(line=>[line.startMs,line.text]),[[1200,'Repeated'],[3000,''],[5123,'Repeated']]);
@@ -131,7 +131,23 @@ test('AMLL profile detection and bounds never relax standard TTML or XML budgets
   assert.throws(()=>parseTTML('<!DOCTYPE tt><tt xmlns:a="http://www.example.com/ns/amll"/>'));
   const rich=normalizeLyrics({ttml:amll('<p begin="12" end="14">Selected</p>'),lrc:'[00:00]Fallback'});
   assert.equal(rich.document.lines[0]!.text,'Selected');assert.equal(rich.document.lines[0]!.startMs,12000);
-  const ruby=amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="text" begin="12" end="14">zi</span></span></p>');
-  assert.throws(()=>parseTTML(ruby),/注音布局/);
-  assert.equal(normalizeLyrics({ttml:ruby,lrc:'[00:12]Readable fallback'}).document.lines[0]!.text,'Readable fallback');
+  const ruby=amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="textContainer"><span tts:ruby="text" begin="12" end="13.5">zi</span></span></span><span tts:ruby="container"><span tts:ruby="base">音</span><span tts:ruby="textContainer"><span tts:ruby="text" begin="13.5" end="14">yin</span></span></span></p>');
+  const parsedRuby=parseTTML(ruby);
+  assert.equal(parsedRuby.lines[0]!.text,'字音');
+  assert.deepEqual(parsedRuby.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby]),[
+    ['字',12000,13500,'zi'],['音',13500,14000,'yin'],
+  ]);
+  assert.equal(lyricSpokenText(parsedRuby.lines[0]!),'字音，注音：zi，yin');
+  assert.equal(normalizeLyrics({ttml:ruby,lrc:'[00:12]Readable fallback'}).document.lines[0]!.text,'字音');
+});
+test('TTML standard ruby keeps annotations separate from sung text and rejects malformed structure',()=>{
+  const parsed=parseTTML('<tt><body><p begin="2s" end="4s"><span begin="0s" end="1s">A</span><ruby begin="1s" end="2s"><rb>漢</rb><rp>(</rp><rt>kan</rt><rp>)</rp></ruby><span begin="1s" end="2s">B</span></p></body></tt>');
+  assert.equal(parsed.lines[0]!.text,'A漢B');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>[word.text,word.ruby]),[['A',undefined],['漢','kan'],['B',undefined]]);
+  assert.equal(lyricSpokenText(parsed.lines[0]!),'A漢B，注音：kan');
+  for(const input of [
+    '<tt><body><p><span tts:ruby="base">字</span></p></body></tt>',
+    '<tt><body><p><span tts:ruby="container"><span tts:ruby="base">字</span></span></p></body></tt>',
+    '<tt><body><p><ruby><rb>漢</rb></ruby></p></body></tt>',
+  ])assert.throws(()=>parseTTML(input),/注音/);
 });

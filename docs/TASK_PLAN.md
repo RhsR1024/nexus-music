@@ -1,3 +1,18 @@
+## 2026-11-03 AMLL/标准 TTML 注音
+
+- [x] AMLL `tts:ruby` 严格容器解析：一个基础 span、一个 `textContainer/text`，注音独立保存在 `LyricWord.ruby`，不进入演唱文字。
+- [x] 标准 TTML `<ruby>/<rb>/<rt>/<rp>` 解析；`rp` 只作非权威回退，`rtc`、缺基础/注解、游离文字和畸形结构安全拒绝。
+- [x] 歌词无障碍标签追加去重后的 `注音：...`；非当前行停车单词时间但保留注音，不让旧行动画继续。
+- [x] 原生歌词行预留紧凑上方 inset 并绘制注音；`CTRubyAnnotation` 未出图的尝试不保留为伪完成。
+- [x] `npm run check` 991/991、完整 native 与正式 Release `SourceUITests-1793661968282` 1/0/0、`sourceUnchanged=true`；截图确认 `kanji` 位于“漢字”上方。
+- [x] 已亲看懂并核验注音截图 SHA-256 `3611de59…6315`；可访问标签与视觉文本分开验收。
+- [x] precommit dirty IPA/archive/manifest 先复制到 T7 `2026-11-03-amll-ruby-precommit-70c0b13`，哈希与目录比较通过。
+- [ ] 提交产品/测试/初始文档；从 clean 工作区重新生成 unsigned archive，独立核验 manifest commit、`dirty=false`、archive/IPA 字节、ZIP CRC、架构/SDK/系统/设备族、未签名及生产/隐私排除。
+- [ ] 正常 push、核对 remote 与 Actions 队列；失败时按紧凑递归产物定位真实根因。
+- [ ] 实体 iPhone VoiceOver、真实歌词库、动态字号/小屏、复杂 AMLL/标准 ruby 布局、签名/安装/续签和 iOS 27 终态。
+
+见[专项回执](2026-11-03-amll-ruby-rendering-report.md)与[UI规格](ui-spec/amll-ruby-2026-11-03.md)。本批不关闭完整 TTML2、S4/J35–42、iOS 27 或项目总目标。
+
 ## 2026-11-03 iOS 27 紧凑失败诊断
 
 - [x] 从`41510740220`/`78018c7`确认第11步`testSequentialTTMLLyrics`失败只留下Node`aborted`/`ECONNRESET`；完整诊断756,359,033字节超过512 MiB下载上限，不把连接中断猜成XCTest或产品根因。
