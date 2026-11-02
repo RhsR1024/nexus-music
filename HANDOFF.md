@@ -4,7 +4,7 @@
 
 原生 TextKit 路径先保留紧凑上方 inset，再按基础字形范围手动绘制注音；试验证明 `CTRubyAnnotation` 在当前路径不绘制，因此以可截图的实际绘制为准。`npm run check` 991/991、完整 native 和正式 Release `SourceUITests-1793661968282` 均通过；专项为 1/0/0、`sourceUnchanged=true`，`kanji` 实际位于“漢字”上方，XCTest 同时读到 `注音：kanji`。固定截图 SHA-256 为 `3611de59…6315`，日志与安装 bundle digest 见[专项回执](docs/2026-11-03-amll-ruby-rendering-report.md)。
 
-提交前可构建 archive 故意处于 dirty 状态，IPA SHA-256 `b433beb3…07df`；已先复制 IPA、archive 和 manifest 到 T7 `2026-11-03-amll-ruby-precommit-70c0b13` 并核验，随后才允许 clean archive 覆盖公共 distribution 路径。当前边界为 AMLL 单基础/单注解容器、标准 ruby 解析和同一上方小字绘制；不支持 `rtc`、复杂并列/换行、完整 TTML2 ruby 排版或右侧/行间注音。标准结构有单测，App 渲染夹具使用 AMLL。实体机 VoiceOver、真实歌词库、签名/安装及 iOS 27 终态继续。
+提交前可构建 archive 故意处于 dirty 状态，IPA SHA-256 `b433beb3…07df`；已先复制 IPA、archive 和 manifest 到 T7 `2026-11-03-amll-ruby-precommit-70c0b13` 并核验，随后才允许 clean archive 覆盖公共 distribution 路径。产品/测试/初始文档提交`ec03fbf`后已从 clean tree 重建并独立核验：manifest 与 HEAD 一致且`dirty=false`，arm64/iphoneos26.2/iOS15.1/[1,2]、未签名；IPA 17,831,759字节、SHA-256`4b73df48ef799925ef554223d28536b44c40b0bcb447d303e8c01d20df903a4b`，178项ZIP CRC、151项archive/IPA（63普通+88 AppleDouble）逐字节、生产`rubyInset`及测试/私人排除通过。精确IPA/archive/xcresult/截图/日志/补丁/文档已复制至T7`2026-11-03-amll-ruby-ec03fbf`并逐项比较，首次传输134个普通文件/98,482,069字节、`transfer-receipt.json` SHA-256`d3aaa054…e03e8`，源证据保留且`deleted=0/movedUserFiles=0`。当前边界为 AMLL 单基础/单注解容器、标准 ruby 解析和同一上方小字绘制；不支持 `rtc`、复杂并列/换行、完整 TTML2 ruby 排版或右侧/行间注音。标准结构有单测，App 渲染夹具使用 AMLL。push、Actions、实体机 VoiceOver、真实歌词库、签名/安装及 iOS 27 终态继续。
 
 ## 2026-11-03 iOS 27 紧凑失败诊断与递归日志上传
 

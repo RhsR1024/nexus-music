@@ -7,7 +7,8 @@
 - [x] `npm run check` 991/991、完整 native 与正式 Release `SourceUITests-1793661968282` 1/0/0、`sourceUnchanged=true`；截图确认 `kanji` 位于“漢字”上方。
 - [x] 已亲看懂并核验注音截图 SHA-256 `3611de59…6315`；可访问标签与视觉文本分开验收。
 - [x] precommit dirty IPA/archive/manifest 先复制到 T7 `2026-11-03-amll-ruby-precommit-70c0b13`，哈希与目录比较通过。
-- [ ] 提交产品/测试/初始文档；从 clean 工作区重新生成 unsigned archive，独立核验 manifest commit、`dirty=false`、archive/IPA 字节、ZIP CRC、架构/SDK/系统/设备族、未签名及生产/隐私排除。
+- [x] 提交产品/测试/初始文档；从 clean 工作区重新生成 unsigned archive，独立核验 manifest commit、`dirty=false`、archive/IPA 字节、ZIP CRC、架构/SDK/系统/设备族、未签名及生产/隐私排除。
+- [x] clean IPA `4b73df48…03a4b`与验证回执`308e92a0…14b6`、精确xcresult、截图、日志、补丁及文档复制至 T7 `2026-11-03-amll-ruby-ec03fbf`；134个普通文件/98,482,069字节逐项比较通过，源证据保留且零删除/零个人文件搬移。
 - [ ] 正常 push、核对 remote 与 Actions 队列；失败时按紧凑递归产物定位真实根因。
 - [ ] 实体 iPhone VoiceOver、真实歌词库、动态字号/小屏、复杂 AMLL/标准 ruby 布局、签名/安装/续签和 iOS 27 终态。
 

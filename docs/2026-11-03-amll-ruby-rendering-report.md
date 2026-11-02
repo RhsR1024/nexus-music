@@ -40,6 +40,12 @@
 
 该 dirty archive 只证明 precommit 源码可构建，不能作为产品提交产物。功能提交后必须从干净工作区重新 archive，独立检查 manifest commit、`dirty=false`、IPA/archive 字节、ZIP CRC、架构、SDK、最低系统、设备族、未签名状态以及生产注音标记和测试/私人数据排除。
 
+产品/测试/初始文档已提交为 `ec03fbfdb63b776f89d830a13c702e38a3a7f4dc`，随后从 clean tree 重建 unsigned archive。manifest 与实际 HEAD 一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、bundle ID `com.nexusmusic.app`、`signed=false` 且无描述文件或测试 bundle。IPA 为 17,831,759 字节、SHA-256 `4b73df48ef799925ef554223d28536b44c40b0bcb447d303e8c01d20df903a4b`；manifest SHA-256 `baf0719d722db8011db160374619f65b5f4744d7936a975d1d16ceaa275bbd24`，archive 日志 SHA-256 `1c6b4552e51ad2fade6ba6ed336fbaf74c5fdc365ac7de54e04ca0656b584633`。
+
+独立验证回执 `build/logs/amll-ruby-clean-archive-verification-ec03fbf.json` 为 `ready=true`，SHA-256 `308e92a01ab48f9a976129bf1010c19f479169dbd319e796970aa21e4ba614b6`。178 项 ZIP CRC 通过；archive/IPA 各 151 项、含 63 个普通文件和 88 个 exFAT AppleDouble 元数据，逐个字节比较无缺失、额外或不一致；生产标记 `rubyInset` 存在，测试夹具、私人标记及固定注音串 `kanji` 均排除。
+
+精确 IPA、archive、manifest、验证回执与日志、`SourceUITests-1793661968282.xcresult`、4 张截图与 provenance、提交补丁和阶段文档已复制到 T7 `NexusMusic/BuildArchive/2026-11-03-amll-ruby-ec03fbf/`。首次传输的 `copy-comparison.json` 与 `transfer-receipt.json` 记录 134 个普通文件、98,482,069 字节，全部源/目标 SHA-256 和目录比较通过，回执 SHA-256 `d3aaa0543a4fcc43d0607807207fee1a7e24705b851111a9b0053b1af23e03e8`；源证据保留，`deleted=0`、`movedUserFiles=0`，活动构建进程为 0。
+
 当前明确未覆盖：
 
 - AMLL 只支持一个 `base` 加一个 `textContainer/text`，不覆盖多注音、嵌套注音或任意 TTML2 ruby 布局。
