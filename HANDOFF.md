@@ -4,7 +4,7 @@
 
 最终 `SourceUITests-1793646248544` 为1/0/0、222.427秒、`sourceUnchanged=true`；首轮`1/2/3/4`，低水位`5/6/3/5`去重后共六项且保持`3/6`，终止后释放迟到响应并重启仍为`5/6`、无第7首，空/错响应均保持FM5。服务计数5次FM请求、2次释放、0次鉴权失败；6张1290×2796 PNG逐张亲看，provenance ready。
 
-`npm run check` 990/990、完整native、`ios:build`和提交前`ios:archive`通过；离线`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告。提交前IPA SHA-256 `c1fbe5ee…`、178项ZIP CRC、151项archive/IPA普通文件逐字节、生产入口测试标记/私人数据/签名排除通过。真实网易账号/个性化、后台/锁屏、实体iPhone、VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签及iOS27终态继续。详细失败链与证据边界见[专项回执](docs/2026-11-03-account-fm-station-vertical-report.md)，本批不关闭完整平台FM、F/J或项目。
+`npm run check` 990/990、完整native、`ios:build`和提交前`ios:archive`通过；离线`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告。提交前IPA SHA-256 `c1fbe5ee…`、178项ZIP CRC、151项archive/IPA普通文件逐字节、生产入口测试标记/私人数据/签名排除通过。产品提交`04f9d12`后重新归档和独立核验：clean manifest与HEAD一致且工作区清洁，clean IPA SHA-256 `749eace5…963f8`，151项archive/IPA普通文件逐项一致、生产入口隔离与未签名检查通过，回执`ready=true`。真实网易账号/个性化、后台/锁屏、实体iPhone、VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签及iOS27终态继续。详细失败链与证据边界见[专项回执](docs/2026-11-03-account-fm-station-vertical-report.md)，本批不关闭完整平台FM、F/J或项目。
 
 ## 2026-11-03 定制风格化推荐
 

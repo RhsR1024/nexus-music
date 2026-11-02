@@ -6,6 +6,7 @@
 - [x] 正式Release`SourceUITests-1793646248544`为1/0/0、222.427秒、`sourceUnchanged=true`；5次FM请求、2次释放、0次鉴权失败；6张PNG provenance ready并逐张亲看。
 - [x] `npm run check`990/990、完整native、`ios:build`、提交前`ios:archive`通过；离线`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告。
 - [x] 提交前unsigned IPA的ZIP、archive/IPA字节、arm64/SDK26.2/iOS15.1/[1,2]、生产入口隔离、私人/测试标记和签名排除通过。
+- [x] 产品提交`04f9d12` clean unsigned manifest与独立IPA回执`ready=true`：IPA `749eace5…963f8`、151项archive/IPA普通文件逐项字节、178项ZIP CRC、生产入口及私人/签名排除通过。
 - [ ] 真实网易账号及个性化FM、真实网络/配额/限流、自然曲尾长时续批、后台/锁屏/中断、实体机/VoiceOver/动态字号/小屏、连续动效、签名/安装/续签和iOS27终态。
 
 见[专项回执](2026-11-03-account-fm-station-vertical-report.md)与[UI场景](ui-spec/account-fm-station-2026-11-03.md)。本批关闭合成授权下的正式App纵向缺口，不关闭完整平台FM、F/J或项目。

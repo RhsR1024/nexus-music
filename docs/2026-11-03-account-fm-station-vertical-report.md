@@ -53,7 +53,9 @@
 - 提交前 IPA 为 17,825,520 字节、SHA-256 `c1fbe5eeae35c9d082b631efa30d76eb6c0dfff878af4907d998e042ac560d37`。ZIP 178 项 CRC、151 项 archive/IPA 普通文件逐字节比较、主 JS 与可执行哈希、无测试/私人标记和无签名材料检查通过；核验回执 SHA-256 `bb4bdafb…`。
 - `node scripts/sollin-reverse-gate.mjs ipa --review`：PASS，**56 Evidence / 21 Work Items / 119 timeline / 47 Finding / 47 Path，0 errors / 0 warnings**；日志 SHA-256 `80c14300…`。本批复用既有离线 scope，没有新增采集、真实账号或私有服务探测。
 
-清洁提交后的 manifest、IPA 哈希、T7 阶段副本和 Actions 队列在阶段收尾回填。
+产品提交 `04f9d127c6295961e7a15ed439b1b8dc2cb82da4` 后重新执行 clean unsigned archive，manifest SHA-256 为 `3cbc2df750200509352aa24bf143a04f8fdb477d93c4d94463ff19ab1c287e5c`，记录同一提交、`dirty:false`、`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族 `[1,2]` 与 `signed:false`；clean archive 日志 SHA-256 为 `63408f3a…e986`。独立核验回执 `build/logs/account-fm-station-20261103-r8/ipa-verification-clean-04f9d12.json` 为 `ready=true`、SHA-256 `d28804102404f1dd67e811fb9ff9410bc3b6590c94d3fc0156d8ba2d536d9085`，未覆盖提交前回执。
+
+clean IPA 为 17,825,520 字节、SHA-256 `749eace5d01b361ea8007b50a4c02ed58a9d84926bc6ddcfc7073a09892963f8`。178 个 ZIP 条目 CRC 全部通过；151 个 archive/IPA 普通文件逐项比较 0 missing、0 extra、0 byte mismatch，其中 63 个真实 payload 另计 88 个 exFAT AppleDouble 元数据。主 JS 两侧 SHA-256 均为 `0b2fc58f…29fa`，arm64 可执行文件两侧均为 `6c46411c…5c77`；FM 测试入口、合成 Cookie、私人夹具与敏感文件名 0 命中，包内无 `_CodeSignature` 或描述文件。T7 阶段副本、push 与 Actions 实际队列在阶段收尾回填。
 
 ## 证据边界
 

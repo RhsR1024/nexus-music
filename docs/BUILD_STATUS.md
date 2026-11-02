@@ -2,6 +2,8 @@
 
 正式Release使用固定合成账号/Keychain会话、合成FM响应和WAV，经生产账号、FM协调器、唯一权威队列及原生PCM验证首次播放、低水位暂停、去重追加、终止后迟到隔离、重启、空/错响应保留当前曲及清理。`SourceUITests-1793646248544`为1/0/0、222.427秒、`sourceUnchanged=true`；5次FM请求、2次释放、0次鉴权失败，6PNG provenance ready并逐张亲看。提交前990检查、完整native、build/archive及IPA ZIP/逐文件/隐私/签名检查通过，`ipa --review` 56E/21WI/119时间线/47F/47P、0错误/0警告。详见[回执](2026-11-03-account-fm-station-vertical-report.md)。
 
+产品提交`04f9d12`的clean unsigned manifest为`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`，SHA-256 `3cbc2df7…7e5c`。IPA为17,825,520字节、SHA-256 `749eace5d01b361ea8007b50a4c02ed58a9d84926bc6ddcfc7073a09892963f8`；独立回执`ready=true`、SHA-256`d2880410…9085`，178项ZIP CRC及151项archive/IPA普通文件逐项字节一致，63个真实payload与88个exFAT AppleDouble元数据分列。主JS/arm64可执行文件双侧哈希一致，FM测试入口、合成会话、私人夹具和签名材料0命中。
+
 ## 2026-11-02 粉调磁带封面 clean unsigned archive
 
 产品提交 `6785769` 的 `npm run ios:archive` 成功。manifest 记录 `dirty:false`、`workingTreeChanges:[]`、同一 HEAD、arm64/iphoneos26.2/iOS15.1/设备族 `[1,2]`、`signed:false`，SHA-256 `78c4b7de9fb4eb8c7611c0e35a6f8a239a5d61ff6e7113f8f56e38810fc641e4`。
