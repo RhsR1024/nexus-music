@@ -2,7 +2,7 @@
 
 正式“播放与歌词 → 播放控制”已在 App 音量后加入“系统音频输出”，嵌入 Apple `AVRoutePickerView`。设备、AirPlay/蓝牙/耳机列表由 iOS 提供，音枢不保存路由凭据、不复制设备列表、不创建第二播放器，单一权威音乐队列保持不变。原生入口提供“选择音频输出”无障碍按钮、至少 44pt 触控区、颜色参数与 VoiceOver 激活。
 
-`npm run check` 967/967、完整 native、Swift parse、Node 语法、diff、Pods 与完整 `ios:build` 通过；最终 Release `SourceUITests-1793585640904` 为 1/0/0、62.135 秒，`sourceUnchanged=true`，源码 digest `5480bf2a…`、安装 bundle `d000b371…`。3PNG provenance ready 并亲看，验证正常导航、前后台和终止重启后的入口可达性。IPA/APK strict review 在新增 E-054→F-045→P-045 后为 54E/19WI/113事件/45F/45P 与 3E/2WI/2F/2P，均0错误/0警告；无新增原始采集入库。实际 AirPlay/蓝牙/耳机切换、断开/中断、实体机、签名与 iOS27 继续；不报 S10/F37/J59/J30 或全项目完成。见[本批回执](docs/2026-11-02-system-audio-output-route-report.md)与[UI规格](docs/ui-spec/system-audio-output-route-2026-11-02.md)。清洁 IPA、push 与 CI 终态随后补录。
+`npm run check` 967/967、完整 native、Swift parse、Node 语法、diff、Pods 与完整 `ios:build` 通过；最终 Release `SourceUITests-1793585640904` 为 1/0/0、62.135 秒，`sourceUnchanged=true`，源码 digest `5480bf2a…`、安装 bundle `d000b371…`。3PNG provenance ready 并亲看，验证正常导航、前后台和终止重启后的入口可达性。IPA/APK strict review 在新增 E-054→F-045→P-045 后为 54E/19WI/113事件/45F/45P 与 3E/2WI/2F/2P，均0错误/0警告；无新增原始采集入库。清洁提交 `a5082ef` 的未签名 IPA 为 12,886,731 字节、SHA-256 `c3c49b95…`；manifest/arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA逐文件、生产路由标记及隐私/测试排除通过，T7 14份阶段文件/20,401,184字节逐份一致。推送前队列为0运行/1 pending，push与iOS27终态随后补录。实际 AirPlay/蓝牙/耳机切换、断开/中断、实体机、签名与 iOS27 继续；不报 S10/F37/J59/J30 或全项目完成。见[本批回执](docs/2026-11-02-system-audio-output-route-report.md)与[UI规格](docs/ui-spec/system-audio-output-route-2026-11-02.md)。
 
 ## 2026-11-02 公开 MV 媒体与全屏生命周期
 

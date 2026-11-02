@@ -48,4 +48,12 @@ run manifest 的 `exitCode=0`、`sourceUnchanged=true`；源码 digest `5480bf2a
 
 ## 清洁未签名归档与远程交付
 
-待功能/文档提交完成后补录。
+功能提交 `a5082efb4cb71a35b9c6cd80e2f4fcd42df9c490` 的归档对应同一清洁 HEAD，manifest 为 `dirty:false`、`workingTreeChanges:[]`。归档为 arm64 / iphoneos26.2 / 最低 iOS 15.1 / 设备族 `[1,2]` / `com.nexusmusic.app`，`signed:false`，包内没有 `_CodeSignature` 或 provisioning profile。IPA 为 **12,886,731 字节**，SHA-256 `c3c49b956723ea5fc74deca1162da5108719d20f43a937db098ccdbc76fbbe2f`。
+
+机器验证位于 `build/logs/system-audio-output-route-archive-verification-a5082ef.json`，SHA-256 `2c678d81695ed05a644045f16317f193351992ba554fe79cb3d678874ac0a019`。164 个 ZIP 条目全部通过 CRC；archive 与 IPA 均有 138 个普通文件/链接条目，路径集合一致、0 缺失/0 额外/0 字节差异。`Info.plist`、可执行文件与 `main.jsbundle` 的 SHA-256 分别为 `dd9d3304202133385f743d3b89fc3af5f319faebaae0435cde36eb0b39e90452`、`d9d31b5945b4dffcdca2d18994d143cf8b06f2447f19ac3a34a6f98c31162a0c`、`97ee5063c6eb41626150e48d427a0fdc7cb0c59bc2647f35e36801b75694dfa1`。
+
+生产包内验证到 Hermes UTF-16 的“系统音频输出”、AirPlay/蓝牙/耳机说明、“选择音频输出”原生字符串、`RoutePicker` 以及 `NexusRoutePickerView` / `AVRoutePickerView` native 标记。`fixture-secret`、`private.invalid`、`matching-audio`、`nexus-ui-test-online-adapter`、`PRIVATE_TOKEN`、Wayfarer 私有夹具和私人备份路径均未进入包。内容扫描仍发现 4 处既有绝对构建路径（`app` 3、`main.jsbundle` 1），归类为 `PASS_WITH_KNOWN_BUILD_METADATA`；没有私人资源路径或凭据。
+
+内容快照为 `build/distribution-history/c3c49b956723ea5fc74deca1162da5108719d20f43a937db098ccdbc76fbbe2f/`，其中 IPA、checksum、manifest、验证回执逐份复核一致。T7 阶段归档为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-system-audio-output-route-c3c49b95/`：14 份 IPA、验证、构建日志、xcresult 摘要、UI manifest/index 与 3PNG 共 **20,401,184 字节**，逐份 SHA-256 一致；复本回执 SHA-256 为 `7ed5e174a6f484f35d74e4f0ce258b3c9e93cdfb1b1aa69df5d0cb2db997226b`，本机原始证据全部保留。
+
+推送前远端同工作流/分支实测为 0 运行 / 1 pending（`41375349982`），未取消或重派旧运行。当前阶段收尾无活动构建/提取；内盘约 **53.95 GiB**、T7 约 **606.62 GiB** 可用，未删除或移动内容，清理决定见 `build/logs/cleanup-2026-11-02-system-audio-output-route.json`。正常 push 后的实际 HEAD、替换后的队列和新运行终态在交付收尾补录。

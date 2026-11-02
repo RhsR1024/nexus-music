@@ -4,7 +4,7 @@
 
 反向门禁按固定 mobile-reverse 路由执行，新增 E-054→F-045→P-045/WI-019；IPA 严格 review 为 54E/19WI/113事件/45F/45P，APK 为 3E/2WI/3事件/2F/2P，均0错误/0警告。967/967检查、完整 native、Swift/Node/diff、Pods 与完整 Release build 通过；正式 Release `SourceUITests-1793585640904` 为1/0/0、62.135秒，`sourceUnchanged=true`，验证正常设置视口、完整 44pt 原生控件、前后台和终止重启后的可达性，3PNG provenance ready并亲看。
 
-本批没有选择任何模拟器输出设备。真实 AirPlay/蓝牙/耳机设备列表、切换/断开、来电与音频会话中断、实体iPhone、签名/安装和 iOS27 继续开放；系统控件渲染、SDK26.2 与未签名包不能替代这些结果。见[回执](2026-11-02-system-audio-output-route-report.md)与[UI规格](ui-spec/system-audio-output-route-2026-11-02.md)。
+`a5082ef`清洁未签名归档对应同一HEAD，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节一致；IPA 12,886,731字节、SHA-256 `c3c49b95…`，生产路由标记存在，测试/私人资源与签名材料排除，T7 14份/20,401,184字节逐份哈希一致。本批没有选择任何模拟器输出设备。真实 AirPlay/蓝牙/耳机设备列表、切换/断开、来电与音频会话中断、实体iPhone、签名/安装和 iOS27 继续开放；系统控件渲染、SDK26.2 与未签名包不能替代这些结果。见[回执](2026-11-02-system-audio-output-route-report.md)与[UI规格](ui-spec/system-audio-output-route-2026-11-02.md)。
 
 ## 2026-11-02 公开 MV 媒体与全屏生命周期
 

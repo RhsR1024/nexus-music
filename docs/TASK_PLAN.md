@@ -5,6 +5,8 @@
 - [x] `npm run check` 967/967、完整 native、Swift parse、Node 语法、diff、Pods 与 `ios:build` 通过；最终 Release 1/0/0、62.135 秒、`sourceUnchanged=true`。
 - [x] 3PNG provenance ready 并亲看，覆盖正常入口、前台恢复和终止重启后的可达性。
 - [x] IPA/APK strict review 复用新增 E-054→F-045→P-045，分别 0 错误/0 警告；原始采集和反编译输出未入库。
+- [x] `a5082ef` clean unsigned archive 的 manifest、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产路由标记和隐私/测试排除通过；IPA SHA-256 `c3c49b95…`。
+- [x] T7 阶段 14份/20,401,184字节逐份 SHA-256 一致；内容快照、验证回执和本机原始证据保留，收尾无删除。
 - [ ] 实际 AirPlay/蓝牙/耳机选择、切回/断开、来电中断、实体机、签名/安装与 iOS27 行为待验。
 
 见[本批回执](2026-11-02-system-audio-output-route-report.md)与[UI规格](ui-spec/system-audio-output-route-2026-11-02.md)。本批只关闭系统路由入口与页面生命周期增量，不关闭 S10/F37/J59/J30。

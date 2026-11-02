@@ -3,6 +3,7 @@
 - [x] 正式播放设置嵌入 Apple `AVRoutePickerView`，系统设备列表由 iOS 提供；无凭据、第二播放器或设备复制。
 - [x] 无障碍入口、至少 44pt 触控区、正常滚动、前后台恢复和终止重启后的可达性通过。
 - [x] 967/967检查、完整 native、Release 1/0/0、3PNG 亲看、Pods/build/diff 与 IPA/APK strict review 通过。
+- [x] `a5082ef` clean unsigned archive 通过 manifest、CRC、archive/IPA 字节、生产标记、隐私/测试/签名排除及 T7 逐文件核验；IPA SHA-256 `c3c49b95…`。
 - [ ] 实际 AirPlay/蓝牙/耳机选择、断开/中断、实体机、签名/安装与 iOS27 继续。
 
 见[本批回执](2026-11-02-system-audio-output-route-report.md)。本批只关闭系统路由入口增量，S10/F37/J59/J30仍开放。
