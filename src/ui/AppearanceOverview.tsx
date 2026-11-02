@@ -19,6 +19,7 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
   type Row={id:string;title:string;icon:React.ComponentProps<typeof Ionicons>['name'];detail?:string;subtitle?:string;page?:AppearanceSection|'globalFont'|'lyricFont';toggle?:{value:boolean;change:(next:boolean)=>void}};
   const rows:Row[]=[
     {id:'theme',title:'软件主题',icon:'contrast-outline',subtitle:'白天、晚上或跟随系统外观',detail:{system:'跟随系统',light:'白天',dark:'晚上'}[value.theme],page:'theme'},
+    {id:'icons',title:'软件图标',icon:'apps-outline',subtitle:'从音枢原创配色中选择桌面图标',detail:'系统图标',page:'icons'},
     {id:'background',title:'主题与背景',icon:'brush-outline',detail:`${themes[value.visualTheme]} · ${styles[value.backgroundStyle]} · 背景 ${Math.round(value.backgroundOpacity*100)}%`,page:'background'},
     {id:'cover-color',title:'背景随封面变化',icon:'color-filter-outline',subtitle:'使用封面主体色，应用到全局及播放器；关闭后恢复自选背景',toggle:{value:value.coverColor,change:coverColor=>update({coverColor})}},
     {id:'motion',title:'动态背景',icon:'pulse-outline',subtitle:'播放页封面缓慢移动；暂停、后台或减少动态效果时停止',toggle:{value:value.dynamicBackground,change:dynamicBackground=>update({dynamicBackground})}},

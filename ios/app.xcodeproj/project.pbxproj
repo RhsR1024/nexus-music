@@ -446,6 +446,7 @@
 			baseConfigurationReference = 7143EFB1F6C2AC9B2F36A8CC /* Pods-app.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "NexusAltOrange NexusAltGreen NexusAltBlue NexusAltPurple NexusAltGraphite";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = app/app.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
@@ -482,6 +483,7 @@
 			baseConfigurationReference = 0E4949C5537408AC76335C17 /* Pods-app.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "NexusAltOrange NexusAltGreen NexusAltBlue NexusAltPurple NexusAltGraphite";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = app/app.entitlements;
 				CURRENT_PROJECT_VERSION = 1;

@@ -45,7 +45,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(waitForGone(caption,timeout:10))
   }
   private func openSettings(_ app:XCUIApplication,page:String){
-    for id in ["background-sheet-close","theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{
+    for id in ["background-sheet-close","theme-sheet-close","skins-sheet-close","mini-sheet-close","navigation-sheet-close","icons-sheet-close","typography-sheet-close","globalFont-sheet-close","lyricFont-sheet-close"]{
       let close=app.buttons[id]
       if waitForHittable(close,timeout:0.2){close.tap();_ = waitForGone(close,timeout:5)}
     }
@@ -75,7 +75,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(selected(),"Settings tab must actually become selected")
     for _ in 0..<3 {let back=app.buttons["settings-back"];if !waitForHittable(back,timeout:0.2){break};back.tap()}
     var settingsPage="home"
-    let sheetIDs=["background":"theme-background-sheet","theme":"theme-mode-sheet","skins":"player-style-sheet","mini":"mini-settings-sheet","navigation":"navigation-style-sheet","globalFont":"global-font-sheet","lyricFont":"lyric-font-sheet"]
+    let sheetIDs=["background":"theme-background-sheet","theme":"theme-mode-sheet","skins":"player-style-sheet","mini":"mini-settings-sheet","navigation":"navigation-style-sheet","icons":"app-icon-sheet","globalFont":"global-font-sheet","lyricFont":"lyric-font-sheet"]
     func pageIsOpen(_ target:String)->Bool{
       let deadline=Date().addingTimeInterval(5)
       repeat{
@@ -112,7 +112,7 @@ final class SourceSettingsTests: XCTestCase {
       }
       XCTAssertTrue(row.isHittable,"Settings row must be reachable: \(target), frame: \(row.frame)");row.tap();XCTAssertTrue(pageIsOpen(target),"Settings page or presented sheet must become active: \(target)");settingsPage=target
     }
-    let appearancePages=["theme","background","skins","accent","navigation","mini","globalFont","lyricFont"]
+    let appearancePages=["theme","background","skins","accent","navigation","mini","icons","globalFont","lyricFont"]
     enter(page=="typography" || page=="equalizer" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
     if page=="typography" || page=="equalizer"{enter(page)}else if appearancePages.contains(page){enter(page)}
   }
@@ -291,6 +291,110 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(icon.isHittable || label != nil,"The actual Home screen must expose or visibly render the 音枢 icon label")
     if let label {home.coordinate(withNormalizedOffset:CGVector(dx:label.x,dy:label.y)).tap()}else{icon.tap()}
     XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15))
+  }
+  func testAppIconSelectionPersistsAndRestoresPrimary() throws {
+    let app=XCUIApplication(),home=XCUIApplication(bundleIdentifier:"com.apple.springboard")
+    func icon(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:"app-icon-"+id).firstMatch}
+    app.launch();openSettings(app,page:"icons")
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"app-icon-sheet").firstMatch.waitForExistence(timeout:10))
+    let ids=["primary","orange","green","blue","purple","graphite"]
+    let icons=ids.map(icon)
+    for icon in icons{
+      XCTAssertTrue(icon.waitForExistence(timeout:10),"Every bounded icon choice must be present")
+      XCTAssertGreaterThanOrEqual(icon.frame.width,44)
+      XCTAssertGreaterThanOrEqual(icon.frame.height,44)
+      XCTAssertEqual(icon.frame.width/icon.frame.height,0.82,accuracy:0.08,"Each icon item must retain its compact portrait proportion")
+    }
+    for row in 0..<2{
+      let first=icons[row*3],second=icons[row*3+1],third=icons[row*3+2]
+      XCTAssertGreaterThanOrEqual(second.frame.minX-first.frame.maxX,11,"The three-column choice grid must keep a real horizontal gap")
+      XCTAssertGreaterThanOrEqual(third.frame.minX-second.frame.maxX,11)
+      if row==0{XCTAssertGreaterThanOrEqual(icons[3].frame.minY-first.frame.maxY,13,"Icon labels must not overlap the following row")}
+    }
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"app-icon-current").firstMatch.label.contains("当前"))
+
+    func dismissSystemIconAlert(){
+      for host in [app,home]{
+        let alert=host.alerts.firstMatch
+        if alert.waitForExistence(timeout:5){
+          let preferred=alert.buttons.matching(NSPredicate(format:"label IN %@",["好","OK","确定","確認"])).firstMatch
+          if preferred.exists{preferred.tap()}else if alert.buttons.firstMatch.exists{alert.buttons.firstMatch.tap()}
+          return
+        }
+      }
+    }
+    func waitForSelected(_ icon:XCUIElement,timeout:TimeInterval=15)->Bool{
+      let selected=XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:icon)
+      return XCTWaiter.wait(for:[selected],timeout:timeout) == .completed
+    }
+    func expectSelected(_ icon:XCUIElement){
+      XCTAssertTrue(waitForSelected(icon),"The native module must return the system's applied icon")
+    }
+    func screenshot(_ name:String){
+      let attachment=XCTAttachment(screenshot:XCUIScreen.main.screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)
+    }
+    func recordSystemFailure(_ name:String){
+      let error=app.descendants(matching:.any).matching(identifier:"app-icon-error").firstMatch
+      XCTAssertTrue(error.waitForExistence(timeout:10),"A failed native call must expose its error instead of selecting the requested icon")
+      let attachment=XCTAttachment(string:error.label);attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)
+      screenshot(name)
+    }
+    func launchFromVisibleHomeIcon(){
+      XCUIDevice.shared.press(.home)
+      let icon=home.icons["音枢"].firstMatch
+      for _ in 0..<4{if icon.isHittable{break};home.swipeLeft()}
+      screenshot("Changed app icon visible on SpringBoard")
+      XCTAssertTrue(icon.waitForExistence(timeout:10),"SpringBoard must expose the app label after changing its icon")
+      if icon.isHittable{icon.tap()}else{
+        XCTAssertTrue(hasVisibleFrame(icon,in:home),"The changed icon must remain visibly reachable")
+        icon.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()
+      }
+      XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15),"The app must launch from the changed icon")
+    }
+
+    if !icons[0].isSelected {
+      XCTAssertTrue(icons[0].isEnabled,"A restored alternate icon must be resettable from the system")
+      icons[0].tap();dismissSystemIconAlert();expectSelected(icons[0])
+    }
+    icons[1].tap();dismissSystemIconAlert()
+    if !waitForSelected(icons[1]) {
+      recordSystemFailure("Simulator icon service rejected the native completion")
+      app.terminate();app.launch();openSettings(app,page:"icons")
+      XCTAssertTrue(icon("orange").waitForExistence(timeout:10))
+      if !waitForSelected(icon("orange")) {
+#if targetEnvironment(simulator)
+        throw XCTSkip("iOS Simulator LaunchServices/CoreServicesUIUpcallEmbedded returned POSIX EIO/EAGAIN without applying the alternate icon. The strict native call correctly reports failure; icon switching, restart persistence and primary restoration still require a physical iPhone or a working iOS 27 simulator.")
+#else
+        XCTFail("After relaunch the system must expose the icon it actually applied")
+#endif
+      }
+    }
+    screenshot("Nexus warm-orange app icon selected")
+    launchFromVisibleHomeIcon()
+
+    app.terminate();app.launch();openSettings(app,page:"icons")
+    XCTAssertTrue(icon("orange").waitForExistence(timeout:10))
+    expectSelected(icon("orange"))
+
+    icon("primary").tap();dismissSystemIconAlert()
+    if !waitForSelected(icon("primary")) {
+      recordSystemFailure("Simulator icon service rejected the primary-icon restoration")
+      app.terminate();app.launch();openSettings(app,page:"icons")
+      let orange=icon("orange")
+      XCTAssertTrue(orange.waitForExistence(timeout:10))
+      XCTAssertTrue(waitForSelected(orange),"The simulator must expose the icon that remains applied after restoration failure")
+#if targetEnvironment(simulator)
+      throw XCTSkip("iOS Simulator CoreServicesUIUpcallEmbedded cannot restore the primary icon after returning POSIX EIO/EAGAIN; the strict native call correctly reports failure. Primary restoration still requires a physical iPhone.")
+#else
+      XCTFail("Primary app icon restoration must succeed when the native call reports success")
+#endif
+    }
+    launchFromVisibleHomeIcon()
+
+    app.terminate();app.launch();openSettings(app,page:"icons")
+    XCTAssertTrue(icon("primary").waitForExistence(timeout:10))
+    expectSelected(icon("primary"))
+    screenshot("Nexus primary app icon restored after relaunch")
   }
   func testIPadWindowNavigationAndRotation() throws {
     XCTAssertEqual(UIDevice.current.userInterfaceIdiom,.pad,"Run this dedicated test on an actual iPad simulator target")

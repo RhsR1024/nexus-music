@@ -5,6 +5,7 @@
   "apple": {
     "modules": [
       "NexusNativeModule",
+      "NexusAppIconModule",
       "NexusPlaybackModule",
       "NexusLyricsModule",
       "NexusMusicAuthModule",
