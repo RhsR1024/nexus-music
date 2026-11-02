@@ -1,3 +1,13 @@
+## 2026-11-03 动态背景低电量模式门控
+
+原有Ambient/Mesh只检查请求、挂载、前后台和Reduce Motion。本批在[MeshField.swift](../modules/nexus-native/ios/MeshField.swift)新增纯值`MotionPolicy`，把Low Power Mode加入同一求值，并在两类原生视图观察`NSProcessInfoPowerStateDidChange`。状态关闭时现有display link/Timeline时钟停车；重新开放时从累计相位继续。
+
+`NexusNativeModule`增加只读`isLowPowerModeEnabled()`和`onPowerStateChange`，按React Native Expo订阅启停原生通知，并在模块销毁时清理。`useLowPowerMode()`把相同状态提供给`VisualBackground`，使Ambient、Mesh及模糊封面位移与原生层保持同一边界。实现不轮询、不把PCM逐帧送入React，也不保存与系统状态平行的偏好。
+
+990/990检查、完整native与diff通过。正式Release`SourceUITests-1793649933674`为2/0/0，覆盖既有动态背景开关往返及全局封面跨页/PCM；25张截图哈希全部匹配，4张代表图亲看。产品提交`e3666a1`的clean unsigned IPA为17,826,862字节、SHA-256`8030f37b…9f895`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、未签名，178项ZIP CRC与151项archive/IPA普通文件逐字节、生产低电量标记及隐私/测试/签名排除通过。严格`ipa --review`沿用离线背景链路，0错误/0警告。
+
+iOS26.3.1模拟器没有可用Battery/Low Power Mode开关，因此系统切换、恢复/重启、真实功耗、VoiceOver/小屏、实体机、签名和iOS27仍开放。见[回执](2026-11-03-dynamic-background-power-gating-report.md)；J47与项目未完成。
+
 ## 2026-11-03 合成授权网易云私人FM正式 App 纵向验收
 
 新增测试专用但使用正式业务组件的私人FM纵向路径：`NEXUS_UI_ACCOUNT_FM_FIXTURE=1`保存固定合成账号和Keychain会话，生产`MusicAccounts`/`AccountFmClient`/`AccountFmStation`/唯一权威队列/原生PCM不变；生产`index.ts`不导入测试入口。本地同步服务器提供合成响应，覆盖`normal/empty/error`、下一响应挂起和请求/释放/鉴权计数。

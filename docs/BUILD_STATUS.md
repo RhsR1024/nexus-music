@@ -1,3 +1,11 @@
+## 2026-11-03 动态背景低电量模式门控 clean unsigned archive
+
+产品提交`e3666a1`完成动态背景Low Power Mode生命周期门控。990/990、完整native与diff通过；正式Release`SourceUITests-1793649933674`为2/0/0、`sourceUnchanged=true`，动态背景开关往返61.118秒、全局封面跨页575.506秒。25PNG全部匹配索引哈希，4张代表图人工亲看；iOS26.3.1模拟器没有Low Power Mode开关，系统切换与功耗未验。
+
+`npm run ios:archive`的manifest对应同一HEAD、`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`，SHA-256`fff361d0…f4b1`。IPA为17,826,862字节、SHA-256`8030f37b04a8332394a7794cdc554395f2fea5ed7e3f2208814c125b7929f895`；独立回执`ready=true`，178项ZIP CRC、151项archive/IPA普通文件逐字节、生产`onPowerStateChange`/`isLowPowerModeEnabled`/`NSProcessInfoPowerStateDidChange`标记及测试/私人/签名排除通过。
+
+严格`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告；无新增Sollin采集、目标运行或私有请求。实体机/可用设备Low Power Mode切换、恢复、重启保持、真实功耗、VoiceOver/字号/小屏、签名/安装和iOS27终态继续。见[本批回执](2026-11-03-dynamic-background-power-gating-report.md)。
+
 ## 2026-11-03 合成授权网易云私人FM正式 App 纵向验收
 
 正式Release使用固定合成账号/Keychain会话、合成FM响应和WAV，经生产账号、FM协调器、唯一权威队列及原生PCM验证首次播放、低水位暂停、去重追加、终止后迟到隔离、重启、空/错响应保留当前曲及清理。`SourceUITests-1793646248544`为1/0/0、222.427秒、`sourceUnchanged=true`；5次FM请求、2次释放、0次鉴权失败，6PNG provenance ready并逐张亲看。提交前990检查、完整native、build/archive及IPA ZIP/逐文件/隐私/签名检查通过，`ipa --review` 56E/21WI/119时间线/47F/47P、0错误/0警告。详见[回执](2026-11-03-account-fm-station-vertical-report.md)。

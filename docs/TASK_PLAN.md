@@ -1,3 +1,16 @@
+## 2026-11-03 动态背景低电量模式门控
+
+- [x] 原生`MotionPolicy`统一约束动画请求、视图挂载、App前台、Reduce Motion与Low Power Mode；Ambient/Mesh观察系统电量变化并保留停车/恢复相位。
+- [x] `NexusNative`暴露只读低电量状态和变化事件，React Ambient、Mesh与模糊封面位移共用门控；不增加轮询、第二播放器或持久化镜像状态。
+- [x] `npm run check`990/990、完整native、diff通过；门控单测覆盖六种条件组合。
+- [x] 正式Release`SourceUITests-1793649933674`为2/0/0、61.118秒/575.506秒、`sourceUnchanged=true`；动态背景开关往返与全局封面跨页回归通过。
+- [x] 25张1290×2796 PNG与索引哈希一致；4张代表图人工亲看，其余只做尺寸/哈希/关联检查，不报逐张人工验收。
+- [x] 产品提交后clean unsigned archive、独立IPA/ZIP/逐文件/生产标记/隐私/签名检查通过；IPA`8030f37b…9f895`。
+- [x] reverse-skill离线门禁复用`E-024→F-023→P-023`与`E-032→F-031→P-031`；strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集或目标观察。
+- [ ] 实体机/可用设备的系统Low Power Mode开关、恢复、重启保持、帧率、CPU/GPU/电量/发热、VoiceOver/动态字号/小屏、签名/安装/续签与iOS27终态。
+
+见[本批回执](2026-11-03-dynamic-background-power-gating-report.md)。本批不关闭J47、完整动态背景、F/J或项目。
+
 ## 2026-11-03 合成授权网易云私人FM正式 App 纵向验收
 
 - [x] 合成账号/Keychain会话仅由测试入口启用，经生产账号仓库、FM客户端、低水位协调器、权威队列与原生PCM通路运行；生产入口不导入测试模块。
