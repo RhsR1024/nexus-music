@@ -28,3 +28,7 @@
 push前远端main为0b733e2，最新iOS27运行41378728355/2abb0b6仍in_progress、无pending；checks/native已通过，App回归执行中。正常push及新队列核对在交付后补记，不取消运行中、不重派旧版本。
 
 完整TTML2（外部资源/样式布局/时钟基准等）、真实TTML库矩阵、seq端到端显示、实体机/签名及云端iOS27终态仍待。S4/J35–42和全项目不据此完成。
+
+## push与队列核对
+
+`0b733e2..38af8c4`已普通快进push到`RhsR1024/nexus-music`，远端main实读为`38af8c4067fd3767e3ee66f96c59599de15463af`。同iOS27 workflow/main分支API实核：`41378728355`/`2abb0b6`继续in_progress，`41381592614`/`38af8c4`为唯一pending，**1运行/1排队**。没有取消运行中或手动重派；新运行包含本批代码，终态尚未通过。本段后续文档提交受Markdown路径忽略，不为追平文档SHA重派构建。机器快照保留在`build/logs/ttml-seq-ci-postpush.json`。
