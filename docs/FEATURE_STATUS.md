@@ -1,3 +1,7 @@
+## 2026-11-03 iOS 27 紧凑失败诊断
+
+`60a638a`加固合成 HTTP 夹具与 CI 紧凑日志上传。客户端断开被有界记录，未预期请求错误返回 500 并保留进程失败；递归 artifact 可取得子测试目录中的 `ui-summary.json`、`ui-catalog.log` 和 counts。本地 990/990、正式 TTML 专项 1/0/0、clean unsigned archive、151 项 archive/IPA 逐字节及 reverse-skill strict review 均通过；工具实际处理一次 `ECONNRESET`。本项只增加诊断可靠性，不增加功能完成度，也不把旧连接错误推断为产品缺陷。详见[回执](2026-11-03-ios27-compact-diag-artifact-report.md)。
+
 ## 2026-11-03 动态背景低电量模式门控
 
 - [x] Ambient、Mesh、React背景和模糊封面位移共用门控：动画请求、视图挂载、App前台、Reduce Motion关闭、Low Power Mode关闭。

@@ -1,3 +1,13 @@
+## 2026-11-03 iOS 27 紧凑失败诊断与递归日志上传
+
+`78018c7`/`41510740220` 在第 11 步 `testSequentialTTMLLyrics` 失败。现有紧凑产物只显示 Node`aborted`/`ECONNRESET`，没有嵌套 XCTest summary/catalog；完整诊断`13182872453`为756,359,033字节，超过下载通道512 MiB上限，匿名API及备用浏览器/桌面通道不可用，因此没有把连接中断误判为某条测试断言或产品缺陷。
+
+`60a638a` 为合成 HTTP 夹具增加受控异常边界，记录客户端中断，未预期异常返回500并保留失败；iOS 工作流的紧凑 artifact路径改为递归，覆盖嵌套`summary/counts/verification/csv/log`。本地990/990、Node/YAML/diff通过；正式Release`SourceUITests-1793659369901`的TTML专项1/0/0、`sourceUnchanged=true`，测试工具实际处理一次`ECONNRESET`且`clientAborts=1`。
+
+clean unsigned archive的manifest与`60a638a`一致且工作区清洁，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`；IPA 17,827,502字节、SHA-256`d6b8526aaec09bc1ecd046cbe32a5a726ab25fb3a0fef195ea330a62efa9978d`。独立核验`ready=true`：178 ZIP项CRC、151项archive/IPA逐字节、bundle identity、测试/私人/签名排除通过；reverse-skill离线strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告。
+
+`60a638a`已正常push，推送时远端main一致；本条随后只追加文档记录。旧pending`41536098207`由`queue:single`自动取消，`41540983547`/`60a638a`成为唯一pending；`41521043387`/`9fb541a`继续运行，实核1运行/1排队，未手动取消或重派。iOS27终态、实体机、签名/安装/续签及全部产品计划余项继续。详见[本批回执](docs/2026-11-03-ios27-compact-diag-artifact-report.md)。
+
 ## 2026-11-03 动态背景低电量模式门控
 
 动态背景补齐 Low Power Mode 生命周期门控。原生`MotionPolicy`统一要求动画已请求、视图已挂载、App前台、Reduce Motion关闭且低电量模式关闭；Ambient/Mesh同时观察前后台、Reduce Motion与`NSProcessInfoPowerStateDidChange`。`NexusNative`向React暴露只读初始值和变化事件，React Ambient、Mesh及模糊封面位移共用同一门控。`e3666a1`先接入门控，`430754d`再修正停车路径：Ambient、Mesh与React模糊封面现在都保留当前值、方向和剩余时长，恢复后从停车位置继续。

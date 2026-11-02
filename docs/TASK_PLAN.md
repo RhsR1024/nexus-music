@@ -1,3 +1,16 @@
+## 2026-11-03 iOS 27 紧凑失败诊断
+
+- [x] 从`41510740220`/`78018c7`确认第11步`testSequentialTTMLLyrics`失败只留下Node`aborted`/`ECONNRESET`；完整诊断756,359,033字节超过512 MiB下载上限，不把连接中断猜成XCTest或产品根因。
+- [x] 合成HTTP夹具增加受控异常边界，区分客户端中断与未预期错误；未预期错误返回500并保留失败，`clientError`记录脱敏摘要。
+- [x] 紧凑artifact改为递归包含嵌套`log/summary/counts/verification/csv`，使完整诊断不可下载时仍可取得具体子测试结果。
+- [x] `npm run check`990/990、Node/YAML/diff通过；正式Release TTML专项1/0/0、`sourceUnchanged=true`，实际夹具中断`clientAborts=1`且测试继续完成。
+- [x] `60a638a` clean unsigned archive、manifest、ZIP CRC、151项archive/IPA逐字节、架构/SDK/最低系统/设备族、生产入口隔离及测试/私人/签名排除通过；IPA`d6b8526a…9978d`。
+- [x] reverse-skill离线strict review PASS，56E/21WI/119 timeline/47F/47P、0错误/0警告；无新增采集或私有探测。
+- [x] 已正常push并实核远端main；旧pending由`queue:single`自动替换，当前`41521043387`运行、`41540983547`/`60a638a`唯一pending，1运行/1排队。
+- [ ] `41521043387`及`41540983547`的实际iOS27终态；若新运行失败，先从递归紧凑产物取得嵌套`ui-summary.json`/`ui-catalog.log`，再定位真实根因。
+
+见[本批回执](2026-11-03-ios27-compact-diag-artifact-report.md)。本批只加固失败诊断，不增加产品功能完成度，也不替代实体机、签名或iOS27通过。
+
 ## 2026-11-03 动态背景低电量模式门控
 
 - [x] 原生`MotionPolicy`统一约束动画请求、视图挂载、App前台、Reduce Motion与Low Power Mode；Ambient/Mesh观察系统电量变化并保留停车/恢复相位。

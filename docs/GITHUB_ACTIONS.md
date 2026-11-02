@@ -1,3 +1,11 @@
+## 2026-11-03 嵌套测试摘要进入紧凑诊断产物
+
+`78018c7`/`41510740220`在第11步`testSequentialTTMLLyrics`失败后，完整诊断756,359,033字节超过当前下载通道512 MiB上限；原紧凑包仅保留顶层日志，缺少子命令目录中的`ui-summary.json`与`ui-catalog.log`，网络中断不能据此归因为具体 XCTest 或产品故障。
+
+`60a638a`将紧凑上传路径扩展为`build/logs/**/*.log`、`**/*summary*.json`、`**/*counts*.json`、`**/*.verification.txt`、`**/*.csv`，同时保留既有完整诊断、失败截图和条件上传。下一次失败即使完整ZIP继续超过上限，也应先读取嵌套summary/catalog再定位。
+
+本地990/990、YAML、Node与diff通过；工具专项实际处理一次`ECONNRESET`并完成1/0/0。`60a638a`已推送，旧pending由`queue:single`自动取消；`41521043387`/`9fb541a`继续运行，`41540983547`/`60a638a`唯一pending，实核1运行/1排队，未手动取消或重派。
+
 ## 2026-10-25 批次5A main推送与CI队列快照
 
 功能74ff975及回执893952f已正常快进push到origin/main，远端SHA核对一致；分支codex/local-audio-index同时保留。GitHub集成创建PR返回403，实际没有创建PR；按既有阶段授权完成普通main推送，未force push。原主检出已快进到同一代码，原有SourceSettingsTests.swift的5增/2删逐行保留且仍未提交；本地恢复补丁及回执留在受管工作树build/local-music-live-20261025。
