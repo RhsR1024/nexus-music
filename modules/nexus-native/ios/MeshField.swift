@@ -15,11 +15,11 @@ struct MotionPolicy {
   }
 }
 
-// Drift clock for the mesh (decision 0081). Motion accumulates only while the
-// gate is open, so pausing parks the field and resuming continues from the
-// parked phase instead of jumping to the wall clock. Pure value semantics keep
-// the gating unit testable without UIKit or SwiftUI.
-struct MeshTimeline {
+// Drift clock shared by the native ambient and mesh scenes (decision 0081).
+// Motion accumulates only while the gate is open, so pausing parks the scene
+// and resuming continues from the parked phase instead of jumping to the wall
+// clock. Pure value semantics keep the timing testable without UIKit/SwiftUI.
+struct MotionTimeline {
   private(set) var accumulated = 0.0
   private var resumedAt: Double?
 

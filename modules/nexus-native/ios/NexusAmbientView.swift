@@ -46,8 +46,7 @@ private final class AmbientCanvas: UIView {
   private let overlay = CAGradientLayer()
   private var transition = AmbientTransition<AmbientSceneLayer>()
   private var displayLink: CADisplayLink?
-  private var startedAt: CFTimeInterval?
-  private var elapsed = 0.0
+  private var timeline = MotionTimeline()
   private var previousTime = 0.0
   private var canMove: Bool {
     MotionPolicy.allowsMotion(
@@ -78,39 +77,40 @@ private final class AmbientCanvas: UIView {
     else { syncMotion() }
   }
   func install(colors: [String], identity: String, dark: Bool) {
+    let now = CACurrentMediaTime()
+    timeline.setMoving(false, at: now)
     CATransaction.begin(); CATransaction.setDisableActions(true)
     transition.previous?.removeFromSuperlayer()
     transition.settle()
     let next = AmbientScene(colors: colors, identity: identity, dark: dark).map { AmbientSceneLayer(scene: $0) }
     let animated = canMove && next != nil
     if !animated { transition.current?.removeFromSuperlayer() }
-    previousTime = elapsed
-    transition.replace(next, at: CACurrentMediaTime(), animated: animated)
+    previousTime = timeline.time(at: now)
+    transition.replace(next, at: now, animated: animated)
     if let next { layer.insertSublayer(next, below: overlay) }
     overlay.colors = AmbientScene.overlay(dark: dark)
     overlay.isHidden = next == nil
-    startedAt = nil; elapsed = 0
+    timeline = MotionTimeline()
     CATransaction.commit()
     syncMotion()
   }
   func syncMotion() {
-    guard canMove && transition.current != nil else { stop(); return }
-    render(at: CACurrentMediaTime())
+    let now = CACurrentMediaTime()
+    guard canMove && transition.current != nil else { stop(at: now); return }
+    render(at: now)
+    timeline.setMoving(true, at: now)
     guard displayLink == nil else { return }
     let link = CADisplayLink(target: AmbientFrameTarget(self), selector: #selector(AmbientFrameTarget.tick(_:)))
     link.preferredFramesPerSecond = 30
     displayLink = link; link.add(to: .main, forMode: .common)
   }
-  private func stop() {
+  private func stop(at time: CFTimeInterval = CACurrentMediaTime()) {
+    timeline.setMoving(false, at: time)
     displayLink?.invalidate(); displayLink = nil
     transition.previous?.removeFromSuperlayer(); transition.settle()
-    startedAt = nil; elapsed = 0; render(at: CACurrentMediaTime())
+    render(at: time)
   }
-  func tick(_ link: CADisplayLink) {
-    if startedAt == nil { startedAt = link.timestamp }
-    elapsed = link.timestamp - (startedAt ?? link.timestamp)
-    render(at: link.timestamp)
-  }
+  func tick(_ link: CADisplayLink) { render(at: link.timestamp) }
   private func render(at time: Double) {
     guard bounds.width > 0, bounds.height > 0 else { return }
     let previous = transition.previous
@@ -122,7 +122,7 @@ private final class AmbientCanvas: UIView {
     transition.previous?.opacity = 1
     transition.previous?.render(size: bounds.size, time: previousTime)
     transition.current?.opacity = Float(transition.weight(at: time))
-    transition.current?.render(size: bounds.size, time: elapsed)
+    transition.current?.render(size: bounds.size, time: timeline.time(at: time))
     CATransaction.commit()
   }
 }

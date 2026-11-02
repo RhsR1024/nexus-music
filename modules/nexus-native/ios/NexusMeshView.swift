@@ -6,7 +6,7 @@ import SwiftUI
 // it stopped instead of jumping to the wall clock.
 final class MeshClock: ObservableObject {
   @Published var moving = false
-  private var timeline = MeshTimeline()
+  private var timeline = MotionTimeline()
   func setMoving(_ value: Bool) {
     timeline.setMoving(value, at: Date().timeIntervalSinceReferenceDate)
     if value != moving { moving = value }

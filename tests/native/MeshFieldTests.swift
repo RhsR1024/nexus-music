@@ -65,7 +65,7 @@ import CoreGraphics
 
     // Drift gating: time advances only while moving, and a pause parks the
     // phase so the resumed field does not jump (decision 0081).
-    var timeline = MeshTimeline()
+    var timeline = MotionTimeline()
     precondition(!timeline.moving && timeline.time(at: 100) == 0)
     timeline.setMoving(true, at: 10)
     precondition(timeline.moving)

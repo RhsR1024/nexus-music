@@ -28,10 +28,12 @@ export function AmbientMeshGradient({colors,identity,moving,pending,dark}:{color
   return <View testID={`ambient-mesh-${running?'active':'still'}`} pointerEvents="none" style={StyleSheet.absoluteFill}><NativeMesh testID="ambient-mesh" colors={colors} identity={identity} moving={running} pending={pending} dark={dark} pointerEvents="none" style={StyleSheet.absoluteFill}/></View>;
 }
 export function MotionImage({uri,blur=0,opacity=1,moving=false,onError,testID}:{testID?:string;uri:string;blur?:number;opacity?:number;moving?:boolean;onError?:()=>void}){
-  const phase=useRef(new Animated.Value(0)).current,running=useMotionGate(moving);
+  const phase=useRef(new Animated.Value(0)).current,target=useRef<0|1>(1),activeURI=useRef(uri),running=useMotionGate(moving);
   useEffect(()=>{let alive=true,animation:Animated.CompositeAnimation|undefined;
-    const step=(next:number)=>{if(!alive)return;animation=Animated.timing(phase,{toValue:next,duration:18000,useNativeDriver:true,isInteraction:false});animation.start(({finished})=>{if(finished&&alive)step(next===1?0:1);});};
-    if(running)step(1);else{phase.stopAnimation();phase.setValue(0);}
+    if(activeURI.current!==uri){activeURI.current=uri;target.current=1;phase.stopAnimation();phase.setValue(0);}
+    const step=(next:0|1,duration=18000)=>{if(!alive)return;target.current=next;animation=Animated.timing(phase,{toValue:next,duration,useNativeDriver:true,isInteraction:false});animation.start(({finished})=>{if(finished&&alive)step(next===1?0:1);});};
+    if(running)phase.stopAnimation(value=>{if(alive)step(target.current,Math.max(1,Math.round(18000*Math.abs(target.current-value))));});
+    else phase.stopAnimation();
     return()=>{alive=false;animation?.stop();phase.stopAnimation();};
   },[uri,running,phase]);
   return <Animated.View testID={testID?`${testID}-${running?'active':'still'}`:undefined} pointerEvents="none" style={[StyleSheet.absoluteFill,{opacity,transform:[{scale:1.12},{translateX:phase.interpolate({inputRange:[0,1],outputRange:[-9,9]})},{translateY:phase.interpolate({inputRange:[0,1],outputRange:[7,-7]})}]}]}><Image source={{uri}} blurRadius={blur} resizeMode="cover" onError={onError} style={StyleSheet.absoluteFill}/></Animated.View>;
