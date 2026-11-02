@@ -60,4 +60,16 @@ AppleDouble 元数据另行记录。`SHA256SUMS` 的 SHA-256 为
 `6f9cc5c78a916898ce9549f1bbd93aeb2c790188d1f618bc0a827fe98e15342e`。
 源证据继续保留，本批没有删除源文件或迁移个人文件。
 
+阶段收尾清理回执为
+`build/logs/cleanup-2026-11-02-ios27-discovery-text-replace.json`，SHA-256
+`cfa3faec5475d6b417b31e1d362fea22c74bd54d199b6922cf6f0dc6ad5dc056`。
+独立 IPA 校验回执
+`build/logs/ipa-verification-51e517a.json` 的 SHA-256 为
+`c815e236734411d44e487c8d742ac0a303b88b07d61c773e6acbe83416c7f98d`：
+164 个 ZIP entry 中 138 个普通文件 CRC/归档字节全部一致，manifest 对应代码提交
+`51e517a`，其后的 `cce0005` 仅修改文档；测试、私人及签名标记排除，`ready=true`。
+最终补充材料位于阶段目录 `supplement-final/`，其中
+`SHA256SUMS` SHA-256 为
+`0337be2e2ef113bc62c405f9ed6c1d3320660c5af9224769622bc5abbeb7180a`。
+
 本批没有新增 Sollin IPA/APK 采集、Evidence/Finding/Path 或 strict review 声明；云端 iOS 27 终态、实体机、签名和其他开放验收项不能由本次本地测试与未签名构建替代。
