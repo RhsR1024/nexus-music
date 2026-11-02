@@ -475,6 +475,12 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"sources");let removeAccount=app.buttons["移除连接：fixture-user"];reveal(removeAccount);removeAccount.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
   }
   func testCrossPlatformLyrics() throws {
+    try verifyCrossPlatformLyrics(sequentialTTML:false)
+  }
+  func testSequentialTTMLLyrics() throws {
+    try verifyCrossPlatformLyrics(sequentialTTML:true)
+  }
+  private func verifyCrossPlatformLyrics(sequentialTTML:Bool) throws {
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<12 {if element.isHittable{break};if element.exists {let above=element.frame.midY < app.frame.midY; if above {app.swipeDown()} else {app.swipeUp()}} else if up {app.swipeUp()} else {app.swipeDown()}};XCTAssertTrue(element.isHittable)}
     // The preceding core tests intentionally leave the persisted player skin
@@ -493,7 +499,11 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<5{if enable.isHittable||enabled.isHittable{break};app.swipeUp()};if enable.exists{enable.tap()}else{XCTAssertTrue(enabled.isHittable)}
     XCTAssertTrue(app.staticTexts["已启用"].firstMatch.waitForExistence(timeout:20))
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
-    let query=app.textFields["搜索歌曲或歌手"];reach(query);app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap();query.tap();query.typeText("Synthetic match tone\n")
+    let query=app.textFields["搜索歌曲或歌手"];reach(query);app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap();query.tap()
+    for character in "Synthetic match tone"{query.typeText(String(character))}
+    expectation(for:NSPredicate(format:"value == %@","Synthetic match tone"),evaluatedWith:query);waitForExpectations(timeout:5)
+    query.typeText("\n")
+    XCTAssertEqual(query.value as? String,"Synthetic match tone","The submitted query must remain complete")
     let searchSongs=app.buttons["run-online-search"];reach(searchSongs);searchSongs.tap()
     let first=app.buttons["search-track-wy-0"];for _ in 0..<8{if first.waitForExistence(timeout:2){break};app.swipeUp()};XCTAssertTrue(first.exists);reach(first);first.tap()
     let mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
@@ -540,6 +550,13 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(stageGroup.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Entering stage must keep paused intent")
     XCTAssertEqual(stageGroup.value as? String,"逐字歌词","Stage must preserve the loaded word-timing capability")
     XCTAssertTrue(["Synthetic ","rich lyric","Second rich line"].contains(stageGroup.label),"Stage must display a real word group from the selected lyric")
+    if sequentialTTML {
+      let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch,before=progress.value as? String
+      stageGroup.tap();XCTAssertEqual(progress.value as? String,before,"One stage tap must not seek")
+      stageGroup.doubleTap()
+      expectation(for:NSPredicate(format:"value == %@","0:00 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:10)
+      XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Stage double tap must keep paused intent")
+    }
     let stageImage=XCTAttachment(screenshot:app.screenshot());stageImage.name="Stage real timed group";stageImage.lifetime = .keepAlways;add(stageImage)
     let stageSettings=app.buttons["打开全部歌词与偏移设置"];reach(stageSettings);stageSettings.tap()
     XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:5));app.buttons["+100ms"].tap()
@@ -549,7 +566,30 @@ final class SourceSettingsTests: XCTestCase {
     let classicSkin=app.descendants(matching:.any).matching(identifier:"play-skin-classic").firstMatch;reach(classicSkin,up:false);classicSkin.tap()
     XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.waitForExistence(timeout:10))
     let fullLyrics=app.buttons["全部歌词 · 双击行定位，长按打开设置"]
-    reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10));app.buttons["收起全部歌词"].tap();XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.exists)
+    let seekProgress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    let beforeFullSeek=sequentialTTML ? (seekProgress.value as? String):nil
+    reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10))
+    if sequentialTTML {
+      let second=app.buttons["定位歌词：Second rich line"].firstMatch
+      XCTAssertTrue(second.waitForExistence(timeout:10));reach(second);second.tap()
+      app.buttons["收起全部歌词"].tap();XCTAssertEqual(seekProgress.value as? String,beforeFullSeek,"One expanded-lyric tap must not seek")
+      reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10))
+      reach(second);second.doubleTap()
+      XCTAssertFalse(app.buttons["定位歌词：Sequential TTML fallback must not be selected"].exists,"Valid sequential TTML must win over the readable LRC fallback")
+    }
+    app.buttons["收起全部歌词"].tap();XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.exists)
+    if sequentialTTML {
+      let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+      expectation(for:NSPredicate(format:"value == %@","0:30 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:10)
+      XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Seeking a sequential paragraph must preserve paused intent")
+      let sequentialImage=XCTAttachment(screenshot:app.screenshot());sequentialImage.name="Sequential TTML second paragraph seeks to thirty seconds";sequentialImage.lifetime = .keepAlways;add(sequentialImage)
+      let firstClassic=app.buttons["Synthetic rich lyric"].firstMatch;reach(firstClassic,up:false)
+      firstClassic.tap();XCTAssertEqual(progress.value as? String,"0:30 / 2:00","One classic-lyric tap must not seek")
+      firstClassic.doubleTap()
+      expectation(for:NSPredicate(format:"value == %@","0:00 / 2:00"),evaluatedWith:progress);waitForExpectations(timeout:10)
+      firstClassic.press(forDuration:0.7);XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10));app.buttons["收起全部歌词"].tap()
+      XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Classic double tap and long press must keep paused intent")
+    }
     reach(sourceButton,up:false);sourceButton.tap();let search=app.buttons["搜索歌词候选"];reach(search);search.tap()
     let live=app.buttons["lyric-candidate-tx-fixture-live"];XCTAssertTrue(live.waitForExistence(timeout:20));reach(live);live.tap()
     let save=app.buttons["保存此歌词"];XCTAssertTrue(save.waitForExistence(timeout:15));reach(save);save.tap()

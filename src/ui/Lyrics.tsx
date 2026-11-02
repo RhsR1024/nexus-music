@@ -85,10 +85,10 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
       const actual=firstVisible+index,time=state.position*1000-offset,singing=time>=item.startMs&&(item.endMs===undefined||time<item.endMs);
       // Give every row a stable Pressable owner. Replacing an inline onPress
       // while the first seek realigns a FlatList can cancel the second tap.
-      return <AM2LyricPressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} onTap={now=>seek(item.startMs,actual,now)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:item.background?4:count===1?0:style.spacing,opacity:item.background?.65:1}}>
+      return <LyricGesture key={actual} accessibilityRole="button" accessibilityLabel={item.text} onTap={now=>seek(item.startMs,actual,now)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:item.background?4:count===1?0:style.spacing,opacity:item.background?.65:1}}>
         <NativeLyricLine line={actual===active||item.background&&singing?item:{...item,words:undefined,timedCues:undefined}} position={actual===active||item.background&&singing?state.position*1000-offset:0} playing={(actual===active||!!item.background&&singing)&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={actual===active||item.background&&singing?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={actual===active||item.background&&singing?0:style.blur} emphasis={style.emphasis}/>
         {item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:13,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
-      </AM2LyricPressable>;
+      </LyricGesture>;
     })}
     {!document?.synced&&(fullPage||presentation==='stage')&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
     {!document?.synced&&!fullPage&&presentation!=='stage'&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
@@ -103,9 +103,9 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
         {!document?.synced&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:size,color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
         {document?.synced&&<FlatList ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
           onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
-          renderItem={({item,index})=><Pressable accessibilityRole="button" accessibilityLabel={`定位歌词：${item.text}`} onPress={event=>seek(item.startMs,index,event.nativeEvent.timestamp)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
+          renderItem={({item,index})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${item.text}`} onTap={time=>seek(item.startMs,index,time)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
             <View><NativeLyricLine line={index===active?item:{...item,words:undefined,timedCues:undefined}} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={index===active?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
-          </Pressable>}/>}
+          </LyricGesture>}/>}
       </View>
     </SheetModal>
   </View>;
@@ -117,10 +117,10 @@ const AM2LyricRows=memo(function AM2LyricRows({alignStart,testID,services,lines,
   const list=useRef<FlatList<LyricLine>>(null),actions=useRef({seek,openSettings});actions.current={seek,openSettings};
   const extra=useMemo(()=>[active,center,font,size,offset,style,activeColor,inactiveColor],[active,center,font,size,offset,style,activeColor,inactiveColor]);
   useEffect(()=>{if(active>=0)list.current?.scrollToIndex({index:active,viewPosition:alignStart?0:anchor,animated:false});},[active,alignStart]);
-  const render=useCallback(({item,index}:{item:LyricLine;index:number})=><AM2LyricPressable accessibilityRole="button" accessibilityLabel={`定位歌词：${item.text}`} onTap={time=>actions.current.seek(item.startMs,index,time)} onLongPress={()=>actions.current.openSettings()} accessibilityHint="双击定位，长按调整偏移" style={{paddingVertical:style.spacing}}>
+  const render=useCallback(({item,index}:{item:LyricLine;index:number})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${item.text}`} onTap={time=>actions.current.seek(item.startMs,index,time)} onLongPress={()=>actions.current.openSettings()} accessibilityHint="双击定位，长按调整偏移" style={{paddingVertical:style.spacing}}>
     {index===active?<AM2ActiveLyric services={services} line={item} center={center} offset={offset} size={size} font={font} color={activeColor} style={style}/>:<NativeLyricLine line={{...item,words:undefined,timedCues:undefined}} position={0} playing={false} center={center} size={size} font={font} fontURI={services.fonts.selectedURI()} color={inactiveColor} lineHeight={style.lineHeight} blur={style.blur} emphasis={style.emphasis}/>}
     {item.translation&&<LyricText style={{fontFamily:font,color:'#D5D5DA',fontSize:14,marginTop:8}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{fontFamily:font,color:'#D5D5DA',fontSize:14,marginTop:6}}>{item.romanization}</LyricText>}
-  </AM2LyricPressable>,[services,active,center,font,size,offset,style,activeColor,inactiveColor]);
+  </LyricGesture>,[services,active,center,font,size,offset,style,activeColor,inactiveColor]);
   const failed=useCallback((info:{averageItemLength:number;index:number})=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false}),[]);
   const footerNode=useMemo(()=><Pressable accessibilityRole="button" accessibilityLabel="打开全部歌词与偏移设置" onPress={openSettings} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:'#D5D5DA'}}>全部歌词与偏移设置</Text></Pressable>,[openSettings]);
   return <FlatList testID={testID} ref={list} data={lines} extraData={extra} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={failed} ListFooterComponent={footer?footerNode:null} contentContainerStyle={{paddingTop:30+bias,paddingBottom:30}}/>;
@@ -135,11 +135,11 @@ const StageLyricRows=memo(function StageLyricRows({services,lines,group,font,off
   const active=group?Number(group.id.split(':')[0]):-1;
   useEffect(()=>{if(active>=0)list.current?.scrollToIndex({index:active,viewPosition:.32,animated:false});},[active]);
   const render=({item,index}:{item:LyricLine;index:number})=>index===active&&group
-    ?<Pressable key={index} testID="lyric-stage-group" accessibilityRole="button" accessibilityLabel={group.line.text}
+    ?<LyricGesture key={index} testID="lyric-stage-group" accessibilityRole="button" accessibilityLabel={group.line.text}
       accessibilityValue={{text:group.line.words?'逐字歌词':group.line.timedCues?.length?'部分逐字歌词':'行级歌词'}} accessibilityHint="双击定位到当前段，长按打开歌词设置"
-      onPress={event=>actions.current.seek(group.line.startMs,index,event.nativeEvent.timestamp)} onLongPress={()=>actions.current.openSettings()}>
+      onTap={time=>actions.current.seek(group.line.startMs,index,time)} onLongPress={()=>actions.current.openSettings()}>
       <NativeLyricLine line={item} position={position} playing={playing} size={size} font={font} fontURI={services.fonts.selectedURI()} color={activeColor} center lineHeight={1.25} emphasis stageStyle={stageStyle}/>
-    </Pressable>
+    </LyricGesture>
     :<NativeLyricLine key={index} line={{...item,words:undefined,timedCues:undefined}} position={0} playing={false} size={size} font={font} fontURI={services.fonts.selectedURI()} color={inactiveColor} center lineHeight={1.25} blur={0} emphasis={false}/>;
   return <FlatList testID="lyric-stage-list" ref={list} data={lines} extraData={[active,group?.line.text,size,font,position,playing,activeColor,stageStyle]} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})} contentContainerStyle={{paddingTop:largeText?24:206,paddingBottom:24}}/>;
 });
@@ -152,7 +152,7 @@ const NativeLyricGesture=requireNativeView<ViewProps&{onDoubleTap?:()=>void;onLo
 
 // UIKit owns double-tap detection because Fabric can expose only one JS touch
 // sequence for a synthesized double tap. The existing two-tap seek guard stays.
-function AM2LyricPressable({onTap,onLongPress,...props}:ViewProps&{onTap:(time:number)=>void;onLongPress?:()=>void}){
+function LyricGesture({onTap,onLongPress,...props}:ViewProps&{onTap:(time:number)=>void;onLongPress?:()=>void}){
   return <NativeLyricGesture {...props} onDoubleTap={()=>{const now=Date.now();onTap(now);onTap(now);}} onLongPress={onLongPress}/>;
 }
 
@@ -214,9 +214,9 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
     {document?.synced&&document.lines.slice(first,first+visibleLines).map((item,index)=>{
       const actual=first+index,now=state.position*1000-offset,singing=now>=item.startMs&&(item.endMs===undefined||now<item.endMs);
       const live=actual===active||!!item.background&&singing,row=classicLyricRow(live,preferences.fontScale,style.lineHeight);
-      return <Pressable key={actual} accessibilityRole="button" accessibilityLabel={item.text} accessibilityHint="双击歌词定位，长按打开歌词设置" onPress={event=>tap(item.startMs,actual,event.nativeEvent.timestamp)} onLongPress={onOpenSettings} style={{minHeight:lineHeight,justifyContent:'center'}}>
+      return <LyricGesture key={actual} accessibilityRole="button" accessibilityLabel={item.text} accessibilityHint="双击歌词定位，长按打开歌词设置" onTap={time=>tap(item.startMs,actual,time)} onLongPress={onOpenSettings} style={{minHeight:lineHeight,justifyContent:'center'}}>
         <NativeLyricLine line={live?item:{...item,words:undefined,timedCues:undefined}} position={live?now:0} playing={live&&state.intent==='playing'&&!state.buffering} center size={row.size} font={font} fontURI={services.fonts.selectedURI()} color={live?classicInk.text:classicInk.lyricInactive} maxLines={1} lineHeight={row.lineHeight} emphasis={style.emphasis} weight={row.weight} embolden={row.embolden}/>
-      </Pressable>;
+      </LyricGesture>;
     })}
     {!document?.synced&&!!document?.plain.length&&<Text numberOfLines={2} style={{textAlign:'center',color:theme.palette.secondary,fontSize:15}}>{document.plain[0]}</Text>}
   </View>;
