@@ -1,3 +1,17 @@
+## 2026-11-02 J25 统一歌曲/专辑/艺术家搜索
+
+- [x] 正式搜索新增“全部”页签；歌曲、专辑、艺术家按所选平台或聚合平台并列搜索，按“平台 → 类型”分组，每块最多预览两项并标明已载入数/目录总数。
+- [x] 歌曲预览复用权威 `playTracks`；专辑/艺术家打开既有 `Discovery`；“查看全部”切到对应独立页签。
+- [x] 三类协调器继续分别持有查询、加载、失败、重试、总数和分页状态；歌曲第二页及目录结果在往返统一页后保持，歌单/MV 与 Navidrome 私人边界不变。
+- [x] `npm run check` 978/978、完整 native、Node/Swift/YAML/diff 与最终 Release build 通过；最终 Release 2/0/0、总执行197.277秒、`sourceUnchanged=true`，5PNG provenance ready并亲看。
+- [x] r1 功能通过但截图暴露专辑人物图标，原 xcresult/截图保留；修复 `albums-outline` 后独立 r2 重跑。输入/fixture 路由/媒体/页码断言等 5 轮失败原结果均保留。
+- [x] 匿名网易云公开抽查歌曲3/275、专辑3/592、艺术家3/84且身份合法；其他四平台只复用既有契约，不声明真实五平台矩阵。
+- [x] `f611c06` clean unsigned IPA、manifest、CRC、archive/IPA 字节、生产标记及测试/私人/签名排除通过；T7 主阶段541份/129,708,228逻辑字节逐文件哈希一致。
+- [ ] push、远端 main 与 iOS27 本批终态。
+- [ ] 其他四平台真实统一搜索、真实 iPhone、VoiceOver/动态字号/小屏、弱网/限流、签名/安装、连续转场录屏与完整 J25/F/J 继续。
+
+见[本批回执](2026-11-02-unified-search-report.md)与[UI规格](ui-spec/unified-search-2026-11-02.md)。J25 来源为 `U`，不新增 Sollin 证据或 strict review 声明。
+
 ## 2026-11-02 J26 App 与系统输出音量分离
 
 - [x] 播放设置明确区分 App 相对音量与系统输出音量；真机公共 `MPVolumeView` 由 iOS 管理当前输出设备，音枢不持久化系统音量、不维护设备副本或第二队列。
