@@ -16,9 +16,6 @@ function duration(v:unknown){if(v===undefined||v===null||v==='')return undefined
 function art(v:unknown){try{const u=new URL(text(v).replace('{size}','400').replace(/^\/\//,'https://'));if(u.protocol==='http:')u.protocol='https:';return safePublicURL(u.href)?u.href:undefined;}catch{return undefined;}}
 export interface VideoItem extends BrowseItem{platform:OnlinePlatform;durationSeconds?:number}
 export interface VideoSearchPage{items:readonly VideoItem[];page:number;total?:number;hasMore:boolean}
-export class PublicMVPageUnavailableError extends Error {
- constructor(){super('此平台暂不支持在应用内查看MV详情。');}
-}
 type Dependencies={http?:HTTPClient;textHTTP?:TextHTTPClient;md5:(v:string)=>Promise<string>;sha1:(v:string)=>Promise<string>;deviceId:()=>string;now?:()=>number};
 export class VideoProvider{
  private readonly deps:Dependencies;
@@ -46,9 +43,7 @@ export class VideoProvider{
   if(platform==='wy')return`https://music.163.com/mv?id=${identity}`;
   if(platform==='tx')return`https://y.qq.com/n/ryqq/mv/${identity}`;
   if(platform==='kw')return`https://m.kuwo.cn/newh5app/mvplay/7/${identity}?id=${identity}&type=7`;
-  // The old official MV URL now redirects to the v5 home page. Do not disguise
-  // that unrelated page as this result's detail. Catalog metadata remains usable.
-  if(platform==='mg')throw new PublicMVPageUnavailableError();
+  if(platform==='mg')return`https://h5.nf.migu.cn/app/v4/p/share/mv/index.html?id=${identity}`;
   // Resolve only the public page ID. Expiring media URLs never enter the model.
   const d=row(await this.http(queryURL('https://m.kugou.com/app/i/mv.php',{cmd:100,hash:identity,ismp3:1,ext:'mp4'}),{},signal));if(signal.aborted)throw Error('已取消');if(d.status!==1||d.errcode!==0)throw Error('MV页面暂不可读取');const pageId=id(d.id);if(!/^\d+$/.test(pageId))throw Error('MV页面标识无效');return`https://www.kugou.com/mvweb/html/mv_${pageId}.html`;
  }

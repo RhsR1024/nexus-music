@@ -26,6 +26,10 @@ enum PublicMVPolicy {
       valid = matches(path, "^/newh5app/mvplay/7/[0-9]{1,128}$") && query.count == 2
         && query.filter({ $0.name == "id" && $0.value == identity }).count == 1
         && query.filter({ $0.name == "type" && $0.value == "7" }).count == 1
+    case "h5.nf.migu.cn":
+      let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+      valid = path == "/app/v4/p/share/mv/index.html" && query.count == 1
+        && query[0].name == "id" && matches(query[0].value ?? "", digits)
     case "www.kugou.com": valid = matches(path, "^/mvweb/html/mv_[0-9]{1,128}\\.html$") && url.query == nil
     default: valid = false
     }
@@ -38,6 +42,7 @@ enum PublicMVPolicy {
     case "music.163.com": hosts = ["music.163.com", "m.music.163.com", "y.music.163.com"]
     case "y.qq.com": hosts = ["y.qq.com", "m.y.qq.com", "i.y.qq.com", "i2.y.qq.com"]
     case "www.kuwo.cn", "m.kuwo.cn": hosts = ["www.kuwo.cn", "m.kuwo.cn"]
+    case "h5.nf.migu.cn": hosts = ["h5.nf.migu.cn"]
     case "www.kugou.com": hosts = ["www.kugou.com", "m.kugou.com"]
     default: return false
     }
