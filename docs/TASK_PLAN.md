@@ -1,3 +1,13 @@
+## 2026-11-02 iOS 27 发现页文本替换与 CI 失败根因
+
+- [x] 取得`41390545740`/`cfac30c`紧凑日志和精确失败；根因是iOS27未暴露长按`Select All`/`全选`/`全選`编辑菜单，后续`ECONNRESET`属于夹具拆除级联，不是根因。
+- [x] 测试helper改用`tap`→`Command+A`→输入→换行→值断言，并覆盖四处原依赖编辑菜单的字段；r1/r2失败原件保留，r3 `SourceUITests-1793608470565` 1/0/0、204.493秒，16PNG provenance ready并亲看。
+- [x] 978/978、Swift parse和diff通过；`51e517a`已push并核对远端main，clean unsigned IPA/manifest/archive verifier通过，IPA SHA-256`59e4818f…`。
+- [x] T7独立阶段321个payload/119,897,975字节逐文件核验，源证据保留且无删除/个人搬移；push后`41415230222`唯一pending、`41406504201`继续运行，队列1运行/1排队。
+- [ ] `41415230222`的iOS27终态；实体机、签名及其余真实服务/VoiceOver/弱网/动效验收继续。
+
+见[修复回执](2026-11-02-ios27-discovery-text-replacement-fix.md)。本批无新增Sollin证据或strict review声明。
+
 ## 2026-11-02 J25 五平台统一搜索矩阵
 
 - [x] 五平台歌曲/专辑/艺术家确定性 UI 矩阵通过；网易云、QQ、酷我、酷狗、咪咕各显示三类预览，咪咕艺术家身份和 QQ 歌曲权威队列打开通过。
@@ -7,7 +17,7 @@
 - [x] 978/978、完整native、Node/Swift/YAML/diff、完整Release build和`ac11314` clean unsigned IPA验证通过；归档编码探针首轮失败原件保留。
 - [x] T7阶段目录296个普通payload/105,590,020字节逐份哈希一致，exFAT `._*`单独计数；源证据保留，本批未删除项目内容或迁移个人文件，清理回执SHA-256`479c378f…`。
 - [x] `df9972f..73f975e`及文档-only`688e1ae`正常push并实核远端main；最新`41411187417`/`73f975e`为唯一pending，`41406504201`/`a279581`继续运行，队列1运行/1排队，Markdown-only未触发新运行。
-- [ ] 旧`41390545740`/`cfac30c`已失败在在线播放/歌词/source health/discovery组；步骤和产物摘要已取得，精确日志因GitHub API限额暂待下载与定位。
+- [x] 旧`41390545740`/`cfac30c`紧凑日志已取得；精确根因为iOS27未暴露长按编辑菜单`Select All`，后续服务器`ECONNRESET`是XCTest拆除级联，并已由`51e517a`本地修复与独立r3通过。
 - [ ] 真实五平台逐页网络UI、真实iPhone、VoiceOver/动态字号/小屏、弱网/限流、连续转场录屏、签名/安装、iOS27终态与完整J25/F/J。
 
 见[阶段回执](2026-11-02-unified-search-five-platform-matrix-report.md)与[UI规格](ui-spec/unified-search-2026-11-02.md)。J25 来源为 `U`，不新增 Sollin 证据或 strict review 声明。

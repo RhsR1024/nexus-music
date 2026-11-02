@@ -1,3 +1,11 @@
+## 2026-11-02 iOS 27 发现页文本替换与 CI 失败根因
+
+`41390545740`/`cfac30c`的紧凑日志已经把失败定位到`SourceSettingsTests.swift:4794`：`testDiscoverySongActions`长按公开歌单链接输入后，在iOS27等待系统编辑菜单的`Select All`/`全选`/`全選`超时。后续`ui-online-runner.log`的`ECONNRESET`发生在XCTest断言失败并拆除夹具服务器后，是级联结果。
+
+测试helper现使用`tap`、`typeKey("a", .command)`、`typeText(value)`、换行和输入值断言，发现页与其他三处原依赖编辑菜单的字段共用该路径。r1光标坐标删除仅留下`...id=101101`、r2错误插入均保留；r3 `SourceUITests-1793608470565`为1/0/0、204.493秒，16张PNG按精确xcresult导出并亲看关键歌曲操作页。978/978、Swift parse与diff通过。
+
+测试提交`51e517a`已正常push且远端main实核一致。clean unsigned archive的manifest为`dirty:false`/无工作区变更，archive verifier通过arm64/iphoneos26.2/iOS15.1/[1,2]及测试/私人/签名排除；IPA 12,899,334字节、SHA-256`59e4818f8c355cfd0200797a38abafad41b79b8e7735c0b79c16b8ab8f3073f6`。T7阶段`2026-11-02-ci-discovery-text-replace-51e517a`含321个普通payload/119,897,975字节逐文件核验，exFAT `._*`另计，`SHA256SUMS` SHA-256`6f9cc5c7…`；源证据保留，本批零删除/零个人搬移。`41415230222`/`51e517a`为唯一pending，`41406504201`/`a279581`继续运行，旧pending`41411187417`由`queue:single`自动取消，实核1运行/1排队。iOS27终态及实体机/签名/真实服务/VoiceOver/弱网/动效继续；无新增Sollin证据或strict review声明。详见[本批回执](2026-11-02-ios27-discovery-text-replacement-fix.md)。
+
 ## 2026-11-02 J25 五平台统一搜索矩阵
 
 统一搜索新增五平台歌曲/专辑/艺术家确定性矩阵，正式统一页在网易云、QQ、酷我、酷狗、咪咕各显示三类预览；咪咕艺术家身份与QQ歌曲权威队列打开通过。独立Release `SourceUITests-1793605506843`为1/0/0、131.460秒，`sourceUnchanged=true`，源码digest`981904c2…`、安装bundle`75ac9e78…`；原单平台回归`SourceUITests-1793605767609`同源1/0/0、110.772秒。978/978、完整native、Node/Swift/YAML/diff和完整Release build通过，2张矩阵PNG与5张回归PNG provenance ready并亲看。QQ `req.module`与酷我文本传输两轮失败原件保留后修复，r3/r4独立通过。
