@@ -50,8 +50,12 @@ private final class AmbientCanvas: UIView {
   private var elapsed = 0.0
   private var previousTime = 0.0
   private var canMove: Bool {
-    requestedMotion && window != nil && !UIAccessibility.isReduceMotionEnabled
-      && UIApplication.shared.applicationState == .active
+    MotionPolicy.allowsMotion(
+      requested: requestedMotion,
+      attached: window != nil,
+      appActive: UIApplication.shared.applicationState == .active,
+      reduceMotion: UIAccessibility.isReduceMotionEnabled,
+      lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled)
   }
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -60,7 +64,8 @@ private final class AmbientCanvas: UIView {
     overlay.isHidden = true; layer.addSublayer(overlay)
     let center = NotificationCenter.default
     for name in [UIApplication.didBecomeActiveNotification, UIApplication.willResignActiveNotification,
-      UIApplication.didEnterBackgroundNotification, UIAccessibility.reduceMotionStatusDidChangeNotification] {
+      UIApplication.didEnterBackgroundNotification, UIAccessibility.reduceMotionStatusDidChangeNotification,
+      Notification.Name.NSProcessInfoPowerStateDidChange] {
       center.addObserver(self, selector: #selector(environmentChanged), name: name, object: nil)
     }
   }

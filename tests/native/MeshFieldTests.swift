@@ -3,6 +3,24 @@ import CoreGraphics
 
 @main struct MeshFieldTests {
   static func main() {
+    // Motion is allowed only when every independent environment gate is open.
+    let motionCases: [(Bool, Bool, Bool, Bool, Bool, Bool)] = [
+      (true, true, true, false, false, true),
+      (false, true, true, false, false, false),
+      (true, false, true, false, false, false),
+      (true, true, false, false, false, false),
+      (true, true, true, true, false, false),
+      (true, true, true, false, true, false),
+    ]
+    for (requested, attached, active, reduce, lowPower, expected) in motionCases {
+      precondition(MotionPolicy.allowsMotion(
+        requested: requested,
+        attached: attached,
+        appActive: active,
+        reduceMotion: reduce,
+        lowPowerMode: lowPower) == expected)
+    }
+
     // Palette validation: 1–3 parseable hex entries, softened per mode.
     precondition(MeshField.palette(from: ["#FF0000"], dark: true)?.count == 1)
     precondition(MeshField.palette(from: ["#FF0000", "#00FF00", "#0000FF"], dark: false)?.count == 3)
@@ -68,6 +86,6 @@ import CoreGraphics
     timeline.setMoving(true, at: .infinity)
     precondition(timeline.time(at: .nan) == 6)
 
-    print("mesh-field tests passed")
+    print("mesh-field and native-motion-policy tests passed")
   }
 }

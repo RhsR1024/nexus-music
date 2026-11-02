@@ -1,6 +1,20 @@
 import Foundation
 import CoreGraphics
 
+// Native motion is consequential only while the view is requested, attached,
+// foregrounded, and the system has not asked the app to reduce visual work.
+struct MotionPolicy {
+  static func allowsMotion(
+    requested: Bool,
+    attached: Bool,
+    appActive: Bool,
+    reduceMotion: Bool,
+    lowPowerMode: Bool
+  ) -> Bool {
+    requested && attached && appActive && !reduceMotion && !lowPowerMode
+  }
+}
+
 // Drift clock for the mesh (decision 0081). Motion accumulates only while the
 // gate is open, so pausing parks the field and resuming continues from the
 // parked phase instead of jumping to the wall clock. Pure value semantics keep

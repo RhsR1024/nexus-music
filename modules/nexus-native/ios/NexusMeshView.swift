@@ -39,8 +39,12 @@ private final class MeshCanvas: UIView {
   private let fallback = CAGradientLayer()
   private let clock = MeshClock()
   private var canMove: Bool {
-    requestedMotion && window != nil && !UIAccessibility.isReduceMotionEnabled
-      && UIApplication.shared.applicationState == .active
+    MotionPolicy.allowsMotion(
+      requested: requestedMotion,
+      attached: window != nil,
+      appActive: UIApplication.shared.applicationState == .active,
+      reduceMotion: UIAccessibility.isReduceMotionEnabled,
+      lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled)
   }
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -49,7 +53,8 @@ private final class MeshCanvas: UIView {
     layer.addSublayer(fallback)
     let center = NotificationCenter.default
     for name in [UIApplication.didBecomeActiveNotification, UIApplication.willResignActiveNotification,
-                 UIApplication.didEnterBackgroundNotification, UIAccessibility.reduceMotionStatusDidChangeNotification] {
+                 UIApplication.didEnterBackgroundNotification, UIAccessibility.reduceMotionStatusDidChangeNotification,
+                 Notification.Name.NSProcessInfoPowerStateDidChange] {
       center.addObserver(self, selector: #selector(environmentChanged), name: name, object: nil)
     }
   }

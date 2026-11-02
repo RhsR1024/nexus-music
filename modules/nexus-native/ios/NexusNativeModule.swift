@@ -12,9 +12,20 @@ public final class NexusNativeModule: Module {
   private let covers = CoverCache.shared
   private let exportCovers = CoverCache(directory: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("NexusExportCovers"), maximumBytes: 16 * 1024 * 1024)
   private var coverRequests: [String: (client: ScriptHTTP, promises: [Promise])] = [:]
+  private var powerObserver: NSObjectProtocol?
 
   public func definition() -> ModuleDefinition {
     Name("NexusNative")
+    Events("onPowerStateChange")
+    OnStartObserving("onPowerStateChange") {
+      self.startPowerObservation()
+    }
+    OnStopObserving("onPowerStateChange") {
+      self.stopPowerObservation()
+    }
+    Function("isLowPowerModeEnabled") {
+      ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
     View(NexusMaterialView.self) {
       Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }
     }
@@ -147,6 +158,7 @@ public final class NexusNativeModule: Module {
     AsyncFunction("destroyHealthSource") { (id: String) in self.diagnosticRuntimes.removeValue(forKey: id)?.destroy() }.runOnQueue(runtimeQueue)
 
     OnDestroy {
+      self.stopPowerObservation()
       self.probeQueue.async { [self] in for probe in Array(probes.values) { probe.cancel() }; probes.removeAll() }
       self.coverQueue.async { [self] in
         for pending in coverRequests.values { pending.client.destroy(); for promise in pending.promises { promise.reject("COVER_CANCELLED", "封面加载已结束") } }
@@ -160,6 +172,24 @@ public final class NexusNativeModule: Module {
         downloads.removeAll()
       }
     }
+  }
+  private func startPowerObservation() {
+    guard powerObserver == nil else { return }
+    powerObserver = NotificationCenter.default.addObserver(
+      forName: Notification.Name.NSProcessInfoPowerStateDidChange,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      guard let self else { return }
+      self.sendEvent("onPowerStateChange", [
+        "lowPowerModeEnabled": ProcessInfo.processInfo.isLowPowerModeEnabled
+      ])
+    }
+  }
+  private func stopPowerObservation() {
+    guard let powerObserver else { return }
+    NotificationCenter.default.removeObserver(powerObserver)
+    self.powerObserver = nil
   }
   private func fetchCover(_ key: String, url: String, maximum: Int, exporting: Bool, promise: Promise) {
     guard (exporting ? [256,500,512,1000,1024,1200,2048] : [512,1024]).contains(maximum) else { promise.reject("COVER_SIZE", "封面尺寸无效"); return }
