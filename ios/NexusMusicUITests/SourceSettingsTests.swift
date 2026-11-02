@@ -373,6 +373,113 @@ final class SourceSettingsTests: XCTestCase {
     app.terminate();app.launch();revealRoute()
     let relaunched=XCTAttachment(screenshot:app.screenshot());relaunched.name="System AV route picker reachable after relaunch";relaunched.lifetime = .keepAlways;add(relaunched)
   }
+  func testSystemAndAppVolumeControlsPreservePlayback() throws {
+    let app=XCUIApplication();app.launch()
+    func screen(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reveal(_ element:XCUIElement,in viewport:XCUIElement){
+      XCTAssertTrue(viewport.waitForExistence(timeout:10))
+      for _ in 0..<24 {
+        if element.exists && element.isHittable && viewport.frame.insetBy(dx:0,dy:8).contains(element.frame){break}
+        let above=element.exists && element.frame.midY<viewport.frame.midY
+        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25)))
+      }
+      XCTAssertTrue(element.exists && element.isHittable)
+    }
+    func type(_ field:XCUIElement,_ value:String){
+      XCTAssertTrue(field.waitForExistence(timeout:10));field.tap()
+      if let old=field.value as? String,!old.isEmpty,!old.contains("服务器"),!old.contains("用户名"){
+        field.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:old.count))
+      }
+      for character in value{field.typeText(String(character))};field.typeText("\n")
+    }
+    func volumeControls() -> (XCUIElement,XCUIElement){
+      openSettings(app,page:"playback")
+      let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-playback").firstMatch
+      let appVolume=app.descendants(matching:.any).matching(identifier:"app-volume").firstMatch
+      let deviceVolume=app.descendants(matching:.any).matching(identifier:"device-volume-slider").firstMatch
+      let hierarchy=XCTAttachment(string:app.debugDescription)
+      hierarchy.name="Playback settings accessibility hierarchy"
+      hierarchy.lifetime = .keepAlways
+      add(hierarchy)
+      reveal(deviceVolume,in:viewport);reveal(appVolume,in:viewport)
+      XCTAssertEqual(deviceVolume.label,"设备音量")
+      XCTAssertTrue((deviceVolume.value as? String)?.isEmpty == false,"Apple volume slider must expose its current accessible value")
+#if targetEnvironment(simulator)
+      XCTAssertEqual(deviceVolume.value as? String,"此环境不提供系统音量滑块","The simulator must not expose a mirrored system-volume value")
+#else
+      XCTAssertNotEqual(deviceVolume.value as? String,"此环境不提供系统音量滑块")
+#endif
+      XCTAssertGreaterThanOrEqual(deviceVolume.frame.width,44)
+      XCTAssertGreaterThanOrEqual(deviceVolume.frame.height,44)
+      XCTAssertTrue(app.staticTexts["设备音量"].exists)
+      XCTAssertTrue(app.staticTexts["系统输出"].exists)
+      XCTAssertTrue(app.staticTexts["只调整音枢播放器的相对音量，不修改系统输出音量。"].exists)
+      return (appVolume,deviceVolume)
+    }
+
+    openSettings(app,page:"sources")
+    let existing=app.buttons["移除连接：fixture-user"]
+    if existing.exists {
+      for _ in 0..<24 {if existing.isHittable{break};app.swipeUp()}
+      XCTAssertTrue(existing.isHittable);existing.tap();app.alerts.buttons["移除"].tap()
+    }
+    type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439")
+    type(app.textFields["Navidrome用户名"],"fixture-user")
+    type(app.secureTextFields["Navidrome密码"],"fixture-password")
+    app.buttons["验证并保存连接"].tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch
+    XCTAssertTrue(account.waitForExistence(timeout:10));account.tap()
+    let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
+    XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
+    let playAll=app.buttons["播放全部"];XCTAssertTrue(playAll.waitForExistence(timeout:10));playAll.tap()
+    let openPlayer=app.buttons["打开播放页"];XCTAssertTrue(openPlayer.waitForExistence(timeout:10));openPlayer.tap()
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:15),"The volume scenario needs a real decoded fixture stream")
+    let pause=app.buttons["暂停"].firstMatch;XCTAssertTrue(pause.waitForExistence(timeout:10));pause.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5))
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    let pausedClock=progress.value as? String
+    XCTAssertNotNil(pausedClock)
+    app.buttons["更多播放控制"].tap()
+    let queueEntry=app.buttons["队列与播放选项"];XCTAssertTrue(queueEntry.waitForExistence(timeout:5))
+    XCTAssertEqual(queueEntry.value as? String,"1 首")
+    app.buttons["收起播放选项"].tap();app.buttons["收起播放页"].tap()
+
+    var controls=volumeControls()
+    let initial=XCTAttachment(screenshot:app.screenshot());initial.name="Separate App and system output volume controls";initial.lifetime = .keepAlways;add(initial)
+    controls.0.coordinate(withNormalizedOffset:CGVector(dx:0.8,dy:0.5)).press(forDuration:0.05,thenDragTo:controls.0.coordinate(withNormalizedOffset:CGVector(dx:0.3,dy:0.5)))
+    XCTAssertEqual(app.staticTexts["app-volume-value"].label,"30%")
+    // Direct manipulation proves the native control is tappable. Physical
+    // speaker/headset volume remains a device-only assertion.
+    controls.1.coordinate(withNormalizedOffset:CGVector(dx:0.35,dy:0.5)).tap()
+    screen("Device volume slider after direct input")
+    XCUIDevice.shared.press(.home);app.activate();controls=volumeControls()
+    XCTAssertEqual(app.staticTexts["app-volume-value"].label,"30%")
+    app.terminate();app.launch();controls=volumeControls()
+    XCTAssertEqual(app.staticTexts["app-volume-value"].label,"30%","App-relative volume must persist separately from system volume")
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let reopened=app.buttons["打开播放页"];XCTAssertTrue(reopened.waitForExistence(timeout:10));reopened.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10),"Volume changes must preserve paused intent")
+    XCTAssertEqual(progress.value as? String,pausedClock,"Volume changes must preserve the paused timeline")
+    app.buttons["更多播放控制"].tap()
+    let restoredQueue=app.buttons["队列与播放选项"]
+    XCTAssertTrue(restoredQueue.waitForExistence(timeout:5))
+    XCTAssertEqual(restoredQueue.value as? String,"1 首","Volume changes must preserve the authoritative queue")
+    app.buttons["收起播放选项"].tap();app.buttons["收起播放页"].tap()
+
+    openSettings(app,page:"playback")
+    let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-playback").firstMatch
+    let appVolume=app.descendants(matching:.any).matching(identifier:"app-volume").firstMatch
+    reveal(appVolume,in:viewport)
+    appVolume.coordinate(withNormalizedOffset:CGVector(dx:0.3,dy:0.5)).press(forDuration:0.05,thenDragTo:appVolume.coordinate(withNormalizedOffset:CGVector(dx:0.995,dy:0.5)))
+    XCTAssertEqual(app.staticTexts["app-volume-value"].label,"100%")
+    openSettings(app,page:"sources")
+    let cleanup=app.buttons["移除连接：fixture-user"];XCTAssertTrue(cleanup.waitForExistence(timeout:10))
+    for _ in 0..<24 {if cleanup.isHittable{break};app.swipeUp()}
+    XCTAssertTrue(cleanup.isHittable);cleanup.tap();app.alerts.buttons["移除"].tap()
+  }
   func testDownloadSettingsAndOfflinePlayback() throws {
     let app=XCUIApplication();app.launch()
     func reveal(_ element:XCUIElement){

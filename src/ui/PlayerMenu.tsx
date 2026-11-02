@@ -30,7 +30,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       <Text style={styles.cardLabel}>{label}</Text>
     </Pressable>);
   const row=(icon:React.ComponentProps<typeof Ionicons>['name'],label:string,value:string,action:()=>void,last=false)=>(
-    <Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={[styles.row,last?null:styles.rowBorder]}>
+    <Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{text:value}} onPress={action} style={[styles.row,last?null:styles.rowBorder]}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={19} color={theme.palette.accent}/></View>
       <Text style={styles.rowTitle}>{label}</Text>
       <Text numberOfLines={1} style={styles.rowValue}>{value}</Text>

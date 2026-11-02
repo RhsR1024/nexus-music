@@ -40,6 +40,10 @@ public final class NexusNativeModule: Module {
       Prop("tint") { (view: NexusRoutePickerView, value: String) in view.setTint(value) }
       Prop("activeTint") { (view: NexusRoutePickerView, value: String) in view.setActiveTint(value) }
     }
+    View(NexusDeviceVolumeView.self) {
+      ViewName("DeviceVolume")
+      Prop("tint") { (view: NexusDeviceVolumeView, value: String) in view.setTint(value) }
+    }
     View(NexusLyricGestureView.self) {
       ViewName("LyricGesture")
       Events("onDoubleTap", "onLongPress")

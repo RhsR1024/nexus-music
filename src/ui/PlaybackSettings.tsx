@@ -7,6 +7,7 @@ import {GainSlider} from './EqualizerGraph.tsx';
 import {useTheme} from './theme.tsx';
 import {controls,radius,space} from './tokens.ts';
 const NativeRoutePicker=requireNativeView<ViewProps&{tint:string;activeTint:string}>('NexusNative','RoutePicker');
+const NativeDeviceVolume=requireNativeView<ViewProps&{tint:string}>('NexusNative','DeviceVolume');
 export function PlaybackSettings({services}:{services:Services}) {
   const {palette:p}=useTheme(),settings=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
   const [minutes,setMinutes]=useState('30'),[now,setNow]=useState(Date.now()),[error,setError]=useState('');
@@ -19,7 +20,15 @@ export function PlaybackSettings({services}:{services:Services}) {
     {button(`普通在线歌曲自动匹配：${settings.autoMatch?'开启':'关闭'}`,()=>{void services.preferences.update({autoMatch:!settings.autoMatch}).catch(()=>setError('自动匹配设置未保存'));},false,'automatic-online-matching')}
     <Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>原曲当前音质不可用时，先尝试其他平台的可靠同版本，再降音质。手动指定的版本优先，原始收藏和歌单保留。</Text>
     <GainSlider testID="app-volume" label="App 音量" format={value=>`${Math.round((value+12)/24*100)}%`} value={settings.volume*24-12} onChange={value=>{void services.preferences.update({volume:(value+12)/24}).catch(()=>setError('音量未保存'));}}/>
-    <Text style={{color:p.secondary,fontSize:12}}>App 内相对音量；设备音量使用 iPhone 音量键调整。</Text>
+    <Text style={{color:p.secondary,fontSize:12}}>只调整音枢播放器的相对音量，不修改系统输出音量。</Text>
+    <View testID="device-volume-control" style={{minHeight:92,padding:space.md,borderRadius:radius.lg,backgroundColor:p.selected,gap:space.xs}}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space.md}}>
+        <Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>设备音量</Text>
+        <Text style={{color:p.secondary,fontSize:12}}>系统输出</Text>
+      </View>
+      <NativeDeviceVolume tint={p.accent} style={{width:'100%',height:44}}/>
+      <Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>调整当前 iPhone 扬声器或耳机、蓝牙、AirPlay 输出设备的系统音量。</Text>
+    </View>
     <View testID="system-audio-output" style={{minHeight:72,padding:space.md,borderRadius:radius.lg,backgroundColor:p.selected,flexDirection:'row',alignItems:'center',gap:space.md}}>
       <View style={{flex:1,gap:space.xs}}>
         <Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>系统音频输出</Text>

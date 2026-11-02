@@ -25,6 +25,7 @@ const liveDownloadCoverUI=process.argv.slice(2).some(target=>/\/testLiveDownload
 const liveDownloadAttachmentsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadAttachments'));
 const liveDownloadExportUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveDownloadNamingExport'));
 const liveBackupSettingsUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveBackupSettings'));
+const systemVolumeUI=process.argv.slice(2).some(target=>target.endsWith('/testSystemAndAppVolumeControlsPreservePlayback'));
 const liveThemeConfigUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveThemeConfig'));
 const liveStatisticsSyncUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveStatisticsSync'));
 const liveLocalUI=process.argv.slice(2).some(target=>/\/testLive(?:Local(?:IndexActions|Sorting|FolderScan|PlaylistBatch)|ListeningStatistics|StatisticsSync|BackupSettings|RestoredTimeline|ThemeConfig|RetainedAudio|DownloadPolicy|DiscoveryRandom|Similar(?:Songs|Controls)|PlayerDownloadQualityChoice|SongShare|SongDownloadEntries|SongDownloadQualityChoice|DownloadNaming|DownloadNamingExport|DownloadAttachments|DownloadQuality|DownloadCover(?:Large|Small)|ManagedDownloadAttachments|DownloadDestination|QQWebLogin|KugouQrLogin|PlatformRecommendations|QQDailyAuthorization|BackgroundPersistence|AccountMVEntry|AccountAlbumEntry|AccountPlaylistEntry|QQPlaylistEntry|KugouPlaylistEntry|KugouQrPhoto(?:Denied|Save)|QQComputerPairing|PlaylistSearch|AlbumSearch|ArtistSearch|MVSearch|SearchAssistance|MiguSearchAssistance|CatalogFavorites)$/.test(target));
@@ -742,6 +743,7 @@ try {
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
   if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');
+  if(!systemVolumeUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSystemAndAppVolumeControlsPreservePlayback');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');
   if(!classicReferenceUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicReferenceDirect');
   if(!classicUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicDirect','-skip-testing:NexusMusicUITests/SourceSettingsTests/testVisualLabClassicShortDirect');
