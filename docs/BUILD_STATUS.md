@@ -4,7 +4,9 @@
 
 正式导航覆盖四分类/两级详情返回、服务端星标页保持、原生PCM后恢复第二页、第三页120项、提交搜索与服务端歌单上下文及第二账户清空旧栈/查询；服务器21次认证成功/0失败并仅清理两个合成账户。5PNG逐张`verifyCaptureEvidence` ready且亲看。综合回归继续覆盖私人曲库凭据、4次流/4次歌词、多皮肤暂停/定位/队列、mini持久化、统计和连接移除，13次认证成功/0失败。完整哈希与失败历史见[本批回执](2026-11-02-navidrome-browse-history-report.md)。
 
-967/967检查、Node/Swift/YAML/diff检查通过。初轮`SourceUITests-1793576224837`为0/1/0、555.378秒，唯一断言把iOS AX空搜索框的占位文字误当旧值；原xcresult/failure-evidence/console保留，整轮不计通过。本机现约56.4GiB、T7约607.3GiB可用；收尾清理回执记录零内容删除。clean unsigned IPA、push和云端终态待执行，不报完整F15/S8、私有服务、实体机、签名或项目完成。
+967/967检查、Node/Swift/YAML/diff检查通过。初轮`SourceUITests-1793576224837`为0/1/0、555.378秒，唯一断言把iOS AX空搜索框的占位文字误当旧值；原xcresult/failure-evidence/console保留，整轮不计通过。本机现约56.4GiB、T7约607.3GiB可用；收尾清理回执记录零内容删除。
+
+功能提交`6522587`的清洁未签名归档manifest与HEAD一致、`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。IPA12,881,335字节、SHA-256 `d2134ee4…`；164项ZIP CRC通过，archive/IPA 138个普通文件逐项一致，正式导航标记存在且测试/私人标记与签名/描述文件排除。T7 exFAT构建目录产生81个`._*`元数据文件，已连同57个规范payload全部参与字节比较。push和云端终态待执行，不报完整F15/S8、私有服务、实体机、签名或项目完成。
 
 ## 2026-11-02 闲置安装日志完整迁移
 

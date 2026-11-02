@@ -20,7 +20,15 @@
 
 旧 Navidrome 综合回归 `SourceUITests-1793577857813` 为1/0/0、651.540秒，`sourceUnchanged=true`，源码 digest 与安装 bundle 和新导航专项一致。正式 App 继续通过账户校验、私有曲库、原生流4次、歌词4次、六个播放器皮肤的暂停/定位/队列/重启行为、迷你控件持久化、实际聆听统计和连接/凭据移除；13次认证成功、0失败。两次运行证明本批导航未破坏原播放与凭据链路。
 
-来源摘要：正式 UI run manifest `6da32aef…`、xcresult Info `061f40c3…`、截图导出索引 `62ef4be4…`、联系表 `2bff2c09…`；交叉回归 run manifest `5df631ba…`、xcresult Info `adf79b14…`。截图 `provenance-review.json` 的五项均为 ready。精确 xcresult、日志、计数和截图保留在 `build/logs/navidrome-history-ui-final-20261102/`、`build/logs/navidrome-existing-regression-final-20261102/` 与 `build/ui-screenshots/navidrome-browse-history-final-20261102/`。clean unsigned IPA、提交、push与云端终态在实际完成后补录，当前不预记。
+来源摘要：正式 UI run manifest `6da32aef…`、xcresult Info `061f40c3…`、截图导出索引 `62ef4be4…`、联系表 `2bff2c09…`、provenance review `46fe3a0c…`；交叉回归 run manifest `5df631ba…`、xcresult Info `adf79b14…`。截图 `provenance-review.json` 的五项均为 ready。精确 xcresult、日志、计数和截图保留在 `build/logs/navidrome-history-ui-final-20261102/`、`build/logs/navidrome-existing-regression-final-20261102/` 与 `build/ui-screenshots/navidrome-browse-history-final-20261102/`。
+
+## 清洁未签名归档
+
+功能提交`6522587`生成清洁未签名归档：manifest `dirty:false`、`workingTreeChanges:[]`、commit与HEAD一致，arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed:false`。IPA 12,881,335字节、SHA-256 `d2134ee41a894e6d0296aca18aa8cff89f30d4032123550646eeeaf11937baf1`；manifest SHA-256 `a57fe579f1608c9fd3aff1c15e66820ca2a04384c546df3c25e2d4bb9ecd3650`，核验回执`1a4bfc16…`。
+
+ZIP共164项、138个普通文件，CRC全通过；archive与IPA的138项逐文件字节一致，0缺失/0额外/0差异。由于本机`build/`位于T7 exFAT，归档同时包含81个`._*`扩展属性旁文件及57个规范payload；138项均参与比较并通过，Git树仍清洁。包内正式导航标记存在；`fixture-browser`、合成歌曲/歌手、测试适配器、私人端点与夹具秘密均排除，无`_CodeSignature`或描述文件。机器核验在`build/distribution/ipa-verification.json`与`build/logs/navidrome-history-archive-verification-6522587.json`。本机SDK26.2/未签名归档不替代iOS27、签名、实体机或真实私人服务。
+
+push与云端本批终态在实际完成后补录；本批不预记。
 
 ## 云端证据与诊断
 

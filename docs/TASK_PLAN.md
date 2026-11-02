@@ -6,7 +6,8 @@
 - [x] `npm run check`967/967、Node/Swift/YAML/diff检查通过；导航Release1/0/0（580.834秒）与旧Navidrome综合回归同源1/0/0（651.540秒），均`sourceUnchanged=true`。
 - [x] 5PNG来源`ready`并亲看；正式App验证真实合成PCM、播放器多皮肤、重启、账户清空/清理，服务器认证21/13次成功且均0失败。
 - [x] 初轮AX占位文字误判失败原结果、附件和根因保留；最终断言只允许空串或精确占位，旧查询仍禁止。
-- [ ] clean unsigned IPA、提交/push、iOS27本批终态；真实私人服务器、弱网/限流、实体机、签名/安装、大字号/VoiceOver、完整手势/动效及完整F15/S8继续。
+- [x] 功能提交`6522587`的clean unsigned manifest、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、archive/IPA 138个普通文件逐项字节、生产/测试/私人标记和签名/描述文件排除通过；IPA SHA-256 `d2134ee4…`。
+- [ ] push、iOS27本批终态；真实私人服务器、弱网/限流、实体机、签名/安装、大字号/VoiceOver、完整手势/动效及完整F15/S8继续。
 
 见[本批回执](2026-11-02-navidrome-browse-history-report.md)与[UI规格](ui-spec/navidrome-browse-history-2026-11-02.md)。本批只关闭音枢自有的会话内层级导航与上下文恢复增量，不声称完整私人曲库或项目完成。
 

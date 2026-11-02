@@ -4,7 +4,7 @@
 
 正式导航Release `SourceUITests-1793577102182` 1/0/0、580.834秒；原综合回归 `SourceUITests-1793577857813` 1/0/0、651.540秒，均`sourceUnchanged=true`且源码/安装bundle digest一致。967/967检查、Node/Swift/YAML/diff检查通过，5PNG来源ready并亲看。首轮唯一失败为AX对空搜索框暴露占位文字，原结果保留，最终仍禁止旧查询残留。
 
-本批为音枢自有OpenSubsonic导航补强，没有新增Sollin采集、证据结论、第三方源码或原生依赖；复用原客户端、唯一播放队列、本地收藏与账户存储边界。clean unsigned IPA、push与iOS27本批终态待补录；真实私人服务、弱网、实体机、签名、大字号/VoiceOver与完整F15/S8继续。详见[回执](2026-11-02-navidrome-browse-history-report.md)。
+本批为音枢自有OpenSubsonic导航补强，没有新增Sollin采集、证据结论、第三方源码或原生依赖；复用原客户端、唯一播放队列、本地收藏与账户存储边界。`6522587`清洁未签名归档已通过manifest、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138个archive/IPA普通文件逐项字节、生产/测试/私人与签名资源扫描；IPA SHA-256 `d2134ee4…`。push与iOS27本批终态待补录；真实私人服务、弱网、实体机、签名、大字号/VoiceOver与完整F15/S8继续。详见[回执](2026-11-02-navidrome-browse-history-report.md)。
 
 ## 2026-11-02 公开歌单默认端口回归修正
 
