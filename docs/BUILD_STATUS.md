@@ -2,7 +2,7 @@
 
 仅对精确 AMLL 命名空间启用媒体绝对时间，普通 TTML 保持父相对语义；新增缩短秒/分秒时钟，拒绝AMLL `seq`混用，背景声/翻译/罗马音按区段边界保留，ruby注音明确拒绝回退。固定库3,389候选中抽取12个真实样本，11个支持、1个ruby预期拒绝；独立oracle核对416行/3,749词/29背景词/4个边界夹紧词，无序词降级为0。978/978检查通过；最终Release AMLL、标准seq、坏TTML→LRC三组各1/0/0，8PNG provenance ready并亲看。
 
-功能提交`ce0b19d`的clean unsigned IPA为12,889,220字节、SHA-256 `1e974ad0cd323eab2b32a7607873bdb1af5cad0411353944502f5581dd96fb19`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产AMLL/ruby拒绝标记和测试/私人/签名排除通过。T7有效阶段213份/41,985,390字节逐份哈希一致并保留补充回执；内盘约53.17GiB、T7约605.97GiB，本批零删除/零个人搬移。真实歌词库App音轨、实体机/VoiceOver、完整TTML2/ruby绘制、签名、iOS27终态和全部其余F/J继续。见[本批回执](2026-11-02-amll-ttml-profile-report.md)。
+功能提交`ce0b19d`的clean unsigned IPA为12,889,220字节、SHA-256 `1e974ad0cd323eab2b32a7607873bdb1af5cad0411353944502f5581dd96fb19`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产AMLL/ruby拒绝标记和测试/私人/签名排除通过。T7有效阶段213份/41,985,390字节逐份哈希一致并保留补充回执；内盘约53.17GiB、T7约605.97GiB，本批零删除/零个人搬移。`a4b2596..cfac30c`已正常push并实核远端main一致；最新`41390545740`/`cfac30c`唯一pending，旧`41378728355`继续，队列1运行/1排队，未取消/重派。真实歌词库App音轨、实体机/VoiceOver、完整TTML2/ruby绘制、签名、iOS27终态和全部其余F/J继续。见[本批回执](2026-11-02-amll-ttml-profile-report.md)。
 
 ## 2026-11-02 有效seq TTML端到端与歌词手势修复
 
