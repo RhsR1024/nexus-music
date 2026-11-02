@@ -7,7 +7,8 @@
 - [x] r1 功能通过但截图暴露专辑人物图标，原 xcresult/截图保留；修复 `albums-outline` 后独立 r2 重跑。输入/fixture 路由/媒体/页码断言等 5 轮失败原结果均保留。
 - [x] 匿名网易云公开抽查歌曲3/275、专辑3/592、艺术家3/84且身份合法；其他四平台只复用既有契约，不声明真实五平台矩阵。
 - [x] `f611c06` clean unsigned IPA、manifest、CRC、archive/IPA 字节、生产标记及测试/私人/签名排除通过；T7 主阶段541份/129,708,228逻辑字节逐文件哈希一致。
-- [ ] push、远端 main 与 iOS27 本批终态。
+- [x] `be26761..a279581`正常push并实核远端main；最新`41406504201`/`a279581`为唯一pending，旧`41390545740`继续，队列1运行/1排队，旧pending由`queue:single`自动取代。
+- [ ] iOS27本批终态。
 - [ ] 其他四平台真实统一搜索、真实 iPhone、VoiceOver/动态字号/小屏、弱网/限流、签名/安装、连续转场录屏与完整 J25/F/J 继续。
 
 见[本批回执](2026-11-02-unified-search-report.md)与[UI规格](ui-spec/unified-search-2026-11-02.md)。J25 来源为 `U`，不新增 Sollin 证据或 strict review 声明。

@@ -105,6 +105,14 @@ T7 为真实挂载且可写的 exFAT 卷。阶段副本位于 `/Volumes/T7 Touch
 
 收尾检查时无活动 Xcode/XCTest/archive 进程。J25 在 T7 增加了约 262 MiB 主阶段证据；主阶段复制在 30 GiB 阈值以上完成，未因空间压力扩大清理范围。收尾时内盘可用 57,526,571,008 字节（约 53.58 GiB），T7 可用 649,974,120,448 字节（约 605.34 GiB）；本批删除 0 字节、搬移 0 个个人文件、搬移 0 个受保护项目文件。小型回执为 `build/logs/cleanup-2026-11-02-j25-postflight.json`，SHA-256 `00c61e8b215aad326b399c5811fa00e71dc939d1441fd5a16630c6625d221aa6`。
 
+## 远程交付与 CI
+
+`be26761..a279581` 已按正常 fast-forward push 到 `origin/main`，push 后 `git ls-remote origin refs/heads/main` 与本地交付提交均为 `a2795812b08dee6804e32723060deaa0e73c4460`。iOS 27 workflow 已创建运行 `41406504201` / `a279581`；核对时为唯一 pending。
+
+同工作流/分支仍有旧运行 `41390545740` / `cfac30c` 在执行。旧的 pending `41398183935` / `465cba4` 已由 `queue: single` 自动替换为 cancelled；没有手动取消或重派。核对状态为 **1 running / 1 pending**，符合项目队列上限。机器可读回执为 `build/logs/j25-ci-queue.json`，SHA-256 `30a8c35aa99a8fa7f2c13bbf5162263be96d3c9330a02ad4448cb91a6baf19e9`。
+
+`41406504201` 的终态尚未返回。后续只补录 CI 状态的回执文档由 workflow 的 Markdown-only `paths-ignore` 排除，不把 pending、旧运行结果或本地模拟器结果写成 iOS 27 已通过。
+
 ## Sollin 与验收边界
 
 J25 来源为用户清单 `U`。本批只复用音枢既有搜索协调器、`Discovery` 和权威队列，不新增 Sollin IPA/APK 分析、原始采集、Evidence、Finding、Path 或 strict-review 申请；因此不声明新增 Sollin 证据链，也不声明与参考版像素、动效或私有实现一致。

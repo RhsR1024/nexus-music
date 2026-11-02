@@ -4,7 +4,7 @@
 
 最终 Release `SourceUITests-1793603350460` 为 2/0/0、总执行197.277秒、`sourceUnchanged=true`，统一搜索和历史回归分别耗时107.794/29.868秒；5PNG provenance ready并亲看。978/978、完整 native、Node/Swift/YAML/diff 与完整 Release build 通过。功能通过的 r1 因截图发现专辑人物图标而由 r2 取代，r1及5轮中间失败原结果均保留。匿名网易云公开协议抽查仅证明当前歌曲/专辑/艺术家查询可读，其他四平台沿用既有契约。
 
-`f611c06` 清洁未签名 IPA 为12,900,173字节、SHA-256 `fa85e757…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节一致，生产标记和测试/私人/签名排除通过。T7 主阶段541份/129,708,228逻辑字节逐文件哈希一致，源证据保留。J25 来源为用户清单 `U`，无新增 Sollin 证据/strict review；push、真实五平台、实体机、VoiceOver、iOS27 与签名继续，不报完整 J25 或全项目完成。见[回执](2026-11-02-unified-search-report.md)。
+`f611c06` 清洁未签名 IPA 为12,900,173字节、SHA-256 `fa85e757…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节一致，生产标记和测试/私人/签名排除通过。T7 主阶段541份/129,708,228逻辑字节逐文件哈希一致，源证据保留。`be26761..a279581`已正常push并实核远端main；最新`41406504201`/`a279581`为唯一pending，`41390545740`继续，队列1运行/1排队，未手动取消/重派。J25 来源为用户清单 `U`，无新增 Sollin 证据/strict review；iOS27终态、真实五平台、实体机、VoiceOver 与签名继续，不报完整 J25 或全项目完成。见[回执](2026-11-02-unified-search-report.md)。
 
 ## 2026-11-02 J26 App 与系统输出音量分离
 

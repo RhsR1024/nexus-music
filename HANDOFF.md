@@ -4,7 +4,7 @@
 
 最终 Release `SourceUITests-1793603350460` 为 2/0/0、总执行197.277秒，`sourceUnchanged=true`；统一搜索用例 107.794秒，历史回归 29.868秒，5PNG provenance ready并亲看。978/978、完整native、Node/Swift/YAML/diff与最终Release build通过。最终r1功能通过但截图发现专辑人物图标，原xcresult与截图保留；修正 `albums-outline` 后完整重跑r2。另有5轮输入、fixture路由/媒体与第二页索引失败原证据保留。匿名网易云公开抽查取得歌曲3/275、专辑3/592、艺术家3/84；其余四平台只复用既有契约，不冒充五平台真实矩阵。
 
-功能提交`f611c06`的clean unsigned IPA为12,900,173字节、SHA-256`fa85e757…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记及测试/私人/签名排除通过。T7阶段主payload 541份/129,708,228逻辑字节逐份哈希一致，含exFAT元数据共1,114份/132,392,245字节；源原件保留，本批零删除/零个人搬移。收尾内盘约53.58GiB、T7约605.34GiB可用，活动构建0，清理回执SHA-256`00c61e8b…`。J25来源为`U`，未新增Sollin采集、Evidence或strict review结论。push、远端与iOS27终态待核对；真实五平台矩阵、实体机/VoiceOver、签名/弱网和动效继续，不报J25/F/J或全项目完成。见[本批回执](docs/2026-11-02-unified-search-report.md)与[UI规格](docs/ui-spec/unified-search-2026-11-02.md)。
+功能提交`f611c06`的clean unsigned IPA为12,900,173字节、SHA-256`fa85e757…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记及测试/私人/签名排除通过。T7阶段主payload 541份/129,708,228逻辑字节逐份哈希一致，含exFAT元数据共1,114份/132,392,245字节；源原件保留，本批零删除/零个人搬移。收尾内盘约53.58GiB、T7约605.34GiB可用，活动构建0，清理回执SHA-256`00c61e8b…`。`be26761..a279581`已正常push并实核远端main一致；最新`41406504201`/`a279581`为唯一pending，`41390545740`/`cfac30c`继续执行，队列1运行/1排队，旧pending由`queue:single`取代，未手动取消或重派。J25来源为`U`，未新增Sollin采集、Evidence或strict review结论。iOS27本批终态待返回；真实五平台矩阵、实体机/VoiceOver、签名/弱网和动效继续，不报J25/F/J或全项目完成。见[本批回执](docs/2026-11-02-unified-search-report.md)与[UI规格](docs/ui-spec/unified-search-2026-11-02.md)。
 
 ## 2026-11-02 J26 App 与系统输出音量分离
 
