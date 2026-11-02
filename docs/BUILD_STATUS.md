@@ -1,3 +1,7 @@
+## 2026-11-03 合成授权网易云私人FM正式 App 纵向验收
+
+正式Release使用固定合成账号/Keychain会话、合成FM响应和WAV，经生产账号、FM协调器、唯一权威队列及原生PCM验证首次播放、低水位暂停、去重追加、终止后迟到隔离、重启、空/错响应保留当前曲及清理。`SourceUITests-1793646248544`为1/0/0、222.427秒、`sourceUnchanged=true`；5次FM请求、2次释放、0次鉴权失败，6PNG provenance ready并逐张亲看。提交前990检查、完整native、build/archive及IPA ZIP/逐文件/隐私/签名检查通过，`ipa --review` 56E/21WI/119时间线/47F/47P、0错误/0警告。详见[回执](2026-11-03-account-fm-station-vertical-report.md)。
+
 ## 2026-11-02 粉调磁带封面 clean unsigned archive
 
 产品提交 `6785769` 的 `npm run ios:archive` 成功。manifest 记录 `dirty:false`、`workingTreeChanges:[]`、同一 HEAD、arm64/iphoneos26.2/iOS15.1/设备族 `[1,2]`、`signed:false`，SHA-256 `78c4b7de9fb4eb8c7611c0e35a6f8a239a5d61ff6e7113f8f56e38810fc641e4`。

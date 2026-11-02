@@ -33,3 +33,11 @@
 - 未用真实网易账号、真实网络与实际音频验证续批；未验证后台/锁屏/自然结束、服务返回极小批次或持续全重复时的真实行为；这些只在本批单测中模拟，不冒充真实服务通过。
 - 未执行本批云端iOS 27构建、Apple签名或真机验收。
 - UI Phase 0仍为 **2/5** 静态对齐（4855、4856）；经典4854歌词区域仍以r49的SSIM 79.52%/ΔE 5.34为最佳已知状态，r53负证据见[记录](ui-spec/classic-4854-r53-active-embolden-2026-10-23.md)。下一批回到4851黑胶与4861 AM歌词的冻结锚点/关键区工作。
+
+## 2026-11-03 合成授权账号正式 App 纵向复测
+
+新增正式 Release XCUITest，使用固定合成网易云账号、Keychain 会话、FM 响应和 WAV，经生产 `MusicAccounts`、`AccountFmClient`、`AccountFmStation`、唯一权威队列和原生 PCM 通路完成首次播放、低水位暂停、去重追加、进程终止迟到隔离、重启恢复、空批次和失败重试保留当前曲。测试入口只在 `NEXUS_UI_ACCOUNT_FM_FIXTURE=1` 时保存合成会话，生产 `index.ts` 不导入该入口。
+
+最终 `SourceUITests-1793646248544` 为1通过/0失败/0跳过、222.427秒、`sourceUnchanged=true`；首轮 `1/2/3/4`、低水位 `5/6/3/5`，去重后共有六项，当前 `3/6`；终止后释放迟到响应并重启仍为 `5/6`，无第7首；空/错批次均保持FM5。最终服务计数为5次FM请求、2次释放、0次鉴权失败。6张1290×2796 PNG逐张亲看，provenance `ready=true`。
+
+`npm run check` 990/990、完整 native、`ios:build` 和提交前 `ios:archive` 通过；IPA/APK离线门禁复用既有 scope，`ipa --review` 为56 Evidence/21 Work Items/119 timeline/47 Finding/47 Path、0错误/0警告。此项关闭“合成授权下的正式 App 纵向路径”，不关闭真实网易账号、真实个性化、实体机、后台/锁屏、签名或完整FM。详细证据与失败修正见[专项回执](2026-11-03-account-fm-station-vertical-report.md)。

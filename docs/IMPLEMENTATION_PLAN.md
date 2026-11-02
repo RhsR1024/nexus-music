@@ -1,3 +1,11 @@
+## 2026-11-03 合成授权网易云私人FM正式 App 纵向验收
+
+新增测试专用但使用正式业务组件的私人FM纵向路径：`NEXUS_UI_ACCOUNT_FM_FIXTURE=1`保存固定合成账号和Keychain会话，生产`MusicAccounts`/`AccountFmClient`/`AccountFmStation`/唯一权威队列/原生PCM不变；生产`index.ts`不导入测试入口。本地同步服务器提供合成响应，覆盖`normal/empty/error`、下一响应挂起和请求/释放/鉴权计数。
+
+最终Release验证首次FM实音与进度、低水位暂停、`5/6/3/5`去重追加、当前`3/6`、终止后迟到隔离、重启`5/6`、空/错批次保持FM5以及账号/音源清理。6PNG逐张亲看且provenance ready；测试5次FM请求、2次释放、0次鉴权失败。990/990检查、完整native、Release build、unsigned archive与IPA结构/隐私检查通过，`ipa --review`严格复核0错误/0警告。
+
+真实网易账号、真实个性化、真实网络/限流、自然曲尾长时续批、后台/锁屏、实体iPhone、VoiceOver/动态字号/小屏、签名和iOS27终态仍待。详见[专项回执](2026-11-03-account-fm-station-vertical-report.md)。
+
 ## 2026-11-03 定制风格化推荐
 
 `StyleRecommendationSheet`从正式发现页入口打开，按曲风、语种、情感、主题和场景展示平台公开分类。选择集合最多五个唯一标签，超出时禁用第6个；移除、清空、维度切换和计数共用同一状态。分类读取及生成分别持有代次和`AbortSignal`，关闭、取消、重试和重开都会终止旧请求并在发布前复核代次。

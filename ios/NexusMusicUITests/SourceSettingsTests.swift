@@ -2381,6 +2381,181 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(settingsLogin.waitForExistence(timeout:15),"The account card CTA must open the existing NetEase login entry")
     let routed=XCTAttachment(screenshot:app.screenshot());routed.name="Account recommendations login route";routed.lifetime = .keepAlways;add(routed)
   }
+  func testAccountFmStationContinuation() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_ACCOUNT_FM_FIXTURE"]="1"
+    app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<28 {
+        if waitForHittable(element,timeout:0.2){return}
+        let above=element.exists&&element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.7))
+          .press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.35)))
+      }
+      XCTAssertTrue(waitForHittable(element,timeout:5),"FM fixture control must be reachable: \(element)")
+    }
+    func control(_ query:String="") throws -> [String:Any] {
+      let suffix=query.isEmpty ? "" : "?\(query)&"
+      let url=URL(string:"http://127.0.0.1:18439/account-fm-fixture-control\(suffix)t=\(Date().timeIntervalSince1970)")!
+      let data=try Data(contentsOf:url)
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:data) as? [String:Any])
+    }
+    func waitControl(_ description:String,_ predicate:@escaping ([String:Any])->Bool) {
+      let deadline=Date().addingTimeInterval(20)
+      repeat {
+        if let state=try? control(),predicate(state){return}
+        RunLoop.current.run(until:Date().addingTimeInterval(0.2))
+      }while Date()<deadline
+      XCTFail("Timed out waiting for FM fixture state: \(description)")
+    }
+    func requestCount(_ state:[String:Any])->Int{(state["requests"] as? [[String:Any]])?.count ?? 0}
+    func goLibrary(){
+      let detailsClose=app.buttons["收起播放选项"].firstMatch
+      if detailsClose.exists{
+        reveal(detailsClose);detailsClose.tap();_ = waitForGone(detailsClose,timeout:5)
+      }
+      let close=app.buttons["收起播放页"].firstMatch
+      if waitForHittable(close,timeout:0.5){close.tap();_ = waitForGone(close,timeout:5)}
+      let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch
+      let tab=rail.exists ? rail:app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch
+      XCTAssertTrue(tab.waitForExistence(timeout:15));XCTAssertTrue(waitForHittable(tab,timeout:10));tab.tap()
+    }
+    func removeUnifiedSourceIfPresent(){
+      openSettings(app,page:"sources")
+      let previous=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Unified Search Fixture").firstMatch
+      if !previous.exists{return}
+      reveal(previous);previous.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+      XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
+    }
+    _=try control("reset=1")
+    removeUnifiedSourceIfPresent()
+    openSettings(app,page:"sources")
+    let source=app.textFields["音源订阅地址"]
+    XCTAssertTrue(source.waitForExistence(timeout:10))
+    source.tap()
+    source.typeText("http://127.0.0.1:18439/unified-search-source.js")
+    source.typeText("\n")
+    XCTAssertEqual(source.value as? String,"http://127.0.0.1:18439/unified-search-source.js")
+    let importSource=app.buttons["从地址导入"];reveal(importSource);importSource.tap()
+    let enable=app.buttons["启用音源：Nexus Unified Search Fixture"]
+    XCTAssertTrue(enable.waitForExistence(timeout:15));reveal(enable);enable.tap()
+    XCTAssertTrue(app.buttons["停用音源：Nexus Unified Search Fixture"].waitForExistence(timeout:10))
+    openSettings(app,page:"playback")
+    let basic=app.descendants(matching:.any).matching(identifier:"128k").firstMatch
+    reveal(basic);if !basic.isSelected{basic.tap()}
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:basic)],timeout:10),.completed)
+    selectClassicSourcePlayback(in:app)
+
+    goLibrary()
+    let start=app.buttons["account-fm-start"]
+    reveal(start);start.tap()
+    let firstRow=app.descendants(matching:.any).matching(identifier:"account-fm-track-0").firstMatch
+    XCTAssertTrue(firstRow.waitForExistence(timeout:20),"Authorized FM rows must be rendered from the fixture response")
+    let mini=app.buttons["打开播放页"]
+    XCTAssertTrue(mini.waitForExistence(timeout:20));mini.tap()
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    XCTAssertTrue(progress.waitForExistence(timeout:20))
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:45),"The FM track must reach the real native PCM path")
+    let before=progress.value as? String ?? ""
+    RunLoop.current.run(until:Date().addingTimeInterval(3))
+    XCTAssertNotEqual(progress.value as? String,before,"FM playback progress must advance")
+    XCTAssertTrue(app.staticTexts["Synthetic account FM 1"].waitForExistence(timeout:15))
+    image("Private FM starts with an authorized synthetic account and actual progress")
+
+    _=try control("holdNext=1")
+    let next=app.buttons["下一首"].firstMatch
+    reveal(next);next.tap();XCTAssertTrue(app.staticTexts["Synthetic account FM 2"].waitForExistence(timeout:10))
+    reveal(next);next.tap();XCTAssertTrue(app.staticTexts["Synthetic account FM 3"].waitForExistence(timeout:10))
+    waitControl("one held low-watermark request"){state in requestCount(state)==2&&(state["held"] as? Int)==1}
+    let pause=app.buttons["暂停"].firstMatch;reveal(pause);pause.tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))
+    let heldState=try control();XCTAssertEqual(heldState["authFailures"] as? Int,0)
+    image("Low-watermark FM request is in flight while the current track stays paused")
+    _=try control("release=1")
+    waitControl("deduplicated batch append"){state in (state["held"] as? Int)==0&&((state["released"] as? Int) ?? 0)>=1}
+
+    let openQueue=app.buttons["查看播放队列"].firstMatch
+    reveal(openQueue);openQueue.tap()
+    let fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
+    XCTAssertTrue(fullQueue.waitForExistence(timeout:10));reveal(fullQueue);fullQueue.tap()
+    XCTAssertTrue(app.staticTexts["· 3/6"].waitForExistence(timeout:10),"The current track and six-item authoritative queue must remain unchanged except for the appended two tracks")
+    for value in 1...6{
+      let row=app.buttons["\(value). Synthetic account FM \(value)"]
+      XCTAssertTrue(row.waitForExistence(timeout:5),"FM queue row \(value) must be unique and ordered")
+      reveal(row)
+      XCTAssertTrue(row.isHittable,"FM queue row \(value) must remain reachable in the authoritative queue")
+    }
+    XCTAssertFalse(app.buttons["7. Synthetic account FM 7"].exists)
+    image("FM continuation appends two unique tracks after the current item")
+    app.buttons["收起队列"].tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["Synthetic account FM 3"].exists,"Releasing a prefetch must not change the current track")
+
+    let details=app.descendants(matching:.any).matching(identifier:"player-details-scroll").firstMatch
+    let resume=details.buttons["播放"].firstMatch
+    XCTAssertTrue(resume.waitForExistence(timeout:10));reveal(resume);resume.tap()
+    XCTAssertTrue(details.buttons["暂停"].firstMatch.waitForExistence(timeout:10))
+    _=try control("holdNext=1")
+    let detailNext=details.buttons["下一首"].firstMatch
+    reveal(detailNext);detailNext.tap();XCTAssertTrue(app.staticTexts["Synthetic account FM 4"].waitForExistence(timeout:10))
+    reveal(detailNext);detailNext.tap();XCTAssertTrue(app.staticTexts["Synthetic account FM 5"].waitForExistence(timeout:10))
+    waitControl("a held response during app termination"){state in requestCount(state)==3&&(state["held"] as? Int)==1}
+    app.terminate()
+    _=try control("release=1")
+    app.launch()
+
+    goLibrary()
+    XCTAssertTrue(app.buttons["打开播放页"].waitForExistence(timeout:15));app.buttons["打开播放页"].tap()
+    let restoredQueue=app.buttons["查看播放队列"].firstMatch;reveal(restoredQueue);restoredQueue.tap()
+    let restoredFullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
+    XCTAssertTrue(restoredFullQueue.waitForExistence(timeout:10));reveal(restoredFullQueue);restoredFullQueue.tap()
+    XCTAssertTrue(app.staticTexts["· 5/6"].waitForExistence(timeout:10),"A response released after process termination must not publish")
+    let sixth=app.buttons["6. Synthetic account FM 6"]
+    XCTAssertTrue(sixth.waitForExistence(timeout:5))
+    reveal(sixth);XCTAssertTrue(sixth.isHittable)
+    XCTAssertFalse(app.buttons["7. Synthetic account FM 7"].exists,"Late FM response must not append after relaunch")
+    image("Restarted FM queue rejects the late response and remains at six items")
+    app.buttons["收起队列"].tap()
+
+    _=try control("mode=empty")
+    goLibrary()
+    let emptyRefresh=app.buttons["account-fm-refresh"]
+    if waitForHittable(emptyRefresh,timeout:2){
+      emptyRefresh.tap()
+    }else{
+      // A relaunch creates a fresh session cache, so the normal start action
+      // performs the first request. If this view already has a ready batch,
+      // the refresh action above forces the empty response instead.
+      let emptyStart=app.buttons["account-fm-start"]
+      reveal(emptyStart);emptyStart.tap()
+    }
+    XCTAssertTrue(app.staticTexts["account-fm-empty"].waitForExistence(timeout:15))
+    let emptyCurrent=app.buttons["打开播放页"]
+    XCTAssertTrue(emptyCurrent.waitForExistence(timeout:10));emptyCurrent.tap()
+    XCTAssertTrue(app.staticTexts["Synthetic account FM 5"].waitForExistence(timeout:10),"An empty FM batch must keep the current authoritative track")
+    image("Authorized FM preserves the current queue on an empty batch")
+    goLibrary()
+    _=try control("mode=error")
+    let retry=app.buttons["account-fm-retry"];reveal(retry);retry.tap()
+    XCTAssertTrue(app.staticTexts["account-fm-error"].waitForExistence(timeout:15))
+    let errorCurrent=app.buttons["打开播放页"]
+    XCTAssertTrue(errorCurrent.waitForExistence(timeout:10));errorCurrent.tap()
+    XCTAssertTrue(app.staticTexts["Synthetic account FM 5"].waitForExistence(timeout:10),"Failed FM retry must keep the current authoritative track")
+    image("Authorized FM keeps the current track after a failed retry")
+    goLibrary()
+
+    openSettings(app,page:"accounts")
+    let removeAccount=app.buttons["remove-music-account-wy"]
+    XCTAssertTrue(removeAccount.waitForExistence(timeout:10));removeAccount.tap()
+    XCTAssertTrue(app.buttons["login-music-account-wy"].waitForExistence(timeout:10))
+    openSettings(app,page:"sources")
+    let removeSource=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Unified Search Fixture").firstMatch
+    XCTAssertTrue(removeSource.waitForExistence(timeout:10));reveal(removeSource);removeSource.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+    XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
+    let finalState=try control();XCTAssertEqual(finalState["authFailures"] as? Int,0)
+    XCTAssertGreaterThanOrEqual(requestCount(finalState),5)
+    XCTAssertGreaterThanOrEqual(finalState["released"] as? Int ?? 0,2)
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.
