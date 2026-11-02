@@ -4,7 +4,7 @@
 
 最终 Release `SourceUITests-1793598879537` 为1/0/0、169.709秒，`sourceUnchanged=true`；源码 digest `ababbd4f…`、安装 bundle `cbeac737…`、JS bundle `8d6d51e2…`、xcresult Info `85c372b3…`。测试用真实解码合成流暂停后验证 App 音量30%跨 Home/终止重启、暂停时间和“1首”权威队列保持，再恢复到100%并清理夹具。2PNG逐张 provenance ready并亲看；r7 `SourceUITests-1793598350996` 执行成功但视觉证据不足，原 xcresult与附件保留。
 
-978/978、完整 native、Pods、Swift/Node/diff和最终`ios:build`通过。功能提交`02e96bd`的clean unsigned IPA为12,894,336字节、SHA-256 `2a404ba8cfbce0fba73647f8f624c397eedb7f0c23aedcb5d696c87769715d9e`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记及测试/私人/签名排除通过。T7阶段`2026-11-02-device-volume-control-02e96bd/`共229份/42,962,837字节（含exFAT `._*` 元数据）逐份一致；内盘约52.3GiB、T7约606GiB，本批零删除/零个人搬移。实体系统音量、VoiceOver手势、耳机/蓝牙/AirPlay、路由断开/中断、iOS27、签名和实体机仍待，J26/F29未完成。见[本批回执](2026-11-02-device-volume-control-report.md)。
+978/978、完整 native、Pods、Swift/Node/diff和最终`ios:build`通过。功能提交`02e96bd`的clean unsigned IPA为12,894,336字节、SHA-256 `2a404ba8cfbce0fba73647f8f624c397eedb7f0c23aedcb5d696c87769715d9e`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记及测试/私人/签名排除通过。T7阶段`2026-11-02-device-volume-control-02e96bd/`共229份/42,962,837字节（含exFAT `._*` 元数据）逐份一致；内盘约52.3GiB、T7约606GiB，本批零删除/零个人搬移。`5522533..465cba4`已正常push并实核远端main一致；最新`41398183935`/`465cba4`唯一pending，`41390545740`继续运行，队列1运行/1排队，未取消/重派，iOS27终态继续。实体系统音量、VoiceOver手势、耳机/蓝牙/AirPlay、路由断开/中断、iOS27、签名和实体机仍待，J26/F29未完成。见[本批回执](2026-11-02-device-volume-control-report.md)。
 
 ## 2026-11-02 AMLL TTML 命名空间时间配置
 

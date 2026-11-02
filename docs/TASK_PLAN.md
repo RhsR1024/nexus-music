@@ -6,7 +6,8 @@
 - [x] 最终 Release `SourceUITests-1793598879537` 1/0/0、169.709秒、`sourceUnchanged=true`；真实解码合成流暂停、App音量后台/终止持久化、播放时间与单一队列保持，2PNG provenance ready并亲看。
 - [x] r7 已执行通过但截图暴露不可见 slider 空白，原 xcresult/附件保留；修正后 r8 重新执行，不放宽既有断言。
 - [x] 功能提交`02e96bd` clean unsigned IPA、manifest/ZIP CRC/archive与IPA逐文件字节、生产标记、测试/私人/签名排除和 T7 229份/42,962,837字节（含exFAT `._*` 元数据）逐份哈希通过。
-- [ ] push与iOS27本批终态；实体系统音量变化、VoiceOver实际操作、耳机/蓝牙/AirPlay、路由断开/中断、签名/安装和实体iPhone继续。
+- [x] `5522533..465cba4`正常push并实核远端main；最新`41398183935`唯一pending、`41390545740`继续运行，队列1运行/1排队，未取消/重派。
+- [ ] iOS27本批终态；实体系统音量变化、VoiceOver实际操作、耳机/蓝牙/AirPlay、路由断开/中断、签名/安装和实体iPhone继续。
 
 见[本批回执](2026-11-02-device-volume-control-report.md)与[UI规格](ui-spec/device-volume-control-2026-11-02.md)。本批只关闭正式设置中的音量分离与模拟器纵向路径增量，不关闭 J26/F29 或全项目。
 

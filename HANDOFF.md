@@ -2,7 +2,7 @@
 
 正式播放设置现在明确区分音枢 App 相对音量与当前 iOS 输出设备的系统音量。真机分支使用 Apple 公共 `MPVolumeView`，系统音量、耳机/蓝牙/AirPlay 路由和当前输出设备由 iOS 管理；音枢不保存系统音量镜像、不枚举设备、不建立第二播放器，单一权威队列和暂停意图不变。模拟器不提供系统滑块时显示并暴露“当前环境未提供系统音量滑块”，不再显示不可见内部 slider 的伪 0%。
 
-最终 Release `SourceUITests-1793598879537` 为1/0/0、169.709秒，`sourceUnchanged=true`；真实解码合成流后暂停，App 音量80%→30%跨Home和终止重启保持，播放时间与“1首”队列不变，最后恢复100%并清理夹具。两张PNG provenance ready并亲看。先通过但视觉不足的r7 `SourceUITests-1793598350996`及完整附件保留。978/978、完整native、Pods、Swift/Node/diff和最终`ios:build`通过。功能提交`02e96bd`的clean unsigned IPA为12,894,336字节、SHA-256`2a404ba8…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记及测试/私人/签名排除通过，T7阶段229份/42,962,837字节（含exFAT `._*` 元数据）逐份哈希一致，内盘约52.3GiB可用且本批零删除/零个人搬移。实体系统音量变化、实际 VoiceOver 手势、耳机/蓝牙/AirPlay、路由断开、音频中断、iOS27、签名与实体机继续；不报J26/F29或全项目完成。见[本批回执](docs/2026-11-02-device-volume-control-report.md)与[UI规格](docs/ui-spec/device-volume-control-2026-11-02.md)。
+最终 Release `SourceUITests-1793598879537` 为1/0/0、169.709秒，`sourceUnchanged=true`；真实解码合成流后暂停，App 音量80%→30%跨Home和终止重启保持，播放时间与“1首”队列不变，最后恢复100%并清理夹具。两张PNG provenance ready并亲看。先通过但视觉不足的r7 `SourceUITests-1793598350996`及完整附件保留。978/978、完整native、Pods、Swift/Node/diff和最终`ios:build`通过。功能提交`02e96bd`的clean unsigned IPA为12,894,336字节、SHA-256`2a404ba8…`；manifest clean、arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节、生产标记及测试/私人/签名排除通过，T7阶段229份/42,962,837字节（含exFAT `._*` 元数据）逐份哈希一致，内盘约52.3GiB可用且本批零删除/零个人搬移。`5522533..465cba4`已正常push并实核远端main一致；最新`41398183935`/`465cba4`为唯一pending，`41390545740`继续运行，队列1运行/1排队，未取消/重派，iOS27终态继续。实体系统音量变化、实际 VoiceOver 手势、耳机/蓝牙/AirPlay、路由断开、音频中断、iOS27、签名与实体机继续；不报J26/F29或全项目完成。见[本批回执](docs/2026-11-02-device-volume-control-report.md)与[UI规格](docs/ui-spec/device-volume-control-2026-11-02.md)。
 
 ## 2026-11-02 AMLL TTML 命名空间时间配置
 

@@ -4,7 +4,7 @@
 
 最终 Release `SourceUITests-1793598879537` 为 1/0/0、169.709秒，`sourceUnchanged=true`。正式设置中真实合成流进入 PCM 后暂停，App 音量80%→30%跨 Home 和进程重启保持，暂停时间及权威队列“1首”不变，最终恢复100%并清理夹具；2PNG provenance ready并亲看。978/978、完整 native、Pods、Swift/Node/diff和最终 Release build通过。r7 执行通过但截图暴露不可见 slider 空白，原证据保留后修正并重跑 r8。
 
-功能提交`02e96bd`的清洁未签名 IPA为12,894,336字节、SHA-256`2a404ba8…`；arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节一致，生产 `DeviceVolume` 标记存在，测试/私人/签名资源排除。T7阶段229份/42,962,837字节（含exFAT `._*` 元数据）逐份哈希一致。实体系统音量变化、实际 VoiceOver 手势、输出路由切换/断开、音频会话中断、iOS27、签名/安装和实体机继续；J26/F29整体未关闭。见[回执](2026-11-02-device-volume-control-report.md)与[UI规格](ui-spec/device-volume-control-2026-11-02.md)。
+功能提交`02e96bd`的清洁未签名 IPA为12,894,336字节、SHA-256`2a404ba8…`；arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节一致，生产 `DeviceVolume` 标记存在，测试/私人/签名资源排除。T7阶段229份/42,962,837字节（含exFAT `._*` 元数据）逐份哈希一致。`5522533..465cba4`已正常push并实核远端main一致；最新`41398183935`/`465cba4`唯一pending，`41390545740`继续运行，队列1运行/1排队，未取消/重派。实体系统音量变化、实际 VoiceOver 手势、输出路由切换/断开、音频会话中断、iOS27、签名/安装和实体机继续；J26/F29整体未关闭。见[回执](2026-11-02-device-volume-control-report.md)与[UI规格](ui-spec/device-volume-control-2026-11-02.md)。
 
 ## 2026-11-02 AMLL TTML 命名空间时间配置
 

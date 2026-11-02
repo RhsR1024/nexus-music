@@ -63,6 +63,12 @@ IPA 为 **12,894,336 字节**，SHA-256 `2a404ba8cfbce0fba73647f8f624c397eedb7f0
 
 阶段收尾实测内盘约 52.3 GiB、T7 约 606 GiB 可用，未发现活动 Xcode、Pods、归档或提取进程。最末有效 r8、r7 已解决视觉问题和 IPA 均保留，`build/DeviceDerivedData` 是当前可重建增量缓存且剩余空间高于 30 GiB；本轮删除 0 字节、个人文件搬移 0 字节。精确空间、候选与保留理由见 `build/logs/cleanup-2026-11-02-device-volume-control.json`。
 
+## Push 与云端队列
+
+`5522533..465cba4` 已通过普通 `git push origin main` 推送，没有 force push。GitHub API 实核远端 `main` 为 `465cba414f4ed8168073d2e783085ae7e3d83d25`，与本地 HEAD 一致。
+
+推送后 iOS 27 工作流创建运行 `41398183935`（`465cba4`，`pending`）。先前 `41390545740`（`cfac30c`，`in_progress`）继续执行；快照为 1 个运行中、1 个排队，符合 `queue: single` / `cancel-in-progress: false`。没有取消运行中任务、手动重派旧版本或提前宣称 iOS 27 通过。该运行失败时仍需取得诊断、定位根因并在当前授权批次修复。
+
 ## 未闭环边界
 
 当前没有实体 iPhone、耳机、蓝牙或 AirPlay 接收端。以下均未验收：实体输出音量数值变化、VoiceOver 实际上滑/下滑调整、路由切换/断开、音频会话中断、静音开关行为、iOS 27 云端运行、Apple 签名和覆盖安装。
