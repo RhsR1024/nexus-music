@@ -40,4 +40,12 @@
 
 ## 清洁未签名归档
 
-待功能提交后，从清洁 HEAD 生成并核验 arm64/iphoneos、最低 iOS 15.1、设备族 `[1,2]`、未签名/无描述文件、ZIP CRC、archive/IPA 字节一致及测试/私人资源排除；精确字节数、SHA-256 与 manifest receipt 在归档完成后补录。
+功能提交 `b512848c92827939d71769d845eafbde2e5cd0d1` 已从清洁工作区生成未签名归档。manifest `dirty:false`、`workingTreeChanges:[]`、commit 与 HEAD 一致；机器核验记录保存在 `build/logs/mv-lifecycle-archive-verification-b512848.json`，SHA-256 `3d3c016f78ebb5bb0fbd503b338b3ff9f5c9654f894683f6817634dd25a78037`，`ready:true`、0 failures。
+
+IPA 为 12,884,632 字节、SHA-256 `b3bb9d4bc7659817fa6ac2b58f358896639466d07738d62623be9c5facf03b20`；build manifest SHA-256 `675f15e225bd6cab3997a9468a999756d29c01279441eec0f4048389566abdd3`。归档为 arm64、iphoneos26.2、最低 iOS 15.1、设备族 `[1,2]`、bundle `com.nexusmusic.app`；`codesign` 明确返回“code object is not signed at all”，无 `_CodeSignature`、`.mobileprovision` 或 `.provisionprofile`。
+
+ZIP 共 164 项，其中 138 个普通文件、57 个规范 payload 与 81 个 exFAT `._*` 旁文件；CRC 0 错误，archive/IPA 的 138 项逐文件字节比较 0 缺失、0 额外、0 差异。Hermes 产物含 `mv-media-status`、`mv-native-page` 生产标记；固定测试适配器、合成/私人端点及既有夹具标记均未命中。精确 archive Info、主程序和 JS bundle SHA-256 分别为 `dd9d3304…`、`05d4dfe6…`、`a2471239…`。
+
+首轮深度核验误把 Swift 类名 `NexusPublicMVView` 当作 Hermes JS 标记，因原生类名不出现在 JS bundle 而正确返回失败；该回执保留为 `mv-lifecycle-archive-verification-b512848-attempt1-invalid-native-marker.json`。修正为正式 React Native 组件标记 `mv-media-status`/`mv-native-page` 后重跑全部结构与字节检查并通过，并非放宽 CRC、签名或 payload 比较。
+
+阶段副本位于 T7 `NexusMusic/BuildArchive/2026-11-02-mv-lifecycle-b512848/`，包含 IPA、manifest、两份核验回执、构建日志、精确 xcresult、四张截图、UI 摘要与清理预检；69 份文件、27,110,741 字节全部源/目标 SHA-256 一致，copy manifest SHA-256 `e7e84307522c32a0034f330c63eb5c6ded26e461c436a246c4437f2ff8fa2d7c`。本机原证据仍保留。收尾空间复核不删除任何内容，内盘约 55.3GiB、T7 约 606.7GiB 可用；活动构建为 0，`build/logs/cleanup-2026-11-02-mv-lifecycle-postflight.json` SHA-256 `5e509b808808ec7c9c5d125b3c0dfd2b52b1b60bdf98b997dc652634e958ede7`，恢复无需操作。

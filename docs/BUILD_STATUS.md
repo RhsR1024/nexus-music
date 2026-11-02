@@ -2,7 +2,7 @@
 
 公开 MV 原生 WebKit 页面已在可见前台文档中轮询有界媒体状态，后台/隐藏/暂停时停止；状态与 `fullscreenState` 经现有 native event 显示，不改变权威音乐队列或持久状态。真实酷狗公开页面由可见控件进入 WebKit `playing`，系统原生 AV 全屏可打开/退出；系统层期间根 WebView 仍报告 `inline`，本批明确区分系统原生全屏与 WebKit `fullscreenState`。Home 后媒体为 `suspended` 或 `paused` 且不自动续播，音乐保持同暂停进度和队列。
 
-967/967检查和完整 native/Node/Swift/YAML/diff通过；最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒、`sourceUnchanged=true`，4PNG provenance ready并亲看。首次 Command Line Tools 工具环境失败原证据保留，之后显式加载项目 Xcode 环境通过；IPA/APK strict review 0错误/0警告，无新增 Sollin 采集。clean unsigned IPA、push、iOS27终态与实体机/签名/弱网/跨平台MV继续，见[回执](2026-11-02_mv-media-lifecycle-report.md)。
+967/967检查和完整 native/Node/Swift/YAML/diff通过；最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒、`sourceUnchanged=true`，4PNG provenance ready并亲看。首次 Command Line Tools 工具环境失败原证据保留，之后显式加载项目 Xcode 环境通过；IPA/APK strict review 0错误/0警告，无新增 Sollin 采集。`b512848`的clean unsigned IPA为12,884,632字节、SHA-256 `b3bb9d4b…`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC/138项逐文件字节、生产标记与无签名/描述文件检查通过，T7 69份阶段副本哈希一致。push、iOS27终态与实体机/签名/弱网/跨平台MV继续，见[回执](2026-11-02_mv-media-lifecycle-report.md)。
 
 ## 2026-11-02 Navidrome 浏览历史本地验收
 
