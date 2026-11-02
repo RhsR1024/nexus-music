@@ -6,6 +6,8 @@ IPA为12,899,521字节、SHA-256 `648ae07add5b894916e84642096b880f3c036c3733e1e5
 
 最终Migu/MV Release `1793623216513`为1/0/0、219.732秒，`sourceUnchanged=true`；云备份`1793621671370`与Navidrome页签`1793622026059`各1/0/0。只证明iOS26.3.1模拟器与unsigned archive，不证明iOS27、签名、实体机或真实咪咕视频/声音/全屏。详见[专项回执](2026-11-02-migu-official-mv-detail-report.md)。
 
+`8053354..dfba72a`已正常push并实核远端main一致。push后`41435198362`运行、`41449172204`/`dfba72a`唯一pending，队列1运行/1排队，未手动取消或重派。T7阶段`2026-11-02-migu-mv-8053354`完成238个源文件逐份SHA-256对比与`SHA256SUMS`全量复核，均0失败；最终清单哈希保存在该阶段的`transfer-receipt.json`。源证据保留，本批零删除、零个人文件搬移。
+
 ## 2026-11-02 iOS 27 发现页初始链接种子输入修复
 
 `ea134a9`的clean unsigned archive在`npm run ios:archive`中输出`ARCHIVE SUCCEEDED`。manifest对应同一提交，`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed=false`。IPA为12,900,214字节、SHA-256`3ecd59c0e5eaef1273674b1987edd3fd56e89fb3bb6da7066e09d2ad42917613`，manifest SHA-256`ae469a3339348b4b312988514c4c62b10e145cc6c902e62e85efb1c1ff902407`。

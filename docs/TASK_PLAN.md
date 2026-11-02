@@ -7,7 +7,9 @@
 - [x] 云备份文本替换回归 `SourceUITests-1793621671370` 与 Navidrome页签回归 `SourceUITests-1793622026059` 各1/0/0；同源码/安装digest。
 - [x] `8053354` clean unsigned manifest、arm64/SDK26.2/iOS15.1/[1,2]、164项ZIP CRC、138项archive/IPA逐文件、生产标记、隐私排除与未签名检查通过；IPA SHA-256 `648ae07a…`。
 - [x] IPA/APK strict review均PASS、0错误/0警告；复用既有E-1028/E-1030/E-1052→F-042→P-040，无新增Sollin采集。
-- [ ] push、clean T7阶段副本与云端iOS27终态。
+- [x] `8053354..dfba72a`已正常push并实核远端main一致；push后`41435198362`运行、`41449172204`唯一pending，队列1运行/1排队，未取消或重派。
+- [x] T7 `2026-11-02-migu-mv-8053354`保存IPA/archive、3个xcresult、运行日志、11PNG/provenance、文档和提交diff；238个源文件逐份SHA-256对比0失败，250条`SHA256SUMS`复核0失败，源证据保留且`deleted=0/moved=0`。
+- [ ] `41449172204`以及后续最新文档提交对应的iOS27终态。
 - [ ] 咪咕真实视频起播、声音、网页/系统全屏、退出、弱网/限流、后台竞争、实体iPhone、VoiceOver/动态字号/小屏、签名/安装/续签和功耗继续。
 
 见[专项回执](2026-11-02-migu-official-mv-detail-report.md)。本批只关闭咪咕官方详情页加载/刷新缺口，不关闭完整MV、五类型搜索或项目总目标。

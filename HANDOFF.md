@@ -4,7 +4,9 @@
 
 `npm run check` 980/980、完整 native 与 `ios:build` 通过。最终 Migu/MV Release `SourceUITests-1793623216513` 为1/0/0、219.732秒，11PNG provenance ready并亲看两张咪咕关键图，页面实际显示官方网页标题、作者、时长且刷新保持同源同标题。云备份文本替换回归 `1793621671370` 1/0/0、Navidrome iOS27页签回归 `1793622026059` 1/0/0，均使用同一源码/安装digest。只证明官方详情页加载/刷新，不证明视频起播、声音、全屏、弱网或真机。
 
-clean unsigned archive对应产品提交，manifest `dirty:false`/`workingTreeChanges:[]`、arm64/SDK26.2/iOS15.1/[1,2]、`signed:false`；IPA 12,899,521字节、SHA-256 `648ae07add5b894916e84642096b880f3c036c3733e1e5cab17a64c32099d1a3`，164项ZIP CRC、138个archive/IPA普通文件逐项字节、生产分享标记及测试/私人/签名排除通过。IPA/APK strict review均PASS、0错误/0警告，复用既有Sollin E-1028/E-1030/E-1052→F-042→P-040，无新增采集或私有探测。详见[专项回执](docs/2026-11-02-migu-official-mv-detail-report.md)。实体iPhone、VoiceOver/动态字号/小屏、弱网/限流、真实媒体生命周期、签名/安装/续签及iOS27云端终态继续，完整目标未关闭。
+clean unsigned archive对应产品提交，manifest `dirty:false`/`workingTreeChanges:[]`、arm64/SDK26.2/iOS15.1/[1,2]、`signed:false`；IPA 12,899,521字节、SHA-256 `648ae07add5b894916e84642096b880f3c036c3733e1e5cab17a64c32099d1a3`，164项ZIP CRC、138个archive/IPA普通文件逐项字节、生产分享标记及测试/私人/签名排除通过。IPA/APK strict review均PASS、0错误/0警告，复用既有Sollin E-1028/E-1030/E-1052→F-042→P-040，无新增采集或私有探测。
+
+`8053354..dfba72a`已正常push并实核远端main一致。push后`41435198362`继续运行，`41449172204`/`dfba72a`为唯一pending，队列1运行/1排队；未手动取消或重派。T7独立阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-migu-mv-8053354/`保存IPA/archive、3个xcresult及运行日志、11PNG/provenance、审阅文档与提交diff；238个源文件逐份SHA-256对比0失败，`SHA256SUMS`复核0失败，最终清单哈希保存在该阶段的`transfer-receipt.json`，exFAT `._*`元数据另计。源证据保留，`deleted=0/moved=0`，内盘约47GiB可用。详见[专项回执](docs/2026-11-02-migu-official-mv-detail-report.md)。实体iPhone、VoiceOver/动态字号/小屏、弱网/限流、真实媒体生命周期、签名/安装/续签及iOS27云端终态继续，完整目标未关闭。
 
 ## 2026-11-02 iOS 27 发现页初始链接种子输入修复
 

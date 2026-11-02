@@ -113,6 +113,24 @@ SHA-256 为
 dd9d3304202133385f743d3b89fc3af5f319faebaae0435cde36eb0b39e90452  Info.plist
 ```
 
+### 推送与 T7 阶段
+
+产品提交 `8053354` 与文档提交 `dfba72a` 已正常 push，远端 `main` 实核一致。
+push 后 `41435198362` 继续运行，`41449172204`/`dfba72a` 为唯一 pending，符合
+同工作流/分支 1 运行 / 1 排队；没有手动取消或重派旧版本。
+
+独立阶段位于：
+
+```text
+/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-migu-mv-8053354/
+```
+
+该目录保存 IPA/archive、manifest/验证回执、三个 xcresult 及对应运行日志、11 张
+截图/provenance、审阅文档和提交 diff。238 个源文件逐份 SHA-256 对比为 0
+失败；`SHA256SUMS` 全量复核通过，最终清单哈希、普通 payload 与 exFAT `._*`
+元数据计数保存在该阶段的 `transfer-receipt.json`。源证据保留，
+`deleted=0/moved=0`，内盘约 47 GiB 可用。
+
 ## Evidence → Finding → Path
 
 | 类型 | ID | 内容 |
