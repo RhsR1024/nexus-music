@@ -85,3 +85,15 @@ Asia/Shanghai 的 Actions HTML 内嵌数据实核：
 
 云端 iOS 27 本批终态仍需该运行返回。实体 iPhone、真实授权账号、VoiceOver、
 动态字号、小屏、弱网/限流、连续动效、签名/安装/续签、真机后台与功耗仍开放。
+
+## T7 阶段留存
+
+独立阶段目录为
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-ios27-discovery-link-input-ea134a9/`。
+目录保存 IPA/xcarchive、clean manifest、当前 xcresult、run 日志、失败层级与紧凑证据 ZIP、
+strict review、两轮 verifier 失败输出、最终 verifier 及机器回执、项目回执和 Git patch。
+
+源/目标逐文件 SHA-256 比较 0 差异；exFAT `._*` 元数据与逻辑 payload 分开计数，
+`SHA256SUMS` 全量复核通过。`copy-receipt.json` 记录 SHA-256 清单摘要与恢复方式，
+`cleanup-2026-11-02-ios27-discovery-link-input.json` 记录活动构建 0、
+`deleted=0/moved=0`。所有源证据继续保留。

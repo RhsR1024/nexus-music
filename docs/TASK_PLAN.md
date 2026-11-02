@@ -6,6 +6,7 @@
 - [x] IPA strict review PASS，54E/19WI/116 timeline/45F/45P、0错误/0警告；无新增采集或私有探测。
 - [x] `ea134a9` clean unsigned IPA、manifest、ZIP CRC、archive↔IPA字节、隐私与未签名检查通过；与已验证`90a0ecb`产品payload逐项相同、差异0。
 - [x] `ea134a9`已push并实核远端main；`41415230222`运行、`41435198362`唯一pending，旧pending自动取消，队列1运行/1排队。
+- [x] T7 `2026-11-02-ios27-discovery-link-input-ea134a9`完成源/目标逐文件SHA-256核验与`SHA256SUMS`复核，活动构建0；源证据保留且`deleted=0/moved=0`。
 - [ ] `41435198362`iOS27终态；实体机、真实授权账号、VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签及真机后台/功耗继续。
 
 见[修复回执](2026-11-02-ios27-discovery-link-input-seed-fix.md)。本批只修复iOS27测试输入稳定性，不增加产品功能完成度。

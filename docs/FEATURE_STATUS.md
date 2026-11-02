@@ -4,6 +4,7 @@
 - [x] 测试种子URL改用统一文本替换helper，产品代码不变；Release 1/0/0、234.199秒，980/980、Swift parse/diff、完整归档与strict review通过。
 - [x] `ea134a9` clean unsigned IPA、manifest、CRC、archive字节、隐私与未签名检查通过；与已验证`90a0ecb`产品payload完全一致。
 - [x] 已push并实核远端；1运行/1排队，未取消运行中任务或重派旧版本。
+- [x] T7阶段完成源/目标逐文件SHA-256与`SHA256SUMS`复核；活动构建0，源证据保留且`deleted=0/moved=0`。
 - [ ] `41435198362`iOS27终态及实体机、真实授权账号、VoiceOver/动态字号/小屏、弱网、连续动效、签名/安装和真机后台/功耗继续。
 
 本批只修复iOS27测试输入稳定性，不增加产品功能完成度；见[回执](2026-11-02-ios27-discovery-link-input-seed-fix.md)。

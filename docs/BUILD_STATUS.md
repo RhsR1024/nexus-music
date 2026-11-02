@@ -4,7 +4,7 @@
 
 164项ZIP entry、138个普通文件及CRC通过，archive与IPA逐文件字节一致；与已验证`90a0ecb`产品IPA比较，138个普通payload路径和全部字节一致、差异0，未发现签名、描述文件、测试URL、夹具私密值或私人resource路径。机器回执`build/logs/ios27-discovery-seed-archive-verification-ea134a9.json`的SHA-256为`bc0ae579…`、`ready=true`。此包只证明本机SDK26.2未签名归档，不替代iOS27终态、签名或实体机。
 
-`ea134a9`已push且远端一致；`41415230222`继续运行、`41435198362`为唯一pending，旧pending自动取消，队列1运行/1排队。详见[本批回执](2026-11-02-ios27-discovery-link-input-seed-fix.md)。
+`ea134a9`已push且远端一致；`41415230222`继续运行、`41435198362`为唯一pending，旧pending自动取消，队列1运行/1排队。T7阶段`2026-11-02-ios27-discovery-link-input-ea134a9`完成IPA/archive、manifest、xcresult、日志、失败证据和diff的源/目标逐文件SHA-256及`SHA256SUMS`复核；exFAT `._*`单独计数，活动构建0，源证据保留且`deleted=0/moved=0`。详见[本批回执](2026-11-02-ios27-discovery-link-input-seed-fix.md)。
 
 ## 2026-11-02 J25 统一搜索五类结果
 

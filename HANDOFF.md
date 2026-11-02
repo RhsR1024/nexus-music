@@ -4,7 +4,7 @@
 
 最终Release`SourceUITests-1793617307441`为1/0/0、234.199秒，`sourceUnchanged=true`；980/980、Swift parse/diff、完整归档与IPA strict review（0错误/0警告）通过。`ea134a9` clean unsigned IPA为12,900,214字节、SHA-256`3ecd59c0e5eaef1273674b1987edd3fd56e89fb3bb6da7066e09d2ad42917613`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项ZIP/138普通文件、CRC、archive↔IPA字节、隐私及未签名检查通过。与已验证`90a0ecb`产品IPA相比138个普通payload路径与全部字节完全一致，证明测试修改未改变生产内容；验证回执SHA-256`bc0ae579…`。
 
-`ea134a9`已正常push并实核远端main一致。push后`41415230222`/`51e517a`继续运行，`41435198362`/`ea134a9`为唯一pending，旧pending`41430990767`由`queue:single`自动取消；队列1运行/1排队，未手动取消或重派。云端终态、实体机、真实授权账号、VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签及真机后台/功耗继续。见[本批回执](docs/2026-11-02-ios27-discovery-link-input-seed-fix.md)。
+`ea134a9`已正常push并实核远端main一致。push后`41415230222`/`51e517a`继续运行，`41435198362`/`ea134a9`为唯一pending，旧pending`41430990767`由`queue:single`自动取消；队列1运行/1排队，未手动取消或重派。T7阶段`2026-11-02-ios27-discovery-link-input-ea134a9`已完成源/目标逐文件SHA-256核验，exFAT `._*`元数据单独计数；`SHA256SUMS`全量复核通过，活动构建0且`deleted=0/moved=0`，源证据保留。云端终态、实体机、真实授权账号、VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签及真机后台/功耗继续。见[本批回执](docs/2026-11-02-ios27-discovery-link-input-seed-fix.md)。
 
 ## 2026-11-02 J25 统一搜索五类结果
 
