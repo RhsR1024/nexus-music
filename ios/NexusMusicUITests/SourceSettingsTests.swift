@@ -5106,7 +5106,7 @@ final class SourceSettingsTests: XCTestCase {
     func replaceLink(_ value:String){
       replaceText(linkInput,with:value)
     }
-    linkInput.tap();linkInput.typeText("https://music.163.com.attacker.invalid/playlist?id=101");linkInput.typeText("\n")
+    replaceLink("https://music.163.com.attacker.invalid/playlist?id=101")
     reach(linkPreview);linkPreview.tap()
     XCTAssertTrue(app.staticTexts["尚未识别此分享链接，请展开链接或输入公开歌单ID"].waitForExistence(timeout:10))
     evidence("Invalid public playlist host stays on the discovery page with safe copy")
