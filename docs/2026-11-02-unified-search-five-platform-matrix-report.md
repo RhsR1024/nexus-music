@@ -77,14 +77,16 @@ T7 阶段副本位于 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-unif
 
 主阶段复制核验：
 
-- 289 个源 payload、105,199,379 逻辑字节；加入提交元数据与可审阅 patch 后共 291 个普通 payload、105,229,347 字节，源/目标逐文件 SHA-256 一致。
-- exFAT 自动生成 326 个 `._*` 元数据文件、1,335,296 字节，单独计数，不冒充源 payload。
-- `SHA256SUMS` SHA-256 为 `53e4ba1828ce1d6bced4352df61a966cd18c7845218688cf5cd168aad4b5e2f9`，291 行；`payload-index.json` SHA-256 为 `29da28c7b3c1d1754efb0ecebc2aae3ae02eb35a9c7e0859e471fcc8e32a3e0f`；`transfer-receipt.json` SHA-256 为 `a9c500c3da3d6260023accb1ec510e953c6a1990b09ac5e63886a3090a07c01b`。
-- 源原件全部保留；本批没有删除项目内容或迁移项目外个人文件。
+- 294 个源 payload、105,560,052 逻辑字节；加入提交元数据与可审阅 patch 后共 296 个普通 payload、105,590,020 字节，源/目标逐文件 SHA-256 一致。
+- 加上 3 份复制与完整性核验文件后，目录在收尾前共有 299 个普通文件、105,763,952 字节；`SHA256SUMS` 的 296 行均通过。
+- exFAT 自动生成 332 个 `._*` 元数据文件、1,359,872 字节，单独计数，不冒充源 payload。
+- `SHA256SUMS` SHA-256 为 `e374f69facb421550ffc5f609d3cb6a7df41ee4f7278f1b4f6f3188be370168a`；`payload-index.json` SHA-256 为 `d46739bf4d145399a8c11653df92273286692b8493071c1d3d422f15d7f9fe41`；`transfer-receipt.json` SHA-256 为 `b560032844677990983cc97d7ef7f7b5c5e4a2e817efacf8230659e8f702ba1c`。
+- 源原件全部保留；本批没有删除项目内容或迁移项目外个人文件。阶段收尾时内盘可用 52,641,067,008 字节（约 52.64 GB），T7 可用 649,736,093,696 字节（约 649.74 GB）；无活动 Xcode 构建或提取。
+- 小型清理回执为 `build/logs/cleanup-2026-11-02-j27-postflight.json`，SHA-256 `479c378f673549a2d8092d8c126c0c8b7d78fd873e38ed7bf534ad1edc728b1e`；本批删除 0 字节、个人或受保护项目内容搬移 0 字节。
 
 ## 远程交付与 CI
 
-`df9972f..73f975e` 已按正常 fast-forward 推送到 `origin/main`；推送后 `git ls-remote origin refs/heads/main` 与本地交付提交均为 `73f975eaa97bd1e69d549df5f6eb73ca392da435`。提交链包含功能提交 `ac11314` 与阶段文档提交 `73f975e`。
+`df9972f..73f975e` 已按正常 fast-forward 推送到 `origin/main`；推送后 `git ls-remote origin refs/heads/main` 与本地交付提交均为 `73f975eaa97bd1e69d549df5f6eb73ca392da435`。随后文档-only 队列回执提交 `688e1ae0fa2f0a4ea7c74949943f983293bc9c25` 也正常推送并实核远端 `main` 一致；该提交只修改 Markdown，受工作流 `paths-ignore` 排除，不创建新的 iOS 27 运行。提交链包含功能提交 `ac11314`、阶段文档提交 `73f975e` 与队列回执 `688e1ae`。
 
 iOS 27 工作流实核：
 
