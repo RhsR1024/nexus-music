@@ -49,3 +49,5 @@
 
 本批开始前活动构建为 0；内盘约 76 GiB、T7 约 583 GiB 可用，未达到需要清理的阈值。没有删除项目或用户文件，也没有迁移来源不明的个人文件。
 
+T7 阶段目录为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-03-app-icon-settings-7380079/`。源/目标复制对比覆盖135份普通文件、106,922,548字节，0差异；阶段 `SHA256SUMS` 含141份普通文件、116,178,251字节，复核0失败，另有189份 exFAT `._*` 元数据单独计数。`transfer-receipt.json` SHA-256 为 `c04b908a4e84a9e0f3929bd991e1937d087e423ddbee6c3cb97e7c4d9e5027c7`，源证据保留，`deleted=0/movedUserFiles=0`，活动构建0。
+

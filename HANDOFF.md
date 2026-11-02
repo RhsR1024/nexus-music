@@ -8,6 +8,8 @@
 
 产品提交`7380079`已正常push并实核远端main一致。clean unsigned manifest为`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,811,639字节、SHA-256`8cf4607d2ccfb06421e16fe7a0afc6b70bf9a6a8c89120d1c432f0fba53f9344`。ZIP CRC、133项archive/IPA普通文件逐字节、18项exFAT元数据计数、五图标`Assets.car`/两份`CFBundleIcons`声明及测试/私人/签名排除通过。push后`41455717983`/`6785769`继续运行，`41489113091`/`7380079`为唯一pending，实核1运行/1排队，未手动取消或重派。
 
+T7阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-03-app-icon-settings-7380079/`保存IPA/archive、xcresult、运行证据、5PNG、逆向摘要、提交补丁与文档；复制对比135份普通源文件/106,922,548字节、0差异，阶段`SHA256SUMS`含141份普通文件/116,178,251字节并复核0失败，另有189份exFAT `._*`元数据不计入。`transfer-receipt.json` SHA-256为`c04b908a4e84a9e0f3929bd991e1937d087e423ddbee6c3cb97e7c4d9e5027c7`，源证据保留且`deleted=0/movedUserFiles=0`、活动构建0。
+
 实体 iPhone/可用iOS27的替代图标切换、确认/取消、重启、恢复和SpringBoard行为，VoiceOver/动态字号、签名/安装/续签继续。本批不关闭完整外观、J43/J46、F/J或项目。详见[专项回执](docs/2026-11-03-app-icon-settings-report.md)与[UI场景](docs/ui-spec/app-icons-2026-11-02.md)。
 
 ## 2026-11-02 粉调磁带封面样式

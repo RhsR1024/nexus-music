@@ -8,7 +8,7 @@
 
 IPA strict review为55E/20WI/118 timeline/46F/46P、0错误/0警告，沿用`E-055 → F-046 → P-046 → WI-020`；离线边界没有目标运行时、真机或视觉等价结论。产品提交`7380079` clean unsigned manifest为`dirty:false`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,811,639字节、SHA-256`8cf4607d…9344`，ZIP CRC、133项archive/IPA普通文件字节、18项exFAT元数据、五替代图标`Assets.car`/两份`CFBundleIcons`及隐私/签名排除通过。
 
-`7380079`已push并实核远端一致；`41455717983`继续运行、`41489113091`唯一pending，队列1运行/1排队。iOS27终态、实体iPhone/可用iOS27的切换/确认/取消/重启/恢复/SpringBoard、VoiceOver/动态字号、签名/安装/续签继续。见[回执](2026-11-03-app-icon-settings-report.md)与[UI场景](ui-spec/app-icons-2026-11-02.md)；本批不关闭完整外观、J43/J46、F/J或项目。
+`7380079`已push并实核远端一致；`41455717983`继续运行、`41489113091`唯一pending，队列1运行/1排队。T7阶段`2026-11-03-app-icon-settings-7380079`复制对比135份普通源文件/106,922,548字节且0差异，`SHA256SUMS`141项复核0失败，189份exFAT元数据另计；源证据保留且零删除/零个人搬移，`transfer-receipt.json` SHA-256为`c04b908a…27c7`。iOS27终态、实体iPhone/可用iOS27的切换/确认/取消/重启/恢复/SpringBoard、VoiceOver/动态字号、签名/安装/续签继续。见[回执](2026-11-03-app-icon-settings-report.md)与[UI场景](ui-spec/app-icons-2026-11-02.md)；本批不关闭完整外观、J43/J46、F/J或项目。
 
 ## 2026-11-02 粉调磁带封面样式
 

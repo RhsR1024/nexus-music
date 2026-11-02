@@ -8,6 +8,7 @@
 - [x] reverse-skill离线case guard、prerequisite与`ipa --review` PASS，55E/20WI/118 timeline/46F/46P、0错误/0警告；无新增采集或私有探测。
 - [x] `7380079` clean unsigned archive、manifest、ZIP CRC、133项archive/IPA字节、五替代图标plist/`Assets.car`、arm64/SDK26.2/iOS15.1/[1,2]与隐私/签名排除通过。
 - [x] 产品提交已push并实核远端main；`41455717983`运行、`41489113091`唯一pending，队列1运行/1排队。
+- [x] T7 `2026-11-03-app-icon-settings-7380079`完成源/目标逐文件核验：135份普通源文件0差异，141项`SHA256SUMS`复核0失败，189份exFAT元数据另计；源证据保留且`deleted=0/movedUserFiles=0`。
 - [ ] `41489113091` iOS27终态；实体iPhone/可用iOS27的切换、确认/取消、重启、恢复和SpringBoard，VoiceOver/动态字号、签名/安装/续签。
 
 见[本批回执](2026-11-03-app-icon-settings-report.md)与[UI场景](ui-spec/app-icons-2026-11-02.md)。本批只完成图标选择器和构建增量，不关闭完整外观、J43/J46、F/J或项目。
