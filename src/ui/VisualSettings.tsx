@@ -71,6 +71,8 @@ export function VisualSettings({services}:{services:Services}){
     <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{([['artwork','歌曲封面背景'],['photo','自定义写真背景'],['solid','纯色播放背景']]as const).map(([mode,label])=>button(`player-background-${mode}`,label,()=>update({playerBackground:mode}),value.playerBackground===mode))}</View>
     <Text style={{color:p.secondary,fontSize:12}}>写真皮肤优先使用已导入写真；其他皮肤遵循背景选项。写真主图保持清晰；图片缺失时使用封面或纯色，模糊仅影响背景。</Text>
     {adjust('playerDarkness','播放背景暗度',.1,.35,.9)}{adjust('coverRadius','封面圆角',8,0,48)}
+    {control('visual-tape-style','磁带封面',value.tapeStyle,tapeStyle=>update({tapeStyle}))}
+    <Text style={{color:p.secondary,fontSize:12}}>在经典、封面沉浸、声波核、AM 与 AM2 的主要封面外显示粉调磁带框；迷你播放器和列表缩略图保持简洁。此样式来自用户补充需求，不使用新图片或在线素材。</Text>
     {control('visual-cover-color','封面取色',value.coverColor,coverColor=>update({coverColor}))}
     {control('visual-global-motion','全局封面流动',value.globalBackgroundMotion,globalBackgroundMotion=>update({globalBackgroundMotion}))}
     <Text style={{color:p.secondary,fontSize:12}}>全局封面流动可独立开启，优先显示当前歌曲封面；关闭后恢复封面取色或主题背景。</Text>

@@ -4,11 +4,11 @@ export const visualThemeLabels: Record<VisualTheme,string> = {classic:'经典',b
 export type Accent = 'rose' | 'coral' | 'purple' | 'blue' | 'orange';
 export type FlowPalette=readonly[string,string,string];
 export function isFlowPalette(value:unknown):value is FlowPalette {return Array.isArray(value)&&value.length===3&&[0,1,2].every(index=>typeof value[index]==='string'&&/^#[0-9a-f]{6}$/i.test(value[index]));}
-export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgroundStyle:'gradient'|'solid'|'image';backgroundOpacity:number;cardOpacity:number;backgroundMask:number;maskColor:string;playerBackground:'artwork'|'solid'|'photo';playerBlur:number;playerDarkness:number;coverRadius:number;coverColor:boolean;globalBackgroundMotion:boolean;dynamicBackground:boolean;glassNavigation:boolean}
+export interface AppearanceOptions {visualTheme:VisualTheme;accent:Accent;backgroundStyle:'gradient'|'solid'|'image';backgroundOpacity:number;cardOpacity:number;backgroundMask:number;maskColor:string;playerBackground:'artwork'|'solid'|'photo';playerBlur:number;playerDarkness:number;coverRadius:number;tapeStyle:boolean;coverColor:boolean;globalBackgroundMotion:boolean;dynamicBackground:boolean;glassNavigation:boolean}
 // IMG_4856 exposes 背景透明度/卡片透明度/背景遮罩/遮罩颜色/背景模糊. `cardOpacity`
 // starts at 100% so existing cards stay opaque until the user lowers it; the
 // reference screenshot itself is at 30%.
-export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,cardOpacity:1,backgroundMask:0,maskColor:'#FFFFFF',playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,coverColor:true,globalBackgroundMotion:false,dynamicBackground:false,glassNavigation:true};
+export const appearanceDefaults:AppearanceOptions={visualTheme:'blush',accent:'rose',backgroundStyle:'gradient',backgroundOpacity:.25,cardOpacity:1,backgroundMask:0,maskColor:'#FFFFFF',playerBackground:'artwork',playerBlur:55,playerDarkness:.55,coverRadius:24,tapeStyle:false,coverColor:true,globalBackgroundMotion:false,dynamicBackground:false,glassNavigation:true};
 export const accentColors:Record<Accent,readonly[string,string]>={rose:['#E83D56','#FF94B0'],coral:['#BA4240','#FF9B94'],purple:['#7650AB','#D4B4FF'],blue:['#2E64A0','#9AC8FF'],orange:['#A65A14','#FFC485']};
 // IMG_4856 keeps the accent swatch at #E83D56 while slider fills and thumbs use a
 // desaturated brick (#864D4F), so controls derive their own muted tone from the
@@ -103,6 +103,17 @@ export function darkenCoverColor(color:string):string {
   const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16));
   // A dark tinted foundation keeps white player controls legible even without artwork.
   const scale=Math.min(1,72/Math.max(...rgb,1));return '#'+rgb.map(value=>Math.round(value*scale).toString(16).padStart(2,'0')).join('');
+}
+
+// The tape shell is an original user-requested treatment, not a recovered
+// Sollin asset. Keep its outer footprint identical to the existing square
+// artwork viewport so changing the option never moves playback controls.
+export function tapeCoverLayout(size:number,radius:number){
+  const side=Math.max(1,size),shellRadius=Math.max(0,Math.min(radius,side/2));
+  const inset=Math.max(3,Math.round(side*.055));
+  const reelBandHeight=Math.max(18,Math.round(side*.19));
+  const reelDiameter=Math.max(11,Math.round(reelBandHeight*.54));
+  return {side,shellRadius,inset,artSize:Math.max(1,side-inset*2),artRadius:Math.max(0,Math.min(radius*.58,(side-inset*2)/2)),reelBandHeight,reelDiameter};
 }
 
 // Bounded static fallback behind the native scene, also used before it mounts.

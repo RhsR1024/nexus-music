@@ -18,7 +18,7 @@ import {FrequencyHalo} from './PlayerVisuals.tsx';
 import {VinylPlayer} from './VinylPlayer.tsx';
 import {SkipGlyph} from './SkipGlyph.tsx';
 import type {PlayerLayout} from '../app/preferences.ts';
-import {Cover} from './Cover.tsx';
+import {PlayerCover} from './TapeCover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 const PhotoMask=requireNativeView<ViewProps>('NexusNative','PhotoMask');
 export function ArtworkBackdrop({services,track,photo=false}:{services:Services;track:Track;photo?:boolean}){
@@ -75,7 +75,7 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
   // bottom row; the immersive skin keeps the left-aligned header.
   const centered=layout==='wave';
   return <View style={{gap:16}}>
-    {<><View testID="player-artwork-viewport" collapsable={false} style={{width:artworkSide,height:artworkSide,alignSelf:'center',overflow:'hidden',borderRadius:preferences.coverRadius}}><View testID="player-artwork-square" collapsable={false}><Cover services={services} track={track} size={artworkSide}/></View></View><View style={{flexDirection:'row',alignItems:'center',gap:12,justifyContent:centered?'center':undefined}}><View style={{flex:centered?0:1,gap:8,alignItems:centered?'center':'flex-start'}}><Text style={{fontSize:centered?22:27,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text style={styles.small}>{track.artist}</Text></View>{!centered&&favoriteButton}{!centered&&icon('ellipsis-horizontal','更多播放控制',onMore)}</View></>}
+    {<><View testID="player-artwork-viewport" collapsable={false} style={{width:artworkSide,height:artworkSide,alignSelf:'center',overflow:'hidden',borderRadius:preferences.coverRadius}}><View testID="player-artwork-square" collapsable={false}><PlayerCover services={services} track={track} size={artworkSide}/></View></View><View style={{flexDirection:'row',alignItems:'center',gap:12,justifyContent:centered?'center':undefined}}><View style={{flex:centered?0:1,gap:8,alignItems:centered?'center':'flex-start'}}><Text style={{fontSize:centered?22:27,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text style={styles.small}>{track.artist}</Text></View>{!centered&&favoriteButton}{!centered&&icon('ellipsis-horizontal','更多播放控制',onMore)}</View></>}
     <View testID="player-lyric-viewport" collapsable={false} style={{height:centered?96:150,overflow:'hidden',justifyContent:'center'}}><Lyrics services={services} track={lyricTrack} font={font} visibleLines={layout==='wave'||layout==='immersive'?1:undefined} presentation="immersive"/></View>
     {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.small}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
     <PlaybackProgress services={services}/>

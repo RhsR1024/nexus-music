@@ -25,6 +25,7 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
     {id:'globalFont',title:'全局字体',icon:'text-outline',detail:fontName(fonts.global),page:'globalFont'},
     {id:'lyricFont',title:'歌词字体',icon:'reader-outline',detail:fonts.lyricMode==='inherit'?`跟随全局 · ${fontName(effectiveLyricFont(fonts))}`:fontName(effectiveLyricFont(fonts)),page:'lyricFont'},
     {id:'skins',title:'播放界面样式',icon:'albums-outline',detail:layouts[value.playerLayout],page:'skins'},
+    {id:'tape-style',title:'磁带封面',icon:'radio-outline',subtitle:'为经典、沉浸、声波核与 AM 系列主要封面追加粉调磁带框；不影响歌曲身份和队列',toggle:{value:value.tapeStyle,change:tapeStyle=>update({tapeStyle})}},
     {id:'navigation',title:'底部栏样式',icon:'grid-outline',detail:value.glassNavigation?'玻璃':'实色',page:'navigation'},
     {id:'mini',title:'迷你播放器按钮',icon:'options-outline',subtitle:'选择与调整按钮顺序，最多 4 个',detail:value.miniActions.map(action=>miniActionLabels[action]).join('、'),page:'mini'},
   ];

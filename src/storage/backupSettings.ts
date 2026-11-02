@@ -7,7 +7,8 @@ const fields=[
   'visualTheme','accent','backgroundStyle','backgroundOpacity','cardOpacity','backgroundMask','maskColor','playerBackground','playerBlur','playerDarkness','coverRadius','coverColor','globalBackgroundMotion','dynamicBackground','glassNavigation',
   'miniActions','miniLyrics','localAudioSortField','localAudioSortDirection','stageStyle','stageBackdrop','am2AutoLyrics','am2DelaySeconds','am2ShowVolume','lyricStyle','autoMatch','lyricAlignment','lyricOffsets','volume','preampDB','eqPresets','playerLayout','favoriteVisualTheme','quality','eqEnabled','gains','repeat','shuffle','lyricOffsetMs','fontScale','rate','theme','cacheLimitMB','offlineLimitMB',
 ] as const satisfies readonly (keyof Preferences)[];
-export interface BackupSettings {version:1;preferences:Pick<Preferences,(typeof fields)[number]>&Partial<Pick<Preferences,'downloadQualities'>>}
+const optionalFields=['tapeStyle'] as const satisfies readonly (keyof Preferences)[];
+export interface BackupSettings {version:1;preferences:Pick<Preferences,(typeof fields)[number]>&Partial<Pick<Preferences,(typeof optionalFields)[number]|'downloadQualities'>>}
 function portableOffsetKey(key:string){
   try{const value=JSON.parse(key);if(!Array.isArray(value)||value.length!==3||value.some(x=>typeof x!=='string')||JSON.stringify(value)!==key)return false;
     const [kind,namespace,id]=value as string[];
@@ -18,9 +19,11 @@ function portableOffsetKey(key:string){
 export function cleanBackupSettings(value:unknown):BackupSettings{
   if(!value||typeof value!=='object'||(value as BackupSettings).version!==1)throw Error('设置备份版本无效');
   const raw=(value as BackupSettings).preferences;if(!raw||typeof raw!=='object'||Array.isArray(raw)||fields.some(field=>!Object.hasOwn(raw,field)))throw Error('设置备份不完整');
-  const selected=Object.fromEntries(fields.map(field=>[field,raw[field]])) as unknown as BackupSettings['preferences'];
+  const selected=Object.fromEntries(fields.map(field=>[field,(raw as Record<string,unknown>)[field]])) as unknown as BackupSettings['preferences'];
+  for(const field of optionalFields)if(Object.hasOwn(raw,field))(selected as Record<string,unknown>)[field]=(raw as Record<string,unknown>)[field];
   if(Object.hasOwn(raw,'downloadQualities'))selected.downloadQualities=raw.downloadQualities;
   const valid=validatePreferences({...defaults,...selected}),style=valid.lyricStyle;
+  for(const field of optionalFields)if(Object.hasOwn(selected,field))(selected as Record<string,unknown>)[field]=valid[field];
   if(Object.hasOwn(selected,'downloadQualities'))selected.downloadQualities=valid.downloadQualities;
   return {version:1,preferences:{...selected,gains:[...valid.gains],miniActions:[...valid.miniActions],eqPresets:valid.eqPresets.map(preset=>({name:preset.name,gains:[...preset.gains],preampDB:preset.preampDB})),
     lyricStyle:{activeColor:style.activeColor,inactiveColor:style.inactiveColor,lineHeight:style.lineHeight,spacing:style.spacing,blur:style.blur,emphasis:style.emphasis},

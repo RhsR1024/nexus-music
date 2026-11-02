@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {VisualAssetStore,VisualColorCache,VisualImportError,type VisualNative} from '../src/storage/visualAssets.ts';
 import {PreferenceStore,defaults} from '../src/app/preferences.ts';
-import {darkenCoverColor,playerBackgroundImage} from '../src/domain/appearance.ts';
+import {darkenCoverColor,playerBackgroundImage,tapeCoverLayout} from '../src/domain/appearance.ts';
 import {deferred} from './fixtures.ts';
 import type {Repository} from '../src/storage/repository.ts';
 function rig(){let record:unknown,fail=false;const retained:string[][]=[];const native:VisualNative={importVisual:async uri=>({id:(uri.endsWith('a')?'a':'b').repeat(64),width:1920,height:1080}),resolveVisual:async id=>`file:///private/app/${id}.jpg`,reconcileVisuals:async ids=>{retained.push([...ids]);},visualPalette:async()=> '#FF2040'};
@@ -60,10 +60,18 @@ test('cleared in-flight palettes cannot block or remove a replacement request fo
 });
 test('visual preferences migrate old settings and reject out of range updates atomically',async()=>{
   let value:unknown={quality:'128k'};const repository={get:async<T>()=>value as T,put:async(_:string,next:unknown)=>{value=structuredClone(next);}} as unknown as Repository;
-  const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().coverRadius,defaults.coverRadius);assert.equal(preferences.getSnapshot().dynamicBackground,false);
-  await preferences.update({backgroundStyle:'image',backgroundOpacity:.6,playerBackground:'photo',coverRadius:48,coverColor:true,dynamicBackground:true});const saved=preferences.getSnapshot();
-  for(const patch of [{playerBlur:81},{playerBlur:NaN},{backgroundOpacity:-1},{coverRadius:49},{playerDarkness:.1},{playerBackground:'unknown'}])await assert.rejects(preferences.update(patch as never));
-  assert.equal(preferences.getSnapshot(),saved);const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().backgroundStyle,'image');assert.equal(restored.getSnapshot().coverColor,true);
+  const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().coverRadius,defaults.coverRadius);assert.equal(preferences.getSnapshot().dynamicBackground,false);assert.equal(preferences.getSnapshot().tapeStyle,false);
+  await preferences.update({backgroundStyle:'image',backgroundOpacity:.6,playerBackground:'photo',coverRadius:48,tapeStyle:true,coverColor:true,dynamicBackground:true});const saved=preferences.getSnapshot();
+  for(const patch of [{playerBlur:81},{playerBlur:NaN},{backgroundOpacity:-1},{coverRadius:49},{tapeStyle:'true'},{playerDarkness:.1},{playerBackground:'unknown'}])await assert.rejects(preferences.update(patch as never));
+  assert.equal(preferences.getSnapshot(),saved);const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().backgroundStyle,'image');assert.equal(restored.getSnapshot().tapeStyle,true);assert.equal(restored.getSnapshot().coverColor,true);
+});
+
+test('tape shell keeps the existing square footprint and clamps inset geometry',()=>{
+  for(const size of [1,111,180,430])for(const radius of [0,24,48]){
+    const layout=tapeCoverLayout(size,radius);
+    assert.equal(layout.side,size);assert.ok(layout.inset>=3);assert.ok(layout.artSize>=1&&layout.artSize<=size);assert.ok(layout.artRadius>=0&&layout.artRadius<=layout.artSize/2);
+    assert.ok(layout.reelBandHeight>=18&&layout.reelBandHeight<size+18);assert.ok(layout.reelDiameter>=11);
+  }
 });
 
 test('solid player backgrounds never resurrect a loaded cover and failed photos fall back safely',()=>{

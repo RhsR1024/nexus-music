@@ -3,7 +3,7 @@ import {Pressable,View,useWindowDimensions} from 'react-native';
 import {Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
-import {Cover} from './Cover.tsx';
+import {PlayerCover} from './TapeCover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {QueuePanel} from './QueueView.tsx';
 import {Text} from './Typography.tsx';
@@ -34,7 +34,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
     </View>
   </View>;
   const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:14,minHeight:75}}>
-    <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')}><Cover services={services} track={track} size={75} radius={18}/></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')}><PlayerCover services={services} track={track} size={75}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:4}}><Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:16,fontWeight:'600'}}>{track.title}</Text><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:14}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
     {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏',44)}
     {circle('ellipsis-horizontal','更多播放控制',onMore,undefined,44)}
@@ -51,7 +51,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
     {content==='cover'?<View style={{flex:1,minHeight:0,gap:0}}>
       <View testID={columns?'am-horizontal':'am-vertical'} style={{flex:1,minHeight:0,flexDirection:columns?'row':'column',gap:12}}>
         <View testID="am-body" collapsable={false} style={{width:'100%',height:side,alignItems:'center',marginTop:columns?0:fontScale>1.4?16:72,overflow:'hidden'}}>
-          <View testID="am-artwork-square" collapsable={false} style={{width:side,height:side}}><Cover services={services} track={track} size={side}/></View>
+          <View testID="am-artwork-square" collapsable={false} style={{width:side,height:side}}><PlayerCover services={services} track={track} size={side}/></View>
         </View>
         <View testID="am-controls" style={{flexShrink:0,width:columns?Math.min(360,width*.42):undefined}}>
           {coverInfo}

@@ -11,7 +11,7 @@ import {StatusBar} from 'expo-status-bar';
 import {Ionicons,MaterialIcons} from '@expo/vector-icons';
 import {AmbientBackground,GlassSurface} from './Materials.tsx';
 import {ArtworkBackdrop,ModernPlayer} from './ModernPlayer.tsx';
-import {Cover} from './Cover.tsx';
+import {PlayerCover} from './TapeCover.tsx';
 import {CupertinoGlyph} from './CupertinoGlyph.tsx';
 import {MatchModal} from './MatchModal.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
@@ -115,7 +115,7 @@ export function Player({ services }: { services: Services }) {
   const selectSkin=(id:PlayerLayout)=>{closeDetails();void services.preferences.update({playerLayout:id}).catch(()=>Alert.alert('界面未保存','之前的播放界面保持不变，请重试。'));};
   const skinSelector=(<View style={{gap:10}}><Text style={styles.caption}>选择后立即应用，播放进度和播放意图保持不变。</Text><View style={{borderRadius:16,overflow:'hidden',borderWidth:1,borderColor:theme.palette.border}}>{([['classic','经典','albums-outline'],['am','AM 风格','musical-notes-outline'],['immersive','封面沉浸','image-outline'],['photo','写真歌词','person-outline'],['vinyl','黑胶唱机','disc-outline'],['wave','声波核','pulse-outline'],['stage','歌词舞台','text-outline'],['am2','AM2','reader-outline']] as const).map(([id,title,icon])=><Pressable key={id} testID={`play-skin-${id}`} accessibilityRole="radio" accessibilityState={{selected:preferences.playerLayout===id}} onPress={()=>selectSkin(id)} style={{minHeight:64,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:14,borderBottomWidth:id==='am2'?0:1,borderBottomColor:theme.palette.border,backgroundColor:preferences.playerLayout===id?theme.palette.selected:theme.palette.surface}}><View style={{width:36,height:36,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:preferences.playerLayout===id?theme.palette.accent:theme.palette.selected}}><Ionicons name={icon} size={19} color={preferences.playerLayout===id?theme.palette.surface:theme.palette.accent}/></View><Text style={{flex:1,color:preferences.playerLayout===id?theme.palette.accent:theme.palette.text,fontWeight:preferences.playerLayout===id?'600':'400',fontSize:15}}>{title}</Text><Ionicons name={preferences.playerLayout===id?'checkmark-circle':'chevron-forward'} size={21} color={preferences.playerLayout===id?theme.palette.accent:theme.palette.secondary}/></Pressable>)}</View></View>);
   const detailContent=(<>
-        <Cover services={services} track={entry.track} size={240}/>
+        <PlayerCover services={services} track={entry.track} size={240}/>
         <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
         <Text style={styles.caption}>{localQuality??`偏好 ${preferences.quality} · 成功请求档位 ${state.media?.quality??'待解析'}${qualityNotice}（非实际文件格式证明）`}</Text>
         <Spectrum services={services} />
@@ -174,7 +174,7 @@ export function Player({ services }: { services: Services }) {
       <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
       <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicHeaderInk,{transform:[{translateY:-1.83}]})}</View>
     </View>
-    <View testID="classic-artwork" collapsable={false} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><Cover services={services} track={entry.track} size={artworkSide}/></View>
+    <View testID="classic-artwork" collapsable={false} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><PlayerCover services={services} track={entry.track} size={artworkSide}/></View>
     <View style={{marginTop:classicArtworkLayout.titleBefore,alignItems:'center',gap:2}}>
       <Text numberOfLines={1} style={{fontSize:classicMetadataLayout.titleSize,lineHeight:classicMetadataLayout.titleLineHeight,fontWeight:'700',color:classicInk.text,transform:[{translateY:classicMetadataLayout.titleOffset}]}}>{entry.track.title}</Text>
       {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
@@ -211,7 +211,7 @@ export function Player({ services }: { services: Services }) {
   </View>;
   return <>
     <View testID="mini-player" onTouchStart={startTouch(miniTouchStart)} onTouchEnd={finishTouch(miniTouchStart,'up',()=>setOpen(true))}><GlassSurface><View style={styles.mini}>
-      <Cover services={services} track={entry.track} size={44}/>
+      <PlayerCover services={services} track={entry.track} size={44}/>
       <View style={{flex:1,minWidth:80}}><Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={()=>setOpen(true)} style={{minHeight:44,justifyContent:'center'}}>
         <Text numberOfLines={1} style={styles.track}>{entry.track.title}</Text>{(!preferences.miniLyrics||open)&&<Text numberOfLines={1} style={styles.caption}>{entry.track.artist} · {state.phase==='resolving'?'正在选择音源…':state.error??(state.buffering?'缓冲中…':time(state.position))}</Text>}
       </Pressable>{preferences.miniLyrics&&!open&&<MiniLyric key={JSON.stringify(lyricTrack.origin)} services={services} track={lyricTrack}/>}</View><View style={{flexDirection:'row',flexShrink:0,alignItems:'center'}}>{preferences.miniActions.map(action=>{

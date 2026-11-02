@@ -5811,6 +5811,101 @@ final class SourceSettingsTests: XCTestCase {
     flat.tap();XCTAssertTrue(flat.isSelected)
     let image=XCTAttachment(screenshot:app.screenshot());image.name="EQ single column at accessibility XXXL";image.lifetime = .keepAlways;add(image)
   }
+  func testTapeCoverPersistenceAndMainCoverScope() throws {
+    let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
+    openSettings(app,page:"sources")
+    let existingFixtureAccount=app.buttons["移除连接：fixture-user"]
+    let createdFixtureAccount = !existingFixtureAccount.exists
+    if createdFixtureAccount {
+      let address=app.textFields["Navidrome服务器地址"],username=app.textFields["Navidrome用户名"],password=app.secureTextFields["Navidrome密码"]
+      func enter(_ field:XCUIElement,_ value:String){
+        for _ in 0..<8 {if field.isHittable{break};app.swipeUp()}
+        XCTAssertTrue(field.isHittable,"Navidrome fixture field must remain reachable")
+        field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
+      }
+      enter(address,"http://127.0.0.1:18439")
+      enter(username,"fixture-user")
+      enter(password,"fixture-password")
+      let connect=app.buttons["验证并保存连接"]
+      for _ in 0..<8 {if connect.isHittable{break};app.swipeUp()}
+      XCTAssertTrue(connect.isHittable);connect.tap()
+      XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
+    }
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch
+    XCTAssertTrue(account.waitForExistence(timeout:10));account.tap()
+    let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
+    XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
+    let playAll=app.buttons["播放全部"];XCTAssertTrue(playAll.waitForExistence(timeout:10));playAll.tap()
+    let ordinaryPlayer=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(ordinaryPlayer.waitForExistence(timeout:10));ordinaryPlayer.tap()
+    let classicArtwork=app.descendants(matching:.any).matching(identifier:"classic-artwork").firstMatch
+    XCTAssertTrue(classicArtwork.waitForExistence(timeout:10))
+    XCTAssertTrue(classicArtwork.descendants(matching:.any).matching(identifier:"cover-image-image").firstMatch.waitForExistence(timeout:20),"The Navidrome fixture must render a real raster cover before applying the tape shell")
+    app.buttons["暂停"].firstMatch.tap();app.buttons["收起播放页"].firstMatch.tap()
+    func reach(_ element:XCUIElement,in viewport:XCUIElement){
+      for _ in 0..<24 {
+        if element.isHittable{return}
+        let above=element.exists && element.frame.midY<viewport.frame.midY
+        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25)))
+      }
+      XCTAssertTrue(element.isHittable,"Tape style control must remain reachable")
+    }
+    func openPlayer()->XCUIElement{
+      let button=app.buttons["打开播放页"].firstMatch
+      XCTAssertTrue(button.waitForExistence(timeout:10));button.tap()
+      let shell=app.descendants(matching:.any).matching(identifier:"player-tape-cover").firstMatch
+      XCTAssertTrue(shell.waitForExistence(timeout:10),"Enabled tape style must render on the main player cover")
+      XCTAssertTrue(shell.descendants(matching:.any).matching(identifier:"cover-image").firstMatch.exists,"The tape shell must retain the cover loader")
+      XCTAssertTrue(shell.descendants(matching:.any).matching(identifier:"cover-image-image").firstMatch.waitForExistence(timeout:20),"The tape shell must retain an actually loaded raster cover")
+      return shell
+    }
+    func selectSkin(_ identifier:String,_ name:String){
+      app.buttons["更多播放控制"].firstMatch.tap()
+      let styles=app.buttons["播放界面样式"].firstMatch;XCTAssertTrue(styles.waitForExistence(timeout:5));styles.tap()
+      let skin=app.descendants(matching:.any).matching(identifier:identifier).firstMatch
+      for _ in 0..<8 {if skin.isHittable{break};app.swipeUp()}
+      XCTAssertTrue(skin.isHittable,"Playback skin must remain reachable: \(identifier)");skin.tap()
+      let shell=app.descendants(matching:.any).matching(identifier:"player-tape-cover").firstMatch
+      XCTAssertTrue(shell.waitForExistence(timeout:10),"Tape shell must render on \(name)")
+      XCTAssertTrue(shell.descendants(matching:.any).matching(identifier:"cover-image-image").firstMatch.waitForExistence(timeout:10),"Tape shell must retain the loaded raster on \(name)")
+      let screenshot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());screenshot.name="Tape cover with loaded raster on \(name)";screenshot.lifetime = .keepAlways;add(screenshot)
+    }
+    openSettings(app,page:"appearance")
+    let toggle=app.switches["appearance-tape-style"],viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-appearance").firstMatch
+    XCTAssertTrue(viewport.waitForExistence(timeout:10));reach(toggle,in:viewport)
+    if toggle.value as? String != "1"{toggle.tap()}
+    XCTAssertEqual(toggle.value as? String,"1")
+    app.buttons["settings-back"].tap()
+    _=openPlayer()
+    let on=XCTAttachment(screenshot:XCUIScreen.main.screenshot());on.name="Tape cover with loaded raster on classic player";on.lifetime = .keepAlways;add(on)
+    for (identifier,name) in [("play-skin-immersive","immersive"),("play-skin-wave","wave"),("play-skin-am","AM"),("play-skin-am2","AM2")]{selectSkin(identifier,name)}
+    selectSkin("play-skin-classic","classic restored")
+    app.buttons["收起播放页"].firstMatch.tap()
+    XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"player-tape-cover").firstMatch.exists,"The mini player must keep its ordinary compact cover")
+    app.terminate();app.launch()
+    _=openPlayer()
+    let restored=XCTAttachment(screenshot:XCUIScreen.main.screenshot());restored.name="Tape cover persisted after restart";restored.lifetime = .keepAlways;add(restored)
+    app.buttons["收起播放页"].firstMatch.tap()
+    openSettings(app,page:"appearance")
+    let restoredToggle=app.switches["appearance-tape-style"],restoredViewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-appearance").firstMatch
+    XCTAssertTrue(restoredViewport.waitForExistence(timeout:10));reach(restoredToggle,in:restoredViewport)
+    XCTAssertEqual(restoredToggle.value as? String,"1")
+    restoredToggle.tap();XCTAssertEqual(restoredToggle.value as? String,"0")
+    app.buttons["settings-back"].tap()
+    let button=app.buttons["打开播放页"].firstMatch
+    XCTAssertTrue(button.waitForExistence(timeout:10));button.tap()
+    XCTAssertTrue(waitForGone(app.descendants(matching:.any).matching(identifier:"player-tape-cover").firstMatch,timeout:5),"Disabling the option must return to the ordinary main cover")
+    let off=XCTAttachment(screenshot:XCUIScreen.main.screenshot());off.name="Tape cover disabled returns ordinary cover";off.lifetime = .keepAlways;add(off)
+    app.buttons["收起播放页"].firstMatch.tap()
+    if createdFixtureAccount {
+      openSettings(app,page:"sources")
+      let remove=app.buttons["移除连接：fixture-user"]
+      XCTAssertTrue(remove.waitForExistence(timeout:10));remove.tap();app.alerts.buttons["移除"].tap()
+      XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
+    }
+  }
   func testAppearancePersistenceAndPrimaryNavigation() throws {
     let app=XCUIApplication();app.launch()
     let discover=app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch
