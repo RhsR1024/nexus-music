@@ -21,7 +21,7 @@ import {DownloadSubmissionModal} from './DownloadSubmission.tsx';
 import {BatchSelectionBar,type BatchAction} from './BatchSelectionBar.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {Toast,useToast} from './Toast.tsx';
-import {selectionAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
+import {selectionToggleAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
 type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易'],['tx','QQ'],['kw','酷我'],['kg','酷狗'],['mg','咪咕']]as const;
@@ -136,7 +136,7 @@ export function Discovery({services,embedded=false,initialCollection,onClose,cat
       {!!detailDescription&&((initialCollection?.kind==='album'||initialCollection?.kind==='artist')?<View style={{gap:8}}><Pressable accessibilityRole="button" accessibilityLabel={descriptionOpen?artistMetadata?'收起艺术家简介':'收起专辑简介':artistMetadata?'展开艺术家简介':'展开专辑简介'} accessibilityState={{expanded:descriptionOpen}} onPress={()=>setDescriptionOpen(value=>!value)} style={{minHeight:controls.hit,justifyContent:'center'}}><Text style={{color:theme.palette.accent}}>{artistMetadata?'艺术家':'专辑'}简介 · {descriptionOpen?'收起':'展开'}</Text></Pressable><Text numberOfLines={descriptionOpen?undefined:2} style={{color:theme.palette.secondary,lineHeight:23}}>{detailDescription}</Text></View>:<Pressable accessibilityRole="button" accessibilityLabel={descriptionOpen?'收起歌单简介':'展开歌单简介'} onPress={()=>setDescriptionOpen(value=>!value)}><Text numberOfLines={descriptionOpen?undefined:2} style={{color:theme.palette.secondary,lineHeight:23}}>{detailDescription}</Text><Text style={{color:theme.palette.accent,marginTop:6}}>{descriptionOpen?'收起':'展开'}</Text></Pressable>)}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{tracks.length>0&&button('播放已加载歌曲',()=>services.playTracks(tracks,0))}{tracks.length>0&&button('随机播放已加载',()=>{void services.preferences.update({repeat:'off',shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));})}</View>
       {selection.active&&!picking&&<BatchSelectionBar count={selectionCount(selection)} total={shownRows.length} allSelected={shownRows.length>0&&selectionCount(selection)===shownRows.length} actions={['favorite','playlist','next','download']} busy={busy} testPrefix="discovery"
-        onSelectAll={()=>setSelection(selectionAll(selection,shownRows.map(row=>row.key)))}
+        onSelectAll={()=>setSelection(current=>selectionToggleAll(current,shownRows.map(row=>row.key)))}
         onCancel={()=>{setSelection(selectionNone);setPicking(false);}}
         onAction={action=>{void runBatch(action);}}/>}
       {selection.active&&picking&&<PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,shownRows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>toast.show(`已添加 ${selectionCount(selection)} 首到 ${title}`)}/>}

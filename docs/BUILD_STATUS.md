@@ -1,3 +1,7 @@
+## 2026-11-02 选择边界本地 Release 验证
+
+下载任务、搜索和发现详情的选择边界修复已通过同源码两条正式 Release：下载任务`SourceUITests-1793612699584`为1/0/0、257.578秒；搜索/发现`SourceUITests-1793613088076`为2/0/0、34.224/222.847秒。两者manifest均为`exitCode=0/sourceUnchanged=true`、源码digest `530a1e85…`；7张1290×2796 PNG provenance ready并亲看。980/980、完整native、Swift/YAML/diff与IPA/APK strict review通过。clean unsigned IPA、T7阶段与iOS27云端结果在后续交付补充中绑定精确提交，不用模拟器结果替代真机或签名。
+
 ## 2026-11-02 J26 App 与系统输出音量分离
 
 正式播放设置现在把音枢 App 相对音量与当前 iOS 输出设备的系统音量分开。真机由公共 `MPVolumeView` 显示系统滑块，外层提供至少 44pt 的 adjustable 无障碍元素；音量、路由和输出设备保持系统所有，不写入偏好、不枚举设备、不创建第二播放器。模拟器不提供系统滑块时显示并暴露明确不可用说明，不伪造 0% 系统音量。

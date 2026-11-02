@@ -85,6 +85,12 @@ jobs:
           fi
           cp build/logs/ui-catalog.log build/logs/ui-online-matching.log
           cp build/logs/ui-server-counts.json build/logs/ui-online-matching-counts.json
+          if ! NEXUS_UI_RUN_DIR=build/logs/search-selection-app node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates 2>&1 | tee build/logs/ui-search-selection-runner.log; then
+            tail -n 100 build/logs/search-selection-app/ui-catalog.log
+            exit 1
+          fi
+          cp build/logs/search-selection-app/ui-catalog.log build/logs/ui-search-selection.log
+          cp build/logs/search-selection-app/ui-server-counts.json build/logs/ui-search-selection-counts.json
           if ! NEXUS_UI_RUN_DIR=build/structured-lyrics-app node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics 2>&1 | tee build/logs/ui-structured-runner.log; then
             tail -n 100 build/structured-lyrics-app/ui-catalog.log
             exit 1
@@ -113,6 +119,12 @@ jobs:
           fi
           cp build/logs/ui-catalog.log build/logs/ui-downloads.log
           cp build/logs/ui-server-counts.json build/logs/ui-downloads-counts.json
+          if ! NEXUS_UI_RUN_DIR=build/logs/download-task-batch-app node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testDownloadTaskBatchActions 2>&1 | tee build/logs/ui-download-batch-runner.log; then
+            tail -n 100 build/logs/download-task-batch-app/ui-catalog.log
+            exit 1
+          fi
+          cp build/logs/download-task-batch-app/ui-catalog.log build/logs/ui-download-batch.log
+          cp build/logs/download-task-batch-app/ui-server-counts.json build/logs/ui-download-batch-counts.json
       - name: Archive unsigned device IPA
         shell: bash
         run: |

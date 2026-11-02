@@ -115,8 +115,15 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["收起播放选项"].firstMatch.tap()
   }
   private func replaceText(_ field:XCUIElement,with value:String){
-    field.tap()
-    field.typeKey("a",modifierFlags:.command)
+    field.tap();field.press(forDuration:1.1)
+    // UIKit edit menus differ between host and simulator versions. Prefer its
+    // full-selection command, then fall back to the keyboard accelerator.
+    let selectAll=XCUIApplication().descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
+    if selectAll.waitForExistence(timeout:2){
+      XCTContext.runActivity(named:"Replace text using native Select All"){_ in selectAll.tap()}
+    }else{
+      field.typeKey("a",modifierFlags:.command)
+    }
     field.typeText(value);field.typeText("\n")
     XCTAssertEqual(field.value as? String,value)
   }
@@ -732,6 +739,15 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["run-online-search"].tap()
     XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:15))
     XCTAssertTrue(app.staticTexts["search-end-wy"].waitForExistence(timeout:10),"A terminal result set must say there is no more content")
+    app.buttons["search-track-wy-0"].press(forDuration:1.1)
+    let selection=app.descendants(matching:.any).matching(identifier:"batch-selection-bar").firstMatch
+    XCTAssertTrue(selection.waitForExistence(timeout:5));XCTAssertEqual(selection.label,"已选 1 / 1 首")
+    let selectAll=app.buttons["batch-select-all"];XCTAssertEqual(selectAll.label,"取消全选");selectAll.tap()
+    XCTAssertEqual(selection.label,"已选 0 / 1 首");XCTAssertEqual(selectAll.label,"全选")
+    for action in ["收藏","加歌单","下一首","下载"]{XCTAssertFalse(app.buttons["batch-action-\(action)"].isEnabled)}
+    let selectionImage=XCTAttachment(screenshot:app.screenshot());selectionImage.name="Search selection cleared without playing";selectionImage.lifetime = .keepAlways;add(selectionImage)
+    selectAll.tap();XCTAssertEqual(selection.label,"已选 1 / 1 首")
+    app.buttons["batch-cancel-selection"].tap();XCTAssertTrue(waitForGone(selection,timeout:5))
     let clear=app.buttons["search-clear"];XCTAssertTrue(clear.isHittable);clear.tap()
     let history=app.buttons["search-history-0"];XCTAssertTrue(history.waitForExistence(timeout:5))
     XCTAssertEqual(history.label,"搜索历史：Fixture song")
@@ -3134,8 +3150,8 @@ final class SourceSettingsTests: XCTestCase {
       XCTAssertTrue(visible(),"Offline control must be fully visible and hittable: \(element.identifier)")
     }
     func type(_ field:XCUIElement,_ value:String){reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")}
-    func control(_ block:Bool?=nil) throws -> [String:Int] {
-      let done=expectation(description:"Read isolated fixture counters"),path="http://127.0.0.1:18439/offline-fixture-control"+(block == nil ? "" : "?block=\(block! ? 1 : 0)")
+    func control(pauseWindow:Bool?=nil) throws -> [String:Int] {
+      let done=expectation(description:"Read isolated fixture counters"),path="http://127.0.0.1:18439/offline-fixture-control"+(pauseWindow == nil ? "" : "?pauseWindow=\(pauseWindow! ? 1 : 0)")
       var result:[String:Int]?,failure:Error?
       URLSession.shared.dataTask(with:URL(string:path)!){data,_,error in
         failure=error;if let data {result=(try? JSONSerialization.jsonObject(with:data)) as? [String:Int]};done.fulfill()
@@ -3148,14 +3164,22 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"downloads")
     func policy(_ value:Int){let e=app.descendants(matching:.any).matching(identifier:"download-concurrency-\(value)").firstMatch;reveal(e);e.tap();if value>1{XCTAssertTrue(app.alerts["提高下载并发？"].waitForExistence(timeout:5));app.alerts.buttons["使用 \(value) 并发"].tap()};let saved=XCTNSPredicateExpectation(predicate:NSPredicate(format:"label == %@","最多 \(value) 个任务"),object:app.staticTexts["download-concurrency-summary"]);XCTAssertEqual(XCTWaiter.wait(for:[saved],timeout:15),.completed)}
     policy(1);policy(2)
+    // A failed prior attempt may leave only these two test-owned records.
+    // Recover through the production UI without clearing unrelated app data.
+    let tasksEntry=app.buttons["settings-open-downloadTasks"];reveal(tasksEntry);tasksEntry.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-downloadTasks"].waitForExistence(timeout:8))
+    for title in ["Synthetic tone","Synthetic tone 2"]{
+      let suffix="：\(title) · Fixture artist"
+      let previous=app.buttons.matching(NSPredicate(format:"label == %@ OR label == %@","删除离线文件"+suffix,"移除记录"+suffix)).firstMatch
+      if previous.exists{reveal(previous);previous.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(previous,timeout:10))}
+    }
     openSettings(app,page:"sources")
     type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439");type(app.textFields["Navidrome用户名"],"fixture-user");type(app.secureTextFields["Navidrome密码"],"fixture-password")
     app.buttons["验证并保存连接"].tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch;XCTAssertTrue(account.waitForExistence(timeout:10));reveal(account);account.tap()
-    // The 8-song long-queue album keeps each 120-second WAV download
-    // mid-flight for about a minute, so two saves are still active when the
-    // task page opens. The player's own transport button is the hittable
+    // Hold both full responses after real partial bytes, independently of
+    // navigation duration. The player's own transport button is the hittable
     // 下一首; the album page keeps a covered one behind the modal.
     let longQueueDone=expectation(description:"Enable long-queue fixture")
     URLSession.shared.dataTask(with:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=1")!){_,_,_ in longQueueDone.fulfill()}.resume()
@@ -3167,6 +3191,8 @@ final class SourceSettingsTests: XCTestCase {
       let save=app.buttons["保存离线"];XCTAssertTrue(save.waitForExistence(timeout:15));reveal(save);save.tap();finishPlayerDownload(app)
       RunLoop.current.run(until:Date().addingTimeInterval(1))
     }
+    _=try control(pauseWindow:true)
+    defer{_=try? control(pauseWindow:false)}
     saveCurrent()
     let next=app.buttons.matching(NSPredicate(format:"label == %@","下一首")).allElementsBoundByIndex.first{$0.isHittable}
     XCTAssertNotNil(next,"The player's own next control must be hittable while the modal is open")
@@ -3179,9 +3205,10 @@ final class SourceSettingsTests: XCTestCase {
     let rows=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","offline-download-"))
     let active=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in rows.allElementsBoundByIndex.count>=2},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[active],timeout:30),.completed,"Two held downloads must appear as tasks")
-    let summary=app.staticTexts["offline-task-summary"];XCTAssertTrue(summary.waitForExistence(timeout:8));XCTAssertTrue(summary.label.contains("2 个待处理"),summary.label)
-    let bothRunning=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in summary.label.contains("2 个正在下载")},object:nil)
+    let summary=app.staticTexts["offline-task-summary"];XCTAssertTrue(summary.waitForExistence(timeout:8));XCTAssertTrue(summary.label.contains("2 个未完成"),summary.label)
+    let bothRunning=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in summary.label.contains("其中 2 个下载中")},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[bothRunning],timeout:20),.completed,"The explicit two-task policy must admit both held transfers")
+    XCTAssertGreaterThanOrEqual(try control()["heldFull"] ?? 0,2,"Both full responses must have independently reached the hold point")
     // The row View's center sits over its action buttons; the content
     // Pressable that owns onLongPress lives in the row's upper half.
     func rowContent(_ row:XCUIElement)->XCUICoordinate{return row.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.2))}
@@ -3192,6 +3219,15 @@ final class SourceSettingsTests: XCTestCase {
     let secondRow=rows.allElementsBoundByIndex[1];reveal(secondRow);rowContent(secondRow).tap()
     let twoSelected=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in bar.label=="已选 2 / 2 个任务"},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[twoSelected],timeout:8),.completed,"Tapping the second row must extend the selection")
+    let selectAll=app.buttons["offline-batch-select-all"]
+    XCTAssertEqual(selectAll.label,"取消全选");selectAll.tap()
+    let cleared=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in bar.label=="已选 0 / 2 个任务"},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[cleared],timeout:8),.completed,"Cancel select-all must clear selection without exiting task management")
+    XCTAssertEqual(selectAll.label,"全选")
+    for action in ["暂停","继续","取消","重试","移除记录"]{XCTAssertFalse(app.buttons["offline-batch-action-\(action)"].isEnabled,"An empty selection cannot submit \(action)")}
+    image("Download task selection cleared")
+    selectAll.tap()
+    XCTAssertEqual(bar.label,"已选 2 / 2 个任务");XCTAssertEqual(selectAll.label,"取消全选")
     app.buttons["offline-batch-action-暂停"].tap()
     XCTAssertTrue(app.staticTexts["已暂停 2 / 2 个任务"].waitForExistence(timeout:15))
     let paused=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons.matching(NSPredicate(format:"label == %@","继续下载")).allElementsBoundByIndex.count>=2},object:nil)
@@ -3206,12 +3242,16 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(bar.waitForExistence(timeout:8));let retrySecond=rows.allElementsBoundByIndex[1];reveal(retrySecond);rowContent(retrySecond).tap()
     let retryTwo=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in bar.label=="已选 2 / 2 个任务"},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[retryTwo],timeout:8),.completed,"Retry selection must cover both cancelled records")
+    _=try control(pauseWindow:false)
     app.buttons["offline-batch-action-重试"].tap()
     // Each retry resolves only when its download actually completes, so the
     // batch receipt lands after both 120-second fixtures finish (~2 minutes).
     XCTAssertTrue(app.staticTexts["已重试 2 / 2 个任务"].waitForExistence(timeout:240))
     let saved=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","删除离线文件：")).allElementsBoundByIndex.count>=2},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[saved],timeout:150),.completed,"Batch retry must complete both payloads");image("Batch retried downloads completed")
+    let completedRow=rows.allElementsBoundByIndex.first!;reveal(completedRow);rowContent(completedRow).press(forDuration:1.1)
+    XCTAssertFalse(bar.exists,"Completed audio is excluded from task selection and keeps its explicit file deletion path")
+    XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","删除离线文件：")).firstMatch.exists)
     for _ in 0..<2 {
       let remove=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","删除离线文件：")).firstMatch
       XCTAssertTrue(remove.waitForExistence(timeout:10));reveal(remove);remove.tap();app.alerts.buttons["删除"].tap()
@@ -5087,6 +5127,17 @@ final class SourceSettingsTests: XCTestCase {
     reach(refresh);refresh.tap()
     XCTAssertTrue(app.buttons["更多操作：Synthetic discovery one"].waitForExistence(timeout:10))
     XCTAssertFalse(app.staticTexts["此歌单为空，无法导入。"].exists)
+    let selectable=app.buttons.containing(NSPredicate(format:"label CONTAINS %@","Synthetic discovery one")).matching(NSPredicate(format:"label BEGINSWITH %@","播放")).firstMatch
+    reach(selectable);selectable.press(forDuration:1.1)
+    let selection=app.descendants(matching:.any).matching(identifier:"discovery-selection-bar").firstMatch
+    XCTAssertTrue(selection.waitForExistence(timeout:5));XCTAssertEqual(selection.label,"已选 1 / 2 首")
+    let selectAll=app.buttons["discovery-select-all"];reach(selectAll);selectAll.tap()
+    XCTAssertEqual(selection.label,"已选 2 / 2 首");XCTAssertEqual(selectAll.label,"取消全选")
+    selectAll.tap();XCTAssertEqual(selection.label,"已选 0 / 2 首");XCTAssertEqual(selectAll.label,"全选")
+    for action in ["收藏","加歌单","下一首","下载"]{XCTAssertFalse(app.buttons["discovery-action-\(action)"].isEnabled)}
+    evidence("Discovery selection cleared without submitting songs")
+    selectAll.tap();XCTAssertEqual(selection.label,"已选 2 / 2 首")
+    app.buttons["discovery-cancel-selection"].tap();XCTAssertTrue(waitForGone(selection,timeout:5))
     let back=app.buttons["返回歌单广场"];reach(back);back.tap();detail()
     _=try control("holdNext=1");defer{_=try? control("release=1")}
     reach(importButton);importButton.tap();XCTAssertTrue(app.buttons["取消读取"].waitForExistence(timeout:10))

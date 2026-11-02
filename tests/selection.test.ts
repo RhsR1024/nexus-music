@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  selectionNone,selectionEnter,selectionToggle,selectionAll,selectionExit,
+  selectionNone,selectionEnter,selectionToggle,selectionAll,selectionToggleAll,selectionExit,
   selectionHas,selectionCount,selectionByTapOrder,selectionByListOrder,
 } from '../src/domain/selection.ts';
 
@@ -54,4 +54,20 @@ test('an empty loaded collection cannot be fully selected',()=>{
   assert.deepEqual(model.ids,[]);
   assert.equal(selectionCount(model),0);
   assert.equal(selectionNone.active,false);
+});
+
+test('select-all control clears a full selection, stays active and selects again in list order',()=>{
+  let model=selectionToggleAll(selectionEnter('c'),['a','b','c']);
+  assert.deepEqual(model,{active:true,ids:['a','b','c']});
+  model=selectionToggleAll(model,['a','b','c']);
+  assert.deepEqual(model,{active:true,ids:[]});
+  model=selectionToggleAll(model,['c','a']);
+  assert.deepEqual(model,{active:true,ids:['c','a']});
+});
+
+test('select-all control compares current page identities rather than stale selection counts',()=>{
+  assert.deepEqual(selectionToggleAll({active:true,ids:['a','stale']},['a','b']),{active:true,ids:['a','b']});
+  assert.deepEqual(selectionToggleAll({active:true,ids:['a','b','stale']},['b','a']),{active:true,ids:[]});
+  assert.deepEqual(selectionToggleAll(selectionEnter('stale'),[]),{active:true,ids:[]});
+  assert.equal(selectionToggleAll(selectionNone,['a']),selectionNone,'the control cannot enter an inactive page');
 });

@@ -18,7 +18,7 @@ import {TrackActions} from './TrackActions.tsx';
 import {BatchSelectionBar, type BatchAction} from './BatchSelectionBar.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {Toast,useToast} from './Toast.tsx';
-import {selectionAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionToggle,selectionNone,type SelectionModel} from '../domain/selection.ts';
+import {selectionToggleAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionToggle,selectionNone,type SelectionModel} from '../domain/selection.ts';
 import {Ionicons} from '@expo/vector-icons';
 import type {DownloadSubmission} from '../app/downloadSubmission.ts';
 import {DownloadSubmissionModal} from './DownloadSubmission.tsx';
@@ -226,7 +226,7 @@ export function Search({ services }: { services: Services }) {
         count={selectionCount(model)} total={group.items.length}
         allSelected={group.items.length>0&&selectionCount(model)===group.items.length}
         actions={['favorite','playlist','next','download']} busy={busy}
-        onSelectAll={()=>setSelection({platform:group.platform,model:selectionAll(model,group.items.map((_,index)=>String(index)))})}
+        onSelectAll={()=>setSelection({platform:group.platform,model:selectionToggleAll(model,group.items.map((_,index)=>String(index)))})}
         onCancel={()=>{setSelection(null);setPicking(false);}}
         onAction={action=>{void runBatch(action,group);}}/>}
       {model.active&&picking&&<PlaylistPicker inline services={services} tracks={selectionByListOrder(model,group.items.map((track,index)=>({track,id:String(index)})),row=>row.id).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>toast.show(`已添加 ${selectionCount(model)} 首到 ${title}`)}/>}

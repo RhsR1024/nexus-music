@@ -27,6 +27,13 @@ export function selectionAll(model: SelectionModel, loadedIds: readonly string[]
   return { active: true, ids: [...loadedIds] }
 }
 
+/** Toggle the page's select-all control without leaving selection mode. */
+export function selectionToggleAll(model: SelectionModel, loadedIds: readonly string[]): SelectionModel {
+  if (!model.active) return model
+  const allSelected = loadedIds.length > 0 && loadedIds.every(id => model.ids.includes(id))
+  return { active: true, ids: allSelected ? [] : [...loadedIds] }
+}
+
 export function selectionExit(): SelectionModel {
   return selectionNone
 }

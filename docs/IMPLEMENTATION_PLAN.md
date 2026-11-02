@@ -1,3 +1,11 @@
+## 2026-11-02 下载任务、搜索与发现选择边界回归
+
+“取消全选”在下载任务、搜索歌曲组和发现详情中原先仍调用`selectionAll`。共享选择模型现在提供`selectionToggleAll`，只以当前页已加载ID判断是否全选：全选态点击清空并保留选择模式，再次点击按列表顺序全选；失效ID、当前页空集合与inactive模型均有契约覆盖。下载任务页完成音频不再挂任务选择标记、长按或选择回调，独立播放、导出与确认删除保持分离。
+
+最终同源码 Release 分两组通过：下载任务`SourceUITests-1793612699584` 1/0/0、257.578秒；搜索/发现`SourceUITests-1793613088076` 2/0/0、34.224/222.847秒。两个manifest均`exitCode=0/sourceUnchanged=true`，源码digest同为`530a1e85…`；7张1290×2796 PNG provenance ready并亲看。980/980、完整native、Swift/YAML/diff及IPA/APK strict review通过；E-006与E-1300/F-098/P-095复用，无新增Sollin采集、参考运行时、像素或动效等价声明。
+
+工作流下载组新增正式`testDownloadTaskBatchActions`独立运行，搜索新增独立选择回归，发现保留原完整场景并补1/2→2/2→0/2→2/2。真实平台批量限流、真机后台传输、签名/安装、iOS27终态、实体机/VoiceOver、弱网与连续动效继续。见[本批回执](2026-11-02-selection-boundary-report.md)。
+
 ## 2026-11-02 iOS 27 发现页文本替换与 CI 失败根因
 
 `41390545740`/`cfac30c`的紧凑日志已经把失败定位到`SourceSettingsTests.swift:4794`：`testDiscoverySongActions`长按公开歌单链接输入后，在iOS27等待系统编辑菜单的`Select All`/`全选`/`全選`超时。后续`ui-online-runner.log`的`ECONNRESET`发生在XCTest断言失败并拆除夹具服务器后，是级联结果。
