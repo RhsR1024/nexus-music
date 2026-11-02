@@ -4,7 +4,7 @@
 
 真实酷狗公开页面“Shape of You(官方中字版)”由页面可见原生控件从暂停进入 WebKit `playing`；随后系统原生视频全屏可用系统 `Close Button` 打开/退出。实测根 WebView 的全屏 API 仍报告 `inline`，因此系统 AV 全屏证据与 WebKit `fullscreenState` 分支分开记录，前者已验、后者继续开放。Home 后回前台媒体为 `suspended` 或 `paused` 且不自动续播；合成音乐仍暂停在同一进度，队列保持。
 
-967/967检查、完整 native、Node/Swift/YAML/diff均通过；最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒、`sourceUnchanged=true`，4PNG provenance ready并亲看。首次未加载项目 Xcode 环境的失败保留，根因为活动目录仍指向 Command Line Tools；IPA/APK strict review 复用均0错误/0警告，无新增 Sollin 分析。`b512848`的clean unsigned IPA为12,884,632字节、SHA-256 `b3bb9d4b…`，arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节、生产标记及无签名/描述文件检查通过，T7 69份阶段文件逐份哈希一致。实体机声音路由/音频中断、锁屏、WebKit自身全屏、其他平台真实起播、弱网、iOS27、签名/安装及完整F/J继续。见[回执](2026-11-02_mv-media-lifecycle-report.md)与[UI规格](ui-spec/mv-media-lifecycle-2026-11-02.md)。
+967/967检查、完整 native、Node/Swift/YAML/diff均通过；最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒、`sourceUnchanged=true`，4PNG provenance ready并亲看。首次未加载项目 Xcode 环境的失败保留，根因为活动目录仍指向 Command Line Tools；IPA/APK strict review 复用均0错误/0警告，无新增 Sollin 分析。`b512848`的clean unsigned IPA为12,884,632字节、SHA-256 `b3bb9d4b…`，arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC与138项archive/IPA字节、生产标记及无签名/描述文件检查通过，T7 69份阶段文件逐份哈希一致。CI触发交付提交`7547851`已push，iOS 27 workflow运行`41375349982`创建及核对时为排队且当前队列为0运行/1排队。实体机声音路由/音频中断、锁屏、WebKit自身全屏、其他平台真实起播、弱网、iOS27、签名/安装及完整F/J继续。见[回执](2026-11-02_mv-media-lifecycle-report.md)与[UI规格](ui-spec/mv-media-lifecycle-2026-11-02.md)。
 
 ## 2026-11-02 Navidrome 浏览历史与上下文恢复
 

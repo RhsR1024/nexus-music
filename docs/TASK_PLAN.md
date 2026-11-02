@@ -9,7 +9,8 @@
 - [x] 4PNG逐张 provenance ready并亲看；源码、diff、fixture、安装 bundle、JS bundle、xcresult Info、附件与截图哈希绑定。
 - [x] 首次未加载项目 Xcode 环境的启动失败及 Command Line Tools 根因原证据保留；IPA/APK strict review 均PASS、0错误/0警告，无新增 Sollin 采集。
 - [x] 功能提交`b512848`的clean unsigned manifest、arm64/iphoneos26.2/iOS15.1/[1,2]、164项CRC、archive/IPA 138项字节、生产/测试/私人标记和签名/描述文件排除通过；IPA SHA-256 `b3bb9d4b…`。
-- [ ] push与iOS27本批终态；实体机声音路由、锁屏/通话中断、WebKit自身全屏、其他平台MV、弱网与签名/安装继续。
+- [x] CI触发交付提交`7547851`已push；iOS 27 workflow运行`41375349982`创建及核对时为排队，当前0运行/1排队。
+- [ ] iOS27本批终态；实体机声音路由、锁屏/通话中断、WebKit自身全屏、其他平台MV、弱网与签名/安装继续。
 
 见[本批回执](2026-11-02_mv-media-lifecycle-report.md)与[UI规格](ui-spec/mv-media-lifecycle-2026-11-02.md)。本批只关闭酷狗公开 MV 的模拟器真实媒体、系统原生全屏与后台暂停增量，不报完整 MV 或全项目完成。
 

@@ -49,3 +49,7 @@ ZIP 共 164 项，其中 138 个普通文件、57 个规范 payload 与 81 个 e
 首轮深度核验误把 Swift 类名 `NexusPublicMVView` 当作 Hermes JS 标记，因原生类名不出现在 JS bundle 而正确返回失败；该回执保留为 `mv-lifecycle-archive-verification-b512848-attempt1-invalid-native-marker.json`。修正为正式 React Native 组件标记 `mv-media-status`/`mv-native-page` 后重跑全部结构与字节检查并通过，并非放宽 CRC、签名或 payload 比较。
 
 阶段副本位于 T7 `NexusMusic/BuildArchive/2026-11-02-mv-lifecycle-b512848/`，包含 IPA、manifest、两份核验回执、构建日志、精确 xcresult、四张截图、UI 摘要与清理预检；69 份文件、27,110,741 字节全部源/目标 SHA-256 一致，copy manifest SHA-256 `e7e84307522c32a0034f330c63eb5c6ded26e461c436a246c4437f2ff8fa2d7c`。本机原证据仍保留。收尾空间复核不删除任何内容，内盘约 55.3GiB、T7 约 606.7GiB 可用；活动构建为 0，`build/logs/cleanup-2026-11-02-mv-lifecycle-postflight.json` SHA-256 `5e509b808808ec7c9c5d125b3c0dfd2b52b1b60bdf98b997dc652634e958ede7`，恢复无需操作。
+
+## 远程交付与 CI
+
+功能提交 `b512848` 与首批文档提交 `7547851` 已按正常 fast-forward push 到 `origin/main`；push 后核对时本地 HEAD 与 `git ls-remote origin refs/heads/main` 均为 `75478512a068356586a2964286c1e0d91160b5c7`，工作区清洁。iOS 27 workflow `iOS checks and unsigned IPA` 已创建运行 [`41375349982`](https://github.com/RhsR1024/nexus-music/actions/runs/41375349982)，创建时与核对时为 `pending`，同工作流/分支当前 0 运行、1 排队。旧排队运行由 `queue: single` 自动替换，未手动重派或取消旧版本；旧运行中验证仍保留给 `cancel-in-progress:false`。本条回执使用 docs/Markdown-only 后续提交，workflow 的 `paths-ignore` 会排除它，因此不会替换上述代码运行；该运行终态返回后再补录，不把排队或本地模拟器结果当作 iOS 27 已通过。
