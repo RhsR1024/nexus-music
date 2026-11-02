@@ -157,9 +157,15 @@ const timedLyricsUI=amllLyricsUI||sequentialLyricsUI;
 if(timedLyricsUI&&process.argv.slice(2).length!==1)throw new Error('Timed TTML requires its single explicit target so malformed-TTML fallback coverage stays separate');
 const matchingUI=timedLyricsUI||process.argv.slice(2).some(target=>target.endsWith('/testCrossPlatformLyrics')||target.endsWith('/testOnlineMatching')||target.endsWith('/testSourceHealth')||target.endsWith('/testPublicComments')||target.endsWith('/testPublicQQComments')||target.endsWith('/testPublicMiguComments')||target.endsWith('/testPublicKuwoComments')||target.endsWith('/testPublicKugouComments')||target.endsWith('/testWayfarerAppImport'));
 const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDiscoverySongActions'));
-const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates'));
+const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates')||target.endsWith('/testUnifiedSongAlbumArtistSearch'));
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
 const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI;
+const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
+lx.on('request',async({source,action})=>{
+  if(action!=='musicUrl')throw new Error('unsupported fixture action');
+  return 'http://127.0.0.1:18439/unified-search-audio/'+source+'.wav';
+});
+lx.send('inited',{sources:{wy:{name:'Unified Search WY',actions:['musicUrl'],qualitys:['128k']}}});`;
 const navidromeNavigationUI=process.argv.slice(2).some(target=>target.endsWith('/testNavidromeBrowseHistory'));
 const structuredLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testStructuredNavidromeLyrics'));
 const classicReferenceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicReferenceDirect'));
@@ -344,6 +350,7 @@ const server = createServer(async (req, res) => {
   }
   if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
   if(req.url==='/health-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(healthScript);return;}
+  if(req.url==='/unified-search-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(unifiedSearchScript);return;}
   if(req.url==='/wayfarer-fixture-state'){
     res.setHeader('Content-Type','application/json');
     res.end(JSON.stringify({matchAudio:counts.matchAudio??{},online:counts.online??{},expectedMatchingAudio:wayfarerFixtureAudioPath}));return;
@@ -351,6 +358,12 @@ const server = createServer(async (req, res) => {
   if(req.url.startsWith('/matching-audio/')){
     if(!matchingUI){res.writeHead(404);res.end();return;}
     counts.matchAudio??={};counts.matchAudio[req.url]=(counts.matchAudio[req.url]??0)+1;
+    res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+    if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),matchingAudio.length-1):matchingAudio.length-1;if(start>=matchingAudio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${matchingAudio.length}`);res.end(matchingAudio.subarray(start,end+1));}else res.end(matchingAudio);return;
+  }
+  if(req.url.startsWith('/unified-search-audio/')){
+    if(!searchUI){res.writeHead(404);res.end();return;}
+    counts.unifiedSearchAudio??={};counts.unifiedSearchAudio[req.url]=(counts.unifiedSearchAudio[req.url]??0)+1;
     res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),matchingAudio.length-1):matchingAudio.length-1;if(start>=matchingAudio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${matchingAudio.length}`);res.end(matchingAudio.subarray(start,end+1));}else res.end(matchingAudio);return;
   }
@@ -483,7 +496,31 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({err_code:0,current_page:page,childrenid:24748592,tid:'101',list,comments_num:41}));return;
     }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
-    if(parsed.hostname==='music.163.com'){res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;}
+    if(parsed.hostname==='music.163.com'){
+      if(searchUI&&parsed.pathname==='/api/album/2001'){
+        res.end(JSON.stringify({code:200,album:{size:1,artist:{name:'Fixture artist'}},songs:[{id:'1001',name:'Unified fixture album track',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:120000}]}));return;
+      }
+      if(searchUI&&parsed.pathname==='/api/artist/3001'){
+        res.end(JSON.stringify({code:200,artist:{id:'3001',name:'Unified fixture artist',musicSize:20,albumSize:2},hotSongs:[{id:'1001',name:'Unified fixture artist track',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:120000}]}));return;
+      }
+      if(parsed.pathname==='/api/search/get/web'&&req.method==='POST'){
+        const body=new URLSearchParams(request.body??''),type=body.get('type'),query=body.get('s'),offset=Number(body.get('offset')??0);
+        if(type==='10'){
+          res.end(JSON.stringify({code:200,result:{albumCount:1,albums:[{id:'2001',name:'Unified fixture album',artist:{name:'Fixture artist'},size:12,publishTime:0}]}}));return;
+        }
+        if(type==='100'){
+          res.end(JSON.stringify({code:200,result:{artistCount:1,artists:[{id:'3001',name:'Unified fixture artist',musicSize:20,albumSize:2}]}}));return;
+        }
+        if(type==='1000'){
+          res.end(JSON.stringify({code:200,result:{playlistCount:1,playlists:[{id:'4001',name:'Unified fixture playlist',creator:{nickname:'Fixture editor'},trackCount:8}]}}));return;
+        }
+        if(query==='Unified fixture'){
+          const songs=offset===0?[{id:'1001',name:'Unified fixture song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:120000},{id:'1002',name:'Unified second song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:121000}]:offset===30?[{id:'1031',name:'Unified second page song',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:122000}]:[];
+          res.end(JSON.stringify({code:200,result:{songCount:61,songs}}));return;
+        }
+      }
+      res.end(JSON.stringify({code:200,result:{songCount:1,songs:[{id:'1001',name:'Synthetic match tone',ar:[{name:'Fixture artist'}],al:{name:'Original fixture'},dt:120000,sq:{size:1000}}]}}));return;
+    }
     if(parsed.hostname==='u.y.qq.com'){
       const body=JSON.parse(request.body);
       if(body.req_0?.method==='GetNewCommentList'){
@@ -739,7 +776,7 @@ try {
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
   if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');
