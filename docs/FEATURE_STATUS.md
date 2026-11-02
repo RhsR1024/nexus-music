@@ -1,3 +1,13 @@
+## 2026-11-02 iOS 27 发现页初始链接种子输入修复
+
+- [x] 真实失败根因为`testDiscoverySongActions()`首次无效域名输入绕过`replaceLink`，iOS27丢首字符后形成`htps://music.163.c...`；失败层级与证据ZIP保留。
+- [x] 测试种子URL改用统一文本替换helper，产品代码不变；Release 1/0/0、234.199秒，980/980、Swift parse/diff、完整归档与strict review通过。
+- [x] `ea134a9` clean unsigned IPA、manifest、CRC、archive字节、隐私与未签名检查通过；与已验证`90a0ecb`产品payload完全一致。
+- [x] 已push并实核远端；1运行/1排队，未取消运行中任务或重派旧版本。
+- [ ] `41435198362`iOS27终态及实体机、真实授权账号、VoiceOver/动态字号/小屏、弱网、连续动效、签名/安装和真机后台/功耗继续。
+
+本批只修复iOS27测试输入稳定性，不增加产品功能完成度；见[回执](2026-11-02-ios27-discovery-link-input-seed-fix.md)。
+
 ## 2026-11-02 J25 统一搜索五类结果
 
 - J25“全部”现并列歌曲、歌单、专辑、艺术家、MV；五类复用各自既有协调器与分页/错误状态，歌曲进入唯一权威队列，其余四类进入既有详情。

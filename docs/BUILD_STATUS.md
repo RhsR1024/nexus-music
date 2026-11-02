@@ -1,3 +1,11 @@
+## 2026-11-02 iOS 27 发现页初始链接种子输入修复
+
+`ea134a9`的clean unsigned archive在`npm run ios:archive`中输出`ARCHIVE SUCCEEDED`。manifest对应同一提交，`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、`signed=false`。IPA为12,900,214字节、SHA-256`3ecd59c0e5eaef1273674b1987edd3fd56e89fb3bb6da7066e09d2ad42917613`，manifest SHA-256`ae469a3339348b4b312988514c4c62b10e145cc6c902e62e85efb1c1ff902407`。
+
+164项ZIP entry、138个普通文件及CRC通过，archive与IPA逐文件字节一致；与已验证`90a0ecb`产品IPA比较，138个普通payload路径和全部字节一致、差异0，未发现签名、描述文件、测试URL、夹具私密值或私人resource路径。机器回执`build/logs/ios27-discovery-seed-archive-verification-ea134a9.json`的SHA-256为`bc0ae579…`、`ready=true`。此包只证明本机SDK26.2未签名归档，不替代iOS27终态、签名或实体机。
+
+`ea134a9`已push且远端一致；`41415230222`继续运行、`41435198362`为唯一pending，旧pending自动取消，队列1运行/1排队。详见[本批回执](2026-11-02-ios27-discovery-link-input-seed-fix.md)。
+
 ## 2026-11-02 J25 统一搜索五类结果
 
 最终 Release `SourceUITests-1793615533426.xcresult` 为1通过/0失败/0跳过、144.687秒；run manifest `exitCode=0`、`sourceUnchanged=true`，源码digest`3cae8317…`、安装bundle`efd73f39…`、Info.plist SHA-256`c15313ec…`。7张1290×2796 PNG provenance ready并亲看。首个有效`1793615144965`保留歌单错误/重试态，`1793615102531`的重复`-only-testing:` 0/0 exit70保留为调用错误。

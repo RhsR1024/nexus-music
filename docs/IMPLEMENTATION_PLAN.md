@@ -1,3 +1,13 @@
+## 2026-11-02 iOS 27 发现页初始链接种子输入修复
+
+`41406504201`/`a279581`的iOS作业在`SourceSettingsTests.testDiscoverySongActions()`失败。失败时AX层级记录输入值为`htps://music.163.c...`，首字符丢失使应用留在“请输入平台公开歌单分享链接或选择平台后输入ID”，未出现预期的无效域名提示。紧凑失败证据ZIP SHA-256为`51b55e280d32101dff04ede83efe7c769babd2b6e0d44ca80fc35c0180d9ead2`。
+
+提交`51e517a`已加入原生文本替换helper，但本测试首次种子URL仍绕过helper直接`typeText`。`ea134a9`只将该调用替换为`replaceLink(...)`，沿用`Command+A`、输入、换行与精确值断言；产品校验代码未改动。
+
+正式Release`SourceUITests-1793617307441`为1/0/0、234.199秒，`sourceUnchanged=true`；980/980、Swift parse、diff、完整归档与IPA strict review（54E/19WI/116 timeline/45F/45P、0错误/0警告）通过。清洁未签名IPA为12,900,214字节、SHA-256`3ecd59c0e5eaef1273674b1987edd3fd56e89fb3bb6da7066e09d2ad42917613`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项ZIP/138普通文件、CRC、archive↔IPA字节、隐私标记与未签名检查通过。与已验证`90a0ecb`比较138个普通payload路径及全部字节一致，测试修复未改变生产包。
+
+`ea134a9`已推送并实核远端一致；`41415230222`运行、`41435198362`唯一pending，`41430990767`自动取消，队列1运行/1排队。iOS27终态、实体机、真实授权账号、VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签及真机后台/功耗继续。见[回执](2026-11-02-ios27-discovery-link-input-seed-fix.md)。
+
 ## 2026-11-02 J25 统一搜索五类结果
 
 正式“全部”搜索现由歌曲、歌单、专辑、艺术家、MV 五个既有协调器组成。统一页仅负责按“平台 → 类型”编排有界预览，每类继续保留自己的查询、加载、失败、重试、总数和分页状态；空结果判断也覆盖五类。歌曲预览继续调用现有 `playTracks` 权威队列，歌单/专辑/艺术家/MV 打开既有详情，“查看全部”切到对应独立类型页。歌单与 MV 结果不会被统一页单独缓存，切换独立页和返回后由原协调器保留。
