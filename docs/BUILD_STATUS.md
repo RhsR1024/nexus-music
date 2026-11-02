@@ -1,3 +1,11 @@
+## 2026-11-02 J25 统一搜索五类结果
+
+最终 Release `SourceUITests-1793615533426.xcresult` 为1通过/0失败/0跳过、144.687秒；run manifest `exitCode=0`、`sourceUnchanged=true`，源码digest`3cae8317…`、安装bundle`efd73f39…`、Info.plist SHA-256`c15313ec…`。7张1290×2796 PNG provenance ready并亲看。首个有效`1793615144965`保留歌单错误/重试态，`1793615102531`的重复`-only-testing:` 0/0 exit70保留为调用错误。
+
+980/980、完整native、Node/Swift/diff和Release build通过。clean unsigned archive日志`ARCHIVE SUCCEEDED`；IPA12,900,214字节、SHA-256`6791673c7c80ef867be73b47f0b5362b754f524f0a4480e702491a03547787d9`，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164 ZIP/138普通文件逐文件字节与CRC、生产标记及测试/私人/签名排除通过。独立验证JSON`ready=true`、SHA-256`18bf9f2c…`。可执行/Hermes仍有third-party与Hermes绝对构建路径例外，无凭据/夹具/签名材料。
+
+`90a0ecb`已push且远端一致；`41415230222`/`51e517a`运行、`41430990767`/`90a0ecb`唯一pending。T7阶段`2026-11-02-unified-five-type-search-90a0ecb`逐文件核验，源证据保留、零删除/零迁移。真实五平台网络UI、实体机/签名/后台/功耗和iOS27终态继续。见[回执](2026-11-02-unified-five-type-search-report.md)。
+
 ## 2026-11-02 选择边界本地 Release 验证
 
 下载任务、搜索和发现详情的选择边界修复已通过同源码两条正式 Release：下载任务`SourceUITests-1793612699584`为1/0/0、257.578秒；搜索/发现`SourceUITests-1793613088076`为2/0/0、34.224/222.847秒。两者manifest均为`exitCode=0/sourceUnchanged=true`、源码digest `530a1e85…`；7张1290×2796 PNG provenance ready并亲看。980/980、完整native、Swift/YAML/diff与IPA/APK strict review通过。

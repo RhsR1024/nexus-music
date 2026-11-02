@@ -1,3 +1,10 @@
+## 2026-11-02 J25 统一搜索五类结果
+
+- J25“全部”现并列歌曲、歌单、专辑、艺术家、MV；五类复用各自既有协调器与分页/错误状态，歌曲进入唯一权威队列，其余四类进入既有详情。
+- 最终 Release `SourceUITests-1793615533426` 1/0/0、144.687秒、`sourceUnchanged=true`；7PNG provenance ready并亲看，歌单/MV详情及返回、独立页签和结果保留通过。
+- `90a0ecb` clean unsigned IPA、manifest/ZIP CRC/逐文件字节、架构/设备族、生产标记及测试/私人/签名排除通过；reverse-skill strict review 54E/19WI/116/45F/45P、0错误/0警告。
+- 真实五平台逐页网络UI、实体机/VoiceOver/动态字号/小屏/弱网/动效、私有服务/授权账号、签名/安装/续签、真机后台/功耗与iOS27继续。
+
 ## 2026-11-02 下载任务、搜索与发现选择边界回归
 
 统一选择模型的“取消全选”现在真正清空当前页选择并保留模式，再次点击恢复列表顺序全选；下载任务、搜索和发现详情共用该语义。完成音频不再显示任务选择状态，独立播放、导出和确认删除保持。两条同源码Release分别1/0/0与2/0/0，7张截图provenance ready并亲看，980/980、完整native与IPA/APK strict review通过；`ad1cf1c` clean unsigned IPA、T7逐文件副本和远端main一致性通过。真实平台批量限流、真机后台传输、签名/安装、iOS27终态与动效继续；见[本批回执](2026-11-02-selection-boundary-report.md)。

@@ -1,3 +1,18 @@
+## 2026-11-02 J25 统一搜索五类结果
+
+- [x] 正式“全部”搜索从歌曲/专辑/艺术家扩为歌曲、歌单、专辑、艺术家、MV；五类分别复用既有协调器、加载/失败/重试/总数/分页状态和既有详情。
+- [x] 歌曲继续进入唯一权威播放队列；歌单、专辑、艺术家、MV 打开各自既有详情，“查看全部”切换独立页签；往返后五类结果保留，不新增第二队列或结果缓存。
+- [x] 产品/夹具/UI 测试 diff 为 `53+/17-`；`npm run check` 980/980、Node/Swift/diff 与完整 native 通过。
+- [x] 最终 Release `SourceUITests-1793615533426` 为 1/0/0、144.687 秒、`sourceUnchanged=true`；7 张 1290×2796 PNG provenance ready 并亲看。
+- [x] 保留首个有效运行 `1793615144965` 的歌单详情错误/重试态，以及重复 `-only-testing:` 导致 0/0、runner exit 70 的调用错误原件；均不伪装成最终通过。
+- [x] `90a0ecb` clean unsigned IPA 12,900,214 字节、SHA-256 `6791673c…`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164 ZIP/138 普通文件逐文件、CRC、生产标记及测试/私人/签名排除通过。
+- [x] reverse-skill R2/离线 case-guard/prerequisite/`ipa --review` PASS，54E/19WI/116 timeline/45F/45P、0错误/0警告；无新增采集或私有探测。
+- [x] T7 `2026-11-02-unified-five-type-search-90a0ecb` 完成逐文件 SHA-256 核验，源证据保留，零删除/零迁移。
+- [x] push 后实核 `origin/main=90a0ecb`；`41415230222` 运行、`41430990767` 唯一 pending，1运行/1排队，未手动取消或重派。
+- [ ] 真实五平台逐页网络 UI、真实 iPhone、VoiceOver/动态字号/小屏、弱网/限流、连续动效、私有服务/授权账号、签名/安装/续签、真机后台/功耗和 iOS 27 终态继续。
+
+见[本批回执](2026-11-02-unified-five-type-search-report.md)与[UI规格](ui-spec/unified-search-2026-11-02.md)。J25 来源为 `U`，本批只关闭五类统一入口增量，不报完整 J25/F/J 或全项目完成。
+
 ## 2026-11-02 下载任务、搜索与发现选择边界回归
 
 - [x] 修复“取消全选”仍调用全选的三处同源缺陷；共享`selectionToggleAll`只比较当前页已加载ID，清空后保持选择模式，再次点击恢复列表顺序全选。

@@ -1,3 +1,13 @@
+## 2026-11-02 J25 统一搜索五类结果
+
+正式“全部”搜索现并列歌曲、歌单、专辑、艺术家与 MV，均复用各自既有协调器；每类独立保留查询、加载、失败、重试、总数和分页。歌曲继续进入唯一权威队列，其余四类打开既有详情，“查看全部”进入独立页签，往返后结果保留。产品/夹具/UI测试合计 `53+/17-`。
+
+最终 Release `SourceUITests-1793615533426` 为1/0/0、144.687秒，`sourceUnchanged=true`，源码 digest`3cae8317…`、安装 bundle`efd73f39…`；7张1290×2796 PNG provenance ready并亲看。首个有效运行`1793615144965`保留既有歌单错误/重试态，重复`-only-testing:`的0/0 exit70保留为调用错误，二者不改写为最终通过。980/980、Node/Swift/diff与完整native通过。
+
+`90a0ecb` clean unsigned IPA为12,900,214字节、SHA-256`6791673c…`；manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164 ZIP/138普通文件逐文件字节、CRC、生产标记及测试/私人/签名排除通过。可执行/Hermes仍含third-party与Hermes构建溯源绝对路径，已公开记录，未发现凭据、夹具或签名材料。reverse-skill R2/离线case-guard/prerequisite/`ipa --review` PASS，54E/19WI/116 timeline/45F/45P、0错误/0警告；无新增采集或私有探测。T7阶段目录`2026-11-02-unified-five-type-search-90a0ecb`逐文件SHA-256核验，源证据保留且零删除/零迁移。
+
+push后远端main实核`90a0ecb`；`41415230222`/`51e517a`继续运行、`41430990767`/`90a0ecb`为唯一pending，1运行/1排队，未手动取消或重派。真实五平台逐页网络UI、实体iPhone、VoiceOver/动态字号/小屏、弱网/限流、连续动效、私有服务/授权账号、签名/安装/续签、真机后台/功耗和iOS27终态继续。见[本批回执](docs/2026-11-02-unified-five-type-search-report.md)与[UI规格](docs/ui-spec/unified-search-2026-11-02.md)。J25来源为`U`，本批不关闭完整J25/F/J或项目。
+
 ## 2026-11-02 下载任务、搜索与发现选择边界回归
 
 共享选择模型新增当前页 `selectionToggleAll`：下载任务、搜索歌曲组与发现详情在显示“取消全选”时按当前已加载 ID 清空选择并保留选择模式，再次点击恢复当前页全选；失效/非当前页 ID 不参与全选判定。下载任务页同时不再给已完成音频提供任务选择标记、长按或选择回调，完成文件的播放、导出和独立确认删除保持不变。
