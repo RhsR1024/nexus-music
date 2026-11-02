@@ -5,6 +5,9 @@
 - [x] 下载任务Release `SourceUITests-1793612699584` 1/0/0、257.578秒；搜索/发现Release `SourceUITests-1793613088076` 2/0/0、34.224/222.847秒；同源码digest `530a1e85…`、均`sourceUnchanged=true`。
 - [x] 7张1290×2796 PNG逐张provenance ready并亲看；空选择动作禁用、下载暂停/取消/重试/完成和搜索1/1→0/1→1/1、发现1/2→2/2→0/2→2/2通过。
 - [x] 980/980、完整native、Swift/YAML/diff与IPA/APK strict review通过；E-006与E-1300/F-098/P-095复用，无新增Sollin采集或参考运行时/像素/动效声明。
+- [x] `ad1cf1c`已push并实核远端一致；clean unsigned IPA 12,899,920字节、SHA-256 `20395f05…`，manifest clean、164项ZIP/138项archive逐文件字节、arm64/iOS15.1/[1,2]、测试/私人与签名排除通过。
+- [x] T7独立阶段`2026-11-02-selection-boundary-ad1cf1c`完成源/目标逐文件SHA-256核验；源证据保留，空间回执`deleted=0/moved=0`。IPA strict review初次`reference.unknown_evidence`已记录，原始输出因同路径重跑覆盖如实标注。
+- [x] `41415230222`/`51e517a`继续运行，`41426350992`/`ad1cf1c`为唯一pending，实核1运行/1排队，未取消或重派。
 - [ ] 真实平台批量限流、真机后台传输、签名/安装、iOS27终态、实体机/VoiceOver、弱网和连续动效继续。
 
 见[本批回执](2026-11-02-selection-boundary-report.md)与[UI场景](ui-spec/download-task-selection-2026-11-02.md)。

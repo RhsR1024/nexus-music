@@ -2,7 +2,9 @@
 
 共享选择模型新增当前页 `selectionToggleAll`：下载任务、搜索歌曲组与发现详情在显示“取消全选”时按当前已加载 ID 清空选择并保留选择模式，再次点击恢复当前页全选；失效/非当前页 ID 不参与全选判定。下载任务页同时不再给已完成音频提供任务选择标记、长按或选择回调，完成文件的播放、导出和独立确认删除保持不变。
 
-最终同源码 Release 分两组通过：下载任务 `SourceUITests-1793612699584` 为1/0/0、257.578秒；搜索/发现 `SourceUITests-1793613088076` 为2/0/0，分别为34.224/222.847秒。两个 manifest 均`exitCode=0`、`sourceUnchanged=true`，源码 digest同为`530a1e85…`；7张1290×2796 PNG逐张provenance ready并亲看。下载夹具最终`heldFull=2/fullFinished=2/authFailures=0`，空选择动作禁用、暂停/取消/重试、完成文件和搜索/发现选择往返均通过。980/980、完整native、Swift/YAML/diff与IPA/APK strict review（0错误/0警告）通过；IPA case误把Android E-1300写入机器Evidence ID的失败日志保留，修正为E-006后重跑通过。
+最终同源码 Release 分两组通过：下载任务 `SourceUITests-1793612699584` 为1/0/0、257.578秒；搜索/发现 `SourceUITests-1793613088076` 为2/0/0，分别为34.224/222.847秒。两个 manifest 均`exitCode=0`、`sourceUnchanged=true`，源码 digest同为`530a1e85…`；7张1290×2796 PNG逐张provenance ready并亲看。下载夹具最终`heldFull=2/fullFinished=2/authFailures=0`，空选择动作禁用、暂停/取消/重试、完成文件和搜索/发现选择往返均通过。980/980、完整native、Swift/YAML/diff与IPA/APK strict review（0错误/0警告）通过；IPA case初次把Android E-1300误写入IPA机器Evidence ID，正确改为E-006后复核通过，初次失败结果已用小型回执保留，原始标准输出被同路径重跑覆盖，不能写成原日志仍可取。
+
+功能提交 `ad1cf1c` 已正常push并实核`origin/main`一致。clean unsigned IPA为12,899,920字节、SHA-256`20395f05…`；manifest`dirty:false`且无工作区变更，arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、164项ZIP、138项archive/IPA逐文件字节、测试/私人标记排除和未签名检查通过。T7独立阶段为`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-selection-boundary-ad1cf1c/`，源/目标逐文件SHA-256核验且源证据保留。云端`41415230222`/`51e517a`继续运行，`41426350992`/`ad1cf1c`为唯一pending，实核1运行/1排队，未取消或重派。
 
 工作流下载组新增正式`testDownloadTaskBatchActions`独立运行，搜索新增独立选择回归，发现组保留原有完整场景并补选择断言。按E-006与E-1300/F-098/P-095既有任务/文件边界复用，无新增Sollin采集、参考运行时或像素/动效等价声明。真实平台批量限流、真机后台传输、签名/安装、iOS27终态、实体机/VoiceOver与连续动效继续独立验收。见[本批回执](docs/2026-11-02-selection-boundary-report.md)与[UI场景](docs/ui-spec/download-task-selection-2026-11-02.md)。
 

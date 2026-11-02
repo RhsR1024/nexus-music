@@ -4,7 +4,7 @@
 
 最终同源码 Release 分两组通过：下载任务`SourceUITests-1793612699584` 1/0/0、257.578秒；搜索/发现`SourceUITests-1793613088076` 2/0/0、34.224/222.847秒。两个manifest均`exitCode=0/sourceUnchanged=true`，源码digest同为`530a1e85…`；7张1290×2796 PNG provenance ready并亲看。980/980、完整native、Swift/YAML/diff及IPA/APK strict review通过；E-006与E-1300/F-098/P-095复用，无新增Sollin采集、参考运行时、像素或动效等价声明。
 
-工作流下载组新增正式`testDownloadTaskBatchActions`独立运行，搜索新增独立选择回归，发现保留原完整场景并补1/2→2/2→0/2→2/2。真实平台批量限流、真机后台传输、签名/安装、iOS27终态、实体机/VoiceOver、弱网与连续动效继续。见[本批回执](2026-11-02-selection-boundary-report.md)。
+工作流下载组新增正式`testDownloadTaskBatchActions`独立运行，搜索新增独立选择回归，发现保留原完整场景并补1/2→2/2→0/2→2/2。`ad1cf1c`已push并实核远端main一致；clean unsigned IPA 12,899,920字节、SHA-256`20395f05…`，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、164项ZIP/138项archive逐文件字节、测试/私人与签名排除通过。T7独立阶段完成源/目标逐文件SHA-256核验，源证据保留；IPA strict review初次错误引用的结果已单独记录，原始输出被同路径重跑覆盖的事实如实保留。云端`41415230222`/`51e517a`继续运行，`41426350992`/`ad1cf1c`为唯一pending，1运行/1排队。真实平台批量限流、真机后台传输、签名/安装、iOS27终态、实体机/VoiceOver、弱网与连续动效继续。见[本批回执](2026-11-02-selection-boundary-report.md)。
 
 ## 2026-11-02 iOS 27 发现页文本替换与 CI 失败根因
 

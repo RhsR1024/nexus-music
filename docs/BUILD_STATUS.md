@@ -1,6 +1,10 @@
 ## 2026-11-02 选择边界本地 Release 验证
 
-下载任务、搜索和发现详情的选择边界修复已通过同源码两条正式 Release：下载任务`SourceUITests-1793612699584`为1/0/0、257.578秒；搜索/发现`SourceUITests-1793613088076`为2/0/0、34.224/222.847秒。两者manifest均为`exitCode=0/sourceUnchanged=true`、源码digest `530a1e85…`；7张1290×2796 PNG provenance ready并亲看。980/980、完整native、Swift/YAML/diff与IPA/APK strict review通过。clean unsigned IPA、T7阶段与iOS27云端结果在后续交付补充中绑定精确提交，不用模拟器结果替代真机或签名。
+下载任务、搜索和发现详情的选择边界修复已通过同源码两条正式 Release：下载任务`SourceUITests-1793612699584`为1/0/0、257.578秒；搜索/发现`SourceUITests-1793613088076`为2/0/0、34.224/222.847秒。两者manifest均为`exitCode=0/sourceUnchanged=true`、源码digest `530a1e85…`；7张1290×2796 PNG provenance ready并亲看。980/980、完整native、Swift/YAML/diff与IPA/APK strict review通过。
+
+功能提交`ad1cf1c`已正常push并实核远端main一致。clean unsigned IPA为12,899,920字节、SHA-256`20395f05…`；manifest`dirty:false`且无工作区变更，arm64/iphoneos26.2/iOS15.1/设备族`[1,2]`、164项ZIP、138项archive/IPA逐文件字节、正式产物与测试/私人标记、签名/描述文件排除通过。验证日志与JSON SHA-256均为`ca3d5e37…`，main JS bundle为`8c42695a…`。首次IPA校验器在环境脚本外的Python路径上于内容断言前失败，失败情况已另记；修正后同一脚本完整通过。IPA strict review初次把Android E-1300误放进IPA机器Evidence ID，修正为E-006后通过，初次失败结果保留回执并明确原输出已被同路径重跑覆盖。
+
+T7独立阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-selection-boundary-ad1cf1c/`包含IPA/archive、clean manifest、验证、两条xcresult、run日志、7图、失败回执、报告与提交diff；源/目标逐文件SHA-256、恢复清单和`SHA256SUMS`复核通过，源证据全部保留。最终复制核验回执SHA-256`7df4ee92…`；空间回执SHA-256`5c9d4a7c…`记录内盘约49.14GiB、T7约604.69GiB可用、活动构建0及`deleted=0/moved=0`。云端`41415230222`/`51e517a`继续运行，`41426350992`/`ad1cf1c`为唯一pending，实核1运行/1排队，未取消或重派。模拟器与未签名包不替代真机、签名或iOS27终态。
 
 ## 2026-11-02 J26 App 与系统输出音量分离
 
