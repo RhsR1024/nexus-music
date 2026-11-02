@@ -28,7 +28,7 @@ const kindNames={song:'歌曲',playlist:'歌单',album:'专辑',artist:'艺术�
 type SearchKind=keyof typeof kindNames;
 type SearchTab='all'|SearchKind;
 interface GroupSelection { platform: OnlinePlatform; model: SelectionModel }
-const unifiedKinds=['song','album','artist'] as const;
+const unifiedKinds=['song','playlist','album','artist','mv'] as const;
 const unifiedPreviewLimit=2;
 
 export function Search({ services }: { services: Services }) {
@@ -60,8 +60,8 @@ export function Search({ services }: { services: Services }) {
 
   const draft=normalizeSearchQuery(query);
   const suggestions=draft&&draft!==state.query?suggestSearchQueries(history,draft):[];
-  const activeStates=kind==='all'?[songState,albumState,artistState]:[state];
-  const emptyResults=!!state.query&&activeStates.every(candidate=>candidate.groups.length>0&&candidate.groups.every(group=>!group.loading&&!group.error&&group.items.length===0));
+  const activeGroups=kind==='all'?[songState.groups,playlistState.groups,albumState.groups,artistState.groups,videoState.groups]:[state.groups];
+  const emptyResults=!!state.query&&activeGroups.every(groups=>groups.length>0&&groups.every(group=>!group.loading&&!group.error&&group.items.length===0));
   const assistanceMode=!draft&&!history.length?'hot':draft&&(editing||draft!==state.query||emptyResults)?'suggest':null;
   useEffect(()=>{
     services.searchAssistance.clear();
@@ -149,7 +149,9 @@ export function Search({ services }: { services: Services }) {
         const details=artist?[artist.songCount!==undefined?`${artist.songCount} 首歌曲`:'',artist.albumCount!==undefined?`${artist.albumCount} 张专辑`:''].filter(Boolean).join(' · '):[item.author,item.count!==undefined?`${item.count} 首`:''].filter(Boolean).join(' · ');
         return {key:item.id,title:item.title,subtitle:details||`打开${kindNames[type]}`,...(item.artwork?{artwork:item.artwork}:{}),onPress:()=>openCatalog(type,platform,item)};
       });
-    const retry=()=>{const coordinator=type==='song'?services.search:type==='album'?services.albumSearch:services.artistSearch;void coordinator.retry(platform);};
+    const coordinator=type==='song'?services.search:type==='playlist'?services.playlistSearch:type==='album'?services.albumSearch:type==='artist'?services.artistSearch:services.videoSearch;
+    const retry=()=>{void coordinator.retry(platform);};
+    const icon=type==='song'?'musical-note-outline':type==='playlist'?'list-outline':type==='album'?'albums-outline':type==='artist'?'person-outline':'videocam-outline';
     return <View key={`${platform}-${type}`} testID={`unified-${type}-${platform}`} style={styles.unifiedEntity}>
       <View style={styles.unifiedEntityHeader}>
         <Text accessibilityRole="header" style={styles.unifiedEntityTitle}>{kindNames[type]}</Text>
@@ -157,7 +159,7 @@ export function Search({ services }: { services: Services }) {
         <Pressable testID={`unified-view-all-${type}-${platform}`} accessibilityRole="button" accessibilityLabel={`查看${platformNames[platform]}全部${kindNames[type]}结果`} onPress={()=>selectKind(type)} style={styles.unifiedViewAll}><Text style={styles.link}>查看全部</Text></Pressable>
       </View>
       {previews.map((item,index)=><Pressable key={item.key} testID={`unified-${type}-${platform}-${index}`} accessibilityRole="button" accessibilityLabel={`${type==='song'?'播放':'打开'}${kindNames[type]}：${item.title}，${platformNames[platform]}${item.subtitle?`，${item.subtitle}`:''}`} onPress={item.onPress} style={styles.unifiedRow}>
-        {item.artwork?<Cover services={services} url={item.artwork} size={catalogArtwork.square} radius={Math.min(theme.appearance.coverRadius,radius.md)}/>:<View style={styles.unifiedTypeIcon}><Ionicons name={type==='song'?'musical-note-outline':type==='album'?'albums-outline':'person-outline'} size={20} color={theme.palette.accent}/></View>}
+        {item.artwork?<Cover services={services} url={item.artwork} size={catalogArtwork.square} radius={Math.min(theme.appearance.coverRadius,radius.md)}/>:<View style={styles.unifiedTypeIcon}><Ionicons name={icon} size={20} color={theme.palette.accent}/></View>}
         <View style={{flex:1}}><Text style={styles.track} numberOfLines={2}>{item.title}</Text>{!!item.subtitle&&<Text style={styles.caption} numberOfLines={2}>{item.subtitle}</Text>}</View>
       </Pressable>)}
       {group.loading&&<View testID={`unified-${type}-loading-${platform}`} style={styles.unifiedStatus}><ActivityIndicator color={theme.palette.accent}/><Text style={styles.caption}>{group.items.length?'正在加载更多…':`正在搜索${kindNames[type]}…`}</Text></View>}
@@ -169,9 +171,9 @@ export function Search({ services }: { services: Services }) {
 
   return <View>
     <Text style={styles.title}>寻找下一首喜欢的歌</Text>
-    <Text style={styles.caption}>歌曲、歌单、专辑、艺术家与MV按平台分别搜索、展示。“全部”并列预览歌曲、专辑与艺术家，键入时向所选平台获取关键词建议。</Text>
+    <Text style={styles.caption}>歌曲、歌单、专辑、艺术家与MV按平台分别搜索、展示。“全部”并列预览这五类结果，键入时向所选平台获取关键词建议。</Text>
     <View style={styles.inputRow}>
-      <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':kind==='all'?'搜索歌曲、专辑或艺术家':`搜索${kindNames[kind]}`} placeholder={kind==='song'?'歌曲、歌手':kind==='all'?'歌曲、专辑、艺术家':`${kindNames[kind]}关键词`} placeholderTextColor="#768191" autoCorrect={false} onFocus={()=>setEditing(true)} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
+      <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':kind==='all'?'搜索歌曲、歌单、专辑、艺术家或MV':`搜索${kindNames[kind]}`} placeholder={kind==='song'?'歌曲、歌手':kind==='all'?'歌曲、歌单、专辑、艺术家、MV':`${kindNames[kind]}关键词`} placeholderTextColor="#768191" autoCorrect={false} onFocus={()=>setEditing(true)} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
       {!!query&&<Pressable testID="search-clear" accessibilityRole="button" accessibilityLabel="清除搜索输入" onPress={clearQuery} style={styles.clear}><Ionicons name="close-circle" size={22} color={theme.palette.secondary}/></Pressable>}
     </View>
     {assistance.mode==='suggest'&&assistanceSections}
@@ -192,22 +194,24 @@ export function Search({ services }: { services: Services }) {
           <Ionicons name="time-outline" size={18} color={theme.palette.secondary}/>
           <Text style={styles.historyText} numberOfLines={1}>{item}</Text>
         </Pressable>)}
-      </>:<Text style={styles.caption}>{kind==='song'?'输入歌曲、歌手或专辑名开始搜索。':kind==='all'?'输入歌曲、歌手或专辑名开始全局搜索。':`输入${kindNames[kind]}关键词开始搜索。`}</Text>}
+      </>:<Text style={styles.caption}>{kind==='song'?'输入歌曲、歌手或专辑名开始搜索。':kind==='all'?'输入歌曲、歌单、专辑、艺术家或MV关键词开始全局搜索。':`输入${kindNames[kind]}关键词开始搜索。`}</Text>}
     </View>}
     <View style={styles.row}>{(['all','song','playlist','album','artist','mv']as const).map(type=><Pressable key={type} testID={`search-kind-${type}`} accessibilityRole="radio" accessibilityState={{selected:kind===type}} onPress={()=>selectKind(type)} style={[styles.chip,kind===type&&styles.selected]}><Text style={styles.text}>{type==='all'?'全部':kindNames[type]}</Text></Pressable>)}</View>
     <View style={styles.row}>{(['all',...platforms] as const).map(item => <Pressable key={item} accessibilityRole="radio" accessibilityState={{selected:platform===item}} onPress={() => {setPlatform(item);submit(query,item,false);}} style={[styles.chip,platform===item&&styles.selected]}><Text style={styles.text}>{item==='all'?'聚合':platformNames[item]}</Text></Pressable>)}</View>
     <Pressable testID="run-online-search" accessibilityRole="button" onPress={run} style={styles.button}><Text style={styles.text}>搜索</Text></Pressable>
     {assistance.mode==='hot'&&assistanceSections}
     {kind==='all'&&<View testID="unified-search-results">
-      <View style={styles.section}><Text accessibilityRole="header" style={styles.heading}>跨类型结果</Text><Text style={styles.caption}>按平台分组；歌曲、专辑与艺术家各自保留加载、失败和分页状态。</Text></View>
+      <View style={styles.section}><Text accessibilityRole="header" style={styles.heading}>跨类型结果</Text><Text style={styles.caption}>按平台分组；歌曲、歌单、专辑、艺术家与MV各自保留加载、失败和分页状态。</Text></View>
       {platforms.map(platformName=>{
-        const songGroup=songState.groups.find(group=>group.platform===platformName),albumGroup=albumState.groups.find(group=>group.platform===platformName),artistGroup=artistState.groups.find(group=>group.platform===platformName);
-        if(!songGroup&&!albumGroup&&!artistGroup)return null;
+        const songGroup=songState.groups.find(group=>group.platform===platformName),playlistGroup=playlistState.groups.find(group=>group.platform===platformName),albumGroup=albumState.groups.find(group=>group.platform===platformName),artistGroup=artistState.groups.find(group=>group.platform===platformName),videoGroup=videoState.groups.find(group=>group.platform===platformName);
+        if(!songGroup&&!playlistGroup&&!albumGroup&&!artistGroup&&!videoGroup)return null;
         return <View key={platformName} testID={`unified-platform-${platformName}`} style={styles.group}>
           <Text accessibilityRole="header" style={styles.heading}>{platformNames[platformName]}　<Text style={styles.caption}>来源：{platformNames[platformName]}</Text></Text>
           {renderUnifiedEntity('song',platformName,songGroup)}
+          {renderUnifiedEntity('playlist',platformName,playlistGroup)}
           {renderUnifiedEntity('album',platformName,albumGroup)}
           {renderUnifiedEntity('artist',platformName,artistGroup)}
+          {renderUnifiedEntity('mv',platformName,videoGroup)}
         </View>;
       })}
     </View>}

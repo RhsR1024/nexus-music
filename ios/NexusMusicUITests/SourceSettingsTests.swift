@@ -796,22 +796,32 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(netease.waitForExistence(timeout:10));reach(netease);netease.tap()
     let all=app.descendants(matching:.any).matching(identifier:"search-kind-all").firstMatch
     XCTAssertTrue(all.waitForExistence(timeout:10));reach(all);all.tap()
-    let field=app.textFields["搜索歌曲、专辑或艺术家"]
+    let field=app.textFields["搜索歌曲、歌单、专辑、艺术家或MV"]
     XCTAssertTrue(field.waitForExistence(timeout:10));reach(field);field.tap()
     for character in "Unified fixture"{field.typeText(String(character))}
     XCTAssertEqual(field.value as? String,"Unified fixture")
     let run=app.buttons["run-online-search"];reach(run);run.tap()
-    let song=app.buttons["unified-song-wy-0"],album=app.buttons["unified-album-wy-0"],artist=app.buttons["unified-artist-wy-0"]
-    XCTAssertTrue(song.waitForExistence(timeout:20));XCTAssertTrue(album.waitForExistence(timeout:20));XCTAssertTrue(artist.waitForExistence(timeout:20))
+    let song=app.buttons["unified-song-wy-0"],playlist=app.buttons["unified-playlist-wy-0"],album=app.buttons["unified-album-wy-0"],artist=app.buttons["unified-artist-wy-0"],mv=app.buttons["unified-mv-wy-0"]
+    XCTAssertTrue(song.waitForExistence(timeout:20));XCTAssertTrue(playlist.waitForExistence(timeout:20));XCTAssertTrue(album.waitForExistence(timeout:20));XCTAssertTrue(artist.waitForExistence(timeout:20));XCTAssertTrue(mv.waitForExistence(timeout:20))
     XCTAssertTrue(app.staticTexts["跨类型结果"].exists)
     let neteaseSource=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","来源：网易云")).firstMatch
     XCTAssertTrue(neteaseSource.exists,"Unified search results must identify their source platform")
-    image("Unified search previews songs albums and artists from one platform")
+    image("Unified search previews songs playlists albums artists and MVs from one platform")
 
     reach(song);song.tap()
     let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
     XCTAssertTrue(app.staticTexts["Unified fixture song"].firstMatch.waitForExistence(timeout:10),"The unified song preview must drive the existing authoritative queue")
     app.buttons["收起播放页"].firstMatch.tap()
+
+    reach(playlist);playlist.tap()
+    XCTAssertTrue(app.staticTexts["Unified fixture playlist"].firstMatch.waitForExistence(timeout:10))
+    image("Unified playlist preview opens the existing playlist detail")
+    app.buttons["返回搜索结果"].tap()
+
+    reach(mv);mv.tap()
+    XCTAssertTrue(app.buttons["mv-back"].waitForExistence(timeout:15))
+    image("Unified MV preview opens its existing public detail")
+    app.buttons["mv-back"].tap()
 
     let allSongs=app.buttons["unified-view-all-song-wy"];reach(allSongs);allSongs.tap()
     XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:10))
@@ -820,9 +830,11 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(secondPageSong.waitForExistence(timeout:15),"Songs must retain their own second page")
 
     let allAgain=app.descendants(matching:.any).matching(identifier:"search-kind-all").firstMatch;reach(allAgain);allAgain.tap()
+    XCTAssertTrue(app.buttons["unified-playlist-wy-0"].waitForExistence(timeout:10),"Returning to unified search must preserve playlist results")
     XCTAssertTrue(app.buttons["unified-album-wy-0"].waitForExistence(timeout:10),"Returning to unified search must preserve album results")
     XCTAssertTrue(app.buttons["unified-artist-wy-0"].waitForExistence(timeout:10),"Returning to unified search must preserve artist results")
-    image("Unified search preserves independent song pagination and catalog results")
+    XCTAssertTrue(app.buttons["unified-mv-wy-0"].waitForExistence(timeout:10),"Returning to unified search must preserve MV results")
+    image("Unified search preserves independent song pagination and all four catalog types")
     reach(artist);image("Unified search catalog previews remain reachable below songs")
     reach(album);album.tap()
     XCTAssertTrue(app.staticTexts["Unified fixture album"].firstMatch.waitForExistence(timeout:10))
@@ -841,6 +853,16 @@ final class SourceSettingsTests: XCTestCase {
     reach(allAgainForArtist);allAgainForArtist.tap()
     let allArtists=app.buttons["unified-view-all-artist-wy"];reach(allArtists);allArtists.tap()
     XCTAssertTrue(app.buttons["search-artist-wy-0"].waitForExistence(timeout:10))
+
+    let allBackForPlaylist=app.descendants(matching:.any).matching(identifier:"search-kind-all").firstMatch
+    reach(allBackForPlaylist);allBackForPlaylist.tap()
+    let allPlaylists=app.buttons["unified-view-all-playlist-wy"];reach(allPlaylists);allPlaylists.tap()
+    XCTAssertTrue(app.buttons["search-playlist-wy-0"].waitForExistence(timeout:10))
+
+    let allBackForMV=app.descendants(matching:.any).matching(identifier:"search-kind-all").firstMatch
+    reach(allBackForMV);allBackForMV.tap()
+    let allMVs=app.buttons["unified-view-all-mv-wy"];reach(allMVs);allMVs.tap()
+    XCTAssertTrue(app.buttons["search-mv-wy-0"].waitForExistence(timeout:10))
 
     openSettings(app,page:"sources")
     removeUnifiedSourceIfPresent()
@@ -878,7 +900,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(allKind.waitForExistence(timeout:10));reach(allKind);allKind.tap()
     let aggregate=app.descendants(matching:.any).matching(identifier:"聚合").firstMatch
     XCTAssertTrue(aggregate.waitForExistence(timeout:10));reach(aggregate);aggregate.tap()
-    let field=app.textFields["搜索歌曲、专辑或艺术家"]
+    let field=app.textFields["搜索歌曲、歌单、专辑、艺术家或MV"]
     XCTAssertTrue(field.waitForExistence(timeout:10));reach(field);field.tap()
     for character in "Unified aggregate fixture"{field.typeText(String(character))}
     XCTAssertEqual(field.value as? String,"Unified aggregate fixture")

@@ -497,11 +497,20 @@ const server = createServer(async (req, res) => {
     }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){
+      if(searchUI&&parsed.pathname==='/api/cloudsearch/pc'){
+        const body=new URLSearchParams(request.body??'');
+        if(body.get('s')==='Unified fixture'&&body.get('type')==='1004'){
+          res.end(JSON.stringify({code:200,result:{mvCount:1,mvs:[{id:5001,name:'Unified fixture MV',artistName:'Fixture artist',duration:242500,cover:'http://127.0.0.1:18439/unified-mv-cover.png'}]}}));return;
+        }
+      }
       if(searchUI&&parsed.pathname==='/api/album/2001'){
         res.end(JSON.stringify({code:200,album:{size:1,artist:{name:'Fixture artist'}},songs:[{id:'1001',name:'Unified fixture album track',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:120000}]}));return;
       }
       if(searchUI&&parsed.pathname==='/api/artist/3001'){
         res.end(JSON.stringify({code:200,artist:{id:'3001',name:'Unified fixture artist',musicSize:20,albumSize:2},hotSongs:[{id:'1001',name:'Unified fixture artist track',ar:[{name:'Fixture artist'}],al:{name:'Unified fixture album'},dt:120000}]}));return;
+      }
+      if(searchUI&&parsed.pathname==='/api/v6/playlist/detail'){
+        res.end(JSON.stringify({code:200,playlist:{id:4001,name:'Unified fixture playlist',trackIds:[],tracks:[]}}));return;
       }
       if(parsed.pathname==='/api/search/get/web'&&req.method==='POST'){
         const body=new URLSearchParams(request.body??''),type=body.get('type'),query=body.get('s'),offset=Number(body.get('offset')??0);
@@ -594,6 +603,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(400);res.end();return;
   }
   if(req.url==='/discovery-cover.png'&&discoveryUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
+  if(req.url==='/unified-mv-cover.png'&&searchUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.multi,'base64'));return;}
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
   if(req.url==='/sync-fixture/remote-edit'){
     counts.syncEdits=(counts.syncEdits??0)+1;
