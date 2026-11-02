@@ -1,3 +1,11 @@
+## 2026-11-02 TTML 顺序时间容器
+
+原创有界解析器支持`timeContainer="seq"`顺接、相对begin/end/dur、嵌套par/seq与父边界夹紧，保留agent/背景声/翻译/罗马音、根xml:space继承和原有安全预算。最终973/973检查、歌词17项、diff通过；正式Release跨平台歌词回归`SourceUITests-1793588385895`为1/0/0、145.643秒、sourceUnchanged=true，2PNG provenance ready并亲看。现有UI覆盖坏TTML→LRC回退与原交互；seq精确时间及有效字段优选由单测证明，未冒充seq端到端或真实库矩阵。
+
+功能提交`050979f`的clean unsigned IPA为12,889,116字节、SHA-256`240ea23a…`；arm64/SDK26.2/iOS15.1/[1,2]、164项CRC、138项archive/IPA字节及测试/私人/签名排除通过。T7阶段57份/26,398,750字节逐份哈希一致，原件及最新两个有效阶段保留；内盘约54GiB，无新增删除或个人文件移动。push与iOS27终态待补录。无新增Sollin结论，不报完整TTML2、S4/J35–42、实体机/签名或总项目完成。
+
+见[本批回执](docs/2026-11-02-ttml-sequential-containers-report.md)。
+
 ## 2026-11-02 系统音频输出路由入口
 
 正式“播放与歌词 → 播放控制”已在 App 音量后加入“系统音频输出”，嵌入 Apple `AVRoutePickerView`。设备、AirPlay/蓝牙/耳机列表由 iOS 提供，音枢不保存路由凭据、不复制设备列表、不创建第二播放器，单一权威音乐队列保持不变。原生入口提供“选择音频输出”无障碍按钮、至少 44pt 触控区、颜色参数与 VoiceOver 激活。
