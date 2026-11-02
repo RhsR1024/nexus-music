@@ -84,7 +84,16 @@ T7 阶段副本位于 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-unif
 
 ## 远程交付与 CI
 
-本地功能提交完成后按正常 fast-forward 方式与阶段文档一并推送。远端 main 和 iOS 27 Actions 队列在推送后实核；结果只记录实际 API/`git ls-remote` 返回，不把 pending、旧运行或本地 SDK 26.2 结果写成 iOS 27 通过。
+`df9972f..73f975e` 已按正常 fast-forward 推送到 `origin/main`；推送后 `git ls-remote origin refs/heads/main` 与本地交付提交均为 `73f975eaa97bd1e69d549df5f6eb73ca392da435`。提交链包含功能提交 `ac11314` 与阶段文档提交 `73f975e`。
+
+iOS 27 工作流实核：
+
+- 最新 `41411187417` / `73f975e` 为唯一 pending。
+- `41406504201` / `a279581` 仍在运行。
+- 队列为 **1 running / 1 pending**，符合 `queue: single` 与 `cancel-in-progress: false`；没有取消运行中任务、手动重派或提前宣称 iOS 27 通过。
+- 机器可读快照为 `build/logs/j27-ci-queue.json`。
+
+同一观察窗口内，旧运行 `41390545740` / `cfac30c` 已自然结束为失败。失败作业为 `Verify matched playback, lyrics, source health and discovery actions`，前置 checks、iOS 27 工具链、native、首个 App 来源/Navidrome 测试组均成功，后续下载/归档步骤跳过；Workflow 页面已给出失败步骤和 artifact digest，但未登录页面不提供精确步骤日志/artifact 内容，当时 GitHub API 公共限额已耗尽。该证据已保留为后续诊断入口，不把旧 pending/失败或当前进度写成通过。
 
 ## 边界
 

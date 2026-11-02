@@ -6,6 +6,8 @@
 - [x] 真实匿名五平台公开契约探针15/15；该结果与确定性UI矩阵分开记录，不声称真实五平台逐页UI网络通过。
 - [x] 978/978、完整native、Node/Swift/YAML/diff、完整Release build和`ac11314` clean unsigned IPA验证通过；归档编码探针首轮失败原件保留。
 - [x] T7阶段副本逐普通文件哈希核验，源证据保留；本批未删除项目内容或迁移个人文件。
+- [x] `df9972f..73f975e`正常push并实核远端main；最新`41411187417`/`73f975e`为唯一pending，`41406504201`/`a279581`继续运行，队列1运行/1排队。
+- [ ] 旧`41390545740`/`cfac30c`已失败在在线播放/歌词/source health/discovery组；步骤和产物摘要已取得，精确日志因GitHub API限额暂待下载与定位。
 - [ ] 真实五平台逐页网络UI、真实iPhone、VoiceOver/动态字号/小屏、弱网/限流、连续转场录屏、签名/安装、iOS27终态与完整J25/F/J。
 
 见[阶段回执](2026-11-02-unified-search-five-platform-matrix-report.md)与[UI规格](ui-spec/unified-search-2026-11-02.md)。J25 来源为 `U`，不新增 Sollin 证据或 strict review 声明。
