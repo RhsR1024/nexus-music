@@ -4,7 +4,9 @@
 
 IPA 为 12,903,359 字节、SHA-256 `1054d323d971c22f15cab79bf7697d05c6003867d629254f74737286eedcc15a`。独立核验回执 `build/logs/tape-cover-archive-verification-6785769.json` 为 `ready=true`、SHA-256 `c86c01497538e2b7eaa4b47fd95d76727914caabb5ae58d4b25928e08c297d2b`，27/27 检查通过：57 个普通 payload 路径集合和字节与 archive 一致，81 个 exFAT `._*` 元数据另计；ZIP CRC、bundle identity、最低系统、设备族、未签名/无描述文件、UI测试/夹具/私人备份/私钥/源映射排除均通过。首次失败回执因核验器对嵌套 `._*` 过滤不足而保留；随后一次 Python 版本兼容调用错误未生成回执，修正后同一产物全量通过。
 
-正式 Release `SourceUITests-1793625940527` 为1/0/0、约278秒、`sourceUnchanged=true`；8PNG provenance ready并亲看。产品提交已push且远端main实核一致；push后`41449172204`继续运行，`41455717983`/`6785769`为唯一pending，实核队列1运行/1排队，未手动取消或重派。iOS27终态、实体机、签名与真实媒体继续，模拟器/未签名包不替代这些验收。见[回执](2026-11-02-tape-cover-style-report.md)。
+正式 Release `SourceUITests-1793625940527` 为1/0/0、约278秒、`sourceUnchanged=true`；8PNG provenance ready并亲看。产品提交已push且远端main实核一致；push后`41449172204`继续运行，`41455717983`/`6785769`为唯一pending，实核队列1运行/1排队，未手动取消或重派。阶段文档提交`f753efe`随后正常push，全部改动为Markdown，Actions列表未新建运行。
+
+T7阶段目录已更新并验证：旧生成清单与`6785769`文档快照保存在`history/6785769/`，新提交补丁、文档、Actions页面快照、cleanup与transfer回执已纳入归档；184个仓库映射文件逐字节一致、203个普通文件SHA-256校验全部通过，missing/mismatch为空。iOS27终态、实体机、签名与真实媒体继续，模拟器/未签名包不替代这些验收。见[回执](2026-11-02-tape-cover-style-report.md)。
 
 ## 2026-11-02 咪咕官方 MV 分享页 clean unsigned archive
 

@@ -7,7 +7,8 @@
 - [x] 正式 Release `SourceUITests-1793625940527` 为1/0/0、约278秒、`sourceUnchanged=true`；8PNG provenance ready并亲看，五种主要播放器的真实加载 raster 封面、关闭恢复、重启保持和迷你播放器隔离通过。
 - [x] `6785769` clean unsigned IPA、manifest、ZIP CRC、archive↔IPA 57个普通文件字节、arm64/SDK26.2/iOS15.1/[1,2]及隐私/测试/签名排除通过；独立核验27/27、`ready=true`。
 - [x] 产品提交已push并实核远端main一致；`41449172204`继续运行、`41455717983`/`6785769`为唯一pending，实核1运行/1排队，未取消或重派。
-- [ ] `41455717983`iOS27终态及实体iPhone、VoiceOver实际手势、动态字号/小屏、连续动效/性能、真实私人服务与用户媒体、签名/安装/续签及T7阶段回执。
+- [x] 阶段文档提交 `f753efe` 正常push且未新建运行；T7保留版本化旧快照、提交补丁、文档、Actions页面快照和阶段回执，184个仓库映射文件逐字节一致、203项普通文件校验通过。
+- [ ] `41455717983`iOS27终态及实体iPhone、VoiceOver实际手势、动态字号/小屏、连续动效/性能、真实私人服务与用户媒体、签名/安装/续签。
 
 见[本批回执](2026-11-02-tape-cover-style-report.md)与[UI规格](ui-spec/tape-style-2026-11-02.md)。需求来源为 `U`，磁带样式是原创实现，不冒充 Sollin 已观测视觉；本批不关闭完整 J43/J46、F25 或项目。
 

@@ -4,6 +4,7 @@
 - [x] 复用既有封面加载/失败回退；偏好、云备份和主题配置保留开关，旧配置缺少字段时保留接收设备当前值。
 - [x] 982/982、完整 native、Swift/Node/YAML/diff、`ios:build` 与正式 Release 1/0/0、约278秒通过；8PNG provenance ready并亲看。
 - [x] `6785769` clean unsigned IPA、27项独立归档/IPA核验、隐私/测试/签名排除与远端main一致性通过。
+- [x] T7阶段目录、版本化旧快照、阶段文档、提交补丁、Actions页面快照、transfer/cleanup回执与203项普通文件SHA-256校验通过；无删除或用户文件迁移。
 - [ ] 实体iPhone、VoiceOver实际手势、动态字号/小屏、连续动效/性能、真实用户媒体/私人服务、签名/安装/续签与iOS27终态。
 
 见[本批回执](2026-11-02-tape-cover-style-report.md)与[UI规格](ui-spec/tape-style-2026-11-02.md)。J43/J46 与 F25 保持 B 状态；需求来源为 `U`，磁带样式为原创实现，不提升为完整 Sollin 外观或项目完成。

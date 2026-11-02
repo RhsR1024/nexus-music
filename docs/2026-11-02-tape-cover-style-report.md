@@ -58,5 +58,19 @@ SHA-256 `78c4b7de9fb4eb8c7611c0e35a6f8a239a5d61ff6e7113f8f56e38810fc641e4`。
 push 后 `41449172204` 继续运行，`41455717983`/`6785769` 为本提交的唯一 pending；
 实核队列为 1 运行 / 1 排队，未手动取消运行中任务或重派旧版本。
 
+阶段文档提交 `f753efe` 已正常 push，远端 `main` 与本地一致；该提交只改
+Markdown，Actions 列表没有为它新建运行。T7 阶段目录
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-02-tape-cover-6785769/`
+保留两份 xcresult、两套截图、归档、未签名 IPA、三份归档核验回执、2026-11-02
+提交补丁、阶段文档、UI 规格与 Actions 页面快照。更新前的 `6785769` 文档与
+生成的旧清单保存在 `history/6785769/`，没有用覆盖替代历史。当前 transfer
+receipt 核对 184 个仓库映射文件逐字节一致、203 个普通文件入选校验清单，
+mismatch 与 missing 均为空；exFAT `._*` 元数据另行计数。
+
+阶段收尾时内盘可用空间仍在 30 GiB 阈值以上，没有 Xcode/Node 构建进程占用证据
+目录，因此本批执行 `deleted=0`、`movedUserFiles=0`。最新两个有效阶段产物、
+未解决失败回执、reverse-skill 样本/scope/Evidence 均继续保留；这只是一份清理
+判断回执，不代表可以删除后续阶段仍需引用的数据。
+
 iOS 27 GitHub Actions 的终态、实体 iPhone、VoiceOver 实际手势、动态字号、小屏、
 连续动效/性能、签名/安装/续签，以及真实私人服务与真实用户媒体仍继续独立验收。

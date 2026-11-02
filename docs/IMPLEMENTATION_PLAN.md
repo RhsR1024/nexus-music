@@ -8,7 +8,7 @@
 
 `npm run check` 982/982、完整 `npm run test:native`、Swift parse、工作流 YAML、Node syntax、diff 与 `npm run ios:build` 通过。正式 Release `SourceUITests-1793625940527` 为1/0/0、约278秒，manifest `exitCode=0/sourceUnchanged=true`，源码 digest `63efa46d…`、安装 bundle `e56883a5…`。8张1290×2796 PNG由正式 Navidrome 合成服务加载真实 raster 封面，provenance ready并逐张亲看；验证五种主要播放器、关闭恢复、重启保持与迷你播放器隔离。
 
-`6785769` clean unsigned archive 对应同一提交，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 12,903,359字节、SHA-256 `1054d323…`。独立27项核验确认ZIP CRC、57个普通payload路径/字节、81个exFAT元数据计数及测试/私人/签名排除；最终回执SHA-256 `c86c0149…`。提交已push并实核远端main；`41449172204`继续运行、`41455717983`/`6785769`唯一pending，队列1运行/1排队。iOS27终态、实体机、VoiceOver/字号/小屏、连续动效/性能、真实媒体和签名继续。来源为用户补充 `U`，无新增Sollin采集或视觉语义声明。见[回执](2026-11-02-tape-cover-style-report.md)。
+`6785769` clean unsigned archive 对应同一提交，manifest clean、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 12,903,359字节、SHA-256 `1054d323…`。独立27项核验确认ZIP CRC、57个普通payload路径/字节、81个exFAT元数据计数及测试/私人/签名排除；最终回执SHA-256 `c86c0149…`。提交已push并实核远端main；`41449172204`继续运行、`41455717983`/`6785769`唯一pending，队列1运行/1排队。阶段文档提交`f753efe`随后正常push，未触发新的工作流运行。T7目录的旧清单/文档快照进入`history/6785769/`，新增提交补丁、Actions页面快照与阶段回执；184个仓库映射文件逐字节一致、203项普通文件校验通过，missing/mismatch为空。阶段收尾`deleted=0`、`movedUserFiles=0`。iOS27终态、实体机、VoiceOver/字号/小屏、连续动效/性能、真实媒体和签名继续。来源为用户补充 `U`，无新增Sollin采集或视觉语义声明。见[回执](2026-11-02-tape-cover-style-report.md)。
 
 ## 2026-11-02 咪咕官方 MV 分享页详情
 
