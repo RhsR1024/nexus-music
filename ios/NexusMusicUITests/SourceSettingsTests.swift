@@ -1640,6 +1640,53 @@ final class SourceSettingsTests: XCTestCase {
     reach(clear);clear.tap();artistField.tap();for c in "Ed Sheeran"{artistField.typeText(String(c))};let netease=app.descendants(matching:.any).matching(identifier:"网易云").firstMatch;reach(netease);netease.tap();XCTAssertEqual(artistField.value as? String,"Ed Sheeran");XCTAssertTrue(app.buttons["search-artist-wy-0"].waitForExistence(timeout:45));image("Real pending search draft survives a platform change")
     reach(player);player.tap();XCTAssertTrue(app.staticTexts["Shape of You"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));XCTAssertFalse(app.buttons["暂停"].exists);let paused=progress.value as? String;RunLoop.current.run(until:Date().addingTimeInterval(3));XCTAssertEqual(progress.value as? String,paused);app.buttons["收起播放页"].firstMatch.tap()
   }
+  func testLiveMVMediaLifecycle() throws {
+    let app=XCUIApplication();app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func text(_ name:String){let value=XCTAttachment(string:name);value.name="MV media lifecycle diagnostic";value.lifetime = .keepAlways;add(value)}
+    func reach(_ item:XCUIElement){
+      for _ in 0..<18{if waitForHittable(item,timeout:0.2){return};let keyboard=app.keyboards.firstMatch,upper:CGFloat=160,lower=min(app.frame.height-240,keyboard.exists ? keyboard.frame.minY-app.frame.minY-80 : app.frame.height-240),down=item.exists && item.frame.midY-app.frame.minY<(upper+lower)/2,origin=app.coordinate(withNormalizedOffset:.zero);origin.withOffset(CGVector(dx:app.frame.width/2,dy:down ? upper:lower)).press(forDuration:0.05,thenDragTo:origin.withOffset(CGVector(dx:app.frame.width/2,dy:down ? lower:upper)))}
+      if !waitForHittable(item,timeout:5){image("Real MV media lifecycle navigation failure")};XCTAssertTrue(waitForHittable(item,timeout:5))
+    }
+    func mediaValue(_ expected:String,timeout:TimeInterval=20,alternate:String?=nil){
+      let status=app.staticTexts["mv-media-status"];XCTAssertTrue(status.waitForExistence(timeout:20))
+      let predicate=alternate.map{NSPredicate(format:"value CONTAINS %@ OR value CONTAINS %@",expected,$0)} ?? NSPredicate(format:"value CONTAINS %@",expected),expectation=XCTNSPredicateExpectation(predicate:predicate,object:status)
+      let result=XCTWaiter.wait(for:[expectation],timeout:timeout);if result != .completed{image("Unexpected real MV media state for \(expected)")};XCTAssertEqual(result,.completed,"Actual MV media state: \(String(describing:status.value))")
+    }
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;XCTAssertTrue(local.waitForExistence(timeout:15));local.tap()
+    let importer=app.buttons["导入音频文件"];XCTAssertTrue(importer.waitForExistence(timeout:10));importer.tap();selectLocalFixture("Synthetic Tagged Tone",in:app);XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
+    let localField=app.textFields["搜索本地歌曲艺术家专辑"];XCTAssertTrue(localField.waitForExistence(timeout:10));localField.tap();for character in "Synthetic Tagged Tone"{localField.typeText(String(character))};localField.typeText("\n");let localTrack=app.buttons["local-track-0"];XCTAssertTrue(localTrack.waitForExistence(timeout:10));localTrack.tap();app.buttons["收起本地音频"].tap()
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap();XCTAssertTrue(app.staticTexts["Synthetic tagged tone"].firstMatch.waitForExistence(timeout:10))
+    let playMusic=app.buttons["播放"].firstMatch;if playMusic.waitForExistence(timeout:3){playMusic.tap()}
+    let progress=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch;XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:15));let playing=progress.value as? String ?? "";RunLoop.current.run(until:Date().addingTimeInterval(3));XCTAssertNotEqual(progress.value as? String,playing)
+    app.buttons["暂停"].firstMatch.tap();let paused=progress.value as? String ?? "";app.buttons["收起播放页"].firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"search-kind-mv").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"酷狗").firstMatch.tap()
+    let field=app.textFields["搜索MV"];XCTAssertTrue(field.waitForExistence(timeout:10));field.tap();for character in "Ed Sheeran"{field.typeText(String(character))};field.typeText("\n")
+    let first=app.buttons["search-mv-kg-0"];XCTAssertTrue(first.waitForExistence(timeout:45));reach(first);first.tap();XCTAssertTrue(app.buttons["mv-back"].waitForExistence(timeout:15))
+    let ready=NSPredicate(format:"label == %@","页面已载入");XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:ready,object:app.staticTexts["mv-page-status"])],timeout:45),.completed)
+    let page=app.webViews.firstMatch;XCTAssertTrue(page.waitForExistence(timeout:20));text("Opened public Kugou MV: \(app.staticTexts["mv-title"].label)\n\(app.debugDescription)")
+    let status=app.staticTexts["mv-media-status"];XCTAssertTrue(status.waitForExistence(timeout:20));let initial=NSPredicate(format:"value CONTAINS %@ OR value CONTAINS %@ OR value CONTAINS %@","media:none","media:paused","media:playing");XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:initial,object:status)],timeout:20),.completed,"Actual initial MV state: \(String(describing:status.value))")
+    func isPlaying()->Bool{String(describing:status.value).contains("media:playing")}
+    let play=page.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["播放","Play"])).firstMatch
+    if play.waitForExistence(timeout:5)&&play.isHittable{play.tap();text("Tapped the visible public Kugou native play control")}else if !isPlaying(){page.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)).tap();text("The public Kugou video exposed no play control; tapped its visible media region")}
+    RunLoop.current.run(until:Date().addingTimeInterval(3));if !isPlaying(){if play.exists&&play.isHittable{play.tap()}else{page.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.42)).tap()}}
+    mediaValue("media:playing",timeout:30);image("Real Kugou MV media reaches WebKit playing state");text("Playing state: \(String(describing:status.value))\n\(page.debugDescription)")
+    app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap();RunLoop.current.run(until:Date().addingTimeInterval(1))
+    let close=app.buttons.matching(identifier:"Close Button").firstMatch
+    let nativeFullscreen=close.waitForExistence(timeout:5)
+    if !nativeFullscreen && !String(describing:status.value).contains("fullscreen:fullscreen") {
+      let fullscreen=page.descendants(matching:.button).matching(NSPredicate(format:"label CONTAINS[c] 'full screen' OR label CONTAINS[c] 'fullscreen' OR label CONTAINS '全屏'")).firstMatch
+      XCTAssertTrue(fullscreen.waitForExistence(timeout:5),"Actual MV media state after playback: \(String(describing:status.value))");fullscreen.tap()
+    }
+    if nativeFullscreen {
+      image("Real Kugou MV enters native fullscreen");text("Native video fullscreen observed; WKWebView reported \(String(describing:status.value))")
+    }else{mediaValue("fullscreen:fullscreen",timeout:15);image("Real Kugou MV enters WebKit fullscreen")}
+    XCUIDevice.shared.press(.home);RunLoop.current.run(until:Date().addingTimeInterval(2));app.activate();mediaValue("media:suspended",timeout:20,alternate:"media:paused");let background=String(describing:app.staticTexts["mv-media-status"].value);RunLoop.current.run(until:Date().addingTimeInterval(2));XCTAssertEqual(String(describing:app.staticTexts["mv-media-status"].value),background,"Backgrounded MV must not auto-resume");image("Real Kugou MV is suspended after backgrounding")
+    app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap();RunLoop.current.run(until:Date().addingTimeInterval(1))
+    if close.exists{close.tap()}else{let exit=page.descendants(matching:.button).matching(NSPredicate(format:"label CONTAINS[c] 'exit' OR label CONTAINS '退出' OR label CONTAINS '完成'")).firstMatch;XCTAssertTrue(exit.waitForExistence(timeout:5),"The fullscreen player must expose an exit control");exit.tap()}
+    mediaValue("fullscreen:inline",timeout:15);text("Fullscreen lifecycle after exit: \(String(describing:status.value))")
+    app.buttons["mv-back"].tap();XCTAssertTrue(player.waitForExistence(timeout:15));player.tap();XCTAssertTrue(app.staticTexts["Synthetic tagged tone"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));XCTAssertFalse(app.buttons["暂停"].exists);XCTAssertEqual(progress.value as? String,paused,"Web MV lifecycle must not move the paused music position");image("Paused music and its queue survive the real MV media lifecycle")
+  }
   func testLiveArtistSearch() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

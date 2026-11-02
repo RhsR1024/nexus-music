@@ -17,6 +17,10 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
   private var documentGeneration = 0
   private var rulesReady = false
   private var rulesFailed = false
+  private var mediaTimer: Timer?
+  private var mediaPlayback = "none"
+  private var fullscreen = "inline"
+  private var fullscreenObservation: NSKeyValueObservation?
 
   required init(appContext: AppContext? = nil) {
     let configuration = WKWebViewConfiguration()
@@ -28,6 +32,15 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
     web.navigationDelegate = self; web.uiDelegate = self
     web.accessibilityIdentifier = "mv-public-webview"
     addSubview(web)
+    if #available(iOS 16.0, *) {
+      fullscreenObservation = web.observe(\.fullscreenState, options: [.new]) { [weak self] web, _ in
+        DispatchQueue.main.async {
+          guard let self else { return }
+          self.fullscreen = Self.fullscreenName(web.fullscreenState)
+          self.sendMediaState()
+        }
+      }
+    }
     WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "nexus-public-mv-privacy-v1", encodedContentRuleList: PublicMVPolicy.privacyRules) { [weak self] rules, _ in
       DispatchQueue.main.async {
         guard let self else { return }
@@ -41,7 +54,12 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
       center.addObserver(self, selector: #selector(syncPlayback), name: name, object: nil)
     }
   }
-  deinit { NotificationCenter.default.removeObserver(self); web.stopLoading() }
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+    mediaTimer?.invalidate()
+    fullscreenObservation?.invalidate()
+    web.stopLoading()
+  }
   override func layoutSubviews() { super.layoutSubviews(); web.frame = bounds }
   override func didMoveToWindow() {
     super.didMoveToWindow()
@@ -54,10 +72,14 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
       guard let url = PublicMVPolicy.initialURL(source) else {
         documentGeneration += 1; documentCommitted = false
         navigation = nil; root = nil; needsLoad = false
+        stopMediaPolling()
+        mediaPlayback = "none"; fullscreen = "inline"
         web.stopLoading(); web.isHidden = true
         onState(["phase":"blocked"]); return
       }
       web.isHidden = false
+      stopMediaPolling()
+      mediaPlayback = "none"; fullscreen = "inline"
       root = url; needsLoad = true
     }
     syncPlayback()
@@ -68,7 +90,13 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
     if suspended != !allowed {
       if !allowed { web.pauseAllMediaPlayback(completionHandler: nil) }
       // A paused page remains paused when it becomes visible again.
-      web.setAllMediaPlaybackSuspended(!allowed, completionHandler: nil)
+      web.setAllMediaPlaybackSuspended(!allowed) { [weak self] in
+        DispatchQueue.main.async {
+          guard let self else { return }
+          self.requestMediaState()
+          if self.mediaAllowed() { self.startMediaPolling() } else { self.stopMediaPolling() }
+        }
+      }
       suspended = !allowed
     }
     if allowed, rulesReady, needsLoad, let root {
@@ -97,6 +125,7 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
       guard let self, generation == self.documentGeneration, self.window != nil else { return }
       if let state = state as? String, state == "interactive" || state == "complete" {
         self.onState(["phase":"ready"])
+        self.startMediaPolling()
       } else {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
           self?.checkDocument(generation: generation, remaining: remaining - 1)
@@ -107,6 +136,7 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
   func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
     guard navigation === self.navigation else { return }
     onState(["phase":"ready"])
+    startMediaPolling()
   }
   func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { failed(navigation, error) }
   func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { failed(navigation, error) }
@@ -119,6 +149,7 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
     }
     guard code != NSURLErrorCancelled else { return }
     documentGeneration += 1; documentCommitted = false
+    stopMediaPolling()
     onState(["phase":"error"])
   }
   private func rejected(_ action: WKNavigationAction) {
@@ -160,4 +191,54 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
   }
   @available(iOS 15.0, *)
   func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) { decisionHandler(.deny) }
+
+  private func mediaAllowed() -> Bool {
+    active && window != nil && UIApplication.shared.applicationState == .active
+  }
+  private func startMediaPolling() {
+    guard rulesReady, documentCommitted, mediaAllowed() else { return }
+    mediaTimer?.invalidate()
+    requestMediaState()
+    let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.requestMediaState() }
+    RunLoop.main.add(timer, forMode: .common)
+    mediaTimer = timer
+    sendMediaState()
+  }
+  private func stopMediaPolling() {
+    mediaTimer?.invalidate()
+    mediaTimer = nil
+  }
+  private func requestMediaState() {
+    guard documentCommitted, window != nil else { return }
+    let generation = documentGeneration
+    web.requestMediaPlaybackState { [weak self] state in
+      DispatchQueue.main.async {
+        guard let self, generation == self.documentGeneration, self.window != nil else { return }
+        self.mediaPlayback = Self.mediaName(state)
+        self.sendMediaState()
+      }
+    }
+  }
+  private func sendMediaState() {
+    onState(["media":mediaPlayback,"fullscreen":fullscreen])
+  }
+  private static func mediaName(_ state: WKMediaPlaybackState) -> String {
+    switch state {
+    case .none:return "none"
+    case .playing:return "playing"
+    case .paused:return "paused"
+    case .suspended:return "suspended"
+    @unknown default:return "unknown"
+    }
+  }
+  @available(iOS 16.0, *)
+  private static func fullscreenName(_ state: WKWebView.FullscreenState) -> String {
+    switch state {
+    case .notInFullscreen:return "inline"
+    case .enteringFullscreen:return "entering"
+    case .inFullscreen:return "fullscreen"
+    case .exitingFullscreen:return "exiting"
+    @unknown default:return "unknown"
+    }
+  }
 }

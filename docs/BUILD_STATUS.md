@@ -1,3 +1,9 @@
+## 2026-11-02 公开 MV 媒体与全屏生命周期
+
+公开 MV 原生 WebKit 页面已在可见前台文档中轮询有界媒体状态，后台/隐藏/暂停时停止；状态与 `fullscreenState` 经现有 native event 显示，不改变权威音乐队列或持久状态。真实酷狗公开页面由可见控件进入 WebKit `playing`，系统原生 AV 全屏可打开/退出；系统层期间根 WebView 仍报告 `inline`，本批明确区分系统原生全屏与 WebKit `fullscreenState`。Home 后媒体为 `suspended` 或 `paused` 且不自动续播，音乐保持同暂停进度和队列。
+
+967/967检查和完整 native/Node/Swift/YAML/diff通过；最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒、`sourceUnchanged=true`，4PNG provenance ready并亲看。首次 Command Line Tools 工具环境失败原证据保留，之后显式加载项目 Xcode 环境通过；IPA/APK strict review 0错误/0警告，无新增 Sollin 采集。clean unsigned IPA、push、iOS27终态与实体机/签名/弱网/跨平台MV继续，见[回执](2026-11-02_mv-media-lifecycle-report.md)。
+
 ## 2026-11-02 Navidrome 浏览历史本地验收
 
 最终导航 Release `SourceUITests-1793577102182.xcresult` 为1通过/0失败/0跳过、580.834秒；旧 Navidrome 综合回归 `SourceUITests-1793577857813.xcresult` 同源1/0/0、651.540秒。两次 `exitCode=0`、`sourceUnchanged=true`，源码 digest `5ea1ca973007f722df13ec81beddd9c09594c049df8057f2fe3ed9b3a287e36d`、安装 bundle `f0291dc47d5b95dce1a2a5578be7b80ebbb8b97739d26546083e5e73903c90ae`。导航 run manifest/xcresult Info/截图索引摘要分别为`6da32aef…`/`061f40c3…`/`62ef4be4…`；综合回归为`5df631ba…`/`adf79b14…`。

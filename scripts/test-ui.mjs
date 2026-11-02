@@ -685,6 +685,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveArtistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveArtistSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveCatalogFavorites')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveCatalogFavorites');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMVSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMVSearch');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMVMediaLifecycle')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMVMediaLifecycle');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveAlbumSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveAlbumSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePlaylistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLivePlaylistSearch');
   if(!liveLocalUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalIndexActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalSorting','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalFolderScan','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveLocalPlaylistBatch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveListeningStatistics');

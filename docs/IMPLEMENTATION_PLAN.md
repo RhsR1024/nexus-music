@@ -1,3 +1,11 @@
+## 2026-11-02 公开 MV 媒体与全屏生命周期
+
+`NexusPublicMVView` 将 `WKWebView.requestMediaPlaybackState` 限定在可见、前台、已提交文档，按秒轮询并在暂停/隐藏/后台时停止；文档 generation 隔离旧回调，销毁时清理轮询、全屏观察和加载。`WKMediaPlaybackState` 与 `fullscreenState` 经现有 `onState` 事件交给 `MVDetail`，不引入媒体 URL、网页内容、Cookie 或第二播放器。
+
+真实酷狗公开页面“Shape of You(官方中字版)”由页面可见原生控件从暂停进入 WebKit `playing`；随后系统原生视频全屏可用系统 `Close Button` 打开/退出。实测根 WebView 的全屏 API 仍报告 `inline`，因此系统 AV 全屏证据与 WebKit `fullscreenState` 分支分开记录，前者已验、后者继续开放。Home 后回前台媒体为 `suspended` 或 `paused` 且不自动续播；合成音乐仍暂停在同一进度，队列保持。
+
+967/967检查、完整 native、Node/Swift/YAML/diff均通过；最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒、`sourceUnchanged=true`，4PNG provenance ready并亲看。首次未加载项目 Xcode 环境的失败保留，根因为活动目录仍指向 Command Line Tools；IPA/APK strict review 复用均0错误/0警告，无新增 Sollin 分析。实体机声音路由/音频中断、锁屏、WebKit自身全屏、其他平台真实起播、弱网、iOS27、签名/安装及完整F/J继续。见[回执](2026-11-02_mv-media-lifecycle-report.md)与[UI规格](ui-spec/mv-media-lifecycle-2026-11-02.md)。
+
 ## 2026-11-02 Navidrome 浏览历史与上下文恢复
 
 `NavidromeBrowser` 将四个一级分类和详情父层保存在组件会话内存：items、标题、搜索草稿/已提交查询、歌单名草稿、offset、可见页、more和错误均可恢复；刷新回第一页，分页失败同offset重试。取消/代次/AbortController隔离迟到结果，账户切换、移除、重连和卸载清空缓存；只保存白名单Track元数据，不持久化凭据、客户端、URL或音频。

@@ -1,3 +1,11 @@
+## 2026-11-02 公开 MV 媒体与全屏生命周期
+
+公开 MV 的原生 WebKit 容器现在只在可见、前台且文档提交后读取有界媒体状态；后台、隐藏、暂停或音乐播放时停止轮询，generation 隔离导航迟到回调。`MVDetail` 可观察 `none/playing/paused/suspended` 与 WebKit `fullscreenState`，但仍保持单一权威音乐队列、不暴露媒体 URL/网页内容/Cookie，返回前台不自动恢复网页播放。
+
+正式 App 用合成本地曲保持暂停后打开酷狗公开“Shape of You(官方中字版)”，可见页面控件使真实 WebKit 媒体进入 `playing`；系统原生视频全屏用系统 `Close Button` 打开/退出。实测 `WKWebView.fullscreenState` 在系统 AV 全屏期间仍为 `inline`，因此本批只关闭原生全屏层与媒体生命周期，WebKit `entering/fullscreen/exiting` 分支继续开放。Home 后回前台稳定为 `suspended` 或 `paused`，不自动续播；原音乐仍暂停在同进度、原队列。
+
+`npm run check` 967/967、完整 native、Node/Swift/YAML/diff通过。最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒、`sourceUnchanged=true`，源码 digest `514105ba…`、安装 bundle `c933f022…`；4PNG provenance ready并亲看。首次启动失败原证据保留，根因是 shell 未加载项目 Xcode 环境、活动目录仍为 `/Library/Developer/CommandLineTools`，修正环境后的 r2 通过；IPA/APK strict review 0错误/0警告，无新增 Sollin 采集。见[本批回执](docs/2026-11-02_mv-media-lifecycle-report.md)与[UI规格](docs/ui-spec/mv-media-lifecycle-2026-11-02.md)。clean IPA、push与iOS27终态随后补录。实体机声音路由、锁屏/通话中断、WebKit自身全屏、其他平台MV、弱网、签名/安装及完整F/J继续。
+
 ## 2026-11-02 Navidrome 浏览历史与上下文恢复
 
 自己的私人曲库现已支持歌手→专辑→歌曲和服务端歌单详情的逐层返回，并在本次会话保存父层已加载项、offset、50项可见页、标题、搜索草稿/已提交查询和歌单名称草稿。返回已加载父层不重读；四个一级分类各自恢复上下文。账户切换、移除或重连清空栈和缓存；请求取消、generation 隔离迟到结果，取消的 client 获取不再联网。刷新/分页失败保留内容，分页重试使用同一 offset。确认服务端星标后只同步本次浏览缓存，保留页且不碰本地收藏/队列；其余写入继续原刷新路径。

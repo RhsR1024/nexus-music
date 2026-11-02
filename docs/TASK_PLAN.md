@@ -1,3 +1,17 @@
+## 2026-11-02 公开 MV 媒体与全屏生命周期
+
+- [x] 原生 WebKit 页面仅在可见、前台、文档提交后轮询有界媒体状态；后台/隐藏/音乐播放时停止轮询，导航 generation 阻止迟到状态覆盖新页面。
+- [x] 媒体状态与 `WKWebView.fullscreenState` 经现有 `onState` 交给 `MVDetail`；网页 MV 仍与权威音乐队列隔离，不保存媒体 URL、网页内容或 Cookie。
+- [x] 真实酷狗“Shape of You(官方中字版)”页面加载并由可见原生控件进入 WebKit `playing`；系统原生视频全屏可进入/退出。
+- [x] 系统原生全屏层由可见 `Close Button` 验收；实测 `WKWebView.fullscreenState` 在此期间仍为 `inline`，未冒充 WebKit 全屏状态已闭环。
+- [x] Home/前台切换后媒体稳定为 `suspended` 或 `paused`，不自动续播；原合成音乐保持暂停、同进度和原队列。
+- [x] `npm run check`967/967、完整 native、Node/Swift/YAML/diff检查通过；最终 Release `SourceUITests-1793583694048` 为1/0/0、118.932秒，`sourceUnchanged=true`。
+- [x] 4PNG逐张 provenance ready并亲看；源码、diff、fixture、安装 bundle、JS bundle、xcresult Info、附件与截图哈希绑定。
+- [x] 首次未加载项目 Xcode 环境的启动失败及 Command Line Tools 根因原证据保留；IPA/APK strict review 均PASS、0错误/0警告，无新增 Sollin 采集。
+- [ ] clean unsigned IPA、push与iOS27本批终态；实体机声音路由、锁屏/通话中断、WebKit自身全屏、其他平台MV、弱网与签名/安装继续。
+
+见[本批回执](2026-11-02_mv-media-lifecycle-report.md)与[UI规格](ui-spec/mv-media-lifecycle-2026-11-02.md)。本批只关闭酷狗公开 MV 的模拟器真实媒体、系统原生全屏与后台暂停增量，不报完整 MV 或全项目完成。
+
 ## 2026-11-02 Navidrome 浏览历史与上下文恢复
 
 - [x] 歌手→专辑→歌曲及服务端歌单详情逐层返回；已加载父层、offset、50项可见页、标题、搜索草稿/提交查询和歌单名称草稿在分类切换后恢复，返回已加载父层不重读。
