@@ -1,3 +1,13 @@
+## 2026-11-03 定制风格化推荐
+
+`StyleRecommendationSheet`从正式发现页入口打开，按曲风、语种、情感、主题和场景展示平台公开分类。选择集合最多五个唯一标签，超出时禁用第6个；移除、清空、维度切换和计数共用同一状态。分类读取及生成分别持有代次和`AbortSignal`，关闭、取消、重试和重开都会终止旧请求并在发布前复核代次。
+
+`DiscoveryProvider.stylePlaylists()`只使用已有公开歌单目录能力：对每个标签读取有界首屏，单标签失败保留其他成功结果；领域层按平台和歌单 ID 去重，以命中标签数排序，并保留所有匹配理由。Sheet明确区分分类失败、生成传输失败、空结果和部分失败；点击结果关闭Sheet并进入既有公开歌单详情，不写权威队列、远端歌单或账号画像。
+
+固定离线IPA只提供五维、五标签和选择持久化边界：`E-056 → F-047 → P-047 → WI-021`。没有推断私有生成请求、响应schema、个人画像或排序模型。`npm run check`990/990、完整native、Swift/Node/YAML/diff、Release构建与归档通过。正式Release`SourceUITests-1793642239978`为1/0/0、95.008秒，9PNG provenance ready并逐张亲看；`ipa --review`为56E/21WI/119/47F/47P、0错误/0警告。
+
+产品提交`fc39a76`clean unsigned manifest为`dirty:false`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,825,526字节、SHA-256`67bc068b…1d2`，ZIP CRC、151项archive/IPA字节、生产入口及测试/私人/签名排除通过。提交已push并实核远端main；`41455717983`继续运行、`41498672211`唯一pending，队列1运行/1排队。T7阶段`2026-11-03-style-recommendation-fc39a76`保存构建、UI、日志与离线证据，157份有效源文件逐项SHA-256比较0差异且源证据保留。真实账号个性化、弱网/限流、实体机/VoiceOver、动效、签名和iOS27终态继续。见[回执](2026-11-03-style-recommendation-report.md)。
+
 ## 2026-11-03 软件图标选择
 
 `AppearanceOverview`新增“软件图标”真实入口，`SettingsScreen`复用既有Sheet打开三列选择器。`src/domain/appIcons.ts`锁定`primary/orange/green/blue/purple/graphite`与五个原生替代名称；`AppIconSettings`读取系统快照，忙碌时禁用选择，成功后采用原生返回值，失败时保留原选择并显示严格错误。系统当前图标是唯一权威状态，没有新增React偏好、第二队列或云备份字段。

@@ -1,3 +1,15 @@
+## 2026-11-03 定制风格化推荐
+
+发现页新增“定制风格化推荐”。Sheet 以曲风、语种、情感、主题、场景五维组织公开分类，最多选择五个唯一标签；生成时只聚合所选平台的公开歌单目录，按平台和歌单 ID 去重，命中标签数优先并保留全部命中理由。分类读取与生成均可取消，失败、空结果和部分失败分开显示，迟到请求不会覆盖当前代次；结果只进入既有公开歌单详情，不成为第二权威队列或持久化远端歌单。
+
+固定离线 IPA 的 `E-056 → F-047 → P-047 → WI-021` 只支持五维、五标签与选择持久化的可见结构，不证明 Sollin 私有生成协议、账号画像或服务端排序。本批没有新增采集、目标运行、私有请求或凭据访问；公开目录聚合是音枢原创实现。
+
+`npm run check` 990/990、`node --check scripts/test-ui.mjs`、Swift/YAML/diff、完整 native、`ios:build` 与 `ios:archive` 通过。正式 Release `SourceUITests-1793642239978` 的 `testStyleRecommendation` 为1/0/0、95.008秒，`sourceUnchanged=true`；9张1290×2796 PNG provenance ready并逐张亲看。`ipa --review` 为56E/21WI/119 timeline/47F/47P、0错误/0警告。
+
+clean unsigned manifest为`dirty:false`/`workingTreeChanges:[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；IPA 17,825,526字节、SHA-256`67bc068bebf51bd09d8823c45cf6fa79a0a76591fbcaecb4893a6732cd1bc1d2`。ZIP 178项CRC、151项archive/IPA普通文件逐字节、生产入口标记及测试/私人/签名排除通过；核验回执SHA-256`455e02fa…d69a5`、manifest SHA-256`36d7c507…1160b`。
+
+产品提交`fc39a76bfc2c32f83d1a2371121b86299933c2c5`已正常push并实核远端main一致。push后`41455717983`继续运行，`41498672211`/`fc39a76`为唯一pending，旧pending由`queue: single`自动取消；实核队列1运行/1排队，未手动取消或重派。T7阶段`2026-11-03-style-recommendation-fc39a76`保存IPA/archive、xcresult、9PNG、运行/strict日志、离线scope/E-056/Finding-Path摘要、提交补丁和文档；157份有效源文件逐项SHA-256比较0差异，源证据保留且`deleted=0/movedUserFiles=0`。iOS27终态、实体iPhone、真实账号个性化、VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签继续。详见[专项回执](docs/2026-11-03-style-recommendation-report.md)与[UI场景](docs/ui-spec/style-recommendation-2026-11-03.md)。
+
 ## 2026-11-03 软件图标选择与严格失败边界
 
 设置新增“外观与界面 → 软件图标”，提供珊瑚主图标和暖橙、青柠、海蓝、暮紫、石墨五个原创替代图标。系统 `alternateIconName` 是唯一状态源；原生 Expo 模块只接受五个 `NexusAlt*` 名称及主图标 `nil`，在主队列执行，拒绝未知/不支持/忙请求，失败保留实际系统状态，不另建 React 或云备份偏好。Xcode、五份 asset catalog、编译 plist、设置导航和正式 UI 测试均已接线。

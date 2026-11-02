@@ -1,3 +1,18 @@
+## 2026-11-03 定制风格化推荐
+
+- [x] 发现页新增正式入口；按曲风/语种/情感/主题/场景五维组织公开分类，最多五个唯一标签，0/5至5/5计数与第6个禁用可见。
+- [x] 分类读取和生成支持取消、重试、迟到隔离；全失败、空结果与部分失败分开，单标签失败保留其他成功结果。
+- [x] 只聚合所选平台的公开歌单目录，按平台与歌单 ID 去重，命中标签数优先并保留全部理由；结果打开既有公开歌单详情，不创建第二权威队列。
+- [x] `npm run check` 990/990、完整 native、Swift/Node/YAML/diff、`ios:build` 和`ios:archive`通过。
+- [x] 正式 Release `SourceUITests-1793642239978` 为1/0/0、95.008秒、`sourceUnchanged=true`；9张PNG provenance ready并逐张亲看。
+- [x] reverse-skill 离线门禁复用 `E-056 → F-047 → P-047 → WI-021`；`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集或私有探测。
+- [x] `fc39a76` clean unsigned archive、manifest、ZIP CRC、151项archive/IPA字节、arm64/SDK26.2/iOS15.1/[1,2]、生产入口及隐私/签名排除通过。
+- [x] 产品提交已push并实核远端main；`41455717983`运行、`41498672211`唯一pending，队列1运行/1排队。
+- [x] T7 `2026-11-03-style-recommendation-fc39a76`保存IPA/archive、XCResult、9PNG、日志、离线E-056/Finding-Path摘要、补丁和文档；157份有效源文件逐项SHA-256比较0差异，源证据保留且零删除/零个人文件搬移。
+- [ ] `41498672211` iOS27终态；Sollin私有推荐协议/账号画像、真实网易个性化、实体机/VoiceOver/动态字号/小屏、弱网/限流、连续动效、签名/安装/续签。
+
+见[本批回执](2026-11-03-style-recommendation-report.md)与[UI场景](ui-spec/style-recommendation-2026-11-03.md)。本批只完成公开分类聚合与静态界面增量，不关闭完整发现、F/J或项目。
+
 ## 2026-11-03 软件图标选择
 
 - [x] 外观设置新增“软件图标”正式入口，提供珊瑚主图标和五个原创替代图标；系统值是唯一状态源，不新增 React/云备份偏好。
