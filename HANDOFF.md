@@ -1,3 +1,7 @@
+## 2026-11-03 Ruby wrapping clean delivery
+
+Product `eaa891a` clean unsigned archive verified: manifest clean, IPA SHA-256 `2729c56acbabd0afcef0c48184505f8112c59d5419703eb617c482aad889829f` (17,845,009 bytes), ZIP/151 file comparisons and privacy/signing exclusions passed. T7 clean stage `2026-11-03-ttml-ruby-wrap-eaa891a`: 295 mapped files / 116,221,275 bytes, zero mismatch, SHA256SUMS PASS, originals preserved. Product pushed normally; iOS27/physical device/signing and arbitrary cross-line ruby redistribution remain open. See [delivery report](docs/2026-11-03-ttml-ruby-wrap-report.md).
+
 ## 2026-11-03 注音基础范围换行保护
 
 修复大字号“到/尾”跨行而`ed`留在首行的问题：仅在带注音基础组内插入WORD JOINER，并统一映射TextKit单词/注音范围；可见字素和withBase计数忽略连接符。997/997、完整native与Release build通过；正式XXXL `1793689134708`及正常字号`1793689484355`各1/0/0、同源且sourceUnchanged=true，关键截图亲看。dirty unsigned IPA和T7预提交281份/109,313,865字节核验通过、源证据保留。clean归档/push/云端结果待交付补记；任意跨行重排、完整TTML2、真实库、实体VoiceOver/签名仍开放。见[专项回执](docs/2026-11-03-ttml-ruby-wrap-report.md)与[UI规格](docs/ui-spec/ttml-ruby-wrap-2026-11-03.md)。
