@@ -1,3 +1,11 @@
+## 2026-11-03 iOS27 DAV初始地址输入修复
+
+最新`41602015021/eaa891a`核心组23通过/2失败；两项均为XCTest把`http://`输入成`htp://`，图标与重启配色已在同一云端运行通过。仅将同步/备份初始地址输入改用已有`replaceText`，保留精确值及全部业务断言。997/997检查、正式Release `1793716226294`的同步与备份各通过（合计2/0/0、sourceUnchanged=true），3张截图亲看。clean归档、T7与push/新云端终态继续补录；不增加功能完成度，不冒充私人服务/实体机/签名验收。见[回执](docs/2026-11-03-ios27-dav-address-input-report.md)。
+
+## 2026-11-03 iOS27 WebDAV地址输入修正
+
+最新`41602015021/eaa891a`核心组23/2/0，两失败均为地址`http`被输入成`htp`；图标启动/切换恢复与配色三项已云端通过，后续测试组未执行。同步/备份地址复用既有真实键盘替换与严格值校验辅助器。Release `1793716226294`两项2/0/0、sourceUnchanged=true，同步241.759秒/备份200.666秒，997检查全过；冲突与备份预览截图已亲看。产品未改，本批不重复unsigned归档；新iOS27终态、真实私人服务/实体签名及原F/J继续开放。见[回执](docs/2026-11-03-ios27-webdav-input-report.md)。
+
 ## 2026-11-03 Ruby wrap queue closeout
 
 `eaa891a` and clean-delivery docs `ba27b56` pushed and remote verified. Actual iOS27 queue: `41591188218/c178ea6` running, `41602015021/eaa891a` only pending (1/1). No cancel/re-dispatch. Internal free space 69,624,832,000 bytes; T7 616,947,515,392 bytes; no active build and no deletion/personal-file movement. Clean stage and a separate final supplement preserve source, hashes and receipts. Cloud acceptance and physical/signing gaps remain open; see [report](docs/2026-11-03-ttml-ruby-wrap-report.md).

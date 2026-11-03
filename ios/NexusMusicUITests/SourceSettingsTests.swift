@@ -2747,7 +2747,7 @@ final class SourceSettingsTests: XCTestCase {
     let prior=app.buttons["移除WebDAV连接：Sync fixture"];if prior.exists{XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/sync-dav/"].exists);prior.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
     // Each typeText waits for system animation idleness. Submit whole values
     // so a slow keyboard cannot multiply that wait by every fixture character.
-    address.tap();address.typeText("http://127.0.0.1:18439/sync-dav/");address.typeText("\n");XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/sync-dav/")
+    replaceText(address,with:"http://127.0.0.1:18439/sync-dav/")
     let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
     let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
     let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Sync fixture");label.typeText("\n");XCTAssertEqual(label.value as? String,"Sync fixture");app.buttons["验证并保存WebDAV"].tap()
@@ -2782,7 +2782,7 @@ final class SourceSettingsTests: XCTestCase {
     if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
     let priorConnection=app.buttons["移除WebDAV连接：Backup fixture"]
     if priorConnection.exists {XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/backup-dav/"].exists);priorConnection.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
-    XCTAssertTrue(address.waitForExistence(timeout:5));address.tap();address.typeText("http://127.0.0.1:18439/backup-dav/");address.typeText("\n");XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/backup-dav/")
+    XCTAssertTrue(address.waitForExistence(timeout:5));replaceText(address,with:"http://127.0.0.1:18439/backup-dav/")
     let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
     let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
     let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Backup fixture");label.typeText("\n");XCTAssertEqual(label.value as? String,"Backup fixture");app.buttons["验证并保存WebDAV"].tap()
