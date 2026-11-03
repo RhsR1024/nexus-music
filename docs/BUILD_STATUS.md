@@ -1,3 +1,11 @@
+## 2026-11-03 iOS 27 Files 本地提供方根目录测试导航
+
+`41521043387`/`9fb541a`唯一失败`testWayfarerAppImport`已定位为测试导航误判：iOS27 Locations根页同时暴露目标提供方`DOC.browsingRoot`与`On My iPhone`。修正版先将实际`On My iPhone`单元检查置于提供方根判断之前，不改产品入口、Wayfarer导入逻辑或原生播放。
+
+定向Release`SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`；日志`439a7ba5…c3e41`、运行清单`5398cb1a…ad0665`、摘要`70342564…46c88`、计数`57b2b131…776d`。同一结果导出5张1290×2796截图，索引`e91b52ae…af03`，导入预览已亲看。`npm run check`992/992。
+
+本地unsigned archive为arm64/iphoneos26.2/iOS15.1/[1,2]、未签名，dirty IPA 17,832,598字节、SHA-256`09f583075041608f0c2bc78283c713d76d9974f5441ce7aba671e6e0fce3160c`。这只是提交前构建；clean rebuild、独立ZIP CRC/archive/IPA载荷/隐私检查和新的iOS27 Actions终态仍待。`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告。详见[专项回执](2026-11-03-ios27-files-provider-root-navigation-report.md)。
+
 ## 2026-11-03 iOS 27 紧凑诊断产物加固
 
 `78018c7`/`41510740220`在`testSequentialTTMLLyrics`失败，原紧凑产物仅有Node`aborted`/`ECONNRESET`，完整诊断756,359,033字节超过下载通道上限，无法确认具体 XCTest 或产品故障。`60a638a`在合成HTTP夹具中受控处理客户端中断、保留未预期500错误，并把紧凑artifact路径改为递归收集嵌套summary/counts/catalog。

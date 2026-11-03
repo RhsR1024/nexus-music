@@ -214,14 +214,17 @@ final class SourceSettingsTests: XCTestCase {
       if fileCell.exists{fileCell.tap();confirmSelection();return}
       if folderCell.exists{folderCell.tap();settle();continue}
       if fileRow.exists{fileRow.tap();confirmSelection();return}
+      // iOS 27 exposes the local provider title (`Nexus UITest Fixtures`)
+      // even while the document manager is still on the Locations root. Move
+      // into `On My iPhone` before treating that provider title as "inside".
+      let phone=app.cells.matching(locations).allElementsBoundByIndex.first{$0.exists}
+      if let phone{phone.tap();settle();continue}
       // Once inside, allow provider enumeration without reopening the title
       // menu or navigating back out to the location list.
       if fixtureRoot.exists{settle();continue}
       if folderRow.exists{folderRow.tap();settle();continue}
       // Files labels its back button with the previous location. Never accept
       // a Button here or navigation moves backwards instead of to On My iPhone.
-      let phone=app.cells.matching(locations).allElementsBoundByIndex.first{$0.exists}
-      if let phone{phone.tap();settle();continue}
       let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
       if browse.exists && browse.isHittable{browse.tap()}
       settle()

@@ -1,3 +1,18 @@
+## 2026-11-03 iOS 27 Files 本地提供方根目录导航
+
+- [x] 从`41521043387`/`9fb541a`紧凑日志和失败附件确认唯一失败在第270行，不是Wayfarer解析/导入或产品播放回归。
+- [x] 在iOS27层级中确认Locations根页同时发布目标提供方`DOC.browsingRoot`标题与`On My iPhone` sidebar单元。
+- [x] `selectLocalFixture`先点击实际`On My iPhone`单元，进入后才接受提供方根标题；保留真实文件单元断言，不使用固定坐标替代导航。
+- [x] Release `SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`；同xcresult导出5张截图并亲看导入预览。
+- [x] `npm run check`992/992；Swift由正式测试构建编译，`git diff --check`通过。
+- [x] 本地unsigned archive成功，提交前IPA、archive、测试结果及未解决云端失败证据已复制至T7阶段并校验。
+- [ ] 提交后从clean HEAD重建并核验manifest、IPA、ZIP CRC、archive/IPA载荷、正式入口及隐私/签名排除。
+- [x] `ipa --review`通过既有离线证据56E/21WI/119 timeline/47F/47P，0错误/0警告；本批无新增Sollin采集。
+- [ ] 正常提交push并核对远端与Actions队列；等待包含本补丁的iOS27运行终态。
+- [ ] 实体设备、签名/安装/续签及真实Wayfarer数据继续独立验收。
+
+见[专项回执](2026-11-03-ios27-files-provider-root-navigation-report.md)。本批只关闭一次iOS27测试导航失败，不关闭Wayfarer、F/J或项目总目标。
+
 ## 2026-11-03 TTML 标准 `rtc` 单注解注音
 
 - [x] 标准 `<ruby>` 接受一个基础载体加一个仅含单 `<rt>` 的 `<rtc>`；分组内外 `<rp>` 忽略，`ruby→rtc→rt` 的嵌套相对时间沿用原解析器。

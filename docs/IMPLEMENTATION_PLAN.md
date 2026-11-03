@@ -1,3 +1,13 @@
+## 2026-11-03 iOS 27 Files 本地提供方根目录导航
+
+`41521043387`/`9fb541a`的唯一App失败来自`selectLocalFixture`对iOS27 Files层级的状态误判。失败附件显示Locations根页包含目标提供方的`DOC.browsingRoot ... Title: Nexus UITest Fixtures`，同时也包含`DOC.sidebar.item.On My iPhone`。旧循环先看到提供方根标题便停留等待，没有点击真实`On My iPhone`，第二次picker调用因此无法枚举夹具文件。
+
+`SourceSettingsTests.swift`现在仍优先选择目标文件/文件夹/文件行，但把实际`On My iPhone`单元检查放在`fixtureRoot`之前；点击进入后sidebar单元消失，后续轮次才接受提供方根并等待枚举。产品代码和Wayfarer测试断言不变，不用固定点击坐标或放宽目标文件断言绕过问题。
+
+定向Release`SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`，安装bundle与运行清单一致；5张截图从同xcresult导出并人工亲看。`npm run check`992/992；本地unsigned archive为arm64/iphoneos26.2/iOS15.1/[1,2]、未签名。提交后需要clean rebuild和独立回执，再由新iOS27 Actions终态确认修复。`ipa --review`复用既有离线证据并0错误/0警告，本批不新增Sollin语义结论。
+
+见[专项回执](2026-11-03-ios27-files-provider-root-navigation-report.md)。实体设备、签名/安装/续签和真实Wayfarer数据仍开放。
+
 ## 2026-11-03 TTML 标准 `rtc` 单注解注音
 
 标准 TTML `<ruby>` 的 `rtc` 分支现在只接受一个无歧义基础载体和一个单 `<rt>` 注音容器，`rp` 在分组内外均作为非权威回退忽略。基础可由直接文字或唯一 `rb`/基础子元素承载；`ruby`、`rtc`、`rt` 的嵌套相对时间保持标准 TTML 语义。任何多注解、混用、多基础、空分组、缺基础或分组后游离文字都安全拒绝，不做方向猜测。
