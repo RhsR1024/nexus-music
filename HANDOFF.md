@@ -4,7 +4,11 @@
 
 `npm run check` 993/993、完整 native 退出 0。固定 provenance 的正式 Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`；源码 digest `a6ff7239…ccac59`、安装 bundle `9140b488…c79262`。运行清单、日志、摘要、4PNG索引和逐图验真已固定在 `build/logs/ttml-rbc-20261103-r1/`；人工亲看确认 `kanji / yin / duo / ji` 分列位于 `漢字音多基` 上方，可访问标签完整。
 
-`node scripts/sollin-reverse-gate.mjs ipa --review` 为56E/21WI/119 timeline/47F/47P、0错误/0警告，复用既有离线证据，无新增 Sollin 采集或私有探测。当前边界是多组单基础/单注解按序映射；双侧/第二个 `rtc`、跨行、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装与 iOS27 终态继续。clean IPA、T7 和 push 回执待补录；详见[专项回执](docs/2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](docs/ui-spec/ttml-rbc-2026-11-03.md)。
+`node scripts/sollin-reverse-gate.mjs ipa --review` 为56E/21WI/119 timeline/47F/47P、0错误/0警告，复用既有离线证据，无新增 Sollin 采集或私有探测。提交前 dirty IPA 为17,833,688字节、SHA-256`dd757f9603f1934ca4055ae31c3e0160db5d4cbb94862a182300020626e219c9`；178项ZIP CRC、151项archive/IPA载荷逐字节、manifest、未签名及测试/私人排除回执`301d3c51…b552`均通过。IPA、archive、xcresult、4PNG、日志、补丁和文档已先复制至T7`2026-11-03-ttml-rbc-precommit-dd757f96`，139份映射文件/99,665,574字节0缺失/0差异，`transfer-receipt.json` SHA-256`d688f14d…36bf`，源证据保留且零删除。
+
+产品/测试/初始文档提交`5a23db3`已正常push并实核远端main。提交后clean manifest与HEAD一致、`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/iOS15.1/[1,2]且未签名，manifest SHA-256`1d7e470f…48f1`；clean IPA同为17,833,688字节、SHA-256`fc3f204e4841338152ed854e00935e1be840b780d71e596d3b9f0756b8f55acb`。独立回执`0be61065…e6e8`为`passed=true`：178项ZIP CRC、151项archive/IPA逐字节、生产`rubyInset`与`rbc`拒绝标记、无描述文件/签名或UI测试入口及私人夹具均通过；archive日志`820e5757…b6b7`。
+
+T7 clean阶段`2026-11-03-ttml-rbc-5a23db3`保存精确IPA/archive/xcresult/截图/日志/补丁/提交源码，141份映射文件/104,372,180字节逐项SHA-256一致，`SHA256SUMS``f043ca00…6612`复核0失败，`transfer-receipt.json` SHA-256`bbfd27e9…d35c`；`deleted=0/movedUserFiles=0`。push后`41553030339`/`295bf94`继续运行，`41559631207`/`5a23db3`为唯一pending，旧pending自动取消，实核1运行/1排队且未手动取消或重派。当前边界是多组单基础/单注解按序映射；双侧/第二个 `rtc`、跨行、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装与 iOS27 终态继续。详见[专项回执](docs/2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](docs/ui-spec/ttml-rbc-2026-11-03.md)。
 
 ## 2026-11-03 iOS 27 Files 本地提供方根目录导航修复
 

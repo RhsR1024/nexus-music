@@ -51,4 +51,12 @@ SHA-256 `704ad0be65ef53466e70ef560791cf486ad5ae52a80cf9a95909296ce91c5a7e`。截
 
 ## 发布与归档
 
-待提交前 IPA、clean archive、独立载荷核验和 T7 阶段完成后补录。任何 iOS 26.3.1 模拟器、合成歌词或 unsigned IPA 结果都不替代实体 iPhone VoiceOver、真实歌词库、动态字号/小屏、签名/安装或 iOS 27 Actions 验收。
+提交前 dirty IPA 为 17,833,688 字节、SHA-256 `dd757f9603f1934ca4055ae31c3e0160db5d4cbb94862a182300020626e219c9`。固定 UI 结果、archive、manifest、4PNG、日志、补丁和文档先复制至 T7 `2026-11-03-ttml-rbc-precommit-dd757f96`：139 份映射文件/99,665,574 字节逐项 SHA-256 一致，`transfer-receipt.json` SHA-256 `d688f14d573885a0bcba49253645e10db8568f1257731603bf8c9d240d1c36bf`，源证据保留且 `deleted=0/movedUserFiles=0`。
+
+产品/测试/初始文档提交 `5a23db3dccffd0d4e0e7c932c477e2c1cb7d109a` 已正常 push 并实核远端 `main`。clean manifest 与 HEAD 一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`，SHA-256 `1d7e470fb3a7c6d63e4884d7e786198f1ca00e80c3feffef3fa64749751548f1`；clean IPA 为 17,833,688 字节、SHA-256 `fc3f204e4841338152ed854e00935e1be840b780d71e596d3b9f0756b8f55acb`。
+
+独立核验回执 `build/logs/ttml-rbc-clean-5a23db3/archive-verification-clean.json` 为 `passed=true`、SHA-256 `0be610654ae1fc5941f85e49c9c5495fa3820940699984e860a556692c6186e8`：178 项 ZIP CRC、151 项 archive/IPA 载荷逐字节一致；生产 `rubyInset` 与本批 `rbc` 拒绝标记存在；UI 测试入口、私人夹具、描述文件与签名材料均排除。archive 日志 SHA-256 为 `820e57578d84e18840aa9e0b202722a9fa6c25d607d4db31616fdcac706966b7`。
+
+clean T7 阶段 `2026-11-03-ttml-rbc-5a23db3` 保存精确 IPA、archive、xcresult、截图、日志、提交补丁和提交源码；141 份映射文件/104,372,180 字节逐项 SHA-256 一致，`SHA256SUMS` SHA-256 `f043ca003d81b7cf85faac511f848a068360cce2894ee43b5ac0f666ecfe6612`、复核 0 失败，`transfer-receipt.json` SHA-256 `bbfd27e9fc3ec2ada6149b3246d8a3dd6e061164f180b3ac3f1b63592c21d35c`。源证据保留且 `deleted=0/movedUserFiles=0`。
+
+push 后 `41553030339`/`295bf94` 继续运行，`41559631207`/`5a23db3` 为唯一 pending；旧 pending 由 `queue:single` 自动取消，实核 1 运行/1 排队且未手动取消或重派。任何 iOS 26.3.1 模拟器、合成歌词或 unsigned IPA 结果都不替代实体 iPhone VoiceOver、真实歌词库、动态字号/小屏、签名/安装或 iOS 27 Actions 终态验收。

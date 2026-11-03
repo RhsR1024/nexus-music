@@ -6,7 +6,9 @@
 - [x] 单测覆盖显式/回退时间与畸形矩阵；`npm run check` 993/993，完整 `npm run test:native` 退出 0。
 - [x] 固定 provenance Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`；4 张截图逐图 provenance ready，`kanji / yin / duo / ji` 截图亲看通过。
 - [x] `ipa --review` 复用既有离线证据并通过 56E/21WI/119 timeline/47F/47P，0错误/0警告；无新增 Sollin 采集或私有探测。
-- [ ] 提交后 clean unsigned IPA、T7 独立副本、iOS 27 Actions 终态。
+- [x] `5a23db3`提交后clean unsigned IPA、manifest、178项ZIP CRC、151项archive/IPA字节与生产/隐私/签名排除通过，正常push并实核远端main。
+- [x] dirty/clean阶段分别保存至T7`2026-11-03-ttml-rbc-precommit-dd757f96`与`2026-11-03-ttml-rbc-5a23db3`，逐文件哈希0差异且源证据保留。
+- [ ] `41559631207`/`5a23db3` iOS 27 Actions 终态。
 - [ ] 双侧/第二个 `rtc`、跨行/wrapping、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签。
 
 见[本批回执](2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](ui-spec/ttml-rbc-2026-11-03.md)。本批只关闭等数量 `rbc/rtc` 顺序映射，不关闭完整 TTML2、S4/J35–42、F/J 或项目总目标。

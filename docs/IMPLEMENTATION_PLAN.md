@@ -6,7 +6,9 @@
 
 `npm run check` 993/993，完整 native 退出 0；固定 provenance Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`，源码 digest `a6ff7239…ccac59`、安装 bundle `9140b488…c79262`。4 张截图 provenance ready，注音截图 SHA-256 `704ad0be…1c5a7e`，确认 `kanji/yin/duo/ji` 分别位于基础文字上方。`ipa --review` 复用既有离线证据并发通过 56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增 Sollin 采集或目标观察。
 
-当前边界扩展为“多组一基础一注解按序配对”；双侧/并行多注音、第二个 `rtc`、跨行/wrapping、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏及签名继续。clean IPA、T7 阶段和 iOS 27 终态在提交后补录。见[本批回执](2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](ui-spec/ttml-rbc-2026-11-03.md)。
+产品/测试/初始文档提交`5a23db3`已push并实核远端main。clean unsigned manifest对应同一HEAD、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`；IPA 17,833,688字节、SHA-256`fc3f204e…55acb`。独立回执`passed=true`，178项ZIP CRC、151项archive/IPA逐字节、生产`rubyInset`/`rbc`标记、无测试入口/私人夹具/描述文件/签名均通过。Dirty与clean阶段已复制至T7并逐文件核验，源证据保留。push后`41553030339`/`295bf94`运行、`41559631207`/`5a23db3`唯一pending，实核1运行/1排队；iOS27终态继续。
+
+当前边界扩展为“多组一基础一注解按序配对”；双侧/并行多注音、第二个 `rtc`、跨行/wrapping、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏及签名继续。见[本批回执](2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](ui-spec/ttml-rbc-2026-11-03.md)。
 
 ## 2026-11-03 iOS 27 Files 本地提供方根目录导航
 

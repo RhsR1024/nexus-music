@@ -4,7 +4,9 @@
 
 固定 provenance Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`；源码 digest `a6ff7239…ccac59`、安装 bundle `9140b488…c79262`、xcresult Info `b06025a5…eaf50`。运行清单 `093ce324…085fa`、日志 `2eb5fcc4…5d969`、摘要 `dca60df7…3914f`、截图索引 `0a9293e6…a03fc`，4PNG逐图 provenance ready。亲看注音截图 SHA-256 `704ad0be…1c5a7e`，`kanji/yin/duo/ji` 位于对应基础上方。`ipa --review` 为 56E/21WI/119 timeline/47F/47P、0错误/0警告，复用离线证据且无新增采集。
 
-clean unsigned archive、T7 阶段、提交/push 和 iOS 27 终态待补录。见[专项回执](2026-11-03-ttml-rbc-ruby-report.md)。
+dirty IPA为17,833,688字节、SHA-256`dd757f96…19c9`；固定UI证据、archive、manifest、xcresult、截图和补丁先复制至T7`2026-11-03-ttml-rbc-precommit-dd757f96`，139份映射文件/99,665,574字节0差异。产品/测试/初始文档提交`5a23db3`后从clean HEAD归档：manifest与HEAD一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`，SHA-256`1d7e470f…48f1`；IPA 17,833,688字节、SHA-256`fc3f204e4841338152ed854e00935e1be840b780d71e596d3b9f0756b8f55acb`。独立回执`build/logs/ttml-rbc-clean-5a23db3/archive-verification-clean.json`为`passed=true`、SHA-256`0be61065…e6e8`，178项ZIP CRC、151项archive/IPA逐字节、生产`rubyInset`/`rbc`标记、无测试入口/私人夹具/描述文件/签名均通过；archive日志SHA-256`820e5757…b6b7`。
+
+`5a23db3`已push并实核远端main。T7 clean阶段`2026-11-03-ttml-rbc-5a23db3`的141份映射文件/104,372,180字节逐项一致，`SHA256SUMS`复核0失败，源证据保留且`deleted=0/movedUserFiles=0`。Actions为`41553030339`/`295bf94`运行、`41559631207`/`5a23db3`唯一pending，实核1运行/1排队。iOS27终态继续。见[专项回执](2026-11-03-ttml-rbc-ruby-report.md)。
 
 ## 2026-11-03 iOS 27 Files 本地提供方根目录测试导航
 

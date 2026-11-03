@@ -5,7 +5,10 @@
 - [x] `npm run check` 993/993、完整 native 退出 0；固定 provenance Release 1/0/0、171.097 秒、`sourceUnchanged=true`。
 - [x] 4PNG provenance ready；人工亲看 `kanji/yin/duo/ji` 分别位于 `漢字音多基` 上方，可访问标签完整。
 - [x] reverse-skill 离线 strict review 通过，56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集。
-- [ ] clean unsigned IPA、T7 阶段与 iOS 27 Actions 终态；双侧/第二个 `rtc`、跨行、行间/右侧位置、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签。
+- [x] `5a23db3` clean unsigned IPA、manifest、178项ZIP CRC、151项archive/IPA字节、生产标记及测试/私人/签名排除通过；远端main一致。
+- [x] dirty与clean阶段均复制至T7并逐文件核验；clean阶段141份映射文件/104,372,180字节0差异，源证据保留且`deleted=0/movedUserFiles=0`。
+- [x] push后队列实核1运行/1排队：`41553030339`运行，`41559631207`/`5a23db3`唯一pending。
+- [ ] `41559631207` iOS 27 Actions终态；双侧/第二个 `rtc`、跨行、行间/右侧位置、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签。
 
 见[本批回执](2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](ui-spec/ttml-rbc-2026-11-03.md)。J37/S4 仍保持 B 状态，本批不关闭完整 TTML2、F/J 或项目。
 
