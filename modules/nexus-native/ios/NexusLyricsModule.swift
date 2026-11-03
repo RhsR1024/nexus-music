@@ -132,33 +132,80 @@ final class NexusLyricLineView: ExpoView {
       let paragraph = NSMutableParagraphStyle(); paragraph.alignment = center ? .center : .left
       paragraph.minimumLineHeight = ceil(size * height); paragraph.maximumLineHeight = ceil(size * height)
       paragraph.lineSpacing = rubyLineSpacing
-      storage.setAttributedString(NSAttributedString(string: text, attributes: [.font: font, .paragraphStyle: paragraph, .foregroundColor: color]))
+      var nextWords: [(range: NSRange, start: Double, end: Double)] = []
+      var nextRuby: [(range: NSRange, text: String, position: RubyPosition, alignment: LyricRubyAlignment)] = []
+      var nextSparseCues: [LyricCueRange]?
+      var wordsValid = rawWords.count <= 2000
+      var offset = 0
+      if wordsValid {
+        for word in rawWords {
+          guard let part = word["text"] as? String, let start = word["startMs"] as? Double, let end = word["endMs"] as? Double,
+                start.isFinite, end.isFinite, start >= 0, end >= start, end <= 86400000 else {
+            wordsValid = false
+            break
+          }
+          let range = NSRange(location: offset, length: part.utf16.count)
+          nextWords.append((range, start, end))
+          let alignment = LyricRubyAlignment(raw: word["rubyAlign"] as? String)
+          if let ruby = Self.validRuby(word["ruby"]) { nextRuby.append((range, ruby, .before, alignment)) }
+          if let ruby = Self.validRuby(word["rubyAfter"]) { nextRuby.append((range, ruby, .after, alignment)) }
+          offset += part.utf16.count
+        }
+      }
+      if offset != text.utf16.count || rawWords.compactMap({ $0["text"] as? String }).joined() != text {
+        wordsValid = false
+      }
+      if !wordsValid {
+        nextWords.removeAll()
+        nextRuby.removeAll()
+      }
+      if nextWords.isEmpty {
+        nextSparseCues = LyricCueRanges.decode(text: text, cues: rawCues)
+      }
+      // U+2060 keeps each annotated base span as one TextKit line-breaking
+      // unit. The renderer's layout delegate alone does not stop CJK breaks
+      // inside a word-wrapped range.
+      let protected = LyricRubyLayout.protect(
+        text: text,
+        ranges: nextRuby.map(\.range)
+      )
+      storage.setAttributedString(NSAttributedString(
+        string: protected.text,
+        attributes: [.font: font, .paragraphStyle: paragraph, .foregroundColor: color]
+      ))
       if stageStyle == "aurora" {
         // Original stable spectrum across composed characters. Layout and real
         // word ranges remain unchanged; no inferred per-character timestamps.
         let palette: [UIColor] = [.init(red: 0.55, green: 0.9, blue: 1, alpha: 1), .init(red: 0.8, green: 0.65, blue: 1, alpha: 1), .init(red: 1, green: 0.65, blue: 0.84, alpha: 1), .init(red: 1, green: 0.85, blue: 0.55, alpha: 1), .init(red: 0.6, green: 1, blue: 0.75, alpha: 1)]
         var index = 0
-        text.enumerateSubstrings(in: text.startIndex..<text.endIndex, options: .byComposedCharacterSequences) { _, range, _, _ in
-          self.storage.addAttribute(.foregroundColor, value: palette[index % palette.count], range: NSRange(range, in: text)); index += 1
+        protected.text.enumerateSubstrings(in: protected.text.startIndex..<protected.text.endIndex, options: .byComposedCharacterSequences) { value, range, _, _ in
+          let colorIndex = value == LyricRubyLayout.wordJoiner ? max(0, index - 1) : index
+          self.storage.addAttribute(.foregroundColor, value: palette[colorIndex % palette.count], range: NSRange(range, in: protected.text))
+          if value != LyricRubyLayout.wordJoiner { index += 1 }
         }
       }
-      words.removeAll(keepingCapacity: true); rubyAnnotations.removeAll(keepingCapacity: true); untimedRanges.removeAll(keepingCapacity: true); sparseCues = nil; var offset = 0
-      if rawWords.count <= 2000 {
-        for word in rawWords {
-          guard let part = word["text"] as? String, let start = word["startMs"] as? Double, let end = word["endMs"] as? Double,
-                start.isFinite, end.isFinite, start >= 0, end >= start, end <= 86400000 else { words.removeAll(); rubyAnnotations.removeAll(); break }
-          let range = NSRange(location: offset, length: part.utf16.count)
-          words.append((range, start, end))
-          let alignment = LyricRubyAlignment(raw: word["rubyAlign"] as? String)
-          if let ruby = Self.validRuby(word["ruby"]) { rubyAnnotations.append((range, ruby, .before, alignment)) }
-          if let ruby = Self.validRuby(word["rubyAfter"]) { rubyAnnotations.append((range, ruby, .after, alignment)) }
-          offset += part.utf16.count
+      words = nextWords.compactMap { item in
+        protected.range(item.range).map {
+          (range: $0, start: item.start, end: item.end)
         }
       }
-      if offset != text.utf16.count || rawWords.compactMap({ $0["text"] as? String }).joined() != text { words.removeAll(); rubyAnnotations.removeAll() }
-      if words.isEmpty, let cues = LyricCueRanges.decode(text: text, cues: rawCues) {
-        sparseCues = cues; updateSparseRanges()
+      if words.count != nextWords.count {
+        words.removeAll()
+        rubyAnnotations.removeAll()
+      } else {
+        rubyAnnotations = nextRuby.compactMap { item in
+          protected.range(item.range).map {
+            (range: $0, text: item.text, position: item.position, alignment: item.alignment)
+          }
+        }
+        if rubyAnnotations.count != nextRuby.count {
+          words.removeAll()
+          rubyAnnotations.removeAll()
+        }
       }
+      untimedRanges.removeAll(keepingCapacity: true)
+      sparseCues = nextSparseCues
+      if sparseCues != nil { updateSparseRanges() }
     }
     updateClock(); setNeedsDisplay()
   }
@@ -228,12 +275,16 @@ final class NexusLyricLineView: ExpoView {
       }
       let height = ceil(font.lineHeight)
       let source = storage.string as NSString
-      let baseGraphemes = LyricRubyLayout.graphemes(source.substring(with: item.range))
-      var baseLocation = item.range.location,baseWidths: [CGFloat] = []
-      for grapheme in baseGraphemes {
-        let range = NSRange(location: baseLocation, length: grapheme.utf16.count)
-        baseWidths.append(manager.boundingRect(forGlyphRange: manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil), in: container).width)
-        baseLocation += grapheme.utf16.count
+      let baseText = source.substring(with: item.range)
+      let baseWidths: [CGFloat] = LyricRubyLayout.graphemeRanges(in: baseText).map { localRange in
+        let range = NSRange(
+          location: item.range.location + localRange.location,
+          length: localRange.length
+        )
+        return manager.boundingRect(
+          forGlyphRange: manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil),
+          in: container
+        ).width
       }
       let origins = LyricRubyLayout.horizontalOrigins(
         regionWidth: region.width,

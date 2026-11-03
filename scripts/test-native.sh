@@ -9,7 +9,7 @@ xcrun swiftc -swift-version 5 modules/nexus-native/ios/AppIconPolicy.swift tests
 build/tests/native-app-icon-policy
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/LyricCueRanges.swift tests/native/LyricCueRangesTests.swift -o build/tests/native-lyric-cues
 build/tests/native-lyric-cues
-xcrun swiftc -swift-version 5 modules/nexus-native/ios/LyricRubyLayout.swift tests/native/LyricRubyLayoutTests.swift -framework CoreGraphics -o build/tests/native-ruby-layout
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/LyricRubyLayout.swift tests/native/LyricRubyLayoutTests.swift -framework AppKit -framework CoreGraphics -o build/tests/native-ruby-layout
 build/tests/native-ruby-layout
 xcrun swiftc -O -swift-version 5 modules/nexus-native/ios/ScriptUtilities.swift tests/native/UtilitiesCLI.swift -lz -o build/tests/native-utilities
 node scripts/test-native-utilities.mjs

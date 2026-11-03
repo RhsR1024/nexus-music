@@ -15,11 +15,94 @@ enum LyricRubyAlignment: String {
 }
 
 enum LyricRubyLayout {
+  static let wordJoiner = "\u{2060}"
+
+  struct ProtectedText {
+    let text: String
+    private let sourceLength: Int
+    private let boundaries: [Int]
+
+    fileprivate init(text: String, sourceLength: Int, boundaries: [Int]) {
+      self.text = text
+      self.sourceLength = sourceLength
+      self.boundaries = boundaries
+    }
+
+    private func layoutOffset(_ sourceOffset: Int) -> Int? {
+      guard sourceOffset >= 0, sourceOffset <= sourceLength else { return nil }
+      return sourceOffset + boundaries.prefix { $0 < sourceOffset }.count
+    }
+
+    func range(_ sourceRange: NSRange) -> NSRange? {
+      guard sourceRange.location >= 0, sourceRange.length >= 0,
+            sourceRange.location <= sourceLength,
+            sourceRange.length <= sourceLength - sourceRange.location,
+            let start = layoutOffset(sourceRange.location),
+            let end = layoutOffset(NSMaxRange(sourceRange)) else { return nil }
+      return NSRange(location: start, length: end - start)
+    }
+  }
+
+  static func protect(
+    text: String,
+    ranges: [NSRange]
+  ) -> ProtectedText {
+    let source = text as NSString
+    let sourceLength = source.length
+    let validRanges = ranges.filter {
+      $0.location >= 0 && $0.length > 0 &&
+        $0.location <= sourceLength &&
+        $0.length <= sourceLength - $0.location
+    }
+    var boundaries = Set<Int>()
+    text.enumerateSubstrings(
+      in: text.startIndex..<text.endIndex,
+      options: .byComposedCharacterSequences
+    ) { _, range, _, _ in
+      let boundary = NSMaxRange(NSRange(range, in: text))
+      if validRanges.contains(where: {
+        boundary > $0.location && boundary < NSMaxRange($0)
+      }) {
+        boundaries.insert(boundary)
+      }
+    }
+    let sorted = boundaries.sorted()
+    guard !sorted.isEmpty else {
+      return ProtectedText(text: text, sourceLength: sourceLength, boundaries: [])
+    }
+    var result = ""
+    var cursor = 0
+    for boundary in sorted {
+      result += source.substring(with: NSRange(
+        location: cursor,
+        length: boundary - cursor
+      ))
+      result += wordJoiner
+      cursor = boundary
+    }
+    result += source.substring(from: cursor)
+    return ProtectedText(
+      text: result,
+      sourceLength: sourceLength,
+      boundaries: sorted
+    )
+  }
+
   static func graphemes(_ text: String) -> [String] {
-    var result: [String] = []
-    text.enumerateSubstrings(in: text.startIndex..<text.endIndex, options: .byComposedCharacterSequences) {
-      value, _, _, _ in
-      if let value=value { result.append(value) }
+    graphemeRanges(in: text).compactMap {
+      Range($0, in: text).map { String(text[$0]) }
+    }
+  }
+
+  static func graphemeRanges(in text: String) -> [NSRange] {
+    var result: [NSRange] = []
+    text.enumerateSubstrings(
+      in: text.startIndex..<text.endIndex,
+      options: .byComposedCharacterSequences
+    ) { value, range, _, _ in
+      if let value, value != wordJoiner {
+        result.append(NSRange(range, in: text))
+      }
     }
     return result
   }

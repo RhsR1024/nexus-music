@@ -1,3 +1,7 @@
+## 2026-11-03 注音基础范围换行保护
+
+修复大字号“到/尾”跨行而`ed`留在首行的问题：仅在带注音基础组内插入WORD JOINER，并统一映射TextKit单词/注音范围；可见字素和withBase计数忽略连接符。997/997、完整native与Release build通过；正式XXXL `1793689134708`及正常字号`1793689484355`各1/0/0、同源且sourceUnchanged=true，关键截图亲看。dirty unsigned IPA和T7预提交281份/109,313,865字节核验通过、源证据保留。clean归档/push/云端结果待交付补记；任意跨行重排、完整TTML2、真实库、实体VoiceOver/签名仍开放。见[专项回执](2026-11-03-ttml-ruby-wrap-report.md)与[UI规格](ui-spec/ttml-ruby-wrap-2026-11-03.md)。
+
 ## 2026-11-03 配色重启真实状态观测
 
 固定 14 点判据无法区分 palette 丢失与静止相位避开采样点。模拟器专用只读观测以 boot UUID/一次性 nonce 绑定 store 与原生 applied 状态；最终 `SourceUITests-1793682338519` 为 1/0/0、589.358 秒、`sourceUnchanged=true`，重启前后和浅色重建均只有唯一可见、已安装、暂停的背景，store/native palette 精确为 `#FE0000,#0000FE,#00FF01` 且身份摘要一致。25 张全屏截图保留并亲看三个关键状态；`npm run check` 996/996、完整 native、Swift/Node/diff 通过，离线 `ipa --review` 为 56E/21WI/121 timeline/47F/47P、0 错误/0 警告。
