@@ -80,6 +80,11 @@ public final class NexusNativeModule: Module {
     Function("launchArgument") { (name: String) -> String? in
       ProcessInfo.processInfo.environment[name] ?? UserDefaults.standard.string(forKey: name)
     }
+#if targetEnvironment(simulator)
+    AsyncFunction("themeObservationSnapshot") { () -> [[String: Any]] in
+      NexusAmbientView.observationSnapshot()
+    }.runOnQueue(.main)
+#endif
     AsyncFunction("decodeImportText") { (base64: String) throws -> String in try ScriptUtilities.perform("importText", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("probeAudioURL") { (id: String, url: String, promise: Promise) in
       guard self.probes[id] == nil, self.probes.count < 2 else { promise.reject("PROBE_BUSY", "请等待其他检查完成"); return }

@@ -1,3 +1,13 @@
+## 2026-11-03 配色重启真实应用状态观测
+
+固定 14 点无法区分“palette 丢失”和“静止相位避开采样点”。本批只在模拟器且显式测试环境开启只读观测，以新 boot UUID 和一次性 nonce 绑定检查点，在 E2E store 快照前后核对同一对象，并由原生主线程读取真实 `appliedColors`、身份摘要、installed scene、dark/pending/moving、只读 timeline 和已安装背景层 PNG。可见性加入 window 交集及祖先裁剪；观测不推进动画、不修改服务或偏好，正式设备不编译该接口，正常界面与无障碍树不展示诊断值。
+
+r1 `SourceUITests-1793680673149` 为 1/0/0、593.609 秒。r2 `SourceUITests-1793681555883` 为 0/1/0、483.815 秒，实际已证明重启前后 store/native 均为 `#FE0000,#0000FE,#00FF01`、身份摘要均为 `9ea3c446…d1cd`，唯一失败是静止场景未命中固定 14 点，原失败与证据保留。移除暂停态该 14 点断言后，r3 `SourceUITests-1793682338519` 为 1/0/0、589.358 秒、`sourceUnchanged=true`；源码摘要 `4a738e51…f18522`、fixture `564e821a…c709`。重启前后及浅色重建三态均唯一可见、已安装、暂停，store/native palette 与身份一致；真实背景 PNG 的 86×186 三通道贡献均远高于 200 最低门槛。全屏像素、停车稳定、跨页三色、亮度、运动、异步身份竞争和跨进程状态断言继续保留。
+
+`npm run check` 996/996、0 失败，完整 `npm run test:native`、真实 Release Swift 编译、Node 语法和 diff 检查通过。`ipa --review` 复用既有离线证据为 56E/21WI/121 timeline/47F/47P、0 错误/0 警告，无新增 Sollin 采集或私有探测。精确 25 张 1290×2796 全屏截图已导出并亲看重启前暗色、重启后暗色与浅色重建；索引 SHA-256 `dd47f0db…a798a`。当前证据见[专项回执](docs/2026-11-03-palette-restart-observation-report.md)；正式构建归档、T7 复制、提交、push 与新 iOS27 终态尚未完成，原始旧运行故障仍不关闭。模拟器、观测摘要和编译不能替代云端 iOS27、实体机、真实服务或签名验收。
+
+提交前 dirty unsigned archive 已通过：`dirty=true`、当前 14 项工作区变化、arm64、iphoneos26.2、最低 iOS15.1、设备族`[1,2]`、`signed=false`；IPA 17,838,257字节、SHA-256`8eba44db9c889b4298b1ab1046cf3c09d0880dc21ea18964adb5a92dcfd94eeb`，manifest SHA-256`a0b26a41bcf1f21ae083232532811a30d817de11431eb3aec5370d3275f6e667`，archive log SHA-256`a21ef9906df2e63f54ab2bb8a4efd9d5d9c4792465bc0666474b12b591b9adc5`。T7阶段`2026-11-03-palette-restart-observation-precommit-8eba44db9c88`保存archive/IPA/manifest、r1–r3 xcresult、r3观测/25张截图、本轮源码与diff；606份普通源文件/619,107,655字节逐项SHA-256一致，`sourceOnly=0`、`targetOnly=0`、源证据保留、`deleted=0`，SHA清单与transfer receipt已复核。clean HEAD archive、提交/push和新iOS27终态继续。
+
 ## 2026-11-03 iOS27 核心组超时诊断与测试修正
 
 旧运行 `41553030339`/`295bf94` 超过3小时被取消；紧凑包已取得并验SHA/CRC，独立确认图标主屏定位、配色恢复断言两项失败及UCloud输入92次60秒动画等待，不能仅归因预算。主屏启动与切换后启动共用已有真实屏幕精确标签OCR；同步/备份11处输入改为整串XCTest输入，保留字段与所有业务断言。995/995检查通过；本地主屏启动1/0/0，同步冲突/重启/删除1/0/0；图标切换因模拟器系统EIO/EAGAIN为0/0/1，不计通过。备份上传/回读/恢复专项亦1/0/0、183.184秒；同步/备份均sourceUnchanged。clean IPA与T7逐文件核验已通过，`e388e50`已push；当前`41563617753`运行、`41578685392`唯一pending，旧pending自动取消。

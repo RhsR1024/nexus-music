@@ -1,3 +1,17 @@
+## 2026-11-03 配色重启真实应用状态观测
+
+- [x] 模拟器测试环境加入只读 boot/nonce 检查点、store/native applied 快照、身份摘要、安装背景层 PNG 和失败证据保留；正式设备/界面不暴露诊断入口。
+- [x] 可见实例要求 window 交集及祖先裁剪；验收要求唯一有效 installed scene、精确有序 palette、身份、暗色/暂停状态和 store/native 一致。
+- [x] r2 保留固定 14 点失败并证明重启前后实际 palette/身份一致；移除暂停态不适用的 14 点断言，保留全屏、停车稳定、亮度、运动、跨页三色/身份竞争及跨进程断言。
+- [x] r3 `SourceUITests-1793682338519` 为 1/0/0、589.358 秒、`sourceUnchanged=true`；三态 store/native palette 均为 `#FE0000,#0000FE,#00FF01`，身份一致，安装背景层三通道贡献均超过门槛。
+- [x] `npm run check` 996/996、完整 native、Release Swift 编译、Node 语法与 diff 检查通过；`ipa --review` 复用离线证据 56E/21WI/121 timeline/47F/47P、0 错误/0 警告。
+- [x] 精确 xcresult 导出 25 张全屏截图并亲看三个关键状态；原生 PNG 与 JSON/PNG 哈希绑定。
+- [x] 提交前 dirty unsigned archive通过；IPA为17,838,257字节、SHA-256`8eba44db…4eeb`，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。T7 precommit阶段保存archive/IPA、r1–r3、观测/截图、源码与diff，606份普通文件/619,107,655字节逐项一致且源证据保留。
+- [ ] clean HEAD unsigned archive、正常提交/push与实际 iOS27 队列核对。
+- [ ] 云端 iOS27 原始失败根因终态、实体机、真实服务与签名验收。
+
+见[专项回执](2026-11-03-palette-restart-observation-report.md)。本批只收口测试判据和本地模拟器观测，不把模拟器通过写成云端或原始 iOS27 故障已解决。
+
 ## 2026-11-03 iOS27 核心组超时诊断与测试修正
 
 旧运行 `41553030339`/`295bf94` 超过3小时被取消；紧凑包已取得并验SHA/CRC，独立确认图标主屏定位、配色恢复断言两项失败及UCloud输入92次60秒动画等待，不能仅归因预算。主屏启动与切换后启动共用已有真实屏幕精确标签OCR；同步/备份11处输入改为整串XCTest输入，保留字段与所有业务断言。995/995检查通过；本地主屏启动1/0/0，同步冲突/重启/删除1/0/0；图标切换因模拟器系统EIO/EAGAIN为0/0/1，不计通过。备份上传/回读/恢复专项亦1/0/0、183.184秒；同步/备份均sourceUnchanged。clean IPA与T7逐文件核验已通过，`e388e50`已push；当前`41563617753`运行、`41578685392`唯一pending，旧pending自动取消。

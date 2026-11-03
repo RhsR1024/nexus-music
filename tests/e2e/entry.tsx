@@ -5,6 +5,7 @@ import {MusicApplication} from '../../App.tsx';
 import {createServices,type Services} from '../../src/app/services.ts';
 import {parseProviderJSON,type HTTPClient,type TextHTTPClient} from '../../src/providers/http.ts';
 import type {PlaylistLinkExpander} from '../../src/providers/playlistLink.ts';
+import {observeTheme} from './themeObservation.ts';
 const requestOnlineText=async(url:string,request:Parameters<TextHTTPClient>[1],signal:AbortSignal)=>{
   const response=await fetch('http://127.0.0.1:18439/nexus-ui-test-online-adapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,request}),signal});
   if(!response.ok)throw new Error('Synthetic provider unavailable');return response.text();
@@ -21,7 +22,9 @@ const expandPlaylistLink:PlaylistLinkExpander=async(url,signal)=>{
   return value.url;
 };
 const initialize=()=>pending??=(async()=>{
-  const services=await createServices({onlineHTTP:http,onlineTextHTTP:textHTTP,playlistLinkExpander:expandPlaylistLink});
+  const boot=requireNativeModule<{launchArgument(name:string):string|null}>('NexusNative').launchArgument('NEXUS_UI_THEME_BOOT_ID');
+  const services=await createServices(boot?{}:{onlineHTTP:http,onlineTextHTTP:textHTTP,playlistLinkExpander:expandPlaylistLink});
+  if(boot)observeTheme(services,boot);
   const fixtureAccount=requireNativeModule<{launchArgument(name:string):string|null}>('NexusNative').launchArgument('NEXUS_UI_ACCOUNT_FM_FIXTURE')==='1';
   if(fixtureAccount){
     // Simulator-only account/session fixture. The production entry does not

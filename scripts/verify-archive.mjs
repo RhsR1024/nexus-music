@@ -6,7 +6,7 @@ const manifest=JSON.parse(readFileSync('build/distribution/build-manifest.json',
 const architecture=execFileSync('xcrun',['lipo','-archs',`${app}/${plist('CFBundleExecutable')}`],{encoding:'utf8'}).trim();
 if(architecture!=='arm64'||plist('DTPlatformName')!=='iphoneos'||plist('CFBundleIdentifier')!==manifest.bundleIdentifier||plist('DTSDKName')!==`iphoneos${manifest.iOSSDK}`||!statSync(`${app}/main.jsbundle`).size)throw new Error('Archive architecture, SDK, bundle ID or JavaScript bundle did not match the requested build');
 const jsBundle=readFileSync(`${app}/main.jsbundle`);
-for(const marker of ['nexus-ui-test-online-adapter','nexus-ui-test-playlist-link-expander','https://163cn.tv/AbCd']){
+for(const marker of ['nexus-ui-test-online-adapter','nexus-ui-test-playlist-link-expander','nexus-ui-test-theme-observation','https://163cn.tv/AbCd']){
   if(jsBundle.includes(Buffer.from(marker)))throw new Error(`Test-only marker must never be included in the production archive: ${marker}`);
 }
 const deviceFamilies=[Number(plist('UIDeviceFamily:0')),Number(plist('UIDeviceFamily:1'))];

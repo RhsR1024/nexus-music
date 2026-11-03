@@ -11,6 +11,7 @@ import { gzipSync } from 'node:zlib';
 import {fileSha256,sourceSnapshot,installedBundleSnapshot,externalInputSnapshot} from './lib/ui-provenance.mjs';
 import {loadReferenceScene} from './lib/reference-scene.mjs';
 import {exportFailureEvidence} from './export-failure-evidence.mjs';
+import {ThemeObservation} from './lib/theme-observation.mjs';
 
 const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
 if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.json')))throw new Error('Refusing to overwrite a capture run manifest');
@@ -180,8 +181,9 @@ const classicShortUI=process.argv.slice(2).some(target=>target.endsWith('/testVi
 const classicUI=classicReferenceUI||structuredLyricsUI||classicShortUI||vinylReferenceUI||process.argv.slice(2).some(target=>target.endsWith('/testVisualLabClassicDirect'));
 const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabAppearanceDirect'));
 if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
-const entryFile=vinylReferenceUI?'tests/e2e/vinyl.tsx':classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI?'tests/e2e/entry.tsx':null;
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
+const entryFile=vinylReferenceUI?'tests/e2e/vinyl.tsx':classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI||coverThemeUI?'tests/e2e/entry.tsx':null;
+const themeObservation=new ThemeObservation();
 // Optional public recording for this functional race regression. Controlled
 // artwork identities remain test data and are not visual acceptance evidence.
 const themeAudioPath=process.env.NEXUS_UI_THEME_AUDIO?realpathSync(process.env.NEXUS_UI_THEME_AUDIO):null;
@@ -281,11 +283,41 @@ const handleRequest = async (req, res) => {
   if(req.url.startsWith('/am-fixture-control')){const control=new URL(req.url,'http://127.0.0.1');amLongQueue=control.searchParams.get('longQueue')==='1';res.setHeader('Content-Type','application/json');res.end(JSON.stringify({longQueue:amLongQueue}));return;}
   if(req.url==='/photo-artwork-fixture-control'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:photoArtworkVersion,requests:photoCoverRequests}));return;}
 
+  if(coverThemeUI&&req.url.startsWith('/nexus-ui-test-theme-observation')){
+    res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json');
+    if(req.method==='GET'){
+      res.end(JSON.stringify(themeObservation.poll(new URL(req.url,'http://127.0.0.1').searchParams.get('boot'))));return;
+    }
+    if(req.method!=='POST'){res.writeHead(405);res.end('{}');return;}
+    let bytes=0;const chunks=[];
+    for await(const chunk of req){bytes+=chunk.length;if(bytes>4_000_000){res.writeHead(413);res.end('{}');return;}chunks.push(chunk);}
+    let value;try{value=JSON.parse(Buffer.concat(chunks).toString());}catch{res.writeHead(400);res.end('{}');return;}
+    if(!themeObservation.accept(value)){res.writeHead(409);res.end('{}');return;}
+    const saved=structuredClone(themeObservation.result);
+    for(const view of saved.native??[]){
+      if(view.png){
+        const file=`theme-observation-${saved.nonce}-${view.instanceID}.png`,data=Buffer.from(view.png,'base64');
+        writeFileSync(resolve(runDirectory,file),data);
+        view.pngSha256=createHash('sha256').update(data).digest('hex');view.pngFile=file;delete view.png;
+      }
+    }
+    themeObservation.result=saved;
+    writeFileSync(resolve(runDirectory,`theme-observation-${saved.nonce}.json`),JSON.stringify(saved,null,2)+'\n');
+    res.end('{"accepted":true}');return;
+  }
   if(coverThemeUI&&req.url.startsWith('/theme-fixture-control')){
     // This endpoint observes changing in-flight requests, never cached data.
     res.setHeader('Cache-Control','no-store');
     counts.themeControlPolls=(counts.themeControlPolls??0)+1;
     const control=new URL(req.url,'http://127.0.0.1');
+    if(control.searchParams.has('checkpoint')){
+      themeObservation.begin(control.searchParams.get('observationBoot'),control.searchParams.get('checkpoint'));
+    }
+    if(control.searchParams.has('observationNonce')){
+      const result=themeObservation.result;
+      res.setHeader('Content-Type','application/json');
+      res.end(JSON.stringify({observation:result?.boot===control.searchParams.get('observationBoot')&&result?.nonce===control.searchParams.get('observationNonce')?result:null}));return;
+    }
     if(control.searchParams.has('transition'))transitionFixture=true;
     const release=control.searchParams.get('release');
     if(release){

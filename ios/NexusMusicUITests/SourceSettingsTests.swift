@@ -5117,7 +5117,15 @@ final class SourceSettingsTests: XCTestCase {
   func testGlobalCoverThemeChangesAcrossPages() throws {
     XCUIDevice.shared.orientation = .portrait
     defer{XCUIDevice.shared.orientation = .portrait}
-    let app=XCUIApplication();app.launch();app.activate()
+    let app=XCUIApplication()
+    var observationBoot=""
+    func launch(){
+      observationBoot=UUID().uuidString
+      app.launchEnvironment["NEXUS_UI_THEME_OBSERVATION"]="1"
+      app.launchEnvironment["NEXUS_UI_THEME_BOOT_ID"]=observationBoot
+      app.launch()
+    }
+    launch();app.activate()
     func themeState(_ query:String="") throws -> [String:Any] {
       let done=expectation(description:"Theme fixture control \(query)")
       var result:Result<Data,Error>?
@@ -5136,6 +5144,43 @@ final class SourceSettingsTests: XCTestCase {
       if completed != .completed {task.cancel();throw NSError(domain:"ThemeFixtureControlTimeout",code:-1)}
       guard let result else {throw NSError(domain:"ThemeFixtureControlEmpty",code:-1)}
       return try JSONSerialization.jsonObject(with:result.get()) as? [String:Any] ?? [:]
+    }
+    func observePalette(_ name:String,dark:Bool=true) throws -> [String:Any] {
+      let deadline=Date().addingTimeInterval(20)
+      var last=[String:Any]()
+      repeat {
+        let nonce=UUID().uuidString
+        last=[:]
+        _=try themeState("observationBoot="+observationBoot+"&checkpoint="+nonce)
+        let responseDeadline=Date().addingTimeInterval(3)
+        repeat {
+          let response=try themeState("observationBoot="+observationBoot+"&observationNonce="+nonce)
+          if let value=response["observation"] as? [String:Any] {last=value;break}
+          Thread.sleep(forTimeInterval:0.2)
+        } while Date()<responseDeadline
+        if let store=last["store"] as? [String:Any],store["pending"] as? Bool == false,
+           let colors=store["palette"] as? [String],colors.count==3,
+           let views=last["native"] as? [[String:Any]] {
+          let visible=views.filter{$0["visible"] as? Bool == true && $0["installedScene"] as? Bool == true}
+          let hueCounts=visible.first?["renderedPrimaryHueCounts"] as? [Int] ?? []
+          if visible.count==1,let view=visible.first,
+             view["pending"] as? Bool == false,view["moving"] as? Bool == false,
+             view["dark"] as? Bool == dark,view["sceneColorCount"] as? Int == 3,view["pngSha256"] as? String != nil,
+             colors == ["#FE0000","#0000FE","#00FF01"],
+             view["palette"] as? [String] == colors,
+             view["renderedHueSamples"] as? Int == 86*186,
+             hueCounts.count == 3,
+             hueCounts.allSatisfy({$0 >= 200}),
+             view["identityDigest"] as? String == store["identityDigest"] as? String {
+            let attachment=XCTAttachment(string:String(describing:last));attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)
+            return last
+          }
+        }
+        Thread.sleep(forTimeInterval:0.2)
+      } while Date()<deadline
+      let attachment=XCTAttachment(string:String(describing:last));attachment.name=name+" incomplete";attachment.lifetime = .keepAlways;add(attachment)
+      XCTFail("Expected one visible, installed native scene with the actual store palette and identity: \(last)")
+      throw NSError(domain:"ThemeObservationIncomplete",code:-1)
     }
     func themeControl(_ query:String="") throws -> Int {
       (try themeState(query))["held"] as? Int ?? -1
@@ -5210,7 +5255,7 @@ final class SourceSettingsTests: XCTestCase {
     let restoredFollow=app.switches["appearance-cover-color"];reveal(restoredFollow);restoredFollow.tap()
     let fallback=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[fallback],timeout:10),.completed)
     restoredFollow.tap();expectTint(false,"Blue cover enabled again")
-    app.terminate();app.launch();openSettings(app,page:"appearance");expectTint(false,"Blue cover restored paused after restart")
+    app.terminate();launch();openSettings(app,page:"appearance");expectTint(false,"Blue cover restored paused after restart")
     // Global flow has its own persisted switch and works with tint disabled.
     // Assert actual pixels, not merely the presence of the background view.
     openSettings(app,page:"background")
@@ -5222,7 +5267,7 @@ final class SourceSettingsTests: XCTestCase {
     let playerMotion=app.switches["visual-motion"];reveal(playerMotion);XCTAssertEqual(playerMotion.value as? String,"0")
     app.buttons["background-sheet-close"].tap();expectTint(false,"Global flow without cover tint")
     app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap();expectTint(false,"Global flow discovery independent of player motion")
-    app.terminate();app.launch();openSettings(app,page:"background")
+    app.terminate();launch();openSettings(app,page:"background")
     let persistedGlobal=app.switches["visual-global-motion"];reveal(persistedGlobal);XCTAssertEqual(persistedGlobal.value as? String,"1")
     let persistedTint=app.switches["visual-cover-color"];reveal(persistedTint);XCTAssertEqual(persistedTint.value as? String,"0")
     let persistedPlayer=app.switches["visual-motion"];reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"0")
@@ -5403,8 +5448,10 @@ final class SourceSettingsTests: XCTestCase {
     expectThreeColors("Softened dark flow actual appearance pixels")
     XCTAssertLessThan(marginBrightness(),lightBrightness-60,"The same raw cover must rebuild a substantially darker native scene")
     app.buttons["mini-action-toggle"].tap()
-    _=pausedScene("Dark paused scene before restart")
-    app.terminate();app.launch();motion(false)
+    let darkBaseline=pausedScene("Dark paused scene before restart")
+    let paletteBeforeRestart=try observePalette("Actual applied dark palette before restart")
+    print("Dark stopped margin baseline: \(darkBaseline)")
+    app.terminate();launch();motion(false)
     let restoredPlayer=app.buttons["打开播放页"]
     XCTAssertTrue(restoredPlayer.waitForExistence(timeout:10),"The paused player must restore after restart")
     restoredPlayer.tap()
@@ -5412,13 +5459,19 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["收起播放页"].tap()
     motion(false)
     let restoredDark=pausedScene("Softened dark flow restored paused")
-    XCTAssertTrue(BackgroundPixels.hasPrimaryHues(restoredDark),"The same red, green and blue palette must restore after restart")
+    let paletteAfterRestart=try observePalette("Actual applied dark palette after restart")
+    XCTAssertNotEqual(paletteBeforeRestart["boot"] as? String,paletteAfterRestart["boot"] as? String,"Observation must come from a new process launch")
+    let beforeStore=paletteBeforeRestart["store"] as? NSDictionary,afterStore=paletteAfterRestart["store"] as? NSDictionary
+    XCTAssertEqual(beforeStore,afterStore,"Same cover must rebuild the identical ordered palette and actual scene identity")
+    print("Restored dark stopped margins: \(restoredDark)")
     XCTAssertLessThan(marginBrightness(),lightBrightness-60,"Dark scene must survive restart")
     let darkStopped=backgroundPixels();XCTAssertEqual(darkStopped,backgroundPixels(),"Paused dark scene must remain stable")
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
     app.buttons["theme-sheet-close"].tap()
     let restoredLight=pausedScene("Softened light flow restored paused")
-    XCTAssertTrue(BackgroundPixels.hasPrimaryHues(restoredLight),"The light theme must retain the same red, green and blue palette")
+    let paletteAfterLight=try observePalette("Actual applied light palette after rebuild",dark:false)
+    XCTAssertEqual(beforeStore,paletteAfterLight["store"] as? NSDictionary,"Theme changes must preserve the actual ordered cover palette and identity")
+    print("Restored light stopped margins: \(restoredLight)")
     XCTAssertGreaterThan(marginBrightness(),lightBrightness-30,"Light theme must rebuild even with unchanged identity and palette")
     openSettings(app,page:"background");setSwitch(persistedPlayer,true)
     setSwitch(persistedGlobal,false)

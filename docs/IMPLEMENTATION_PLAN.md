@@ -1,3 +1,15 @@
+## 2026-11-03 配色重启真实应用状态观测
+
+旧配色测试以固定 14 个边缘点判断静止场景是否含三色。该判据与已有“第三色场可避开14点”的合法构图反例冲突，因此本批先增加真实状态观测，再替换错误采样。模拟器专用接口用 weak `NexusAmbientView` 列表找到当前背景实例；view 转 window 坐标后检查隐藏/透明祖先、`clipsToBounds` 求交和 window 交集，只接受唯一可见且 installed scene 有效的实例。
+
+前后端检查点由新 boot UUID 与一次性 nonce 绑定。`tests/e2e/themeObservation.ts` 在原生快照前后核对同一 `services.coverTheme` 对象，记录有序 palette 和完整 URI 的 SHA-256；原生读取真实 `appliedColors/appliedIdentity`、scene 色数、dark/pending/display-link 和只读 timeline，并从已安装 canvas 渲染 PNG。`scripts/lib/theme-observation.mjs` 拒绝旧 boot/nonce、重复结果、畸形字段与超大 PNG，`scripts/test-ui.mjs` 按落盘 bytes 计算并回写 PNG SHA-256。观测不推进时间、不恢复相位、不修改服务/偏好，也不进入正式入口；archive verifier 新增测试标记排除。
+
+r2 已证明固定 14 点失败时 store/native palette 与身份仍然一致。最终 r3 `SourceUITests-1793682338519` 为 1/0/0、589.358 秒、`sourceUnchanged=true`；重启前后和浅色重建均唯一可见、已安装、暂停，store/native 都有精确 `#FE0000,#0000FE,#00FF01`，身份为同一 `5d3c8a44…7fb0b`。86×186 真实背景层三通道贡献最低为 1969，门槛为 200。全屏像素、停车稳定、亮度、运动、跨页三色、异步身份竞争及跨进程状态断言未删除。
+
+996/996 检查、完整 native、Release Swift 编译、Node 语法和 diff 通过；`ipa --review` 复用离线证据 56E/21WI/121 timeline/47F/47P、0 错误/0 警告。25 张全屏截图从精确 xcresult 导出并亲看关键三态；原生 PNG 为独立已安装图层，不能替代全屏合成或真机。正式归档、提交/push、云端 iOS27 和原始故障终态仍开放，见[专项回执](2026-11-03-palette-restart-observation-report.md)。
+
+提交前 dirty archive 通过并记录完整清单；IPA SHA-256为`8eba44db9c889b4298b1ab1046cf3c09d0880dc21ea18964adb5a92dcfd94eeb`，manifest与log分别绑定SHA-256`a0b26a41…f6e667`、`a21ef990…b9adc5`。T7 precommit阶段逐项核对606份普通文件/619,107,655字节，无缺失、额外载荷或内容差异；clean HEAD归档将在正常提交后单独绑定提交与工作区清洁状态。
+
 ## 2026-11-03 iOS27 核心组超时诊断与测试修正
 
 旧运行 `41553030339`/`295bf94` 超过3小时被取消；紧凑包已取得并验SHA/CRC，独立确认图标主屏定位、配色恢复断言两项失败及UCloud输入92次60秒动画等待，不能仅归因预算。主屏启动与切换后启动共用已有真实屏幕精确标签OCR；同步/备份11处输入改为整串XCTest输入，保留字段与所有业务断言。995/995检查通过；本地主屏启动1/0/0，同步冲突/重启/删除1/0/0；图标切换因模拟器系统EIO/EAGAIN为0/0/1，不计通过。备份上传/回读/恢复专项亦1/0/0、183.184秒；同步/备份均sourceUnchanged。clean IPA与T7逐文件核验已通过，`e388e50`已push；当前`41563617753`运行、`41578685392`唯一pending，旧pending自动取消。
