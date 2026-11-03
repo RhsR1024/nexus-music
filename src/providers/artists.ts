@@ -7,6 +7,7 @@ import {requestJSON,requestText,queryURL,type HTTPClient,type TextHTTPClient} fr
 import {parseKuwoJSON} from './kuwoJSON.ts';
 import {qqSignature} from './qqSignature.ts';
 import {safePublicURL} from '../storage/cleanTrack.ts';
+import {miguArtistSongs} from './miguArtistSongs.ts';
 type Row=Record<string,unknown>;
 const row=(v:unknown):Row=>v&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const text=(v:unknown)=>typeof v==='string'?v:typeof v==='number'&&Number.isSafeInteger(v)?String(v):'';
@@ -60,7 +61,7 @@ export class ArtistProvider{
   else if(platform==='tx'){const d=await this.qq('musichall.song_list_server','GetSingerSongList',{singerMid:id,begin:(page-1)*limit,num:limit,order:1},signal);if(text(d.singerMid)!==id)throw Error('艺术家响应身份不符');values=array(d.songList).map(v=>row(v).songInfo);total=d.totalNum;}
   else if(platform==='kw'){const d=row(parseKuwoJSON(await this.textHTTP(queryURL('https://search.kuwo.cn/r.s',{stype:'artist2music',artistid:id,pn:page-1,rn:limit,encoding:'utf8'}),{},signal)));values=d.musiclist;total=d.total;}
   else if(platform==='kg'){const r=row(await this.http(queryURL('https://mobiles.kugou.com/api/v5/singer/song',{singerid:id,page,pagesize:limit}),{},signal));if(r.status!==1||r.errcode!==0)throw Error('艺术家歌曲暂不可读取');const d=row(r.data);values=d.info;total=d.total;if(page===1){try{const profile=row(await this.http(queryURL('https://mobiles.kugou.com/api/v5/singer/info',{singerid:id}),{},signal));if(profile.status===1&&profile.errcode===0&&text(row(profile.data).singerid)===id)details=artistItem(platform,row(profile.data));}catch{if(signal.aborted)throw Error('已取消');}}}
-  else{const r=row(await this.http(queryURL('https://app.c.nf.migu.cn/MIGUM2.0/v1.0/content/querySingerSong',{singerId:id,pageNo:page,pageSize:limit}),{},signal));if(r.code!=='000000')throw Error('此平台艺术家歌曲暂不可读取');const d=row(r.data);values=d.songList;total=d.totalCount;}
+  else{const result=await miguArtistSongs(this.http,id,page,limit,signal);return{title:artist.title,page,...result,info:result.total===undefined?{}:{songCount:result.total}};}
   if(signal.aborted)throw Error('已取消');const parsedTotal=count(total),rows=array(values,parsedTotal);const items=rows.map(v=>{const x=row(v);if(platform==='kg'){const f=text(x.filename),i=f.indexOf(' - ');return onlineTrack(platform,{...x,FileHash:x.hash,SongName:i<0?f:f.slice(i+3),SingerName:i<0?artist.title:f.slice(0,i),AlbumName:x.album_name,Duration:x.duration,FileSize:x.filesize,HQFileHash:x['320hash'],HQFileSize:x['320filesize'],SQFileHash:x.sqhash,SQFileSize:x.sqfilesize});}if(platform==='wy')return onlineTrack(platform,{...x,h:x.h??x.hMusic,m:x.m??x.mMusic,l:x.l??x.lMusic});if(platform==='kw')return onlineTrack(platform,{...x,name:clean(x.name),artist:clean(x.artist),rid:x.MUSICRID??x.musicrid??x.rid??x.id,pic:x.pic??art(x.img),FORMATS:x.formats});return onlineTrack(platform,x);});
   return{title:details.title,items,page,total:parsedTotal,scope,info:platform==='wy'||(platform==='kg'&&details!==artist)?details:{...(parsedTotal!==undefined?{songCount:parsedTotal}:{})},hasMore:scope?false:rows.length>0&&(parsedTotal!==undefined?page*limit<parsedTotal:rows.length>=limit)};
  }

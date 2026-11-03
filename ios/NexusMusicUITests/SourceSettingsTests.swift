@@ -2260,6 +2260,29 @@ final class SourceSettingsTests: XCTestCase {
     mediaValue("fullscreen:inline",timeout:15);text("Fullscreen lifecycle after exit: \(String(describing:status.value))")
     app.buttons["mv-back"].tap();XCTAssertTrue(player.waitForExistence(timeout:15));player.tap();XCTAssertTrue(app.staticTexts["Synthetic tagged tone"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));XCTAssertFalse(app.buttons["暂停"].exists);XCTAssertEqual(progress.value as? String,paused,"Web MV lifecycle must not move the paused music position");image("Paused music and its queue survive the real MV media lifecycle")
   }
+  func testLiveMiguArtistSongs() throws {
+    let app=XCUIApplication();app.launch()
+    func reach(_ item:XCUIElement){for _ in 0..<18{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5))}
+    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    let mini=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(mini.waitForExistence(timeout:15),"Wait for the saved paused player to finish restoring before browsing")
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let artists=app.descendants(matching:.any).matching(identifier:"search-kind-artist").firstMatch;reach(artists);artists.tap()
+    let migu=app.descendants(matching:.any).matching(identifier:"咪咕").firstMatch;reach(migu);migu.tap()
+    let field=app.textFields["搜索艺术家"];reach(field);replaceText(field,with:"Ed Sheeran")
+    let artist=app.buttons["search-artist-mg-0"];XCTAssertTrue(artist.waitForExistence(timeout:45));XCTAssertTrue(artist.label.contains("Ed Sheeran"));reach(artist);artist.tap()
+    let first=app.otherElements["discovery-track-0"];XCTAssertTrue(first.waitForExistence(timeout:45))
+    let fifty=app.staticTexts.matching(NSPredicate(format:"label == %@","咪咕 · 已加载 50 首")).firstMatch;XCTAssertTrue(fifty.waitForExistence(timeout:10));image("Real Migu artist ID catalog first fifty songs")
+    // Filtering remains local to loaded rows and makes the real pagination
+    // footer reachable without pretending that it searches the whole catalog.
+    let filter=app.textFields["搜索已加载歌曲歌手专辑"];reach(filter);replaceText(filter,with:"nexus-no-match-artist-catalog")
+    let more=app.buttons["加载更多"];reach(more);more.tap()
+    let hundred=app.staticTexts.matching(NSPredicate(format:"label == %@","咪咕 · 已加载 100 首")).firstMatch;XCTAssertTrue(hundred.waitForExistence(timeout:45));reach(hundred);image("Real Migu artist second page preserves local filter and loaded count")
+    let clear=app.buttons["清空歌曲筛选"];reach(clear);clear.tap();XCTAssertTrue(first.waitForExistence(timeout:10))
+    let refresh=app.buttons["刷新艺术家"];reach(refresh);refresh.tap();XCTAssertTrue(fifty.waitForExistence(timeout:45));XCTAssertTrue(first.waitForExistence(timeout:15))
+    let back=app.buttons["返回搜索结果"];reach(back);back.tap();XCTAssertTrue(artist.waitForExistence(timeout:15));image("Real Migu artist returns to original search results")
+    XCTAssertTrue(mini.exists,"Read-only artist browsing must keep the restored player available")
+    XCTAssertFalse(app.buttons["暂停"].exists,"Artist browsing must not start playback")
+  }
   func testLiveArtistSearch() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}

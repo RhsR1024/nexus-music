@@ -924,6 +924,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguSearchAssistance')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguSearchAssistance');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveSearchAssistance')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSearchAssistance');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveArtistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveArtistSearch');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguArtistSongs')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguArtistSongs');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveCatalogFavorites')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveCatalogFavorites');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMVSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMVSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMVMediaLifecycle')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMVMediaLifecycle');
