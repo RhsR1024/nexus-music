@@ -1,3 +1,7 @@
+## 2026-11-03 Ruby wrap queue closeout
+
+`eaa891a` and clean-delivery docs `ba27b56` pushed and remote verified. Actual iOS27 queue: `41591188218/c178ea6` running, `41602015021/eaa891a` only pending (1/1). No cancel/re-dispatch. Internal free space 69,624,832,000 bytes; T7 616,947,515,392 bytes; no active build and no deletion/personal-file movement. Clean stage and a separate final supplement preserve source, hashes and receipts. Cloud acceptance and physical/signing gaps remain open; see [report](docs/2026-11-03-ttml-ruby-wrap-report.md).
+
 ## 2026-11-03 Ruby wrapping clean delivery
 
 Product `eaa891a` clean unsigned archive verified: manifest clean, IPA SHA-256 `2729c56acbabd0afcef0c48184505f8112c59d5419703eb617c482aad889829f` (17,845,009 bytes), ZIP/151 file comparisons and privacy/signing exclusions passed. T7 clean stage `2026-11-03-ttml-ruby-wrap-eaa891a`: 295 mapped files / 116,221,275 bytes, zero mismatch, SHA256SUMS PASS, originals preserved. Product pushed normally; iOS27/physical device/signing and arbitrary cross-line ruby redistribution remain open. See [delivery report](docs/2026-11-03-ttml-ruby-wrap-report.md).
