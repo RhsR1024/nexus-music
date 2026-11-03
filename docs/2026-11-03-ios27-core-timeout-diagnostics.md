@@ -21,3 +21,9 @@ GitHub Actions `41553030339` 对应 `295bf94`，终态 Cancelled，annotation �
 本批 `npm run check` 为995/995、零失败。主屏截图SHA-256 `6d4db987b59c3ea7924eec8a55d00fd7203d0ebd2e0d596002416bbef7ad69b3`，独立provenance ready，人工亲看确认真实“音枢”标签及图标可见。Xcode在同步专项结束后报告可选simulator诊断采集找不到simctl；测试、xcresult、摘要与bundle采集已成功，该警告保留，不报告可选系统诊断成功。
 
 同步冲突截图SHA-256 `22d00a4d71a5efde993f4cde1f8dae14383213b7ec418fac774810a51a3903cd`，独立provenance ready。人工亲看确认同一冲突同时展示本地/云端版本、预览与采用按钮，未选择时确认按钮禁用；只作音枢功能界面证据，不计Sollin像素/动效对齐。
+
+## 本批交付
+
+测试修正提交 `e388e50` 已正常push，远端main实核一致。由clean提交构建的manifest为 `dirty=false`/无工作区变更，arm64/iphoneos26.2/最低iOS15.1/设备族[1,2]且未签名。IPA 17,838,257字节、SHA-256 `4c699c31a18caf75d70934f17150c9b27e88c4888e574c110f108ca528f24983`；178项ZIP CRC、151项archive/IPA逐字节及生产/测试/私人/签名排除通过。T7独立阶段 `2026-11-03-ios27-core-reliability-e388e50` 保存383份文件/117,239,962字节，逐文件SHA一致、源保留。
+
+push后 `41563617753`/`235d0d8`继续运行，`41578685392`/`e388e50`为唯一pending；旧pending `41575342000`由queue:single自动取消。实核1运行/1排队，未手动取消或重派；新运行尚未验证当前修正。收尾空间检查及无清理回执为 `build/logs/cleanup-2026-11-03-ios27-core-reliability-close.json`。配色真实恢复、云端输入等待、实体图标切换、签名/真实服务及完整计划仍开放。
