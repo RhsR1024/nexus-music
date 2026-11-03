@@ -4,7 +4,9 @@
 
 产品/测试/初始文档提交 `d7bb46a` 的 clean unsigned archive 成功，manifest 与 HEAD 一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。clean IPA 为 17,838,257 字节、SHA-256 `a5663c03d45236a81e213ea9eeee35bde2d0c2481b8e222aaf13ab00fbf0f328`；manifest SHA-256 `b7a72f4cac6e729e8bd959c49401cc9805d726a6781d43e1f43f907dbcf138f1`，archive log SHA-256 `ae1f0d60a55bd434c3d59632371f78eed8992a76fa6aeb51e4fac6eb4fb4d781`。独立回执 `ready=true`、SHA-256 `b033ce058045b8d4f25caac890f71de743b9e8eb6f44d8acea424ad5778da167`，178 项 ZIP CRC 和 151 项 archive/IPA 普通文件逐项字节一致，测试/私人/签名排除通过。
 
-推送后远端 main 实核一致；`41584802858`/`d7bb46a` 为唯一 pending，`41563617753`/`235d0d8` 继续运行，旧 pending 由 `queue:single` 自动取消，当前 1 运行/1 排队。T7 clean 阶段 `2026-11-03-palette-restart-observation-d7bb46a` 的 608 份普通映射/619,064,639 字节逐项一致，源证据保留。新 iOS27 终态、实体机、VoiceOver、真实服务与签名仍开放，详见[专项回执](2026-11-03-palette-restart-observation-report.md)。
+推送后远端 main 实核一致；`41584802858`/`d7bb46a` 为唯一 pending，`41563617753`/`235d0d8` 继续运行，旧 pending 由 `queue:single` 自动取消，当前 1 运行/1 排队。T7 clean 阶段 `2026-11-03-palette-restart-observation-d7bb46a` 的 611 份普通映射路径逐项一致，源证据保留。
+
+阶段收尾无活动构建/测试进程，内盘可用 71,444,910,080 字节、T7 可用 618,402,414,592 字节，`build/` 约 9.76GB；最新产物、增量缓存和未解决 CI 证据保留，零删除、零用户文件搬移。清理回执 SHA-256 为 `8e447e4a5eacbf9774f38bc941be24888a1c9d1818f6b516df389ac2b14c52bd`。新 iOS27 终态、实体机、VoiceOver、真实服务与签名仍开放，详见[专项回执](2026-11-03-palette-restart-observation-report.md)。
 
 ## 2026-11-03 TTML 双侧注音
 

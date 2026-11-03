@@ -50,6 +50,8 @@ r3 三态均只有一个可见、已安装背景实例，frame 都是 `(0,0,430,
 
 产品/测试/初始文档提交 `d7bb46acedf8c1929db50f570820bc74f34e4f03` 后，从 clean HEAD 重建 unsigned archive。manifest 与 HEAD 一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/设备族 `[1,2]`、`signed=false`。clean IPA 仍为 17,838,257 字节，SHA-256 `a5663c03d45236a81e213ea9eeee35bde2d0c2481b8e222aaf13ab00fbf0f328`；manifest SHA-256 `b7a72f4cac6e729e8bd959c49401cc9805d726a6781d43e1f43f907dbcf138f1`，archive log SHA-256 `ae1f0d60a55bd434c3d59632371f78eed8992a76fa6aeb51e4fac6eb4fb4d781`。
 
-独立回执 `build/logs/palette-clean-archive-verification-d7bb46a.json` 为 `ready=true`、SHA-256 `b033ce058045b8d4f25caac890f71de743b9e8eb6f44d8acea424ad5778da167`。178 项 ZIP CRC 全部通过；archive 与 IPA 各有 151 项普通文件，路径集合与逐项字节一致。`nexus-ui-test-theme-observation`、其他 UI 测试入口、合成账号/夹具、私人和签名材料均未进入生产包，`codesign` 明确返回未签名。T7 clean 阶段 `2026-11-03-palette-restart-observation-d7bb46a` 的 608 份普通映射/619,064,639 字节逐项 SHA-256 一致，源证据保留。
+独立回执 `build/logs/palette-clean-archive-verification-d7bb46a.json` 为 `ready=true`、SHA-256 `b033ce058045b8d4f25caac890f71de743b9e8eb6f44d8acea424ad5778da167`。178 项 ZIP CRC 全部通过；archive 与 IPA 各有 151 项普通文件，路径集合与逐项字节一致。`nexus-ui-test-theme-observation`、其他 UI 测试入口、合成账号/夹具、私人和签名材料均未进入生产包，`codesign` 明确返回未签名。T7 clean 阶段 `2026-11-03-palette-restart-observation-d7bb46a` 的 611 份普通映射路径逐项 SHA-256 一致，源证据保留。
 
 远端 main 实核为 `d7bb46a`。推送后 `41584802858`/`d7bb46a` 为唯一 pending，`41563617753`/`235d0d8` 继续运行；旧 pending `41578685392` 由 `queue:single` 自动取消，实核 1 运行/1 排队，未手动取消或重派。新 run 的 iOS 27 终态仍待，不与本地模拟器、unsigned IPA 或历史 run 混用。
+
+阶段收尾检查无活动构建或逆向进程。内盘可用 71,444,910,080 字节，T7 可用 618,402,414,592 字节；本批零删除、零个人文件搬移，增量构建缓存、最新有效产物和未解决 CI 证据保留。清理回执 SHA-256 为 `8e447e4a5eacbf9774f38bc941be24888a1c9d1818f6b516df389ac2b14c52bd`。
