@@ -1,3 +1,16 @@
+## 2026-11-03 TTML `rbc` 多基础注音映射
+
+- [x] 标准 `<ruby><rbc><rb>…</rb></rbc><rtc><rt>…</rt></rtc></ruby>` 按顺序把同数量基础与注解一一绑定；原有 AMLL、直接 `rb/rt`、单基础 `rtc` 路径保持。
+- [x] 基础时间优先，其次对应注解时间，再回退文字容器/`ruby` 上下文；`rp` 继续作为非权威回退忽略。
+- [x] 数量不等、空容器、顺序颠倒、额外容器、非 `<rb>` 基础项、非 `<rt>/<rp>` 注解项与容器外游离文字安全拒绝，不猜测映射。
+- [x] 单测覆盖显式/回退时间与畸形矩阵；`npm run check` 993/993，完整 `npm run test:native` 退出 0。
+- [x] 固定 provenance Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`；4 张截图逐图 provenance ready，`kanji / yin / duo / ji` 截图亲看通过。
+- [x] `ipa --review` 复用既有离线证据并通过 56E/21WI/119 timeline/47F/47P，0错误/0警告；无新增 Sollin 采集或私有探测。
+- [ ] 提交后 clean unsigned IPA、T7 独立副本、iOS 27 Actions 终态。
+- [ ] 双侧/第二个 `rtc`、跨行/wrapping、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签。
+
+见[本批回执](2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](ui-spec/ttml-rbc-2026-11-03.md)。本批只关闭等数量 `rbc/rtc` 顺序映射，不关闭完整 TTML2、S4/J35–42、F/J 或项目总目标。
+
 ## 2026-11-03 iOS 27 Files 本地提供方根目录导航
 
 - [x] 从`41521043387`/`9fb541a`紧凑日志和失败附件确认唯一失败在第270行，不是Wayfarer解析/导入或产品播放回归。
@@ -26,7 +39,7 @@
 - [x] dirty阶段`2026-11-03-ttml-rtc-precommit-b9ddc87`已复制并校验67个文件；clean manifest`636c4502…3da68a`、archive log`c7b76f14…a3d31`、verification`912379f4…2f4932`。
 - [x] `ipa --review` strict review PASS，56E/21WI/119 timeline/47F/47P、0错误/0警告；无新增采集或私有探测。
 - [x] `295bf94`正常push并实核远端main；初始`41521043387`/`9fb541a`运行、`41553030339`/`295bf94`唯一pending，旧`41548304374`由`queue:single`自动取消，即1运行/1排队且未手动取消/重派。
-- [ ] `rbc` 多基础映射、双侧/多注解、wrapping/行间位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签和 iOS 27 终态。
+- [ ] 双侧/多注解、wrapping/行间位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签和 iOS 27 终态。
 
 见[本批回执](2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](ui-spec/ttml-rtc-2026-11-03.md)。本批不关闭完整 TTML2、S4/J35–42、F/J 或项目总目标。
 

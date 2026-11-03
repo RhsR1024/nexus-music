@@ -170,3 +170,25 @@ test('TTML standard ruby accepts an unambiguous one-base one-annotation rtc grou
     '<tt><body><p><ruby><rb> </rb><rtc><rt>kan</rt></rtc></ruby></p></body></tt>',
   ])assert.throws(()=>parseTTML(input),/注音/);
 });
+test('TTML rbc maps equal base and annotation containers pairwise with explicit timing',()=>{
+  const parsed=parseTTML('<tt><body><p begin="2s" end="12s"><ruby begin="1s" end="9s"><rbc><rb begin="0.5s" end="1s">漢</rb><rb>字</rb></rbc><rtc begin="0.25s"><rp>(</rp><rt begin="1s" end="2s">kan</rt><rt begin="2s" end="3s">ji</rt><rp>)</rp></rtc></ruby><span begin="4s" end="5s"> tail</span></p></body></tt>');
+  assert.equal(parsed.lines[0]!.text,'漢字 tail');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby]),[
+    ['漢',3500,4000,'kan'],['字',5250,6250,'ji'],[' tail',6000,7000,undefined],
+  ]);
+  assert.equal(lyricSpokenText(parsed.lines[0]!),'漢字 tail，注音：kan，ji');
+  const explicitBase=parseTTML('<tt><body><p begin="1s" end="4s"><ruby><rbc begin="1s" end="3s"><rb begin="0.5s" end="1s">音</rb></rbc><rtc><rt>yin</rt></rtc></ruby></p></body></tt>');
+  assert.deepEqual(explicitBase.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby]),[
+    ['音',2500,3000,'yin'],
+  ]);
+  for(const input of [
+    '<tt><body><p><ruby><rbc><rb>漢</rb><rb>字</rb></rbc><rtc><rt>kan</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>漢</rb></rbc><rtc><rt>kan</rt><rt>ji</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>漢</rb><rp>(</rp></rbc><rtc><rt>kan</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb> </rb></rbc><rtc><rt>kan</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>漢</rb></rbc><rtc>fallback<rt>kan</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rtc><rt>kan</rt></rtc><rbc><rb>漢</rb></rbc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>漢</rb></rbc><rtc><rt>kan</rt></rtc><rtc><rt>ji</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>漢</rb></rbc><rtc><rt>kan</rt></rtc>tail</ruby></p></body></tt>',
+  ])assert.throws(()=>parseTTML(input),/注音/);
+});

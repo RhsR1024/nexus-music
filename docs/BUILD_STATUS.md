@@ -1,3 +1,11 @@
+## 2026-11-03 TTML `rbc` 多基础注音
+
+标准 `<ruby><rbc>…</rbc><rtc>…</rtc></ruby>` 在同数量 `<rb>/<rt>` 时按顺序一一配对，基础时间优先于对应注解时间；`rp` 忽略，数量不等或结构有歧义时拒绝并回退。`npm run check` 993/993，完整 native 退出 0。
+
+固定 provenance Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`；源码 digest `a6ff7239…ccac59`、安装 bundle `9140b488…c79262`、xcresult Info `b06025a5…eaf50`。运行清单 `093ce324…085fa`、日志 `2eb5fcc4…5d969`、摘要 `dca60df7…3914f`、截图索引 `0a9293e6…a03fc`，4PNG逐图 provenance ready。亲看注音截图 SHA-256 `704ad0be…1c5a7e`，`kanji/yin/duo/ji` 位于对应基础上方。`ipa --review` 为 56E/21WI/119 timeline/47F/47P、0错误/0警告，复用离线证据且无新增采集。
+
+clean unsigned archive、T7 阶段、提交/push 和 iOS 27 终态待补录。见[专项回执](2026-11-03-ttml-rbc-ruby-report.md)。
+
 ## 2026-11-03 iOS 27 Files 本地提供方根目录测试导航
 
 `41521043387`/`9fb541a`唯一失败`testWayfarerAppImport`已定位为测试导航误判：iOS27 Locations根页同时暴露目标提供方`DOC.browsingRoot`与`On My iPhone`。修正版先将实际`On My iPhone`单元检查置于提供方根判断之前，不改产品入口、Wayfarer导入逻辑或原生播放。

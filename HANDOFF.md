@@ -1,3 +1,11 @@
+## 2026-11-03 TTML `rbc` 多基础注音映射
+
+标准 TTML `<ruby><rbc><rb>…</rb></rbc><rtc><rt>…</rt></rtc></ruby>` 现在在同数量 `<rb>`/`<rt>` 时按顺序一一配对；基础显式时间优先，否则取对应注解时间，再回退容器的相对时间。`<rp>` 继续只作非权威回退；数量不等、空容器、顺序颠倒、额外 `<rtc>`、非预期子项或游离文字均拒绝，不猜测映射。现有 `LyricWord.ruby`、无障碍读法和原生 TextKit 上方绘制直接复用。
+
+`npm run check` 993/993、完整 native 退出 0。固定 provenance 的正式 Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`；源码 digest `a6ff7239…ccac59`、安装 bundle `9140b488…c79262`。运行清单、日志、摘要、4PNG索引和逐图验真已固定在 `build/logs/ttml-rbc-20261103-r1/`；人工亲看确认 `kanji / yin / duo / ji` 分列位于 `漢字音多基` 上方，可访问标签完整。
+
+`node scripts/sollin-reverse-gate.mjs ipa --review` 为56E/21WI/119 timeline/47F/47P、0错误/0警告，复用既有离线证据，无新增 Sollin 采集或私有探测。当前边界是多组单基础/单注解按序映射；双侧/第二个 `rtc`、跨行、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装与 iOS27 终态继续。clean IPA、T7 和 push 回执待补录；详见[专项回执](docs/2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](docs/ui-spec/ttml-rbc-2026-11-03.md)。
+
 ## 2026-11-03 iOS 27 Files 本地提供方根目录导航修复
 
 `41521043387`/`9fb541a` 的 iOS27 App 组 6/7 通过，唯一失败`testWayfarerAppImport`在`SourceSettingsTests.swift:270`等待实际文件单元超时。紧凑日志与失败层级证明 Locations 根页同时发布`DOC.browsingRoot ... Title: Nexus UITest Fixtures`和可点击`On My iPhone`；旧辅助函数先接受标题，误以为已进入目录，因而第二次 picker 调用一直停留。未改产品代码，修复仅把`On My iPhone`单元检查移到`fixtureRoot`判断之前。

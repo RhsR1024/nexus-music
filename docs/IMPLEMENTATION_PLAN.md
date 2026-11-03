@@ -1,3 +1,13 @@
+## 2026-11-03 TTML `rbc` 多基础注音映射
+
+`src/lyrics/ttml.ts` 现在接受标准 `<ruby><rbc><rb>…</rb></rbc><rtc><rt>…</rt></rtc></ruby>`，仅在有效基础数与有效注解数相等时按顺序一一绑定。每对词优先采用 `<rb>` 的显式时间；基础未带时间时采用对应 `<rt>` 的时间，再回退 `<rtc>`/`<ruby>` 上下文。`<rp>` 继续作为非权威回退忽略。TTML2 对数量不等没有规定映射，因此空容器、数量不等、顺序颠倒、额外 `<rtc>`、非 `<rb>` 基础项、非 `<rt>/<rp>` 注解项和游离文字全部拒绝并沿用歌曲来源回退。
+
+现有 `LyricWord.ruby`、行级无障碍注音以及原生 TextKit 上方绘制无需分叉；正式 App fixture 在同一行保留 AMLL、单基础 `rtc`，再加入 `多/基 → duo/ji`，一次覆盖同一可访问标签和原生绘制路径。
+
+`npm run check` 993/993，完整 native 退出 0；固定 provenance Release `SourceUITests-1793668070121` 为 1/0/0、171.097 秒、`sourceUnchanged=true`，源码 digest `a6ff7239…ccac59`、安装 bundle `9140b488…c79262`。4 张截图 provenance ready，注音截图 SHA-256 `704ad0be…1c5a7e`，确认 `kanji/yin/duo/ji` 分别位于基础文字上方。`ipa --review` 复用既有离线证据并发通过 56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增 Sollin 采集或目标观察。
+
+当前边界扩展为“多组一基础一注解按序配对”；双侧/并行多注音、第二个 `rtc`、跨行/wrapping、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏及签名继续。clean IPA、T7 阶段和 iOS 27 终态在提交后补录。见[本批回执](2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](ui-spec/ttml-rbc-2026-11-03.md)。
+
 ## 2026-11-03 iOS 27 Files 本地提供方根目录导航
 
 `41521043387`/`9fb541a`的唯一App失败来自`selectLocalFixture`对iOS27 Files层级的状态误判。失败附件显示Locations根页包含目标提供方的`DOC.browsingRoot ... Title: Nexus UITest Fixtures`，同时也包含`DOC.sidebar.item.On My iPhone`。旧循环先看到提供方根标题便停留等待，没有点击真实`On My iPhone`，第二次picker调用因此无法枚举夹具文件。
@@ -20,7 +30,7 @@
 
 产品/测试/初始文档`295bf94`已正常push并实核远端main。提交后clean unsigned archive的manifest与HEAD一致、`dirty=false`/无工作区变更，arm64/iphoneos26.2/iOS15.1/[1,2]且`signed=false`；IPA为17,832,598字节、SHA-256`f9ab39c6…1139de`，manifest`636c4502…3da68a`，archive log`c7b76f14…a3d31`。独立核验`ready=true`，178项ZIP CRC、151项archive/IPA payload/39,522,298字节逐项一致，生产`rubyInset`与隐私/测试/签名排除通过，回执`912379f4…2f4932`。`ipa --review` strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告。dirty包与67个归档文件先存T7`2026-11-03-ttml-rtc-precommit-b9ddc87`；最终clean阶段将在推送与Actions快照后归档。push时旧pending自动被替换，当前`41521043387`继续运行、`41553030339`/`295bf94`唯一pending，队列1运行/1排队，未手动取消或重派。
 
-当前边界是一个基础加一个注解；`rbc`多基础映射、双侧/并行多注音、wrapping、右侧/行间位置和完整TTML2样式仍开放。实体机VoiceOver、真实歌词库、动态字号/小屏、签名与iOS27终态继续。见[回执](2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](ui-spec/ttml-rtc-2026-11-03.md)。
+当前边界已由后续 `rbc` 批次扩展为多组一基础一注解按序配对；双侧/并行多注音、wrapping、右侧/行间位置和完整TTML2样式仍开放。实体机VoiceOver、真实歌词库、动态字号/小屏、签名与iOS27终态继续。见[回执](2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](ui-spec/ttml-rtc-2026-11-03.md)。
 
 ## 2026-11-03 AMLL/标准 TTML 注音解析与原生绘制
 

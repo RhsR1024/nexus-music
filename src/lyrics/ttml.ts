@@ -106,6 +106,38 @@ export function parseTTML(input:string):LyricDocument {
           // annotations. rp is a non-authoritative fallback and is ignored.
           // A grouped rtc is accepted only when it maps one base carrier to
           // exactly one rt; the current lyric model has one annotation slot.
+          const rubyElements=containerNode.children.filter((child):child is Element=>typeof child!=='string');
+          const explicitBaseContainers=rubyElements.filter(child=>local(child.name)==='rbc');
+          if(explicitBaseContainers.length){
+            if(containerNode.children.some(child=>typeof child==='string'&&!!child.trim())||
+               explicitBaseContainers.length!==1||rubyElements.length!==2||
+               local(rubyElements[0]!.name)!=='rbc'||local(rubyElements[1]!.name)!=='rtc'){
+              throw new Error('TTML 注音分组结构不支持');
+            }
+            const baseContainer=rubyElements[0]!,annotationContainer=rubyElements[1]!;
+            const baseContext=hasTiming(baseContainer)?timing(baseContainer,context,context.start,'par'):context;
+            const baseNodes=baseContainer.children.filter((child):child is Element=>typeof child!=='string');
+            if(baseContainer.children.some(child=>typeof child==='string'&&!!child.trim())||
+               baseNodes.some(child=>local(child.name)!=='rb')||!baseNodes.length){
+              throw new Error('TTML 注音基础容器结构不支持');
+            }
+            const annotationContext=hasTiming(annotationContainer)?timing(annotationContainer,context,context.start,'par'):context;
+            const annotationElements=annotationContainer.children.filter((child):child is Element=>typeof child!=='string');
+            if(annotationContainer.children.some(child=>typeof child==='string'&&!!child.trim())||
+               annotationElements.some(child=>local(child.name)!=='rt'&&local(child.name)!=='rp')){
+              throw new Error('TTML 注音文字容器结构不支持');
+            }
+            const annotationNodes=annotationElements.filter(child=>local(child.name)==='rt');
+            if(!annotationNodes.length||annotationNodes.length!==baseNodes.length)throw new Error('TTML 注音基础与注解数量不匹配');
+            baseNodes.forEach((baseNode,index)=>{
+              const annotationNode=annotationNodes[index]!;
+              const leaf=hasTiming(baseNode)?timing(baseNode,baseContext,baseContext.start,'par'):
+                hasTiming(annotationNode)?timing(annotationNode,annotationContext,annotationContext.start,'par'):annotationContext;
+              const base=plainText(baseNode);if(!base.trim())throw new Error('TTML 注音缺少基础文字');
+              addText(base,leaf,role,background,rubyValue(plainText(annotationNode),leaf.preserve));
+            });
+            return;
+          }
           let pending='';let count=0,baseElements=0,baseText=false,sawRtc=false;
           const addRuby=(annotationNode:Element)=>{
             const base=pending;pending='';if(!base.trim())throw new Error('TTML 注音缺少基础文字');

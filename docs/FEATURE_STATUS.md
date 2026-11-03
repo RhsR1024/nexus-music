@@ -1,3 +1,14 @@
+## 2026-11-03 TTML `rbc` 多基础注音映射
+
+- [x] 标准 `<rbc>`/`<rtc>` 在同数量 `<rb>` 与 `<rt>` 时按顺序一一绑定；基础时间优先，否则使用对应注解时间。
+- [x] `rp` 保持非权威回退；数量不等、空容器、顺序颠倒、额外 `rtc`、非预期子项与游离文字全部安全拒绝。
+- [x] `npm run check` 993/993、完整 native 退出 0；固定 provenance Release 1/0/0、171.097 秒、`sourceUnchanged=true`。
+- [x] 4PNG provenance ready；人工亲看 `kanji/yin/duo/ji` 分别位于 `漢字音多基` 上方，可访问标签完整。
+- [x] reverse-skill 离线 strict review 通过，56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集。
+- [ ] clean unsigned IPA、T7 阶段与 iOS 27 Actions 终态；双侧/第二个 `rtc`、跨行、行间/右侧位置、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签。
+
+见[本批回执](2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](ui-spec/ttml-rbc-2026-11-03.md)。J37/S4 仍保持 B 状态，本批不关闭完整 TTML2、F/J 或项目。
+
 ## 2026-11-03 iOS 27 紧凑失败诊断
 
 `60a638a`加固合成 HTTP 夹具与 CI 紧凑日志上传。客户端断开被有界记录，未预期请求错误返回 500 并保留进程失败；递归 artifact 可取得子测试目录中的 `ui-summary.json`、`ui-catalog.log` 和 counts。本地 990/990、正式 TTML 专项 1/0/0、clean unsigned archive、151 项 archive/IPA 逐字节及 reverse-skill strict review 均通过；工具实际处理一次 `ECONNRESET`。本项只增加诊断可靠性，不增加功能完成度，也不把旧连接错误推断为产品缺陷。详见[回执](2026-11-03-ios27-compact-diag-artifact-report.md)。
