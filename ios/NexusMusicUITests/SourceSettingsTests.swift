@@ -275,12 +275,11 @@ final class SourceSettingsTests: XCTestCase {
     }
     confirmSelection()
   }
-  func testAppIconOnHomeScreen() throws {
-    let app=XCUIApplication();app.launch();XCUIDevice.shared.press(.home)
+  private func launchFromHomeIcon(_ app:XCUIApplication) throws {
+    XCUIDevice.shared.press(.home)
     let home=XCUIApplication(bundleIdentifier:"com.apple.springboard"),icon=home.icons["音枢"].firstMatch
-    // iOS 27 can expose only an empty UISystemShellApplication AX root even
-    // while the icon is visible. Locate its exact label in the actual screen;
-    // never replace this icon-launch check with app.activate() or a fixed point.
+    // SpringBoard on iOS 27 can expose an empty AX root. Read the exact label
+    // from each real screen before paging, including after an icon change.
     func visibleLabel() throws -> CGPoint? {
       guard let image=XCUIScreen.main.screenshot().image.cgImage else{return nil}
       let request=VNRecognizeTextRequest();request.recognitionLevel = .accurate;request.recognitionLanguages=["zh-Hans","en-US"]
@@ -291,9 +290,17 @@ final class SourceSettingsTests: XCTestCase {
     var label=try visibleLabel()
     for _ in 0..<4 {if icon.isHittable || label != nil{break};home.swipeLeft();label=try visibleLabel()}
     let image=XCTAttachment(screenshot:XCUIScreen.main.screenshot());image.name="Home screen icon and exact display label";image.lifetime = .keepAlways;add(image)
-    XCTAssertTrue(icon.isHittable || label != nil,"The actual Home screen must expose or visibly render the 音枢 icon label")
+    if !icon.isHittable && label == nil {
+      let detail=XCTAttachment(string:"home=\(home.frame) icon=\(icon.frame) exists=\(icon.exists) hittable=\(icon.isHittable) OCR=none\n\(home.debugDescription)")
+      detail.name="Home icon launch diagnostics";detail.lifetime = .keepAlways;add(detail)
+      XCTFail("The actual Home screen must expose or visibly render the 音枢 icon label")
+      return
+    }
     if let label {home.coordinate(withNormalizedOffset:CGVector(dx:label.x,dy:label.y)).tap()}else{icon.tap()}
-    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15))
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15),"The app must launch from its actual Home screen icon")
+  }
+  func testAppIconOnHomeScreen() throws {
+    let app=XCUIApplication();app.launch();try launchFromHomeIcon(app)
   }
   func testAppIconSelectionPersistsAndRestoresPrimary() throws {
     let app=XCUIApplication(),home=XCUIApplication(bundleIdentifier:"com.apple.springboard")
@@ -342,18 +349,6 @@ final class SourceSettingsTests: XCTestCase {
       let attachment=XCTAttachment(string:error.label);attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)
       screenshot(name)
     }
-    func launchFromVisibleHomeIcon(){
-      XCUIDevice.shared.press(.home)
-      let icon=home.icons["音枢"].firstMatch
-      for _ in 0..<4{if icon.isHittable{break};home.swipeLeft()}
-      screenshot("Changed app icon visible on SpringBoard")
-      XCTAssertTrue(icon.waitForExistence(timeout:10),"SpringBoard must expose the app label after changing its icon")
-      if icon.isHittable{icon.tap()}else{
-        XCTAssertTrue(hasVisibleFrame(icon,in:home),"The changed icon must remain visibly reachable")
-        icon.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()
-      }
-      XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.waitForExistence(timeout:15),"The app must launch from the changed icon")
-    }
 
     if !icons[0].isSelected {
       XCTAssertTrue(icons[0].isEnabled,"A restored alternate icon must be resettable from the system")
@@ -373,7 +368,7 @@ final class SourceSettingsTests: XCTestCase {
       }
     }
     screenshot("Nexus warm-orange app icon selected")
-    launchFromVisibleHomeIcon()
+    try launchFromHomeIcon(app)
 
     app.terminate();app.launch();openSettings(app,page:"icons")
     XCTAssertTrue(icon("orange").waitForExistence(timeout:10))
@@ -392,7 +387,7 @@ final class SourceSettingsTests: XCTestCase {
       XCTFail("Primary app icon restoration must succeed when the native call reports success")
 #endif
     }
-    launchFromVisibleHomeIcon()
+    try launchFromHomeIcon(app)
 
     app.terminate();app.launch();openSettings(app,page:"icons")
     XCTAssertTrue(icon("primary").waitForExistence(timeout:10))
@@ -2735,18 +2730,20 @@ final class SourceSettingsTests: XCTestCase {
     library();let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch;reveal(webdav);webdav.tap()
     let address=app.textFields["WebDAV服务器根目录"];if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
     let prior=app.buttons["移除WebDAV连接：Sync fixture"];if prior.exists{XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/sync-dav/"].exists);prior.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
-    address.tap();for character in "http://127.0.0.1:18439/sync-dav/"{address.typeText(String(character))};address.typeText("\n");XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/sync-dav/")
-    let user=app.textFields["WebDAV用户名"];user.tap();for character in "fixture-user"{user.typeText(String(character))};user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
-    let password=app.secureTextFields["WebDAV密码"];password.tap();for character in "fixture-password"{password.typeText(String(character))};password.typeText("\n")
-    let label=app.textFields["WebDAV连接名称"];label.tap();for character in "Sync fixture"{label.typeText(String(character))};label.typeText("\n");XCTAssertEqual(label.value as? String,"Sync fixture");app.buttons["验证并保存WebDAV"].tap()
+    // Each typeText waits for system animation idleness. Submit whole values
+    // so a slow keyboard cannot multiply that wait by every fixture character.
+    address.tap();address.typeText("http://127.0.0.1:18439/sync-dav/");address.typeText("\n");XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/sync-dav/")
+    let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
+    let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
+    let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Sync fixture");label.typeText("\n");XCTAssertEqual(label.value as? String,"Sync fixture");app.buttons["验证并保存WebDAV"].tap()
     XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
     let suffix=String(Int(Date().timeIntervalSince1970)),original="Sync original "+suffix,local="Sync local "+suffix,cloud="Sync cloud "+suffix,folder="nexus-sync-"+suffix+"/"
-    let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in original{input.typeText(String(character))};input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
+    let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();input.typeText(original);input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
     sync();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","同步连接：Sync fixture")).firstMatch;reveal(connection);connection.tap()
     let directory=app.textFields["多设备同步相对目录"];reveal(directory);replaceText(directory,with:folder)
     let save=app.buttons["cloud-sync-save"];reveal(save);save.tap();XCTAssertTrue(app.staticTexts["同步目录已保存，请读取合并预览"].waitForExistence(timeout:5));let preview=app.buttons["cloud-sync-preview"];reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15));confirm();app.buttons["收起多设备同步"].tap()
     let edit=try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/remote-edit")!,encoding:.utf8);XCTAssertEqual(edit,"ok")
-    for _ in 0..<8{app.swipeDown()};let originalRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",original+" ·")).firstMatch;reveal(originalRow);originalRow.tap();let rename=app.textFields["音枢歌单名称"];reveal(rename);rename.tap();rename.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:(rename.value as? String)?.count ?? 0));for character in local{rename.typeText(String(character))};rename.typeText("\n");XCTAssertEqual(rename.value as? String,local);let saveInfo=app.buttons["保存信息"];reveal(saveInfo);XCTAssertTrue(saveInfo.isEnabled);saveInfo.tap();XCTAssertTrue(app.staticTexts[local].waitForExistence(timeout:10),"The saved title must update before leaving the editor");app.buttons["返回歌单列表"].tap()
+    for _ in 0..<8{app.swipeDown()};let originalRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",original+" ·")).firstMatch;reveal(originalRow);originalRow.tap();let rename=app.textFields["音枢歌单名称"];reveal(rename);rename.tap();rename.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:(rename.value as? String)?.count ?? 0));rename.typeText(local);rename.typeText("\n");XCTAssertEqual(rename.value as? String,local);let saveInfo=app.buttons["保存信息"];reveal(saveInfo);XCTAssertTrue(saveInfo.isEnabled);saveInfo.tap();XCTAssertTrue(app.staticTexts[local].waitForExistence(timeout:10),"The saved title must update before leaving the editor");app.buttons["返回歌单列表"].tap()
     sync();reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["发现 1 项冲突，请逐项选择后确认"].waitForExistence(timeout:15));let commit=app.buttons["cloud-sync-commit"];reveal(commit);XCTAssertFalse(commit.isEnabled);let remoteChoice=app.buttons["cloud-sync-remote-0"];reveal(remoteChoice);XCTAssertTrue(app.staticTexts["云端："+cloud+" · 0 首"].exists)
     let image=XCTAttachment(screenshot:app.screenshot());image.name="Three-way conflict preview";image.lifetime = .keepAlways;add(image)
     for (button,title) in [("预览本机版本",local),("预览云端版本",cloud)]{let detail=app.buttons[button];reveal(detail);detail.tap();XCTAssertTrue(app.buttons["关闭版本预览"].waitForExistence(timeout:5));XCTAssertTrue(app.staticTexts[title+" · 0 首"].exists);app.buttons["关闭版本预览"].tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
@@ -2763,17 +2760,17 @@ final class SourceSettingsTests: XCTestCase {
     func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();for _ in 0..<8{app.swipeDown()}}
     func cloud(){let entry=app.buttons["cloud-backup-open"];reveal(entry);entry.tap();XCTAssertTrue(app.buttons["收起云备份"].waitForExistence(timeout:5))}
     func makePlaylist(_ name:String){
-      let tab=app.buttons["我的歌单"];reveal(tab);tab.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();for character in name{input.typeText(String(character))};input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
+      let tab=app.buttons["我的歌单"];reveal(tab);tab.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();input.typeText(name);input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
     }
     library();let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch;reveal(webdav);webdav.tap()
     let address=app.textFields["WebDAV服务器根目录"]
     if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
     let priorConnection=app.buttons["移除WebDAV连接：Backup fixture"]
     if priorConnection.exists {XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/backup-dav/"].exists);priorConnection.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
-    XCTAssertTrue(address.waitForExistence(timeout:5));address.tap();for character in "http://127.0.0.1:18439/backup-dav/"{address.typeText(String(character))};address.typeText("\n");XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/backup-dav/")
-    let user=app.textFields["WebDAV用户名"];user.tap();for character in "fixture-user"{user.typeText(String(character))};user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
-    let password=app.secureTextFields["WebDAV密码"];password.tap();for character in "fixture-password"{password.typeText(String(character))};password.typeText("\n")
-    let label=app.textFields["WebDAV连接名称"];label.tap();for character in "Backup fixture"{label.typeText(String(character))};label.typeText("\n");XCTAssertEqual(label.value as? String,"Backup fixture");app.buttons["验证并保存WebDAV"].tap()
+    XCTAssertTrue(address.waitForExistence(timeout:5));address.tap();address.typeText("http://127.0.0.1:18439/backup-dav/");address.typeText("\n");XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/backup-dav/")
+    let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
+    let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
+    let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Backup fixture");label.typeText("\n");XCTAssertEqual(label.value as? String,"Backup fixture");app.buttons["验证并保存WebDAV"].tap()
     XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
     let suffix=String(Int(Date().timeIntervalSince1970)),kept="Cloud kept "+suffix,later="Cloud later "+suffix,backupPath="nexus-backup-"+suffix+"/"
     makePlaylist(kept);cloud()

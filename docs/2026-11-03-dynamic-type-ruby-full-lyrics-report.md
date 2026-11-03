@@ -42,4 +42,6 @@
 
 该归档与回执先复制至 T7 `2026-11-03-dynamic-ruby-final-precommit`，185 份文件、92,031,668 字节逐文件核验一致，`sourcePreserved=true`、零删除/零个人文件迁移。前一版 dirty IPA 也保留在独立 `2026-11-03-dynamic-ruby-precommit-6580b5c5`，不与最终版混用。
 
-clean 归档、完整阶段证据 T7 核验、正常提交/push 及 Actions 队列在完成时补记；未完成项不预记成功。实体 iPhone VoiceOver、真实歌词库、复杂单词跨行、普通字号任意多行矩阵、完整 TTML2、签名安装及 iOS27 终态保持开放。
+产品/测试提交 `a7bccdc` 已正常 push 并实核远端 main。clean manifest 与该提交一致，`dirty=false`/无工作区变更；arm64、iphoneos26.2、最低 iOS15.1、设备族 `[1,2]`、未签名。clean IPA 为17,838,257字节、SHA-256 `868e8fdff3ca8ff9c72071ea42356f3a67f423df4591a301c503c6d4fec453d6`；178项ZIP CRC、151项archive/IPA逐字节及测试/私人/签名排除通过。完整T7阶段 `2026-11-03-dynamic-ruby-a7bccdc` 的310份映射文件/106,075,765字节再次逐文件SHA-256核验一致，源证据保留。Actions实核 `41563617753`/`235d0d8`运行、`41575342000`/`a7bccdc`唯一pending；未取消或重派。旧 `41553030339` 因3小时上限取消，紧凑日志另外证实图标定位与配色断言失败，以及WebDAV输入大量60秒动画等待；该旧运行不能计为通过，正在独立修复。
+
+实体 iPhone VoiceOver、真实歌词库、复杂单词跨行、普通字号任意多行矩阵、完整 TTML2、签名安装及 iOS27 终态保持开放。
