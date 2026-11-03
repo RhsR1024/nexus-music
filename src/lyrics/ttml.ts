@@ -104,20 +104,38 @@ export function parseTTML(input:string):LyricDocument {
         if(local(containerNode.name)==='ruby'){
           // Standard TTML ruby: ruby contains base text/rb plus one or more rt
           // annotations. rp is a non-authoritative fallback and is ignored.
-          let pending='';let count=0;
+          // A grouped rtc is accepted only when it maps one base carrier to
+          // exactly one rt; the current lyric model has one annotation slot.
+          let pending='';let count=0,baseElements=0,baseText=false,sawRtc=false;
           const addRuby=(annotationNode:Element)=>{
-            const base=pending;pending='';if(!base)throw new Error('TTML 注音缺少基础文字');
+            const base=pending;pending='';if(!base.trim())throw new Error('TTML 注音缺少基础文字');
             const leaf=timing(annotationNode,context,context.start,'par');
-            addText(base,leaf,role,background,rubyValue(plainText(annotationNode),context.preserve));count++;
+            addText(base,leaf,role,background,rubyValue(plainText(annotationNode),leaf.preserve));count++;
           };
           for(const child of containerNode.children){
-            if(typeof child==='string'){pending+=child;continue;}
+            if(typeof child==='string'){
+              if(sawRtc){if(child.trim())throw new Error('TTML 注音分组后包含游离文字');continue;}
+              pending+=child;baseText||=!!child.trim();continue;
+            }
             const kind=local(child.name);
-            if(kind==='rt')addRuby(child);
+            if(kind==='rt'){if(sawRtc)throw new Error('TTML 注音分组混用');addRuby(child);}
             else if(kind==='rp')continue;
-            else if(kind==='rb')pending+=plainText(child);
-            else if(kind==='rtc')throw new Error('TTML 注音分组结构不支持');
-            else pending+=plainText(child);
+            else if(kind==='rb'){if(sawRtc)throw new Error('TTML 注音分组混用');baseElements++;pending+=plainText(child);}
+            else if(kind==='rtc'){
+              if(sawRtc||count||baseElements>1||baseElements&&baseText)throw new Error('TTML 注音分组结构不支持');
+              const base=pending;pending='';if(!base.trim())throw new Error('TTML 注音缺少基础文字');
+              const rtcContext=hasTiming(child)?timing(child,context,context.start,'par'):context;
+              const children=child.children.filter((item):item is Element=>typeof item!=='string');
+              if(child.children.some(item=>typeof item==='string'&&!!item.trim()))throw new Error('TTML 注音分组包含游离文字');
+              const annotations=children.filter(item=>local(item.name)==='rt');
+              if(children.some(item=>local(item.name)!=='rt'&&local(item.name)!=='rp')||annotations.length!==1)throw new Error('TTML 注音分组结构不支持');
+              const annotationNode=annotations[0]!,leaf=hasTiming(annotationNode)?timing(annotationNode,rtcContext,rtcContext.start,'par'):rtcContext;
+              addText(base,leaf,role,background,rubyValue(plainText(annotationNode),leaf.preserve));count++;sawRtc=true;
+            }
+            else {
+              if(sawRtc)throw new Error('TTML 注音分组混用');
+              baseElements++;pending+=plainText(child);
+            }
           }
           if(pending.trim())throw new Error('TTML 注音缺少注解文字');
           if(!count)throw new Error('TTML 注音结构为空');

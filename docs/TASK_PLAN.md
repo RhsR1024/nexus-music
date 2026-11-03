@@ -1,3 +1,16 @@
+## 2026-11-03 TTML 标准 `rtc` 单注解注音
+
+- [x] 标准 `<ruby>` 接受一个基础载体加一个仅含单 `<rt>` 的 `<rtc>`；分组内外 `<rp>` 忽略，`ruby→rtc→rt` 的嵌套相对时间沿用原解析器。
+- [x] 缺基础、空分组、多 `rtc`/`rt`、直接与分组混用、多个基础元素及分组后游离文字拒绝并走歌词来源回退。
+- [x] 单测覆盖 `rb + rtc + rp`、直接文字基、`ruby→rtc→rt` 三层相对时间及纯空白基础拒绝；`npm run check` 992/992。
+- [x] 完整 `npm run test:native` 退出 0，既有 Sendable/weak-variable 警告不作为新失败或已修复声明。
+- [x] 正式 Release `SourceUITests-1793664862752` 为1/0/0、172.649秒、`sourceUnchanged=true`；截图亲看并确认 AMLL `kanji` 与标准 `rtc` `yin` 各自位于基础文字上方。
+- [x] 首次退出70/0/0的重复 `-only-testing:` 调用错误及结果原件保留；正确裸 target 参数的重跑才计入通过。
+- [ ] 生成并独立核验 clean unsigned IPA/archive；正常 push 后核对最新代码对应 iOS27 运行、至多1运行/1排队。
+- [ ] `rbc` 多基础映射、双侧/多注解、wrapping/行间位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签和 iOS 27 终态。
+
+见[本批回执](2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](ui-spec/ttml-rtc-2026-11-03.md)。本批不关闭完整 TTML2、S4/J35–42、F/J 或项目总目标。
+
 ## 2026-11-03 AMLL/标准 TTML 注音
 
 - [x] AMLL `tts:ruby` 严格容器解析：一个基础 span、一个 `textContainer/text`，注音独立保存在 `LyricWord.ruby`，不进入演唱文字。

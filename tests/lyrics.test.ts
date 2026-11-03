@@ -151,3 +151,22 @@ test('TTML standard ruby keeps annotations separate from sung text and rejects m
     '<tt><body><p><ruby><rb>漢</rb></ruby></p></body></tt>',
   ])assert.throws(()=>parseTTML(input),/注音/);
 });
+test('TTML standard ruby accepts an unambiguous one-base one-annotation rtc group',()=>{
+  const parsed=parseTTML('<tt><body><p begin="2s" end="7s"><ruby begin="1s" end="4s"><rb>漢字</rb><rp>(</rp><rtc begin="1s" end="3s"><rp>(</rp><rt begin="0.5s" end="1s">kanji</rt><rp>)</rp></rtc><rp>)</rp></ruby><span begin="4s" end="5s"> tail</span></p></body></tt>');
+  assert.equal(parsed.lines[0]!.text,'漢字 tail');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby]),[
+    ['漢字',4500,5000,'kanji'],[' tail',6000,7000,undefined],
+  ]);
+  const textBase=parseTTML('<tt><body><p begin="1s" end="3s"><ruby>漢字<rtc><rt begin="1s" end="2s">kanji</rt></rtc></ruby></p></body></tt>');
+  assert.deepEqual(textBase.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby]),[
+    ['漢字',2000,3000,'kanji'],
+  ]);
+  for(const input of [
+    '<tt><body><p><ruby><rb>漢</rb><rtc/></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rtc><rt>kan</rt></rtc><rb>漢</rb></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rb>漢</rb><rtc><rt>kan</rt><rt>ji</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rb>漢</rb><rtc><rt>kan</rt></rtc>字</ruby></p></body></tt>',
+    '<tt><body><p><ruby><rb>漢</rb><rt>kan</rt><rtc><rt>ji</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rb> </rb><rtc><rt>kan</rt></rtc></ruby></p></body></tt>',
+  ])assert.throws(()=>parseTTML(input),/注音/);
+});

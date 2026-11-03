@@ -813,10 +813,10 @@ final class SourceSettingsTests: XCTestCase {
     let beforeFullSeek=sequentialTTML ? (seekProgress.value as? String):nil
     reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10))
     if absoluteTTML {
-      let rubyRow=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","注音：kanji")).firstMatch
+      let rubyRow=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","注音：kanji，yin")).firstMatch
       for _ in 0..<8 where !rubyRow.exists {app.swipeUp()}
-      XCTAssertTrue(rubyRow.waitForExistence(timeout:10),"Ruby annotation must remain in the accessible lyric text")
-      let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name="AMLL ruby annotation rendered above its base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
+      XCTAssertTrue(rubyRow.waitForExistence(timeout:10),"AMLL and standard rtc annotations must remain in the accessible lyric text")
+      let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name="AMLL and standard rtc annotations rendered above base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
     }
     if sequentialTTML {
       let second=app.buttons["定位歌词：Second rich line"].firstMatch

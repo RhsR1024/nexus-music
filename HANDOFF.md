@@ -1,3 +1,11 @@
+## 2026-11-03 TTML 标准 `rtc` 单注解注音
+
+标准 TTML `<ruby>` 现支持一个无歧义的基础载体加一个含单个 `<rt>` 的 `<rtc>`，分组内外的 `<rp>` 只作为非权威回退忽略；`ruby→rtc→rt` 继续使用标准相对时间。缺基础、空分组、多个 `rtc`/`rt`、直接与分组混用、多个基础元素及分组后游离文字均拒绝回退，不猜测多注解映射。
+
+正式 App fixture 在同一歌词行同时保留 AMLL `kanji` 注音并新增标准 `<rb>音</rb><rtc><rt>yin</rt></rtc>`。`npm run check` 992/992、完整 native 退出 0；Release `SourceUITests-1793664862752` 为1/0/0、172.649秒、`sourceUnchanged=true`，安装 bundle digest `1f8776bf…e13ee`，截图亲看确认 `kanji` 与 `yin` 分列位于“漢字”和“音”上方，XCTest 读到 `注音：kanji，yin`。首次调用因脚本重复 `-only-testing:` 前缀退出70且0/0，原结果保留，不计测试失败或通过。
+
+详细协议边界、畸形矩阵与证据见[本批回执](docs/2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](docs/ui-spec/ttml-rtc-2026-11-03.md)。标准 `rbc` 多基础映射、双侧/多注音、跨行与完整 TTML2 排版仍开放；iOS 27 Actions、实体机 VoiceOver、真实歌词库、签名/安装继续。
+
 ## 2026-11-03 AMLL/标准 TTML 注音解析与原生绘制
 
 歌词解析已支持 AMLL 的严格 `container/base/textContainer/text` 注音结构和标准 TTML `<ruby><rb/><rt/><rp/>`。注音只保存在 `LyricWord.ruby`，不混入演唱文字；畸形、缺基础文字、游离文字、`rtc` 分组等结构拒绝并回退。无障碍标签追加去重后的 `注音：...`，非当前歌词行保留注音元数据但停车逐字时间，避免旧行继续消费动画。
