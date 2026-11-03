@@ -846,18 +846,33 @@ final class SourceSettingsTests: XCTestCase {
       let rubyRow=lyricList.buttons.matching(NSPredicate(format:"label CONTAINS %@","注音：kanji，yin，duo，ji，shuang，sou")).firstMatch
       reach(rubyRow,viewportID:"full-lyrics-list")
       XCTAssertTrue(waitForHittable(rubyRow,timeout:10),"AMLL, rtc, rbc and double-sided annotations must be reachable in the full lyric reader")
-      if largeText {
-        XCTAssertGreaterThanOrEqual(rubyRow.frame.height,100,"Scaled ruby must reserve a readable annotation row above the large base text")
-        XCTAssertLessThanOrEqual(rubyRow.frame.height,lyricList.frame.height,"Both wrapped base lines and their readings must fit in the reader viewport")
-        for _ in 0..<6 where rubyRow.frame.maxY>lyricList.frame.maxY-8 {
-          let start=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.8))
-          let end=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5))
+      func revealFullyInLyricList(_ row:XCUIElement)->Bool{
+        for _ in 0..<12 {
+          if row.frame.minY>=lyricList.frame.minY && row.frame.maxY<=lyricList.frame.maxY{return true}
+          let above=row.frame.midY<lyricList.frame.midY
+          let start=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75))
+          let end=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25))
           start.press(forDuration:0.05,thenDragTo:end)
         }
+        return row.frame.minY>=lyricList.frame.minY && row.frame.maxY<=lyricList.frame.maxY
+      }
+      if largeText {
+        XCTAssertTrue(revealFullyInLyricList(rubyRow),"The complete original ruby row must enter the large-text reader viewport")
+        XCTAssertGreaterThanOrEqual(rubyRow.frame.height,100,"Scaled ruby must reserve a readable annotation row above the large base text")
+        XCTAssertLessThanOrEqual(rubyRow.frame.height,lyricList.frame.height,"Both wrapped base lines and their readings must fit in the reader viewport")
         XCTAssertGreaterThanOrEqual(rubyRow.frame.minY,lyricList.frame.minY,"The first base line and upper annotations must remain visible")
         XCTAssertLessThanOrEqual(rubyRow.frame.maxY,lyricList.frame.maxY,"The wrapped base line and lower annotation must be visible in the evidence")
       }
-      let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name=largeText ? "AMLL and double-sided ruby at accessibility XXXL":"AMLL, rtc, rbc and double-sided annotations rendered around base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
+      let alignedRow=lyricList.buttons.matching(NSPredicate(format:"label CONTAINS %@","注音：st，md，ed")).firstMatch
+      reach(alignedRow,viewportID:"full-lyrics-list")
+      XCTAssertTrue(waitForHittable(alignedRow,timeout:10),"Start, center and end annotation rows must remain independently reachable")
+      if largeText {
+        XCTAssertTrue(revealFullyInLyricList(alignedRow),"The complete aligned ruby row must enter the large-text reader viewport")
+        XCTAssertLessThanOrEqual(alignedRow.frame.height,lyricList.frame.height,"The aligned annotation row must fit without covering the lyric reader viewport")
+        XCTAssertGreaterThanOrEqual(alignedRow.frame.minY,lyricList.frame.minY,"Start alignment must remain inside the large-text reader")
+        XCTAssertLessThanOrEqual(alignedRow.frame.maxY,lyricList.frame.maxY,"End alignment must remain inside the large-text reader")
+      }
+      let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name=largeText ? "AMLL, double-sided and aligned ruby at accessibility XXXL":"AMLL, rtc, rbc, double-sided and aligned annotations rendered around base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
       if largeText {return}
     }
     if sequentialTTML {

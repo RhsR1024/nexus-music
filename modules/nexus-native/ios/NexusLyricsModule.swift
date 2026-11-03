@@ -25,7 +25,7 @@ final class NexusLyricLineView: ExpoView {
   private let clockTarget = LyricClockTarget()
   private var clock: CADisplayLink?
   private var words: [(range: NSRange, start: Double, end: Double)] = []
-  private var rubyAnnotations: [(range: NSRange, text: String, position: RubyPosition)] = []
+  private var rubyAnnotations: [(range: NSRange, text: String, position: RubyPosition, alignment: LyricRubyAlignment)] = []
   private var untimedRanges: [NSRange] = []
   private var sparseCues: [LyricCueRange]?
   private var position = 0.0, anchor = 0.0, playing = false
@@ -149,8 +149,9 @@ final class NexusLyricLineView: ExpoView {
                 start.isFinite, end.isFinite, start >= 0, end >= start, end <= 86400000 else { words.removeAll(); rubyAnnotations.removeAll(); break }
           let range = NSRange(location: offset, length: part.utf16.count)
           words.append((range, start, end))
-          if let ruby = Self.validRuby(word["ruby"]) { rubyAnnotations.append((range, ruby, .before)) }
-          if let ruby = Self.validRuby(word["rubyAfter"]) { rubyAnnotations.append((range, ruby, .after)) }
+          let alignment = LyricRubyAlignment(raw: word["rubyAlign"] as? String)
+          if let ruby = Self.validRuby(word["ruby"]) { rubyAnnotations.append((range, ruby, .before, alignment)) }
+          if let ruby = Self.validRuby(word["rubyAfter"]) { rubyAnnotations.append((range, ruby, .after, alignment)) }
           offset += part.utf16.count
         }
       }
@@ -213,14 +214,34 @@ final class NexusLyricLineView: ExpoView {
       let firstLineGlyphs = NSIntersectionRange(glyphs, lineGlyphs)
       let region = firstLineGlyphs.length > 0 ? manager.boundingRect(forGlyphRange: firstLineGlyphs, in: container) : .zero
       guard region.width > 0 else { continue }
+      let graphemes = LyricRubyLayout.graphemes(item.text)
+      guard !graphemes.isEmpty else { continue }
       var font = textFont.withSize(naturalSize)
-      let naturalWidth = (item.text as NSString).size(withAttributes: [.font: font]).width
+      func glyphWidths() -> [CGFloat] {
+        graphemes.map { ($0 as NSString).size(withAttributes: [.font: font]).width }
+      }
+      var widths = glyphWidths(),naturalWidth = widths.reduce(0, +)
       if naturalWidth > region.width {
         font = font.withSize(max(7, naturalSize * region.width / naturalWidth))
+        widths = glyphWidths()
+        naturalWidth = widths.reduce(0, +)
       }
       let height = ceil(font.lineHeight)
-      let width = ceil((item.text as NSString).size(withAttributes: [.font: font]).width)
-      let x = min(max(0, region.midX - width / 2), max(0, bounds.width - width))
+      let source = storage.string as NSString
+      let baseGraphemes = LyricRubyLayout.graphemes(source.substring(with: item.range))
+      var baseLocation = item.range.location,baseWidths: [CGFloat] = []
+      for grapheme in baseGraphemes {
+        let range = NSRange(location: baseLocation, length: grapheme.utf16.count)
+        baseWidths.append(manager.boundingRect(forGlyphRange: manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil), in: container).width)
+        baseLocation += grapheme.utf16.count
+      }
+      let origins = LyricRubyLayout.horizontalOrigins(
+        regionWidth: region.width,
+        glyphWidths: widths,
+        alignment: item.alignment,
+        baseWidths: baseWidths
+      )
+      guard origins.count == graphemes.count else { continue }
       let y: CGFloat
       switch item.position {
       case .before:
@@ -234,7 +255,12 @@ final class NexusLyricLineView: ExpoView {
         let baseBottom = rubyInset + region.maxY
         y = max(0, min(bounds.height - rubyAfterInset, baseBottom + 1))
       }
-      (item.text as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.9)])
+      for (index, grapheme) in graphemes.enumerated() {
+        (grapheme as NSString).draw(
+          at: CGPoint(x: region.minX + origins[index], y: y),
+          withAttributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.9)]
+        )
+      }
     }
   }
   override func draw(_ rect: CGRect) {

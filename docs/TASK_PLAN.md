@@ -1,3 +1,18 @@
+## 2026-11-03 TTML `rubyAlign` 与 `outside`
+
+- [x] `LyricWord.rubyAlign`持久化六个TTML2值；未声明/未知值回退`center`，横排`rubyPosition="outside"`解析为`before`。
+- [x] 原生TextKit按字素实现`start/center/end/spaceAround/spaceBetween/withBase`；`withBase`数量匹配时逐基础字素居中，否则中心回退。
+- [x] 正式fixture新增三组两字基础对齐样本；正常与大字号都经React、无障碍标签、inset及原生绘制。
+- [x] 首次整行714pt超高及第二次目标部分露出列表的失败原件保留；拆成独立段并在真实阅读列表双向滚动到整行，不放宽断言。
+- [x] 最终同源Release正常`SourceUITests-1793686791272`为1/0/0、264.185秒，大字号`1793686417862`为1/0/0、315.965秒；均`sourceUnchanged=true`且安装bundle一致。
+- [x] `npm run check`997/997、完整native、Swift解析、Node检查和diff通过；原生布局单测覆盖六模式、字素边界、回退与非法输入。
+- [x] 正常截图亲看`st/md/ed`分别位于左/中/右基础组，大字号完整阅读行可滚动到达；`ipa --review`为56E/21WI/121 timeline/47F/47P、0错误/0警告且无新增Sollin采集。
+- [x] dirty unsigned IPA通过：17,842,149字节、`b347850f…e07a3`，151项archive/IPA逐字节、ZIP CRC、生产标记及测试/私人/签名排除通过；T7预提交阶段669份映射/305,997,336字节0差异、源证据保留且零删除。
+- [ ] clean HEAD unsigned IPA、正常push、远端main与iOS27 Actions队列/终态。
+- [ ] 竖排左右注音、跨行Ruby重分配、完整TTML2样式级联、真实歌词库、实体VoiceOver、动态字号/小屏与签名安装。
+
+见[专项回执](2026-11-03-ttml-ruby-align-report.md)与[UI规格](ui-spec/ttml-ruby-align-2026-11-03.md)。本批不关闭完整TTML2、S4/J35–42、F/J或项目。
+
 ## 2026-11-03 配色重启真实应用状态观测
 
 - [x] 模拟器测试环境加入只读 boot/nonce 检查点、store/native applied 快照、身份摘要、安装背景层 PNG 和失败证据保留；正式设备/界面不暴露诊断入口。

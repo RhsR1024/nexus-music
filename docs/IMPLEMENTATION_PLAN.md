@@ -1,3 +1,13 @@
+## 2026-11-03 TTML `rubyAlign` 与 `rubyPosition="outside"`
+
+`LyricWord`新增可选`rubyAlign`。TTML有界解析器在注音容器上读取六个支持值；未声明或未知值使用初值`center`，只有实际含注音的词携带该字段。`rubyPosition="outside"`在当前单行横排语境解析为上方`before`，既有`before/after`双侧注音路径不变。
+
+原生抽取纯值`LyricRubyLayout`，按Swift组合字素序列计算注音字形宽度与水平起点。`start`、`center`、`end`对齐整段注音，`spaceBetween`和`spaceAround`分配字素间隙；`withBase`只在注音和基础字素数量相同且基础宽度有效时逐项居中，否则回退`center`。TextKit仍只绘制当前歌词实例，没有新增React逐帧列表、第二歌词时间线或播放器。
+
+正式fixture新增`起边/st`、`中间/md`、`到尾/ed`。最终同源Release正常字号`SourceUITests-1793686791272`为1/0/0、264.185秒，大字号`SourceUITests-1793686417862`为1/0/0、315.965秒；两者`sourceUnchanged=true`，源码digest`65c2971d…c86f`、安装bundle`01730b58…e021`。正常截图SHA-256`bcd082ac…bf851`，人工亲看三种对齐实际可见。首次大字号行高714pt超出418.67pt视口及第二次目标仅部分露出列表中，两轮失败原件均保留；最终拆段并用真实列表双向滚动到整行，未放宽断言。
+
+997/997检查、完整native、Swift解析、Node检查和diff通过；原生布局单测覆盖六模式、组合字素、`withBase`回退和非法输入。`ipa --review`复用既有离线证据为56E/21WI/121 timeline/47F/47P、0错误/0警告。提交前dirty unsigned archive的manifest绑定基线`1a27c23`且`dirty=true`，IPA为17,842,149字节、SHA-256`b347850f…e07a3`；151项archive/IPA载荷、ZIP CRC、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名、生产标记及测试/私人/签名排除均通过。完整archive、IPA、成功/失败xcresult、运行清单、截图、源码/diff和核验日志已复制至T7`2026-11-03-ttml-ruby-align-precommit-b347850f09db`，669份映射/305,997,336字节0差异且源证据保留。clean归档、提交、Actions队列与实际iOS27终态由[专项回执](2026-11-03-ttml-ruby-align-report.md)补录；不据此关闭完整TTML2、实体机/签名或项目。
+
 ## 2026-11-03 配色重启真实应用状态观测
 
 旧配色测试以固定 14 个边缘点判断静止场景是否含三色。该判据与已有“第三色场可避开14点”的合法构图反例冲突，因此本批先增加真实状态观测，再替换错误采样。模拟器专用接口用 weak `NexusAmbientView` 列表找到当前背景实例；view 转 window 坐标后检查隐藏/透明祖先、`clipsToBounds` 求交和 window 交集，只接受唯一可见且 installed scene 有效的实例。

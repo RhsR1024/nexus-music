@@ -1,3 +1,15 @@
+## 2026-11-03 TTML `rubyAlign` 与 `rubyPosition="outside"`
+
+歌词模型新增可选`rubyAlign`，解析并在原生TextKit中实现TTML2的`start`、`center`、`end`、`spaceAround`、`spaceBetween`、`withBase`六个值；未声明或未知值回到初值`center`，`withBase`仅在注音与基础字素数量相等时逐字素居中，否则回退中心。横排`rubyPosition="outside"`解析为上方`before`。布局按字素计算，不新增播放器、权威队列、React逐帧列表或第二歌词时间线。
+
+正式fixture在既有AMLL/rtc/rbc/双侧注音后新增`起边/st`、`中间/md`、`到尾/ed`三组对齐样本。最终同源Release大字号`SourceUITests-1793686417862`为1/0/0、315.965秒，正常字号`SourceUITests-1793686791272`为1/0/0、264.185秒；两者`sourceUnchanged=true`，源码digest`65c2971da8e60d76575250c0f35759e53980c73fb2a8725b686e8ce363e6c86f`、安装bundle`01730b5831dc243a2e2d814f01d132150546fe8938a303d5f1f42ebf3c05e021`，fixture SHA-256`564e821a…c709`。正常字号截图SHA-256`bcd082ac…bf851`，人工亲看`st`贴左侧基础组、`md`居中、`ed`靠右侧基础组；大字号截图确认完整注音与换行基础仍在阅读列表内。
+
+首次大字号把三组样本追加到最长注音行后，行高714pt超过418.67pt视口；把对齐样本拆成独立段后，第二次尝试仍因目标只部分露出列表上缘而失败。两次xcresult均保留，未放宽完整容纳断言；最终测试辅助器在真实`full-lyrics-list`内按目标方向双向滚动至整行可见。`npm run check`997/997、0失败，完整native、Swift解析、Node检查和diff检查通过；原生布局单测覆盖六种模式、组合字素、`withBase`回退与非法输入。
+
+`ipa --review`复用既有离线证据为56 Evidence/21 WorkItems/121 timeline/47 Findings/47 Paths、0错误/0警告；本批依据W3C TTML2，无新增Sollin采集、私有服务探测或商业逻辑移植。提交前dirty unsigned archive已核验：manifest绑定基线`1a27c23`且`dirty=true`，IPA为17,842,149字节、SHA-256`b347850f…e07a3`，arm64/iphoneos26.2/iOS15.1/[1,2]且`signed=false`；151项archive/IPA载荷逐字节一致，ZIP CRC、生产`rubyAlign/withBase/spaceAround/spaceBetween/outside`标记及测试/私人/签名排除通过。完整archive、IPA、两轮成功和两轮失败xcresult、运行清单、截图、源码/diff与核验日志已复制至T7`2026-11-03-ttml-ruby-align-precommit-b347850f09db`，669份映射文件/305,997,336字节逐项一致，`SHA256SUMS`复核PASS，源证据保留且零删除。clean HEAD IPA、正常push及iOS27 Actions结果仍在专项回执补齐。模拟器、unsigned包和静态检查不替代iOS27终态、实体机VoiceOver、真实歌词库、跨行Ruby重排或签名安装。
+
+详见[专项回执](docs/2026-11-03-ttml-ruby-align-report.md)与[UI规格](docs/ui-spec/ttml-ruby-align-2026-11-03.md)。
+
 ## 2026-11-03 配色重启真实应用状态观测
 
 固定 14 点无法区分“palette 丢失”和“静止相位避开采样点”。本批只在模拟器且显式测试环境开启只读观测，以新 boot UUID 和一次性 nonce 绑定检查点，在 E2E store 快照前后核对同一对象，并由原生主线程读取真实 `appliedColors`、身份摘要、installed scene、dark/pending/moving、只读 timeline 和已安装背景层 PNG。可见性加入 window 交集及祖先裁剪；观测不推进动画、不修改服务或偏好，正式设备不编译该接口，正常界面与无障碍树不展示诊断值。

@@ -231,3 +231,23 @@ test('TTML double-sided ruby rejects duplicate, missing, unsupported and mismatc
     '<tt><body><p><ruby><rbc><rb>東</rb></rbc><rtc tts:rubyPosition="before"><rt>とう</rt></rtc><rtc tts:rubyPosition="after"><rt>たつ</rt><rp>.</rp><rt>み</rt></rtc></ruby></p></body></tt>',
   ])assert.throws(()=>parseTTML(input),/注音/);
 });
+test('TTML rubyAlign preserves all six TTML2 values and safely falls back to center',()=>{
+  const aligned=parseTTML(amll('<p begin="12" end="20">'+
+    '<span tts:ruby="container" tts:rubyAlign="start"><span tts:ruby="base" begin="12" end="13">起</span><span tts:ruby="textContainer"><span tts:ruby="text">st</span></span></span>'+
+    '<span tts:ruby="container" tts:rubyAlign="center"><span tts:ruby="base" begin="13" end="14">中</span><span tts:ruby="textContainer"><span tts:ruby="text">md</span></span></span>'+
+    '<span tts:ruby="container" tts:rubyAlign="end"><span tts:ruby="base" begin="14" end="15">尾</span><span tts:ruby="textContainer"><span tts:ruby="text">ed</span></span></span>'+
+    '<span tts:ruby="container" tts:rubyAlign="spaceAround"><span tts:ruby="base" begin="15" end="16">围</span><span tts:ruby="textContainer"><span tts:ruby="text">sa</span></span></span>'+
+    '<span tts:ruby="container" tts:rubyAlign="spaceBetween"><span tts:ruby="base" begin="16" end="17">间</span><span tts:ruby="textContainer"><span tts:ruby="text">sb</span></span></span>'+
+    '<span tts:ruby="container" tts:rubyAlign="withBase"><span tts:ruby="base" begin="17" end="18">基</span><span tts:ruby="textContainer"><span tts:ruby="text">wb</span></span></span>'+
+    '<span tts:ruby="container" tts:rubyAlign="unsupported"><span tts:ruby="base" begin="18" end="19">退</span><span tts:ruby="textContainer"><span tts:ruby="text">fb</span></span></span>'+
+  '</p>'));
+  assert.deepEqual(aligned.lines[0]!.words?.map(word=>[word.text,word.ruby,word.rubyAlign]),[
+    ['起','st','start'],['中','md','center'],['尾','ed','end'],['围','sa','spaceAround'],
+    ['间','sb','spaceBetween'],['基','wb','withBase'],['退','fb','center'],
+  ]);
+
+  const standard=parseTTML('<tt xmlns:tts="http://www.w3.org/ns/ttml#styling"><body><p begin="2s" end="5s"><ruby tts:rubyAlign="end"><rb>東</rb><rtc tts:rubyPosition="outside"><rt>とう</rt></rtc></ruby></p></body></tt>');
+  assert.deepEqual(standard.lines[0]!.words?.map(word=>[word.text,word.ruby,word.rubyAfter,word.rubyAlign]),[
+    ['東','とう',undefined,'end'],
+  ]);
+});

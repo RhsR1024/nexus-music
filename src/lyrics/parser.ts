@@ -1,6 +1,7 @@
 import {createLyricBudget} from './budget.ts';
 import {parseTTML} from './ttml.ts';
-export interface LyricWord {startMs:number;endMs:number;text:string;ruby?:string;rubyAfter?:string}
+export type RubyAlign='start'|'center'|'end'|'spaceAround'|'spaceBetween'|'withBase';
+export interface LyricWord {startMs:number;endMs:number;text:string;ruby?:string;rubyAfter?:string;rubyAlign?:RubyAlign}
 export interface LyricCue extends LyricWord {byteStart:number;byteEnd:number}
 export interface LyricLine {layerGroup?:number;primary?:boolean;timedCues?:readonly LyricCue[];timingFallback?:'untimed_text'|'invalid_cues';background?:boolean;agent?:string;startMs:number;endMs?:number;text:string;words?:readonly LyricWord[];translation?:string;romanization?:string}
 export interface LyricDocument {lines:readonly LyricLine[];plain:readonly string[];synced:boolean}

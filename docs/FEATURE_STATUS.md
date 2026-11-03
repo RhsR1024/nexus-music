@@ -1,3 +1,16 @@
+## 2026-11-03 TTML `rubyAlign` 与 `outside`
+
+- [x] `LyricWord.rubyAlign`支持`start/center/end/spaceAround/spaceBetween/withBase`；未知/未声明值回退`center`，横排`outside`解析为`before`。
+- [x] Swift TextKit按字素定位注音；`withBase`数量匹配时逐基础字素居中，否则中心回退；不新增React逐帧重绘或第二时间线。
+- [x] 正式fixture新增三组两字基础；正常与大字号Release均1/0/0、同源且安装bundle一致。
+- [x] 正常截图人工亲看`st/md/ed`分别贴合左/中/右基础组；大字号拆段后完整阅读行可滚动到达。
+- [x] 997/997、完整native、Swift/Node/diff与原生六模式单测通过；reverse-skill离线strict review为56E/21WI/121 timeline/47F/47P、0错误/0警告。
+- [x] dirty unsigned IPA、151项archive/IPA载荷与ZIP CRC、生产/隐私排除通过；T7预提交阶段669份映射/305,997,336字节0差异，源证据保留且零删除。
+- [ ] clean unsigned IPA、提交push、iOS27 Actions终态。
+- [ ] 竖排左右放置、跨行Ruby重分配、完整TTML2样式、真实歌词库、实体VoiceOver、动态字号/小屏及签名安装。
+
+见[专项回执](2026-11-03-ttml-ruby-align-report.md)与[UI规格](ui-spec/ttml-ruby-align-2026-11-03.md)。J37/S4仍为B状态，本批不关闭完整TTML2、F/J或项目。
+
 ## 2026-11-03 TTML 双侧注音
 
 - [x] `LyricWord.rubyAfter`保存下方注音，既有`ruby`继续保存上方注音；单个无位置注解保持默认上方。
