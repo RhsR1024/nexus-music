@@ -9,6 +9,7 @@ import {parseKuwoJSON} from './kuwoJSON.ts';
 import {qqSignature} from './qqSignature.ts';
 import {onlineTrack} from './online.ts';
 import {safePublicURL} from '../storage/cleanTrack.ts';
+import {miguAlbumSnapshot,miguAlbumCatalogId} from './miguAlbums.ts';
 type Row=Record<string,unknown>;
 const row=(v:unknown):Row=>v&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const text=(v:unknown)=>typeof v==='string'?v:typeof v==='number'&&Number.isSafeInteger(v)?String(v):'';
@@ -44,7 +45,7 @@ export class AlbumProvider{
       const raw=row(await this.http(queryURL('https://jadeite.migu.cn/music_search/v3/search/searchAll',{isCorrect:1,isCopyright:1,searchSwitch:JSON.stringify({song:0,album:1,singer:0,tagSong:0,mvSong:0,bestShow:0,songlist:0,lyricSong:0}),pageSize:limit,text:query,pageNo:page,sort:0,sid:'USS'}),{headers:{uiVersion:'A_music_3.6.1',deviceId,timestamp,sign,channel:'0146921','User-Agent':'Mozilla/5.0'}},signal));if(raw.code!=='000000')throw Error('专辑搜索暂不可用');const d=row(raw.albumResultData);values=d.result;total=d.totalCount;
     }
     if(signal.aborted)throw Error('已取消');const parsedTotal=count(total),rows=array(values,parsedTotal);if(rows.length>1000)throw Error('专辑搜索响应过大');
-    const items=rows.map(value=>{const v=row(value),id=identity(platform==='tx'?v.albumMID:platform==='kw'||platform==='kg'?v.albumid:v.id),title=clean(platform==='tx'?v.albumName:platform==='kg'?v.albumname:v.name);if(!title||title.length>1000||/[\u0000-\u001f\u007f]/.test(title))throw Error('专辑名称无效');const author=clean(platform==='wy'?row(v.artist).name:platform==='tx'?v.singerName:platform==='kw'?v.artist:platform==='kg'?v.singername:v.singer).slice(0,200),artwork=art(platform==='wy'?v.picUrl:platform==='tx'?v.albumPic:platform==='kw'?v.hts_img??v.img:platform==='kg'?v.imgurl:row(Array.isArray(v.imgItems)?v.imgItems[0]:undefined).img),size=count(platform==='wy'?v.size:platform==='tx'?v.song_count:platform==='kw'?v.musiccnt:platform==='kg'?v.songcount:undefined);return{id,title,...info(author,platform==='wy'?v.publishTime:platform==='tx'?v.publicTime:platform==='kw'?v.pub:platform==='kg'?v.publishtime:v.publishDate,v.description??v.intro),...(author?{author}:{}),...(artwork?{artwork}:{}),...(size!==undefined?{count:size}:{})};});
+    const items=rows.map(value=>{const v=row(value),id=platform==='mg'?miguAlbumCatalogId(v.id,v.resourceType):identity(platform==='tx'?v.albumMID:platform==='kw'||platform==='kg'?v.albumid:v.id),title=clean(platform==='tx'?v.albumName:platform==='kg'?v.albumname:v.name);if(!title||title.length>1000||/[\u0000-\u001f\u007f]/.test(title))throw Error('专辑名称无效');const author=clean(platform==='wy'?row(v.artist).name:platform==='tx'?v.singerName:platform==='kw'?v.artist:platform==='kg'?v.singername:v.singer).slice(0,200),artwork=art(platform==='wy'?v.picUrl:platform==='tx'?v.albumPic:platform==='kw'?v.hts_img??v.img:platform==='kg'?v.imgurl:row(Array.isArray(v.imgItems)?v.imgItems[0]:undefined).img),size=count(platform==='wy'?v.size:platform==='tx'?v.song_count:platform==='kw'?v.musiccnt:platform==='kg'?v.songcount:undefined);return{id,title,...info(author,platform==='wy'?v.publishTime:platform==='tx'?v.publicTime:platform==='kw'?v.pub:platform==='kg'?v.publishtime:v.publishDate,v.description??v.intro??(platform==='mg'?v.desc:undefined)),...(author?{author}:{}),...(artwork?{artwork}:{}),...(size!==undefined?{count:size}:{})};});
     return{items:[...new Map(items.map(v=>[v.id,v])).values()],page,total:parsedTotal,hasMore:rows.length>0&&(parsedTotal!==undefined?page*limit<parsedTotal:rows.length>=limit)};
   }
   async detail(platform:OnlinePlatform,album:BrowseItem,page:number,signal:AbortSignal,limit=100):Promise<PlaylistPage>{
@@ -58,7 +59,7 @@ export class AlbumProvider{
     }else if(platform==='kg'){
       const r=row(await this.http(queryURL('https://mobiles.kugou.com/api/v3/album/song',{version:9108,albumid:id,plat:0,pagesize:limit,area_code:0,page,with_res_tag:0}),{},signal));if(r.errcode!==0||r.status!==1)throw Error('此专辑暂不可公开读取');const d=row(r.data);values=d.info;total=d.total;
     }else{
-      const r=row(await this.http(queryURL('https://app.c.nf.migu.cn/MIGUM2.0/v1.0/content/queryAlbumSong',{albumId:id,pageNo:page}),{},signal));if(r.code!=='000000')throw Error('此专辑暂不可公开读取');const d=row(r.data);values=d.songList;total=d.totalCount;localPaging=true;
+      const snapshot=await miguAlbumSnapshot(this.http,album,signal);return{...snapshot,items:snapshot.items.slice((page-1)*limit,page*limit),page,hasMore:page*limit<snapshot.total};
     }
     if(signal.aborted)throw Error('已取消');const parsedTotal=count(total);let rows=array(values,parsedTotal);
     // These endpoints return a complete album; never silently accept a truncated snapshot.
@@ -66,7 +67,9 @@ export class AlbumProvider{
     const items=rows.map(value=>{const v=row(value);if(platform==='kw')return onlineTrack(platform,{...v,name:clean(v.name),artist:clean(v.artist),rid:v.id??v.rid,album:album.title,albumid:id,pic:v.pic??album.artwork,FORMATS:v.formats});if(platform==='kg'){const filename=text(v.filename),split=filename.indexOf(' - ');return onlineTrack(platform,{...v,FileHash:v.hash,SongName:split<0?filename:filename.slice(split+3),SingerName:split<0?'':filename.slice(0,split),AlbumID:id,AlbumName:album.title,Duration:v.duration,FileSize:v.filesize,HQFileHash:v['320hash'],HQFileSize:v['320filesize'],SQFileHash:v.sqhash,SQFileSize:v.sqfilesize});}if(platform==='tx')return onlineTrack(platform,{...v,file:{media_mid:v.strMediaMid,size_128mp3:v.size128,size_320mp3:v.size320,size_flac:v.sizeflac}});return onlineTrack(platform,v);});
     if(items.some(v=>!v.title))throw Error('专辑歌曲信息缺失');return{title:album.title,items,page,total:parsedTotal,info:metadata,hasMore:rows.length>0&&(parsedTotal!==undefined?page*limit<parsedTotal:rows.length>=limit)};
   }
-  async complete(platform:OnlinePlatform,album:BrowseItem,signal:AbortSignal):Promise<{title:string;tracks:readonly Track[]}>{
+  async complete(platform:OnlinePlatform,album:BrowseItem,signal:AbortSignal):Promise<{title:string;tracks:readonly Track[];scope?:'public'}>{
+    if(signal.aborted)throw Error('已取消');
+    if(platform==='mg'){const snapshot=await miguAlbumSnapshot(this.http,album,signal);return{title:snapshot.title,tracks:snapshot.items,...(snapshot.scope?{scope:snapshot.scope}:{})};}
     const tracks:Track[]=[];let expected:number|undefined,previous='';
     for(let page=1;page<=200;page++){
       const result=await this.detail(platform,album,page,signal);if(result.total===undefined||result.total>20000||(expected!==undefined&&result.total!==expected))throw Error('无法确认专辑完整曲目');expected=result.total;

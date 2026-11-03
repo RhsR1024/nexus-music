@@ -8,6 +8,7 @@ import {parseKuwoJSON} from './kuwoJSON.ts';
 import {qqSignature} from './qqSignature.ts';
 import {safePublicURL} from '../storage/cleanTrack.ts';
 import {miguArtistSongs} from './miguArtistSongs.ts';
+import {miguArtistAlbums} from './miguAlbums.ts';
 type Row=Record<string,unknown>;
 const row=(v:unknown):Row=>v&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const text=(v:unknown)=>typeof v==='string'?v:typeof v==='number'&&Number.isSafeInteger(v)?String(v):'';
@@ -71,7 +72,7 @@ export class ArtistProvider{
   else if(platform==='tx'){const r=row(await this.http(queryURL('https://c.y.qq.com/v8/fcg-bin/fcg_v8_singer_album.fcg',{singermid:id,order:'time',begin:(page-1)*limit,num:limit,format:'json'}),{headers:{Referer:'https://y.qq.com/'}},signal));if(r.code!==0)throw Error('艺术家专辑暂不可读取');const d=row(r.data);if(d.singer_mid!==undefined&&text(d.singer_mid)!==id)throw Error('艺术家响应身份不符');values=d.list;total=d.total;}
   else if(platform==='kw'){const d=row(parseKuwoJSON(await this.textHTTP(queryURL('https://search.kuwo.cn/r.s',{stype:'albumlist',artistid:id,pn:page-1,rn:limit,encoding:'utf8'}),{},signal)));values=d.albumlist;total=d.total;}
   else if(platform==='kg'){const r=row(await this.http(queryURL('https://mobiles.kugou.com/api/v5/singer/album',{singerid:id,page,pagesize:limit}),{},signal));if(r.status!==1||r.errcode!==0)throw Error('艺术家专辑暂不可读取');const d=row(r.data);values=d.info;total=d.total;}
-  else{const r=row(await this.http(queryURL('https://app.c.nf.migu.cn/MIGUM2.0/v1.0/content/querySingerAlbum',{singerId:id,pageNo:page,pageSize:limit}),{},signal));if(r.code!=='000000')throw Error('此平台艺术家专辑暂不可读取');const d=row(r.data);values=d.albumList;total=d.totalCount;}
+  else{return{page,...await miguArtistAlbums(this.http,id,page,limit,signal)};}
   if(signal.aborted)throw Error('已取消');const parsedTotal=count(total),rows=array(values,parsedTotal);const items=rows.map(value=>{const v=row(value),albumId=identity(platform==='tx'?v.albumMID:platform==='kw'||platform==='kg'?v.albumid:v.id),title=clean(platform==='tx'?v.albumName:platform==='kg'?v.albumname:v.name);if(!title||title.length>1000)throw Error('艺术家专辑信息无效');const artwork=art(platform==='wy'?v.picUrl:platform==='tx'?`https://y.gtimg.cn/music/photo_new/T002R500x500M000${albumId}.jpg`:platform==='kw'?v.hts_img??v.img:platform==='kg'?v.imgurl:row(Array.isArray(v.imgItems)?v.imgItems[0]:undefined).img);return{id:albumId,title,author:clean(platform==='tx'?v.singerName:platform==='kw'?v.artist:platform==='kg'?v.singername:platform==='wy'&&Array.isArray(v.artists)?v.artists.map(a=>clean(row(a).name)).filter(Boolean).join(' / '):artist.title),...(artwork?{artwork}:{})};});
   return{items,page,total:parsedTotal,hasMore:rows.length>0&&(typeof more==='boolean'?more:parsedTotal!==undefined?page*limit<parsedTotal:rows.length>=limit)};
  }

@@ -2260,6 +2260,36 @@ final class SourceSettingsTests: XCTestCase {
     mediaValue("fullscreen:inline",timeout:15);text("Fullscreen lifecycle after exit: \(String(describing:status.value))")
     app.buttons["mv-back"].tap();XCTAssertTrue(player.waitForExistence(timeout:15));player.tap();XCTAssertTrue(app.staticTexts["Synthetic tagged tone"].firstMatch.waitForExistence(timeout:10));XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));XCTAssertFalse(app.buttons["暂停"].exists);XCTAssertEqual(progress.value as? String,paused,"Web MV lifecycle must not move the paused music position");image("Paused music and its queue survive the real MV media lifecycle")
   }
+  func testLiveMiguArtistAlbums() throws {
+    let app=XCUIApplication();app.launch()
+    func reach(_ item:XCUIElement){for _ in 0..<20{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5))}
+    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    XCTAssertTrue(app.buttons["打开播放页"].firstMatch.waitForExistence(timeout:15))
+    app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
+    let artists=app.descendants(matching:.any).matching(identifier:"search-kind-artist").firstMatch;reach(artists);artists.tap()
+    let migu=app.descendants(matching:.any).matching(identifier:"咪咕").firstMatch;reach(migu);migu.tap()
+    let field=app.textFields["搜索艺术家"];reach(field);replaceText(field,with:"Ed Sheeran")
+    let artist=app.buttons["search-artist-mg-0"];XCTAssertTrue(artist.waitForExistence(timeout:45));artist.tap()
+    let first=app.otherElements["discovery-track-0"];XCTAssertTrue(first.waitForExistence(timeout:45))
+    let albums=app.descendants(matching:.any).matching(identifier:"artist-tab-albums").firstMatch;reach(albums);albums.tap()
+    let digital=app.buttons["discovery-item-0"];XCTAssertTrue(digital.waitForExistence(timeout:45));XCTAssertTrue(digital.label.contains("数字专辑"));image("Real Migu artist albums retain digital and ordinary catalog identities")
+    reach(digital);digital.tap();XCTAssertTrue(first.waitForExistence(timeout:45))
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label == %@","咪咕 · 已加载 7 / 7 首")).firstMatch.waitForExistence(timeout:10));XCTAssertEqual(app.staticTexts["album-artist"].label,"Ed Sheeran");image("Real Migu digital album has verified public tracks and metadata")
+    func cancelImport(_ count:Int,publicOnly:Bool=false){let button=app.buttons["discovery-import-full"];reach(button);if publicOnly{XCTAssertEqual(button.label,"导入公开曲目到音乐库")};button.tap();let alert=app.alerts[publicOnly ? "导入公开曲目":"导入公开专辑"];XCTAssertTrue(alert.waitForExistence(timeout:45));XCTAssertTrue(alert.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","\(count) 首")).firstMatch.exists);if publicOnly{XCTAssertTrue(alert.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","未返回的曲目不在本次导入范围内")).firstMatch.exists)};image("Real Migu import preview \(count) tracks");alert.buttons["取消"].tap()}
+    XCTAssertTrue(app.staticTexts["album-public-scope"].exists);cancelImport(7,publicOnly:true)
+    let albumBack=app.buttons["返回艺术家专辑"];reach(albumBack);albumBack.tap()
+    let normal=app.buttons["discovery-item-1"];XCTAssertTrue(normal.waitForExistence(timeout:15));reach(normal);normal.tap();XCTAssertTrue(first.waitForExistence(timeout:45))
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label == %@","咪咕 · 已加载 25 / 25 首")).firstMatch.waitForExistence(timeout:10));image("Real Migu ordinary album has an independent verified track count")
+    XCTAssertFalse(app.staticTexts["album-public-scope"].exists);cancelImport(25);reach(albumBack);albumBack.tap()
+    let more=app.buttons["加载更多"];reach(more);more.tap();XCTAssertTrue(app.buttons["discovery-item-30"].waitForExistence(timeout:45))
+    for _ in 0..<12{app.swipeDown()}
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label == %@","咪咕 · 已加载 60 张专辑")).firstMatch.waitForExistence(timeout:10));image("Real Migu artist album pagination loads sixty entries")
+    let back=app.buttons["返回搜索结果"];reach(back);back.tap();XCTAssertTrue(artist.waitForExistence(timeout:15))
+    let albumKind=app.descendants(matching:.any).matching(identifier:"search-kind-album").firstMatch;reach(albumKind);albumKind.tap()
+    let albumQuery=app.textFields["搜索专辑"];reach(albumQuery);replaceText(albumQuery,with:"No.6 Collaborations Project")
+    let searched=app.buttons["search-album-mg-0"];XCTAssertTrue(searched.waitForExistence(timeout:45));XCTAssertTrue(searched.label.contains("No.6 Collaborations Project"));reach(searched);searched.tap();XCTAssertTrue(first.waitForExistence(timeout:45));XCTAssertTrue(app.staticTexts["album-public-scope"].exists);image("Real Migu album search preserves digital resource type")
+    reach(back);back.tap();XCTAssertTrue(searched.waitForExistence(timeout:15));XCTAssertTrue(app.buttons["打开播放页"].firstMatch.exists);XCTAssertFalse(app.buttons["暂停"].exists)
+  }
   func testLiveMiguArtistSongs() throws {
     let app=XCUIApplication();app.launch()
     func reach(_ item:XCUIElement){for _ in 0..<18{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5))}
