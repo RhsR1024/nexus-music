@@ -30,3 +30,11 @@ NEXUS_UI_RUN_DIR=build/migu-artist-songs-live-20261103-r2 node scripts/test-ui.m
 ## 待验与下一步
 
 咪咕艺术家专辑已发现新公开目录，但包含普通和数字专辑不同资源身份，尚未接入。继续按ID/资源类型建立详情与分页；不把未支持条目套入普通专辑接口。真实弱网/限流/大曲库、全部歌曲操作/播放、VoiceOver/小屏、实体签名和本提交iOS27终态仍待。本机SDK26.2/iOS26.3.1模拟器结果不替代这些证据，F/J目标继续。
+
+## 清洁交付
+
+产品/测试提交`9a626be43423310743e3c6524ddee2acb8e2c37d`。clean archive manifest与提交一致，`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/最低15.1/设备族[1,2]，未签名。IPA 17,847,054字节，SHA-256 `21956ae41aa1171149fe91c269b1534e1159cd44dc5e1a484df0071e0b902378`；178项ZIP CRC、151项archive/IPA载荷逐字节、生产新目录标记与测试/私人/签名排除均通过。
+
+T7阶段`2026-11-03-migu-artist-songs-9a626be`保存241份映射文件/119,915,314字节，逐项0差异、SHA256SUMS PASS，源证据保留、零删除。首轮独立verifier沿用旧批输出文件前缀，已将本批回执隔离、从T7逐字节还原旧批回执，并重新核验；修正工具与新回执保存在独立`verification-supplement/`及其SHA清单，不覆盖初始阶段文件。
+
+收尾无活动Xcode/UI进程，内盘约70GiB/T7约574GiB可用，无需删除。历史`build/DerivedData`指向T7缓存的符号链接已改名保留为`build/DerivedData-external-preserved-20261103`，其目标全部保留；新的`build/DerivedData`是真实本机SSD目录。只更换缓存位置，没有搬移或删除工具链/缓存/个人文件。回执`build/logs/migu-artist-songs-cache-location.json`记录路径和恢复方式。以后UI构建会在本机重新生成缓存；该空目录不宣称已做新的UI构建验证。线上CI与完整功能目标仍待实际终态。
