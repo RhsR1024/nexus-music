@@ -44,6 +44,16 @@
 
 固定运行证据在 `build/ttml-rtc-evidence-1793664862/`：`ui-catalog.log` SHA-256 `f54976c53932fad40e96c81cc055098aab8fe4aab69358075b877f99d687c8bf`、`run-manifest.json` `08e7eeb401aa6e69afc1ef951ea879b6d927bdd6029474a4607ab813eb01078f`、`ui-summary.json` `fe5436ff6f4f7f76f53a9857248b6f803dc9de07185282d1430164ec5a31a68d`、`ui-server-counts.json` `d34750733322cf67773dd8117c65ad86c4de913f9fb8bbca933a479923006591`；完整 native 日志 SHA-256 `540e9cd7efd1fa0d31c9c2db9725f26d7b70325f1354c26cab4a3c0ad623623e`。
 
+## 发布与归档
+
+产品/测试/初始文档提交为 `295bf94e50a8583d463d15b70a3610dbddd4610e`，已正常 push 并实核 `origin/main` 一致。提交前 dirty IPA 为 17,832,598 字节、SHA-256 `0e0707de79796b05007eb0ff5d68a771d7a654d599f17d4cf1af4d6f03d3bcb4`，manifest SHA-256 `1399d03090f9e8d27e2107c56b7acb363bd4ab2dc19e95a04a1c5886e24f12b6`；IPA/archive/manifest 及诊断已复制至 T7 `2026-11-03-ttml-rtc-precommit-b9ddc87`，67个文件逐项校验通过。dirty 独立验证回执 `ready=true`，SHA-256 `0e34c845cbbd87c636cbacc4a6eced16563452a46ae888e8e54020dfd0b68213`。
+
+提交后从 clean 工作区重新生成 archive。`build-manifest.json` 与 HEAD 一致、`dirty=false`、`workingTreeChanges=[]`，SHA-256 `636c4502ddbe59848858f368b89b85732b14de2fcf25b3b675194adbeb3da68a`；arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`，`signed=false` 且无描述文件或顶层签名。clean IPA 为 17,832,598 字节、SHA-256 `f9ab39c6ee03f3b5920ad9f6b4143dab7a95fc08d062190bef990eee621139de`；archive log SHA-256 `c7b76f141c7e5fb90d663111d127c57dec1c719a38c0c38a6da4bdfaf00a3d31`。
+
+独立验证回执 `build/logs/ttml-rtc-clean-archive-verification-295bf94.json` 为 `ready=true`，SHA-256 `912379f4a05bb0c1da57242a125717028791c012ab278d21be4c9f7eee2f4932`。其中178项 ZIP 全部通过 CRC；151项 archive/IPA payload、39,522,298字节逐项一致；生产 `rubyInset` 标记存在；测试标记/测试路径、私人材料、描述文件和签名材料的禁止项均为空。`node scripts/sollin-reverse-gate.mjs ipa --review` 为 PASS，56 Evidence / 21 WorkItems / 119 timeline / 47 Findings / 47 Paths、0错误/0警告，日志 SHA-256 `eb3299bd08ec8dbbe3796a5723a9e9314e83c4e0f9efad77db9b90af46e80faa`。
+
+push 后初始实核为：`41521043387`/`9fb541a` 继续运行，`41553030339`/`295bf94` 为唯一 pending；旧 pending `41548304374`/`2310103` 由 `queue:single` 自动取消。队列为1运行/1排队，未手动取消或重派。最终 clean 阶段目录将在 Actions 快照和文档提交后于 T7 固化。
+
 ## 边界
 
 该结果是 iOS 26.3.1 模拟器上的合成歌词验证。实体 iPhone、实际 VoiceOver 发音、动态字号/小屏、真实歌词库、复杂字体、连续动效、签名/安装/续签及 iOS 27 Actions 终态继续开放。本批没有新增 Sollin 样本、目标运行时观察、私有请求或参考视觉语义，不提高完整 TTML2、S4/J35–42、F/J 或项目总完成度。

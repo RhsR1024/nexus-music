@@ -4,6 +4,10 @@
 
 正式 App fixture 在同一歌词行同时保留 AMLL `kanji` 注音并新增标准 `<rb>音</rb><rtc><rt>yin</rt></rtc>`。`npm run check` 992/992、完整 native 退出 0；Release `SourceUITests-1793664862752` 为1/0/0、172.649秒、`sourceUnchanged=true`，安装 bundle digest `1f8776bf…e13ee`，截图亲看确认 `kanji` 与 `yin` 分列位于“漢字”和“音”上方，XCTest 读到 `注音：kanji，yin`。首次调用因脚本重复 `-only-testing:` 前缀退出70且0/0，原结果保留，不计测试失败或通过。
 
+产品/测试/初始文档提交`295bf94`已正常push并实核`origin/main`一致。提交前 dirty IPA `0e0707de…bcb4`、17,832,598字节及其archive/manifest已复制至T7 `2026-11-03-ttml-rtc-precommit-b9ddc87`，67个归档文件逐项校验通过。提交后 clean manifest与HEAD一致、`dirty=false`/无工作区变更，arm64/iphoneos26.2/iOS15.1/[1,2]且未签名；clean IPA同为17,832,598字节、SHA-256 `f9ab39c6ee03f3b5920ad9f6b4143dab7a95fc08d062190bef990eee621139de`，manifest `636c4502…68a`，archive log `c7b76f14…d31`。独立核验`ready=true`：178项ZIP CRC、151项archive/IPA payload逐字节（39,522,298字节）、生产`rubyInset`、无描述文件/顶层签名及测试/私人/路径排除均通过，回执`912379f4…932`。`node scripts/sollin-reverse-gate.mjs ipa --review` PASS，56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增Sollin采集或私有探测。
+
+push后初始队列为`41521043387`/`9fb541a`继续运行、`41553030339`/`295bf94`唯一pending，即1运行/1排队；旧pending`41548304374`/`2310103`由`queue:single`自动取消，未手动取消或重派。当前边界仍是一个基础加一个`rtc`单注解；标准`rbc`多基础映射、双侧/多注音、跨行与完整TTML2排版、iOS27 Actions终态、实体机VoiceOver、真实歌词库、动态字号/小屏及签名/安装继续。
+
 详细协议边界、畸形矩阵与证据见[本批回执](docs/2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](docs/ui-spec/ttml-rtc-2026-11-03.md)。标准 `rbc` 多基础映射、双侧/多注音、跨行与完整 TTML2 排版仍开放；iOS 27 Actions、实体机 VoiceOver、真实歌词库、签名/安装继续。
 
 ## 2026-11-03 AMLL/标准 TTML 注音解析与原生绘制

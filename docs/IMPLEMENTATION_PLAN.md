@@ -6,6 +6,8 @@
 
 992/992检查、完整native退出0；正式Release`SourceUITests-1793664862752`为1/0/0、172.649秒、`sourceUnchanged=true`，安装bundle digest`1f8776bf…e13ee`，`ttmlAmll=2`。人工亲看截图确认两个注音分别位于“漢字”和“音”上方，可访问标签同时包含`kanji，yin`，普通尾文字不受影响。首次重复`-only-testing:`调用导致的0/0退出70原件保留，不计执行结果。
 
+产品/测试/初始文档`295bf94`已正常push并实核远端main。提交后clean unsigned archive的manifest与HEAD一致、`dirty=false`/无工作区变更，arm64/iphoneos26.2/iOS15.1/[1,2]且`signed=false`；IPA为17,832,598字节、SHA-256`f9ab39c6…1139de`，manifest`636c4502…3da68a`，archive log`c7b76f14…a3d31`。独立核验`ready=true`，178项ZIP CRC、151项archive/IPA payload/39,522,298字节逐项一致，生产`rubyInset`与隐私/测试/签名排除通过，回执`912379f4…2f4932`。`ipa --review` strict review为56E/21WI/119 timeline/47F/47P、0错误/0警告。dirty包与67个归档文件先存T7`2026-11-03-ttml-rtc-precommit-b9ddc87`；最终clean阶段将在推送与Actions快照后归档。push时旧pending自动被替换，当前`41521043387`继续运行、`41553030339`/`295bf94`唯一pending，队列1运行/1排队，未手动取消或重派。
+
 当前边界是一个基础加一个注解；`rbc`多基础映射、双侧/并行多注音、wrapping、右侧/行间位置和完整TTML2样式仍开放。实体机VoiceOver、真实歌词库、动态字号/小屏、签名与iOS27终态继续。见[回执](2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](ui-spec/ttml-rtc-2026-11-03.md)。
 
 ## 2026-11-03 AMLL/标准 TTML 注音解析与原生绘制

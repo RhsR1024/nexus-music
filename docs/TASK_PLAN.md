@@ -6,7 +6,10 @@
 - [x] 完整 `npm run test:native` 退出 0，既有 Sendable/weak-variable 警告不作为新失败或已修复声明。
 - [x] 正式 Release `SourceUITests-1793664862752` 为1/0/0、172.649秒、`sourceUnchanged=true`；截图亲看并确认 AMLL `kanji` 与标准 `rtc` `yin` 各自位于基础文字上方。
 - [x] 首次退出70/0/0的重复 `-only-testing:` 调用错误及结果原件保留；正确裸 target 参数的重跑才计入通过。
-- [ ] 生成并独立核验 clean unsigned IPA/archive；正常 push 后核对最新代码对应 iOS27 运行、至多1运行/1排队。
+- [x] 产品/测试/初始文档`295bf94`提交后从clean树生成17,832,598字节unsigned IPA，SHA-256`f9ab39c6…1139de`；manifest与HEAD一致、`dirty=false`，独立核验ZIP CRC、151项archive/IPA字节、架构/SDK/系统/设备族、生产标记、隐私/测试/签名排除均为`ready=true`。
+- [x] dirty阶段`2026-11-03-ttml-rtc-precommit-b9ddc87`已复制并校验67个文件；clean manifest`636c4502…3da68a`、archive log`c7b76f14…a3d31`、verification`912379f4…2f4932`。
+- [x] `ipa --review` strict review PASS，56E/21WI/119 timeline/47F/47P、0错误/0警告；无新增采集或私有探测。
+- [x] `295bf94`正常push并实核远端main；初始`41521043387`/`9fb541a`运行、`41553030339`/`295bf94`唯一pending，旧`41548304374`由`queue:single`自动取消，即1运行/1排队且未手动取消/重派。
 - [ ] `rbc` 多基础映射、双侧/多注解、wrapping/行间位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签和 iOS 27 终态。
 
 见[本批回执](2026-11-03-ttml-rtc-ruby-report.md)与[UI规格](ui-spec/ttml-rtc-2026-11-03.md)。本批不关闭完整 TTML2、S4/J35–42、F/J 或项目总目标。
