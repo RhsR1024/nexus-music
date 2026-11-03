@@ -6,9 +6,10 @@
 - [x] Release `SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`；同xcresult导出5张截图并亲看导入预览。
 - [x] `npm run check`992/992；Swift由正式测试构建编译，`git diff --check`通过。
 - [x] 本地unsigned archive成功，提交前IPA、archive、测试结果及未解决云端失败证据已复制至T7阶段并校验。
-- [ ] 提交后从clean HEAD重建并核验manifest、IPA、ZIP CRC、archive/IPA载荷、正式入口及隐私/签名排除。
+- [x] `2b6fbd5`提交后从clean HEAD重建并核验manifest、IPA、ZIP CRC、151项archive/IPA载荷、正式入口及隐私/签名排除；独立回执`ready=true`。
 - [x] `ipa --review`通过既有离线证据56E/21WI/119 timeline/47F/47P，0错误/0警告；本批无新增Sollin采集。
-- [ ] 正常提交push并核对远端与Actions队列；等待包含本补丁的iOS27运行终态。
+- [x] `2b6fbd5`正常push并实核远端main；`41556364945`为包含本补丁的唯一pending，当前队列1运行/1排队，未手动取消或重派。
+- [ ] `41556364945`/`2b6fbd5`的iOS27运行终态。
 - [ ] 实体设备、签名/安装/续签及真实Wayfarer数据继续独立验收。
 
 见[专项回执](2026-11-03-ios27-files-provider-root-navigation-report.md)。本批只关闭一次iOS27测试导航失败，不关闭Wayfarer、F/J或项目总目标。

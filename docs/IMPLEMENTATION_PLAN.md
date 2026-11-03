@@ -4,7 +4,9 @@
 
 `SourceSettingsTests.swift`现在仍优先选择目标文件/文件夹/文件行，但把实际`On My iPhone`单元检查放在`fixtureRoot`之前；点击进入后sidebar单元消失，后续轮次才接受提供方根并等待枚举。产品代码和Wayfarer测试断言不变，不用固定点击坐标或放宽目标文件断言绕过问题。
 
-定向Release`SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`，安装bundle与运行清单一致；5张截图从同xcresult导出并人工亲看。`npm run check`992/992；本地unsigned archive为arm64/iphoneos26.2/iOS15.1/[1,2]、未签名。提交后需要clean rebuild和独立回执，再由新iOS27 Actions终态确认修复。`ipa --review`复用既有离线证据并0错误/0警告，本批不新增Sollin语义结论。
+定向Release`SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`，安装bundle与运行清单一致；5张截图从同xcresult导出并人工亲看。`npm run check`992/992。产品/测试/初始文档提交`2b6fbd5`后，从clean HEAD生成的unsigned IPA为17,832,598字节、SHA-256`ab0f36957e10001d14dafb6c855d147f748837acd04dd00cdf8e4b5b61b66dff`；manifest为arm64/iphoneos26.2/iOS15.1/[1,2]且未签名，独立回执`ready=true`，151项archive/IPA载荷、ZIP CRC和隐私/测试/签名排除均通过。`ipa --review`复用既有离线证据并0错误/0警告，本批不新增Sollin语义结论。
+
+`2b6fbd5`已push并实核远端；`41556364945`/`2b6fbd5`是唯一pending，`41553030339`继续运行，当前1运行/1排队。最终修复结论仍以该iOS27 Actions终态为准。
 
 见[专项回执](2026-11-03-ios27-files-provider-root-navigation-report.md)。实体设备、签名/安装/续签和真实Wayfarer数据仍开放。
 

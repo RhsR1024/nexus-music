@@ -4,7 +4,9 @@
 
 定向Release`SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`；日志`439a7ba5…c3e41`、运行清单`5398cb1a…ad0665`、摘要`70342564…46c88`、计数`57b2b131…776d`。同一结果导出5张1290×2796截图，索引`e91b52ae…af03`，导入预览已亲看。`npm run check`992/992。
 
-本地unsigned archive为arm64/iphoneos26.2/iOS15.1/[1,2]、未签名，dirty IPA 17,832,598字节、SHA-256`09f583075041608f0c2bc78283c713d76d9974f5441ce7aba671e6e0fce3160c`。这只是提交前构建；clean rebuild、独立ZIP CRC/archive/IPA载荷/隐私检查和新的iOS27 Actions终态仍待。`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告。详见[专项回执](2026-11-03-ios27-files-provider-root-navigation-report.md)。
+提交前dirty IPA为17,832,598字节、SHA-256`09f583075041608f0c2bc78283c713d76d9974f5441ce7aba671e6e0fce3160c`，已由distribution history及T7预提交阶段保留。产品/测试/初始文档提交`2b6fbd5`后从clean HEAD重建：manifest`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed:false`；clean IPA同为17,832,598字节、SHA-256`ab0f36957e10001d14dafb6c855d147f748837acd04dd00cdf8e4b5b61b66dff`，manifest SHA-256`c449508b…27d57`、archive log`ff8fb906…14bf8`。
+
+独立回执`build/logs/files-provider-clean-archive-verification-2b6fbd5.json`为`ready=true`、SHA-256`d258d2e0…9b93fd`：151项archive/IPA载荷逐字节一致、ZIP CRC全通过，生产`rubyInset`存在，测试导航辅助/私人夹具、描述文件及签名材料均排除。`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告。`2b6fbd5`已push并实核远端；Actions为`41553030339`/`295bf94`运行、`41556364945`/`2b6fbd5`唯一pending，即1运行/1排队，iOS27终态仍待。详见[专项回执](2026-11-03-ios27-files-provider-root-navigation-report.md)。
 
 ## 2026-11-03 iOS 27 紧凑诊断产物加固
 

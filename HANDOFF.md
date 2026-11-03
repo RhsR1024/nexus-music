@@ -2,9 +2,11 @@
 
 `41521043387`/`9fb541a` 的 iOS27 App 组 6/7 通过，唯一失败`testWayfarerAppImport`在`SourceSettingsTests.swift:270`等待实际文件单元超时。紧凑日志与失败层级证明 Locations 根页同时发布`DOC.browsingRoot ... Title: Nexus UITest Fixtures`和可点击`On My iPhone`；旧辅助函数先接受标题，误以为已进入目录，因而第二次 picker 调用一直停留。未改产品代码，修复仅把`On My iPhone`单元检查移到`fixtureRoot`判断之前。
 
-定向Release `SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`；日志、运行清单、摘要、服务计数哈希已固定，5张1290×2796截图从同一xcresult导出并亲看导入预览。`npm run check`992/992；本地unsigned archive成功，arm64/iphoneos26.2/iOS15.1/[1,2]/未签名，dirty IPA SHA-256为`09f58307…3160c`。离线`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集/私有探测。
+定向Release `SourceUITests-1793666257714`为1/0/0、270.476秒、`sourceUnchanged=true`；日志、运行清单、摘要、服务计数哈希已固定，5张1290×2796截图从同一xcresult导出并亲看导入预览。`npm run check`992/992；本次开头的dirty IPA SHA-256为`09f58307…3160c`，已由distribution history和T7预提交阶段保留。离线`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集或私有探测。
 
-提交后仍需从clean HEAD重建并独立检查manifest、ZIP CRC、archive/IPA载荷、正式入口和隐私/签名排除，正常push后以新iOS27运行终态验证本修复。实体机、签名/安装/续签和真实Wayfarer数据继续开放。详见[专项回执](docs/2026-11-03-ios27-files-provider-root-navigation-report.md)。
+产品/测试/初始文档提交为`2b6fbd5`。提交后从clean HEAD重建的unsigned manifest为`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/iOS15.1/[1,2]且未签名；IPA 17,832,598字节、SHA-256`ab0f36957e10001d14dafb6c855d147f748837acd04dd00cdf8e4b5b61b66dff`。独立回执`ready=true`、SHA-256`d258d2e0…9b93fd`：151项archive/IPA载荷逐字节一致、ZIP CRC全通过，生产`rubyInset`存在，测试辅助/私人夹具、描述文件与签名材料均排除。
+
+`2b6fbd5`已正常push并实核远端main一致；推送后`41553030339`/`295bf94`继续运行，`41556364945`/`2b6fbd5`为唯一pending，实核1运行/1排队，未手动取消或重派。iOS27终态仍待。实体机、签名/安装/续签和真实Wayfarer数据继续开放。详见[专项回执](docs/2026-11-03-ios27-files-provider-root-navigation-report.md)。
 
 ## 2026-11-03 TTML 标准 `rtc` 单注解注音
 

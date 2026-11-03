@@ -57,10 +57,21 @@ node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testWayfarerAppIm
 
 ## 门禁与边界
 
-本地 unsigned device archive 已成功，arm64 / iphoneos26.2 / iOS 15.1 / 设备族 `[1,2]`、未签名。本批开始时的 dirty IPA SHA-256 为 `09f583075041608f0c2bc78283c713d76d9974f5441ce7aba671e6e0fce3160c`；提交后还必须从 clean HEAD 重建并单独核验 manifest、ZIP CRC、archive/IPA 载荷、正式入口和隐私/签名排除。
+本批开始时的 dirty IPA SHA-256 为 `09f583075041608f0c2bc78283c713d76d9974f5441ce7aba671e6e0fce3160c`。产品/测试/初始文档提交 `2b6fbd50288f2747b0d37e513c913cea4630b420` 后，已从 clean HEAD 重建并独立核验：
+
+- unsigned IPA：17,832,598 字节，SHA-256 `ab0f36957e10001d14dafb6c855d147f748837acd04dd00cdf8e4b5b61b66dff`
+- manifest：校验时 HEAD 一致、`dirty=false`、`workingTreeChanges=[]`，SHA-256 `c449508bc6eb94a72ac62d8583311199d34881f28c11661514b0d24750927d57`
+- archive log SHA-256：`ff8fb90605781f0e4cc9a23d8b1c34db77b26298994d45aa82c500d8f6514bf8`
+- arm64、iphoneos26.2、iOS 15.1、设备族 `[1,2]`、bundle `com.nexusmusic.app`，顶层未签名且无描述文件
+- 151 项 archive/IPA 文件逐字节一致，全部 ZIP 条目 CRC 通过
+- 生产 `rubyInset` 标记存在；`selectLocalFixture` 测试辅助名称、目标文件断言文本、私人夹具、测试 bundle、源映射、签名和描述文件材料均未进入 IPA
+
+独立验证回执 `build/logs/files-provider-clean-archive-verification-2b6fbd5.json` 为 `ready=true`，SHA-256 `d258d2e0ba8a7837089fe0bee780f455293d0c5bc850c2ba67764042ec9b93fd`。
 
 dirty IPA/archive、精确本地 xcresult、截图和日志，以及尚未由新 iOS 27 运行关闭的失败压缩包/附件已复制至 T7 `2026-11-03-files-provider-root-precommit-b3451f3`；839 个普通文件、115,768,597 字节的 `SHA256SUMS` 复核通过，回执 SHA-256 为 `7aeb35448785853c13909eebc83f1b08d36328569abacbf90c0c49cea0042272`，源证据保留。
 
 `node scripts/sollin-reverse-gate.mjs ipa --review` 通过，复用既有离线证据 `56 Evidence / 21 WorkItems / 119 timeline / 47 Findings / 47 Paths`，0 错误、0 警告。本批没有新增 Sollin 样本、目标观察或私有探测，也不提高任何 Sollin UI/功能完成度。
 
-本地模拟器通过只证明测试导航在 iOS 26.3.1 上闭环。真正的修复结论仍以包含本补丁的新 iOS 27 Actions 运行终态为准；实体设备、签名/安装/续签和真实 Wayfarer 数据继续独立验收。
+`2b6fbd5` 已正常 push 并实核 `origin/main` 一致。推送后的实际队列为 `41553030339` / `295bf94` 运行中，`41556364945` / `2b6fbd5` 为唯一 pending，即 1 运行 / 1 排队；没有手动取消或重派旧版本。
+
+本地模拟器通过只证明测试导航在 iOS 26.3.1 上闭环。真正的修复结论仍以 `41556364945` 的 iOS 27 Actions 终态为准；实体设备、签名/安装/续签和真实 Wayfarer 数据继续独立验收。
