@@ -93,6 +93,12 @@ push 后立即从 Actions 页面内嵌数据实核：
 - `41559631207` / `5a23db3`：由 `queue:single` 自动取消
 - 当前为 1 运行 / 1 排队；没有手动取消、重派旧版本或 force push
 
-最终版文档提交后建立 clean T7 阶段，保存精确 clean IPA、archive、xcresult、截图、日志、提交源码与文档，并生成逐文件 SHA-256、`SHA256SUMS` 与 transfer receipt。阶段创建不删除或搬移源证据。
+clean T7 阶段已建立：
+
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-03-ttml-double-sided-235d0d8`
+
+该阶段保存精确 clean IPA、archive、xcresult、4PNG、运行/strict/归档/clean 核验日志、Actions 页面快照、修改源码与文档、提交补丁和预提交回执。257 份映射文件、108,283,979 字节逐项 SHA-256 比较，missing/extra/mismatch 全为 0；普通 payload 162 份、107,997,047 字节，另有 223 份 exFAT AppleDouble 元数据。`SHA256SUMS` SHA-256 `3a869ed8ccd175c42a410f3390cedec198fddacbb0a542ac62d74d6df1da3d0e` 全量复核 PASS，`transfer-receipt.json` SHA-256 `4e5570eeab9c737a6c5fb528a5898f0ac59168a21b62ef2bb1f598c56cdac976`、`ready=true`。操作仅为复制，源证据保留，`deleted=0`、`movedUserFiles=0`、活动构建 0。
+
+阶段收尾检查内盘可用 75,451,416,576 字节、T7 可用 620,985,843,712 字节，`build/` 约 7.43GiB。最新有效产物、未解决 CI 证据和 reverse-skill 离线证据均保留，无需删除；清理检查回执 `build/logs/cleanup-2026-11-03-ios27-double-sided.json` SHA-256 `09ccea945d99303f5d6fbc6bfd06590c4a513ad89ae5462ea48d1a2947930b18`。
 
 模拟器截图、合成歌词和 unsigned archive 不替代实体 iPhone VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签或 iOS 27 Actions 终态验收。

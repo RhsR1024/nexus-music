@@ -8,7 +8,9 @@ dirty IPA为17,837,222字节、SHA-256`2999cd1e…3f04e`，manifest`2f26d383…e
 
 产品/测试/初始文档提交`235d0d8`已正常push并实核远端main。clean manifest与HEAD一致、`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`；clean IPA为17,837,222字节、SHA-256`c6a8def1a566eb5438f5b7665496a8575c9b2ad1ec25dafd606b011ba546eb6e`，manifest`1be5a055…209a`、archive log`2b9d35ae…7a78`。独立回执`19142a54…946e`为`passed=true`，178项ZIP CRC、151项archive/IPA字节、生产四标记及测试/私人/签名排除通过。
 
-push后Actions实核`41553030339`/`295bf94`运行、`41563617753`/`235d0d8`唯一pending，`41559631207`/`5a23db3`由`queue:single`自动取消，当前1运行/1排队。最终版文档提交后建立带逐文件哈希的clean T7阶段。模拟器与unsigned包不替代实体机VoiceOver、真实歌词库、动态字号/小屏、跨行/完整TTML2、签名安装或iOS27终态。见[专项回执](2026-11-03-ttml-double-sided-ruby-report.md)。
+push后Actions实核`41553030339`/`295bf94`运行、`41563617753`/`235d0d8`唯一pending，`41559631207`/`5a23db3`由`queue:single`自动取消，当前1运行/1排队。clean T7阶段`2026-11-03-ttml-double-sided-235d0d8`保存精确IPA/archive/xcresult/截图/日志/源码/文档/补丁和Actions快照：257份映射/108,283,979字节0差异，普通payload162份/107,997,047字节、AppleDouble 223份，`SHA256SUMS`SHA-256`3a869ed8…3d0e`复核PASS，transfer receipt`4e5570ee…c976`为`ready=true`，源证据保留且`deleted=0/movedUserFiles=0`。
+
+阶段收尾内盘可用75,451,416,576字节、T7可用620,985,843,712字节，`build/`约7.43GiB；最新产物、未解决CI证据与reverse-skill离线证据保留，无删除或用户文件搬移，回执`build/logs/cleanup-2026-11-03-ios27-double-sided.json` SHA-256`09ccea94…0b18`。模拟器与unsigned包不替代实体机VoiceOver、真实歌词库、动态字号/小屏、跨行/完整TTML2、签名安装或iOS27终态。见[专项回执](2026-11-03-ttml-double-sided-ruby-report.md)。
 
 ## 2026-11-03 TTML `rbc` 多基础注音
 

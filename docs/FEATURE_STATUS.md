@@ -10,7 +10,8 @@
 - [x] dirty unsigned archive、178项ZIP CRC、151项archive/IPA字节、生产四标记及测试/私人/签名排除通过；T7预提交阶段136份/100,950,204字节逐项核验。
 - [x] 产品/测试/初始文档`235d0d8`已push并实核远端main；clean unsigned manifest/HEAD、178项ZIP CRC、151项archive/IPA字节、生产四标记及测试/私人/签名排除通过，IPA`c6a8def1…46eb6e`。
 - [x] push后`41553030339`运行、`41563617753`/`235d0d8`唯一pending，旧`41559631207`自动取消，当前1运行/1排队。
-- [ ] `41563617753` iOS27 Actions终态；最终版文档提交后的clean T7阶段与transfer receipt。
+- [x] clean T7阶段`2026-11-03-ttml-double-sided-235d0d8`逐项核验257份映射/108,283,979字节0差异，`SHA256SUMS`PASS、transfer receipt`4e5570ee…c976`，源证据保留且零删除。
+- [ ] `41563617753` iOS27 Actions终态。
 - [ ] 跨行/wrapping、行间/右侧位置、完整TTML2样式、实体VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签与iOS27终态。
 
 见[本批回执](2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](ui-spec/ttml-double-sided-ruby-2026-11-03.md)。J37/S4仍保持B状态，本批不关闭完整TTML2、F/J或项目。

@@ -10,7 +10,8 @@
 - [x]dirty unsigned archive、178项ZIP CRC、151项archive/IPA字节、生产四标记与隐私/签名排除通过；精确证据复制至T7预提交阶段并逐文件核验。
 - [x]产品/测试/初始文档`235d0d8`提交后从clean HEAD重建unsigned archive；manifest/HEAD、178项ZIP CRC、151项archive/IPA字节、arm64/SDK26.2/iOS15.1/[1,2]、生产四标记与隐私/签名排除通过。
 - [x]正常push并实核远端main；`41553030339`运行、`41563617753`/`235d0d8`唯一pending，旧`41559631207`由`queue:single`自动取消，当前1运行/1排队。
-- [ ]`41563617753`/`235d0d8` iOS27 Actions终态；最终版文档提交后保存clean T7阶段、逐文件哈希及transfer receipt。
+- [x]clean T7阶段`2026-11-03-ttml-double-sided-235d0d8`保存精确IPA/archive/xcresult/截图/日志/源码/文档/补丁与Actions快照；257份映射/108,283,979字节0差异，SHA全量复核PASS，源证据保留且零删除。
+- [ ]`41563617753`/`235d0d8` iOS27 Actions终态；阶段收尾空间检查已记录，无需删除。
 - [ ]`before`/`after`以外的换行/wrapping、行间/右侧、完整TTML2样式、实体VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签与iOS27终态。
 
 见[本批回执](2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](ui-spec/ttml-double-sided-ruby-2026-11-03.md)。本批只增加当前单行模型内的双侧注音，不关闭完整TTML2、S4/J35–42、F/J或项目总目标。
