@@ -1,6 +1,6 @@
 import {createLyricBudget} from './budget.ts';
 import {parseTTML} from './ttml.ts';
-export interface LyricWord {startMs:number;endMs:number;text:string;ruby?:string}
+export interface LyricWord {startMs:number;endMs:number;text:string;ruby?:string;rubyAfter?:string}
 export interface LyricCue extends LyricWord {byteStart:number;byteEnd:number}
 export interface LyricLine {layerGroup?:number;primary?:boolean;timedCues?:readonly LyricCue[];timingFallback?:'untimed_text'|'invalid_cues';background?:boolean;agent?:string;startMs:number;endMs?:number;text:string;words?:readonly LyricWord[];translation?:string;romanization?:string}
 export interface LyricDocument {lines:readonly LyricLine[];plain:readonly string[];synced:boolean}
@@ -83,6 +83,6 @@ export function activeLyric(lines:readonly LyricLine[],positionMs:number,userOff
 // pronunciation. Keep the visible line unchanged and expose annotations as
 // compact auxiliary text for the row's existing accessible owner.
 export function lyricSpokenText(line:LyricLine):string {
-  const ruby=[...new Set((line.words??[]).flatMap(word=>word.ruby?.trim()?[word.ruby.trim()]:[]))];
+  const ruby=[...new Set((line.words??[]).flatMap(word=>[word.ruby,word.rubyAfter]).flatMap(value=>value?.trim()?[value.trim()]:[]))];
   return ruby.length?`${line.text}，注音：${ruby.join('，')}`:line.text;
 }

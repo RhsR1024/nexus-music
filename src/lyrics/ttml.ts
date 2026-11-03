@@ -14,6 +14,13 @@ function rubyValue(raw:string,preserve:boolean):string {
   if(!value||value.length>512||/[\u0000-\u001f\u007f]/.test(value))throw new Error('TTML 注音文字无效');
   return value;
 }
+type RubyPosition='before'|'after';
+function rubyPosition(node:Element):RubyPosition|undefined {
+  const value=attr(node,'rubyPosition');
+  if(value===undefined)return;
+  if(value!=='before'&&value!=='after')throw new Error('TTML 注音位置不支持');
+  return value;
+}
 export function parseTTML(input:string):LyricDocument {
   const root=parseBoundedXML(input);if(local(root.name)!=='tt')throw new Error('TTML 根节点无效');
   // AMLL's explicitly namespaced lyric profile uses media-absolute timestamps,
@@ -71,11 +78,11 @@ export function parseTTML(input:string):LyricDocument {
     const context=timing(node,parent,syncBase,parentContainer);
     if(local(node.name)==='p'){
       const main:LyricWord[]=[],bg:LyricWord[]=[],translation:string[]=[],romanization:string[]=[],bgTranslation:string[]=[],bgRomanization:string[]=[];
-      const addText=(child:string,leaf:Timing,role:string,background:boolean,ruby?:string)=>{
+      const addText=(child:string,leaf:Timing,role:string,background:boolean,ruby?:string,rubyAfter?:string)=>{
         const text=leaf.preserve?child:child.replace(/\s+/g,' ');if(!text)return;
         if(!leaf.preserve&&!text.trim()&&role!=='x-translation'&&role!=='x-roman'){const words=background?bg:main;if(words.length&&!words.at(-1)!.text.endsWith(' '))words[words.length-1]={...words.at(-1)!,text:words.at(-1)!.text+' '};return;}
         if(role==='x-translation'){(background?bgTranslation:translation).push(text);return;}if(role==='x-roman'){(background?bgRomanization:romanization).push(text);return;}
-        (background?bg:main).push({text,startMs:leaf.start,endMs:leaf.end,...(ruby?{ruby}:{})});
+        (background?bg:main).push({text,startMs:leaf.start,endMs:leaf.end,...(ruby?{ruby}:{}),...(rubyAfter?{rubyAfter}:{})});
       };
       const collect=(containerNode:Element,context:Timing,role:string,background:boolean,containerKind:Container)=>{
         // AMLL encodes ruby with tts:ruby roles on spans. The annotation is
@@ -88,53 +95,78 @@ export function parseTTML(input:string):LyricDocument {
           if(containerNode.children.some(child=>typeof child==='string'&&!!child.trim()))throw new Error('TTML 注音容器包含游离文字');
           const bases=elements.filter(child=>attr(child,'ruby')==='base');
           const annotationContainers=elements.filter(child=>attr(child,'ruby')==='textContainer');
-          if(bases.length!==1||annotationContainers.length!==1||elements.length!==2)throw new Error('TTML 注音容器结构不支持');
-          const baseNode=bases[0]!,annotationContainer=annotationContainers[0]!;
-          if(annotationContainer.children.some(child=>typeof child==='string'&&!!child.trim()))throw new Error('TTML 注音文字结构不支持');
-          const annotations=annotationContainer.children.filter((child):child is Element=>typeof child!=='string');
-          if(annotations.length!==1||attr(annotations[0]!,'ruby')!=='text')throw new Error('TTML 注音文字结构不支持');
+          if(bases.length!==1||annotationContainers.length<1||annotationContainers.length>2||elements.length!==1+annotationContainers.length)throw new Error('TTML 注音容器结构不支持');
+          const baseNode=bases[0]!;
+          const inheritedPosition=rubyPosition(containerNode);
+          const records=annotationContainers.map(annotationContainer=>{
+            if(annotationContainer.children.some(child=>typeof child==='string'&&!!child.trim()))throw new Error('TTML 注音文字结构不支持');
+            const annotations=annotationContainer.children.filter((child):child is Element=>typeof child!=='string');
+            if(annotations.length!==1||attr(annotations[0]!,'ruby')!=='text')throw new Error('TTML 注音文字结构不支持');
+            const declaredPosition=rubyPosition(annotationContainer),leafPosition=rubyPosition(annotations[0]!);
+            if(declaredPosition&&leafPosition&&declaredPosition!==leafPosition)throw new Error('TTML 注音位置冲突');
+            const explicitPosition=declaredPosition??leafPosition;
+            if(annotationContainers.length===2&&explicitPosition===undefined)throw new Error('TTML 双侧注音位置不明确');
+            if(inheritedPosition&&explicitPosition&&inheritedPosition!==explicitPosition)throw new Error('TTML 注音位置冲突');
+            const position=explicitPosition??inheritedPosition??'before';
+            const annotationNode=annotations[0]!,annotationParent=timing(annotationContainer,context,context.start,'par');
+            return{position,annotationNode,annotationParent,annotationTiming:timing(annotationNode,annotationParent,annotationParent.start,'par'),ruby:rubyValue(plainText(annotationNode),context.preserve),containerTimed:hasTiming(annotationContainer),nodeTimed:hasTiming(annotationNode)};
+          });
+          if(new Set(records.map(record=>record.position)).size!==records.length)throw new Error('TTML 注音位置重复');
           const base=plainText(baseNode);if(!base)throw new Error('TTML 注音缺少基础文字');
-          const annotationNode=annotations[0]!,ruby=rubyValue(plainText(annotationNode),context.preserve);
           const baseTiming=timing(baseNode,context,context.start,'par');
-          const annotationParent=timing(annotationContainer,context,context.start,'par');
-          const annotationTiming=timing(annotationNode,annotationParent,annotationParent.start,'par');
-          const leaf=hasTiming(baseNode)?baseTiming:hasTiming(annotationNode)||hasTiming(annotationContainer)?annotationTiming:context;
-          addText(base,leaf,role,background,ruby);return;
+          const ordered=[...records].sort((a,b)=>Number(a.position==='after')-Number(b.position==='after'));
+          const leaf=hasTiming(baseNode)?baseTiming:ordered.find(record=>record.nodeTimed)?.annotationTiming??ordered.find(record=>record.containerTimed)?.annotationTiming??ordered[0]!.annotationTiming;
+          const before=ordered.find(record=>record.position==='before'),after=ordered.find(record=>record.position==='after');
+          addText(base,leaf,role,background,before?.ruby,after?.ruby);return;
         }
         if(local(containerNode.name)==='ruby'){
           // Standard TTML ruby: ruby contains base text/rb plus one or more rt
           // annotations. rp is a non-authoritative fallback and is ignored.
-          // A grouped rtc is accepted only when it maps one base carrier to
-          // exactly one rt; the current lyric model has one annotation slot.
+          // A grouped rbc may carry one or two explicitly positioned rtc
+          // tracks. Unique before/after tracks map to the two annotation slots.
           const rubyElements=containerNode.children.filter((child):child is Element=>typeof child!=='string');
           const explicitBaseContainers=rubyElements.filter(child=>local(child.name)==='rbc');
           if(explicitBaseContainers.length){
+            const rtcContainers=rubyElements.filter(child=>local(child.name)==='rtc');
             if(containerNode.children.some(child=>typeof child==='string'&&!!child.trim())||
-               explicitBaseContainers.length!==1||rubyElements.length!==2||
-               local(rubyElements[0]!.name)!=='rbc'||local(rubyElements[1]!.name)!=='rtc'){
+               explicitBaseContainers.length!==1||rtcContainers.length<1||rtcContainers.length>2||rubyElements.length!==1+rtcContainers.length||
+               local(rubyElements[0]!.name)!=='rbc'||rubyElements.slice(1).some(child=>local(child.name)!=='rtc')){
               throw new Error('TTML 注音分组结构不支持');
             }
-            const baseContainer=rubyElements[0]!,annotationContainer=rubyElements[1]!;
+            const baseContainer=rubyElements[0]!;
             const baseContext=hasTiming(baseContainer)?timing(baseContainer,context,context.start,'par'):context;
             const baseNodes=baseContainer.children.filter((child):child is Element=>typeof child!=='string');
             if(baseContainer.children.some(child=>typeof child==='string'&&!!child.trim())||
                baseNodes.some(child=>local(child.name)!=='rb')||!baseNodes.length){
               throw new Error('TTML 注音基础容器结构不支持');
             }
-            const annotationContext=hasTiming(annotationContainer)?timing(annotationContainer,context,context.start,'par'):context;
-            const annotationElements=annotationContainer.children.filter((child):child is Element=>typeof child!=='string');
-            if(annotationContainer.children.some(child=>typeof child==='string'&&!!child.trim())||
-               annotationElements.some(child=>local(child.name)!=='rt'&&local(child.name)!=='rp')){
-              throw new Error('TTML 注音文字容器结构不支持');
-            }
-            const annotationNodes=annotationElements.filter(child=>local(child.name)==='rt');
-            if(!annotationNodes.length||annotationNodes.length!==baseNodes.length)throw new Error('TTML 注音基础与注解数量不匹配');
+            const inheritedPosition=rubyPosition(containerNode);
+            const tracks=rtcContainers.map(annotationContainer=>{
+              const annotationContext=hasTiming(annotationContainer)?timing(annotationContainer,context,context.start,'par'):context;
+              const annotationElements=annotationContainer.children.filter((child):child is Element=>typeof child!=='string');
+              if(annotationContainer.children.some(child=>typeof child==='string'&&!!child.trim())||
+                 annotationElements.some(child=>local(child.name)!=='rt'&&local(child.name)!=='rp')){
+                throw new Error('TTML 注音文字容器结构不支持');
+              }
+              const annotationNodes=annotationElements.filter(child=>local(child.name)==='rt');
+              if(!annotationNodes.length||annotationNodes.length!==baseNodes.length)throw new Error('TTML 注音基础与注解数量不匹配');
+              const declaredPosition=rubyPosition(annotationContainer),leafPositions=annotationNodes.map(node=>rubyPosition(node));
+              if(new Set(leafPositions.filter((value):value is RubyPosition=>value!==undefined)).size>1)throw new Error('TTML 注音位置冲突');
+              const explicitPosition=declaredPosition??leafPositions.find(value=>value!==undefined);
+              if(rtcContainers.length===2&&explicitPosition===undefined)throw new Error('TTML 双侧注音位置不明确');
+              if(inheritedPosition&&explicitPosition&&inheritedPosition!==explicitPosition)throw new Error('TTML 注音位置冲突');
+              const timings=annotationNodes.map(node=>hasTiming(node)?timing(node,annotationContext,annotationContext.start,'par'):annotationContext);
+              return{position:explicitPosition??inheritedPosition??'before',containerTimed:hasTiming(annotationContainer),
+                timings,rubies:annotationNodes.map((node,index)=>rubyValue(plainText(node),timings[index]!.preserve)),nodeTimed:annotationNodes.map(hasTiming)};
+            });
+            if(new Set(tracks.map(track=>track.position)).size!==tracks.length)throw new Error('TTML 注音位置重复');
+            const ordered=[...tracks].sort((a,b)=>Number(a.position==='after')-Number(b.position==='after'));
             baseNodes.forEach((baseNode,index)=>{
-              const annotationNode=annotationNodes[index]!;
+              const before=ordered.find(track=>track.position==='before'),after=ordered.find(track=>track.position==='after');
               const leaf=hasTiming(baseNode)?timing(baseNode,baseContext,baseContext.start,'par'):
-                hasTiming(annotationNode)?timing(annotationNode,annotationContext,annotationContext.start,'par'):annotationContext;
+                ordered.find(track=>track.nodeTimed[index])?.timings[index]??ordered.find(track=>track.containerTimed)?.timings[index]??ordered[0]!.timings[index]!;
               const base=plainText(baseNode);if(!base.trim())throw new Error('TTML 注音缺少基础文字');
-              addText(base,leaf,role,background,rubyValue(plainText(annotationNode),leaf.preserve));
+              addText(base,leaf,role,background,before?.rubies[index]!,after?.rubies[index]!);
             });
             return;
           }
@@ -142,7 +174,10 @@ export function parseTTML(input:string):LyricDocument {
           const addRuby=(annotationNode:Element)=>{
             const base=pending;pending='';if(!base.trim())throw new Error('TTML 注音缺少基础文字');
             const leaf=timing(annotationNode,context,context.start,'par');
-            addText(base,leaf,role,background,rubyValue(plainText(annotationNode),leaf.preserve));count++;
+            const inheritedPosition=rubyPosition(containerNode),declaredPosition=rubyPosition(annotationNode);
+            if(inheritedPosition&&declaredPosition&&inheritedPosition!==declaredPosition)throw new Error('TTML 注音位置冲突');
+            const position=declaredPosition??inheritedPosition??'before',ruby=rubyValue(plainText(annotationNode),leaf.preserve);
+            addText(base,leaf,role,background,position==='before'?ruby:undefined,position==='after'?ruby:undefined);count++;
           };
           for(const child of containerNode.children){
             if(typeof child==='string'){
@@ -162,7 +197,10 @@ export function parseTTML(input:string):LyricDocument {
               const annotations=children.filter(item=>local(item.name)==='rt');
               if(children.some(item=>local(item.name)!=='rt'&&local(item.name)!=='rp')||annotations.length!==1)throw new Error('TTML 注音分组结构不支持');
               const annotationNode=annotations[0]!,leaf=hasTiming(annotationNode)?timing(annotationNode,rtcContext,rtcContext.start,'par'):rtcContext;
-              addText(base,leaf,role,background,rubyValue(plainText(annotationNode),leaf.preserve));count++;sawRtc=true;
+              const inheritedPosition=rubyPosition(containerNode),containerPosition=rubyPosition(child),leafPosition=rubyPosition(annotationNode);
+              if(new Set([inheritedPosition,containerPosition,leafPosition].filter((value):value is RubyPosition=>value!==undefined)).size>1)throw new Error('TTML 注音位置冲突');
+              const position=leafPosition??containerPosition??inheritedPosition??'before',ruby=rubyValue(plainText(annotationNode),leaf.preserve);
+              addText(base,leaf,role,background,position==='before'?ruby:undefined,position==='after'?ruby:undefined);count++;sawRtc=true;
             }
             else {
               if(sawRtc)throw new Error('TTML 注音分组混用');

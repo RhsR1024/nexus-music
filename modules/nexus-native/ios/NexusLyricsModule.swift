@@ -18,13 +18,14 @@ private final class LyricClockTarget: NSObject {
 
 // Original TextKit renderer: only this visible line redraws, never a React list.
 final class NexusLyricLineView: ExpoView {
+  private enum RubyPosition { case before, after }
   private let storage = NSTextStorage()
   private let manager = NSLayoutManager()
   private let container = NSTextContainer(size: .zero)
   private let clockTarget = LyricClockTarget()
   private var clock: CADisplayLink?
   private var words: [(range: NSRange, start: Double, end: Double)] = []
-  private var rubyAnnotations: [(range: NSRange, text: String)] = []
+  private var rubyAnnotations: [(range: NSRange, text: String, position: RubyPosition)] = []
   private var untimedRanges: [NSRange] = []
   private var sparseCues: [LyricCueRange]?
   private var position = 0.0, anchor = 0.0, playing = false
@@ -35,6 +36,7 @@ final class NexusLyricLineView: ExpoView {
   private var blurred: UIImage?
   private var blurredSize = CGSize.zero
   private var rubyInset = CGFloat.zero
+  private var rubyAfterInset = CGFloat.zero
   private var textFont = UIFont.systemFont(ofSize: 24, weight: .semibold)
   private static let imageContext = CIContext(options: [.cacheIntermediates: false])
   private static func color(_ raw: String) -> UIColor {
@@ -100,6 +102,7 @@ final class NexusLyricLineView: ExpoView {
     let maxLines = (object["maxLines"] as? Int).map { min(10, max(0, $0)) } ?? 0
     let radius = min(4, max(0, (object["blur"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
     rubyInset = min(30, max(0, (object["rubyInset"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
+    rubyAfterInset = min(30, max(0, (object["rubyAfterInset"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
     emphasis = object["emphasis"] as? Bool != false
     let hex = object["color"] as? String ?? "#FFFFFF"
     let fontURI = object["fontURI"] as? String ?? ""
@@ -143,10 +146,8 @@ final class NexusLyricLineView: ExpoView {
                 start.isFinite, end.isFinite, start >= 0, end >= start, end <= 86400000 else { words.removeAll(); rubyAnnotations.removeAll(); break }
           let range = NSRange(location: offset, length: part.utf16.count)
           words.append((range, start, end))
-          if let ruby = word["ruby"] as? String, !ruby.isEmpty, ruby.utf16.count <= 512,
-             ruby.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) {
-            rubyAnnotations.append((range, ruby))
-          }
+          if let ruby = Self.validRuby(word["ruby"]) { rubyAnnotations.append((range, ruby, .before)) }
+          if let ruby = Self.validRuby(word["rubyAfter"]) { rubyAnnotations.append((range, ruby, .after)) }
           offset += part.utf16.count
         }
       }
@@ -193,8 +194,13 @@ final class NexusLyricLineView: ExpoView {
     }
     context.restoreGState()
   }
+  private static func validRuby(_ value: Any?) -> String? {
+    guard let text = value as? String, !text.isEmpty, text.utf16.count <= 512,
+          text.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) else { return nil }
+    return text
+  }
   private func drawRuby(in context: CGContext) {
-    guard rubyInset > 0, !rubyAnnotations.isEmpty else { return }
+    guard rubyInset > 0 || rubyAfterInset > 0, !rubyAnnotations.isEmpty else { return }
     let naturalSize = min(12, max(9, textFont.pointSize * 0.46))
     for item in rubyAnnotations {
       let glyphs = manager.glyphRange(forCharacterRange: item.range, actualCharacterRange: nil)
@@ -212,8 +218,17 @@ final class NexusLyricLineView: ExpoView {
       let height = ceil(font.lineHeight)
       let width = ceil((item.text as NSString).size(withAttributes: [.font: font]).width)
       let x = min(max(0, region.midX - width / 2), max(0, bounds.width - width))
-      let baseTop = rubyInset + region.minY
-      let y = max(0, min(rubyInset - height, baseTop - height - 1))
+      let y: CGFloat
+      switch item.position {
+      case .before:
+        guard rubyInset > 0 else { continue }
+        let baseTop = rubyInset + region.minY
+        y = max(0, min(rubyInset - height, baseTop - height - 1))
+      case .after:
+        guard rubyAfterInset > 0 else { continue }
+        let baseBottom = rubyInset + region.maxY
+        y = max(0, min(bounds.height - rubyAfterInset, baseBottom + 1))
+      }
       (item.text as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.9)])
     }
   }

@@ -1,3 +1,15 @@
+## 2026-11-03 TTML 双侧注音
+
+`LyricWord`新增可选`rubyAfter`，既有`ruby`继续表示`before`。`src/lyrics/ttml.ts`复用单一歌词模型，只接受TTML2`tts:rubyPosition`的`before`或`after`：AMLL支持一个base加一至两个位置明确的textContainer，标准rbc支持一个基础轨道加一至两个rtc，直接rb/rt支持单个显式位置。单个无位置注解继续默认上方；双注解必须分别、唯一声明before与after。重复、缺失、未知或冲突位置、数量不等、空容器、额外轨道、直接/分组混用和游离文字全部拒绝，不按字符数或读音猜测。
+
+`parser.ts`把上下注音合并进无障碍文本并去重；`Lyrics.tsx`对任一注音字段保留非当前行停车行为；`NativeLyricLine.tsx`分别预留`rubyInset`与`rubyAfterInset`；Swift TextKit维护注解位置并在基础范围上下绘制。没有新增React逐帧歌词列表、第二播放器或第二权威时间线。
+
+聚焦契约27/27、`npm run check`995/995、TypeScript类型检查、完整native、`node --check`、Swift parse和diff均通过。固定provenance Release`SourceUITests-1793670038024`为1/0/0、摘要总耗时345.561秒、`sourceUnchanged=true`；源码digest`364503cd…b03e9`、安装bundle`bb64941d…f318`。运行清单`5ec34b92…0fb0`、UI摘要`6cee2355…85a4`、服务计数`d3475073…6591`、catalog`1c76f1c2…d4cd`，`ttmlAmll=2`且鉴权失败0。人工亲看截图为1290×2796，SHA-256`894a427f…30e64`，确认`shuang`在“双”上方、`sou`在下方；`ipa --review`再次通过56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增Sollin采集。
+
+提交前dirty IPA为17,837,222字节、SHA-256`2999cd1e…f04e`；178项ZIP CRC、151项archive/IPA字节、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名及生产`rubyAfter/rubyPosition/rubyAfterInset/rubyInset`/隐私排除通过。完整证据先复制至T7预提交阶段，136份普通文件/100,950,204字节0差异，源证据保留。clean archive、正常push、Actions和clean T7阶段仍在当前批次执行。
+
+当前边界是当前单词行内、上下两侧各一个注音；跨行/wrapping、行间/右侧精确排版、完整TTML2样式、实体VoiceOver、真实歌词库、动态字号/小屏及签名继续。见[本批回执](2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](ui-spec/ttml-double-sided-ruby-2026-11-03.md)。
+
 ## 2026-11-03 TTML `rbc` 多基础注音映射
 
 `src/lyrics/ttml.ts` 现在接受标准 `<ruby><rbc><rb>…</rb></rbc><rtc><rt>…</rt></rtc></ruby>`，仅在有效基础数与有效注解数相等时按顺序一一绑定。每对词优先采用 `<rb>` 的显式时间；基础未带时间时采用对应 `<rt>` 的时间，再回退 `<rtc>`/`<ruby>` 上下文。`<rp>` 继续作为非权威回退忽略。TTML2 对数量不等没有规定映射，因此空容器、数量不等、顺序颠倒、额外 `<rtc>`、非 `<rb>` 基础项、非 `<rt>/<rp>` 注解项和游离文字全部拒绝并沿用歌曲来源回退。

@@ -11,8 +11,10 @@ export const NativeLyricLine=memo(function NativeLyricLine({line,position,playin
   const points=Math.min(100,Math.max(10,size*useWindowDimensions().fontScale));
   // NSLayoutManager does not paint the Core Text ruby attribute. Reserve a
   // compact annotation row and let the native renderer place it over the base.
-  const rubyInset=line.words?.some(word=>word.ruby?.trim())?Math.ceil(Math.max(9,Math.min(12,points*.46))*1.25+1):0;
-  return <View pointerEvents="none" style={rubyInset?{paddingTop:rubyInset}:undefined}><Text accessible={false} allowFontScaling={false} numberOfLines={maxLines} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight),fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{line.text}</Text>
-    <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden,maxLines,rubyInset})}/>
+  const rubyHeight=Math.ceil(Math.max(9,Math.min(12,points*.46))*1.25+1);
+  const rubyInset=line.words?.some(word=>word.ruby?.trim())?rubyHeight:0;
+  const rubyAfterInset=line.words?.some(word=>word.rubyAfter?.trim())?rubyHeight:0;
+  return <View pointerEvents="none" style={rubyInset||rubyAfterInset?{...(rubyInset?{paddingTop:rubyInset}:{}),...(rubyAfterInset?{paddingBottom:rubyAfterInset}:{})}:undefined}><Text accessible={false} allowFontScaling={false} numberOfLines={maxLines} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight),fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{line.text}</Text>
+    <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden,maxLines,rubyInset,rubyAfterInset})}/>
   </View>;
 });

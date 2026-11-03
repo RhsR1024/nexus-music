@@ -1,3 +1,13 @@
+## 2026-11-03 TTML 双侧注音
+
+歌词模型新增可选`LyricWord.rubyAfter`，既有`ruby`继续表示上方注音。AMLL容器支持一个基础加明确唯一的`before`/`after`文字容器；标准`rbc`支持一个基础轨道加两条明确位置的`rtc`；直接`ruby/rb/rt`也接受单个显式位置。缺少一侧或只有单个无位置注音时保持原上方默认；重复、缺失、未知、冲突、数量不等、额外轨道、混用及游离文字均拒绝并回退。
+
+`npm run check`995/995、完整native退出0；固定provenance Release`SourceUITests-1793670038024`为1/0/0、摘要总耗时345.561秒、`sourceUnchanged=true`，源码digest`364503cd…b03e9`、安装bundle`bb64941d…f318`。运行清单、摘要、服务计数和4PNG索引已固定；人工亲看确认`shuang`位于“双”上方、`sou`位于下方，既有`kanji/yin/duo/ji`保持各自上方注音。离线`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告，复用既有固定证据且无新增Sollin采集或私有探测。
+
+提交前dirty IPA为17,837,222字节、SHA-256`2999cd1e…3f04e`；178项ZIP CRC、151项archive/IPA载荷逐字节、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名及生产/隐私排除均通过。精确证据已先复制至T7`2026-11-03-ttml-double-sided-precommit-2999cd1e`，136份普通文件/100,950,204字节0缺失/0差异，源证据保留且零删除。
+
+产品/测试/初始文档提交、clean unsigned archive、正常push、Actions终态与clean T7阶段仍在当前批次执行。实体机VoiceOver、真实歌词库、动态字号/小屏、跨行与完整TTML2样式、签名/安装/续签和iOS27终态继续。详见[专项回执](docs/2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](docs/ui-spec/ttml-double-sided-ruby-2026-11-03.md)。
+
 ## 2026-11-03 TTML `rbc` 多基础注音映射
 
 标准 TTML `<ruby><rbc><rb>…</rb></rbc><rtc><rt>…</rt></rtc></ruby>` 现在在同数量 `<rb>`/`<rt>` 时按顺序一一配对；基础显式时间优先，否则取对应注解时间，再回退容器的相对时间。`<rp>` 继续只作非权威回退；数量不等、空容器、顺序颠倒、额外 `<rtc>`、非预期子项或游离文字均拒绝，不猜测映射。现有 `LyricWord.ruby`、无障碍读法和原生 TextKit 上方绘制直接复用。

@@ -1,3 +1,13 @@
+## 2026-11-03 TTML 双侧注音
+
+歌词模型新增`rubyAfter`，既有`ruby`继续表示上方注音。AMLL与标准TTML只在`before`/`after`明确、唯一时接受双侧注音；单注解保持原默认上方，重复、缺失、冲突、数量不等及畸形结构安全拒绝。`npm run check`995/995、类型检查、完整native、Node/Swift/diff均通过。
+
+固定provenance Release`SourceUITests-1793670038024`为1/0/0、摘要总耗时345.561秒、`sourceUnchanged=true`；源码digest`364503cd…b03e9`、安装bundle`bb64941d…f318`、xcresult Info`e4a67878…4a8e`。运行清单`5ec34b92…0fb0`、UI摘要`6cee2355…85a4`、服务计数`d3475073…6591`、catalog`1c76f1c2…d4cd`，4PNG索引`1cd7f0ff…1255`。人工亲看双侧注音截图SHA-256`894a427f…30e64`，`shuang`在“双”上方、`sou`在下方。`ipa --review`为56E/21WI/119 timeline/47F/47P、0错误/0警告，复用固定离线证据且无新增采集。
+
+dirty IPA为17,837,222字节、SHA-256`2999cd1e…3f04e`，manifest`2f26d383…ef1`；178项ZIP CRC、151项archive/IPA载荷逐字节、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名及生产`rubyAfter/rubyPosition/rubyAfterInset/rubyInset`/隐私排除通过，回执`b54f4efa…10ed`。精确证据先复制至T7`2026-11-03-ttml-double-sided-precommit-2999cd1e`，136份/100,950,204字节0差异，`transfer-receipt.json` SHA-256`1217ae75…ad9`，源证据保留且零删除。
+
+产品/测试/初始文档提交、clean unsigned archive、正常push及clean T7阶段仍待创建。模拟器与unsigned包不替代实体机VoiceOver、真实歌词库、动态字号/小屏、跨行/完整TTML2、签名安装或iOS27终态。见[专项回执](2026-11-03-ttml-double-sided-ruby-report.md)。
+
 ## 2026-11-03 TTML `rbc` 多基础注音
 
 标准 `<ruby><rbc>…</rbc><rtc>…</rtc></ruby>` 在同数量 `<rb>/<rt>` 时按顺序一一配对，基础时间优先于对应注解时间；`rp` 忽略，数量不等或结构有歧义时拒绝并回退。`npm run check` 993/993，完整 native 退出 0。

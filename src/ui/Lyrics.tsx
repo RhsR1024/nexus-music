@@ -19,7 +19,7 @@ import {NativeLyricLine} from './NativeLyricLine.tsx';
 import {classicInk,classicLyricRow} from './tokens.ts';
 import type {StageStyle} from '../app/preferences.ts';
 import {SharedRequests} from '../lyrics/sharedRequests.ts';
-const inactiveLyric=(line:LyricLine):LyricLine=>({...line,words:line.words?.some(word=>word.ruby)?line.words.map(word=>({...word,startMs:86400000,endMs:86400000})):undefined,timedCues:undefined});
+const inactiveLyric=(line:LyricLine):LyricLine=>({...line,words:line.words?.some(word=>word.ruby?.trim()||word.rubyAfter?.trim())?line.words.map(word=>({...word,startMs:86400000,endMs:86400000})):undefined,timedCues:undefined});
 export function Lyrics({services,track,font,presentation,visibleLines,chrome=true,chromeOnly=false,openRequest=0}:{services:Services;track:Track;font?:string;presentation?:'am'|'immersive'|'photo'|'stage'|'am2';visibleLines?:number;chrome?:boolean;chromeOnly?:boolean;openRequest?:number}){
   const theme=useTheme();
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);

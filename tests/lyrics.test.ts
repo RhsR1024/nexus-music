@@ -192,3 +192,42 @@ test('TTML rbc maps equal base and annotation containers pairwise with explicit 
     '<tt><body><p><ruby><rbc><rb>漢</rb></rbc><rtc><rt>kan</rt></rtc>tail</ruby></p></body></tt>',
   ])assert.throws(()=>parseTTML(input),/注音/);
 });
+test('TTML double-sided ruby requires one base and unique before and after annotation tracks',()=>{
+  const amllRuby=amll('<p begin="12" end="15"><span tts:ruby="container"><span tts:ruby="base" begin="12" end="13">東</span><span tts:ruby="textContainer" tts:rubyPosition="before"><span tts:ruby="text">とう</span></span><span tts:ruby="textContainer" tts:rubyPosition="after"><span tts:ruby="text" begin="13" end="14">たつ</span></span></span></p>');
+  const parsedAmll=parseTTML(amllRuby);
+  assert.deepEqual(parsedAmll.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby,word.rubyAfter]),[
+    ['東',12000,13000,'とう','たつ'],
+  ]);
+  assert.equal(lyricSpokenText(parsedAmll.lines[0]!),'東，注音：とう，たつ');
+
+  const afterOnly=parseTTML(amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="textContainer" tts:rubyPosition="after"><span tts:ruby="text" begin="12" end="13">ji</span></span></span></p>'));
+  assert.deepEqual(afterOnly.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby,word.rubyAfter]),[
+    ['字',12000,13000,undefined,'ji'],
+  ]);
+
+  const grouped=parseTTML('<tt xmlns:tts="http://www.w3.org/ns/ttml#styling"><body><p begin="2s" end="8s"><ruby begin="1s" end="6s"><rbc><rb begin="0.5s" end="1s">東</rb><rb begin="1s" end="2s">南</rb></rbc><rtc tts:rubyPosition="before"><rt>とう</rt><rt>なん</rt></rtc><rtc tts:rubyPosition="after"><rt>たつ</rt><rt>み</rt></rtc></ruby></p></body></tt>');
+  assert.deepEqual(grouped.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby,word.rubyAfter]),[
+    ['東',3500,4000,'とう','たつ'],['南',4000,5000,'なん','み'],
+  ]);
+  assert.equal(lyricSpokenText(grouped.lines[0]!),'東南，注音：とう，たつ，なん，み');
+
+  const directTracks=parseTTML('<tt xmlns:tts="http://www.w3.org/ns/ttml#styling"><body><p begin="2s" end="5s"><ruby><rb>東</rb><rt tts:rubyPosition="before">とう</rt></ruby><ruby><rb>東</rb><rt tts:rubyPosition="after">たつ</rt></ruby></p></body></tt>');
+  assert.deepEqual(directTracks.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby,word.rubyAfter]),[
+    ['東',2000,5000,'とう',undefined],['東',2000,5000,undefined,'たつ'],
+  ]);
+});
+test('TTML double-sided ruby rejects duplicate, missing, unsupported and mismatched positions',()=>{
+  for(const input of [
+    amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="textContainer" tts:rubyPosition="before"><span tts:ruby="text">zi</span></span><span tts:ruby="textContainer" tts:rubyPosition="before"><span tts:ruby="text">ji</span></span></span></p>'),
+    amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="textContainer"><span tts:ruby="text">zi</span></span><span tts:ruby="textContainer" tts:rubyPosition="after"><span tts:ruby="text">ji</span></span></span></p>'),
+    amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="textContainer" tts:rubyPosition="both"><span tts:ruby="text">zi</span></span></span></p>'),
+    amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="base">音</span><span tts:ruby="textContainer" tts:rubyPosition="before"><span tts:ruby="text">zi</span></span></span></p>'),
+    amll('<p begin="12" end="14"><span tts:ruby="container"><span tts:ruby="base">字</span><span tts:ruby="textContainer" tts:rubyPosition="before"><span tts:ruby="text">zi</span></span><span tts:ruby="textContainer" tts:rubyPosition="after"></span></span></p>'),
+    '<tt><body><p><ruby><rbc><rb>東</rb></rbc><rtc tts:rubyPosition="before"><rt>とう</rt></rtc><rtc tts:rubyPosition="before"><rt>たつ</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>東</rb></rbc><rtc><rt>とう</rt></rtc><rtc><rt>たつ</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>東</rb></rbc><rtc tts:rubyPosition="before"><rt>とう</rt></rtc><rtc><rt>たつ</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>東</rb><rb>南</rb></rbc><rtc tts:rubyPosition="before"><rt>とう</rt><rt>なん</rt></rtc><rtc tts:rubyPosition="after"><rt>たつ</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>東</rb></rbc><rtc tts:rubyPosition="before"><rt>とう</rt></rtc><rtc tts:rubyPosition="after"><rt>たつ</rt></rtc><rtc tts:rubyPosition="after"><rt>み</rt></rtc></ruby></p></body></tt>',
+    '<tt><body><p><ruby><rbc><rb>東</rb></rbc><rtc tts:rubyPosition="before"><rt>とう</rt></rtc><rtc tts:rubyPosition="after"><rt>たつ</rt><rp>.</rp><rt>み</rt></rtc></ruby></p></body></tt>',
+  ])assert.throws(()=>parseTTML(input),/注音/);
+});

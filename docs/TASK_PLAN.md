@@ -1,3 +1,19 @@
+## 2026-11-03 TTML 双侧注音
+
+- [x]`LyricWord.rubyAfter`保存下方注音，既有`ruby`继续表示上方；单侧无位置注音保持默认上方。
+- [x]AMLL一个base至多两个textContainer、标准一个rbc至多两个rtc、直接ruby/rb/rt均只接受`before`/`after`；双轨位置必须明确且唯一。
+- [x]重复/缺失/未知/冲突位置、数量不等、空容器、额外轨道、混用和游离文字安全拒绝，不按字符或读音猜测。
+- [x]无障碍文本合并上下注音并去重；非当前行保留任一注音字段并停车；React分别预留上下空间，Swift TextKit上下绘制。
+- [x]聚焦歌词契约27/27、`npm run check`995/995、TypeScript、完整native、Node check、Swift parse和diff通过。
+- [x]固定provenance Release`SourceUITests-1793670038024`为1/0/0、345.561秒、`sourceUnchanged=true`；4PNG索引与逐图哈希固定，双侧截图亲看通过。
+- [x]`ipa --review`复用固定离线证据并通过56E/21WI/119 timeline/47F/47P，0错误/0警告；无新增Sollin采集或私有探测。
+- [x]dirty unsigned archive、178项ZIP CRC、151项archive/IPA字节、生产四标记与隐私/签名排除通过；精确证据复制至T7预提交阶段并逐文件核验。
+- [ ]产品/测试/初始文档提交后从clean HEAD重建unsigned archive，并完成manifest/HEAD、字节、架构、生产标记与隐私复核。
+- [ ]正常push并实核远端main与Actions至多1运行/1排队；保存clean T7阶段及最终回执。
+- [ ]`before`/`after`以外的换行/wrapping、行间/右侧、完整TTML2样式、实体VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签与iOS27终态。
+
+见[本批回执](2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](ui-spec/ttml-double-sided-ruby-2026-11-03.md)。本批只增加当前单行模型内的双侧注音，不关闭完整TTML2、S4/J35–42、F/J或项目总目标。
+
 ## 2026-11-03 TTML `rbc` 多基础注音映射
 
 - [x] 标准 `<ruby><rbc><rb>…</rb></rbc><rtc><rt>…</rt></rtc></ruby>` 按顺序把同数量基础与注解一一绑定；原有 AMLL、直接 `rb/rt`、单基础 `rtc` 路径保持。

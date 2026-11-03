@@ -1,3 +1,18 @@
+## 2026-11-03 TTML 双侧注音
+
+- [x] `LyricWord.rubyAfter`保存下方注音，既有`ruby`继续保存上方注音；单个无位置注解保持默认上方。
+- [x] AMLL一个base至多两个textContainer、标准一个rbc至多两个rtc、直接rb/rt均只接受`before`/`after`；双轨位置必须明确且唯一。
+- [x] 重复/缺失/未知/冲突位置、数量不等、空容器、额外轨道、混用和游离文字全部安全拒绝并回退。
+- [x] 无障碍文本合并上下注音并去重；非当前行继续停车，React分别预留空间，Swift TextKit上下绘制。
+- [x] 聚焦契约27/27、995/995、类型检查、完整native、Node/Swift/diff通过；固定provenance Release1/0/0、345.561秒、`sourceUnchanged=true`。
+- [x] 4PNG索引固定；人工亲看`shuang`位于“双”上方、`sou`位于下方，既有`kanji/yin/duo/ji`保持上方。
+- [x] reverse-skill离线strict review通过56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增采集。
+- [x] dirty unsigned archive、178项ZIP CRC、151项archive/IPA字节、生产四标记及测试/私人/签名排除通过；T7预提交阶段136份/100,950,204字节逐项核验。
+- [ ] clean unsigned archive、产品/测试/初始文档提交、正常push、Actions终态与clean T7阶段。
+- [ ] 跨行/wrapping、行间/右侧位置、完整TTML2样式、实体VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签与iOS27终态。
+
+见[本批回执](2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](ui-spec/ttml-double-sided-ruby-2026-11-03.md)。J37/S4仍保持B状态，本批不关闭完整TTML2、F/J或项目。
+
 ## 2026-11-03 TTML `rbc` 多基础注音映射
 
 - [x] 标准 `<rbc>`/`<rtc>` 在同数量 `<rb>` 与 `<rt>` 时按顺序一一绑定；基础时间优先，否则使用对应注解时间。
