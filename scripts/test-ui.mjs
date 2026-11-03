@@ -153,7 +153,7 @@ counts.accountFm={mode:'normal',holdNext:false,held:0,released:0,requests:[],aut
 let heldAccountFmResponses=[];
 let wyRepliesNextPageFails=true;
 let qqCommentsMode='normal',qqCommentsNextPageFails=true,qqRepliesNextPageFails=true,qqRepliesMode='normal',miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
-const amllLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testAMLLProfileLyrics'));
+const amllLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testAMLLProfileLyrics')||target.endsWith('/testAMLLProfileLyricsAtAccessibilityXXXL'));
 const sequentialLyricsUI=process.argv.slice(2).some(target=>target.endsWith('/testSequentialTTMLLyrics'));
 const timedLyricsUI=amllLyricsUI||sequentialLyricsUI;
 if(timedLyricsUI&&process.argv.slice(2).length!==1)throw new Error('Timed TTML requires its single explicit target so malformed-TTML fallback coverage stays separate');
@@ -935,7 +935,7 @@ try {
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
   if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountFmStationContinuation');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
-  if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics');
+  if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyricsAtAccessibilityXXXL');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');
   if(!systemVolumeUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSystemAndAppVolumeControlsPreservePlayback');
   if(!structuredLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testStructuredNavidromeLyrics');

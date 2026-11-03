@@ -37,6 +37,7 @@ final class NexusLyricLineView: ExpoView {
   private var blurredSize = CGSize.zero
   private var rubyInset = CGFloat.zero
   private var rubyAfterInset = CGFloat.zero
+  private var rubyLineSpacing = CGFloat.zero
   private var textFont = UIFont.systemFont(ofSize: 24, weight: .semibold)
   private static let imageContext = CIContext(options: [.cacheIntermediates: false])
   private static func color(_ raw: String) -> UIColor {
@@ -101,8 +102,9 @@ final class NexusLyricLineView: ExpoView {
     // Compact previews reserve one row; full lyric pages keep wrapping.
     let maxLines = (object["maxLines"] as? Int).map { min(10, max(0, $0)) } ?? 0
     let radius = min(4, max(0, (object["blur"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
-    rubyInset = min(30, max(0, (object["rubyInset"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
-    rubyAfterInset = min(30, max(0, (object["rubyAfterInset"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
+    rubyInset = min(36, max(0, (object["rubyInset"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
+    rubyAfterInset = min(36, max(0, (object["rubyAfterInset"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
+    rubyLineSpacing = min(72, max(0, (object["rubyLineSpacing"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0))
     emphasis = object["emphasis"] as? Bool != false
     let hex = object["color"] as? String ?? "#FFFFFF"
     let fontURI = object["fontURI"] as? String ?? ""
@@ -115,7 +117,7 @@ final class NexusLyricLineView: ExpoView {
     let rawCues = object["timedCues"] as? [[String: Any]] ?? []
     // Dictionary order must not rebuild glyph layout on a clock-only update.
     let timingData = (try? JSONSerialization.data(withJSONObject: [rawWords, rawCues], options: [.sortedKeys])) ?? Data()
-    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(weight)|\(height)|\(maxLines)|\(radius)|\(embolden)|\(timingData.base64EncodedString())"
+    let layoutKey = "\(nextStyle)|\(text)|\(size)|\(center)|\(hex)|\(fontURI)|\(weight)|\(height)|\(maxLines)|\(radius)|\(embolden)|\(rubyInset)|\(rubyAfterInset)|\(rubyLineSpacing)|\(timingData.base64EncodedString())"
     if signature != layoutKey {
       signature = layoutKey; stageStyle = nextStyle; blur = radius; blurred = nil
       container.maximumNumberOfLines = maxLines
@@ -129,6 +131,7 @@ final class NexusLyricLineView: ExpoView {
       textFont = font
       let paragraph = NSMutableParagraphStyle(); paragraph.alignment = center ? .center : .left
       paragraph.minimumLineHeight = ceil(size * height); paragraph.maximumLineHeight = ceil(size * height)
+      paragraph.lineSpacing = rubyLineSpacing
       storage.setAttributedString(NSAttributedString(string: text, attributes: [.font: font, .paragraphStyle: paragraph, .foregroundColor: color]))
       if stageStyle == "aurora" {
         // Original stable spectrum across composed characters. Layout and real
@@ -201,15 +204,15 @@ final class NexusLyricLineView: ExpoView {
   }
   private func drawRuby(in context: CGContext) {
     guard rubyInset > 0 || rubyAfterInset > 0, !rubyAnnotations.isEmpty else { return }
-    let naturalSize = min(12, max(9, textFont.pointSize * 0.46))
+    let naturalSize = min(24, max(9, textFont.pointSize * 0.46))
     for item in rubyAnnotations {
       let glyphs = manager.glyphRange(forCharacterRange: item.range, actualCharacterRange: nil)
       guard glyphs.length > 0 else { continue }
-      var regions: [CGRect] = []
-      manager.enumerateEnclosingRects(forGlyphRange: glyphs, withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0), in: container) { region, _ in
-        regions.append(region)
-      }
-      guard let region = regions.first, region.width > 0 else { continue }
+      var lineGlyphs = NSRange()
+      _ = manager.lineFragmentRect(forGlyphAt: glyphs.location, effectiveRange: &lineGlyphs)
+      let firstLineGlyphs = NSIntersectionRange(glyphs, lineGlyphs)
+      let region = firstLineGlyphs.length > 0 ? manager.boundingRect(forGlyphRange: firstLineGlyphs, in: container) : .zero
+      guard region.width > 0 else { continue }
       var font = textFont.withSize(naturalSize)
       let naturalWidth = (item.text as NSString).size(withAttributes: [.font: font]).width
       if naturalWidth > region.width {
@@ -223,7 +226,9 @@ final class NexusLyricLineView: ExpoView {
       case .before:
         guard rubyInset > 0 else { continue }
         let baseTop = rubyInset + region.minY
-        y = max(0, min(rubyInset - height, baseTop - height - 1))
+        // Each wrapped base line owns its annotation row. Clamping to the
+        // initial inset pulls every later annotation back above the first line.
+        y = max(0, baseTop - height - 1)
       case .after:
         guard rubyAfterInset > 0 else { continue }
         let baseBottom = rubyInset + region.maxY

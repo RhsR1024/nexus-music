@@ -1,3 +1,7 @@
+## 2026-11-03 动态字号注音与全部歌词可用性
+
+原生TextKit上方注音按本行字形顶部定位，取消首行y上限；辅助字号扩大支持文字并预留双侧注音行距。顶部设置ScrollView限制辅助字号高度并在正常字号取消默认grow，FlatList保留独立视口。正式测试补充真实视口导航、整行可见与正常字号顶部高度断言。最终同源正常/大字号均1/0/0，安装bundle一致，关键截图亲看通过；原生/995项检查通过，clean归档与交付收尾继续。历史自动通过但视觉失败及入口部分可见失败保留。见[回执](2026-11-03-dynamic-type-ruby-full-lyrics-report.md)及[规格](ui-spec/dynamic-type-ruby-full-lyrics-2026-11-03.md)。参考只复用E-019→F-018→P-018角色边界，不声称Sollin注音/动态字号等价；实体/真实库/完整TTML2/签名/iOS27终态开放。
+
 ## 2026-11-03 TTML 双侧注音
 
 `LyricWord`新增可选`rubyAfter`，既有`ruby`继续表示`before`。`src/lyrics/ttml.ts`复用单一歌词模型，只接受TTML2`tts:rubyPosition`的`before`或`after`：AMLL支持一个base加一至两个位置明确的textContainer，标准rbc支持一个基础轨道加一至两个rtc，直接rb/rt支持单个显式位置。单个无位置注解继续默认上方；双注解必须分别、唯一声明before与after。重复、缺失、未知或冲突位置、数量不等、空容器、额外轨道、直接/分组混用和游离文字全部拒绝，不按字符数或读音猜测。

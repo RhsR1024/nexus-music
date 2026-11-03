@@ -8,13 +8,19 @@ const NativeLine=requireNativeView<ViewProps&{configuration:string}>('NexusLyric
 export const NativeLyricLine=memo(function NativeLyricLine({line,position,playing,size,color,center,font,fontURI,lineHeight=1.35,blur=0,emphasis=true,stageStyle='classic',weight='600',embolden=0,maxLines}:{line:LyricLine;position:number;playing:boolean;size:number;color:string;center:boolean;font?:string;fontURI?:string;lineHeight?:number;blur?:number;emphasis?:boolean;stageStyle?:StageStyle;weight?:'500'|'600'|'700'|'800'|'900';embolden?:number;maxLines?:number}) {
   // TextKit receives explicit points. Measure with those same points instead
   // of scaling only the invisible RN placeholder at accessibility text sizes.
-  const points=Math.min(100,Math.max(10,size*useWindowDimensions().fontScale));
+  const {fontScale}=useWindowDimensions(),points=Math.min(100,Math.max(10,size*fontScale));
   // NSLayoutManager does not paint the Core Text ruby attribute. Reserve a
   // compact annotation row and let the native renderer place it over the base.
-  const rubyHeight=Math.ceil(Math.max(9,Math.min(12,points*.46))*1.25+1);
+  // Ruby is supporting text, but it must still grow with accessibility sizes.
+  // Keep it subordinate to the base while reserving the actual TextKit line.
+  const rubyHeight=Math.ceil(Math.max(9,Math.min(24,points*.46))*1.25+1);
   const rubyInset=line.words?.some(word=>word.ruby?.trim())?rubyHeight:0;
   const rubyAfterInset=line.words?.some(word=>word.rubyAfter?.trim())?rubyHeight:0;
-  return <View pointerEvents="none" style={rubyInset||rubyAfterInset?{...(rubyInset?{paddingTop:rubyInset}:{}),...(rubyAfterInset?{paddingBottom:rubyAfterInset}:{})}:undefined}><Text accessible={false} allowFontScaling={false} numberOfLines={maxLines} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight),fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{line.text}</Text>
-    <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden,maxLines,rubyInset,rubyAfterInset})}/>
+  // Wrapped lines need one shared annotation gap before each base line at
+  // accessibility sizes. That gap belongs to the measured text pitch so the
+  // native ruby pass can place a second-line reading above its own base.
+  const rubyLineSpacing=fontScale>1.8?rubyInset+rubyAfterInset:0;
+  return <View pointerEvents="none" style={rubyInset||rubyAfterInset?{...(rubyInset?{paddingTop:rubyInset}:{}),...(rubyAfterInset?{paddingBottom:rubyAfterInset}:{})}:undefined}><Text accessible={false} allowFontScaling={false} numberOfLines={maxLines} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight)+rubyLineSpacing,fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{line.text}</Text>
+    <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden,maxLines,rubyInset,rubyAfterInset,rubyLineSpacing})}/>
   </View>;
 });

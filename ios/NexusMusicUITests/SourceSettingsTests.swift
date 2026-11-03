@@ -725,10 +725,29 @@ final class SourceSettingsTests: XCTestCase {
   func testAMLLProfileLyrics() throws {
     try verifyCrossPlatformLyrics(sequentialTTML:true,absoluteTTML:true)
   }
-  private func verifyCrossPlatformLyrics(sequentialTTML:Bool,absoluteTTML:Bool=false) throws {
+  func testAMLLProfileLyricsAtAccessibilityXXXL() throws {
+    try verifyCrossPlatformLyrics(sequentialTTML:true,absoluteTTML:true,largeText:true)
+  }
+  private func verifyCrossPlatformLyrics(sequentialTTML:Bool,absoluteTTML:Bool=false,largeText:Bool=false) throws {
     let firstSeek=absoluteTTML ? "0:10 / 2:00":"0:00 / 2:00"
-    let app=XCUIApplication();app.launch()
-    func reach(_ element:XCUIElement,up:Bool=true){for _ in 0..<12 {if element.isHittable{break};if element.exists {let above=element.frame.midY < app.frame.midY; if above {app.swipeDown()} else {app.swipeUp()}} else if up {app.swipeUp()} else {app.swipeDown()}};XCTAssertTrue(element.isHittable)}
+    let app=XCUIApplication()
+    if largeText {app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]}
+    app.launch()
+    func reach(_ element:XCUIElement,up:Bool=true,viewportID:String?=nil,fullyVisible:Bool=false){
+      for _ in 0..<24 {
+        let viewport=viewportID.map{app.descendants(matching:.any).matching(identifier:$0).firstMatch}
+          ?? app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","settings-viewport-")).firstMatch
+        let surface=viewport.exists && viewport.frame.width>44 && viewport.frame.height>100 ? viewport : app
+        if element.exists && element.isHittable && (!fullyVisible || surface.frame.insetBy(dx:0,dy:8).contains(element.frame)){return}
+        let above=element.exists && element.frame.midY<surface.frame.midY
+        let swipeUp=element.exists ? !above : up
+        let start=surface.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:swipeUp ? 0.75 : 0.25))
+        let end=surface.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:swipeUp ? 0.25 : 0.75))
+        start.press(forDuration:0.05,thenDragTo:end)
+      }
+      XCTAssertFalse(fullyVisible,"Could not bring the complete control inside its scroll viewport")
+      XCTAssertTrue(element.isHittable)
+    }
     // The preceding core tests intentionally leave the persisted player skin
     // unchanged. Establish a modern layout here so this test exercises the
     // modern player actions instead of depending on test order or simulator
@@ -745,13 +764,20 @@ final class SourceSettingsTests: XCTestCase {
     for _ in 0..<5{if enable.isHittable||enabled.isHittable{break};app.swipeUp()};if enable.exists{enable.tap()}else{XCTAssertTrue(enabled.isHittable)}
     XCTAssertTrue(app.staticTexts["已启用"].firstMatch.waitForExistence(timeout:20))
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
-    let query=app.textFields["搜索歌曲或歌手"];reach(query);app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap();query.tap()
+    let query=app.textFields["搜索歌曲或歌手"];reach(query,viewportID:"search-viewport");app.descendants(matching:.any).matching(identifier:"网易云").firstMatch.tap();query.tap()
     for character in "Synthetic match tone"{query.typeText(String(character))}
     expectation(for:NSPredicate(format:"value == %@","Synthetic match tone"),evaluatedWith:query);waitForExpectations(timeout:5)
     query.typeText("\n")
     XCTAssertEqual(query.value as? String,"Synthetic match tone","The submitted query must remain complete")
-    let searchSongs=app.buttons["run-online-search"];reach(searchSongs);searchSongs.tap()
-    let first=app.buttons["search-track-wy-0"];for _ in 0..<8{if first.waitForExistence(timeout:2){break};app.swipeUp()};XCTAssertTrue(first.exists);reach(first);first.tap()
+    if !largeText {
+      let searchSongs=app.buttons["run-online-search"];reach(searchSongs);searchSongs.tap()
+    } else {
+      // The keyboard's Search key already ran the same submit handler. At
+      // Accessibility XXXL the duplicate button sits below the keyboard and
+      // cannot be treated as an independent reachable step.
+      XCTAssertTrue(app.buttons["search-track-wy-0"].waitForExistence(timeout:15),"Search keyboard submission must produce the fixture result")
+    }
+    let first=app.buttons["search-track-wy-0"];for _ in 0..<8{if first.waitForExistence(timeout:2){break};app.swipeUp()};XCTAssertTrue(first.exists);reach(first,viewportID:"search-viewport");first.tap()
     let mini=app.descendants(matching:.any).matching(identifier:"mini-player").firstMatch
     XCTAssertTrue(mini.waitForExistence(timeout:10));mini.swipeUp()
     let closeAfterSwipe=app.buttons["收起播放页"];XCTAssertTrue(closeAfterSwipe.waitForExistence(timeout:10),"Swiping up on the mini player must open the player")
@@ -814,12 +840,30 @@ final class SourceSettingsTests: XCTestCase {
     let fullLyrics=app.buttons["全部歌词 · 双击行定位，长按打开设置"]
     let seekProgress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
     let beforeFullSeek=sequentialTTML ? (seekProgress.value as? String):nil
-    reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10))
+    reach(fullLyrics,up:false,viewportID:"classic-player-scroll",fullyVisible:true);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10))
     if absoluteTTML {
-      let rubyRow=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","注音：kanji，yin，duo，ji，shuang，sou")).firstMatch
-      for _ in 0..<8 where !rubyRow.exists {app.swipeUp()}
-      XCTAssertTrue(rubyRow.waitForExistence(timeout:10),"AMLL, rtc, rbc and double-sided annotations must remain in the accessible lyric text")
-      let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name="AMLL, rtc, rbc and double-sided annotations rendered around base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
+      let lyricList=app.descendants(matching:.any).matching(identifier:"full-lyrics-list").firstMatch
+      XCTAssertTrue(lyricList.waitForExistence(timeout:10),"Expanded lyrics need an independently scrollable list at every text size")
+      if !largeText {
+        let header=app.descendants(matching:.any).matching(identifier:"full-lyrics-header").firstMatch
+        XCTAssertLessThan(header.frame.height,app.frame.height*0.45,"Normal-size settings must use their content height instead of expanding into empty space")
+      }
+      let rubyRow=lyricList.buttons.matching(NSPredicate(format:"label CONTAINS %@","注音：kanji，yin，duo，ji，shuang，sou")).firstMatch
+      reach(rubyRow,viewportID:"full-lyrics-list")
+      XCTAssertTrue(waitForHittable(rubyRow,timeout:10),"AMLL, rtc, rbc and double-sided annotations must be reachable in the full lyric reader")
+      if largeText {
+        XCTAssertGreaterThanOrEqual(rubyRow.frame.height,100,"Scaled ruby must reserve a readable annotation row above the large base text")
+        XCTAssertLessThanOrEqual(rubyRow.frame.height,lyricList.frame.height,"Both wrapped base lines and their readings must fit in the reader viewport")
+        for _ in 0..<6 where rubyRow.frame.maxY>lyricList.frame.maxY-8 {
+          let start=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.8))
+          let end=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5))
+          start.press(forDuration:0.05,thenDragTo:end)
+        }
+        XCTAssertGreaterThanOrEqual(rubyRow.frame.minY,lyricList.frame.minY,"The first base line and upper annotations must remain visible")
+        XCTAssertLessThanOrEqual(rubyRow.frame.maxY,lyricList.frame.maxY,"The wrapped base line and lower annotation must be visible in the evidence")
+      }
+      let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name=largeText ? "AMLL and double-sided ruby at accessibility XXXL":"AMLL, rtc, rbc and double-sided annotations rendered around base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
+      if largeText {return}
     }
     if sequentialTTML {
       let second=app.buttons["定位歌词：Second rich line"].firstMatch

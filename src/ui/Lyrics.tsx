@@ -96,13 +96,15 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     </View>}
     <SheetModal visible={expanded} onRequestClose={()=>setExpanded(false)} animationType="slide">
       <View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:64}}>
-        <Pressable accessibilityRole="button" onPress={()=>setExpanded(false)}><Text style={{color:theme.color('#D9F49B'),padding:16}}>收起全部歌词</Text></Pressable>
-        {settings}
-        <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{paddingVertical:12}}><Text style={{color:theme.palette.accent}}>选择歌词来源</Text></Pressable>
-        {expanded&&chooser}
-        {(result?.variants.length??0)>1&&<View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:theme.palette.accent}}>{item.label}</Text></Pressable>)}</View>}
-        {!document?.synced&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:size,color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
-        {document?.synced&&<FlatList ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
+        <ScrollView testID="full-lyrics-header" style={systemFontScale>1.8?{flexGrow:0,flexShrink:1,maxHeight:'46%'}:{flexGrow:0,flexShrink:1}} contentContainerStyle={{paddingBottom:12}}>
+          <Pressable accessibilityRole="button" onPress={()=>setExpanded(false)}><Text style={{color:theme.color('#D9F49B'),padding:16}}>收起全部歌词</Text></Pressable>
+          {settings}
+          <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{paddingVertical:12}}><Text style={{color:theme.palette.accent}}>选择歌词来源</Text></Pressable>
+          {expanded&&chooser}
+          {(result?.variants.length??0)>1&&<View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:theme.palette.accent}}>{item.label}</Text></Pressable>)}</View>}
+        </ScrollView>
+        {!document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:size,color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
+        {document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
           onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
           renderItem={({item,index})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>seek(item.startMs,index,time)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
             <View><NativeLyricLine line={index===active?item:inactiveLyric(item)} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={index===active?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
