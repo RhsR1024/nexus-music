@@ -7,7 +7,7 @@
 - [x] 997/997、完整native、Swift/Node/diff与原生六模式单测通过；reverse-skill离线strict review为56E/21WI/121 timeline/47F/47P、0错误/0警告。
 - [x] dirty unsigned IPA、151项archive/IPA载荷与ZIP CRC、生产/隐私排除通过；T7预提交阶段669份映射/305,997,336字节0差异，源证据保留且零删除。
 - [x] `a651aad` clean unsigned IPA、151项载荷与manifest清洁性通过；T7 clean阶段669份映射/310,595,673字节0差异，源证据保留且零删除。
-- [x] `a651aad..c178ea6`已push并实核远端main；`41563617753`运行、`41591188218`唯一pending，实核1运行/1排队。
+- [x] `a651aad..c178ea6`已push并实核远端main；`41563617753`运行、`41591188218`唯一pending，实核1运行/1排队；随后docs-only`e68f7e6`被工作流路径规则忽略，未另派运行。
 - [ ] `41591188218` iOS27 Actions终态。
 - [ ] 竖排左右放置、跨行Ruby重分配、完整TTML2样式、真实歌词库、实体VoiceOver、动态字号/小屏及签名安装。
 

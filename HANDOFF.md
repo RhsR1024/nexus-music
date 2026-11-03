@@ -10,7 +10,9 @@
 
 产品/测试/初始文档提交`a651aad`后从clean HEAD重新归档。manifest与HEAD一致、`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/iOS15.1/[1,2]且`signed=false`；clean IPA为17,842,149字节、SHA-256`e56f2fd9dc78e420606d13886dae21fd973475304db560fd93c64f13a5a0f240`，manifest SHA-256`8a499b60…c93e`，archive log SHA-256`346a72a3…ac65`。独立回执`7dcd80d0…57c7`再次确认151项archive/IPA载荷、ZIP CRC、生产标记、测试/私人/签名排除和架构。clean T7阶段`2026-11-03-ttml-ruby-align-a651aad`保存精确产物与证据，669份映射/310,595,673字节0差异，`SHA256SUMS`复核PASS、transfer receipt`25d03ad5…26b2`。
 
-`a651aad..c178ea6`已正常push并实核远端main。push后实际队列为旧`41563617753`/`235d0d8`运行、`41591188218`/`c178ea6`唯一pending，实核1运行/1排队，未手动取消或重派旧版本；Actions页面快照与receipt已保存至clean T7阶段，receipt SHA-256为`57c1f795…80d8`。`41591188218`的iOS27终态仍开放。模拟器、unsigned包和静态检查不替代iOS27终态、实体机VoiceOver、真实歌词库、跨行Ruby重排或签名安装。
+`a651aad..c178ea6`已正常push并实核远端main。push后实际队列为旧`41563617753`/`235d0d8`运行、`41591188218`/`c178ea6`唯一pending，实核1运行/1排队，未手动取消或重派旧版本。随后仅为队列记录的docs-only提交`e68f7e6`已push；工作流路径规则未另派运行，阶段收尾快照时远端main为`e68f7e6`、最新工作流仍为上述1运行/1排队，终态快照receipt SHA-256为`6b8a73e2…9cb2`。Actions页面快照与两份解析receipt已保存至clean T7阶段。`41591188218`的iOS27终态仍开放。模拟器、unsigned包和静态检查不替代iOS27终态、实体机VoiceOver、真实歌词库、跨行Ruby重排或签名安装。
+
+阶段收尾无活动构建/归档/UI/逆向进程；内盘可用70,920,990,720字节（高于30GiB阈值），T7可用617,358,557,184字节，`build/`约10.03GB且`work/`约415.5MB。重复诊断、未解决失败原件、最新两个有效T7阶段和当前增量编译缓存均保留，未删除或搬移用户文件；小型回执`cleanup-2026-11-03-ttml-ruby-align.json` SHA-256为`c7421072…c0c5`。
 
 详见[专项回执](docs/2026-11-03-ttml-ruby-align-report.md)与[UI规格](docs/ui-spec/ttml-ruby-align-2026-11-03.md)。
 

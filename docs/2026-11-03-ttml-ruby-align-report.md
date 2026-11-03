@@ -138,15 +138,30 @@ transfer receipt SHA-256为
 `25d03ad5cf920f06293d6182db78ac1752ee022c9ee1668520be9937010b26b2`；
 `deleted=0`、`movedUserFiles=0`、`activeBuilds=0`，源证据保留。
 
-`a651aad..c178ea6`已正常push，`git ls-remote origin refs/heads/main`
-实核为`c178ea6c8f07b9f80dd9f0d86430767134591287`。push后GitHub Actions页面
+`a651aad..c178ea6`已正常push，先实核远端main为
+`c178ea6c8f07b9f80dd9f0d86430767134591287`。push后GitHub Actions页面
 实际显示旧`41563617753`/`235d0d8`运行，`41591188218`/`c178ea6`为唯一pending，
 即1运行/1排队；未手动取消运行中任务，也未重派旧版本。Actions页面和解析回执已保存至
 clean T7阶段`actions/c178ea6/`，回执SHA-256为
 `57c1f795f0818b0f2c9eea33d321950f793dfefae53abc9371681a7a509880d8`，
 快照清单SHA-256为
 `dc9e80f86a979a99818798ca39f0928a60907c56af9a4bf6313a734b9bfcc1b1`。
+随后仅为队列记录的docs-only提交`e68f7e6622676f085c19f0396ba6f8b28250c51c`
+已push；工作流路径规则没有另派运行。阶段收尾快照时远端main为`e68f7e6`，
+最新工作流仍是`41591188218`唯一pending且`41563617753`运行，即1运行/1排队；
+终态快照回执SHA-256为
+`6b8a73e2dba7e8d3ed4928bcb77af9cbd6e7da4626b450773be4b5642efe9cb2`，
+快照清单SHA-256为
+`d462ac916014efaf4e8cb4172f019ff6223efaf660378e7dddaa6b5571299872`。
 `41591188218`的iOS27终态仍待后续运行结果，不以pending或本地Result替代。
+
+阶段收尾检查无活动构建/归档/UI/逆向进程。内盘可用70,920,990,720字节，高于30GiB
+阈值；T7可用617,358,557,184字节，`build/`约10.03GB、`work/`约415.5MB。
+保留最新两个有效T7阶段、两组失败原件、当前增量编译缓存和全部源证据；本批未删除或
+搬移用户文件。清理回执
+`cleanup-2026-11-03-ttml-ruby-align.json`的SHA-256为
+`c74210722ed59aec67fa963411ef9d95b02f5bd7cff6bb2ec3ab64248cdcc0c5`，
+已随clean阶段保存。
 
 ## 当前边界
 
