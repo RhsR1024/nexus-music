@@ -10,6 +10,8 @@
 
 T7 clean阶段`2026-11-03-ttml-rbc-5a23db3`保存精确IPA/archive/xcresult/截图/日志/补丁/提交源码，141份映射文件/104,372,180字节逐项SHA-256一致，`SHA256SUMS``f043ca00…6612`复核0失败，`transfer-receipt.json` SHA-256`bbfd27e9…d35c`；`deleted=0/movedUserFiles=0`。push后`41553030339`/`295bf94`继续运行，`41559631207`/`5a23db3`为唯一pending，旧pending自动取消，实核1运行/1排队且未手动取消或重派。当前边界是多组单基础/单注解按序映射；双侧/第二个 `rtc`、跨行、行间/右侧位置、完整 TTML2 样式、实体 VoiceOver、真实歌词库、动态字号/小屏、签名/安装与 iOS27 终态继续。详见[专项回执](docs/2026-11-03-ttml-rbc-ruby-report.md)与[UI规格](docs/ui-spec/ttml-rbc-2026-11-03.md)。
 
+阶段收尾检查时内盘可用75,575,791,616字节、T7可用621,317,324,800字节，`build/`约7.22GiB；最新有效阶段、未解决CI证据和reverse-skill离线证据均保留，无需清理，`deleted=0/movedUserFiles=0`。清理检查回执`build/logs/cleanup-2026-11-03-ios27-rbc.json` SHA-256`f3daea1b…67e`。
+
 ## 2026-11-03 iOS 27 Files 本地提供方根目录导航修复
 
 `41521043387`/`9fb541a` 的 iOS27 App 组 6/7 通过，唯一失败`testWayfarerAppImport`在`SourceSettingsTests.swift:270`等待实际文件单元超时。紧凑日志与失败层级证明 Locations 根页同时发布`DOC.browsingRoot ... Title: Nexus UITest Fixtures`和可点击`On My iPhone`；旧辅助函数先接受标题，误以为已进入目录，因而第二次 picker 调用一直停留。未改产品代码，修复仅把`On My iPhone`单元检查移到`fixtureRoot`判断之前。

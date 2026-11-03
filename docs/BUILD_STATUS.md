@@ -8,6 +8,8 @@ dirty IPA为17,833,688字节、SHA-256`dd757f96…19c9`；固定UI证据、archi
 
 `5a23db3`已push并实核远端main。T7 clean阶段`2026-11-03-ttml-rbc-5a23db3`的141份映射文件/104,372,180字节逐项一致，`SHA256SUMS`复核0失败，源证据保留且`deleted=0/movedUserFiles=0`。Actions为`41553030339`/`295bf94`运行、`41559631207`/`5a23db3`唯一pending，实核1运行/1排队。iOS27终态继续。见[专项回执](2026-11-03-ttml-rbc-ruby-report.md)。
 
+阶段收尾检查内盘可用75,575,791,616字节、T7可用621,317,324,800字节，`build/`约7.22GiB；最新有效阶段、未解决CI证据及reverse-skill离线证据保留，无需清理且未删除/移动用户文件。回执`build/logs/cleanup-2026-11-03-ios27-rbc.json` SHA-256`f3daea1b…67e`。
+
 ## 2026-11-03 iOS 27 Files 本地提供方根目录测试导航
 
 `41521043387`/`9fb541a`唯一失败`testWayfarerAppImport`已定位为测试导航误判：iOS27 Locations根页同时暴露目标提供方`DOC.browsingRoot`与`On My iPhone`。修正版先将实际`On My iPhone`单元检查置于提供方根判断之前，不改产品入口、Wayfarer导入逻辑或原生播放。
