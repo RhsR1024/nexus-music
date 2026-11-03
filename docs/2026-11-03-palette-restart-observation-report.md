@@ -43,3 +43,13 @@ r3 三态均只有一个可见、已安装背景实例，frame 都是 `(0,0,430,
 本轮移除的是暂停态固定 14 点三色断言；全屏像素、停车稳定、跨页三色、亮度、运动、异步身份竞争和跨进程 store/native 状态断言均保留。替换项要求唯一有效安装背景、精确有序 palette、身份、暗色/暂停状态和完整图层三通道贡献，并额外保留原有全屏截图。检查点允许在 20 秒窗口内重试，最终 JSON 只证明最终成功检查点；失败尝试仍另存且未隐藏。
 
 原生 PNG 是 scale=1 的独立已安装图层渲染，不能代替 `XCUIScreen` 的真实合成、遮挡或显示验收；本批同时保留 25 张全屏证据。模拟器编译/运行也不能代替云端 iOS 27、实体机、真实服务或签名验收。
+
+## 提交、clean 归档与远端
+
+提交前 dirty IPA 为 17,838,257 字节、SHA-256 `8eba44db9c889b4298b1ab1046cf3c09d0880dc21ea18964adb5a92dcfd94eeb`；T7 precommit 阶段逐项比较 606 份普通文件/619,109,169 字节，无缺失、额外载荷或差异。
+
+产品/测试/初始文档提交 `d7bb46acedf8c1929db50f570820bc74f34e4f03` 后，从 clean HEAD 重建 unsigned archive。manifest 与 HEAD 一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/设备族 `[1,2]`、`signed=false`。clean IPA 仍为 17,838,257 字节，SHA-256 `a5663c03d45236a81e213ea9eeee35bde2d0c2481b8e222aaf13ab00fbf0f328`；manifest SHA-256 `b7a72f4cac6e729e8bd959c49401cc9805d726a6781d43e1f43f907dbcf138f1`，archive log SHA-256 `ae1f0d60a55bd434c3d59632371f78eed8992a76fa6aeb51e4fac6eb4fb4d781`。
+
+独立回执 `build/logs/palette-clean-archive-verification-d7bb46a.json` 为 `ready=true`、SHA-256 `b033ce058045b8d4f25caac890f71de743b9e8eb6f44d8acea424ad5778da167`。178 项 ZIP CRC 全部通过；archive 与 IPA 各有 151 项普通文件，路径集合与逐项字节一致。`nexus-ui-test-theme-observation`、其他 UI 测试入口、合成账号/夹具、私人和签名材料均未进入生产包，`codesign` 明确返回未签名。T7 clean 阶段 `2026-11-03-palette-restart-observation-d7bb46a` 的 608 份普通映射/619,064,639 字节逐项 SHA-256 一致，源证据保留。
+
+远端 main 实核为 `d7bb46a`。推送后 `41584802858`/`d7bb46a` 为唯一 pending，`41563617753`/`235d0d8` 继续运行；旧 pending `41578685392` 由 `queue:single` 自动取消，实核 1 运行/1 排队，未手动取消或重派。新 run 的 iOS 27 终态仍待，不与本地模拟器、unsigned IPA 或历史 run 混用。

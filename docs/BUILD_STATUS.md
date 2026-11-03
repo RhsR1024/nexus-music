@@ -1,3 +1,11 @@
+## 2026-11-03 配色重启真实状态观测
+
+固定 14 点判据无法区分 palette 丢失与静止相位避开采样点。模拟器专用只读观测以 boot UUID/一次性 nonce 绑定 store 与原生 applied 状态；最终 `SourceUITests-1793682338519` 为 1/0/0、589.358 秒、`sourceUnchanged=true`，重启前后和浅色重建均只有唯一可见、已安装、暂停的背景，store/native palette 精确为 `#FE0000,#0000FE,#00FF01` 且身份摘要一致。25 张全屏截图保留并亲看三个关键状态；`npm run check` 996/996、完整 native、Swift/Node/diff 通过，离线 `ipa --review` 为 56E/21WI/121 timeline/47F/47P、0 错误/0 警告。
+
+产品/测试/初始文档提交 `d7bb46a` 的 clean unsigned archive 成功，manifest 与 HEAD 一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。clean IPA 为 17,838,257 字节、SHA-256 `a5663c03d45236a81e213ea9eeee35bde2d0c2481b8e222aaf13ab00fbf0f328`；manifest SHA-256 `b7a72f4cac6e729e8bd959c49401cc9805d726a6781d43e1f43f907dbcf138f1`，archive log SHA-256 `ae1f0d60a55bd434c3d59632371f78eed8992a76fa6aeb51e4fac6eb4fb4d781`。独立回执 `ready=true`、SHA-256 `b033ce058045b8d4f25caac890f71de743b9e8eb6f44d8acea424ad5778da167`，178 项 ZIP CRC 和 151 项 archive/IPA 普通文件逐项字节一致，测试/私人/签名排除通过。
+
+推送后远端 main 实核一致；`41584802858`/`d7bb46a` 为唯一 pending，`41563617753`/`235d0d8` 继续运行，旧 pending 由 `queue:single` 自动取消，当前 1 运行/1 排队。T7 clean 阶段 `2026-11-03-palette-restart-observation-d7bb46a` 的 608 份普通映射/619,064,639 字节逐项一致，源证据保留。新 iOS27 终态、实体机、VoiceOver、真实服务与签名仍开放，详见[专项回执](2026-11-03-palette-restart-observation-report.md)。
+
 ## 2026-11-03 TTML 双侧注音
 
 歌词模型新增`rubyAfter`，既有`ruby`继续表示上方注音。AMLL与标准TTML只在`before`/`after`明确、唯一时接受双侧注音；单注解保持原默认上方，重复、缺失、冲突、数量不等及畸形结构安全拒绝。`npm run check`995/995、类型检查、完整native、Node/Swift/diff均通过。

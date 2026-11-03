@@ -7,8 +7,8 @@
 - [x] `npm run check` 996/996、完整 native、Release Swift 编译、Node 语法与 diff 检查通过；`ipa --review` 复用离线证据 56E/21WI/121 timeline/47F/47P、0 错误/0 警告。
 - [x] 精确 xcresult 导出 25 张全屏截图并亲看三个关键状态；原生 PNG 与 JSON/PNG 哈希绑定。
 - [x] 提交前 dirty unsigned archive通过；IPA为17,838,257字节、SHA-256`8eba44db…4eeb`，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。T7 precommit阶段保存archive/IPA、r1–r3、观测/截图、源码与diff，606份普通文件/619,107,655字节逐项一致且源证据保留。
-- [ ] clean HEAD unsigned archive、正常提交/push与实际 iOS27 队列核对。
-- [ ] 云端 iOS27 原始失败根因终态、实体机、真实服务与签名验收。
+- [x] clean HEAD unsigned archive、正常提交/push与实际 iOS27 队列核对：`d7bb46a`的IPA SHA-256为`a5663c03…f328`，178项ZIP CRC与151项archive/IPA字节一致；远端main一致，新`41584802858`唯一pending、旧`41563617753`运行，实核1运行/1排队。
+- [ ] 云端 iOS27 原始失败根因终态、实体机、真实服务与签名验收；等待新run终态，不以本地模拟器结果关闭原始故障。
 
 见[专项回执](2026-11-03-palette-restart-observation-report.md)。本批只收口测试判据和本地模拟器观测，不把模拟器通过写成云端或原始 iOS27 故障已解决。
 

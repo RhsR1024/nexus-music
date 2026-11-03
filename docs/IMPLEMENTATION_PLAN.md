@@ -8,7 +8,9 @@ r2 已证明固定 14 点失败时 store/native palette 与身份仍然一致。
 
 996/996 检查、完整 native、Release Swift 编译、Node 语法和 diff 通过；`ipa --review` 复用离线证据 56E/21WI/121 timeline/47F/47P、0 错误/0 警告。25 张全屏截图从精确 xcresult 导出并亲看关键三态；原生 PNG 为独立已安装图层，不能替代全屏合成或真机。正式归档、提交/push、云端 iOS27 和原始故障终态仍开放，见[专项回执](2026-11-03-palette-restart-observation-report.md)。
 
-提交前 dirty archive 通过并记录完整清单；IPA SHA-256为`8eba44db9c889b4298b1ab1046cf3c09d0880dc21ea18964adb5a92dcfd94eeb`，manifest与log分别绑定SHA-256`a0b26a41…f6e667`、`a21ef990…b9adc5`。T7 precommit阶段逐项核对606份普通文件/619,107,655字节，无缺失、额外载荷或内容差异；clean HEAD归档将在正常提交后单独绑定提交与工作区清洁状态。
+提交前 dirty archive 通过并记录完整清单；IPA SHA-256为`8eba44db9c889b4298b1ab1046cf3c09d0880dc21ea18964adb5a92dcfd94eeb`，manifest与log分别绑定SHA-256`a0b26a41…f6e667`、`a21ef990…b9adc5`。T7 precommit阶段逐项核对606份普通文件/619,109,169字节，无缺失、额外载荷或内容差异。
+
+产品/测试/初始文档提交`d7bb46a`后从clean HEAD重新归档：manifest commit与HEAD一致、`dirty=false`/`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]且未签名。IPA SHA-256为`a5663c03d45236a81e213ea9eeee35bde2d0c2481b8e222aaf13ab00fbf0f328`，manifest/log SHA-256分别为`b7a72f4c…38f1`、`ae1f0d60…d781`。独立回执`build/logs/palette-clean-archive-verification-d7bb46a.json`为`ready=true`、SHA-256`b033ce05…a167`，178项ZIP CRC、151项archive/IPA普通文件逐字节一致，测试/私人/签名排除通过。T7 clean阶段608份/619,064,639字节逐项一致。远端main实核一致；新`41584802858`/`d7bb46a`唯一pending、旧`41563617753`运行，1运行/1排队。iOS27新run终态仍待，本批不关闭原云故障。
 
 ## 2026-11-03 iOS27 核心组超时诊断与测试修正
 
