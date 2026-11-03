@@ -8,7 +8,9 @@
 
 `ipa --review`复用既有离线证据为56 Evidence/21 WorkItems/121 timeline/47 Findings/47 Paths、0错误/0警告；本批依据W3C TTML2，无新增Sollin采集、私有服务探测或商业逻辑移植。提交前dirty unsigned archive已核验：manifest绑定基线`1a27c23`且`dirty=true`，IPA为17,842,149字节、SHA-256`b347850f…e07a3`，151项archive/IPA载荷逐字节一致，ZIP CRC、生产`rubyAlign/withBase/spaceAround/spaceBetween/outside`标记及测试/私人/签名排除通过。完整archive、IPA、两轮成功和两轮失败xcresult、运行清单、截图、源码/diff与核验日志已复制至T7`2026-11-03-ttml-ruby-align-precommit-b347850f09db`，669份映射文件/305,997,336字节逐项一致，`SHA256SUMS`复核PASS，源证据保留且零删除。
 
-产品/测试/初始文档提交`a651aad`后从clean HEAD重新归档。manifest与HEAD一致、`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/iOS15.1/[1,2]且`signed=false`；clean IPA为17,842,149字节、SHA-256`e56f2fd9dc78e420606d13886dae21fd973475304db560fd93c64f13a5a0f240`，manifest SHA-256`8a499b60…c93e`，archive log SHA-256`346a72a3…ac65`。独立回执`7dcd80d0…57c7`再次确认151项archive/IPA载荷、ZIP CRC、生产标记、测试/私人/签名排除和架构。clean T7阶段`2026-11-03-ttml-ruby-align-a651aad`保存精确产物与证据，669份映射/310,595,673字节0差异，`SHA256SUMS`复核PASS、transfer receipt`25d03ad5…26b2`。正常push及iOS27 Actions结果仍在专项回执补齐。模拟器、unsigned包和静态检查不替代iOS27终态、实体机VoiceOver、真实歌词库、跨行Ruby重排或签名安装。
+产品/测试/初始文档提交`a651aad`后从clean HEAD重新归档。manifest与HEAD一致、`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/iOS15.1/[1,2]且`signed=false`；clean IPA为17,842,149字节、SHA-256`e56f2fd9dc78e420606d13886dae21fd973475304db560fd93c64f13a5a0f240`，manifest SHA-256`8a499b60…c93e`，archive log SHA-256`346a72a3…ac65`。独立回执`7dcd80d0…57c7`再次确认151项archive/IPA载荷、ZIP CRC、生产标记、测试/私人/签名排除和架构。clean T7阶段`2026-11-03-ttml-ruby-align-a651aad`保存精确产物与证据，669份映射/310,595,673字节0差异，`SHA256SUMS`复核PASS、transfer receipt`25d03ad5…26b2`。
+
+`a651aad..c178ea6`已正常push并实核远端main。push后实际队列为旧`41563617753`/`235d0d8`运行、`41591188218`/`c178ea6`唯一pending，实核1运行/1排队，未手动取消或重派旧版本；Actions页面快照与receipt已保存至clean T7阶段，receipt SHA-256为`57c1f795…80d8`。`41591188218`的iOS27终态仍开放。模拟器、unsigned包和静态检查不替代iOS27终态、实体机VoiceOver、真实歌词库、跨行Ruby重排或签名安装。
 
 详见[专项回执](docs/2026-11-03-ttml-ruby-align-report.md)与[UI规格](docs/ui-spec/ttml-ruby-align-2026-11-03.md)。
 
