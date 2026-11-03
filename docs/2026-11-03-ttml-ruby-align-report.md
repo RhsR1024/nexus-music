@@ -115,7 +115,30 @@ transfer receipt SHA-256为
 `f91ce04917dc4ed9ec9844ee9211725527f9836bf858d88e9899cf19237d68b5`；
 `deleted=0`、`movedUserFiles=0`、`activeBuilds=0`，源证据保留。
 
-clean HEAD archive、正常push、远端main和iOS27 Actions队列/终态仍待本节后续补录。
+产品/测试/初始文档提交`a651aad8265114781008ec6223410d0ec8b39691`
+后从clean HEAD重新归档。manifest与HEAD一致、`dirty=false`且
+`workingTreeChanges=[]`，arm64、iphoneos26.2、最低iOS15.1、设备族`[1,2]`
+且`signed=false`。clean IPA同样为17,842,149字节、SHA-256
+`e56f2fd9dc78e420606d13886dae21fd973475304db560fd93c64f13a5a0f240`；
+manifest 526字节、SHA-256
+`8a499b606b1dc537c1264d6f0fc214d61b11626896fb8c53e9e175667437c93e`，
+archive日志4,601,754字节、SHA-256
+`346a72a3a02c7fa0110401714702f4668aeab4e5e81d527fa5a80d5c6d0aac65`。
+独立回执
+`7dcd80d060c38a580a625bc74b423c92e50d25175e133ab93df23d469b8a57c7`
+为`passed=true`，再次通过151项archive/IPA载荷、ZIP CRC、生产标记、
+未签名/无描述文件/无测试bundle及arm64架构检查。
+
+clean阶段位于T7
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-03-ttml-ruby-align-a651aad`，
+保存精确IPA/archive/manifest、成功与失败xcresult、运行清单、截图、测试门禁日志及
+提交源码。669份逻辑源文件/310,595,673字节逐项一致，`SHA256SUMS`
+SHA-256为`a6cbd81cfcc6ca3b08f95657af9210ced84ffc795fcd81827b2f0977ae22ac8e`，
+transfer receipt SHA-256为
+`25d03ad5cf920f06293d6182db78ac1752ee022c9ee1668520be9937010b26b2`；
+`deleted=0`、`movedUserFiles=0`、`activeBuilds=0`，源证据保留。
+
+正常push、远端main和iOS27 Actions队列/终态仍待本节后续补录。
 
 ## 当前边界
 

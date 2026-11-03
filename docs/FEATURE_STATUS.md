@@ -6,7 +6,8 @@
 - [x] 正常截图人工亲看`st/md/ed`分别贴合左/中/右基础组；大字号拆段后完整阅读行可滚动到达。
 - [x] 997/997、完整native、Swift/Node/diff与原生六模式单测通过；reverse-skill离线strict review为56E/21WI/121 timeline/47F/47P、0错误/0警告。
 - [x] dirty unsigned IPA、151项archive/IPA载荷与ZIP CRC、生产/隐私排除通过；T7预提交阶段669份映射/305,997,336字节0差异，源证据保留且零删除。
-- [ ] clean unsigned IPA、提交push、iOS27 Actions终态。
+- [x] `a651aad` clean unsigned IPA、151项载荷与manifest清洁性通过；T7 clean阶段669份映射/310,595,673字节0差异，源证据保留且零删除。
+- [ ] 提交push、iOS27 Actions终态。
 - [ ] 竖排左右放置、跨行Ruby重分配、完整TTML2样式、真实歌词库、实体VoiceOver、动态字号/小屏及签名安装。
 
 见[专项回执](2026-11-03-ttml-ruby-align-report.md)与[UI规格](ui-spec/ttml-ruby-align-2026-11-03.md)。J37/S4仍为B状态，本批不关闭完整TTML2、F/J或项目。

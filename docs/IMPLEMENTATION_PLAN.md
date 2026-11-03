@@ -6,7 +6,7 @@
 
 正式fixture新增`起边/st`、`中间/md`、`到尾/ed`。最终同源Release正常字号`SourceUITests-1793686791272`为1/0/0、264.185秒，大字号`SourceUITests-1793686417862`为1/0/0、315.965秒；两者`sourceUnchanged=true`，源码digest`65c2971d…c86f`、安装bundle`01730b58…e021`。正常截图SHA-256`bcd082ac…bf851`，人工亲看三种对齐实际可见。首次大字号行高714pt超出418.67pt视口及第二次目标仅部分露出列表中，两轮失败原件均保留；最终拆段并用真实列表双向滚动到整行，未放宽断言。
 
-997/997检查、完整native、Swift解析、Node检查和diff通过；原生布局单测覆盖六模式、组合字素、`withBase`回退和非法输入。`ipa --review`复用既有离线证据为56E/21WI/121 timeline/47F/47P、0错误/0警告。提交前dirty unsigned archive的manifest绑定基线`1a27c23`且`dirty=true`，IPA为17,842,149字节、SHA-256`b347850f…e07a3`；151项archive/IPA载荷、ZIP CRC、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名、生产标记及测试/私人/签名排除均通过。完整archive、IPA、成功/失败xcresult、运行清单、截图、源码/diff和核验日志已复制至T7`2026-11-03-ttml-ruby-align-precommit-b347850f09db`，669份映射/305,997,336字节0差异且源证据保留。clean归档、提交、Actions队列与实际iOS27终态由[专项回执](2026-11-03-ttml-ruby-align-report.md)补录；不据此关闭完整TTML2、实体机/签名或项目。
+997/997检查、完整native、Swift解析、Node检查和diff通过；原生布局单测覆盖六模式、组合字素、`withBase`回退和非法输入。`ipa --review`复用既有离线证据为56E/21WI/121 timeline/47F/47P、0错误/0警告。提交前dirty unsigned archive的manifest绑定基线`1a27c23`且`dirty=true`，IPA为17,842,149字节、SHA-256`b347850f…e07a3`；151项archive/IPA载荷、ZIP CRC、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名、生产标记及测试/私人/签名排除均通过。完整archive、IPA、成功/失败xcresult、运行清单、截图、源码/diff和核验日志已复制至T7`2026-11-03-ttml-ruby-align-precommit-b347850f09db`，669份映射/305,997,336字节0差异且源证据保留。产品/测试/初始文档提交`a651aad`后从clean HEAD重新归档，manifest与HEAD一致、`dirty=false`，clean IPA同为17,842,149字节、SHA-256`e56f2fd9…0f240`；独立回执`7dcd80d0…57c7`再次确认151项载荷、ZIP CRC、架构与生产/隐私/签名排除，T7 clean阶段669份映射/310,595,673字节0差异。正常push、Actions队列与实际iOS27终态由[专项回执](2026-11-03-ttml-ruby-align-report.md)补录；不据此关闭完整TTML2、实体机/签名或项目。
 
 ## 2026-11-03 配色重启真实应用状态观测
 
