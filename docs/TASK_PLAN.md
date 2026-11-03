@@ -8,8 +8,9 @@
 - [x]固定provenance Release`SourceUITests-1793670038024`为1/0/0、345.561秒、`sourceUnchanged=true`；4PNG索引与逐图哈希固定，双侧截图亲看通过。
 - [x]`ipa --review`复用固定离线证据并通过56E/21WI/119 timeline/47F/47P，0错误/0警告；无新增Sollin采集或私有探测。
 - [x]dirty unsigned archive、178项ZIP CRC、151项archive/IPA字节、生产四标记与隐私/签名排除通过；精确证据复制至T7预提交阶段并逐文件核验。
-- [ ]产品/测试/初始文档提交后从clean HEAD重建unsigned archive，并完成manifest/HEAD、字节、架构、生产标记与隐私复核。
-- [ ]正常push并实核远端main与Actions至多1运行/1排队；保存clean T7阶段及最终回执。
+- [x]产品/测试/初始文档`235d0d8`提交后从clean HEAD重建unsigned archive；manifest/HEAD、178项ZIP CRC、151项archive/IPA字节、arm64/SDK26.2/iOS15.1/[1,2]、生产四标记与隐私/签名排除通过。
+- [x]正常push并实核远端main；`41553030339`运行、`41563617753`/`235d0d8`唯一pending，旧`41559631207`由`queue:single`自动取消，当前1运行/1排队。
+- [ ]`41563617753`/`235d0d8` iOS27 Actions终态；最终版文档提交后保存clean T7阶段、逐文件哈希及transfer receipt。
 - [ ]`before`/`after`以外的换行/wrapping、行间/右侧、完整TTML2样式、实体VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签与iOS27终态。
 
 见[本批回执](2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](ui-spec/ttml-double-sided-ruby-2026-11-03.md)。本批只增加当前单行模型内的双侧注音，不关闭完整TTML2、S4/J35–42、F/J或项目总目标。

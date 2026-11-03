@@ -6,7 +6,9 @@
 
 dirty IPA为17,837,222字节、SHA-256`2999cd1e…3f04e`，manifest`2f26d383…ef1`；178项ZIP CRC、151项archive/IPA载荷逐字节、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名及生产`rubyAfter/rubyPosition/rubyAfterInset/rubyInset`/隐私排除通过，回执`b54f4efa…10ed`。精确证据先复制至T7`2026-11-03-ttml-double-sided-precommit-2999cd1e`，136份/100,950,204字节0差异，`transfer-receipt.json` SHA-256`1217ae75…ad9`，源证据保留且零删除。
 
-产品/测试/初始文档提交、clean unsigned archive、正常push及clean T7阶段仍待创建。模拟器与unsigned包不替代实体机VoiceOver、真实歌词库、动态字号/小屏、跨行/完整TTML2、签名安装或iOS27终态。见[专项回执](2026-11-03-ttml-double-sided-ruby-report.md)。
+产品/测试/初始文档提交`235d0d8`已正常push并实核远端main。clean manifest与HEAD一致、`dirty=false`/`workingTreeChanges=[]`，arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`；clean IPA为17,837,222字节、SHA-256`c6a8def1a566eb5438f5b7665496a8575c9b2ad1ec25dafd606b011ba546eb6e`，manifest`1be5a055…209a`、archive log`2b9d35ae…7a78`。独立回执`19142a54…946e`为`passed=true`，178项ZIP CRC、151项archive/IPA字节、生产四标记及测试/私人/签名排除通过。
+
+push后Actions实核`41553030339`/`295bf94`运行、`41563617753`/`235d0d8`唯一pending，`41559631207`/`5a23db3`由`queue:single`自动取消，当前1运行/1排队。最终版文档提交后建立带逐文件哈希的clean T7阶段。模拟器与unsigned包不替代实体机VoiceOver、真实歌词库、动态字号/小屏、跨行/完整TTML2、签名安装或iOS27终态。见[专项回执](2026-11-03-ttml-double-sided-ruby-report.md)。
 
 ## 2026-11-03 TTML `rbc` 多基础注音
 

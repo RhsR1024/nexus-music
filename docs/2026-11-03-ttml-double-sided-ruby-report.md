@@ -73,8 +73,26 @@ SHA-256 `894a427f91bf92b241dda65f7b044347e5696f93b455283782c3038b33430e64`。截
 
 136 份普通文件、100,950,204 字节，缺失/额外/差异均为 0。`SHA256SUMS` SHA-256 为 `ecc7da277355cd7eea69a3affffed2150a5b7d60a336296eff50a36c5c74c161`，`transfer-receipt.json` SHA-256 为 `1217ae7531221e6602d4d58f8c96788ff4ed851818194181ae53f597b8839ad9`；源证据保留，`deleted=0`、`movedUserFiles=0`、活动构建 0。
 
-## 发布状态
+## 发布与归档
 
-产品、测试与本报告所在初始文档提交待创建。完成提交后仍须从 clean HEAD 重建 unsigned archive，复核 manifest/HEAD、ZIP CRC、archive↔IPA 字节、架构/SDK/最低系统/设备族、未签名与隐私排除；之后正常 push、核对远端 main、Actions 至多 1 运行/1 排队，并建立带逐文件哈希的 clean T7 阶段。
+产品/测试/初始文档提交 `235d0d816198ead00567ea12b9af62d47d2b5198` 已正常 push，`git ls-remote` 实核远端 `main` 与本地 HEAD 一致。随后从 clean HEAD 重建 unsigned archive：
+
+- manifest：commit 与 HEAD 一致、`dirty=false`、`workingTreeChanges=[]`
+- IPA：17,837,222 字节、SHA-256 `c6a8def1a566eb5438f5b7665496a8575c9b2ad1ec25dafd606b011ba546eb6e`
+- manifest SHA-256：`1be5a055d8879e28fa29580d4bf78c4aa29c1f110063924ec2d4ed7db17a209a`
+- clean archive log SHA-256：`2b9d35ae23826d489adc0acc66826b9f92b9a410dfbbb6c7d489d26c50377a78`
+- 独立 clean 核验回执 SHA-256：`19142a543f4f22af784092c172eb7bccb18177acb969106369958b78e33a946e`
+- `passed=true`：178 项 ZIP CRC、151 项 archive/IPA 载荷逐字节一致
+- arm64、`iphoneos26.2`、最低 iOS 15.1、设备族 `[1,2]`、`signed=false`
+- 生产 `rubyAfter`、`rubyPosition`、`rubyAfterInset`、`rubyInset` 标记存在；没有描述文件、顶层签名、UI 测试入口、私人夹具或私人资源路径
+
+push 后立即从 Actions 页面内嵌数据实核：
+
+- `41553030339` / `295bf94`：正在运行
+- `41563617753` / `235d0d8`：唯一 pending
+- `41559631207` / `5a23db3`：由 `queue:single` 自动取消
+- 当前为 1 运行 / 1 排队；没有手动取消、重派旧版本或 force push
+
+最终版文档提交后建立 clean T7 阶段，保存精确 clean IPA、archive、xcresult、截图、日志、提交源码与文档，并生成逐文件 SHA-256、`SHA256SUMS` 与 transfer receipt。阶段创建不删除或搬移源证据。
 
 模拟器截图、合成歌词和 unsigned archive 不替代实体 iPhone VoiceOver、真实歌词库、动态字号/小屏、签名/安装/续签或 iOS 27 Actions 终态验收。

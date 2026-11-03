@@ -6,7 +6,7 @@
 
 聚焦契约27/27、`npm run check`995/995、TypeScript类型检查、完整native、`node --check`、Swift parse和diff均通过。固定provenance Release`SourceUITests-1793670038024`为1/0/0、摘要总耗时345.561秒、`sourceUnchanged=true`；源码digest`364503cd…b03e9`、安装bundle`bb64941d…f318`。运行清单`5ec34b92…0fb0`、UI摘要`6cee2355…85a4`、服务计数`d3475073…6591`、catalog`1c76f1c2…d4cd`，`ttmlAmll=2`且鉴权失败0。人工亲看截图为1290×2796，SHA-256`894a427f…30e64`，确认`shuang`在“双”上方、`sou`在下方；`ipa --review`再次通过56E/21WI/119 timeline/47F/47P、0错误/0警告，无新增Sollin采集。
 
-提交前dirty IPA为17,837,222字节、SHA-256`2999cd1e…f04e`；178项ZIP CRC、151项archive/IPA字节、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名及生产`rubyAfter/rubyPosition/rubyAfterInset/rubyInset`/隐私排除通过。完整证据先复制至T7预提交阶段，136份普通文件/100,950,204字节0差异，源证据保留。clean archive、正常push、Actions和clean T7阶段仍在当前批次执行。
+提交前dirty IPA为17,837,222字节、SHA-256`2999cd1e…f04e`；178项ZIP CRC、151项archive/IPA字节、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名及生产`rubyAfter/rubyPosition/rubyAfterInset/rubyInset`/隐私排除通过。完整证据先复制至T7预提交阶段，136份普通文件/100,950,204字节0差异，源证据保留。产品/测试/初始文档`235d0d8`已push并实核远端main；clean manifest与HEAD一致且`dirty=false`，clean IPA SHA-256`c6a8def1…46eb6e`，独立回执`passed=true`。push后`41553030339`运行、`41563617753`/`235d0d8`唯一pending，旧pending由`queue:single`自动取消，实核1运行/1排队。最终版文档提交后建立clean T7阶段；iOS27终态继续。
 
 当前边界是当前单词行内、上下两侧各一个注音；跨行/wrapping、行间/右侧精确排版、完整TTML2样式、实体VoiceOver、真实歌词库、动态字号/小屏及签名继续。见[本批回执](2026-11-03-ttml-double-sided-ruby-report.md)与[UI规格](ui-spec/ttml-double-sided-ruby-2026-11-03.md)。
 
