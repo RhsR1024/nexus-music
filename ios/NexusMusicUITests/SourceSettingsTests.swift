@@ -128,24 +128,22 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["收起播放选项"].firstMatch.tap()
   }
   private func replaceText(_ field:XCUIElement,with value:String){
-    field.tap();field.press(forDuration:1.1)
-    // UIKit edit menus differ between host and simulator versions. Prefer its
-    // full-selection command, then fall back to the keyboard accelerator.
-    let selectAll=XCUIApplication().descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Select All","全选","全選"])).firstMatch
-    if selectAll.waitForExistence(timeout:2){
-      XCTContext.runActivity(named:"Replace text using native Select All"){_ in selectAll.tap()}
-    }else{
-      field.typeKey("a",modifierFlags:.command)
-    }
-    field.typeText(value);field.typeText("\n")
-    if field.value as? String != value {
-      // iOS 27 can ignore Command-A after the edit menu closes. Clear the
-      // observed field contents with ordinary Delete keys before retrying.
+    for _ in 0..<2 {
+      // A tap can place the caret inside the URL. Backspace alone then leaves
+      // its suffix intact, so move to the end before the bounded clear.
       let existing=field.value as? String ?? ""
-      XCTAssertLessThanOrEqual(existing.count,4096,"Text field contents exceeded the bounded replacement budget")
+      guard existing.count<=4096 else {
+        XCTFail("Text field contents exceeded the bounded replacement budget");return
+      }
       field.tap()
-      field.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:min(existing.count+16,4096)))
+      field.typeKey(XCUIKeyboardKey.rightArrow.rawValue,modifierFlags:.command)
+      field.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:existing.count+1))
+      let cleared=field.value as? String ?? ""
+      guard cleared.isEmpty || cleared==field.placeholderValue else {
+        XCTFail("Text replacement must observe an empty field before retrying");return
+      }
       field.typeText(value);field.typeText("\n")
+      if field.value as? String == value {break}
     }
     XCTAssertEqual(field.value as? String,value)
   }
@@ -2786,6 +2784,22 @@ final class SourceSettingsTests: XCTestCase {
     }
     XCTAssertTrue(fixture.isHittable);fixture.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))
+  }
+  func testWebDAVTextReplacementClearsExistingValue() throws {
+    let app=XCUIApplication();app.launch()
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    for _ in 0..<8 {app.swipeDown()}
+    let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch
+    XCTAssertTrue(webdav.waitForExistence(timeout:5));webdav.tap()
+    let address=app.textFields["WebDAV服务器根目录"]
+    if !address.waitForExistence(timeout:2) {app.buttons["管理WebDAV连接"].tap()}
+    XCTAssertTrue(address.waitForExistence(timeout:5))
+    replaceText(address,with:"http://127.0.0.1:18439/backup-dav/")
+    // Replace a populated field with a shorter value; a tap can leave the
+    // insertion point inside the old URL rather than at its end.
+    replaceText(address,with:"http://127.0.0.1:18439/x/")
+    XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439/x/")
+    app.buttons["收起WebDAV"].tap()
   }
   func testUCloudSyncPreviewConflictRestartAndDeletion() throws {
     let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
