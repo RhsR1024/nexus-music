@@ -15,6 +15,8 @@ import {ThemeObservation} from './lib/theme-observation.mjs';
 
 const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
 const popularArtistsUI=process.argv.slice(2).some(target=>target.endsWith('/testLivePopularArtists'));
+const miguAlbumImportUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguAlbumImportPersistence'));
+const livePublicCatalogUI=popularArtistsUI||miguAlbumImportUI;
 const derivedDataPath=process.env.NEXUS_UI_DERIVED_DATA??'build/DerivedData';
 if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.json')))throw new Error('Refusing to overwrite a capture run manifest');
 // Intel simulators cannot link the prebuilt Release Hermes (missing inspector
@@ -904,18 +906,18 @@ server.on('clientError',(error,socket)=>{
 });
 // The real local-file test never uses fixture HTTP routes. Give its harness an
 // ephemeral port so an unrelated online regression can keep its fixed port.
-await new Promise((resolve, reject) => { server.once('error', reject); server.listen(popularArtistsUI||liveLocalUI&&!liveStatisticsSyncUI&&!liveBackupSettingsUI&&!liveDownloadNamingUI?0:18439, '127.0.0.1', resolve); });
+await new Promise((resolve, reject) => { server.once('error', reject); server.listen(livePublicCatalogUI||liveLocalUI&&!liveStatisticsSyncUI&&!liveBackupSettingsUI&&!liveDownloadNamingUI?0:18439, '127.0.0.1', resolve); });
 mkdirSync(runDirectory,{recursive:true});
 const logPath=resolve(runDirectory,'ui-catalog.log');
 const sourceBefore=sourceSnapshot();
 const log = openSync(logPath, 'w+');
 let installedDuringTest;
 const logWatcher=watch(logPath,()=>{
-  if(localFixtureDirectory&&(!popularArtistsUI||installedDuringTest))return;
+  if(localFixtureDirectory&&(!livePublicCatalogUI||installedDuringTest))return;
   const size=statSync(logPath).size,tail=Buffer.alloc(Math.min(4096,size));
   readSync(log,tail,0,tail.length,Math.max(0,size-tail.length));
   const text=tail.toString();
-  if(popularArtistsUI&&!installedDuringTest&&text.includes('Test Case')&&text.includes('PopularArtistsTests')){
+  if(livePublicCatalogUI&&!installedDuringTest&&text.includes('Test Case')&&(text.includes('PopularArtistsTests')||text.includes('MiguAlbumImportTests'))){
     const snapshot=installedBundleSnapshot(process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D');
     if(snapshot.digest){
       installedDuringTest={observedAt:new Date().toISOString(),sourceDigest:sourceBefore.digest,snapshot};
@@ -941,6 +943,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveSearchAssistance')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSearchAssistance');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveArtistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveArtistSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguArtistSongs')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguArtistSongs');
+  if(!miguAlbumImportUI)args.push('-skip-testing:NexusMusicUITests/MiguAlbumImportTests');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePopularArtists')))args.push('-skip-testing:NexusMusicUITests/PopularArtistsTests');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguArtistAlbums')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguArtistAlbums');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveCatalogFavorites')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveCatalogFavorites');
