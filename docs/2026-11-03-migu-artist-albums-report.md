@@ -42,3 +42,7 @@ NEXUS_UI_RUN_DIR=build/migu-artist-albums-live-20261103-r3 node scripts/test-ui.
 接续时独立复核既有`3215002`清洁归档：manifest提交一致、dirty=false、arm64/iphoneos26.2/iOS15.1/[1,2]、未签名。IPA 17,851,852字节，SHA-256 `67d3ad50048e4d83754a21f38ec6a2014b0dce10e5700dfb6a17757aeb526752`；178项ZIP CRC和151项archive/IPA文件逐字节一致，生产标记及测试/私人/签名排除通过。没有为本次只读核验重建旧版本。
 
 T7真实恢复挂载后，精确IPA/archive/manifest、最终r3 xcresult/截图/运行清单和既有核验日志保存至`NexusMusic/BuildArchive/2026-11-03-migu-artist-albums-3215002/`：245份映射文件、105,037,466字节逐项SHA-256一致，0差异，源证据保留、零删除；另存固定提交源码归档。此补记只关闭清洁产物核验与保留，未补做创建副本/重启、云端、实体机或真实音频验收。
+
+## 2026-11-04 数字专辑副本验收补证
+
+No.6公开7首的正式创建/重启/原始ID顺序与范围描述/删除后重启已由新独立Release专项及只读SQLite验证通过，见[持久化回执](2026-11-04-migu-album-import-persistence-report.md)。只关闭该样本与空播放器/默认偏好状态；普通专辑副本、已有队列、授权额外曲目等边界仍保留。
