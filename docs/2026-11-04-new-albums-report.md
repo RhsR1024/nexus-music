@@ -21,3 +21,13 @@ r1 `1793779698633`为0/1/0、97.491秒，首张详情曲目等待失败；r2 `17
 第三轮`SourceUITests-1793780558820.xcresult`为1/0/0、137.979秒、exit0、sourceUnchanged=true；源码digest `0ae1db53c59421b5dcc6154b3112404196fe92347539c3a115c6270e38092503`，实际安装bundle `b4a1f0f15e69348f12463583bc19f7f31e9964713fa51a4d15c9dc18ad1c0627`。6张PNG逐项provenance ready、failures为空且已人工亲看；004与003均显示专辑元信息与明确拒绝提示。实际为官方拒绝分支，未出现真实曲目，未把预期错误当作真实专辑可读验收。返回保留60张、刷新回30张及浏览未启动音乐通过；不声明非空暂停队列/偏好键哈希不变。
 
 首次详情截图的通用错误已被精确专辑可用性提示替代；默认主题界面可读、元信息/返回/重试可达，滚动时卡片会按真实视口裁剪。未声明全页像素、动效或J09完成。两轮失败完整结果保留。
+
+## 清洁归档与外置保存
+
+产品提交`f9121cac28dc0db2097eb72bf8f7c40ec45ac50e`。clean manifest与HEAD相同、dirty=false/workingTreeChanges=[]，arm64/iphoneos26.2/min15.1/[1,2]且signed=false。IPA为17,814,639字节、SHA-256 `592413647f3348225b0a2dbd6f471f94a760b6293cb17e8de8955ebfcdc05f44`；manifest SHA-256 `49e6f43742ae05f670c14329a720f4d4cc7c46151c67431b6d8cd257b62cc42e`。独立核验90项ZIP CRC、63项archive/IPA普通文件逐字节、正式入口/方法标记、测试/私人夹具与签名排除，ready=true。
+
+真实挂载可写T7阶段`NexusMusic/BuildArchive/2026-11-04-new-albums-f9121ca/`保存三轮成功/失败原件、6张最终PNG、归档/IPA/manifest、固定源码tar、脚本与小型回执；283份映射文件/433,686,931字节逐项SHA-256一致，0差异、源证据保留、零删除。最终reverse review追加独立音枢验收事件后为58E/23WI/125事件/49F/49P、0错误/警告；没有扩大静态Sollin结论。
+
+下一可独立实现缺口：J37/F27超宽`withBase`注音基础组按组合字素配对的跨行布局。真实账号、服务写入、实体设备、iOS27终态与签名等原F/J继续独立保留，不以本批通过宣布总目标完成。
+
+产品已正常push并核对实际Actions队列：新`41800375748/f9121ca`唯一pending，旧`41794665316/cc7f2cc`继续运行，旧pending`41796070008/e80b326`由queue:single自动取消。实核1运行/1排队，未手动取消或重派。此快照不等于新iOS27终态。
