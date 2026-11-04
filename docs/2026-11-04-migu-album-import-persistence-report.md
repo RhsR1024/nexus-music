@@ -29,3 +29,9 @@ fdf225a的[41749569579](https://github.com/RhsR1024/nexus-music/actions/runs/417
 当前只关闭这一公开数字专辑样本的本机副本/重启/顺序/范围/清理验收缺口；J09全范围和项目保持开放。证据归档、正常提交/push及实际队列按本批交付记录补记。
 
 证据已保存至真实挂载T7的`NexusMusic/BuildArchive/2026-11-04-migu-album-import-persistence/`：332份映射文件、207,455,291字节逐项SHA-256一致，0差异，源文件保留、零删除。包含全部四轮精确xcresult/清单、最终6PNG/数据库观测、校验与上一批CI日志。
+
+## 提交与队列
+
+验收改动`cc7f2cc5d0be35ba30fb1e6de73b93996abebc6b`已正常推送远端main。实际[41794665316](https://github.com/RhsR1024/nexus-music/actions/runs/41794665316)对应cc7f2cc，1运行/0排队，未取消或重派旧运行。公开API本次返回403，已改用GitHub Actions页面核对；页面Lockfile链接与提交均为cc7f2cc。新iOS27终态仍待，原fdf失败不因新排队转为通过。
+
+收尾内盘约63GiB、T7约573GiB空闲；原仓库仍有另一任务的活跃Xcode验证，因此未清理共享目录或更新其正在使用的本地main。当前隔离分支已提交，源证据与活动缓存保留，没有删除或迁移个人文件。已有队列/自定义偏好以及普通专辑创建副本等独立场景继续验收。

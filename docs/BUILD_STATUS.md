@@ -1,3 +1,7 @@
+## 2026-11-04 咪咕公开专辑副本持久化
+
+cc7f2cc仅测试/调度/文档改动，1016检查通过；Release 1793777533739为1/0/0、152.791秒、sourceUnchanged=true，6PNG来源ready/亲看。97次只读采样验证7个原始ID、顺序、说明及0→1→0。无新产品源/设备IPA，基线仍fdf225a；新iOS27 41794665316为1运行/0排队，旧fdf在线6/1失败不关闭。见[回执](2026-11-04-migu-album-import-persistence-report.md)。
+
 ## 2026-11-04 网易热门歌手清洁交付
 
 fdf225a clean unsigned archive独立核验通过：arm64/SDK26.2/iOS15.1/[1,2]、63载荷逐字节/90 ZIP CRC/生产和隐私排除通过，IPA SHA-256 `b0fa0cc63c5a8a65050d49b8b3f1382d283d2b178427bcbdc3c70ea7f8cac2e6`。Release 1793752218233为1/0/0、143.834秒，6PNG来源ready/亲看；1016检查通过。T7 clean135份/113,977,681字节0差异，源保留。已push，iOS27 [41749569579](https://github.com/RhsR1024/nexus-music/actions/runs/41749569579)对应fdf225a、1运行/0排队，终态待验。详见[回执](2026-11-04-popular-artists-report.md)。
