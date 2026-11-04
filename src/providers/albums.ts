@@ -29,6 +29,22 @@ export class AlbumProvider{
   constructor(deps:Dependencies){this.deps=deps;}
   private http:HTTPClient=(url,request,signal)=>(this.deps.http??requestJSON)(url,{...request,credentials:'omit'},signal);
   private textHTTP:TextHTTPClient=(url,request,signal)=>(this.deps.textHTTP??requestText)(url,{...request,credentials:'omit'},signal);
+  async newNetease(page:number,signal:AbortSignal,limit=30):Promise<PlaylistSearchPage>{
+    check(page,limit,signal);
+    const raw=row(await this.http(queryURL('https://music.163.com/api/album/new',{area:'ALL',offset:(page-1)*limit,limit,total:true}),{headers:{Referer:'https://music.163.com/'}},signal));
+    if(signal.aborted)throw Error('已取消');
+    const total=count(raw.total),offset=(page-1)*limit;
+    if(raw.code!==200||total===undefined||!Array.isArray(raw.albums)||raw.albums.length>limit||offset<total&&raw.albums.length!==Math.min(limit,total-offset)||offset>=total&&raw.albums.length)throw Error('新碟目录暂不可读取，请刷新后重试');
+    const items=raw.albums.map(value=>{
+      const v=row(value),id=text(v.id),title=clean(v.name);
+      if(!/^\d{1,30}$/.test(id)||!title||title.length>1000||/[\u0000-\u001f\u007f]/.test(title))throw Error('新碟目录暂不可读取，请刷新后重试');
+      const author=clean(row(v.artist).name)|| (Array.isArray(v.artists)?v.artists.map(a=>clean(row(a).name)).filter(Boolean).join('、'):'');
+      const artwork=art(v.picUrl),size=count(v.size);
+      return{id,title,...info(author,v.publishTime,v.description),...(artwork?{artwork}:{}),...(size!==undefined?{count:size}:{})};
+    });
+    if(new Set(items.map(item=>item.id)).size!==items.length)throw Error('新碟目录发生变化，请刷新后重试');
+    return{items,page,total,hasMore:offset+items.length<total};
+  }
   async search(platform:OnlinePlatform,query:string,page:number,signal:AbortSignal,limit=30):Promise<PlaylistSearchPage>{
     check(page,limit,signal);if(!query.trim()||query.length>500)throw Error('搜索参数无效');let values:unknown,total:unknown;
     if(platform==='wy'){

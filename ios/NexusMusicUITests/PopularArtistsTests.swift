@@ -59,4 +59,53 @@ final class PopularArtistsTests: XCTestCase {
     reach(count); image("Refreshing popular artists resets the public page boundary")
     XCTAssertFalse(app.buttons["暂停"].exists, "Browsing must not start music")
   }
+  func testLiveNewAlbums() throws {
+    let app = XCUIApplication(); app.launch()
+    func reach(_ item: XCUIElement) {
+      for _ in 0..<32 {
+        if item.exists && item.isHittable { return }
+        if item.exists && item.frame.midY < app.frame.midY { app.swipeDown() } else { app.swipeUp() }
+      }
+      XCTAssertTrue(item.exists && item.isHittable)
+    }
+    func image(_ name: String) {
+      let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
+    }
+    let discover = app.descendants(matching: .any).matching(identifier: "tab-discover").firstMatch
+    XCTAssertTrue(discover.waitForExistence(timeout: 20)); discover.tap()
+    let open = app.buttons["discovery-new-albums"]; reach(open); open.tap()
+    let count = app.staticTexts["new-albums-count"]
+    XCTAssertTrue(count.waitForExistence(timeout: 15))
+    func loaded(_ value: Int) {
+      let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "\(value) 张专辑"), object: count)
+      XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 35), .completed)
+    }
+    loaded(30); reach(count); image("New albums public first thirty")
+    let more = app.buttons["加载更多"]; reach(more); more.tap()
+    loaded(60); reach(count); image("New albums public sixty")
+    let first = app.buttons["discovery-item-0"]; reach(first); first.tap()
+    let track = app.otherElements["discovery-track-0"]
+    let back = app.buttons["返回新碟首发"]
+    XCTAssertTrue(back.waitForExistence(timeout: 20)); image("New album detail before scrolling")
+    if track.waitForExistence(timeout: 15) {
+      reach(track); image("New album opens ordinary album tracks")
+    } else {
+      let error = app.staticTexts["discovery-load-error"]
+      reach(error)
+      XCTAssertEqual(error.label, "此专辑暂不可公开读取，请到官方平台确认可用性")
+      image("New album explicit official availability rejection")
+      let retry = app.buttons["discovery-load-retry"]; reach(retry); retry.tap()
+      XCTAssertTrue(error.waitForExistence(timeout: 25))
+      XCTAssertEqual(error.label, "此专辑暂不可公开读取，请到官方平台确认可用性")
+      XCTAssertFalse(app.otherElements["discovery-track-0"].exists)
+    }
+    XCTAssertTrue(app.buttons["discovery-import-full"].exists)
+    reach(back); back.tap()
+    XCTAssertTrue(count.waitForExistence(timeout: 15)); loaded(60); reach(count)
+    image("New album return retains parent directory")
+    let refresh = app.buttons["discovery-load-retry"]; reach(refresh); refresh.tap()
+    loaded(30); reach(count); image("New album refresh resets paging")
+    XCTAssertFalse(app.buttons["暂停"].exists, "Catalog browsing must not start playback")
+  }
+
 }

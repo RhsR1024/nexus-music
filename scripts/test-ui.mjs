@@ -14,7 +14,7 @@ import {exportFailureEvidence} from './export-failure-evidence.mjs';
 import {ThemeObservation} from './lib/theme-observation.mjs';
 
 const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
-const popularArtistsUI=process.argv.slice(2).some(target=>target.endsWith('/testLivePopularArtists'));
+const popularArtistsUI=process.argv.slice(2).some(target=>(target.endsWith('/testLivePopularArtists')||target.endsWith('/testLiveNewAlbums')));
 const miguAlbumImportUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguAlbumImportPersistence'));
 const livePublicCatalogUI=popularArtistsUI||miguAlbumImportUI;
 const derivedDataPath=process.env.NEXUS_UI_DERIVED_DATA??'build/DerivedData';
@@ -944,7 +944,7 @@ try {
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveArtistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveArtistSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguArtistSongs')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguArtistSongs');
   if(!miguAlbumImportUI)args.push('-skip-testing:NexusMusicUITests/MiguAlbumImportTests');
-  if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePopularArtists')))args.push('-skip-testing:NexusMusicUITests/PopularArtistsTests');
+  if(!process.argv.slice(2).some(target=>(target.endsWith('/testLivePopularArtists')||target.endsWith('/testLiveNewAlbums'))))args.push('-skip-testing:NexusMusicUITests/PopularArtistsTests');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguArtistAlbums')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguArtistAlbums');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveCatalogFavorites')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveCatalogFavorites');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMVSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMVSearch');
