@@ -1,6 +1,6 @@
 # iOS 27 字段输入残留与 DAV、发现页回归
 
-本批最终本地验收：正式表单长URL→短URL回归1/0/0、36.867秒；完整发现页1/0/0、249.715秒；同步/备份第四轮合计2/0/0，分别269.809秒、202.631秒，全部exit0且sourceUnchanged=true。1016项类型/业务检查通过。仅修改XCTest真实键盘输入辅助器并增加非空字段回归，保留所有产品校验和业务断言；未改产品代码或扩大功能完成度。归档、T7阶段交付与新云端终态按后文实际结果补录。
+本批最终本地验收：正式表单长URL→短URL回归1/0/0、36.867秒；完整发现页1/0/0、249.715秒；同步/备份第四轮合计2/0/0，分别269.809秒、202.631秒，全部exit0且sourceUnchanged=true。1016项类型/业务检查通过。仅修改XCTest真实键盘输入辅助器并增加非空字段回归，保留所有产品校验和业务断言；未改产品代码或扩大功能完成度。clean归档和T7交付已完成，精确结果见末节；新云端终态仍开放。
 
 发现页结果包`SourceUITests-1793776816019.xcresult`，DAV为`SourceUITests-1793777325910.xcresult`。两轮源码digest均为`cc069fec7ae6970adcc8d8340dbdf480b2447737441e52a93ac59aa7f36d02a4`；发现fixture实际安装bundle为`2420671963972a9529a0347e8b1e12864301386e64223bb1ba2139247b1c7a81`，正式生产入口DAV安装bundle为`559e50cf72ff3d243c600b3164da413fc3d1ebb9d2c286ecc38ed6514335ef74`。发现页17PNG记录哈希并亲看3张，DAV3PNG全部亲看；前者无效域名提示位于截图视口下方，拒绝结果由断言证明，不宣称该图完整显示错误文案，也不声明Sollin等价。
 
@@ -48,3 +48,15 @@
 ## 提交前设备包核验
 
 提交前dirty manifest绑定基线`6fdf8f8`并如实标记工作区变化。unsigned IPA为17,853,350字节，SHA-256 `c98f46aea7e5f6d6cb7f473949433cc6a3259c6c615074c9bd8dbee89d9c2776`；178项ZIP CRC、151项archive/IPA载荷逐字节一致，arm64/iphoneos26.2/min15.1/[1,2]及未签名确认通过。生产热门歌手/咪咕/注音标记、测试入口/私人夹具/签名排除均通过。独立回执`build/logs/ios27-input-replacement-dirty-archive-verification.json`；T7预提交目录`2026-11-04-ios27-input-precommit`逐项复制IPA/manifest/日志/回执并核验一致，源保留，不宣称已复制完整dirty xcarchive。随后从提交后的clean HEAD重新归档，正式交付另记。
+
+## 清洁交付与并行增量合并
+
+修复提交`6030604d11e028eb245b72b931cb4faa4d49f222`的clean归档已独立核验，IPA为17,853,350字节、SHA-256 `8743633b8b4dc86074a2e60faa435e3c39a958ae8a444e70dafc01890cc23440`；T7阶段271份映射/134,058,877字节0差异。随后正常合并并行`cc7f2cc`的咪咕副本测试，保留双方三份顶部交接记录；没有覆盖其独立测试或重写远端历史。
+
+合并提交`d9ebaed9664d3daaae057a2095a3f1b97a22aed7`与`6030604`之间产品src/modules/App/配置/依赖和本批SourceSettingsTests均无差异。调度脚本只增加显式MiguAlbumImportTests专项的独立条件及默认跳过，不改变本批DAV/发现目标的端口、fixture入口或输入实现。合并后1016检查、Node语法及工程plist通过；之前真实UI来源仍绑定各自运行清单，不冒充在新源码摘要上重跑。
+
+重新从clean `d9ebaed`归档，manifest commit精确一致、dirty=false/workingTreeChanges=[]；IPA为17,853,349字节、SHA-256 `ebbdefd471fe8cfa843e2b2c54af28c43a2ffbf32e432e94c07aa4f5e11cd069`，manifest SHA-256 `d2a23e4c294283ec2d99d2bbab3e67017a1d45ce89b5a861e88eecf0d6de7210`。178项ZIP CRC、151项archive/IPA载荷逐字节一致，arm64/iphoneos26.2/min15.1/[1,2]、未签名、生产/私人/测试排除全部通过；另确认原生可执行文件与JS均不含三个UITest类名及本批回归方法名。
+
+T7正式阶段`2026-11-04-ios27-input-d9ebaed`保存完整clean archive/IPA/manifest、固定源码tar、精确三轮成功结果、第三轮不完整日志、20张截图与索引及核验工具/回执。279份映射/139,249,547字节逐文件SHA-256一致、0差异、源保留，SHA256SUMS复核PASS（清单SHA-256 `188e56dd930c956cdd8231db4d39ac2815a0555943e32f18259580603585ceba`）。首轮失败原件与三轮云端原始证据在各自先前目录独立保留，不删除。
+
+之后合并`5abd0e0`只涉及三份交付/状态Markdown；未改变上述设备包或已验代码。默认SSH22连接关闭，使用443端口并保持既有github.com主机密钥严格校验读取同一远端；不关闭HostKey校验或更换远端。正常push与最终队列由本批后续实核补记，保留原`41794665316/cc7f2cc`运行，不手动取消或重派。真实iOS27新代码终态、实体机、签名与私人服务仍开放。
