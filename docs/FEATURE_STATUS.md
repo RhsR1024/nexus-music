@@ -1,3 +1,7 @@
+## 2026-11-04 网易热门歌手公开目录
+
+正式发现入口、30→60分页、歌曲/专辑详情、返回保留与刷新Release 1/0/0、143.834秒通过；1016检查、6PNG来源ready/亲看及dirty unsigned包通过。清洁归档/交付继续，不报J09或项目完成。见[回执](2026-11-04-popular-artists-report.md)。
+
 ## 2026-11-03 Ruby wrapping clean delivery
 
 Product `eaa891a` clean unsigned archive verified: manifest clean, IPA SHA-256 `2729c56acbabd0afcef0c48184505f8112c59d5419703eb617c482aad889829f` (17,845,009 bytes), ZIP/151 file comparisons and privacy/signing exclusions passed. T7 clean stage `2026-11-03-ttml-ruby-wrap-eaa891a`: 295 mapped files / 116,221,275 bytes, zero mismatch, SHA256SUMS PASS, originals preserved. Product pushed normally; iOS27/physical device/signing and arbitrary cross-line ruby redistribution remain open. See [delivery report](2026-11-03-ttml-ruby-wrap-report.md).

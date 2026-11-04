@@ -14,6 +14,8 @@ import {exportFailureEvidence} from './export-failure-evidence.mjs';
 import {ThemeObservation} from './lib/theme-observation.mjs';
 
 const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
+const popularArtistsUI=process.argv.slice(2).some(target=>target.endsWith('/testLivePopularArtists'));
+const derivedDataPath=process.env.NEXUS_UI_DERIVED_DATA??'build/DerivedData';
 if(process.env.NEXUS_UI_RUN_DIR&&existsSync(resolve(runDirectory,'run-manifest.json')))throw new Error('Refusing to overwrite a capture run manifest');
 // Intel simulators cannot link the prebuilt Release Hermes (missing inspector
 // symbols); Debug links the debug framework and is for local visual iteration
@@ -902,12 +904,26 @@ server.on('clientError',(error,socket)=>{
 });
 // The real local-file test never uses fixture HTTP routes. Give its harness an
 // ephemeral port so an unrelated online regression can keep its fixed port.
-await new Promise((resolve, reject) => { server.once('error', reject); server.listen(liveLocalUI&&!liveStatisticsSyncUI&&!liveBackupSettingsUI&&!liveDownloadNamingUI?0:18439, '127.0.0.1', resolve); });
+await new Promise((resolve, reject) => { server.once('error', reject); server.listen(popularArtistsUI||liveLocalUI&&!liveStatisticsSyncUI&&!liveBackupSettingsUI&&!liveDownloadNamingUI?0:18439, '127.0.0.1', resolve); });
 mkdirSync(runDirectory,{recursive:true});
 const logPath=resolve(runDirectory,'ui-catalog.log');
 const sourceBefore=sourceSnapshot();
 const log = openSync(logPath, 'w+');
-const logWatcher=watch(logPath,()=>{if(localFixtureDirectory)return;const size=statSync(logPath).size,tail=Buffer.alloc(Math.min(4096,size));readSync(log,tail,0,tail.length,Math.max(0,size-tail.length));if(tail.toString().includes('Test Case')||tail.toString().includes('Running tests'))seedLocalAudio();});
+let installedDuringTest;
+const logWatcher=watch(logPath,()=>{
+  if(localFixtureDirectory&&(!popularArtistsUI||installedDuringTest))return;
+  const size=statSync(logPath).size,tail=Buffer.alloc(Math.min(4096,size));
+  readSync(log,tail,0,tail.length,Math.max(0,size-tail.length));
+  const text=tail.toString();
+  if(popularArtistsUI&&!installedDuringTest&&text.includes('Test Case')&&text.includes('PopularArtistsTests')){
+    const snapshot=installedBundleSnapshot(process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D');
+    if(snapshot.digest){
+      installedDuringTest={observedAt:new Date().toISOString(),sourceDigest:sourceBefore.digest,snapshot};
+      writeFileSync(resolve(runDirectory,'installed-during-test.json'),JSON.stringify(installedDuringTest,null,2)+'\n');
+    }
+  }
+  if(!localFixtureDirectory&&(text.includes('Test Case')||text.includes('Running tests')))seedLocalAudio();
+});
 try {
   const resultPath = `build/SourceUITests-${Date.now()}.xcresult`;
   console.log(`UI capture result: ${resultPath}; log: ${logPath}`);
@@ -919,12 +935,13 @@ try {
   writeFileSync(resolve(runDirectory,'run-manifest.json'),JSON.stringify(runManifest,null,2)+'\n');
   const args = ['test','-parallel-testing-enabled','NO', '-workspace', 'ios/app.xcworkspace', '-scheme', 'app', '-configuration', configuration,
     '-destination', `platform=iOS Simulator,id=${process.env.NEXUS_SIMULATOR_ID??'BD3F486B-04DE-4BA7-9E58-64F10166B39D'}`,
-    '-derivedDataPath', 'build/DerivedData', '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
+    '-derivedDataPath', derivedDataPath, '-resultBundlePath', resultPath, 'ONLY_ACTIVE_ARCH=YES', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-', 'FORCE_BUNDLING=1'];
   for(const target of process.argv.slice(2))args.push(`-only-testing:${target}`);
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguSearchAssistance')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguSearchAssistance');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveSearchAssistance')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveSearchAssistance');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveArtistSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveArtistSearch');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguArtistSongs')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguArtistSongs');
+  if(!process.argv.slice(2).some(target=>target.endsWith('/testLivePopularArtists')))args.push('-skip-testing:NexusMusicUITests/PopularArtistsTests');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguArtistAlbums')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMiguArtistAlbums');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveCatalogFavorites')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveCatalogFavorites');
   if(!process.argv.slice(2).some(target=>target.endsWith('/testLiveMVSearch')))args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testLiveMVSearch');
@@ -987,7 +1004,11 @@ try {
     console.error('Timed TTML fixture was not requested; cached lyrics cannot prove this case');
     process.exitCode=1;
   }
-  Object.assign(runManifest,{finishedAt:new Date().toISOString(),exitCode:process.exitCode,sourceAfter:sourceSnapshot(),installedBundle:installedBundleSnapshot(runManifest.simulator),resultInfoSha256:existsSync(resolve(resultPath,'Info.plist'))?fileSha256(resolve(resultPath,'Info.plist')):null});
+  // Observe actual installed bytes while XCTest is running. Xcode may shut
+  // down an initially idle destination during teardown; retain that failure
+  // separately and keep the timestamped in-test observation as provenance.
+  const installedAfterTest=installedBundleSnapshot(runManifest.simulator);
+  Object.assign(runManifest,{finishedAt:new Date().toISOString(),exitCode:process.exitCode,sourceAfter:sourceSnapshot(),installedBundle:installedAfterTest.digest?installedAfterTest:installedDuringTest?.snapshot??installedAfterTest,installedAfterTest,...(installedDuringTest?{installedDuringTest}:{}) ,resultInfoSha256:existsSync(resolve(resultPath,'Info.plist'))?fileSha256(resolve(resultPath,'Info.plist')):null});
   runManifest.sourceUnchanged=runManifest.sourceBefore.digest===runManifest.sourceAfter.digest;
   if(referenceScene){runManifest.externalInputs.after=externalInputSnapshot(referenceScene.paths);runManifest.externalInputs.unchanged=runManifest.externalInputs.before.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}
   if(liveLocalPath){runManifest.externalInputs.after=externalInputSnapshot(liveInputPaths);runManifest.externalInputs.unchanged=liveLocalSnapshot.digest===runManifest.externalInputs.after.digest;if(!runManifest.externalInputs.unchanged)process.exitCode=1;}

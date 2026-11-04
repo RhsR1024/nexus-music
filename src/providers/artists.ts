@@ -35,6 +35,22 @@ export class ArtistProvider{
  private http:HTTPClient=(url,request,signal)=>(this.deps.http??requestJSON)(url,{...request,credentials:'omit'},signal);
  private textHTTP:TextHTTPClient=(url,request,signal)=>(this.deps.textHTTP??requestText)(url,{...request,credentials:'omit'},signal);
  private async qq(module:string,method:string,param:Row,signal:AbortSignal){const body=JSON.stringify({comm:{ct:24,cv:0,format:'json',uin:0},req:{module,method,param}}),raw=row(await this.http(queryURL('https://u.y.qq.com/cgi-bin/musics.fcg',{sign:await qqSignature(body,this.deps.sha1)}),{method:'POST',headers:{'Content-Type':'application/json',Referer:'https://y.qq.com/'},body},signal)),r=row(raw.req);if(raw.code!==0||r.code!==0)throw Error('QQ艺术家服务暂不可用');return row(r.data);}
+ async popularNetease(page:number,signal:AbortSignal,limit=30):Promise<ArtistSearchPage>{
+  check(page,limit,signal);
+  const raw=row(await this.http(queryURL('https://music.163.com/api/artist/top',{offset:(page-1)*limit,limit}),{headers:{Referer:'https://music.163.com/'}},signal));
+  if(signal.aborted)throw Error('已取消');
+  if(raw.code!==200||typeof raw.more!=='boolean'||!Array.isArray(raw.artists)||raw.artists.length>limit)throw Error('热门歌手目录暂不可读取');
+  if(raw.more&&!raw.artists.length)throw Error('热门歌手分页未推进，请重试');
+  const items=raw.artists.map(value=>{
+   const artist=artistItem('wy',row(value));
+   if(!/^\d{1,30}$/.test(artist.id))throw Error('热门歌手身份无效');
+   return artist;
+  });
+  if(new Set(items.map(item=>item.id)).size!==items.length)throw Error('热门歌手分页包含重复身份，请重试');
+  // The public envelope has no total. Preserve its own `more` flag instead
+  // of turning loaded rows or a search count into a complete artist total.
+  return{items,page,hasMore:raw.more};
+ }
   async search(platform:OnlinePlatform,query:string,page:number,signal:AbortSignal,limit=30):Promise<ArtistSearchPage>{
     check(page,limit,signal);if(!query.trim()||query.length>500)throw Error('搜索参数无效');let values:unknown,total:unknown;
     if(platform==='wy'){

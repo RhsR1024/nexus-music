@@ -7,6 +7,9 @@ export interface DiscoveryFailure {kind:DiscoveryFailureKind;message:string;retr
 const safeProviderMessage=/^(无法读取此公开歌单|部分歌曲不可读取，未导入不完整歌单|平台歌曲数量无效，未导入不完整歌单|读取期间歌曲数量变化，请重新读取完整歌单|歌单超过20000首，请分批导入|歌单分页过多，未导入不完整结果|平台未推进分页，已停止不完整导入|歌曲数量与平台声明不符，未导入不完整歌单|酷狗完整歌单暂不可用，未导入预览列表|酷狗完整歌单格式无效|歌单歌曲响应无效|酷狗歌曲响应无效|咪咕歌单响应无效)$/;
 
 export function classifyDiscoveryFailure(error:unknown):DiscoveryFailure {
+  if(error instanceof Error&&/^(热门歌手目录暂不可读取|热门歌手分页未推进，请重试|热门歌手身份无效|热门歌手分页包含重复身份，请重试|热门歌手目录发生变化，请刷新后重试)$/.test(error.message)){
+    return{kind:'invalid',message:error.message,retryable:true};
+  }
   if(error instanceof DeadlineError)return{kind:'timeout',message:'读取超时，请检查网络后重试。',retryable:true};
   if(error instanceof HTTPResponseError){
     if(error.status===429)return{kind:'rate-limit',message:'平台请求过于频繁，请稍后重试。',retryable:true};
