@@ -26,13 +26,13 @@ flowchart LR
 
 类型/全量业务检查1016通过、0失败；新增7项测试覆盖匿名分页、终页/空态、缺失与畸形信封、重复/超量/非法身份、边界和请求前/迟到取消。艺术家聚焦16项全部通过。Node脚本语法、Swift测试语法、工程plist和diff检查通过。原生产品模块未改。
 
-2026-11-04匿名真实读取：前两页各30位，合计60个不同ID、两页more=true；没有Cookie或设备身份。未把目录读取写成音频播放。正式Release UI、截图质量、清洁归档、push及新iOS27终态仍待；[UI规格](ui-spec/popular-artists-2026-11-04.md)记录固定验收条件。
+2026-11-04匿名真实读取：前两页各30位，合计60个不同ID、两页more=true；没有Cookie或设备身份。未把目录读取写成音频播放。正式Release UI与截图已按下方r4通过；清洁归档与正常push已完成（见末节），新iOS27终态继续；[UI规格](ui-spec/popular-artists-2026-11-04.md)记录固定验收条件。
 
 当前同一仓库有独立WebDAV测试修正和模拟器专项，未接管其改动或进程。T7在本轮曾掉载又恢复；掉载期间停止外置读写，未创建内盘回退目录。内盘余量高于30GiB，未删除或迁移用户文件。
 
 ## 后续
 
-先完成本批正常入口/分页/详情/返回/刷新Release专项与截图亲看，再做精确生产归档/隐私核验和交付。咪咕公开专辑真实创建副本/重启、其他热门目录、账号写操作、真实设备/签名、弱网限流与原F/J继续；项目目标仍active。
+本批正常入口/分页/详情/返回/刷新Release专项、截图及清洁归档交付已完成；下一继续独立功能验收。咪咕公开专辑真实创建副本/重启、其他热门目录、账号写操作、真实设备/签名、弱网限流与原F/J继续；项目目标仍active。
 
 ## 分轮验证记录
 
@@ -47,3 +47,17 @@ r4 `SourceUITests-1793752218233.xcresult`为1通过/0失败/0跳过、143.834秒
 验证从正式发现导航进入网易，30→60位、歌手热门歌曲范围与目录摘要、专辑页、返回保留60位、刷新回30位及未启动音乐。图片按平台实际返回加载，失败使用既有占位；不伪造封面或静态参考素材。最终1016业务/类型检查通过，原生产品未改，Release实际编译成功。
 
 提交前dirty unsigned IPA为17,853,350字节，SHA-256 `542e4482e7782765bcf6614c516ca9f325b298494707bfc696ff67f316007e4b`；178项ZIP CRC、151项archive/IPA载荷逐字节、arm64/iphoneos26.2/iOS15.1/[1,2]和测试/私人/签名排除通过。首次核验脚本仅按UTF-8查中文标记而失败；确认Hermes将该中文表存为UTF-16LE后按实际编码核验，保留原失败，不误报生产代码缺失。clean归档、正常push和新iOS27结果下一补记。
+
+严格收尾审查新增独立音枢验收事件后为57E/22WI/123 timeline/48F/48P，离线Sollin结论未扩大。预提交T7阶段保存四轮精确结果、最终截图、dirty IPA/archive与日志，403份文件、158,663,274字节逐项一致，0差异、源证据保留。
+
+## 清洁交付与云端队列
+
+产品/测试/初始文档提交`fdf225add888d0d78b2d8254b1bcd5500ad98380`后，使用独立受管工作树生成真正clean归档，未stash、覆盖或提交并行DAV修改。依赖沿现有锁文件在本机SSD复制；官方RN codegen在隔离树重新生成。首次缺少generated文件、第二次复用路径绑定PCH/SwiftShims失败均保留；切换全新本机DerivedData后第三轮ARCHIVE SUCCEEDED，无原生产品源码修改，工作树始终clean。
+
+manifest提交=`fdf225a`、dirty=false、workingTreeChanges=[]，arm64/iphoneos26.2/min15.1/[1,2]且signed=false。clean IPA为17,813,222字节，SHA-256 `b0fa0cc63c5a8a65050d49b8b3f1382d283d2b178427bcbdc3c70ea7f8cac2e6`；manifest SHA-256 `1c309e0ccd7509f27fd4f66bb52f64740c62fec00d607f688744bf80c016e5f5`。90项ZIP CRC、63项普通archive/IPA载荷逐字节、生产热门目录/既有咪咕/注音标记及测试/私人/签名排除均通过。此本机clean包没有旧外置dirty包中的88项AppleDouble元数据。
+
+本机稳定交付在`build/local-popular-artists-fdf225a/distribution/`。T7 clean阶段`NexusMusic/BuildArchive/2026-11-04-popular-artists-fdf225a/`保存精确产物、失败/成功构建日志、最终UI/6PNG、运行来源、strict review及固定源码归档；135份映射文件、113,977,681字节逐项SHA-256一致，0差异、源证据保留、零删除。
+
+`fdf225a`已正常push并在远端Actions核对；新运行[41749569579](https://github.com/RhsR1024/nexus-music/actions/runs/41749569579)对应同一提交，实核1运行/0排队。旧`41662090745`已经取消，未把它计为成功，本批未取消/重派任何旧运行。此快照不等于iOS27终态，实体机/签名、真实错误/取消矩阵及原F/J仍开放。
+
+独立工作树当前被桌面管理工具视为主checkout，archive_worktree返回保护错误，已保留目录，未用手动删除绕过。所需忽略产物已另存本机稳定目录及T7。原仓库仍在`/Users/ningli/WorkSpace/NexusMusic`，后续业务继续显式使用该路径，并保留独立DAV任务的HANDOFF/SourceSettingsTests/报告修改。收尾磁盘余量高于30GiB，所有当前缓存、最新有效阶段及未解决原件保留，没有个人文件搬移。

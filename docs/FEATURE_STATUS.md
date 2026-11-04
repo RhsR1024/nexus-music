@@ -1,6 +1,6 @@
 ## 2026-11-04 网易热门歌手公开目录
 
-正式发现入口、30→60分页、歌曲/专辑详情、返回保留与刷新Release 1/0/0、143.834秒通过；1016检查、6PNG来源ready/亲看及dirty unsigned包通过。清洁归档/交付继续，不报J09或项目完成。见[回执](2026-11-04-popular-artists-report.md)。
+正式发现入口、30→60分页、歌曲/专辑详情、返回保留与刷新Release 1/0/0、143.834秒通过；1016检查、6PNG来源ready/亲看及dirty unsigned包通过。fdf225a清洁归档/T7核验/push完成，iOS27 41749569579正在运行；不报J09或项目完成。见[回执](2026-11-04-popular-artists-report.md)。
 
 ## 2026-11-03 Ruby wrapping clean delivery
 

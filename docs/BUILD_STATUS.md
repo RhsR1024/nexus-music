@@ -1,3 +1,7 @@
+## 2026-11-04 网易热门歌手清洁交付
+
+fdf225a clean unsigned archive独立核验通过：arm64/SDK26.2/iOS15.1/[1,2]、63载荷逐字节/90 ZIP CRC/生产和隐私排除通过，IPA SHA-256 `b0fa0cc63c5a8a65050d49b8b3f1382d283d2b178427bcbdc3c70ea7f8cac2e6`。Release 1793752218233为1/0/0、143.834秒，6PNG来源ready/亲看；1016检查通过。T7 clean135份/113,977,681字节0差异，源保留。已push，iOS27 [41749569579](https://github.com/RhsR1024/nexus-music/actions/runs/41749569579)对应fdf225a、1运行/0排队，终态待验。详见[回执](2026-11-04-popular-artists-report.md)。
+
 ## 2026-11-03 iOS27 DAV初始地址输入修复
 
 最新`41602015021/eaa891a`核心组23通过/2失败；两项均为XCTest把`http://`输入成`htp://`，图标与重启配色已在同一云端运行通过。仅将同步/备份初始地址输入改用已有`replaceText`，保留精确值及全部业务断言。997/997检查、正式Release `1793716226294`的同步与备份各通过（合计2/0/0、sourceUnchanged=true），3张截图亲看。`49111c5` clean unsigned归档与独立核验通过（IPA `3e74a70f…fec63`），T7 clean阶段246份/108,989,334字节0差异且SHA清单PASS；正常push/新云端终态以本批回执和队列快照为准；不增加功能完成度，不冒充私人服务/实体机/签名验收。见[回执](2026-11-03-ios27-dav-address-input-report.md)。
