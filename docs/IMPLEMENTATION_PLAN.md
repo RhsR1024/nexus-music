@@ -4,7 +4,8 @@
 - [x] Release`SourceUITests-1793848700604`为1/0/0、210.308秒，`sourceUnchanged=true`；单曲→音乐库随机→完整队列断言随机选中/单曲未选中，随后恢复顺序模式。
 - [x] 关键截图1290×2796来源ready并亲看，`npm run check`1025/1025与diff检查通过。
 - [x] `17246a2` clean unsigned IPA、151项archive/IPA与ZIP CRC通过；T7 473份/290,103,144字节0差异，源码tar与commit 1087个tracked文件一致，源证据保留且零删除。
-- [ ] docs收尾提交push与云端队列实核；实体机自然曲尾、后台/锁屏、签名及完整F/J继续。
+- [x] `e6e5668`正常push并实核远端与Actions：1运行/1排队，运行中任务未取消；cancelled旧pending不计通过。
+- [ ] 当前运行终态；实体机自然曲尾、后台/锁屏、签名及完整F/J继续。
 
 详见[专项回执](2026-11-05-library-random-report.md)。
 

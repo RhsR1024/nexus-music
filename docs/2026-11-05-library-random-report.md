@@ -45,6 +45,18 @@
 
 恢复时按 `inventory.json` 的相同 source/target 相对路径取回；tracked 源码也可由 clean 提交和 `source/nexus-music-17246a2.tar.gz` 重建。本批未删除或移动任何源证据或个人文件。
 
+## Push 与队列
+
+产品提交 `17246a2` 与 docs 收尾提交 `e6e5668` 已正常 push；当次快照实核本地、`origin/main` 均为 `e6e5668402042d04d60a682af283561098e06550`。没有 force push，也没有重派旧版本。
+
+GitHub Actions 公开页面与专用解析回执 `build/library-random-ci-queue-20261105.json`（SHA-256 `7ea452f619b5ff50a82cc4bd7438592bfd4c442ebf658c52b8af6edf44f148f7`）在快照时为：
+
+- 运行中：`41949520533` / `a328ee66c7de693898d0f298aade101523a85598`，Run 311。
+- 排队中：`41962294108` / `e6e5668402042d04d60a682af283561098e06550`，Run 314。
+- 计数为 1 运行 / 1 排队；并发规则没有保留额外 pending，运行中任务未被取消。
+
+`130bcd9` 的旧 `41957090823` 已按 `queue: single` 被后续提交替换为 cancelled，不把该取消运行算作通过。云端实际终态仍需在运行完成后另行核对，不由本批模拟器回归或 clean archive 推断。
+
 ## 边界
 
 本批只关闭音乐库随机播放与单曲循环冲突的产品缺陷，不关闭完整F/J、云端 iOS27 终态、实体机、VoiceOver、弱网/限流、真实私人服务、签名或全部平台功能。没有新增 Sollin 证据、采集或私有探测。
