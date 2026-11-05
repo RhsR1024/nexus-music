@@ -74,6 +74,10 @@ NEXUS_UI_RUN_DIR=build/sync-auto-preview-next \
 
 T7 阶段 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-auto-preview-1df0e7d` 保存 clean 分发、xcarchive、源码 tar/补丁、r1/r2/r3 原始结果/截图/诊断、check/archive/UI 日志、脚本与报告快照。323 份业务文件/533,599,597 字节逐文件源/目标 SHA-256 一致，0 差异、源保留、零删除；`inventory.json` SHA-256 `e63d2cf98be5fea962516218ab629a48577d56f1f2a752ad1ce43652d083e151`，`transfer-receipt.json` SHA-256 `0f67c2625279633f3e933df03a3d2c8159e7dab0100eceabf7f4a89bb85697d4`。r2 的 396MiB 长失败结果因保留原始证据一并归档；内盘约 58GiB、T7 约 568GiB，未做清理或搬移个人文件。
 
+## 正常push与云端
+
+产品与初始交付文档已正常push，2026-11-05 19:19（Asia/Shanghai）远端 main 实核 `10d542044819081e5b9b9d514b3892159337810f`。当时 Actions 网页为 `42000006592/a55f90d` 运行（旧睡眠提交，不含本批同步代码）、`42017894763/10d5420` 唯一 pending，1运行/1排队，未手动取消/重派。该 pending 在开始前可被后续 docs-only 提交按 `queue: single` 自动替换；本记录不把旧运行当本批云端结果，云端终态仍待。
+
 ## 边界
 
-本批不宣称完成 F33/J54：自动流程只刷新预览，不自动提交；保存/提交进行中的前台事件仍沿用既有返回，不做并行读取；真实双设备、私人 WebDAV、长时并发/后台持续同步、系统终止后的自动恢复、实体机/签名与 iOS27 云端终态继续开放。正常 push 与云端队列随后补记。
+本批不宣称完成 F33/J54：自动流程只刷新预览，不自动提交；保存/提交进行中的前台事件仍沿用既有返回，不做并行读取；真实双设备、私人 WebDAV、长时并发/后台持续同步、系统终止后的自动恢复、实体机/签名与 iOS27 云端终态继续开放。push 已完成，云端终态仍待。

@@ -2,7 +2,7 @@
 
 产品源新增`WebDAVSync`音乐库订阅与1200ms本机编辑防抖；自动流程只GET，零PUT/零自动确认，历史/统计不触发，后台不读，预览中编辑补读一次且旧预览不可提交，提交后的库恢复被抑制以避免回环。4项同步测试、完整1039/1039、Swift parse/Node/diff通过。正式Release`1793876399041`为1/0/0、191.455秒、sourceUnchanged、exit0；自动改名/删除均触发自动GET且零新增PUT、自动冲突提示、旧确认拒绝、重选提交/重启/删除传播通过，3张1290×2796图亲看。r1锁屏动画等待主动终止、r2末尾清理未重开WebDAV失败原件保留；测试开关不跳过产品断言。整轮夹具`propfind 7 / mkcol 1 / PUT 3 / GET 12 / authFailures 0`，3次PUT均来自原有明确确认。source digest`754fd317…8491`、安装bundle`13d9854d…d9a3`、result Info`282a25f2…c9b8`、run manifest`3aa0c357…5d50`。
 
-clean unsigned 交付：`1df0e7d` IPA 17,864,903字节/SHA-256`6afdd9d3f8695781924ee6273481faaf7cf813c44e7487cd9ba581252d84488a`；manifest`dirty=false`/`workingTreeChanges=[]`/arm64/iphoneos26.2/iOS15.1/[1,2]/`signed=false`；178 ZIP项CRC、63载荷逐字节、8隐私清单、0签名项与测试标记排除通过，`codesign`为未签名。verification`c0dff4fa…9bb1`为ready。源码tar 15,687,680字节/SHA`d6590a22…18ed`，与1,103 Git条目0差异。T7阶段`2026-11-05-sync-auto-preview-1df0e7d` 323份/533,599,597字节逐项0差异、源保留且零删除，inventory`e63d2cf9…e151`、receipt`0f67c262…697d4`。见[回执](2026-11-05-sync-auto-preview-report.md)。push/云端随后补记；真实双设备/私人服务/长时并发/后台持续/实体机/签名/iOS27继续开放。
+clean unsigned 交付：`1df0e7d` IPA 17,864,903字节/SHA-256`6afdd9d3f8695781924ee6273481faaf7cf813c44e7487cd9ba581252d84488a`；manifest`dirty=false`/`workingTreeChanges=[]`/arm64/iphoneos26.2/iOS15.1/[1,2]/`signed=false`；178 ZIP项CRC、63载荷逐字节、8隐私清单、0签名项与测试标记排除通过，`codesign`为未签名。verification`c0dff4fa…9bb1`为ready。源码tar 15,687,680字节/SHA`d6590a22…18ed`，与1,103 Git条目0差异。T7阶段`2026-11-05-sync-auto-preview-1df0e7d` 323份/533,599,597字节逐项0差异、源保留且零删除，inventory`e63d2cf9…e151`、receipt`0f67c262…697d4`。已正常push至`10d5420`，当时Actions为旧提交1运行/本提交1排队，未取消/重派；云端终态仍待。见[回执](2026-11-05-sync-auto-preview-report.md)。真实双设备/私人服务/长时并发/后台持续/实体机/签名/iOS27继续开放。
 
 ## 2026-11-05 J29 后台跨曲终时按绑定暂停
 
