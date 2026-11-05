@@ -60,14 +60,20 @@ source digest `b75f359e281bdebeeb425a38adaa23d2ef70f67c23c68a3355c564dabd14a58b`
 
 Migu公开专辑兼容回归 `build/SourceUITests-1793845487858.xcresult` 为1/0/0、153.956秒、exit0、sourceUnchanged=true。取消导入不创建副本；第二次打开复用保留的咪咕专辑查询与结果；创建本地副本、重启后7首原始ID/顺序/咪咕身份/公开范围说明、删除及再次重启清理均通过。6张截图provenance ready并亲看关键导入说明与重启后列表；索引SHA-256 `04f555be78820b7f18cbd1bf6638de34d382cd244e9833ad99f640145c63930d`。同源digest仍为 `b75f359e…58b`，实际安装bundle `615f398a…23b`。
 
+最终1025/1025检查在包含本地FM与同步修复后为 `build/search-session-all-fixes-check-r2-20261105.log`；提交前重复验证见 `build/search-session-prefinal-check-20261105.log`。
+
 ## 边界与后续
 
 ## 阶段证据归档
 
 本批测试与失败链已复制到真实挂载T7的 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-search-session-29f2057/`。清单与回执均为767份、154,976,735字节，逐文件SHA-256核验0差异；源原件保留、零删除、零迁移个人文件。恢复按 `inventory.json` 的相同相对路径执行。
 
-推送前公共工作流仍为1运行/1排队：`41949520533/a328ee6` 运行，`41951283649/56c8ac5` 等待串行；快照 `build/search-session-ci-before-20261105.json`。本阶段尚未完成clean unsigned交付，不能把预提交dirty证据写成清洁包验收。
+产品提交 `130bcd91dc4a56d10473030138c6f114ed28a7fc` 已正常push并实核远端main一致。clean HEAD unsigned archive通过：manifest绑定该提交、`dirty=false`、工作区无变化，arm64 / iphoneos26.2 / 最低iOS15.1 / 设备族 `[1,2]` / 未签名。IPA为17,859,667字节，SHA-256 `cabe99f46fba19887090eaeb231cd03bd66be18bce37c65634f7ece402b9cc55`；151项archive/IPA普通文件逐字节、ZIP CRC、测试/私人夹具标记、签名材料排除和未签名状态均通过，回执 `build/search-session-clean-verification-20261105.json`。
+
+clean源码tar为 `build/search-session-clean-source-130bcd9.tar`；clean交付阶段在T7 `2026-11-05-search-session-130bcd9/`，11份/38,597,919字节逐项SHA一致。收尾时无活动构建，内盘约65,237,553,152字节可用、T7约613,531,385,856字节可用；零删除、零迁移个人文件，回执 `build/search-session-closeout-20261105.json`。
+
+推送后公共工作流为1运行/1排队：`41949520533/a328ee6` 继续运行，新 `41957090823/130bcd9` 等待串行执行；快照 `build/search-session-ci-after-push-20261105.json`。没有取消或重派旧版本。
 
 ## 边界与后续
 
-本批来自自有应用的状态生命周期缺陷，没有新增Sollin分析、采集或商业逻辑采纳；不增加参考版像素/动效完成量。真实五平台逐页网络UI、实体机、VoiceOver、弱网/限流、签名、完整J25及全部F/J仍开放。clean unsigned交付、提交push与新云端队列将在实际完成后补记。
+本批来自自有应用的状态生命周期缺陷，没有新增Sollin分析、采集或商业逻辑采纳；不增加参考版像素/动效完成量。真实五平台逐页网络UI、实体机、VoiceOver、弱网/限流、签名、完整J25及全部F/J仍开放；云端新运行终态待实际结果。
