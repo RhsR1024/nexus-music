@@ -422,6 +422,9 @@ const handleRequest = async (req, res) => {
   if(req.url==='/matching-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(matchingScript);return;}
   if(req.url==='/health-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(healthScript);return;}
   if(req.url==='/unified-search-source.js'){res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(unifiedSearchScript);return;}
+  if(searchUI&&req.url==='/unified-search-request-count'){
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({count:counts.unifiedSearchRequests??0}));return;
+  }
   if(req.url==='/wayfarer-fixture-state'){
     res.setHeader('Content-Type','application/json');
     res.end(JSON.stringify({matchAudio:counts.matchAudio??{},online:counts.online??{},expectedMatchingAudio:wayfarerFixtureAudioPath}));return;
@@ -626,6 +629,7 @@ const handleRequest = async (req, res) => {
     }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){
+      if(searchUI&&['/api/cloudsearch/pc','/api/search/get/web'].includes(parsed.pathname))counts.unifiedSearchRequests=(counts.unifiedSearchRequests??0)+1;
       if(searchUI&&parsed.pathname==='/api/cloudsearch/pc'){
         const body=new URLSearchParams(request.body??'');
         if(body.get('s')==='Unified fixture'&&body.get('type')==='1004'){
@@ -724,7 +728,7 @@ const handleRequest = async (req, res) => {
       if(parsed.searchParams.get('text')==='Unified aggregate fixture'){
         const searchSwitch=JSON.parse(parsed.searchParams.get('searchSwitch'));
         if(searchSwitch.song){res.end(JSON.stringify({code:'000000',songResultData:{resultList:[[{songId:'mg-aggregate-song',copyrightId:'mg-aggregate-copyright',name:'Unified aggregate song MG',singers:[{name:'Fixture artist'}],audioFormats:[]}]],totalCount:1}}));return;}
-        if(searchSwitch.album){res.end(JSON.stringify({code:'000000',albumResultData:{result:[{id:'mg-aggregate-album',name:'Unified aggregate album MG',singer:'Fixture artist'}],totalCount:1}}));return;}
+        if(searchSwitch.album){res.end(JSON.stringify({code:'000000',albumResultData:{result:[{id:'9002001',resourceType:'2003',name:'Unified aggregate album MG',singer:'Fixture artist'}],totalCount:1}}));return;}
         if(searchSwitch.singer){res.end(JSON.stringify({code:'000000',singerResultData:{result:[{id:'mg-aggregate-artist',name:'Unified aggregate artist MG',songCount:7,albumCount:1}],totalCount:1}}));return;}
       }
       res.end(JSON.stringify({code:'000000',songResultData:{resultList:[],totalCount:0}}));return;

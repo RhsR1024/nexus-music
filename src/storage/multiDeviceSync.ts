@@ -1,5 +1,5 @@
 import {emptyLibrary,validateLibrary,type LibraryState,type LocalPlaylist,type TrackMatch,type LyricChoice} from './library.ts';
-import {cleanTrack} from './cleanTrack.ts';
+import {cleanTrack,safePublicURL} from './cleanTrack.ts';
 import {trackKey,validateTrack,type Track} from '../domain/track.ts';
 import {catalogKey,cleanCatalogFavorite,type CatalogFavorite} from './catalogFavorites.ts';
 
@@ -38,7 +38,7 @@ function cleanRecord(input:SyncRecord):SyncRecord {
       case 'playlist':{
         const value=input.payload as LocalPlaylist;validateLibrary({...emptyLibrary,playlists:[value]});
         if(value.title.length>4096||value.id.length>4096||value.entries.length>maxEntries||value.entries.some(entry=>entry.id.length>4096))throw new SyncError('capacity');
-        payload={id:value.id,title:value.title,createdAt:value.createdAt,updatedAt:value.updatedAt,entries:value.entries.map(entry=>({id:entry.id,track:cleanTrack(entry.track)}))};id=value.id;break;
+        payload={id:value.id,title:value.title,createdAt:value.createdAt,updatedAt:value.updatedAt,...(value.description!==undefined?{description:value.description}:{}),...(value.coverUrl&&safePublicURL(value.coverUrl)?{coverUrl:value.coverUrl}:{}),entries:value.entries.map(entry=>({id:entry.id,track:cleanTrack(entry.track)}))};id=value.id;break;
       }
       case 'match':{const value=input.payload as TrackMatch;validateLibrary({...emptyLibrary,matches:[value]});payload={original:cleanTrack(value.original),target:cleanTrack(value.target),method:value.method,updatedAt:value.updatedAt};id=trackKey(value.original.origin);break;}
       case 'lyricChoice':{const value=input.payload as LyricChoice;validateLibrary({...emptyLibrary,lyricChoices:[value]});payload={original:cleanTrack(value.original),mode:value.mode,...(value.target?{target:cleanTrack(value.target)}:{}),updatedAt:value.updatedAt};id=trackKey(value.original.origin);break;}

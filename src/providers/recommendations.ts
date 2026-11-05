@@ -127,9 +127,9 @@ export class LocalRecommendationStore {
   };
   nextFM(count = 1): readonly Track[] {
     if (!Number.isInteger(count) || count < 1 || count > 50) throw new Error('FM数量无效');
-    const choose = () => this.value.fm.filter(track => !this.fmPlayed.has(trackKey(track.origin))).slice(0, count);
-    let selected = choose();
-    if (selected.length < count && this.fmPlayed.size) { this.fmPlayed.clear(); selected = choose(); }
+    const remaining = () => this.value.fm.filter(track => !this.fmPlayed.has(trackKey(track.origin)));
+    let selected = remaining().slice(0, count);
+    if (!selected.length && this.fmPlayed.size) { this.fmPlayed.clear(); selected = remaining().slice(0, count); }
     selected.forEach(track => this.fmPlayed.add(trackKey(track.origin)));
     return selected;
   }

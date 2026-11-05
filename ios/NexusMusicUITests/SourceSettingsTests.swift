@@ -985,6 +985,26 @@ final class SourceSettingsTests: XCTestCase {
   func testUnifiedSongAlbumArtistSearch() throws {
     let app=XCUIApplication();app.launch()
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func searchRequestCount() throws -> Int {
+      let done=expectation(description:"Read submitted search request count")
+      var result:Int?
+      URLSession.shared.dataTask(with:URL(string:"http://127.0.0.1:18439/unified-search-request-count")!){data,_,error in
+        XCTAssertNil(error)
+        if let data,let state=try? JSONSerialization.jsonObject(with:data) as? [String:Any]{result=state["count"] as? Int}
+        done.fulfill()
+      }.resume()
+      XCTAssertEqual(XCTWaiter.wait(for:[done],timeout:5),.completed)
+      return try XCTUnwrap(result)
+    }
+    func returnFromTab(_ name:String){
+      if app.keyboards.firstMatch.exists{app.descendants(matching:.any).matching(identifier:"search-viewport").firstMatch.swipeUp()}
+      let destination=app.descendants(matching:.any).matching(identifier:"tab-"+name).firstMatch
+      XCTAssertTrue(waitForHittable(destination,timeout:5));destination.tap()
+      XCTAssertTrue(destination.isSelected,"The intermediate main tab must actually open")
+      let search=app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch
+      XCTAssertTrue(waitForHittable(search,timeout:5));search.tap()
+      XCTAssertTrue(search.isSelected)
+    }
     func reach(_ element:XCUIElement){
       for _ in 0..<18 {
         if waitForHittable(element,timeout:0.2){return}
@@ -1047,6 +1067,18 @@ final class SourceSettingsTests: XCTestCase {
     let loadMore=app.buttons["search-load-more-wy"];reach(loadMore);loadMore.tap()
     let secondPageSong=app.buttons.matching(NSPredicate(format:"identifier == %@ AND label CONTAINS %@","search-track-wy-2","Unified second page song")).firstMatch
     XCTAssertTrue(secondPageSong.waitForExistence(timeout:15),"Songs must retain their own second page")
+    let songRequests=try searchRequestCount()
+    XCTAssertGreaterThan(songRequests,0)
+    returnFromTab("discover")
+    XCTAssertTrue(app.textFields["搜索歌曲或歌手"].waitForExistence(timeout:10))
+    XCTAssertEqual(app.textFields["搜索歌曲或歌手"].value as? String,"Unified fixture")
+    XCTAssertTrue(netease.isSelected)
+    XCTAssertTrue(secondPageSong.waitForExistence(timeout:10),"Main navigation must retain the loaded second page")
+    XCTAssertEqual(try searchRequestCount(),songRequests,"Returning must not submit or reset pagination")
+    reach(secondPageSong);image("Main navigation preserves song platform query and second page")
+    reach(player);player.tap()
+    XCTAssertTrue(app.staticTexts["Unified fixture song"].firstMatch.waitForExistence(timeout:10),"Restoring search must preserve the current playback intent")
+    app.buttons["收起播放页"].firstMatch.tap()
 
     let allAgain=app.descendants(matching:.any).matching(identifier:"search-kind-all").firstMatch;reach(allAgain);allAgain.tap()
     XCTAssertTrue(app.buttons["unified-playlist-wy-0"].waitForExistence(timeout:10),"Returning to unified search must preserve playlist results")
@@ -1068,6 +1100,31 @@ final class SourceSettingsTests: XCTestCase {
 
     let allAlbums=app.buttons["unified-view-all-album-wy"];reach(allAlbums);allAlbums.tap()
     XCTAssertTrue(app.buttons["search-album-wy-0"].waitForExistence(timeout:10))
+    let albumRequests=try searchRequestCount()
+    returnFromTab("library")
+    let albumField=app.textFields["搜索专辑"]
+    XCTAssertTrue(albumField.waitForExistence(timeout:10));XCTAssertEqual(albumField.value as? String,"Unified fixture")
+    XCTAssertTrue(netease.isSelected)
+    XCTAssertTrue(app.buttons["search-album-wy-0"].waitForExistence(timeout:10))
+    XCTAssertEqual(try searchRequestCount(),albumRequests,"A restored album search must reuse its existing results")
+    image("Main navigation preserves submitted album search and platform")
+    reach(albumField);albumField.tap()
+    albumField.typeKey(XCUIKeyboardKey.rightArrow.rawValue,modifierFlags:.command)
+    albumField.typeText(" draft")
+    XCTAssertEqual(albumField.value as? String,"Unified fixture draft")
+    returnFromTab("settings")
+    XCTAssertTrue(albumField.waitForExistence(timeout:10));XCTAssertEqual(albumField.value as? String,"Unified fixture draft")
+    XCTAssertTrue(netease.isSelected)
+    XCTAssertTrue(app.buttons["search-album-wy-0"].exists,"An unsubmitted draft must preserve the submitted result set")
+    XCTAssertEqual(try searchRequestCount(),albumRequests,"An unsubmitted draft must not become a search on return")
+    image("Unsubmitted album draft survives settings without submitting")
+    reach(albumField);albumField.tap()
+    albumField.typeKey(XCUIKeyboardKey.rightArrow.rawValue,modifierFlags:.command)
+    albumField.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:" draft".count))
+    XCTAssertEqual(albumField.value as? String,"Unified fixture")
+    returnFromTab("library")
+    XCTAssertEqual(albumField.value as? String,"Unified fixture")
+    XCTAssertEqual(try searchRequestCount(),albumRequests)
     let allAgainForArtist=app.descendants(matching:.any).matching(identifier:"search-kind-all").firstMatch
     reach(allAgainForArtist);allAgainForArtist.tap()
     let allArtists=app.buttons["unified-view-all-artist-wy"];reach(allArtists);allArtists.tap()

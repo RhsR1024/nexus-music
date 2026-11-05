@@ -34,6 +34,17 @@ test('FM session avoids consecutive same-artist tracks and cycles after exhausti
   store.dispose();
 });
 
+test('FM serves the final short batch before cycling and does not skip candidates', () => {
+  const tracks = Array.from({ length: 11 }, (_, index) => song(`tail-${String(index).padStart(2, '0')}`));
+  const librarySource = source<LibraryState>({ ...emptyLibrary, favorites: tracks });
+  const statsSource = source<PlaybackStatsState>(emptyPlaybackStats);
+  const store = new LocalRecommendationStore(librarySource, statsSource, () => 1000);
+  assert.equal(store.nextFM(10).length, 10);
+  assert.deepEqual(store.nextFM(10).map(track => track.origin.id), ['tail-10']);
+  assert.equal(store.nextFM(10).length, 10);
+  store.dispose();
+});
+
 test('recommendation store refreshes when local library changes and removes stale FM state', () => {
   const first = song('first'), second = song('second');
   const librarySource = source<LibraryState>({ ...emptyLibrary, favorites: [first] });

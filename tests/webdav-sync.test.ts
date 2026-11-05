@@ -42,6 +42,17 @@ test('two independent clients exchange collections, reconnect with persisted bas
   const restart=new WebDAVSync(two.options);await restart.restore();assert.equal(restart.getSnapshot().config!.directory,syncDirectory);await one.library.deletePlaylist(id);await cycle(one);await restart.preview();await restart.commit();assert.equal(two.library.getSnapshot().playlists.length,0);
   assert.doesNotMatch(JSON.stringify([...two.records]),/fixture-secret|password|Authorization/);
 });
+
+test('playlist description and safe cover survive WebDAV commits and two clients',async()=>{
+  const one=client(),two=client(one.shared,'c'.repeat(32));await one.configure();await two.configure();
+  const id=await one.library.createPlaylist('Scope');
+  one.library.getSnapshot;const before=structuredClone(one.library.getSnapshot());
+  await one.library.updatePlaylistMeta(id,{description:'Public scope note',coverUrl:'https://images.example.com/public-cover.jpg'});
+  await cycle(one);await cycle(two);await cycle(one);
+  for(const client of [one,two])assert.deepEqual(client.library.getSnapshot().playlists[0]!.description,'Public scope note');
+  for(const client of [one,two])assert.equal(client.library.getSnapshot().playlists[0]!.coverUrl,'https://images.example.com/public-cover.jpg');
+  assert.notEqual(one.library.getSnapshot(),before);
+});
 test('manual conflict choice is mandatory; cancelled preview changes neither endpoint',async()=>{
   const one=client(),two=client(one.shared,'c'.repeat(32));await one.configure();await two.configure();const id=await one.library.createPlaylist('Original');await cycle(one);await cycle(two);await one.library.renamePlaylist(id,'Left');await two.library.renamePlaylist(id,'Right');await cycle(one);await two.sync.preview();assert.equal(two.sync.getSnapshot().preview!.plan.conflicts.length,1);
   const puts=one.shared.puts();assert.throws(()=>two.sync.commit(),isError('choices'));two.sync.cancel();assert.equal(one.shared.puts(),puts);assert.equal(two.library.getSnapshot().playlists[0]!.title,'Right');

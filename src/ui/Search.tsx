@@ -27,15 +27,24 @@ export const platformNames: Readonly<Record<OnlinePlatform,string>> = {wy:'网�
 const kindNames={song:'歌曲',playlist:'歌单',album:'专辑',artist:'艺术家',mv:'MV'} as const;
 type SearchKind=keyof typeof kindNames;
 type SearchTab='all'|SearchKind;
+export interface SearchSession {
+  kind:SearchTab;
+  query:string;
+  platform:OnlinePlatform|'all';
+}
 interface GroupSelection { platform: OnlinePlatform; model: SelectionModel }
 const unifiedKinds=['song','playlist','album','artist','mv'] as const;
 const unifiedPreviewLimit=2;
 
-export function Search({ services }: { services: Services }) {
+export function Search({ services,session,onSessionChange }: { services: Services;session:SearchSession;onSessionChange:(update:Partial<SearchSession>)=>void }) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);
   const songState = useSyncExternalStore(services.search.subscribe,services.search.getSnapshot);
   const playlistState=useSyncExternalStore(services.playlistSearch.subscribe,services.playlistSearch.getSnapshot);
-  const [kind,setKind]=useState<SearchTab>('song'),[collection,setCollection]=useState<DiscoveryTarget|null>(null),[video,setVideo]=useState<{platform:OnlinePlatform;item:VideoItem}|null>(null);
+  const {kind,query,platform}=session;
+  const setKind=(kind:SearchTab)=>onSessionChange({kind});
+  const setQuery=(query:string)=>onSessionChange({query});
+  const setPlatform=(platform:OnlinePlatform|'all')=>onSessionChange({platform});
+  const [collection,setCollection]=useState<DiscoveryTarget|null>(null),[video,setVideo]=useState<{platform:OnlinePlatform;item:VideoItem}|null>(null);
   const albumState=useSyncExternalStore(services.albumSearch.subscribe,services.albumSearch.getSnapshot);
   const artistState=useSyncExternalStore(services.artistSearch.subscribe,services.artistSearch.getSnapshot);
   const videoState=useSyncExternalStore(services.videoSearch.subscribe,services.videoSearch.getSnapshot);
@@ -45,7 +54,6 @@ export function Search({ services }: { services: Services }) {
   const history = useSyncExternalStore(services.searchHistory.subscribe,services.searchHistory.getSnapshot);
   const assistance=useSyncExternalStore(services.searchAssistance.subscribe,services.searchAssistance.getSnapshot);
   const [editing,setEditing]=useState(false);
-  const [query,setQuery] = useState(state.query), [platform,setPlatform] = useState<OnlinePlatform|'all'>('all');
 
   const [menuTrack,setMenuTrack]=useState<Track|null>(null);
   // Batch selection (Sollin capture §4): scope is the loaded collection of one

@@ -47,12 +47,14 @@ final class MiguAlbumImportTests: XCTestCase {
       reach(migu); migu.tap()
       let query = app.textFields["搜索专辑"]
       reach(query)
-      XCTAssertTrue((query.value as? String == "") || (query.value as? String == query.placeholderValue), "Use a fresh search draft")
-      query.tap()
-      for character in title { query.typeText(String(character)) }
-      let typed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", title), object: query)
-      XCTAssertEqual(XCTWaiter.wait(for: [typed], timeout: 10), .completed)
-      query.typeText("\n")
+      if query.value as? String != title {
+        XCTAssertTrue((query.value as? String == "") || (query.value as? String == query.placeholderValue), "Initial search draft must be empty")
+        query.tap()
+        for character in title { query.typeText(String(character)) }
+        let typed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", title), object: query)
+        XCTAssertEqual(XCTWaiter.wait(for: [typed], timeout: 10), .completed)
+        query.typeText("\n")
+      }
       XCTAssertEqual(query.value as? String, title)
       let album = app.buttons["search-album-mg-0"]
       XCTAssertTrue(album.waitForExistence(timeout: 45)); XCTAssertTrue(album.label.contains(title))

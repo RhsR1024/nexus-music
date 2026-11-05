@@ -8,7 +8,7 @@ import {SettingsScreen,type SettingsPage} from './src/ui/SettingsScreen.tsx';
 import {useEffect,useState} from 'react';
 import {getServices,type Services} from './src/app/services';
 import {Player} from './src/ui/Player';
-import {Search} from './src/ui/Search';
+import {Search,type SearchSession} from './src/ui/Search';
 import {Discovery} from './src/ui/Discovery';
 import {PresentationProvider} from './src/ui/AdaptiveModal.tsx';
 import {NavidromeLibrary} from './src/ui/NavidromeLibrary';
@@ -24,6 +24,7 @@ export function MusicApplication(props:ApplicationProps){return <PresentationPro
 function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
   const [tab,setTab]=useState<Tab>(initialSettingsPage?'settings':'discover'),[privateLibrary,setPrivateLibrary]=useState(false);
   const [chromeHeight,setChromeHeight]=useState(80);
+  const [searchSession,setSearchSession]=useState<SearchSession>({kind:'song',query:'',platform:'all'});
   const [settingsEntry,setSettingsEntry]=useState<SettingsPage>(initialSettingsPage??'home'),[settingsRevision,setSettingsRevision]=useState(0);
   const navigateTab=(next:Tab)=>{if(next==='settings'){setSettingsEntry('home');setSettingsRevision(value=>value+1);}setTab(next);};
   const openSources=()=>{setSettingsEntry('sources');setTab('settings');};
@@ -51,7 +52,7 @@ function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
         {startupError?<View><Text style={caption}>{startupError}</Text><Pressable accessibilityRole="button" onPress={startup} style={{padding:16}}><Text style={{color:p.accent}}>重试打开</Text></Pressable></View>:!services?<Text style={caption}>正在打开音乐数据…</Text>:tab==='library'?<>
           <View style={{flexDirection:'row',gap:12,marginBottom:22}}>{([false,true]as const).map(value=><Pressable key={String(value)} testID={value?'tab-private':'library-local'} accessibilityRole="tab" accessibilityState={{selected:privateLibrary===value}} onPress={()=>setPrivateLibrary(value)} style={{paddingHorizontal:18,paddingVertical:12,borderRadius:22,backgroundColor:privateLibrary===value?p.selected:p.surface}}><Text style={{color:privateLibrary===value?p.accent:p.secondary,fontWeight:'600'}}>{value?'私人曲库':'我的音乐'}</Text></Pressable>)}</View>
           {privateLibrary?<NavidromeLibrary services={services} openSettings={openSources}/>:<LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={openSources} openAccounts={openAccounts}/>}
-        </>:<Search services={services}/>}
+        </>:<Search services={services} session={searchSession} onSessionChange={update=>setSearchSession(previous=>({...previous,...update}))}/>}
       </ScrollView>}
       </View>
     </View>

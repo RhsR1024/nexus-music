@@ -1,3 +1,7 @@
+## 2026-11-05 J25 搜索跨导航会话与两项业务修复
+
+J25 已保留搜索类型、平台、已提交查询及未提交草稿；正式Release三联回归3/0/0、sourceUnchanged，13图provenance ready并亲看，请求计数证明跨发现/音乐库/设置返回不重发检索。Migu公开专辑导入复用保留查询，1/0/0、153.956秒通过。同步修复本地FM尾批跳过（1025/1025检查中新增11首10→1→10）与WebDAV歌单描述/安全封面丢失；均见[搜索回执](docs/2026-11-05-search-session-report.md)、[FM回执](docs/2026-11-05-local-fm-tail-report.md)和[同步回执](docs/2026-11-05-webdav-playlist-metadata-report.md)。本批无新增Sollin证据；云端、实体机、签名、完整F/J继续开放。
+
 ## 2026-11-05 下载批量选择候选独立回归通过
 
 旧f9121ca云端唯一下载组失败在取消2/2等待。既有候选使用真实第二任务按钮并确认2/2后取消；未改产品或减少断言。正式Release `1793842666037` 为1/0/0、251.875秒、sourceUnchanged=true，heldFull=2/fullFinished=2/authFailures=0，五图来源核验与亲看通过；仅合成WAV机制回归，不冒充真实平台/Range/实体后台。候选已独立提交、清洁包和T7核验已完成，详见[回执](docs/2026-11-05-download-batch-selection-report.md)。下一推进J25跨Tab搜索状态。

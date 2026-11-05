@@ -4,7 +4,7 @@ import {buildSyncState,canonical,decodeSync,encodeSync,libraryFromSync,planSync,
 import {emptyLibrary,type LibraryState} from '../src/storage/library.ts';
 const account='a'.repeat(64),directory='nexus-music-sync/',a='a'.repeat(32),b='b'.repeat(32);
 const song=(id:string,title=id)=>({title,artist:'Fixture',origin:{kind:'online' as const,platform:'wy' as const,id},metadata:{},qualities:[]});
-const playlist=(id:string,title=id)=>({id,title,createdAt:1,updatedAt:2,entries:[{id:'one',track:song('90071992547409931234')},{id:'two',track:song('90071992547409931234')}]});
+const playlist=(id:string,title=id)=>({id,title,createdAt:1,updatedAt:2,description:'Scope and public cover',coverUrl:'https://images.example.com/public-cover.jpg',entries:[{id:'one',track:song('90071992547409931234')},{id:'two',track:song('90071992547409931234')}]});
 const library=(title='One'):LibraryState=>({version:1,favorites:[song('fav')],history:[{track:song('hist'),playedAt:10}],playlists:[playlist('playlist',title)]});
 const state=(value:LibraryState=library(),base?:SyncState,device=a)=>buildSyncState(value,device,account,directory,base);
 const confirmed=(value:LibraryState=library())=>resolveSync(planSync(state(value)));
@@ -14,6 +14,21 @@ test('sync uses a baseline, not wall-clock ordering, and preserves duplicate ent
   const base=confirmed(),local=state(library('Local'),base),remote=resolveSync(planSync(state({...library(),favorites:[song('remote')]},base,b),base,base));
   const plan=planSync(local,remote,base);assert.equal(plan.conflicts.length,0);const result=libraryFromSync(resolveSync(plan),library());
   assert.equal(result.playlists[0]!.title,'Local');assert.deepEqual(result.playlists[0]!.entries.map(value=>value.id),['one','two']);assert.equal(result.playlists[0]!.entries[0]!.track.origin.id,'90071992547409931234');assert.equal(result.favorites[0]!.origin.id,'remote');assert.deepEqual(result.history,library().history);
+});
+
+test('playlist metadata survives first sync, cycles and rejects unsafe cover URLs',()=>{
+  const unsafe={...playlist('unsafe'),coverUrl:'https://user:fixture-secret@fixture.invalid/cover.jpg'};
+  const withMetadata={...library(),playlists:[playlist('metadata')]};
+  const first=libraryFromSync(resolveSync(planSync(state(withMetadata))),withMetadata);
+  assert.equal(first.playlists[0]!.description,'Scope and public cover');
+  assert.equal(first.playlists[0]!.coverUrl,'https://images.example.com/public-cover.jpg');
+  const encoded=encodeSync(state(withMetadata));
+  assert.doesNotMatch(encoded,/fixture-secret|user:/);
+  const cycled=libraryFromSync(decodeSync(encoded),emptyLibrary);
+  assert.equal(cycled.playlists[0]!.description,'Scope and public cover');
+  assert.equal(cycled.playlists[0]!.coverUrl,'https://images.example.com/public-cover.jpg');
+  const stripped=libraryFromSync(resolveSync(planSync(state({...library(),playlists:[unsafe]}))),emptyLibrary);
+  assert.equal(stripped.playlists[0]!.coverUrl,undefined);
 });
 test('independent first connections merge collections without replacing cloud with an empty device',()=>{
   const remote=confirmed();assert.equal(planSync(state(emptyLibrary),remote).conflicts.length,0);assert.equal(libraryFromSync(resolveSync(planSync(state(emptyLibrary),remote)),emptyLibrary).playlists.length,1);
