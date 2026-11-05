@@ -2972,6 +2972,53 @@ final class SourceSettingsTests: XCTestCase {
     sync();XCTAssertEqual(directory.value as? String,folder);XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:5));confirm();app.buttons["收起多设备同步"].tap();app.terminate();app.launch();library();reveal(playlists);playlists.tap();XCTAssertFalse(cloudRow.exists)
     library();reveal(webdav);webdav.tap();XCTAssertTrue(app.buttons["收起WebDAV"].waitForExistence(timeout:5));let manage=app.buttons["管理WebDAV连接"];XCTAssertTrue(manage.waitForExistence(timeout:5));reveal(manage);manage.tap();let remove=app.buttons["移除WebDAV连接：Sync fixture"];XCTAssertTrue(remove.waitForExistence(timeout:5),"The saved WebDAV account must be available for cleanup");reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10));app.buttons["收起WebDAV"].tap()
   }
+  func testUCloudSyncCommitForegroundRefresh() throws {
+    let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
+    defer{removeUIInterruptionMonitor(monitor)}
+    let app=XCUIApplication();app.launch()
+    if ProcessInfo.processInfo.environment["NEXUS_UI_DISABLE_ANIMATION_IDLE"]=="1"{app.setValue(false,forKey:"idleAnimationWaitEnabled")}
+    func reveal(_ element:XCUIElement){for _ in 0..<18{if element.isHittable{return};let above=element.exists && element.frame.midY < app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75:0.25)))};XCTAssertTrue(element.isHittable)}
+    func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();for _ in 0..<8{app.swipeDown()}}
+    func sync(){let entry=app.buttons["cloud-sync-open"];reveal(entry);entry.tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
+    func syncCounts() throws -> [String:Int]{
+      let data=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/state")!)
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:data) as? [String:Int])
+    }
+    _=try? String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/release-reads")!,encoding:.utf8)
+    library();let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch;reveal(webdav);webdav.tap()
+    let address=app.textFields["WebDAV服务器根目录"];if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
+    let prior=app.buttons["移除WebDAV连接：Commit fixture"];if prior.exists{prior.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
+    replaceText(address,with:"http://127.0.0.1:18439/sync-dav/")
+    let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n")
+    let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
+    let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Commit fixture");label.typeText("\n");app.buttons["验证并保存WebDAV"].tap()
+    XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
+    let suffix=String(Int(Date().timeIntervalSince1970)),name="Commit original "+suffix,folder="nexus-sync-commit-"+suffix+"/"
+    let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();input.typeText(name);input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
+    sync();let connection=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","同步连接：Commit fixture")).firstMatch;reveal(connection);connection.tap()
+    let directory=app.textFields["多设备同步相对目录"];reveal(directory);replaceText(directory,with:folder)
+    let save=app.buttons["cloud-sync-save"];reveal(save);save.tap();XCTAssertTrue(app.staticTexts["同步目录已保存，请读取合并预览"].waitForExistence(timeout:5));let preview=app.buttons["cloud-sync-preview"];reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15))
+    let before=try syncCounts();XCTAssertEqual(try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/hold-next-read")!,encoding:.utf8),"ok")
+    let commit=app.buttons["cloud-sync-commit"];reveal(commit);XCTAssertTrue(commit.isEnabled);commit.tap();XCTAssertTrue(app.alerts["确认同步音乐库？"].waitForExistence(timeout:5));app.alerts.buttons["确认同步两端"].tap()
+    let held=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      guard let current=try? syncCounts() else{return false}
+      return current["held"]==1 && current["gets",default:0]==before["gets",default:0]+1 && current["puts",default:0]==before["puts",default:0]+1
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[held],timeout:20),.completed,"Commit must reach its held readback")
+    XCUIDevice.shared.press(.home);app.activate();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:10))
+    Thread.sleep(forTimeInterval:1.5)
+    let paused=try syncCounts();XCTAssertEqual(paused["held"],1);XCTAssertEqual(paused["gets"],before["gets",default:0]+1,"A foreground refresh must queue while the commit is busy")
+    XCTAssertEqual(try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/release-reads")!,encoding:.utf8),"ok")
+    let followup=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      guard let current=try? syncCounts() else{return false}
+      return current["held"]==0 && current["gets",default:0]==before["gets",default:0]+2
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[followup],timeout:15),.completed,"Exactly one follow-up preview must run after the commit")
+    XCTAssertEqual(try syncCounts()["puts"],before["puts",default:0]+1,"A foreground refresh must never PUT")
+    XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15),"The queued foreground refresh must refresh the merge preview")
+    let image=XCTAttachment(screenshot:app.screenshot());image.name="Commit foreground refresh preview";image.lifetime = .keepAlways;add(image)
+    app.buttons["收起多设备同步"].tap();library();reveal(webdav);webdav.tap();XCTAssertTrue(app.buttons["收起WebDAV"].waitForExistence(timeout:5));app.buttons["管理WebDAV连接"].tap();let remove=app.buttons["移除WebDAV连接：Commit fixture"];XCTAssertTrue(remove.waitForExistence(timeout:5));reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10));app.buttons["收起WebDAV"].tap()
+  }
   func testVCloudBackupUploadRestartPreviewRestore() throws {
     let monitor=addUIInterruptionMonitor(withDescription:"System password suggestion"){[unowned self] alert in self.dismissPasswordSuggestion(in:alert)}
     defer{removeUIInterruptionMonitor(monitor)}

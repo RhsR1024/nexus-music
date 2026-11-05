@@ -1,3 +1,7 @@
+## 2026-11-05 F33 提交期间前台刷新与后台排队
+
+产品源`webdavSync.ts`新增提交期间排队与后台清空：`preview`/`commit`忙碌时前台刷新只排队，提交结束重查前台/目录/连接后补读一次；`setForeground(false)`立即结束排队者，避免预览/提交`finally`在后台发起隐藏GET；提交中连接替换/删除先结束排队者再中止请求。目录保存仍为显式读取预览，自动流程零PUT/不自动确认。新增4项同步测试，完整检查1043/1043，Swift parse/Node/diff通过。正式Release`SourceUITests-1793878235033`为1 passed/0 failed/0 skipped、246.342秒、sourceUnchanged、exit0；夹具挂起提交回读→Home/激活期间GET数不增→释放后仅一次补读，相对提交前PUT+1/GET+2，界面恢复无冲突预览；1张1290×2796截图已导出并亲看。source digest`197dfc00…f043`、安装bundle`d2ff1262…c19c`、run manifest`27b35f00…b65b`、ui-summary`a3f39aa8…a3b3`、ui-server-counts`db1b53aa…fc01`、ui-catalog`0134fb8c…f5e0`。见[回执](2026-11-05-sync-commit-foreground-report.md)。clean IPA/T7/push/云端终态随后补记。
+
 ## 2026-11-05 F33 本机编辑自动刷新合并预览
 
 产品源新增`WebDAVSync`音乐库订阅与1200ms本机编辑防抖；自动流程只GET，零PUT/零自动确认，历史/统计不触发，后台不读，预览中编辑补读一次且旧预览不可提交，提交后的库恢复被抑制以避免回环。4项同步测试、完整1039/1039、Swift parse/Node/diff通过。正式Release`1793876399041`为1/0/0、191.455秒、sourceUnchanged、exit0；自动改名/删除均触发自动GET且零新增PUT、自动冲突提示、旧确认拒绝、重选提交/重启/删除传播通过，3张1290×2796图亲看。r1锁屏动画等待主动终止、r2末尾清理未重开WebDAV失败原件保留；测试开关不跳过产品断言。整轮夹具`propfind 7 / mkcol 1 / PUT 3 / GET 12 / authFailures 0`，3次PUT均来自原有明确确认。source digest`754fd317…8491`、安装bundle`13d9854d…d9a3`、result Info`282a25f2…c9b8`、run manifest`3aa0c357…5d50`。

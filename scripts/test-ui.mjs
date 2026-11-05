@@ -746,6 +746,7 @@ const handleRequest = async (req, res) => {
   }
   if(req.url==='/sync-fixture/hold-next-read'){syncHoldNextRead=true;res.end('ok');return;}
   if(req.url==='/sync-fixture/release-reads'){
+    syncHoldNextRead=false;
     for(const release of syncHeldReads.splice(0))release();
     res.end('ok');return;
   }

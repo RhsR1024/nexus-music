@@ -220,3 +220,57 @@ test('an edit during preview schedules one fresh follow-up and cannot be confirm
   await assert.rejects(c.sync.commit({},stale),error=>error instanceof SyncError&&/预览已改变/.test(error.message));
   c.sync.dispose();
 });
+test('foreground refresh requested during commit coalesces into one post-commit preview without concurrent reads',async()=>{
+  const c=client();await c.configure();await c.library.createPlaylist('One');await c.sync.preview();
+  const entered=deferred(),wait=deferred();c.shared.hooks.beforePut=async()=>{entered.resolve();await wait.promise;};
+  const puts=c.shared.puts(),gets=c.shared.gets();
+  const commit=c.sync.commit();await entered.promise;
+  let result:boolean|undefined;const refresh=c.sync.previewIfConfigured();void refresh.then(value=>{result=value;});
+  const again=c.sync.previewIfConfigured();await Promise.resolve();
+  assert.equal(result,undefined);assert.equal(c.shared.gets(),gets);
+  wait.resolve();await commit;assert.equal(await refresh,true);assert.equal(await again,true);
+  assert.equal(c.shared.puts(),puts+1);assert.equal(c.shared.gets(),gets+2);
+  assert.ok(c.sync.getSnapshot().preview);assert.equal(c.sync.getSnapshot().busy,null);
+});
+test('a commit finishing in the background discards a queued foreground refresh and performs no hidden read',async()=>{
+  const c=client();await c.configure();await c.library.createPlaylist('One');await c.sync.preview();
+  const entered=deferred(),wait=deferred();c.shared.hooks.beforePut=async()=>{entered.resolve();await wait.promise;};
+  const puts=c.shared.puts(),gets=c.shared.gets();
+  const commit=c.sync.commit();await entered.promise;
+  let result:boolean|undefined;const refresh=c.sync.previewIfConfigured();void refresh.then(value=>{result=value;});
+  await Promise.resolve();assert.equal(result,undefined);
+  c.sync.setForeground(false);
+  assert.equal(await refresh,false);
+  wait.resolve();await commit;
+  assert.equal(c.shared.puts(),puts+1);assert.equal(c.shared.gets(),gets+1);
+  assert.equal(c.sync.getSnapshot().preview,undefined);assert.equal(c.sync.getSnapshot().busy,null);
+  c.sync.setForeground(true);assert.equal(await c.sync.previewIfConfigured(),true);
+  assert.equal(c.shared.gets(),gets+2);assert.ok(c.sync.getSnapshot().preview);
+});
+test('background transition during a busy preview cancels a queued refresh instead of reading later',async()=>{
+  const c=client();await c.configure();await c.library.createPlaylist('One');c.sync.start();
+  const entered=deferred(),wait=deferred();let reads=0;
+  c.shared.hooks.beforeRead=async()=>{reads++;entered.resolve();await wait.promise;};
+  const initial=c.sync.preview();await entered.promise;const refresh=c.sync.previewIfConfigured();
+  c.sync.setForeground(false);assert.equal(await refresh,false);
+  wait.resolve();await initial;assert.equal(reads,1);assert.equal(c.shared.puts(),0);
+  await c.library.favorite(song('later'));assert.equal(c.timer.active().length,0);
+  c.sync.setForeground(true);assert.equal(await c.sync.previewIfConfigured(),true);
+  assert.equal(reads,2);assert.equal(c.shared.puts(),0);
+  assert.equal(c.sync.getSnapshot().preview!.plan.local.records.some(value=>value.kind==='favorite'&&!value.deleted),true);
+  c.sync.dispose();
+});
+test('connection changes discard a foreground refresh queued during commit before any follow-up read',async()=>{
+  for(const action of ['replace','remove']){
+    const c=client();await c.configure();await c.library.createPlaylist('One');await c.sync.preview();
+    const entered=deferred(),wait=deferred();c.shared.hooks.beforePut=async()=>{entered.resolve();await wait.promise;};
+    const puts=c.shared.puts(),gets=c.shared.gets();
+    const commit=c.sync.commit();await entered.promise;
+    let result:boolean|undefined;const refresh=c.sync.previewIfConfigured();void refresh.then(value=>{result=value;});
+    await Promise.resolve();assert.equal(result,undefined);
+    c.changeAccount(action==='remove');assert.equal(await refresh,false);
+    wait.resolve();await assert.rejects(commit);
+    assert.equal(c.shared.puts(),puts+1);assert.equal(c.shared.gets(),gets);
+    assert.equal(c.sync.getSnapshot().busy,null);assert.equal(c.sync.getSnapshot().preview,undefined);
+  }
+});

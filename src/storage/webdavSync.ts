@@ -37,7 +37,7 @@ export class WebDAVSync {
     options.accounts.subscribe(()=>{
       const account=this.selectedAccount();if(account===this.account)return;this.account=account;
       if(this.value.busy==='configure')return;
-      if(this.value.busy==='commit'){this.request?.abort();return;}
+      if(this.value.busy==='commit'){this.failForegroundRefresh();this.request?.abort();return;}
       this.cancel();if(this.value.config)this.publish({...this.value,error:new SyncError('account').message});
     });
   }
@@ -50,10 +50,10 @@ export class WebDAVSync {
     this.lastPreviewedSignature=this.localSignature();
     this.unsubscribe=this.options.library.subscribe(this.onLibraryChange);
   }
-  dispose(){this.unsubscribe?.();this.unsubscribe=undefined;this.clearEditTimer();this.pendingEditSignature=undefined;}
+  dispose(){this.unsubscribe?.();this.unsubscribe=undefined;this.clearEditTimer();this.pendingEditSignature=undefined;this.failForegroundRefresh();}
   setForeground(value:boolean){
     this.foreground=value;
-    if(!value)this.clearEditTimer();
+    if(!value){this.clearEditTimer();this.failForegroundRefresh();}
   }
   settled(){return this.editTail;}
   private publish(value:WebDAVSyncState){this.value=value;for(const listener of this.listeners)listener();}
@@ -67,6 +67,21 @@ export class WebDAVSync {
     this.armEditPreview();
   };
   private clearEditTimer(){this.editTimer?.();this.editTimer=undefined;}
+  private failForegroundRefresh(){const refresh=this.foregroundRefresh;this.foregroundRefresh=undefined;refresh?.resolve(false);}
+  private queueForegroundRefresh(){
+    if(!this.foregroundRefresh){
+      let resolve!:(result:boolean)=>void;
+      const promise=new Promise<boolean>(done=>{resolve=done;});
+      this.foregroundRefresh={promise,resolve};
+    }
+    return this.foregroundRefresh.promise;
+  }
+  private flushForegroundRefresh(){
+    const refresh=this.foregroundRefresh;if(!refresh)return;
+    this.foregroundRefresh=undefined;
+    if(this.value.busy||!this.foreground||!this.value.config||!this.selectedAccount()){refresh.resolve(false);return;}
+    void this.preview().then(()=>refresh.resolve(true),()=>refresh.resolve(false));
+  }
   private armEditPreview(milliseconds=this.editDelay){
     if(!this.foreground||!this.pendingEditSignature||this.value.busy)return;
     this.clearEditTimer();
@@ -113,7 +128,7 @@ export class WebDAVSync {
   cancel(){
     if(this.value.busy==='configure'||this.value.busy==='commit')return false;
     this.clearEditTimer();this.pendingEditSignature=undefined;
-    this.foregroundRefresh?.resolve(false);this.foregroundRefresh=undefined;
+    this.failForegroundRefresh();
     this.generation++;this.request?.abort();this.request=undefined;this.publish({...this.value,busy:null,preview:undefined,message:'',error:''});return true;
   }
   private async run(kind:'preview'|'commit',work:(context:{config:SyncConfig;account:WebDAVAccount;credentials:WebDAVCredentials;signal:AbortSignal;check:()=>void})=>Promise<Partial<WebDAVSyncState>>){
@@ -135,8 +150,7 @@ export class WebDAVSync {
           this.lastPreviewedSignature=this.value.preview.localSignature;
           if(this.pendingEditSignature===this.lastPreviewedSignature){this.pendingEditSignature=undefined;this.clearEditTimer();}
         }
-        const refresh=this.foregroundRefresh;this.foregroundRefresh=undefined;
-        if(refresh)void this.previewIfConfigured().then(refresh.resolve);
+        if(this.foregroundRefresh)this.flushForegroundRefresh();
         else this.armEditPreview(0);
       }
     }
@@ -152,15 +166,8 @@ export class WebDAVSync {
    * Conflicts remain explicit and require the existing user confirmation path;
    * foreground refresh never commits data automatically. */
   previewIfConfigured(){
-    if(!this.value.config||!this.selectedAccount())return Promise.resolve(false);
-    if(this.value.busy==='preview'){
-      if(!this.foregroundRefresh){
-        let resolve!:(result:boolean)=>void;
-        const promise=new Promise<boolean>(done=>{resolve=done;});
-        this.foregroundRefresh={promise,resolve};
-      }
-      return this.foregroundRefresh.promise;
-    }
+    if(!this.foreground||!this.value.config||!this.selectedAccount())return Promise.resolve(false);
+    if(this.value.busy==='preview'||this.value.busy==='commit')return this.queueForegroundRefresh();
     if(this.value.busy)return Promise.resolve(false);
     return this.preview().then(()=>true).catch(()=>false);
   }
