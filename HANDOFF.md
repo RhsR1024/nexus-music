@@ -1,6 +1,6 @@
 ## 2026-11-05 歌单持久化封面列表与详情显示
 
-音枢歌单已保存的公开封面地址此前只写入元数据，列表和详情仍只看首曲封面。现以共用 `playlistCoverSource` 优先显示安全 `http/https` 公开封面，地址缺失或不安全时回退首曲；URL 拒绝凭据和敏感查询键，未新增迁移、网络代理或第二封面缓存。最终Release`SourceUITests-1793858859629`的`testLibraryPlaylistCoverURL`为1/0/0、55.901秒、`sourceUnchanged=true`；创建→重启→列表图片→详情图片→删除链路通过，2张1290×2796截图亲看。r1键盘遮挡、r2环境缺失、r3/r8截图页面外、r4/r5封面不可见、r6/r7残留旧夹具及r9注释改动前的证据均保留，未放宽断言。`npm run check`1028/1028，完整native、Swift/Node/diff通过。`3a2ecc2` clean unsigned IPA为17,821,674字节/SHA-256`1f5290d2…a4cdb`，manifest clean/unsigned，63载荷与90 ZIP项核验通过；历史`build/distribution`符号链接恢复且目标文件未变。T7/push随后补记；J24仍为B，实体手势、VoiceOver/字号/小屏、真实大歌单和签名未验。见[专项回执](docs/2026-11-05-playlist-cover-url-report.md)。
+音枢歌单已保存的公开封面地址此前只写入元数据，列表和详情仍只看首曲封面。现以共用 `playlistCoverSource` 优先显示安全 `http/https` 公开封面，地址缺失或不安全时回退首曲；URL 拒绝凭据和敏感查询键，未新增迁移、网络代理或第二封面缓存。最终Release`SourceUITests-1793858859629`的`testLibraryPlaylistCoverURL`为1/0/0、55.901秒、`sourceUnchanged=true`；创建→重启→列表图片→详情图片→删除链路通过，2张1290×2796截图亲看。r1键盘遮挡、r2环境缺失、r3/r8截图页面外、r4/r5封面不可见、r6/r7残留旧夹具及r9注释改动前的证据均保留，未放宽断言。`npm run check`1028/1028，完整native、Swift/Node/diff通过。`3a2ecc2` clean unsigned IPA为17,821,674字节/SHA-256`1f5290d2…a4cdb`，manifest clean/unsigned，63载荷与90 ZIP项核验通过；历史`build/distribution`符号链接恢复且目标文件未变。T7阶段`2026-11-05-playlist-cover-3a2ecc2`为722份业务文件/410,722,802字节，逐项0差异且`SHA256SUMS` PASS；源码tar与1,093个tracked条目一致，源证据保留且零删除，receipt`7609b2f0…0206`。push随后补记；J24仍为B，实体手势、VoiceOver/字号/小屏、真实大歌单和签名未验。见[专项回执](docs/2026-11-05-playlist-cover-url-report.md)。
 
 ## 2026-11-05 J29 睡眠定时器秒级倒计时与立即停止
 

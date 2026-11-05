@@ -6,7 +6,8 @@
 - [x] `npm run check`1028/1028、完整native、Swift/Node/diff通过；r1–r9失败或替代原件保留。
 - [ ] `track-list-cover`实际弹层视觉；当前目标歌单为空，纯函数回退已测。
 - [x] `3a2ecc2` clean unsigned归档：IPA17,821,674字节/SHA-256`1f5290d2…a4cdb`，manifest clean/unsigned，63载荷/90 ZIP项通过；历史distribution链接恢复。
-- [ ] T7逐文件核验、提交push/云端终态。
+- [x] T7阶段`2026-11-05-playlist-cover-3a2ecc2`为722份业务文件/410,722,802字节、逐项0差异且`SHA256SUMS` PASS；源码tar与1,093个tracked条目一致，源证据保留且零删除。
+- [ ] 提交push/云端终态。
 - [ ] J24实体滑动/批量手势、VoiceOver/动态字号/小屏、真实大歌单、签名及完整F11/F23/项目。
 
 详见[专项回执](2026-11-05-playlist-cover-url-report.md)。

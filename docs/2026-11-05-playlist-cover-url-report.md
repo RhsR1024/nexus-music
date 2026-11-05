@@ -67,7 +67,18 @@ r1–r10 结果目录与 xcresult 全部保留，未删除失败或替代证据�
 - manifest SHA-256 `4ecb056dc5424386f1f27cff124d56f50774278a478193515e5cc52da3e264f8`，归档日志 SHA-256 `e057ae3b6db0017e30352f8bc53c702d829a5a5be4c3fe27bb990c60266e0cc1`。
 - 独立核验 SHA-256 `293be4f04c3b723414baaec79a91ea1e1ee8c7ad9d2d6c3667f82edb88fb2320`，结果 `ready=true`：ZIP CRC、63 个普通载荷与 90 个 ZIP 项逐字节、arm64/SDK/iOS/设备族、封面测试标识，以及测试/私人/签名排除全部通过。
 - 构建时临时避开历史 `build/distribution` 符号链接。保护回执 SHA-256 `1b7d31b29e6b4fda88285f9882a18883b97d1e3a5d64839255a882aedf5deeba`，恢复回执 SHA-256 `3dabb245e651643279fc7c4cd8d9f1e53adce9db52d721814b78882edd5daf02`；目标和 6 个顶层文件哈希、mtime 均未变化。
-- `source/nexus-music-3a2ecc2.tar.gz`、完整补丁、UID/权限/源码计数与后续 T7 逐文件回执在 T7 阶段核验后补记。源证据不删除。
+- `source/nexus-music-3a2ecc2.tar.gz` 为 8,066,761 字节、SHA-256 `1324148ee9acbd8b0fc4f5fad9c97d2a0d5c3ee266f43c5319919a32799aaad4`；1,093 个 tracked 条目（1,091 普通文件、2 符号链接）与产品提交逐项内容一致。完整补丁 SHA-256 `0a586cc16305c79cf763b5fa0a6eecb1e56d30c05777ba1a9ca74fc629f3ec85`。
+
+## T7 阶段归档
+
+已真实挂载且可写的 exFAT 外置阶段为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-playlist-cover-3a2ecc2`。归档包含 clean IPA/xcarchive/manifest、r1–r10 运行记录、9 份有效 xcresult、失败附件、最终截图、检查/native/clean/T7 日志、源码 tar/补丁、文档快照和核验脚本。
+
+- 722 份业务文件、410,722,802 字节，逐文件 SHA-256 0 差异；目标 `shasum -a 256 -c SHA256SUMS` 722/722 通过。
+- `inventory.json` SHA-256 `88ec0656f02ad8f839f6c7b82a6ef7246bf17179e89d5cd8fbfd944b47462a67`；`SHA256SUMS` SHA-256 `9d1070e621b37494e34a462fd54b3253f3526a9b09ff7f3fae22c700f6d551ac`。
+- `transfer-receipt.json` 为 `ready=true`、`mismatches=0`、`sourcePreserved=true`、`deleted=0`、`movedUserFiles=0`，SHA-256 `7609b2f0a45af71eea901f4d893207fda9583757f7da067511d5d0ddfe310206`。
+- 源码 tar 的 1,093 个 tracked 条目与 `3a2ecc2` 内容一致，0 差异；文档快照对应 clean 文档提交 `3dddb32ecb9542fa6cdb16f7f6d41955f7f0ccc1`。
+- 目标在回执生成前记录 805 个 exFAT 自动 `._*` 元数据文件；其不计入 722 份业务载荷，也不替代逐文件 SHA-256 核验。
+- 恢复按 `inventory.json` 的相对路径执行；tracked 源码也可由 `3a2ecc2` 与 `source/nexus-music-3a2ecc2.tar.gz` 重建。源证据和本机阶段目录均保留。
 
 ## 边界
 
