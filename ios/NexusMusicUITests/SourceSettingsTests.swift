@@ -5024,6 +5024,12 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["收起播放界面样式"].tap()
     let immersiveImage=XCTAttachment(screenshot:app.screenshot());immersiveImage.lifetime = .keepAlways;add(immersiveImage)
     for layout in ["photo","vinyl","wave","stage","am2"] {
+      if layout=="vinyl" {
+        let play=app.buttons["播放"].firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout:5))
+        play.tap()
+        XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:10),"Sleep immediate stop must start from actual playback")
+      }
       app.buttons["更多播放控制"].tap()
       if layout=="vinyl" {
         XCTAssertTrue(app.buttons["队列与播放选项"].waitForExistence(timeout:5))
@@ -5039,8 +5045,16 @@ final class SourceSettingsTests: XCTestCase {
         app.buttons["自定义"].tap()
         XCTAssertTrue(app.buttons["开始定时"].waitForExistence(timeout:5))
         let customShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());customShot.name="Sleep timer custom";customShot.lifetime = .keepAlways;add(customShot)
-        app.buttons["15 分钟"].tap();XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"sleep-status").firstMatch.waitForExistence(timeout:5))
-        app.buttons["取消睡眠定时"].tap();app.buttons["返回播放选项"].tap()
+        app.buttons["15 分钟"].tap()
+        let sleepStatus=app.descendants(matching:.any).matching(identifier:"sleep-status").firstMatch
+        XCTAssertTrue(sleepStatus.waitForExistence(timeout:5))
+        XCTAssertNotNil(sleepStatus.label.range(of:#"剩余 \d{1,2}:\d{2}(?::\d{2})?$"#,options:.regularExpression),"Active sleep timer must expose a bounded countdown: \(sleepStatus.label)")
+        let runningShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());runningShot.name="Sleep timer countdown and immediate stop";runningShot.lifetime = .keepAlways;add(runningShot)
+        let stopNow=app.buttons["立即停止播放"];XCTAssertTrue(stopNow.waitForExistence(timeout:5));stopNow.tap()
+        XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10),"Immediate sleep stop must pause actual playback")
+        XCTAssertEqual(sleepStatus.label,"未开启","Immediate sleep stop must clear the native timer")
+        let stoppedShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());stoppedShot.name="Sleep timer stopped immediately";stoppedShot.lifetime = .keepAlways;add(stoppedShot)
+        app.buttons["返回播放选项"].tap()
         XCTAssertTrue(app.buttons["播放界面样式"].waitForExistence(timeout:5),"The options sheet must return after the timer panel closes")
       }
       app.buttons["播放界面样式"].tap()

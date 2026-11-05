@@ -5,6 +5,7 @@ import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme, type Theme} from './theme.tsx';
 import {radius, space, typography} from './tokens.ts';
+import {sleepCountdown} from '../playback/sleep.ts';
 
 const rates=[0.5,0.75,1,1.25,1.5,2,3] as const;
 const presets=[15,30,45,60,90] as const;
@@ -49,10 +50,12 @@ function Wheel({values,index,onChange,label,theme}:{values:number[];index:number
 export function SleepPanel({services,onBack}:{services:Services;onBack:()=>void}){
   const theme=useTheme(),styles=makeStyles(theme);
   const sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
+  const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const [custom,setCustom]=useState(false),[hours,setHours]=useState(0),[minutes,setMinutes]=useState(30),[now,setNow]=useState(Date.now()),[error,setError]=useState('');
   useEffect(()=>{if(sleep.mode!=='duration')return;setNow(Date.now());const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[sleep]);
   const apply=(seconds:number,finish=false)=>{void services.playback.sleep.set(seconds,finish).then(()=>setError('')).catch(()=>setError('定时设置未保存，请重试'));};
-  const status=sleep.mode==='off'?'未开启':sleep.mode==='track'?'本曲播放结束后停止':`剩余 ${Math.max(0,Math.ceil((sleep.deadline-now)/60000))} 分钟`;
+  const stopNow=()=>{void services.playback.sleep.stopNow().then(()=>setError('')).catch(()=>setError('未能立即停止播放，请重试'));};
+  const status=sleep.mode==='off'?'未开启':sleep.mode==='track'?'本曲播放结束后停止':`剩余 ${sleepCountdown(sleep.deadline,now)}`;
   return <View style={styles.root}>
     <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={onBack} style={styles.back}><Ionicons name="chevron-back" size={18} color={theme.palette.secondary}/><Text style={styles.backText}>返回</Text></Pressable>
     <Text accessibilityRole="header" style={styles.title}>睡眠定时器</Text>
@@ -74,6 +77,7 @@ export function SleepPanel({services,onBack}:{services:Services;onBack:()=>void}
       <Text style={styles.switchLabel}>播完当前歌曲再停止</Text>
       <Switch accessibilityLabel="播完当前歌曲再停止" value={sleep.mode==='track'} onValueChange={value=>{if(value)apply(0,true);else apply(0);}} trackColor={{true:theme.palette.accent,false:theme.palette.border}} thumbColor="#FFFFFF"/>
     </View>
+    <Pressable accessibilityRole="button" accessibilityLabel="立即停止播放" disabled={!playback.queue.currentId} onPress={stopNow} style={[styles.immediate,!playback.queue.currentId&&{opacity:.4}]}><Ionicons name="stop-circle-outline" size={18} color={theme.palette.accent}/><Text style={[styles.chipText,{color:theme.palette.accent}]}>立即停止播放</Text></Pressable>
     {sleep.mode!=='off'&&<Pressable accessibilityRole="button" accessibilityLabel="取消睡眠定时" onPress={()=>apply(0)} style={styles.cancel}><Text style={[styles.chipText,{color:theme.palette.accent}]}>取消睡眠定时</Text></Pressable>}
     {!!error&&<Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>}
   </View>;
@@ -95,6 +99,7 @@ const makeStyles=(theme:Theme)=>StyleSheet.create({
   startText:{...typography.body,fontSize:16,fontWeight:'600',color:'#FFFFFF'},
   switchRow:{minHeight:52,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space.md},
   switchLabel:{...typography.body,fontSize:16,color:theme.palette.text},
+  immediate:{minHeight:48,borderWidth:1,borderColor:theme.palette.border,borderRadius:radius.lg,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:space.sm},
   cancel:{minHeight:44,alignItems:'center',justifyContent:'center'},
   error:{...typography.micro,color:'#B3261E'},
 });

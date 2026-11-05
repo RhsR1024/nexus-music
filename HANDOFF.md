@@ -1,3 +1,7 @@
+## 2026-11-05 J29 睡眠定时器秒级倒计时与立即停止
+
+睡眠面板新增秒级倒计时和 48pt“立即停止播放”；停止动作先原子取消原生睡眠计时，再通过唯一播放控制器暂停真实音频。完整设置同步秒级显示，原生计时器仍是唯一权威。最终Release `SourceUITests-1793854177801` 的 Navidrome 合成实音/五皮肤回归为 1/0/0、631.892秒、`sourceUnchanged=true`；倒计时、立即停止、计时清除和 vinyl 暂停按钮均通过，5张1290×2796截图亲看。两轮测试状态污染/弹层遮挡失败原件保留，未放宽断言。`npm run check` 1027/1027、完整 native 与 diff 通过。J29 仍保留自定义实际启动、本曲后停正式UI、重启/前后台组合、实体机、签名与 iOS27 边界，不写全部完成。见[专项回执](docs/2026-11-05-sleep-immediate-report.md)。
+
 ## 2026-11-05 本地收藏派生歌单
 
 设备歌单域默认“我喜欢的（仅本机）”此前恒为空。现改为本机音频`favorite`标志的派生视图，列表计数、封面、详情和批量选择共用同一结果；取消收藏走本机标志，不双写歌单成员，也不迁移`device.playlists.v1`。自建设备歌单、音乐库双体系隔离和唯一权威队列不变。最终Release`SourceUITests-1793850809039`的`testLocalPlaylistDualSystem`为1/0/0、84.332秒、`sourceUnchanged=true`；源码digest`a328cb8c…15dcaf`、安装bundle`50b44edd…d31dcef`、result info`7a67d636…93512`，6张1290×2796截图已亲看收藏恢复、派生详情、取消收藏空态和计数。`npm run check`1026/1026、完整native与diff检查通过；r1–r3失败/替代原件保留。clean提交`232686d`的unsigned IPA为17,820,609字节、SHA-256`b5d6237c…48bc4`，ZIP CRC、63项archive/IPA载荷、私人标记排除及未签名检查通过。T7阶段`2026-11-05-local-liked-playlist-232686d`为329份业务文件/149,890,592字节、逐项0差异且`SHA256SUMS` PASS；源码tar 8,052,554字节、SHA-256`5e0d9fbc…be6e9c`，1088个tracked条目内容一致（1086文件+2符号链接）。源证据保留且零删除。`b18d259..5620d38`已正常push并实核远端一致；push后快照`41962294108/e6e5668`运行、`41966235807/5620d38`唯一pending，1运行/1排队，未取消或重派，新运行终态待验。见[专项回执](docs/2026-11-05-local-liked-playlist-report.md)。本批不关闭F11/F23、实体机、签名、iOS27终态或项目，无新增Sollin采集。

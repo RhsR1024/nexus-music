@@ -6,6 +6,7 @@ import type {Services} from '../app/services.ts';
 import {GainSlider} from './EqualizerGraph.tsx';
 import {useTheme} from './theme.tsx';
 import {controls,radius,space} from './tokens.ts';
+import {sleepCountdown} from '../playback/sleep.ts';
 const NativeRoutePicker=requireNativeView<ViewProps&{tint:string;activeTint:string}>('NexusNative','RoutePicker');
 const NativeDeviceVolume=requireNativeView<ViewProps&{tint:string}>('NexusNative','DeviceVolume');
 export function PlaybackSettings({services}:{services:Services}) {
@@ -39,7 +40,7 @@ export function PlaybackSettings({services}:{services:Services}) {
       </View>
     </View>
     <Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>睡眠定时</Text>
-    <Text testID="sleep-status" style={{color:p.secondary}}>{sleep.mode==='off'?'未开启':sleep.mode==='track'?'本曲播放结束后停止':`剩余 ${Math.max(0,Math.ceil((sleep.deadline-now)/60000))} 分钟`}</Text>
+    <Text testID="sleep-status" style={{color:p.secondary}}>{sleep.mode==='off'?'未开启':sleep.mode==='track'?'本曲播放结束后停止':`剩余 ${sleepCountdown(sleep.deadline,now)}`}</Text>
     <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{[15,30,60,90].map(value=><View key={value}>{button(`${value}分钟`,()=>set(value*60))}</View>)}</View>
     <TextInput accessibilityLabel="睡眠定时分钟" keyboardType="number-pad" value={minutes} onChangeText={setMinutes} placeholder="1–1440 分钟" placeholderTextColor={p.secondary} maxLength={4} style={{padding:12,color:p.text,borderWidth:1,borderColor:p.border,borderRadius:12}}/>
     {button('开始自定义定时',()=>{const value=Number(minutes);if(!/^\d+$/.test(minutes)||value<1||value>1440){setError('请输入1到1440分钟');return;}set(value*60);})}
