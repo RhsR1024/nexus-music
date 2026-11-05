@@ -5,7 +5,9 @@
 - [x] 新增4项同步测试；`npm run check`1039/1039，Swift parse/Node/diff通过。
 - [x] 正式Release`1793876399041`为1/0/0、191.455秒、sourceUnchanged；自动改名/删除均触发自动GET、零新增PUT、冲突提示、旧确认拒绝及提交/重启/删除传播通过，3图1290×2796亲看。
 - [x] r1锁屏动画等待主动终止、r2末尾清理未重开WebDAV失败原件保留；测试开关不跳过产品断言。
-- [ ] clean unsigned IPA、T7归档、正常push与云端终态。
+- [x] clean unsigned IPA`6afdd9d3…488a`为17,864,903字节，manifest clean/unsigned、63载荷/8隐私清单/0签名项核验通过；源码tar与1,103 Git条目0差异。
+- [x] T7阶段323份/533,599,597字节逐项0差异、源保留且零删除；inventory`e63d2cf9…e151`、receipt`0f67c262…697d4`。
+- [ ] 正常push与云端终态。
 - [ ] 保存/提交期间事件、真实双设备/私人服务、长时并发/后台持续、实体机/签名与完整F33/J54。
 
 见[回执](2026-11-05-sync-auto-preview-report.md)。

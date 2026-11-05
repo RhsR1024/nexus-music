@@ -61,6 +61,19 @@ NEXUS_UI_RUN_DIR=build/sync-auto-preview-next \
 
 若主机未锁屏且不出现动画空闲等待，可省略 `NEXUS_UI_DISABLE_ANIMATION_IDLE=1`。
 
+## 清洁设备包与T7
+
+产品提交`1df0e7d4a1a37a97fc58eb8eb45afd475e8876ce`的 clean unsigned archive 通过，manifest 与提交一致、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。`unzip -t` 对全部 178 个 ZIP 项 CRC 通过；其中 90 个有效项、63 个载荷文件、8 个隐私清单，88 个 `._*` 为 AppleDouble 元数据，不计入载荷。63 个载荷文件与 archive app 逐字节一致，0 缺失/差异；`_CodeSignature` 项为 0，`codesign` 明确为 `not signed at all`，`PrivacyInfo.xcprivacy` 通过 `plutil -lint`。生产 bundle 含 `pendingEditSignature`/`lastPreviewedSignature`/`flushEditPreview`/`editDelay` 标记，测试适配器、主题观测和夹具口令标记均不存在。
+
+- IPA：17,864,903 字节，SHA-256 `6afdd9d3f8695781924ee6273481faaf7cf813c44e7487cd9ba581252d84488a`；同目录 `.sha256` 复核 OK。
+- manifest：`build/distribution/build-manifest.json`。
+- 独立 verification：`build/distribution/verification.json`，SHA-256 `c0dff4facd750d61d8720b4817dc9b7faf94887dbe37f5bfdff3c3b22e089bb1`，`ready=true`。
+- 源码 tar：15,687,680 字节，SHA-256 `d6590a22df1da31e84488abb19c8ff2b39f2fe3f3af1b2e45dc25224b94118ed`；与 Git 树 1,103 个条目（1,101 文件 + 2 符号链接）逐一比对模式与 blob，0 差异/0 额外。
+- 提交补丁：47,123 字节，SHA-256 `0124a7a066ce70d4b0064039c477e0bd298e326fd7db3a3ccac63d4603b95ac2`。
+- 归档日志：`build/logs/archive-sync-auto-preview-20261105.log`，SHA-256 `813bdf0cf7ee8734bad6a06eaaaea48f555f17767897d54b565bf2ba311f1fd5`。
+
+T7 阶段 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-auto-preview-1df0e7d` 保存 clean 分发、xcarchive、源码 tar/补丁、r1/r2/r3 原始结果/截图/诊断、check/archive/UI 日志、脚本与报告快照。323 份业务文件/533,599,597 字节逐文件源/目标 SHA-256 一致，0 差异、源保留、零删除；`inventory.json` SHA-256 `e63d2cf98be5fea962516218ab629a48577d56f1f2a752ad1ce43652d083e151`，`transfer-receipt.json` SHA-256 `0f67c2625279633f3e933df03a3d2c8159e7dab0100eceabf7f4a89bb85697d4`。r2 的 396MiB 长失败结果因保留原始证据一并归档；内盘约 58GiB、T7 约 568GiB，未做清理或搬移个人文件。
+
 ## 边界
 
-本批不宣称完成 F33/J54：自动流程只刷新预览，不自动提交；保存/提交进行中的前台事件仍沿用既有返回，不做并行读取；真实双设备、私人 WebDAV、长时并发/后台持续同步、系统终止后的自动恢复、实体机/签名与 iOS27 云端终态继续开放。清洁 unsigned 设备包、T7 阶段归档、push 与云端队列随后补记。
+本批不宣称完成 F33/J54：自动流程只刷新预览，不自动提交；保存/提交进行中的前台事件仍沿用既有返回，不做并行读取；真实双设备、私人 WebDAV、长时并发/后台持续同步、系统终止后的自动恢复、实体机/签名与 iOS27 云端终态继续开放。正常 push 与云端队列随后补记。
