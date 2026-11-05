@@ -22,6 +22,16 @@ source digest `f6644a532ecd66b566d63aa8cc6235390ea45b5eacb70575ea26cfcf01bd7cb1`
 
 同一产品源码已通过本轮1022业务检查与完整native；本批仅测试定位/屏障变化，实际Release编译与完整上述业务回归通过。测试夹具是隔离的合成120秒WAV与合成账号，不是平台真实音源、私人Navidrome或实体后台下载验收。
 
+## 清洁交付
+
+独立提交 `56c8ac55067de83611a3188c8515c8c080f7d9c0` 已正常push并实核远端main一致。该提交同时包含已先独立提交的注音修复；clean archive manifest与HEAD一致、`dirty=false`、`workingTreeChanges=[]`，实际构建前后工作区清洁。arm64 / iphoneos26.2 / 最低iOS15.1 / 设备族 `[1,2]`，未签名。
+
+clean IPA为17,859,254字节，SHA-256 `83ff147e8fc490ca99c61167f67b92608ae91fa6b868ec73d0827b17e1ecc2ea`。独立ZIP CRC、151项archive/IPA普通文件字节、测试/私人夹具标记及签名材料排除均通过，ready=true。回执为 `build/ttml-download-clean-verification-20261105.json`；unsigned包不代表签名或实体安装通过。
+
+真实挂载T7阶段 `NexusMusic/BuildArchive/2026-11-05-ttml-download-clean-56c8ac5/` 保存clean archive/IPA/manifest、固定提交源码tar、专项xcresult、清单/计数/日志及五图。预列清单230份/117,583,451字节，确认无活动构建后复制，逐项SHA-256为0差异，sourcePreserved=true/deleted=0。恢复按 `inventory.json` 中的相对路径；源仍保留。
+
+正常push后官方工作流实际清单确认 `41949520533/a328ee6` 继续运行，`41951283649/56c8ac5` 唯一等待串行执行，1运行/1排队。没有取消或重派旧版本。页面及解析快照为 `build/download-batch-actions-after-push-20261105.html` 和 `build/download-batch-ci-queue-after-push-20261105.json`，新iOS27终态仍待。
+
 ## 后续
 
-先提交已验证测试候选并生成包含注音修复的清洁设备包，按真实挂载T7逐文件保存证据；再核对正常push后的1运行/最多1排队。云端iOS27、真实平台批量限流、实体后台、签名与完整F/J继续开放；下一独立产品缺口为J25跨主导航保留搜索类型、平台和草稿。
+云端iOS27、真实平台批量限流、实体后台、签名与完整F/J继续开放；下一独立产品缺口为J25跨主导航保留搜索类型、平台和草稿。既有Migu导入测试中“跨Tab后应为空输入”的历史前提也需随新行为核对，不把旧测试假设当成功能规格。

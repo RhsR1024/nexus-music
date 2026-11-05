@@ -1,6 +1,8 @@
 ## 2026-11-05 下载批量选择候选独立回归通过
 
-旧f9121ca云端唯一下载组失败在取消2/2等待。既有候选使用真实第二任务按钮并确认2/2后取消；未改产品或减少断言。正式Release `1793842666037` 为1/0/0、251.875秒、sourceUnchanged=true，heldFull=2/fullFinished=2/authFailures=0，五图来源核验与亲看通过；仅合成WAV机制回归，不冒充真实平台/Range/实体后台。详见[回执](docs/2026-11-05-download-batch-selection-report.md)。下一提交候选、生成含注音修复的清洁包并核对新CI，再推进J25跨Tab搜索状态。
+旧f9121ca云端唯一下载组失败在取消2/2等待。既有候选使用真实第二任务按钮并确认2/2后取消；未改产品或减少断言。正式Release `1793842666037` 为1/0/0、251.875秒、sourceUnchanged=true，heldFull=2/fullFinished=2/authFailures=0，五图来源核验与亲看通过；仅合成WAV机制回归，不冒充真实平台/Range/实体后台。候选已独立提交、清洁包和T7核验已完成，详见[回执](docs/2026-11-05-download-batch-selection-report.md)。下一推进J25跨Tab搜索状态。
+
+交付补记：`56c8ac5` 已push并核对远端；包含注音修复的clean IPA `83ff147e…ecc2ea`、manifest clean与151项载荷核验通过。T7 clean阶段230份/117,583,451字节0差异，原件保留；新`41951283649/56c8ac5`唯一排队，`41949520533/a328ee6`继续运行，1/1。旧云端故障及新终态仍待，不关闭完整F/J；下一进入J25。
 
 ## 2026-11-05 `withBase` 注音跨行候选验证中
 

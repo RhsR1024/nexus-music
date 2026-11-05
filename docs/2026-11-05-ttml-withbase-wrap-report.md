@@ -1,6 +1,6 @@
 # `withBase` 注音跨行布局
 
-当前状态：实现、业务检查、正常字号正式 UI、XXXL 长段滚动及设备 unsigned 构建通过，产品提交已推送、预提交证据已在 T7 核验；清洁设备包、云端终态、完整 J37/F27 及全项目目标保持开放。
+当前状态：实现、业务检查、正常字号正式 UI、XXXL 长段滚动及清洁设备 unsigned 构建通过，产品提交已推送、证据已在 T7 核验；云端终态、完整 J37/F27 及全项目目标保持开放。
 
 ## 问题与修复
 
@@ -41,6 +41,8 @@ IPA 为 17,859,254 字节，SHA-256 `e83583bb1f33b210e373ee0776c45db9477124d9e0b
 真实挂载且可写的 T7 阶段 `NexusMusic/BuildArchive/2026-11-05-ttml-withbase-wrap-e83583bb-precommit/` 保存四轮成功/失败 xcresult、运行清单、导出截图/几何附件、检查日志、dirty archive/IPA/manifest、工作区补丁及 CI 只读摘要。清单先列出 669 份普通文件、263,098,738 字节，确认无活动 xcodebuild 后复制；复制前后逐项 SHA-256 核验为 0 差异，ready=true、sourcePreserved=true、deleted=0。
 
 恢复按目标下 `transfer-inventory.json` 的相对路径映射回仓库；所有源原件仍在，不需要覆盖或清理即可查阅。`transfer-receipt.json` 与本机 `build/ttml-withbase-transfer-receipt-20261105.json` 保存回执。本阶段为预提交 dirty 证据，补丁包含已明确隔离的既有下载测试改动，不冒称清洁发布产物。
+
+后续下载测试候选已独立验收/提交，clean `56c8ac5` 包包含本批注音修复，IPA SHA-256 `83ff147e8fc490ca99c61167f67b92608ae91fa6b868ec73d0827b17e1ecc2ea`，manifest清洁及151项载荷等核验通过；详见[独立交付回执](2026-11-05-download-batch-selection-report.md)。公共 `build/distribution/` 已由clean构建更新，旧dirty完整archive/IPA应从上述T7预提交阶段读取，本机hash命名history另保留旧IPA/manifest；“源保留”指当次复制时状态，不将当前公共目录误记为旧dirty包。
 
 ## 保留边界
 

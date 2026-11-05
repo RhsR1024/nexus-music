@@ -1,6 +1,6 @@
 ## 2026-11-05 音枢 `withBase` 注音跨行阅读
 
-音枢自有 TextKit 修复，无新增 Sollin 参考或像素一致性声明。正常/XXXL Release各1/0/0、三图 provenance ready并亲看；20字逐项注音在常态分两行、大字号分四行，XXXL 559pt长段以418.6667pt阅读区正常滚动首末重叠覆盖。1022检查、完整native、dirty unsigned包及T7 669份文件核验通过。产品a328ee6已push，新iOS27 41949520533唯一运行、0排队；云端终态、清洁设备包和实体签名仍待。详见[回执](2026-11-05-ttml-withbase-wrap-report.md)与[规格](ui-spec/ttml-withbase-wrap-2026-11-05.md)，不关闭完整J37/F27或项目。
+音枢自有 TextKit 修复，无新增 Sollin 参考或像素一致性声明。正常/XXXL Release各1/0/0、三图 provenance ready并亲看；20字逐项注音在常态分两行、大字号分四行，XXXL 559pt长段以418.6667pt阅读区正常滚动首末重叠覆盖。1022检查、完整native、dirty包/T7 669份及后续56c8ac5 clean包/T7 230份核验通过。产品a328ee6与独立下载测试56c8ac5均已push；iOS27 41949520533运行、41951283649唯一排队，云端终态与实体签名仍待。详见[回执](2026-11-05-ttml-withbase-wrap-report.md)与[规格](ui-spec/ttml-withbase-wrap-2026-11-05.md)，不关闭完整J37/F27或项目。
 
 ## 2026-11-04 新碟首发目录与官方拒绝态验收
 
