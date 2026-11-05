@@ -1,6 +1,6 @@
 ## 2026-11-05 本地收藏派生歌单
 
-设备歌单域默认“我喜欢的（仅本机）”此前恒为空。现改为本机音频`favorite`标志的派生视图，列表计数、封面、详情和批量选择共用同一结果；取消收藏走本机标志，不双写歌单成员，也不迁移`device.playlists.v1`。自建设备歌单、音乐库双体系隔离和唯一权威队列不变。最终Release`SourceUITests-1793850809039`的`testLocalPlaylistDualSystem`为1/0/0、84.332秒、`sourceUnchanged=true`；源码digest`a328cb8c…15dcaf`、安装bundle`50b44edd…d31dcef`、result info`7a67d636…93512`，6张1290×2796截图已亲看收藏恢复、派生详情、取消收藏空态和计数。`npm run check`1026/1026、完整native与diff检查通过；r1–r3失败/替代原件保留。见[专项回执](docs/2026-11-05-local-liked-playlist-report.md)。本批不关闭F11/F23、实体机、签名、iOS27终态或项目；无新增Sollin采集。
+设备歌单域默认“我喜欢的（仅本机）”此前恒为空。现改为本机音频`favorite`标志的派生视图，列表计数、封面、详情和批量选择共用同一结果；取消收藏走本机标志，不双写歌单成员，也不迁移`device.playlists.v1`。自建设备歌单、音乐库双体系隔离和唯一权威队列不变。最终Release`SourceUITests-1793850809039`的`testLocalPlaylistDualSystem`为1/0/0、84.332秒、`sourceUnchanged=true`；源码digest`a328cb8c…15dcaf`、安装bundle`50b44edd…d31dcef`、result info`7a67d636…93512`，6张1290×2796截图已亲看收藏恢复、派生详情、取消收藏空态和计数。`npm run check`1026/1026、完整native与diff检查通过；r1–r3失败/替代原件保留。clean提交`232686d`的unsigned IPA为17,820,609字节、SHA-256`b5d6237c…48bc4`，ZIP CRC、63项archive/IPA载荷、私人标记排除及未签名检查通过。T7阶段`2026-11-05-local-liked-playlist-232686d`为329份业务文件/149,890,592字节、逐项0差异且`SHA256SUMS` PASS；源码tar 8,052,554字节、SHA-256`5e0d9fbc…be6e9c`，1088个tracked条目内容一致（1086文件+2符号链接）。源证据保留且零删除。见[专项回执](docs/2026-11-05-local-liked-playlist-report.md)。正常push与Actions队列待执行；本批不关闭F11/F23、实体机、签名、iOS27终态或项目，无新增Sollin采集。
 
 ## 2026-11-05 音乐库随机播放清除单曲循环
 

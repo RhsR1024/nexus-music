@@ -44,6 +44,25 @@
 
 失败轮次均保留且不计通过：r1 在“歌曲”页错误寻找歌单输入框；r2 在文件选择器已打开后才尝试清理旧收藏；r3 已通过但随后修正陈旧成功提示，由 r4 取代。
 
+## Clean 归档与 T7
+
+产品、测试与初始文档提交 `232686df281853ce45fc76f6397fae032388e391` 后，从 clean HEAD 完成独立构建。`build/local-liked-playlist-clean-232686d/` 保存 unsigned archive/IPA、manifest、独立核验、源码 tar、精确 UI 结果与截图；构建时临时避开并恢复了指向历史证据的 `build/distribution` 符号链接，目标 6 个顶层文件哈希和 mtime 未改变，保护回执 SHA-256 为 `4a2073e87a1040e3934e719628cc5916f128dc36d04a50dac13829fae65e403e`。
+
+- clean manifest 对应 `232686d`、`dirty=false`、`workingTreeChanges=[]`；arm64 / `iphoneos26.2` / 最低 iOS 15.1 / 设备族 `[1,2]`，`signed=false`。
+- unsigned IPA 为 17,820,609 字节，SHA-256 `b5d6237c94f41b302f2cf5b91b584459d47000ef671894085f0fe4bb48948bc4`。
+- 独立核验 `ready=true`：ZIP CRC、63 项 archive/IPA 文件逐字节比较、测试/私人标记排除和生产文案 UTF-8/UTF-16LE 检查通过；生产文案首检因 Hermes bundle 为 UTF-16LE 而失败，改为双编码后通过，产品内容未变。
+- 源码 tar 为 8,052,554 字节，SHA-256 `5e0d9fbcaaf1be86aab5dfc12247aa1af160d6388f8aa40eb6934795f7be6e9c`；未压缩 tar 的 1088 个 tracked 条目（1086 普通文件、2 符号链接）逐项类型、可执行位与内容均匹配 clean 提交，0 差异。tar 容器头字节未作为同一性依据。
+
+正式阶段已复制到真实挂载且可写的：
+
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-local-liked-playlist-232686d`
+
+- 329 份业务文件、149,890,592 字节，逐文件 SHA-256 0 差异；目标 `shasum -c SHA256SUMS` 329/329 通过。
+- `inventory.json` SHA-256 `117b2f765d7baf34cee65f7736e5fa2009e6879de65076d4345c9a3533b17b4a`；`SHA256SUMS` SHA-256 `cf0ce3888010f8be33e8b8f8b5ee6083e01ebe1678f62d9b1a42796491ff073d`。
+- `transfer-receipt.json` 为 `ready=true`、`mismatches=0`、`sourcePreserved=true`、`deleted=0`、`movedUserFiles=0`，SHA-256 `41164737accbcaf037f4ff6a8ac25dfc276e76e007ea762496c4d6333e7b5c1d`。
+- 目标在回执生成前记录 385 个 exFAT 自动 `._*` 元数据文件；写入回执后总数为 386。其不计入业务载荷，也不替代逐文件 SHA-256 核验。
+- 恢复按 `inventory.json` 的相同相对路径执行；tracked 源码也可由 `232686d` 与 `source/nexus-music-232686d.tar.gz` 重建。源证据和本机阶段目录均保留。
+
 ## 边界
 
 本批关闭默认本机收藏歌单始终为空的缺陷，不关闭完整 F11/F23、实体机、Apple 签名、iOS27 云端终态或全部项目。`device.playlists.v1` 仍只在本机，默认歌单不是云同步收藏集合；隐藏索引、文件删除、真实多文件夹和弱网恢复继续按既有边界验收。无新增 Sollin 采集，沿用 E-1247–E-1251 的既有可见能力证据，不访问私人账号、私有接口或商业逻辑。

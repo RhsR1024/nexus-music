@@ -5,7 +5,8 @@
 - [x] 默认歌单不提供改名/删除，并显示自动派生说明；歌曲页收藏反馈明确为仅本机。
 - [x] `npm run check`1026/1026、完整native、`git diff --check`通过；正式Release 1/0/0、84.332秒、`sourceUnchanged=true`。
 - [x] 6张1290×2796截图来源绑定精确xcresult并亲看；r1–r3失败/替代原件保留。
-- [ ] clean归档、T7、push与Actions队列；实体机、签名、云端终态及完整F/J。
+- [x] clean unsigned归档与T7：IPA 17,820,609字节/SHA-256`b5d6237c…48bc4`，ZIP CRC/63项载荷/隐私排除/未签名通过；T7 329份/149,890,592字节0差异，源码tar 1088个tracked条目内容一致，源证据保留。
+- [ ] 正常push与Actions队列；实体机、签名、云端终态及完整F/J。
 
 详见[专项回执](2026-11-05-local-liked-playlist-report.md)。
 
