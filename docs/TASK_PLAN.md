@@ -5,7 +5,8 @@
 - [x] 正式Release`SourceUITests-1793850809039`的`testLocalPlaylistDualSystem`为1/0/0、84.332秒、`sourceUnchanged=true`；收藏→默认歌单1首→取消→空态→恢复流程通过。
 - [x] 6张1290×2796截图已导出并亲看；`npm run check`1026/1026、完整native与`git diff --check`通过。
 - [x] clean unsigned归档与T7逐文件核验：IPA 17,820,609字节/SHA-256`b5d6237c…48bc4`，63项载荷通过；T7 329份/149,890,592字节0差异，源码tar 1088个tracked条目内容一致。
-- [ ] 正常push与实际Actions队列。
+- [x] `b18d259..5620d38`正常push并实核远端；push后`41962294108/e6e5668`运行、`41966235807/5620d38`唯一pending，1运行/1排队，未取消或重派。
+- [ ] 新运行云端终态。
 - [ ] 实体机、签名、iOS27终态及完整F11/F23/项目。
 
 详见[专项回执](2026-11-05-local-liked-playlist-report.md)。
