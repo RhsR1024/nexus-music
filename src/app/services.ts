@@ -82,6 +82,7 @@ import {AccountAlbums} from '../providers/accountAlbums.ts';
 import {AccountMVs} from '../providers/accountMVs.ts';
 import {QQPlaylists} from '../providers/qqPlaylists.ts';
 import {QQFavoriteClient} from '../providers/qqFavorite.ts';
+import {NeteaseFavoriteClient} from '../providers/neteaseFavorite.ts';
 import {KugouPlaylists} from '../providers/kugouPlaylists.ts';
 import {KugouQrPhoto} from '../providers/kugouQrPhoto.ts';
 import {loginQrPhotoNative} from '../storage/loginQrPhoto.ts';
@@ -123,6 +124,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const neteaseProfile=new NeteaseAccountProfileClient({http:options.onlineHTTP??requestJSON});
   const qqProfile=new QQAccountProfileClient({http:options.onlineHTTP??requestJSON});
   const qqFavorite=new QQFavoriteClient({http:options.onlineHTTP??requestJSON,sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),accounts:musicAccounts});
+  const neteaseFavorite=new NeteaseFavoriteClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
   const kugouLoginClient=new KugouLoginClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
   const kugouLogin=new KugouLoginCoordinator({client:kugouLoginClient,accounts:musicAccounts});
   const musicAuth={wy:new MusicAuthFlow<Record<string,unknown>>(),tx:new MusicAuthFlow<Record<string,unknown>>(),kg:new MusicAuthFlow<Record<string,unknown>>()};
@@ -268,7 +270,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, qqFavorite, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

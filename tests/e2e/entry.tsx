@@ -45,6 +45,16 @@ const initialize=()=>pending??=(async()=>{
     const session=Object.freeze({version:1,platform:'tx',accountId,userId:'9000000000000000002',cookies:Object.freeze({qqmusic_key:'synthetic-qq-favorite',qqmusic_uin:'9000000000000000002',login_type:'1'})});
     await services.musicAccounts.save({platform:'tx',label:'Synthetic QQ Favorite',username,displayName:'Synthetic QQ Favorite',capabilities:[]},session);
   }
+  if(native.launchArgument('NEXUS_UI_WY_FAVORITE_FIXTURE')==='1'){
+    // Separate simulator-only NetEase account. The favorite action uses the
+    // real account store, Keychain session and provider; only provider
+    // transport is redirected to the local HTTP fixture.
+    const username='netease:9000000000000000003';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
+    for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'&&existing.username!==username)await services.musicAccounts.remove(existing.id);
+    const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000003',cookies:Object.freeze({MUSIC_U:'synthetic-wy-favorite',__csrf:'synthetic-wy-csrf'})});
+    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Favorite',username,displayName:'Synthetic NetEase Favorite',capabilities:[]},session);
+  }
   return services;
 })().catch(error=>{pending=undefined;throw error;});
 function FixtureApp(){return <MusicApplication initialize={initialize}/>;}
