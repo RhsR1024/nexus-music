@@ -6,7 +6,9 @@
 - [x] 目录保存期间不自动排队，保留“同步目录已保存，请读取合并预览”的显式操作。
 - [x] 新增4项同步测试，`npm run check`1043/1043，Swift parse/Node/diff通过。
 - [x] 正式Release`1793878235033`为1/0/0、246.342秒、sourceUnchanged；提交回读挂起时Home/激活不新增GET，释放后仅一次补读且无额外PUT，1图1290×2796亲看。
-- [ ] clean unsigned IPA、T7归档、push与云端终态。
+- [x] clean unsigned IPA`63978bd5…41841`为17,865,361字节，manifest clean/unsigned、63载荷/8隐私清单/0签名项与源码1,104条目核验通过。
+- [x] T7阶段1,114份/119,152,758字节逐项0差异、源保留且零删除；inventory`bcd7818d…0dee`、receipt`b92b69b9…f47b`。
+- [ ] push与云端终态。
 - [ ] 真实双设备/私人服务、长时并发/后台持续、实体机/签名与完整F33/J54。
 
 见[回执](2026-11-05-sync-commit-foreground-report.md)。

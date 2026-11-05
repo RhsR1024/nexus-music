@@ -42,6 +42,21 @@
 
 夹具的 `/sync-fixture/release-reads` 现同时清除 `hold-next-read` 标志，避免前一轮残留影响下一次正式回归；不改变已挂起请求的释放行为。
 
+## 清洁设备包与T7
+
+产品提交`97f452e52d23a7656a203e7b9bc26f6d6f6a3707`的 clean unsigned archive 通过，manifest 与提交一致、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。
+
+- IPA：17,865,361 字节，SHA-256 `63978bd56365a19a434895a6f664725bb5616fac2e47e4a83e5b98eb57e41841`。
+- 178 个 ZIP 项 CRC 通过；63 个载荷文件与 archive app 逐字节一致，0 缺失/差异；88 个 `._*` 为 AppleDouble 元数据；8 个隐私清单；`_CodeSignature` 项为 0，`codesign` 为 `not signed at all`。
+- 生产 bundle 含 `failForegroundRefresh`/`flushForegroundRefresh`/`queueForegroundRefresh` 标记；测试适配器、主题观测和夹具口令标记均不存在。
+- manifest：`build/distribution/build-manifest.json`，SHA-256 `2eff34dbd6456113295b7ed834cf003f9f6e8bf938d2ca7e0cad271e735dc128`。
+- 独立 verification：`build/distribution/verification.json`，SHA-256 `d0b063130a1169b69ede3369ff6c6387798145ea542f914e83c5cbf9b3e1501d`，`ready=true`。
+- 源码 tar：15,708,160 字节，SHA-256 `55188f7e8f344dff0d34ecb4b5829b83dd80491ea5e17e4622a6eac47390e64d`；与 Git 树 1,104 个条目（1,102 文件 + 2 符号链接）逐一比对模式与 blob，0 差异/缺失/额外。
+- 提交补丁：34,745 字节，SHA-256 `8c37bc81820c75954251dec8c1aeef89cea4c51f3b3afc9486c535122c7eae23`。
+- 归档日志：`build/logs/archive-sync-commit-foreground-20261105.log`，SHA-256 `8d2d7b6c7d6edb0d3a5eb6b24767bffb8780bf21b54fb6474b6c9f8f41162e11`；检查日志 SHA-256 `9a1e45cc87707154174c1d5c9a3ce3f4ffd13fa54cfbdb390cb99088f5a73797`。
+
+T7 阶段 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-commit-97f452e` 保存 clean 分发、xcarchive、源码 tar/补丁、xcresult、运行清单、截图索引、check/archive/UI 日志、源码/文档快照与报告。1,114 份业务文件/119,152,758 字节逐文件源/目标 SHA-256 一致，0 差异、源保留、零删除；`inventory.json` SHA-256 `bcd7818dd6c131d33934afbe791a589bcf3f6d573970994247a55278414d0dee`，`SHA256SUMS` SHA-256 `f8ce6264143798277b3ba8b63269165d33f641ed63b952d59f9df452afd428b4`，`transfer-receipt.json` SHA-256 `b92b69b91cf40127c5b13571281540dfa7ca1d934a23551781ab2f8cbd1ff47b`。内盘约 58GiB、T7 约 568GiB，未做清理或搬移个人文件。
+
 ## 边界
 
 本批不宣称完成 F33/J54：真实双设备/私人 WebDAV、长时并发与后台持续同步、进程终止后的自动恢复、实体机/签名与 iOS27 云端终态仍开放。自动流程仍只刷新预览，配置保存仍要求用户显式读取预览，提交仍必须由用户确认。
