@@ -6578,6 +6578,94 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(cancel.exists)
     let restarted=XCTAttachment(screenshot:app.screenshot());restarted.name="Sleep timer cancelled after process restart";restarted.lifetime = .keepAlways;add(restarted)
   }
+  func testSleepDurationExpiryPausesAudio() throws {
+    let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
+    func reveal(_ element:XCUIElement,in viewport:XCUIElement){
+      XCTAssertTrue(viewport.waitForExistence(timeout:10))
+      for _ in 0..<24 {
+        if element.exists && element.isHittable && viewport.frame.insetBy(dx:0,dy:8).contains(element.frame){return}
+        let above=element.exists && element.frame.midY<viewport.frame.midY
+        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.75:0.25)))
+      }
+      XCTFail("Control must be fully visible: \(element)")
+    }
+    func type(_ field:XCUIElement,_ value:String){
+      reveal(field,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
+      field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
+    }
+    openSettings(app,page:"sources")
+    let remove=app.buttons["移除连接：fixture-user"]
+    if remove.exists {
+      reveal(remove,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
+      remove.tap();app.alerts.buttons["移除"].tap()
+      XCTAssertTrue(remove.waitForNonExistence(timeout:10),"A prior synthetic connection must leave before reconnecting")
+    }
+    type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439")
+    type(app.textFields["Navidrome用户名"],"fixture-user")
+    type(app.secureTextFields["Navidrome密码"],"fixture-password")
+    let save=app.buttons["验证并保存连接"]
+    reveal(save,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch);save.tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch
+    XCTAssertTrue(account.waitForExistence(timeout:10));account.tap()
+    let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
+    XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
+    let playAll=app.buttons["播放全部"];XCTAssertTrue(playAll.waitForExistence(timeout:10));playAll.tap()
+    let openPlayer=app.buttons["打开播放页"];XCTAssertTrue(openPlayer.waitForExistence(timeout:10));openPlayer.tap()
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:15),"Natural expiry must start from actual audio playback")
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    XCTAssertTrue(progress.waitForExistence(timeout:5))
+    XCTAssertTrue((progress.value as? String)?.hasSuffix(" / 2:00")==true,"The 120-second fixture must remain longer than the timer: \(String(describing:progress.value))")
+    app.buttons["更多播放控制"].tap()
+    XCTAssertTrue(app.buttons["睡眠定时器"].waitForExistence(timeout:5));app.buttons["睡眠定时器"].tap()
+    XCTAssertTrue(app.buttons["自定义"].waitForExistence(timeout:5));app.buttons["自定义"].tap()
+    let minutes=app.descendants(matching:.any).matching(identifier:"sleep-wheel-分钟").firstMatch
+    XCTAssertTrue(minutes.waitForExistence(timeout:5))
+    let panel=app.descendants(matching:.any).matching(identifier:"playback-control-panel-scroll").firstMatch
+    reveal(minutes,in:panel)
+    for _ in 0..<20 {
+      if minutes.value as? String=="0"{break}
+      minutes.swipeDown(velocity:.fast)
+    }
+    XCTAssertEqual(minutes.value as? String,"0","The minute wheel must expose a real zero row before stepping to one")
+    let start=minutes.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.75))
+    start.press(forDuration:0.1,thenDragTo:start.withOffset(CGVector(dx:0,dy:-36)),withVelocity:XCUIGestureVelocity(rawValue:80),thenHoldForDuration:0.3)
+    let minuteSelected=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@","1"),object:minutes)
+    XCTAssertEqual(XCTWaiter.wait(for:[minuteSelected],timeout:5),.completed)
+    let startTimer=app.buttons["开始定时"];reveal(startTimer,in:panel);startTimer.tap()
+    let status=app.descendants(matching:.any).matching(identifier:"sleep-status").firstMatch
+    XCTAssertTrue(status.waitForExistence(timeout:5))
+    let running=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      guard status.label.hasPrefix("剩余 ") else{return false}
+      let parts=status.label.dropFirst(3).split(separator:":").compactMap{Int($0)}
+      return parts.count==2 && parts[0]==0 && parts[1]>40 && parts[1]<=60
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[running],timeout:5),.completed,"The one-minute wheel must reach the native timer: \(status.label)")
+    let activeShot=XCTAttachment(screenshot:app.screenshot());activeShot.name="Sleep one minute timer with 120 second audio active";activeShot.lifetime = .keepAlways;add(activeShot)
+    let expired=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in status.label=="未开启" && app.buttons["播放"].firstMatch.exists && !app.buttons["暂停"].firstMatch.exists},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[expired],timeout:75),.completed,"The native deadline must pause actual audio and clear itself")
+    let stoppedClock=progress.value as? String
+    XCTAssertNotNil(stoppedClock)
+    XCTAssertTrue(stoppedClock?.hasSuffix(" / 2:00")==true,"Timer expiry must occur before the 120-second recording ends: \(String(describing:stoppedClock))")
+    RunLoop.current.run(until:Date().addingTimeInterval(2))
+    XCTAssertEqual(progress.value as? String,stoppedClock,"Natural expiry must freeze the real playback timeline")
+    let expiredShot=XCTAttachment(screenshot:app.screenshot());expiredShot.name="Sleep one minute timer expired before audio ended";expiredShot.lifetime = .keepAlways;add(expiredShot)
+    let back=app.buttons["返回播放选项"];reveal(back,in:panel);back.tap()
+    XCTAssertTrue(app.buttons["收起播放选项"].waitForExistence(timeout:5));app.buttons["收起播放选项"].tap()
+    let resume=app.buttons["播放"].firstMatch;XCTAssertTrue(resume.waitForExistence(timeout:5));resume.tap()
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:10),"Audio must remain usable after natural timer expiry")
+    RunLoop.current.run(until:Date().addingTimeInterval(2))
+    let resumedClock=progress.value as? String
+    XCTAssertNotEqual(resumedClock,stoppedClock,"Resuming after expiry must advance the same recording")
+    app.buttons["收起播放页"].tap()
+    openSettings(app,page:"sources")
+    let cleanup=app.buttons["移除连接：fixture-user"];reveal(cleanup,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
+    cleanup.tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(cleanup.waitForNonExistence(timeout:10))
+  }
   func testPlayerStyleSheetWithLargeTextAndPersistence() throws {
     let app=XCUIApplication()
     app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]

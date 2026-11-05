@@ -43,6 +43,8 @@ NEXUS_UI_RUN_DIR=build/sleep-wheel-independent node scripts/test-ui.mjs NexusMus
 
 J29仍保留实际自然到期暂停、播放中手动切歌组合、长时后台、实体手势/VoiceOver/动态字号、真实私人服务、签名和iOS27终态。合成音频和模拟器不能替代这些验收，不能据此关闭J29或全项目。
 
+后续补记：实际自然到期暂停已由120秒合成音轨的1分钟计时独立通过，见[自然到期回执](2026-11-05-sleep-expiry-report.md)；播放中切歌、长后台及实体/签名边界仍开放。
+
 ## 清洁设备包与T7
 
 产品提交`925befe641783bf4c052cc8c1f499bbc45cb3f3e`的clean unsigned archive通过，manifest与提交一致、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。独立核验90个ZIP项CRC、63份载荷逐字节、生产`customSleepSeconds`标记、测试/私人标记排除和未签名状态，`ready=true`。历史distribution符号链接已恢复，6个顶层文件内容/字节/mtime未变。
