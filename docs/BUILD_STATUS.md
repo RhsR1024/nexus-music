@@ -1,3 +1,9 @@
+## 2026-11-05 F33 确认身份清洁归档
+
+Release`1793860542219`为1/0/0、247.520秒、sourceUnchanged，旧Alert经Home/GET刷新后拒绝且零新增PUT，重选提交/重启/删除传播全链通过；两图来源ready并亲看，1030检查/完整native通过。产品`ca38b9f`clean unsigned IPA为17,821,645字节/SHA-256`609e0ccaf414598ecd3e6ff75d8ae0872f64b234639898e3f90fc0a31a04607f`；manifest clean/unsigned，90 ZIP项/63载荷字节与隐私/测试排除核验通过，独立verification`265af3ef…73e6`为ready。历史distribution链接与6顶层文件不变，源码tar与1,095个tracked条目0差异。见[回执](2026-11-05-sync-confirmation-report.md)。T7/push补记继续；实际双设备/签名/云端与完整F33保持开放。
+
+T7阶段`2026-11-05-sync-confirmation-ca38b9f`为130份业务文件/105,236,040字节，源/目标逐项SHA-256一致，ready=true/0差异，源保留且零删除/个人文件迁移；含clean分发、UI/xcresult、源码和旧云端compact。清单`78536171…eeaf`。正常push与云端状态另补。
+
 ## 2026-11-05 歌单封面 push 与云端队列实核
 
 `191574a2e1f699593ca03223419ac9ec68aab826`已正常push，`git ls-remote origin refs/heads/main`一致。14:24（Asia/Shanghai）Actions网页：`41973467272/258cac7`正在运行，`41979882570/191574a`唯一等待串行任务，1运行/1排队；未取消/重派。未认证REST API限流403，网页状态不能替代最终日志/IPA核验，云端仍待终态。

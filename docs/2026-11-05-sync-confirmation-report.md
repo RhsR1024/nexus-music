@@ -39,6 +39,21 @@ Release`build/SourceUITests-1793860542219.xcresult`的`testUCloudSyncPreviewConf
 
 两张1290×2796截图均来源核验`ready=true`并亲看。旧确认拒绝图SHA-256`28ad8943e90ee65f3726f9b424b6f1fd53a5b09d817561f3375c075743593125`，三方冲突图`2a379e87b721a617c8697b7639dbec0dc3bfecbfa97213a9a83347573d041e9c`。当前预览仍含本机/云端版本，选择已清空且确认禁用，不把单纯React清空选择当根因修复。
 
+## 清洁设备包与源码
+
+产品提交`ca38b9f1f72c2801e63ab20f5ea1a8a44cc30502`已完成clean unsigned归档，位于`build/sync-confirmation-delivery-20261105/distribution/`。manifest为`dirty=false`、`workingTreeChanges=[]`、`signed=false`；arm64/iphoneos26.2/iOS15.1/[1,2]。独立检查ZIP CRC、90项ZIP/63份载荷逐字节、生产`previewChanged`标记、私人/测试标记排除及未签名状态均通过，`ready=true`。
+
+- IPA：17,821,645字节，SHA-256`609e0ccaf414598ecd3e6ff75d8ae0872f64b234639898e3f90fc0a31a04607f`。
+- manifest：`25afdb0b38aa7c78801e45f6643eb4155d8d15bb44a37cc3558e0cc02af2904c`。
+- verification JSON：`265af3efb03e0c6c835950c0776e86d33b9c19cbc140c9d1620066bc857173e6`。
+- 历史distribution符号链接已原样恢复，6个顶层文件哈希/字节/mtime保持；恢复回执`62c0b43a32effac508a052925dfba8668de8d98002832d3254c6ba0a0acc03f9`。
+- 源码tar：`9dc0372e3034124d1d830d4e627f34024d697a9f450cc1f833d660af47c82807`；逐Git blob核对1,095个tracked条目，0差异。
+- 完整提交补丁：`63f229afa2dbdaf2f487fb2bb654aad002b1641bcb1a57b95f9489239277b603`。
+
+## T7 副本
+
+外置阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-confirmation-ca38b9f`保存clean分发包/xcarchive、源码tar与补丁、独立核验脚本及回执、正式UI与xcresult、两图、五份检查日志、旧云端compact ZIP和报告快照。130份业务文件/105,236,040字节逐文件源/目标SHA-256一致，`ready=true`、0差异、源保留、零删除/个人文件迁移；清单SHA-256`7853617108c0c16bafc2f570970cc5363d7b638e64ba00f2864f39f5a259eeaf`。按清单相对路径恢复；产品源码也可从`ca38b9f`或tar/补丁重建。未复制本机DerivedData。
+
 ## 边界与下一项
 
 这是音枢自有F33事务确认修复，没有新Sollin分析、私有服务访问或参考代码采纳。私人WebDAV、实际双设备、长时并发、自动变更调度、实体机和签名仍待；F33/J54与项目不标记完成。
