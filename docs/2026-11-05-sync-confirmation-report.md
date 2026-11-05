@@ -54,6 +54,10 @@ Release`build/SourceUITests-1793860542219.xcresult`的`testUCloudSyncPreviewConf
 
 外置阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-confirmation-ca38b9f`保存clean分发包/xcarchive、源码tar与补丁、独立核验脚本及回执、正式UI与xcresult、两图、五份检查日志、旧云端compact ZIP和报告快照。130份业务文件/105,236,040字节逐文件源/目标SHA-256一致，`ready=true`、0差异、源保留、零删除/个人文件迁移；清单SHA-256`7853617108c0c16bafc2f570970cc5363d7b638e64ba00f2864f39f5a259eeaf`。按清单相对路径恢复；产品源码也可从`ca38b9f`或tar/补丁重建。未复制本机DerivedData。
 
+## Push 与云端队列
+
+产品与clean交付文档已正常push，远端main实核为`69bfc2a13423d6f06eee3a7da1e0f3468d5fec86`。14:55（Asia/Shanghai）Actions网页显示`41973467272/258cac7`继续运行，`41983509535/69bfc2a`唯一排队，1运行/1排队；旧`41981102223/2eb037f`由队列自动替换，未手动取消/重派。新云端终态尚未取得。
+
 ## 边界与下一项
 
 这是音枢自有F33事务确认修复，没有新Sollin分析、私有服务访问或参考代码采纳。私人WebDAV、实际双设备、长时并发、自动变更调度、实体机和签名仍待；F33/J54与项目不标记完成。

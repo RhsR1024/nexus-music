@@ -3114,6 +3114,7 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testPlaylistSearchSortAndDuplicateRemoval() throws {
     let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
     func reach(_ element:XCUIElement){
       for _ in 0..<45 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY
         app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
