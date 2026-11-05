@@ -78,7 +78,7 @@ T7 阶段 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-auto-previe
 
 产品与交付文档已正常push。2026-11-05 19:19（Asia/Shanghai）远端 main 实核 `10d542044819081e5b9b9d514b3892159337810f`；随后队列记录提交 `77c5bd0` 也已 push。工作流忽略 `docs/**` 与 `**/*.md`，因此 `77c5bd0` 不触发新运行。Actions 网页仍为 `42000006592/a55f90d` 运行（旧睡眠提交，不含本批同步代码）、`42017894763/10d5420` 唯一 pending（包含本批产品代码），1运行/1排队，未手动取消/重派。本记录不把旧运行当本批云端结果，云端终态仍待。
 
-本次队列记录时远端 main 为 `c94c882694d642c4a7b9a850e54ac5495953dc48`。Actions 页面、修正后的本回执和 `HANDOFF.md` 另存 T7 `postpush-c94c882/`，4份/1,046,652字节逐文件源/目标SHA-256一致、源保留/零删除；该子目录 receipt SHA-256 `c55780f6f41d1eaeb00e2765bb9c0b715ff62c5523ed02eb8878d3c5e8652e22`，不覆盖主323份阶段清单。队列仍为上述1运行/1排队。
+本次队列记录时远端 main 为 `c94c882694d642c4a7b9a850e54ac5495953dc48`；后续 docs-only 记录提交已到 `cc03f86ccc0cb48f0608cbc76ec6dd60267af63b`，工作流忽略这些提交，队列不变。Actions 页面、修正后的本回执和 `HANDOFF.md` 另存 T7 `postpush-c94c882/`，4份/1,046,652字节逐文件源/目标SHA-256一致、源保留/零删除；该子目录 receipt SHA-256 `c55780f6f41d1eaeb00e2765bb9c0b715ff62c5523ed02eb8878d3c5e8652e22`，不覆盖主323份阶段清单。队列仍为上述1运行/1排队。
 
 ## 边界
 
