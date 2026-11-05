@@ -1,5 +1,7 @@
 ## 2026-11-05 F33 忙碌前台读事件正式验收
 
+15:37 push后实核远端main`821d319`；`41984886238/3af8cbd`运行、`41988497570/821d319`唯一pending，1/1，无手动取消/重派。旧`41973467272/258cac7`checks/native成功，核心24/1/0，仍为photo队列入口前置缺失，尚不含`3af8cbd`修正；其余组/归档跳过。compact 593,462字节SHA`0221b030…c8b4`/ZIP CRC通过，网页/compact/状态3份980,298字节另存T7本阶段postpush子目录，0差异、源保留，receipt`0afd14d5…8ae2`。新云端终态保持开放。
+
 交付：`2bba88c`clean unsigned IPA为17,822,286字节/SHA-256`d6c739400518c398708df67c7f312f0bcd1c33624bb56fafc59e164858368095`，manifest clean/unsigned，90ZIP/63载荷逐字节、生产标记及测试/私人排除通过，verification`fa49d871…9d2d`为ready。历史distribution链接恢复/原文件不变；源码tar与1,097个Git条目一致。T7阶段`2026-11-05-sync-foreground-2bba88c`202份/110,772,896字节逐项0差异，源保留且零删除，清单`b292b43a…891c`。push与云端随后核验。
 
 同步20/20、完整1034/1034；Release`1793863509895`为1/0/0、247.756秒、sourceUnchanged，两图ready并亲看。合成慢GET挂起/Home返回/准确再读一次且阶段零新增PUT、旧确认拒绝与原提交/重启/删除传播均通过，整轮累计11GET/3明确确认PUT/0鉴权失败。首轮`1793862602578`因连续60秒动画空闲超时主动终止，exit73/0通过1取消失败，完整结果与诊断保留；重启专用模拟器后正式重验，不取消云端任务。原生传输未改，不重跑上批完整native。见[回执](2026-11-05-sync-foreground-read-report.md)，clean归档/T7/push继续。

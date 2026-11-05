@@ -43,6 +43,14 @@ NEXUS_UI_RUN_DIR=build/sync-refresh-independent node scripts/test-ui.mjs NexusMu
 
 T7阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-foreground-2bba88c`保存clean分发/xcarchive、源码tar与提交补丁、r1取消及r2成功原始结果/截图/诊断、全部检查与测试诊断日志、脚本和报告快照。202份业务文件/110,772,896字节逐文件源/目标SHA-256一致，0差异、源保留、零删除；清单`b292b43a74bc235c657d9a876f54d2120648fc3179bf48c92bdff3ee5214891c`，transfer receipt`f98fd1e2dd467d2ca3b48025dc848b99e18c09e4feacf318e10c17085f62ae59`。依inventory相对路径恢复证据，源码可从tar/提交重建。内盘约58GiB、T7约569GiB，未做清理或搬移个人文件。正常push与新云端队列随后核验。
 
+## 正常push与云端
+
+产品及交付文档已正常push，远端main实核`821d31978bcca827c7a9ba24d87e523c515eee06`。15:37（Asia/Shanghai）Actions网页为`41984886238/3af8cbd`正在运行、`41988497570/821d319`唯一pending，1运行/1排队，未手动取消/重派。
+
+旧`41973467272/258cac7`已实际failure：checks与native成功，核心24/1/0，唯一失败仍是`testPlaylistSearchSortAndDuplicateRemoval`在photo皮肤直接查找“查看播放队列”。该运行不含`3af8cbd`的一行前置修正，不能算修正后的失败，也不能以本地通过改写其结果；当前运行已包含修正，终态仍待。在线、下载及设备归档步骤因核心失败跳过。compact artifact`13396826532`为593,462字节，SHA-256`0221b0300aa8a59cee436cd537b751739b7d12ecc5b6f8c939d0b7bcbd32c8b4`与GitHub摘要一致，ZIP CRC通过；705MB完整诊断包未下载。
+
+上述compact、Actions网页和状态JSON另存T7本阶段`postpush-821d319/`，3份/980,298字节源/目标SHA一致、源保留/零删除，补充receipt`0afd14d5c54a2073cbac427348f43300a53f7899c21927f9643a07d655338ae2`；不覆盖原202份清单。新云端终态、实体双设备/私人服务、签名与全项目继续开放。下一修复J29播放器自定义0h0m误清活动计时。
+
 ## 前一批交付补记
 
 歌单测试单行隔离提交`3af8cbd5003701bfe6ecea45712f4a396ea49eee`已正常push并实核远端。Actions网页为`41973467272/258cac7`继续运行、`41984886238/3af8cbd`唯一pending，旧`41983509535/69bfc2a`自动替换，未手动取消/重派。歌单T7阶段50份/5,767,480字节逐文件0差异，源保留且零删除；清单SHA-256`b78a5203844fa2b1a1505d6457a9d6313841b295775afa86ce1c202932d75782`。这些证据不改变旧云端失败或完整项目状态。
