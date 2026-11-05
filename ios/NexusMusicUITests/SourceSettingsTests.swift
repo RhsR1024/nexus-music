@@ -6732,6 +6732,83 @@ final class SourceSettingsTests: XCTestCase {
     cleanup.tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(cleanup.waitForNonExistence(timeout:10))
   }
+  func testSleepTrackBindingPausesAtTrackEndInBackground() throws {
+    let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
+    func reveal(_ element:XCUIElement,in viewport:XCUIElement){
+      XCTAssertTrue(viewport.waitForExistence(timeout:10))
+      for _ in 0..<24 {
+        if element.exists && element.isHittable && viewport.frame.insetBy(dx:0,dy:8).contains(element.frame){return}
+        let above=element.exists && element.frame.midY<viewport.frame.midY
+        viewport.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.75:0.25)))
+      }
+      XCTFail("Control must be fully visible: \(element)")
+    }
+    func type(_ field:XCUIElement,_ value:String){
+      reveal(field,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
+      field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
+    }
+    openSettings(app,page:"sources")
+    let remove=app.buttons["移除连接：fixture-user"]
+    if remove.exists {
+      reveal(remove,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
+      remove.tap();app.alerts.buttons["移除"].tap()
+      XCTAssertTrue(remove.waitForNonExistence(timeout:10))
+    }
+    type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439")
+    type(app.textFields["Navidrome用户名"],"fixture-user")
+    type(app.secureTextFields["Navidrome密码"],"fixture-password")
+    let save=app.buttons["验证并保存连接"]
+    reveal(save,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch);save.tap()
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
+    let account=app.descendants(matching:.any).matching(identifier:"navidrome-account-fixture-user").firstMatch
+    XCTAssertTrue(account.waitForExistence(timeout:10));account.tap()
+    XCTAssertNotNil(try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=1")!))
+    let album=app.descendants(matching:.any).matching(identifier:"navidrome-item-album-fixture-album").firstMatch
+    XCTAssertTrue(album.waitForExistence(timeout:15));album.tap()
+    let playAll=app.buttons["播放全部"];XCTAssertTrue(playAll.waitForExistence(timeout:10));playAll.tap()
+    let openPlayer=app.buttons["打开播放页"];XCTAssertTrue(openPlayer.waitForExistence(timeout:10));openPlayer.tap()
+    XCTAssertTrue(app.buttons["暂停"].firstMatch.waitForExistence(timeout:15),"Background track-end binding must start with actual audio")
+    app.buttons["更多播放控制"].tap()
+    XCTAssertTrue(app.buttons["播放倍速"].waitForExistence(timeout:5));app.buttons["播放倍速"].tap()
+    let triple=app.buttons["倍速 3x"];XCTAssertTrue(triple.waitForExistence(timeout:5));triple.tap()
+    let rateSelected=XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:triple)
+    XCTAssertEqual(XCTWaiter.wait(for:[rateSelected],timeout:10),.completed,"The background check needs a real 3x rate")
+    app.buttons["返回播放选项"].tap()
+    XCTAssertTrue(app.buttons["睡眠定时器"].waitForExistence(timeout:5));app.buttons["睡眠定时器"].tap()
+    let binding=app.switches["播完当前歌曲再停止"],status=app.descendants(matching:.any).matching(identifier:"sleep-status").firstMatch
+    XCTAssertTrue(binding.waitForExistence(timeout:5));binding.tap()
+    XCTAssertEqual(status.label,"本曲播放结束后停止")
+    let boundShot=XCTAttachment(screenshot:app.screenshot());boundShot.name="Sleep track binding before background track end";boundShot.lifetime = .keepAlways;add(boundShot)
+    XCUIDevice.shared.press(.home)
+    RunLoop.current.run(until:Date().addingTimeInterval(50))
+    app.activate()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:20),"Crossing the actual track end in background must pause audio")
+    XCTAssertFalse(app.buttons["暂停"].firstMatch.exists)
+    XCTAssertTrue(status.waitForExistence(timeout:10))
+    XCTAssertEqual(status.label,"未开启","Track-end sleep mode must clear after pausing")
+    let clearedShot=XCTAttachment(screenshot:app.screenshot());clearedShot.name="Sleep binding cleared after background track end";clearedShot.lifetime = .keepAlways;add(clearedShot)
+    app.buttons["返回播放选项"].tap();XCTAssertTrue(app.buttons["收起播放选项"].waitForExistence(timeout:5));app.buttons["收起播放选项"].tap()
+    XCTAssertTrue(app.staticTexts["Synthetic tone"].waitForExistence(timeout:10),"The bound first track must remain current")
+    XCTAssertFalse(app.staticTexts["Synthetic tone 2"].exists,"Track-end sleep must not advance to the next queue item")
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
+    XCTAssertTrue(progress.waitForExistence(timeout:5))
+    XCTAssertTrue((progress.value as? String)?.hasSuffix(" / 2:00")==true)
+    let stoppedShot=XCTAttachment(screenshot:app.screenshot());stoppedShot.name="Sleep-bound first track paused at natural end after background";stoppedShot.lifetime = .keepAlways;add(stoppedShot)
+    app.buttons["更多播放控制"].tap();XCTAssertTrue(app.buttons["播放倍速"].waitForExistence(timeout:5));app.buttons["播放倍速"].tap()
+    let normal=app.buttons["倍速 1x"];XCTAssertTrue(normal.waitForExistence(timeout:5));normal.tap()
+    let rateRestored=XCTNSPredicateExpectation(predicate:NSPredicate(format:"selected == true"),object:normal)
+    XCTAssertEqual(XCTWaiter.wait(for:[rateRestored],timeout:10),.completed)
+    _ = try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=0")!)
+    app.buttons["返回播放选项"].tap();app.buttons["收起播放选项"].tap()
+    app.buttons["收起播放页"].tap()
+    openSettings(app,page:"sources")
+    let cleanup=app.buttons["移除连接：fixture-user"];reveal(cleanup,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
+    cleanup.tap();app.alerts.buttons["移除"].tap()
+    XCTAssertTrue(cleanup.waitForNonExistence(timeout:10))
+  }
   func testPlayerStyleSheetWithLargeTextAndPersistence() throws {
     let app=XCUIApplication()
     app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
