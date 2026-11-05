@@ -98,6 +98,42 @@ test('a rejected NetEase write is never reported as added and does not read back
   assert.equal(reads,1);
 });
 
+test('an empty NetEase liked-id list permits one write and requires read-back confirmation',async()=>{
+  for(const key of ['data','ids']){
+    let favorited=false,reads=0,writes=0;
+    const {client:target}=client(async(path)=>{
+      if(path==='song/like/check'){reads++;return{code:200,[key]:favorited?['186016']:[]};}
+      writes++;favorited=true;return{code:200};
+    });
+    assert.deepEqual(await target.add(account,session,'186016',signal()),{status:'added'});
+    assert.equal(reads,2);assert.equal(writes,1);
+  }
+});
+
+test('mixed malformed NetEase liked-id lists cannot decide whether to write',async()=>{
+  for(const ids of [['186016','not-an-id'],['2058263032',{}],['2058263032',null],['186016',9007199254740992]]){
+    let writes=0;
+    const {client:target}=client(async(path)=>{
+      if(path==='song/like/check')return{code:200,data:ids};
+      writes++;return{code:200};
+    });
+    assert.deepEqual(await target.add(account,session,'186016',signal()),{status:'unavailable'});
+    assert.equal(writes,0);
+  }
+});
+
+test('empty NetEase read-backs remain unconfirmed and malformed read-backs remain unknown',async()=>{
+  for(const invalid of [false,true]){
+    let reads=0,writes=0;
+    const {client:target}=client(async(path)=>{
+      if(path==='song/like/check'){reads++;return{code:200,data:reads>1&&invalid?['186016',null]:[]};}
+      writes++;return{code:200};
+    });
+    assert.deepEqual(await target.add(account,session,'186016',signal()),{status:invalid?'unknown':'unconfirmed'});
+    assert.equal(reads,invalid?2:3);assert.equal(writes,1);
+  }
+});
+
 test('NetEase authentication rejection during a write is explicit',async()=>{
   const {client:target}=client(async(path)=>{
     if(path==='song/like/check')return{code:200,data:{'186016':false}};

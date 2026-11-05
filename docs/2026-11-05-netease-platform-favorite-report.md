@@ -89,6 +89,32 @@
 - 提交补丁：`build/distribution/netease-platform-favorite-7c884a3.patch`，SHA-256 `2315ebb84c1254fd2ccfc738200f98e476227729300094340859756958f3fe8f`。
 - archive 日志：`build/logs/archive-netease-favorite-20261105.log`，SHA-256 `1bd0d5bf382a890f36de538cd7a22a7c590d91d579e9e56f9c1533d7cd19e065`。
 
+## T7 阶段副本与提交
+
+产品 `7c884a3` 与文档 `f218d09` 已正常 push，远端 main 实核为 `f218d096380e8529a384d5b366b92980836562b1`。Actions 页面快照显示 `42030288920/01837dc` 运行、`42038514883/f218d09` 唯一等待，1运行/1排队；`queue: single`、`cancel-in-progress: false` 保持，未手动取消或重派。旧运行的 checks 已成功，iOS 仍在运行，不代表整套通过。页面 SHA-256 `a351c054f20e8615026579506a4b546fdfe995d29507fa3278332a44b467c7fa`。
+
+阶段目录 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-netease-favorite-7c884a3` 保存 clean IPA/manifest/验证、产品源码tar与补丁、文档提交源码tar、最终xcresult、截图/运行清单、check/native/archive日志和队列快照。58份业务文件、58,309,560字节逐文件源/目标SHA-256一致，0差异；`ready=true`、`sourceRetained=true`、`deleted=0`，未迁移或删除用户文件。exFAT `._*` 元数据不计业务载荷。
+
+- `inventory.json` SHA-256：`b4ff9983b396ac2332a341eb60bba4189a753d8d15858f90d5c7f79b2f6068da`。
+- `SHA256SUMS` SHA-256：`90d0a300768c00de6536168ec5955a748195377232394cf8b09e6fb88b058836`。
+- `transfer-receipt.json` SHA-256：`94189985f1cedc2d874b56f036522017b1beb90d9c29df839bcd4526ebcca215`。
+
+恢复时先在阶段目录执行 `shasum -a 256 -c SHA256SUMS`，再按清单复制所需文件回工作区；原始源副本仍保留。本阶段归档属于 `7c884a3`，后续空数组解析修正另行验证，不复用本IPA宣称覆盖新代码。
+
 ## 边界
 
 真实网易云账号的写入、回读、取消与跨设备生效未验收；本批只有匿名端点核验和合成夹具。酷狗平台收藏、三平台平台歌单创建、真实三平台账号逐项验收、实体机、Apple 签名、iOS27 终态和云端终态仍未完成。J10 保持 B，全项目保持 active；本批没有新增 Sollin IPA/APK 采集或 UI 对齐证据，不触发 reverse-skill 采集门禁，也不能据此宣称 Sollin UI 对齐通过。
+
+## 续批：空数组与畸形数组解析
+
+交付复核发现：明确的空喜欢ID列表此前被误判为不可用，阻止首次收藏；混杂非法ID的数组可能因提前遇到目标ID而错误确认，或因另一个合法ID而触发写入。现完整校验数组每项后再判断成员，空数组明确为未收藏，混杂非法项整体拒绝。没有增加写入次数或以写响应代替回读。
+
+新增3项测试，覆盖 `data:[]`/`ids:[]` 首次收藏、混杂非法字符串/对象/null/不安全数值、写后空数组未确认及畸形数组未知。旧实现先失败复现，修正后专项22/22、完整1090/1090；日志 SHA-256分别为：
+
+- 修正前：`4813fdbdb41d4c656026190f5188cc454cf63049fba33302cea8c6b12fcae4e0`。
+- 修正后：`ab78767f6debd93f0eaaec3f1b5f9d9df296fc2e3def8bb7ed7be3ed4839295b`。
+- 完整check：`8e3aa2653daeea24ec8c39f5511408a86ae5c63b6b9a6e8febed4fd552d8941b`。
+
+正式Release夹具改为 `[]→['1001']`，`SourceUITests-1793886546069.xcresult` 为1/0/0，`testNeteaseFavoriteFixture` 48.515秒，`sourceUnchanged=true`；夹具 `reads=3/writes=1/favorited=true/invalid=0`。三张1290×2796截图亲看入口、完整确认文字与重复点击幂等。源码digest `7a4657fb7a2dbd8f3703e007853bce34704ebc0a1707510e440b87c5f5d24dcb`，安装bundle digest `7ccbccb80b2921901b377bbb603e03687700b1fdc986f5238f91a28c6da95545`。
+
+新输出 `build/ui-netease-favorite-array-20261105-r1/` 的运行清单、summary、计数 SHA-256依次为 `ddf9fac8908473b43a6b76e62ee465c7c1cdf5688462c7b8c319340942976f35`、`9d6b8aa16fb1f32bd0b48e1af28dca81b480d19b0818951944963322b7b7a4ff`、`5ed794a0f2d59ea137cf77071d018be7007a57a3480334b5a359979c1cc91004`；三张截图按003/002/001分别为 `dbb6f6129da675327180564195ca074149864394254b6d05aaab8bdbb5d474d6`、`29aa90065bee1e293d6701a73452353e673422a94af14ce7eaf1780b18e0f2f1`、`0d01db8de42fb3b1237d6f32321353801b1506dd0abbb61aea60fa7fea7cfd0b`。原生代码未变；新clean归档与push另记，不复用原IPA覆盖本次代码。

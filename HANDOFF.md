@@ -1,3 +1,7 @@
+## 2026-11-05 网易云收藏交付与解析边界续批
+
+产品 `7c884a3` 与文档 `f218d09` 已正常push并核对远端。T7阶段 `2026-11-05-netease-favorite-7c884a3` 保存58份/58,309,560字节，逐文件SHA-256零差异、源保留且零删除；inventory `b4ff9983…68da`、receipt `94189985…a215`。Actions快照为 `42030288920/01837dc` 运行、`42038514883/f218d09` 唯一等待，1/1且无手动取消/重派；旧checks成功不代表iOS全过。续批发现空喜欢ID数组误报不可用、混杂非法ID可能过早确认，已补3项回归先失败复现并修正，专项22/22、完整1090/1090；正式Release夹具改为空数组→含目标ID数组，`1793886546069`为1/0/0、48.515秒、sourceUnchanged，reads3/writes1/invalid0且三图亲看。原IPA仅覆盖原提交，新归档/push随后补记。酷狗收藏协议另行核对，完整目标保持active。交付与恢复见[回执](docs/2026-11-05-netease-platform-favorite-report.md)。
+
 ## 2026-11-05 J10 网易云平台收藏纵向切片
 
 网易云在线歌曲新增独立“收藏到网易云音乐”：先读 `/weapi/song/like/check`，已收藏幂等不写；未收藏才以 `trackId/userid/like` 单次写入 `/weapi/song/like`，最多两次回读确认后才显示成功。账号/会话/`userId`/`netease:` 用户名严格绑定，19 位 ID 按不透明字符串处理；取消、账号删除/替换、迟到响应与写后读失败分别隔离，响应 `code:200` 不冒充收藏成功。仅单一网易云账号显示入口，多账号不猜归属；本地收藏、唯一队列、账号 capability 与平台歌单创建范围不变。新增 19 项单测，`npm run check`1087/1087；正式 Release`SourceUITests-1793885436711`为 1/0/0、75.954 秒、`sourceUnchanged=true`，夹具 `reads=3/writes=1/favorited=true/invalid=0`，三张 1290×2796 截图亲看空心星、完整已收藏状态和重复点击幂等。clean unsigned IPA`ba47aa74…39a9`为 17,879,316 字节，manifest clean/178 ZIP/63 业务载荷/8 隐私/0 签名及生产夹具标记排除通过；源码 tar 1,160 条目、验证 `531f1fe0…b3cc`。参考固定 MIT Sollin-Music-Desktop `c9d446f` 的 `neteaseAuth.ts` 与 NeteaseCloudMusicApi `984cc021` 的 `song_like`/`song_like_check`，匿名端点核验与许可/修改说明已记录。真实网易云账号、酷狗收藏、三平台歌单创建、实体机/签名/iOS27 与云端终态仍开放，J10 保持 B。见[回执](docs/2026-11-05-netease-platform-favorite-report.md)。

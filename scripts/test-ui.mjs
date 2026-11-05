@@ -654,7 +654,7 @@ const handleRequest = async (req, res) => {
         const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-favorite(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
         if(!valid){wyFavoriteInvalid++;res.end(JSON.stringify({code:1}));return;}
         wyFavoriteReads++;
-        res.end(JSON.stringify({code:200,data:{'1001':wyFavoriteValue}}));return;
+        res.end(JSON.stringify({code:200,data:wyFavoriteValue?['1001']:[]}));return;
       }
       if(wyFavoriteUI&&parsed.pathname==='/weapi/song/like'){
         const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');

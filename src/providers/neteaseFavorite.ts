@@ -38,13 +38,13 @@ function boolean(value:unknown):boolean|undefined {
 
 function arrayFavorite(value:unknown,trackId:string):boolean|undefined {
   if(!Array.isArray(value))return undefined;
-  let valid=false;
+  const ids:string[]=[];
   for(const item of value){
     const id=text(item);
-    if(/^[1-9]\d{0,18}$/.test(id))valid=true;
-    if(id===trackId)return true;
+    if(!/^[1-9]\d{0,18}$/.test(id))return undefined;
+    ids.push(id);
   }
-  return valid?false:undefined;
+  return ids.includes(trackId);
 }
 
 /** /api/song/like/check has appeared as a liked-id array and as an id map.

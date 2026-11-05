@@ -1,3 +1,7 @@
+## 2026-11-05 J10 网易云收藏数组边界
+
+空喜欢ID数组现明确为未收藏，混杂非法ID整体拒绝，不提前确认或触发写入。新增3项回归先失败复现，专项22/22、完整1090/1090；正式Release夹具使用空数组→含目标ID数组，`1793886546069`为1/0/0、48.515秒、sourceUnchanged，reads3/writes1/invalid0、三图亲看。原 `7c884a3` 及文档 `f218d09` 已push、58份/58,309,560字节T7逐项核验；本次修正的新归档/push另记。J10真实服务与实体/签名边界继续，见[回执](2026-11-05-netease-platform-favorite-report.md)。
+
 ## 2026-11-05 J10 网易云平台收藏纵向切片
 
 新增 `NeteaseFavoriteClient` 与正式歌曲操作入口，完成网易云在线歌曲的平台收藏纵向路径：严格绑定账号/会话/`userId`/用户名/Cookie，先读 `/weapi/song/like/check`，未收藏才单次写入 `/weapi/song/like`，写后最多两次回读确认；已收藏、拒绝、未确认、未知、鉴权失效、账号变更和取消分别处理。19 位 ID 按不透明字符串处理，避免被 JavaScript 安全整数误拒；仅单一网易云账号显示入口，多账号不猜归属。19 项新测试、`npm run check`1087/1087；正式 Release`SourceUITests-1793885436711`为 1/0/0、`sourceUnchanged=true`，三张截图亲看；clean unsigned IPA`ba47aa74…39a9`为 17,879,316 字节，178 ZIP/63 业务载荷/8 隐私/0 签名及生产夹具标记排除通过。参考固定 MIT Sollin-Music-Desktop `c9d446f` 与 NeteaseCloudMusicApi `984cc021`；匿名端点核验只证明协议入口，真实网易云账号、酷狗收藏、平台歌单创建、实体机/签名/iOS27 与云端终态继续开放，J10 保持 B。见[回执](2026-11-05-netease-platform-favorite-report.md)。
