@@ -260,7 +260,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   await restore('webdav.statistics.v1','统计同步目录',()=>davStatistics.restore());
   const davSync=new WebDAVSync({repository,accounts:davAccounts,transport:davTransport,library,mutations:libraryMutations,uuid:Crypto.randomUUID});
   await restore('webdav.sync.v1','多设备同步',()=>davSync.restore());
-  AppState.addEventListener('change',state=>{if(state==='active')void davSync.previewIfConfigured();});
+  davSync.start();davSync.setForeground(AppState.currentState==='active');
+  AppState.addEventListener('change',state=>{davSync.setForeground(state==='active');if(state==='active')void davSync.previewIfConfigured();});
   void davSync.previewIfConfigured();
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);

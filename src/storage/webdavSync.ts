@@ -11,7 +11,9 @@ export interface SyncConfig {version:1;accountId:string;directory:string}
 export interface SyncPreview {plan:SyncPlan;etag?:string;localSignature:string}
 export interface WebDAVSyncState {config?:SyncConfig;preview?:SyncPreview;busy:null|'configure'|'preview'|'commit';message:string;error:string}
 interface Accounts {getSnapshot():readonly WebDAVAccount[];subscribe(listener:()=>void):()=>void;credentials(id:string):Promise<WebDAVCredentials>;client(id:string):Promise<Pick<WebDAVClient,'stat'>>}
-interface Options {repository:Pick<Repository,'get'|'put'|'putMany'>;accounts:Accounts;transport:BackupTransport;library:Pick<LibraryStore,'getSnapshot'|'restore'>;mutations:MutationQueue;uuid:()=>string}
+type Schedule=(callback:()=>void,milliseconds:number)=>()=>void;
+const defaultSchedule:Schedule=(callback,milliseconds)=>{const timer=setTimeout(callback,milliseconds);return()=>clearTimeout(timer);};
+interface Options {repository:Pick<Repository,'get'|'put'|'putMany'>;accounts:Accounts;transport:BackupTransport;library:Pick<LibraryStore,'getSnapshot'|'restore'|'subscribe'>;mutations:MutationQueue;uuid:()=>string;schedule?:Schedule;editDelay?:number}
 interface SavedState {version:1;deviceId:string;config?:SyncConfig;baselines:SyncState[]}
 const space=(value:{accountId:string;directory:string})=>JSON.stringify([value.accountId,value.directory]);
 const fileName='library-v1.json';
@@ -26,9 +28,12 @@ export class WebDAVSync {
   private value:WebDAVSyncState={busy:null,message:'',error:''};private listeners=new Set<()=>void>();
   private deviceId:string;private baselines=new Map<string,SyncState>();private generation=0;private request?:AbortController;private account?:WebDAVAccount;
   private foregroundRefresh?:{promise:Promise<boolean>;resolve:(result:boolean)=>void};
+  private schedule:Schedule;private editDelay:number;private foreground=true;private unsubscribe?:()=>void;private editTimer?:()=>void;
+  private pendingEditSignature?:string;private lastPreviewedSignature?:string;private editTail:Promise<unknown>=Promise.resolve();
+  private suppressLibraryChanges=false;
   private options:Options;
   constructor(options:Options){
-    this.options=options;this.deviceId=options.uuid();
+    this.options=options;this.deviceId=options.uuid();this.schedule=options.schedule??defaultSchedule;this.editDelay=options.editDelay??1200;
     options.accounts.subscribe(()=>{
       const account=this.selectedAccount();if(account===this.account)return;this.account=account;
       if(this.value.busy==='configure')return;
@@ -38,7 +43,46 @@ export class WebDAVSync {
   }
   getSnapshot=()=>this.value;
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
+  /** Watch synced library collections and fetch a fresh merge preview after
+   * local edits settle. Automatic work never confirms or commits a merge. */
+  start(){
+    if(this.unsubscribe)return;
+    this.lastPreviewedSignature=this.localSignature();
+    this.unsubscribe=this.options.library.subscribe(this.onLibraryChange);
+  }
+  dispose(){this.unsubscribe?.();this.unsubscribe=undefined;this.clearEditTimer();this.pendingEditSignature=undefined;}
+  setForeground(value:boolean){
+    this.foreground=value;
+    if(!value)this.clearEditTimer();
+  }
+  settled(){return this.editTail;}
   private publish(value:WebDAVSyncState){this.value=value;for(const listener of this.listeners)listener();}
+  private localSignature(){return canonical(syncRecords(this.options.library.getSnapshot()));}
+  private onLibraryChange=()=>{
+    if(this.suppressLibraryChanges)return;
+    if(!this.value.config||!this.selectedAccount())return;
+    const signature=this.localSignature();
+    if(signature===this.lastPreviewedSignature)return;
+    this.pendingEditSignature=signature;
+    this.armEditPreview();
+  };
+  private clearEditTimer(){this.editTimer?.();this.editTimer=undefined;}
+  private armEditPreview(milliseconds=this.editDelay){
+    if(!this.foreground||!this.pendingEditSignature||this.value.busy)return;
+    this.clearEditTimer();
+    this.editTimer=this.schedule(()=>{
+      this.editTimer=undefined;
+      this.editTail=this.flushEditPreview();
+    },milliseconds);
+  }
+  private async flushEditPreview():Promise<boolean>{
+    const signature=this.pendingEditSignature;
+    if(!signature||!this.value.config||!this.selectedAccount())return false;
+    if(signature===this.lastPreviewedSignature){this.pendingEditSignature=undefined;return false;}
+    if(this.value.busy)return false;
+    this.pendingEditSignature=undefined;
+    try{await this.preview();return true;}catch{return false;}
+  }
   private selectedAccount(){return this.options.accounts.getSnapshot().find(value=>value.id===this.value.config?.accountId);}
   private saved(config=this.value.config,baselines=this.baselines):SavedState{return{version:1,deviceId:this.deviceId,...(config?{config}:{}),baselines:[...baselines.values()]};}
   async restore(){
@@ -57,11 +101,18 @@ export class WebDAVSync {
     if(!this.options.accounts.getSnapshot().some(value=>value.id===accountId))throw new SyncError('account');
     if(!this.baselines.has(space(config))&&this.baselines.size>=8)throw new SyncError('capacity');
     this.cancel();this.publish({...this.value,busy:'configure',message:'',error:''});
-    try{await this.options.repository.put(key,this.saved(config));this.publish({config,busy:null,message:'同步目录已保存，请读取合并预览',error:''});this.account=this.selectedAccount();}
+    try{
+      await this.options.repository.put(key,this.saved(config));
+      this.clearEditTimer();this.lastPreviewedSignature=this.localSignature();
+      if(this.pendingEditSignature===this.lastPreviewedSignature)this.pendingEditSignature=undefined;
+      this.publish({config,busy:null,message:'同步目录已保存，请读取合并预览',error:''});this.account=this.selectedAccount();
+      this.armEditPreview(0);
+    }
     catch(error){this.publish({...this.value,busy:null,error:'同步目录未能保存，请重试'});throw error;}
   }
   cancel(){
     if(this.value.busy==='configure'||this.value.busy==='commit')return false;
+    this.clearEditTimer();this.pendingEditSignature=undefined;
     this.foregroundRefresh?.resolve(false);this.foregroundRefresh=undefined;
     this.generation++;this.request?.abort();this.request=undefined;this.publish({...this.value,busy:null,preview:undefined,message:'',error:''});return true;
   }
@@ -80,8 +131,13 @@ export class WebDAVSync {
     finally{
       if(this.request===request){
         this.request=undefined;
+        if(kind==='preview'&&this.value.preview){
+          this.lastPreviewedSignature=this.value.preview.localSignature;
+          if(this.pendingEditSignature===this.lastPreviewedSignature){this.pendingEditSignature=undefined;this.clearEditTimer();}
+        }
         const refresh=this.foregroundRefresh;this.foregroundRefresh=undefined;
         if(refresh)void this.previewIfConfigured().then(refresh.resolve);
+        else this.armEditPreview(0);
       }
     }
   }
@@ -131,7 +187,11 @@ export class WebDAVSync {
         // Baseline and library are one durable commit. Failed storage keeps the
         // old baseline, allowing the next preview to reconcile an accepted PUT.
         await this.options.repository.putMany([[key,this.saved(config,baselines)],['library.v1',library]]);this.baselines=baselines;
-        await this.options.library.restore();return{preview:undefined,message:'同步已完成，音乐库与基线已保存；本机历史、统计和播放队列保留'};
+        this.suppressLibraryChanges=true;
+        try{await this.options.library.restore();}
+        finally{this.suppressLibraryChanges=false;}
+        this.lastPreviewedSignature=this.localSignature();
+        return{preview:undefined,message:'同步已完成，音乐库与基线已保存；本机历史、统计和播放队列保留'};
       });
     });
   }

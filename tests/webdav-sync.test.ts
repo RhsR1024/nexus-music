@@ -11,7 +11,7 @@ const account:WebDAVAccount={id:'a'.repeat(64),url:'https://fixture.invalid/dav/
 const song=(id:string)=>({title:id,artist:'Fixture',origin:{kind:'online' as const,platform:'wy' as const,id},metadata:{},qualities:[]});
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done;});return{promise,resolve};};
 function server(){
-  const files=new Map<string,{body:string;etag:string}>(),dirs=new Set<string>();let revision=0,put=0;
+  const files=new Map<string,{body:string;etag:string}>(),dirs=new Set<string>();let revision=0,put=0,get=0;
   const hooks={beforePut:async()=>{},beforeRead:async()=>{}};
   const transport:BackupTransport={backup:async(root,path,credentials,operation,body,etag,signal)=>{
     assert.equal(credentials.password,'fixture-secret');const key=root+path;
@@ -20,17 +20,26 @@ function server(){
       put++;await hooks.beforePut();const previous=files.get(key);if(etag?etag!==previous?.etag:!!previous)return{status:412,body:'',etag:'',bytes:0};
       const file={body,etag:`"v${++revision}"`};files.set(key,file);return{status:previous?204:201,body:'',etag:file.etag,bytes:0};
     }
-    await hooks.beforeRead();const file=files.get(key);if(!file)return{status:404,body:'',etag:'',bytes:0};if(etag&&etag!==file.etag)return{status:412,body:'',etag:'',bytes:0};return{status:200,body:file.body,etag:file.etag,bytes:Buffer.byteLength(file.body)};
+    get++;await hooks.beforeRead();const file=files.get(key);if(!file)return{status:404,body:'',etag:'',bytes:0};if(etag&&etag!==file.etag)return{status:412,body:'',etag:'',bytes:0};return{status:200,body:file.body,etag:file.etag,bytes:Buffer.byteLength(file.body)};
   }};
-  return{files,dirs,hooks,transport,puts:()=>put};
+  return{files,dirs,hooks,transport,puts:()=>put,gets:()=>get};
+}
+function manualSchedule(){
+  const jobs:{callback:()=>void;milliseconds:number;cancelled:boolean;started:boolean}[]=[];
+  return{
+    jobs,
+    schedule:(callback:()=>void,milliseconds:number)=>{const job={callback,milliseconds,cancelled:false,started:false};jobs.push(job);return()=>{job.cancelled=true;};},
+    active:()=>jobs.filter(job=>!job.cancelled&&!job.started),
+    runNext:async()=>{const job=jobs.find(value=>!value.cancelled&&!value.started);assert.ok(job,'expected an active scheduled job');job.started=true;job.callback();},
+  };
 }
 function client(shared=server(),device='b'.repeat(32)){
   const records=new Map<string,unknown>(),listeners=new Set<()=>void>();let accounts=[account],fail=false,id=0;
   const repository={get:async<T>(key:string)=>structuredClone(records.get(key)) as T|undefined,put:async(key:string,value:unknown)=>{if(fail)throw Error('fixture disk full');records.set(key,structuredClone(value));},putMany:async(entries:readonly(readonly[string,unknown])[])=>{if(fail)throw Error('fixture disk full');const next=new Map(records);for(const [key,value]of entries)next.set(key,structuredClone(value));records.clear();for(const [key,value]of next)records.set(key,value);}};
   const mutations=new MutationQueue(),library=new LibraryStore(repository,()=>`${device}-${++id}`,()=>100,mutations);
   const source={getSnapshot:()=>accounts,subscribe:(listener:()=>void)=>{listeners.add(listener);return()=>{listeners.delete(listener);};},credentials:async()=>({username:'fixture-user',password:'fixture-secret'}),client:async()=>({stat:async(path:string)=>{const key=account.url+path;if(shared.dirs.has(key))return{path,name:path,directory:true};if(shared.files.has(key))return{path,name:path,directory:false};throw new WebDAVError('missing');}})};
-  const options={repository,accounts:source,transport:shared.transport,library,mutations,uuid:()=>device},sync=new WebDAVSync(options);
-  return{sync,library,records,options,shared,fail:(value:boolean)=>{fail=value;},configure:()=>sync.configure(account.id,''),changeAccount:(remove=false)=>{accounts=remove?[]:[{...account}];for(const listener of listeners)listener();}};
+  const timer=manualSchedule(),options={repository,accounts:source,transport:shared.transport,library,mutations,uuid:()=>device,schedule:timer.schedule,editDelay:750},sync=new WebDAVSync(options);
+  return{sync,library,records,options,shared,timer,fail:(value:boolean)=>{fail=value;},configure:()=>sync.configure(account.id,''),changeAccount:(remove=false)=>{accounts=remove?[]:[{...account}];for(const listener of listeners)listener();}};
 }
 async function cycle(c:ReturnType<typeof client>,choices:SyncChoices={}){await c.sync.preview();await c.sync.commit(choices);}
 const isError=(kind:SyncError['kind'])=>(error:unknown)=>error instanceof SyncError&&error.kind===kind;
@@ -165,4 +174,49 @@ test('late canceled reads cannot consume a new directory foreground request',asy
     newWait.resolve();await current;assert.equal(await newRefresh,true);
     assert.equal(reads,3);assert.ok(c.sync.getSnapshot().preview);assert.equal(c.shared.puts(),0);
   }
+});
+test('local collection edits coalesce into one automatic preview without PUT',async()=>{
+  const c=client();await c.configure();c.sync.start();
+  await c.library.createPlaylist('First');await c.library.favorite(song('one'));await c.library.favorite(song('two'));
+  const active=c.timer.active();assert.equal(active.length,1);assert.equal(active[0]!.milliseconds,750);
+  await c.timer.runNext();await c.sync.settled();
+  assert.equal(c.shared.gets(),1);assert.equal(c.shared.puts(),0);
+  const records=c.sync.getSnapshot().preview!.plan.local.records.filter(value=>!value.deleted);
+  assert.equal(records.filter(value=>value.kind==='playlist').length,1);
+  assert.equal(records.filter(value=>value.kind==='favorite').length,2);
+  c.sync.dispose();
+});
+test('device-local history does not schedule a sync preview',async()=>{
+  const c=client();await c.configure();c.sync.start();
+  await c.library.played(song('history-only'));
+  assert.equal(c.timer.active().length,0);assert.equal(c.shared.gets(),0);assert.equal(c.shared.puts(),0);
+  c.sync.dispose();
+});
+test('background edits wait for the foreground preview instead of issuing hidden reads',async()=>{
+  const c=client();await c.configure();c.sync.start();c.sync.setForeground(false);
+  await c.library.favorite(song('background'));
+  assert.equal(c.timer.active().length,0);assert.equal(c.shared.gets(),0);
+  c.sync.setForeground(true);assert.equal(await c.sync.previewIfConfigured(),true);
+  assert.equal(c.shared.gets(),1);assert.equal(c.shared.puts(),0);
+  assert.equal(c.sync.getSnapshot().preview!.plan.local.records.some(value=>value.kind==='favorite'&&!value.deleted),true);
+  c.sync.dispose();
+});
+test('an edit during preview schedules one fresh follow-up and cannot be confirmed from stale data',async()=>{
+  const c=client();await c.configure();c.sync.start();
+  const entered=deferred(),wait=deferred();let reads=0;
+  c.shared.hooks.beforeRead=async()=>{reads++;if(reads===1){entered.resolve();await wait.promise;}};
+  const initial=c.sync.preview();await entered.promise;
+  await c.library.createPlaylist('During preview');
+  assert.equal(c.timer.active().length,0);
+  wait.resolve();await initial;
+  const stale=c.sync.getSnapshot().preview!;
+  assert.equal(stale.plan.local.records.some(value=>value.kind==='playlist'&&!value.deleted),false);
+  assert.equal(c.timer.active().length,1);
+  await c.timer.runNext();await c.sync.settled();
+  assert.equal(reads,2);assert.equal(c.shared.puts(),0);
+  const fresh=c.sync.getSnapshot().preview!;
+  assert.notEqual(fresh,stale);
+  assert.equal(fresh.plan.local.records.some(value=>value.kind==='playlist'&&!value.deleted),true);
+  await assert.rejects(c.sync.commit({},stale),error=>error instanceof SyncError&&/预览已改变/.test(error.message));
+  c.sync.dispose();
 });

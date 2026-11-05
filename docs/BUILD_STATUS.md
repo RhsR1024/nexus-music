@@ -1,3 +1,7 @@
+## 2026-11-05 F33 本机编辑自动刷新合并预览
+
+产品源新增`WebDAVSync`音乐库订阅与1200ms本机编辑防抖；自动流程只GET，零PUT/零自动确认，历史/统计不触发，后台不读，预览中编辑补读一次且旧预览不可提交，提交后的库恢复被抑制以避免回环。4项同步测试、完整1039/1039、Swift parse/Node/diff通过。正式Release`1793876399041`为1/0/0、191.455秒、sourceUnchanged、exit0；自动改名/删除均触发自动GET且零新增PUT、自动冲突提示、旧确认拒绝、重选提交/重启/删除传播通过，3张1290×2796图亲看。r1锁屏动画等待主动终止、r2末尾清理未重开WebDAV失败原件保留；测试开关不跳过产品断言。整轮夹具`propfind 7 / mkcol 1 / PUT 3 / GET 12 / authFailures 0`，3次PUT均来自原有明确确认。source digest`754fd317…8491`、安装bundle`13d9854d…d9a3`、result Info`282a25f2…c9b8`、run manifest`3aa0c357…5d50`。见[回执](2026-11-05-sync-auto-preview-report.md)。本轮改了产品源，clean unsigned IPA/T7/push与云端终态随后补记；真实双设备/私人服务/长时并发/后台持续/实体机/签名/iOS27继续开放。
+
 ## 2026-11-05 J29 后台跨曲终时按绑定暂停
 
 测试/调度改动，产品源未变。正式Navidrome 8首队列以3x跨过120秒首曲真实曲终；Home后台50秒后回前台，音频暂停、睡眠“未开启”、仍停在第一首`Synthetic tone`且进度`02:00/02:00`，未推进第二首。单测`SourceUITests-1793868612781`为1/0/0、163.263秒、sourceUnchanged、exit0，3张1290×2796图亲看；五项睡眠组合`1793868909601`为5/0/0、641.729秒、runner 692.380秒、同安装bundle且无状态串扰。完整1035检查、Swift/workflow YAML/diff通过，云端专项已纳入新用例。产品二进制未变，不重复IPA；实体锁屏、长时挂起、实体/签名与iOS27终态继续。见[回执](2026-11-05-sleep-background-track-end-report.md)。

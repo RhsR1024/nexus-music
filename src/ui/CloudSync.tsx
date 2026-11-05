@@ -29,7 +29,7 @@ export function CloudSync({services}:{services:Services}){
       {button('收起多设备同步',close,committing)}<Text style={{color:p.text,fontSize:26,fontWeight:'700'}}>多设备音乐库同步</Text>
       <FlatList data={conflicts} keyExtractor={value=>value.id} initialNumToRender={6} windowSize={5} keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,paddingBottom:20}}
         ListHeaderComponent={<View style={{gap:12,paddingBottom:12}}>
-          <Text style={{color:p.secondary,lineHeight:21}}>各设备使用同一连接和目录，先预览再确认。同步收藏、歌单、音频匹配和歌词选择；相同内容两端都有修改时，逐项选择版本。音频文件需在各设备另行配置。</Text>
+          <Text style={{color:p.secondary,lineHeight:21}}>各设备使用同一连接和目录，先预览再确认。本机收藏、歌单、音频匹配、歌词选择和目录收藏变更后会刷新合并预览，但不会自动提交。相同内容两端都有修改时，逐项选择版本；音频文件需在各设备另行配置。</Text>
           {!accounts.length?<Text style={{color:p.text}}>请先在音乐库的WebDAV入口验证并保存连接。</Text>:accounts.map(value=><View key={value.id}>{button(`${accountId===value.id?'● ':''}同步连接：${value.label}`,()=>{store.cancel();setAccountId(value.id);},busy)}</View>)}
           <TextInput accessibilityLabel="多设备同步相对目录" autoCapitalize="none" autoCorrect={false} placeholder="根目录内的同步文件夹" placeholderTextColor={p.secondary} editable={!busy} value={directory} onChangeText={value=>{store.cancel();setDirectory(value);setMessage('');}} style={{color:p.text,padding:12,borderWidth:1,borderColor:p.border,borderRadius:14}}/>
           {button('保存同步目录',()=>{void perform(()=>store.configure(accountId,directory));},busy||!accountId||saved,'cloud-sync-save')}
