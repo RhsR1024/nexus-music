@@ -256,7 +256,7 @@ export function Player({ services }: { services: Services }) {
         <Pressable accessibilityRole="button" accessibilityLabel="关闭面板" onPress={()=>{setPanelReturnsToMenu(false);setPanel(null);}} style={{flex:1,backgroundColor:'rgba(24,18,16,0.28)'}}/>
         <SafeAreaView edges={['bottom']} style={{maxHeight:'78%',backgroundColor:theme.palette.background[0],borderTopLeftRadius:28,borderTopRightRadius:28}}>
           <View style={{alignSelf:'center',width:40,height:5,borderRadius:3,backgroundColor:theme.palette.border,marginTop:8}}/>
-          <ScrollView contentContainerStyle={{paddingBottom:20}}>
+          <ScrollView testID="playback-control-panel-scroll" contentContainerStyle={{paddingBottom:20}}>
             {panel==='rate'?<RatePanel services={services} onBack={closePanel}/>:<SleepPanel services={services} onBack={closePanel}/>}
           </ScrollView>
         </SafeAreaView>

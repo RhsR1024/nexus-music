@@ -73,6 +73,16 @@ jobs:
             tail -n 100 build/logs/ui-catalog.log
             exit 1
           fi
+      - name: Verify custom sleep timer wheels and lifecycle
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! NEXUS_UI_RUN_DIR=build/logs/sleep-wheels-app node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testSleepCustomDurationAndRestart NexusMusicUITests/SourceSettingsTests/testSleepCustomWheelsPreserveActiveTimer 2>&1 | tee build/logs/ui-sleep-wheels-runner.log; then
+            tail -n 100 build/logs/sleep-wheels-app/ui-catalog.log
+            exit 1
+          fi
+          cp build/logs/sleep-wheels-app/ui-catalog.log build/logs/ui-sleep-wheels.log
+          cp build/logs/sleep-wheels-app/ui-server-counts.json build/logs/ui-sleep-wheels-counts.json
       - name: Verify matched playback, lyrics, source health and discovery actions
         shell: bash
         run: |

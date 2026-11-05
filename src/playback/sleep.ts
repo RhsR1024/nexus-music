@@ -1,4 +1,10 @@
 export type SleepState={mode:'off'}|{mode:'duration';deadline:number}|{mode:'track';entryId:string};
+export function customSleepSeconds(hours:number,minutes:number){
+  const valid=(value:number,max:number)=>Number.isInteger(value)&&value>=0&&value<=max;
+  if(!valid(hours,24)||!valid(minutes,59))return undefined;
+  const seconds=hours*3600+minutes*60;
+  return seconds>0?seconds:undefined;
+}
 export function sleepCountdown(deadline:number,now=Date.now()){
   const seconds=Math.max(0,Math.ceil((deadline-now)/1000));
   if(seconds===0)return '即将停止';

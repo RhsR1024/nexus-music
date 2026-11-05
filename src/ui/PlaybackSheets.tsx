@@ -1,11 +1,11 @@
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {Alert, Pressable, ScrollView, StyleSheet, Switch, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Switch, View, type NativeScrollEvent, type NativeSyntheticEvent} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme, type Theme} from './theme.tsx';
 import {radius, space, typography} from './tokens.ts';
-import {sleepCountdown} from '../playback/sleep.ts';
+import {customSleepSeconds,sleepCountdown} from '../playback/sleep.ts';
 
 const rates=[0.5,0.75,1,1.25,1.5,2,3] as const;
 const presets=[15,30,45,60,90] as const;
@@ -37,11 +37,13 @@ export function RatePanel({services,onBack}:{services:Services;onBack:()=>void})
 
 function Wheel({values,index,onChange,label,theme}:{values:number[];index:number;onChange:(value:number)=>void;label:string;theme:Theme}){
   const ref=useRef<ScrollView>(null),styles=makeStyles(theme),item=36;
-  useEffect(()=>{ref.current?.scrollTo({y:index*item,animated:false});},[]);
-  return <View style={{height:item*3,width:110}} accessibilityLabel={label}>
+  useEffect(()=>{ref.current?.scrollTo({y:index*item,animated:false});},[index]);
+  const select=(next:number)=>onChange(values[Math.max(0,Math.min(values.length-1,next))]??0);
+  const settle=(event:NativeSyntheticEvent<NativeScrollEvent>)=>select(Math.round(event.nativeEvent.contentOffset.y/item));
+  return <View style={{height:item*3,width:110}} testID={`sleep-wheel-${label}`} accessible accessibilityRole="adjustable" accessibilityLabel={label} accessibilityValue={{min:0,max:values.length-1,now:index,text:String(values[index]??0)}} accessibilityActions={[{name:'increment'},{name:'decrement'}]} onAccessibilityAction={event=>{if(event.nativeEvent.actionName==='increment')select(index+1);else if(event.nativeEvent.actionName==='decrement')select(index-1);}}>
     <View pointerEvents="none" style={{position:'absolute',top:item,left:0,right:0,height:item,borderRadius:10,backgroundColor:theme.palette.selected,opacity:.55}}/>
     <ScrollView ref={ref} showsVerticalScrollIndicator={false} snapToInterval={item} decelerationRate="fast" contentContainerStyle={{paddingVertical:item}}
-      onMomentumScrollEnd={event=>{const next=Math.round(event.nativeEvent.contentOffset.y/item);onChange(values[Math.max(0,Math.min(values.length-1,next))]??0);}}>
+      onScrollEndDrag={event=>{if(Math.abs(event.nativeEvent.velocity?.y??0)<.01)settle(event);}} onMomentumScrollEnd={settle}>
       {values.map(value=><View key={value} style={{height:item,alignItems:'center',justifyContent:'center'}}><Text style={styles.wheelText}>{value}</Text></View>)}
     </ScrollView>
   </View>;
@@ -54,6 +56,7 @@ export function SleepPanel({services,onBack}:{services:Services;onBack:()=>void}
   const [custom,setCustom]=useState(false),[hours,setHours]=useState(0),[minutes,setMinutes]=useState(30),[now,setNow]=useState(Date.now()),[error,setError]=useState('');
   useEffect(()=>{if(sleep.mode!=='duration')return;setNow(Date.now());const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[sleep]);
   const apply=(seconds:number,finish=false)=>{void services.playback.sleep.set(seconds,finish).then(()=>setError('')).catch(()=>setError('定时设置未保存，请重试'));};
+  const startCustom=()=>{const seconds=customSleepSeconds(hours,minutes);if(seconds===undefined){setError('请选择至少1分钟');return;}apply(seconds);};
   const stopNow=()=>{void services.playback.sleep.stopNow().then(()=>setError('')).catch(()=>setError('未能立即停止播放，请重试'));};
   const status=sleep.mode==='off'?'未开启':sleep.mode==='track'?'本曲播放结束后停止':`剩余 ${sleepCountdown(sleep.deadline,now)}`;
   return <View style={styles.root}>
@@ -71,7 +74,7 @@ export function SleepPanel({services,onBack}:{services:Services;onBack:()=>void}
         <Wheel values={Array.from({length:60},(_,i)=>i)} index={minutes} onChange={setMinutes} label="分钟" theme={theme}/>
         <Text style={styles.wheelUnit}>分钟</Text>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="开始定时" onPress={()=>apply(hours*3600+minutes*60)} style={styles.start}><Ionicons name="timer-outline" size={18} color="#FFFFFF"/><Text style={styles.startText}>开始定时</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="开始定时" onPress={startCustom} style={styles.start}><Ionicons name="timer-outline" size={18} color="#FFFFFF"/><Text style={styles.startText}>开始定时</Text></Pressable>
     </>}
     <View style={styles.switchRow}>
       <Text style={styles.switchLabel}>播完当前歌曲再停止</Text>

@@ -6448,6 +6448,85 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
     let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")
   }
+  func testSleepCustomWheelsPreserveActiveTimer() throws {
+    let app=XCUIApplication();app.launch()
+    selectClassicSourcePlayback(in:app)
+    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
+    let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
+    XCTAssertTrue(local.waitForExistence(timeout:15));local.tap();app.buttons["导入音频文件"].tap()
+    selectLocalFixture("Synthetic Tagged Tone",in:app)
+    XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
+    let search=app.textFields["搜索本地歌曲艺术家专辑"];XCTAssertTrue(search.waitForExistence(timeout:10));replaceText(search,with:"Synthetic Tagged Tone")
+    let track=app.buttons["local-track-0"];XCTAssertTrue(track.waitForExistence(timeout:10));track.tap();app.buttons["收起本地音频"].tap()
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
+    let pause=app.buttons["暂停"].firstMatch;XCTAssertTrue(pause.waitForExistence(timeout:15));pause.tap()
+    app.buttons["更多播放控制"].tap();XCTAssertTrue(app.buttons["睡眠定时器"].waitForExistence(timeout:5));app.buttons["睡眠定时器"].tap()
+    XCTAssertTrue(app.buttons["15 分钟"].waitForExistence(timeout:5));app.buttons["15 分钟"].tap()
+    let status=app.descendants(matching:.any).matching(identifier:"sleep-status").firstMatch
+    func reveal(_ element:XCUIElement){
+      let surface=app.descendants(matching:.any).matching(identifier:"playback-control-panel-scroll").firstMatch
+      XCTAssertTrue(surface.waitForExistence(timeout:5))
+      for _ in 0..<18{
+        if element.isHittable && element.frame.minY>=surface.frame.minY+6 && element.frame.maxY<=surface.frame.maxY-6{return}
+        let above=element.exists && element.frame.midY<surface.frame.midY
+        surface.coordinate(withNormalizedOffset:CGVector(dx:0.97,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:surface.coordinate(withNormalizedOffset:CGVector(dx:0.97,dy:above ? 0.75:0.25)))
+      }
+      XCTAssertTrue(element.isHittable)
+    }
+    func seconds()->Int?{
+      guard status.label.hasPrefix("剩余 ") else{return nil}
+      let parts=status.label.dropFirst(3).split(separator:":").compactMap{Int($0)}
+      if parts.count==2{return parts[0]*60+parts[1]}
+      if parts.count==3{return parts[0]*3600+parts[1]*60+parts[2]}
+      return nil
+    }
+    XCTAssertTrue(status.waitForExistence(timeout:5))
+    let presetStarted=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in guard let remaining=seconds() else{return false};return remaining>840 && remaining<=900},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[presetStarted],timeout:5),.completed)
+    app.buttons["自定义"].tap()
+    let hours=app.descendants(matching:.any).matching(identifier:"sleep-wheel-小时").firstMatch
+    let minutes=app.descendants(matching:.any).matching(identifier:"sleep-wheel-分钟").firstMatch
+    XCTAssertTrue(hours.waitForExistence(timeout:5));XCTAssertTrue(minutes.exists)
+    func value(_ wheel:XCUIElement)->String{wheel.value as? String ?? ""}
+    func expectValue(_ wheel:XCUIElement,_ expected:String){
+      let match=XCTNSPredicateExpectation(predicate:NSPredicate(format:"value == %@",expected),object:wheel)
+      XCTAssertEqual(XCTWaiter.wait(for:[match],timeout:5),.completed,"Wheel value must reflect its selected row")
+    }
+    reveal(minutes)
+    for _ in 0..<15{if value(minutes)=="0"{break};minutes.swipeDown(velocity:.fast)}
+    expectValue(hours,"0");expectValue(minutes,"0")
+    let before=try XCTUnwrap(seconds())
+    let start=app.buttons["开始定时"];XCTAssertTrue(start.waitForExistence(timeout:5));reveal(start);start.tap()
+    XCTAssertTrue(app.staticTexts["请选择至少1分钟"].waitForExistence(timeout:5))
+    let after=try XCTUnwrap(seconds());XCTAssertLessThanOrEqual(after,before);XCTAssertGreaterThan(after,before-20)
+    XCTAssertTrue(app.buttons["取消睡眠定时"].exists)
+    func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    image("Sleep zero wheel input preserves active deadline")
+    func step(_ wheel:XCUIElement,_ increase:Bool){
+      reveal(wheel)
+      let start=wheel.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:increase ? 0.75:0.25))
+      let end=start.withOffset(CGVector(dx:0,dy:increase ? -36:36))
+      start.press(forDuration:0.1,thenDragTo:end,withVelocity:XCUIGestureVelocity(rawValue:80),thenHoldForDuration:0.3)
+    }
+    step(hours,true);expectValue(hours,"1");reveal(start);start.tap()
+    let hourStarted=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in guard let remaining=seconds() else{return false};return remaining>3540 && remaining<=3600},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[hourStarted],timeout:5),.completed,"The hour wheel must reach the native timer")
+    image("Sleep custom hour wheel starts native deadline")
+    step(hours,false);expectValue(hours,"0");step(minutes,true);expectValue(minutes,"1");reveal(start);start.tap()
+    let minuteStarted=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in guard let remaining=seconds() else{return false};return remaining>40 && remaining<=60},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[minuteStarted],timeout:5),.completed,"The minute wheel must reach the native timer")
+    XCTAssertFalse(app.staticTexts["请选择至少1分钟"].exists)
+    image("Sleep custom minute wheel starts native deadline")
+    let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(status.label,"未开启")
+    let finish=app.switches["播完当前歌曲再停止"];XCTAssertTrue(finish.exists);reveal(finish);finish.tap()
+    XCTAssertEqual(status.label,"本曲播放结束后停止")
+    step(minutes,false);expectValue(minutes,"0");reveal(start);start.tap()
+    XCTAssertTrue(app.staticTexts["请选择至少1分钟"].waitForExistence(timeout:5));XCTAssertEqual(status.label,"本曲播放结束后停止")
+    image("Sleep zero wheel input preserves track binding")
+    reveal(cancel);cancel.tap();XCTAssertEqual(status.label,"未开启")
+    let back=app.buttons["返回播放选项"];reveal(back);back.tap();XCTAssertTrue(app.buttons["收起播放选项"].waitForExistence(timeout:5));app.buttons["收起播放选项"].tap()
+    XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:5));app.buttons["收起播放页"].tap()
+  }
   func testSleepCustomDurationAndRestart() throws {
     let app=XCUIApplication();app.launch()
     openSettings(app,page:"playback")
