@@ -58,6 +58,17 @@ r1–r10 结果目录与 xcresult 全部保留，未删除失败或替代证据�
 - r9 已显示正确详情与列表；随后删除一处非必要代码注释，使源码摘要变化，因此保留但不作为最终证据。
 - r10 使用最终源码、计数下降屏障和 `isHittable` 顶部验收，测试与两图均通过。
 
+## Clean 未签名归档
+
+产品、测试和初始文档提交 `3a2ecc2e6135ff28803a80166aeb2ce5d8cd1e9e` 后，从 clean HEAD 完成独立归档。产物保存在 `build/playlist-cover-clean-3a2ecc2/distribution/`。
+
+- clean manifest 对应产品提交 `3a2ecc2`、`dirty=false`、`workingTreeChanges=[]`、`signed=false`；arm64 / `iphoneos26.2` / 最低 iOS 15.1 / 设备族 `[1,2]`。
+- unsigned IPA 为 17,821,674 字节，SHA-256 `1f5290d23211f00011bb82f1f8c0b60e65fb225edaceda6196d5df29651a4cdb`。
+- manifest SHA-256 `4ecb056dc5424386f1f27cff124d56f50774278a478193515e5cc52da3e264f8`，归档日志 SHA-256 `e057ae3b6db0017e30352f8bc53c702d829a5a5be4c3fe27bb990c60266e0cc1`。
+- 独立核验 SHA-256 `293be4f04c3b723414baaec79a91ea1e1ee8c7ad9d2d6c3667f82edb88fb2320`，结果 `ready=true`：ZIP CRC、63 个普通载荷与 90 个 ZIP 项逐字节、arm64/SDK/iOS/设备族、封面测试标识，以及测试/私人/签名排除全部通过。
+- 构建时临时避开历史 `build/distribution` 符号链接。保护回执 SHA-256 `1b7d31b29e6b4fda88285f9882a18883b97d1e3a5d64839255a882aedf5deeba`，恢复回执 SHA-256 `3dabb245e651643279fc7c4cd8d9f1e53adce9db52d721814b78882edd5daf02`；目标和 6 个顶层文件哈希、mtime 均未变化。
+- `source/nexus-music-3a2ecc2.tar.gz`、完整补丁、UID/权限/源码计数与后续 T7 逐文件回执在 T7 阶段核验后补记。源证据不删除。
+
 ## 边界
 
 - 本批正式 UI 覆盖歌单列表与详情；当前目标歌单为空，不出现“全部歌曲与批量管理”，因此 `track-list-cover` 的实际弹层视觉未单独采集。其共用决策和 URL 安全回退由纯函数测试覆盖，后续有歌曲的歌单仍应补正式弹层断言。

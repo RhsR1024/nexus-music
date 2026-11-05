@@ -1,6 +1,8 @@
-## 2026-11-05 歌单持久化封面本地 Release
+## 2026-11-05 歌单持久化封面 clean 归档
 
-最终`SourceUITests-1793858859629`为1/0/0、55.901秒、`sourceUnchanged=true`；源码digest`9192734b…e486`、安装bundle`84ef23b3…ef80`、result Info`89450fc0…0384`。创建→重启→列表封面→详情封面→删除通过，2张1290×2796截图亲看；详情先滚至顶部并验证图片`isHittable`。`npm run check`1028/1028（日志`aaf0dbc5…4d7c`）、完整native（日志`51bfcdb0…4e0d`）、Swift/Node/diff通过。r1–r9失败或替代原件保留。clean unsigned archive、T7和push随后补记；本批不声明签名、实体机或项目完成。见[专项回执](2026-11-05-playlist-cover-url-report.md)。
+最终`SourceUITests-1793858859629`为1/0/0、55.901秒、`sourceUnchanged=true`；源码digest`9192734b…e486`、安装bundle`84ef23b3…ef80`、result Info`89450fc0…0384`。创建→重启→列表封面→详情封面→删除通过，2张1290×2796截图亲看；详情先滚至顶部并验证图片`isHittable`。`npm run check`1028/1028（日志`aaf0dbc5…4d7c`）、完整native（日志`51bfcdb0…4e0d`）、Swift/Node/diff通过。r1–r9失败或替代原件保留。
+
+产品/测试/初始文档提交`3a2ecc2`的clean unsigned manifest对应HEAD、`dirty=false`/`workingTreeChanges=[]`/`signed=false`；IPA 17,821,674字节、SHA-256`1f5290d23211f00011bb82f1f8c0b60e65fb225edaceda6196d5df29651a4cdb`，manifest`4ecb056d…64f8`，归档日志`e057ae3b…0cc1`，独立核验`293be4f0…2320`为`ready=true`。90个ZIP项CRC、63个普通载荷逐字节、arm64/iphoneos26.2/iOS15.1/[1,2]、封面生产标识及测试/私人/签名排除通过。历史`build/distribution`符号链接临时避开后恢复，目标6个顶层文件哈希/mtime不变；guard`1b7d31b2…eeba`、restore`3dabb245…af02`。T7与push随后补记；本批不声明签名、实体机或项目完成。见[专项回执](2026-11-05-playlist-cover-url-report.md)。
 
 ## 2026-11-05 J29 睡眠即时停止清洁交付
 

@@ -1,6 +1,6 @@
 ## 2026-11-05 歌单持久化封面列表与详情显示
 
-歌单已保存的公开封面地址现同时用于列表、详情头和批量歌曲头；安全`http/https`URL优先，缺失或含凭据/敏感查询键时回退首曲。共用纯函数不新增存储迁移、网络代理或第二个封面缓存。最终Release`SourceUITests-1793858859629`的`testLibraryPlaylistCoverURL`为1/0/0、55.901秒、`sourceUnchanged=true`，创建→重启→列表图片→详情图片→删除通过，2张1290×2796图亲看；1028/1028检查、完整native、Swift/Node/diff通过。r1–r9失败/替代证据保留；`track-list-cover`实际弹层、J24实体手势、VoiceOver/字号/小屏、真实大图床/大歌单、签名与项目仍开放。见[专项回执](2026-11-05-playlist-cover-url-report.md)。
+歌单已保存的公开封面地址现同时用于列表、详情头和批量歌曲头；安全`http/https`URL优先，缺失或含凭据/敏感查询键时回退首曲。共用纯函数不新增存储迁移、网络代理或第二个封面缓存。最终Release`SourceUITests-1793858859629`的`testLibraryPlaylistCoverURL`为1/0/0、55.901秒、`sourceUnchanged=true`，创建→重启→列表图片→详情图片→删除通过，2张1290×2796图亲看；1028/1028检查、完整native、Swift/Node/diff通过。`3a2ecc2` clean unsigned IPA`1f5290d2…a4cdb`，63载荷/90 ZIP项与隐私/签名排除通过；历史distribution链接已恢复。r1–r9失败/替代证据保留；T7/push、`track-list-cover`实际弹层、J24实体手势、VoiceOver/字号/小屏、真实大图床/大歌单、签名与项目仍开放。见[专项回执](2026-11-05-playlist-cover-url-report.md)。
 
 ## 2026-11-05 J29 睡眠定时器秒级倒计时与立即停止
 
