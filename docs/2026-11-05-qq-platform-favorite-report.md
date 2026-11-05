@@ -59,8 +59,33 @@
 
 截图索引 SHA-256 `99f5b343a2a302230f63d92f7e1023cdb0db94ee323de9929d6514a02edc1055`。三张已人工亲看。
 
+## 清洁设备包
+
+产品/测试/文档提交 `aebfa2fed39759f83d33e75222f5e3b93389d5b3` 的 clean unsigned archive 通过，`build/distribution/build-manifest.json` 记录同一提交、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。
+
+- IPA：17,876,117 字节，SHA-256 `0775167ab26c61e225d6d4506605779b96447f60b9eada2b8388b1bdd2507f48`。
+- 178 个 ZIP 项 `unzip -t` CRC 通过；63 个载荷文件、88 个 AppleDouble 元数据文件、8 个隐私清单；`_CodeSignature`/`embedded.mobileprovision` 均为 0，`codesign` 为 `not signed at all`。
+- 63 个 IPA 载荷与 archive app 逐字节一致，0 缺失/差异。
+- 生产 `main.jsbundle` 4,374,303 字节，SHA-256 `639fa0d5d77f81eb45e029df7463ac1c15082c9ca478d75072d76d23f2978ae2`；`NEXUS_UI_QQ_FAVORITE_FIXTURE`、`Synthetic QQ Favorite`、`synthetic-qq-favorite`、`qq-favorite-fixture-control`、账号 FM 夹具、在线搜索/主题观测适配器及 `tests/e2e/entry` 标记均为 0。
+- manifest SHA-256 `d93908114d9049330af3d852763e0f1f88e2841891e3d24f0d5889351d473d42`；独立 `build/distribution/verification.json` 的 `ready=true`，SHA-256 `3e7ad715ad6b7672fdb2e1e452285eff2ecd290d99dc9fd2c6d06110f692584d`。
+- 源码 tar：`build/distribution/NexusMusic-source-aebfa2f.tar`，SHA-256 `751b2496efb5c80818f05b65c300282e5f5fbf024cf92a3c33d892ab9d53ac21`；含 Git 树 1,110 个条目（1,108 文件 + 2 符号链接）及 49 个目录项。
+- 提交补丁：`build/distribution/qq-platform-favorite-aebfa2f.patch`，SHA-256 `e4534569056cc1d8b634404abfc47daf3a74a6236bd665a5df0c00d5bafad7a2`。
+- 归档日志 SHA-256 `bcf4275459ba11235435a3d830ce7ba43e128fe608c308ac78036a6d4c9a756c`；检查日志 `ac9166ea1ca13f992ea74c5e0bec613b903dfdb6c2930964a0acfe96900c68f8`；native 日志 `51bfcdb0fafaf187b1df72755f6af8b1f8c4ba434dc89b16c8b05945fd7c4e0d`。
+
+## T7 阶段副本
+
+阶段目录 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-qq-favorite-aebfa2f`，保存 clean 分发、xcarchive、源码 tar/补丁、xcresult、运行清单、截图索引、check/archive/native/UI 日志与产品提交 `aebfa2f` 时点的相关文档快照。
+
+- 129 份业务文件 / 114,290,677 字节逐文件源/目标 SHA-256 一致，0 缺失、0 差异、源保留、零删除；280 个 exFAT `._*` 元数据文件不计业务载荷。
+- `inventory.json` SHA-256 `65db83654c81a94dcdf6a639ed5ba5f2a1d49651fda82516ff02c2ca3081830f`。
+- `SHA256SUMS` SHA-256 `e8effa7f078f585c11579e744d4bcbefaca158c8d1d40c68f6733b83516fabb4`，`shasum -a 256 -c` 全部 OK。
+- `transfer-receipt.json` SHA-256 `d2dce665396b46a791df1213f1ca50ae30fc68bff340891265c78df58611b9a5`，`ready=true`、`sourceRetained=true`、`deleted=0`、`movedUserFiles=0`。
+
+恢复方式：源文件仍保留在工作区 `build/` 与 Git 提交；T7 副本可按 `SHA256SUMS` 重新核验或复制回 `build/`。本批没有迁移或删除任何用户文件。
+
 ## 边界
 
 - 本批只证明 QQ 合成账号、合成服务与正式 App 纵向路径，不证明真实 QQ 账号、真实平台收藏、平台限流/弱网或跨设备同步。
 - 未接入网易云、酷狗平台收藏，未接入平台歌单创建，未扩展账号 `favorite` capability。
+- 本批无新增 Sollin IPA/APK 采集或对齐结论，未触发 reverse-skill 门禁；这不代表 Sollin UI 对齐通过。
 - 不关闭 J10；真实三平台账号、收藏/创建歌单逐项验收、实体机、签名、iOS27 与云端终态仍开放。
