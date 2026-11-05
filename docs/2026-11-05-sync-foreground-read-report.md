@@ -32,6 +32,17 @@ NEXUS_UI_RUN_DIR=build/sync-refresh-independent node scripts/test-ui.mjs NexusMu
 
 使用新输出目录，不覆盖本批结果。
 
+## 清洁设备包与T7
+
+产品提交`2bba88cd052e17637416dcec44bdc6a8013a7fca`的clean unsigned archive通过，manifest与提交一致、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。独立核验90个ZIP项CRC、63份载荷逐字节、生产`foregroundRefresh`标记、测试/私人标记排除及未签名状态均通过。历史distribution符号链接已恢复，原6个顶层文件内容/字节/mtime未变。
+
+- IPA：17,822,286字节，SHA-256`d6c739400518c398708df67c7f312f0bcd1c33624bb56fafc59e164858368095`。
+- manifest：`ae71556b48e6a5c070ac74ea4d3c22bc708e48237efcb0eb842361b3ab599db3`。
+- 独立verification：`fa49d871decea50500262ede12373a06c82e79e91ea03cbd6bfa4c37086d9d2d`，ready=true。
+- 源码tar：8,083,846字节，SHA-256`4bc4780adcdb6aa3a1517a2552149ca4cc02f66369b9e5c618b2f217b88b7224`；与Git树1,097个条目的模式和blob内容全部一致。
+
+T7阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-foreground-2bba88c`保存clean分发/xcarchive、源码tar与提交补丁、r1取消及r2成功原始结果/截图/诊断、全部检查与测试诊断日志、脚本和报告快照。202份业务文件/110,772,896字节逐文件源/目标SHA-256一致，0差异、源保留、零删除；清单`b292b43a74bc235c657d9a876f54d2120648fc3179bf48c92bdff3ee5214891c`，transfer receipt`f98fd1e2dd467d2ca3b48025dc848b99e18c09e4feacf318e10c17085f62ae59`。依inventory相对路径恢复证据，源码可从tar/提交重建。内盘约58GiB、T7约569GiB，未做清理或搬移个人文件。正常push与新云端队列随后核验。
+
 ## 前一批交付补记
 
 歌单测试单行隔离提交`3af8cbd5003701bfe6ecea45712f4a396ea49eee`已正常push并实核远端。Actions网页为`41973467272/258cac7`继续运行、`41984886238/3af8cbd`唯一pending，旧`41983509535/69bfc2a`自动替换，未手动取消/重派。歌单T7阶段50份/5,767,480字节逐文件0差异，源保留且零删除；清单SHA-256`b78a5203844fa2b1a1505d6457a9d6313841b295775afa86ce1c202932d75782`。这些证据不改变旧云端失败或完整项目状态。
