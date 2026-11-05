@@ -54,6 +54,29 @@ J29 此前的睡眠面板只显示分钟倒计时，缺少“立即停止播放�
 - `npm run test:native`：通过；包含 stale expiry/cancel/replace/track binding/once/dispose/invalid input 的睡眠计时器检查，以及真实 AVPlayer 的定时到点/本曲后暂停。
 - `git diff --check`：通过。
 
+完整检查日志为 `build/logs/sleep-immediate-check-96e6a64.log`，SHA-256 `2aeffb82c0b37dc5cdb3d7fd629daeda47746a00a585f6365324d4be2718dd0e`，末项明确为 `tests 1027 / pass 1027 / fail 0`。完整 native 日志为 `build/logs/sleep-immediate-native-96e6a64.log`，SHA-256 `51bfcdb0fafaf187b1df72755f6af8b1f8c4ba434dc89b16c8b05945fd7c4e0d`；只保留仓库既有的 Sendable/WeakMutability 警告，没有本批错误。
+
+## Clean 归档
+
+提交级 clean unsigned 归档位于 `build/sleep-immediate-distribution-96e6a64/`。`build-manifest.json` 与 HEAD `96e6a64` 一致，`dirty=false`、`workingTreeChanges=[]`、`signed=false`。归档脚本 SHA-256 `2529d30ace39584591c6fbbfe5434b78ffd4db5d4641dc5d9eafbd5bbbcf2219`，独立核验 JSON SHA-256 `daf2ac40c10472ee97c53df07d412656f6491f968c231beb7f2dc1af2b7b98f0`，结果 `ready=true`、0 errors。
+
+- IPA：17,821,239 字节，SHA-256 `b164ebc95f30f73864e1913ca5eb01199b5b135fd893870410345293bbefd58f`。
+- manifest SHA-256：`1a4d479900c76b4d9d05c3d78c7665015ee280c450091f7559c355d3658772c8`。
+- ZIP CRC、90 个 ZIP 项、63 个载荷文件及 39,213,600 字节逐字节一致；arm64/iphoneos26.2/iOS15.1/[1,2]，测试入口、私人夹具和签名材料排除。
+- 归档时 `build/distribution` 仍恢复到原历史 T7 证据符号链接，未被 clean 产物覆盖。
+
+源码快照与补丁保存在：
+
+- `build/sleep-immediate-source-96e6a64.tar.gz`，SHA-256 `7574dbdc176f2ec422d6b3c77ba43a905b74c089e7a101146b9a41e60b140cdf`。
+- `build/sleep-immediate-commit-96e6a64.patch`，SHA-256 `6eed4f972226fafa72333e3dadd851b99cc8cf2d29d89be3c200473b9dcd2113`。
+- `build/sleep-immediate-series-96e6a64.patch`（`8c4cffe..96e6a64`），SHA-256 `69953e878baae7d3496482c276385578ff31fcd6edb2da2a4781e0a8988c88c0`。
+
+## T7 阶段归档
+
+已真实挂载且逐文件核验的外置阶段为 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sleep-immediate-96e6a64`。归档包含 clean IPA/xcarchive、r1–r4 运行记录、四份 xcresult、最终截图、检查/native/clean 日志、源码 tar、两份补丁和文档快照；明确排除 `DeviceDerivedData` 等可重建工具链缓存。
+
+`inventory.json` 记录 804 个业务文件，每条含源路径、目标路径、字节数与双侧 SHA-256；全部 804 条一致。目标内 `shasum -a 256 -c SHA256SUMS` 通过 804/804、0 失败，`transfer-receipt.json` 为 `ready=true`、`mismatches=0`、`sourcePreserved=true`、`deleted=0`、`movedUserFiles=0`，最终总字节以该回执为准。exFAT 自动生成的 `._*` AppleDouble 元数据已清除，业务载荷未受影响。所有源证据仍在工作区，恢复方式为源码补丁或 `sleep-immediate-source-96e6a64.tar.gz`。
+
 ## 边界
 
 本批只补齐 J29 的秒级倒计时与立即停止，不把 J29、完整 F/J 或项目标记完成。自定义轮盘的实际计时启动、本曲结束后停止的正式 UI 实音、进程重启/前后台/切换歌曲组合、实体 iPhone、VoiceOver/动态字号/小屏、签名安装及 iOS 27 云端终态仍需分别验收。模拟器合成音频不能替代实体设备、真实个人曲库或后台长时播放。

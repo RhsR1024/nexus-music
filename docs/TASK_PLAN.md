@@ -7,6 +7,8 @@
 - [x] 最终Release `SourceUITests-1793854177801` 为1/0/0、631.892秒、`sourceUnchanged=true`；5张1290×2796截图亲看倒计时、停止后“未开启”、自定义入口及 vinyl 暂停。
 - [x] r1 状态污染、r2 弹层遮挡的失败 xcresult/failure-evidence 保留；r3通过后补停止截图并以同源 r4 为最终证据，原断言不放宽。
 - [x] `npm run check`1027/1027、完整 `npm run test:native`、`git diff --check`通过。
+- [x] 提交级clean unsigned归档通过：IPA 17,821,239字节/SHA-256`b164ebc9…d58f`，manifest与HEAD一致、dirty=false、unsigned，ZIP/63载荷/39,213,600字节逐字节核验。
+- [x] T7阶段`2026-11-05-sleep-immediate-96e6a64`归档804份业务文件，逐文件双侧SHA-256一致、0失败，`ready=true`，源证据保留且零删除。
 - [ ] 自定义轮盘实际启动、本曲后停正式UI实音、重启/前后台/切歌组合、实体iPhone、VoiceOver/动态字号/小屏、签名与iOS27终态。
 
 详见[专项回执](2026-11-05-sleep-immediate-report.md)。J29 仍不标记完整完成。

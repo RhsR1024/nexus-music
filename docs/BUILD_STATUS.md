@@ -1,3 +1,13 @@
+## 2026-11-05 J29 睡眠即时停止清洁交付
+
+提交`96e6a64`的J29实现通过正式Release`SourceUITests-1793854177801`：1/0/0、631.892秒、`sourceUnchanged=true`，真实Navidrome合成音频完成定时→秒级倒计时→立即停止→原生计时清除→vinyl暂停；4张睡眠面板图和1张暂停图均亲看。两轮失败原件保留，原断言未放宽。`npm run check`1027/1027（日志SHA-256`2aeffb82…dd0e`），完整native通过（日志`51bfcdb0…4e0d`），仅既有Sendable/WeakMutability警告。
+
+clean unsigned归档manifest对应HEAD、`dirty=false`/`workingTreeChanges=[]`/`signed=false`；IPA 17,821,239字节、SHA-256`b164ebc95f30f73864e1913ca5eb01199b5b135fd893870410345293bbefd58f`，manifest SHA-256`1a4d4799…72c8`，独立回执`daf2ac40…98f0`为`ready=true`。90个ZIP项CRC、63个载荷文件/39,213,600字节逐字节、arm64/iphoneos26.2/iOS15.1/[1,2]及测试/私人/签名排除通过。`build/distribution`保持指向历史T7证据的符号链接，未被覆盖。
+
+T7阶段`2026-11-05-sleep-immediate-96e6a64`保存clean产物、r1–r4运行记录、四份xcresult、最终截图、日志、源码tar/补丁与文档快照：804份业务文件，逐文件源/目标SHA-256 0差异，`SHA256SUMS` 804/804 PASS，`transfer-receipt.json`为`ready=true`、`mismatches=0`、`sourcePreserved=true`、`deleted=0`、`movedUserFiles=0`；exFAT伴生`._*`元数据清除，业务载荷不受影响。`DeviceDerivedData`与可重建缓存未归档，源证据全部保留。
+
+后续正常push及iOS27队列、实体机、签名、J29剩余组合仍未完成，不写云端或项目完成。详见[专项回执](2026-11-05-sleep-immediate-report.md)。
+
 ## 2026-11-04 咪咕公开专辑副本持久化
 
 cc7f2cc仅测试/调度/文档改动，1016检查通过；Release 1793777533739为1/0/0、152.791秒、sourceUnchanged=true，6PNG来源ready/亲看。97次只读采样验证7个原始ID、顺序、说明及0→1→0。无新产品源/设备IPA，基线仍fdf225a；新iOS27 41794665316为1运行/0排队，旧fdf在线6/1失败不关闭。见[回执](2026-11-04-migu-album-import-persistence-report.md)。
