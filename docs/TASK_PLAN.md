@@ -1,10 +1,20 @@
+## 2026-11-05 音乐库随机播放清除单曲循环
+
+- [x] 音乐库歌单/收藏/最近播放的随机播放入口同时写入`repeat:'off'`与`shuffle:true`，消除与已持久化单曲循环的冲突。
+- [x] 正式Release`SourceUITests-1793848700604`为1/0/0、210.308秒、`sourceUnchanged=true`；测试从播放全部→单曲→返回音乐库随机→队列验证随机选中、单曲未选中，并恢复顺序模式避免污染后续断言。
+- [x] 1290×2796关键截图来源ready并亲看；`npm run check`1025/1025、`git diff --check`通过。
+- [ ] 本批提交、clean unsigned IPA、T7与push收尾；实体机自然曲尾、后台/锁屏、签名和完整F/J继续。
+
+详见[专项回执](2026-11-05-library-random-report.md)。
+
 ## 2026-11-05 J25 搜索跨导航会话与两项业务修复
 
 - [x] J25会话内保留类型/平台/已提交查询/未提交草稿；返回不重发检索，分页与结果由既有五协调器持有。
 - [x] 正式Release三联回归3/0/0、sourceUnchanged；Migu公开专辑导入复用保留查询，1/0/0通过。
 - [x] 本地FM修复尾批不足请求量时提前循环，新增10→1→10回归。
 - [x] WebDAV同步保留歌单描述与安全封面，新增同步与双端往返测试。
-- [ ] 阶段clean归档、T7、提交push与云端队列核对；云端/实体机/签名及完整F/J继续。
+- [x] 阶段clean归档、T7、提交push与云端队列核对：`130bcd9` clean IPA `cabe99f4…cc55`，T7预提交767份/clean11份0差异；当前1运行/1排队。
+- [ ] 云端新运行终态、实体机、签名及完整F/J继续。
 
 详见[搜索回执](2026-11-05-search-session-report.md)、[FM回执](2026-11-05-local-fm-tail-report.md)、[同步回执](2026-11-05-webdav-playlist-metadata-report.md)。
 

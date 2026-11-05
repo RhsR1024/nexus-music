@@ -1,6 +1,10 @@
+## 2026-11-05 音乐库随机播放清除单曲循环
+
+音乐库歌单、收藏和最近播放的随机播放现同时清除单曲循环并开启随机，避免随机与单曲冲突。正式Release 1/0/0、210.308秒、sourceUnchanged；切换链路与恢复顺序模式通过，1290×2796关键图亲看，1025/1025检查通过。clean IPA/T7/push待提交后收尾，实体机自然曲尾、后台/锁屏和签名继续。见[专项回执](2026-11-05-library-random-report.md)。
+
 ## 2026-11-05 J25 搜索跨导航会话与两项业务修复
 
-J25会话内保留搜索类型、平台、查询和草稿，三联Release 3/0/0、13图亲看；Migu导入复用保留查询1/0/0。本地FM修复尾批跳过，WebDAV同步保留歌单描述/安全封面；1025/1025业务检查通过。无新增Sollin证据；clean归档/T7/push待收尾，云端、实体机、签名与完整F/J继续。见[搜索回执](2026-11-05-search-session-report.md)、[FM回执](2026-11-05-local-fm-tail-report.md)、[同步回执](2026-11-05-webdav-playlist-metadata-report.md)。
+J25会话内保留搜索类型、平台、查询和草稿，三联Release 3/0/0、13图亲看；Migu导入复用保留查询1/0/0。本地FM修复尾批跳过，WebDAV同步保留歌单描述/安全封面；1025/1025业务检查通过。`130bcd9` clean IPA与T7核验/push完成，当前CI 1运行/1排队；无新增Sollin证据，云端终态、实体机、签名与完整F/J继续。见[搜索回执](2026-11-05-search-session-report.md)、[FM回执](2026-11-05-local-fm-tail-report.md)、[同步回执](2026-11-05-webdav-playlist-metadata-report.md)。
 
 ## 2026-11-05 下载批量选择独立回归
 

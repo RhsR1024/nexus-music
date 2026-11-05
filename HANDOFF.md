@@ -1,6 +1,10 @@
+## 2026-11-05 音乐库随机播放清除单曲循环
+
+音乐库歌单、收藏和最近播放的“随机播放”原先只写`shuffle:true`，会保留队列先前持久化的`repeat:'one'`，造成随机与单曲同时选中且曲尾重复当前曲。现与相似歌曲/发现页一致改为`{repeat:'off',shuffle:true}`，不新增队列或偏好镜像。正式Release`SourceUITests-1793848700604`为1/0/0、210.308秒、`sourceUnchanged=true`；测试覆盖播放全部→单曲→返回音乐库随机→队列断言随机选中/单曲未选中，并在关闭前恢复顺序模式；1290×2796关键图已亲看，1025/1025检查通过。失败轮次保留，详见[专项回执](docs/2026-11-05-library-random-report.md)。clean IPA/T7/push待本批提交后收尾；实体机、自然曲尾、后台/锁屏及签名继续开放。
+
 ## 2026-11-05 J25 搜索跨导航会话与两项业务修复
 
-J25 已保留搜索类型、平台、已提交查询及未提交草稿；正式Release三联回归3/0/0、sourceUnchanged，13图provenance ready并亲看，请求计数证明跨发现/音乐库/设置返回不重发检索。Migu公开专辑导入复用保留查询，1/0/0、153.956秒通过。同步修复本地FM尾批跳过（1025/1025检查中新增11首10→1→10）与WebDAV歌单描述/安全封面丢失；均见[搜索回执](docs/2026-11-05-search-session-report.md)、[FM回执](docs/2026-11-05-local-fm-tail-report.md)和[同步回执](docs/2026-11-05-webdav-playlist-metadata-report.md)。本批无新增Sollin证据；云端、实体机、签名、完整F/J继续开放。
+J25 已保留搜索类型、平台、已提交查询及未提交草稿；正式Release三联回归3/0/0、sourceUnchanged，13图provenance ready并亲看，请求计数证明跨发现/音乐库/设置返回不重发检索。Migu公开专辑导入复用保留查询，1/0/0、153.956秒通过。同步修复本地FM尾批跳过（1025/1025检查中新增11首10→1→10）与WebDAV歌单描述/安全封面丢失。产品 `130bcd9` 已push，clean IPA `cabe99f4…cc55`、T7预提交767份与clean阶段11份均0差异；见[搜索回执](docs/2026-11-05-search-session-report.md)、[FM回执](docs/2026-11-05-local-fm-tail-report.md)和[同步回执](docs/2026-11-05-webdav-playlist-metadata-report.md)。本批无新增Sollin证据；云端、实体机、签名、完整F/J继续开放。
 
 ## 2026-11-05 下载批量选择候选独立回归通过
 
