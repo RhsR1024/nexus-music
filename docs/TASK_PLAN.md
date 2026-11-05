@@ -3,7 +3,8 @@
 - [x] 音乐库歌单/收藏/最近播放的随机播放入口同时写入`repeat:'off'`与`shuffle:true`，消除与已持久化单曲循环的冲突。
 - [x] 正式Release`SourceUITests-1793848700604`为1/0/0、210.308秒、`sourceUnchanged=true`；测试从播放全部→单曲→返回音乐库随机→队列验证随机选中、单曲未选中，并恢复顺序模式避免污染后续断言。
 - [x] 1290×2796关键截图来源ready并亲看；`npm run check`1025/1025、`git diff --check`通过。
-- [ ] 本批提交、clean unsigned IPA、T7与push收尾；实体机自然曲尾、后台/锁屏、签名和完整F/J继续。
+- [x] 产品提交`17246a2`、clean unsigned IPA与T7核验完成：151项archive/IPA通过；T7 473份/290,103,144字节0差异，源码tar与1087个tracked文件一致，源证据保留且零删除。
+- [ ] docs收尾提交push、云端队列实核；实体机自然曲尾、后台/锁屏、签名和完整F/J继续。
 
 详见[专项回执](2026-11-05-library-random-report.md)。
 

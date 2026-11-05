@@ -25,6 +25,26 @@
 
 `npm run check` 本轮为 1025/1025，`git diff --check` 通过；这是模拟器 Release 回归，不替代真实 iOS 设备、自然曲尾长时播放、后台/锁屏或签名安装验收。
 
+## Clean 归档
+
+产品/测试/初始文档提交 `17246a2` 后，从 clean HEAD 重新构建 `build/distribution/NexusMusic.xcarchive`。manifest 与 HEAD 一致，`dirty=false`、`workingTreeChanges=[]`；unsigned IPA 为 `build/distribution/NexusMusic-unsigned.ipa`，17,859,667 字节，SHA-256 `eb9eb67d9f994701c81ff5054157b397b9a77a6b8d9fc157b5161122e8f56b13`。
+
+独立核验脚本 `build/verify-library-random-clean-20261105.py` 生成 `build/library-random-clean-verification-20261105.json`，`ready=true`：ZIP CRC PASS，151 项 archive/IPA 文件逐字节一致，测试与私人标记排除 PASS，arm64、`iphoneos26.2`、iOS 15.1、设备族 `[1,2]` 且未签名。clean archive 构建日志为 `build/library-random-clean-archive-20261105.log`。
+
+## T7 归档核验
+
+完整 clean 产物、成功与失败 xcresult、UI 清单/截图、clean 提交源码 tar 和本回执已复制至：
+
+`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-library-random-17246a2`
+
+- 473 个业务普通文件，290,103,144 字节，逐项 SHA-256 与源文件比较 0 差异；`SHA256SUMS` 全量复核 PASS。
+- 源码 tar 为 8,031,528 字节，SHA-256 `1fd228200d64e04bf5f501eedd29d4190935c4700ebc696640e0b5a41c43ba72`；未压缩内容与 clean 提交 `17246a2` 的 `git archive` 完全一致，1087 个 tracked 文件集合一致。
+- 源 `NexusMusic.xcarchive` 中 102 个既有 AppleDouble 文件逐项一致、0 差异；exFAT 目标另生成 426 个 `._*` 元数据文件，单独计数，不计入业务载荷。
+- `transfer-receipt.json` 为 `ready=true`、`mismatches=0`、`sourcePreserved=true`、`deleted=0`、`movedUserFiles=0`，SHA-256 `4d0389c62b77c0374abb0105669eaea1c743e8aa20557914874d809f7a63d7c5`。
+- `inventory.json` SHA-256 `11b6bd0537105f3ab867e444d0c495be81fa5430ff860747da4846518827d3d1`；`SHA256SUMS` SHA-256 `ce285cbf1a702b90703525324be123c13a25e452f26bd81a6e295b7c0cb56387`。
+
+恢复时按 `inventory.json` 的相同 source/target 相对路径取回；tracked 源码也可由 clean 提交和 `source/nexus-music-17246a2.tar.gz` 重建。本批未删除或移动任何源证据或个人文件。
+
 ## 边界
 
 本批只关闭音乐库随机播放与单曲循环冲突的产品缺陷，不关闭完整F/J、云端 iOS27 终态、实体机、VoiceOver、弱网/限流、真实私人服务、签名或全部平台功能。没有新增 Sollin 证据、采集或私有探测。
