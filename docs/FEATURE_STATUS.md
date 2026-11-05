@@ -2,6 +2,10 @@
 
 空喜欢ID列表此前阻止首次收藏，混杂非法ID可能过早确认；现完整校验所有ID后判断成员，空列表明确未收藏、畸形列表整体拒绝。新增3项测试先失败复现，专项22/22、完整1090/1090；正式Release `1793886546069`为1/0/0、48.515秒、sourceUnchanged，空数组→写一次→回读/重复点击不增写通过，三张1290×2796图亲看。原提交T7交付58份/58,309,560字节零差异、源保留；新归档另记。真实平台、酷狗收藏、平台建单和实体/签名边界继续，J10保持B。见[回执](2026-11-05-netease-platform-favorite-report.md)。
 
+## 2026-11-05 J10 酷狗平台写入边界
+
+复核Q-music Android `5db858f`、MIT Sollin-Music-Desktop `c9d446f` 与 MIT KuGouMusicApi `7ac64e1`：现有参考可读账号歌单及成员，但目录项不能稳定证明“我喜欢”的listid，向显式listid加歌不等于平台收藏；建单返回身份、隐私和创建后归属也未获可保守验证的契约。未新增酷狗收藏入口、capability或真实服务结论，不把加歌冒充收藏。补齐稳定喜欢身份、单次写入和写后读取目标前，J10酷狗收藏保持阻塞；见[边界](2026-11-05-kugou-platform-write-boundary.md)。
+
 ## 2026-11-05 J10 网易云平台收藏纵向切片
 
 网易云在线歌曲新增独立“收藏到网易云音乐”入口。流程先读 `/weapi/song/like/check`，已收藏幂等不写；未收藏才通过 `/weapi/song/like` 发送一次 `trackId/userid/like`，最多回读两次确认后才显示成功。写入拒绝、回读失败、鉴权失效、账号删除/替换、取消与迟到响应分别返回明确状态，不把响应 `code:200` 当成收藏成功。账号/会话/`userId`/`netease:` 用户名严格绑定，19 位 ID 按不透明字符串处理；仅单一网易云账号显示入口，多账号要求先收敛。新增 19 项单测，`npm run check`1087/1087；正式 Release`SourceUITests-1793885436711`为 1/0/0、75.954 秒、`sourceUnchanged=true`，夹具 `reads=3/writes=1/favorited=true/invalid=0`，三张 1290×2796 截图亲看空心星、完整已收藏状态和重复点击幂等。clean unsigned IPA`ba47aa74…39a9`为 17,879,316 字节，manifest clean/178 ZIP/63 业务载荷/8 隐私/0 签名及生产夹具标记排除通过；源码 tar 1,160 条目、验证 `531f1fe0…b3cc`。参考固定 MIT Sollin-Music-Desktop `c9d446f` 与 NeteaseCloudMusicApi `984cc021`，匿名端点核验、许可与修改说明已记录。真实网易云账号、酷狗收藏、三平台平台歌单创建、实体机、签名、iOS27 与云端终态仍开放，J10 仍为 B。见[回执](2026-11-05-netease-platform-favorite-report.md)。

@@ -2,6 +2,10 @@
 
 亲读 MIT Sollin-Music-Desktop 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `neteaseAuth.ts` 中 `likeSong`/`getLikelist`，以及 NeteaseCloudMusicApi 固定 `984cc021b8598cf94c22134f32a8426887fb2de7` 的 `song_like`/`song_like_check`；仅采用端点和参数事实。音枢自写账号绑定、先读后单次写入、回读确认、取消竞态及19位ID不透明处理，没有复制运行时、UI、依赖或私有逻辑。五参考既有实现、维护、Android与许可边界保留；匿名核验只证明端点存在与鉴权要求，真实账号写入及跨设备效果仍未验收。见[回执](2026-11-05-netease-platform-favorite-report.md)。
 
+## 2026-11-05 酷狗平台写入边界
+
+复核 Q-music Android `5db858f`、Sollin-Music-Desktop `c9d446f` 与 MakcRe/KuGouMusicApi `7ac64e1`：前者只支持目录/曲目读取，Sollin桌面收藏为本地或网易云路径，KuGouMusicApi提供向显式listid加歌及建单参数但没有可靠“我喜欢”身份。未新增代码采纳、依赖或Sollin结论；协议缺口见[边界](2026-11-05-kugou-platform-write-boundary.md)。
+
 ## 2026-11-04 网易新碟公开目录
 
 五参考既有实现、维护、Android与许可边界保留；本批不声称重新审查其全部目录模块。额外亲读MIT Sollin-Music-Desktop固定c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8的neteaseAuth.ts/getNewAlbums，仅采用官方`/api/album/new`与分页参数事实，自写匿名HTTPS、严格总数/身份/取消与正式导航。未复制运行时、素材、依赖、原生补丁或商业逻辑；不推断Sollin私有HTTP。见[回执](2026-11-04-new-albums-report.md)。
