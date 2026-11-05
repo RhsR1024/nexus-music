@@ -10,9 +10,9 @@ export interface SyncConflict {id:string;kind:SyncKind;local?:SyncRecord;remote?
 export interface SyncPlan {local:SyncState;remote?:SyncState;records:readonly SyncRecord[];conflicts:readonly SyncConflict[]}
 export type SyncChoices=Readonly<Record<string,'local'|'remote'>>;
 export class SyncError extends Error {
-  readonly kind:'account'|'format'|'conflict'|'network'|'cancelled'|'localChanged'|'choices'|'busy'|'capacity';
+  readonly kind:'account'|'format'|'conflict'|'network'|'cancelled'|'localChanged'|'previewChanged'|'choices'|'busy'|'capacity';
   constructor(kind:SyncError['kind']){
-    super({account:'同步连接或目录已改变，请重新预览',format:'同步数据格式或强版本信息无效',conflict:'云端版本已改变，请重新预览并核对冲突',network:'同步连接失败，请检查服务端配置',cancelled:'同步已取消',localChanged:'本机音乐库已改变，请重新预览',choices:'请为每项冲突选择本机或云端版本',busy:'当前同步操作尚未结束',capacity:'同步数据超过容量限制，请保留原库并检查数据'}[kind]);this.kind=kind;
+    super({account:'同步连接或目录已改变，请重新预览',format:'同步数据格式或强版本信息无效',conflict:'云端版本已改变，请重新预览并核对冲突',network:'同步连接失败，请检查服务端配置',cancelled:'同步已取消',localChanged:'本机音乐库已改变，请重新预览',previewChanged:'合并预览已改变，请核对当前预览并重新确认',choices:'请为每项冲突选择本机或云端版本',busy:'当前同步操作尚未结束',capacity:'同步数据超过容量限制，请保留原库并检查数据'}[kind]);this.kind=kind;
   }
 }
 const kinds:readonly SyncKind[]=['favorite','playlist','match','lyricChoice','catalogFavorite'];

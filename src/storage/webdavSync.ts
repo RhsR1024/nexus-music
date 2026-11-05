@@ -91,7 +91,8 @@ export class WebDAVSync {
     if(!this.value.config||this.value.busy||!this.selectedAccount())return Promise.resolve(false);
     return this.preview().then(()=>true).catch(()=>false);
   }
-  commit(choices:SyncChoices={}){
+  commit(choices:SyncChoices={},confirmedPreview=this.value.preview){
+    if(confirmedPreview!==this.value.preview)return Promise.reject(new SyncError('previewChanged'));
     const preview=this.value.preview;if(!preview)return Promise.reject(new SyncError('format'));
     // Freeze the user's choices before any asynchronous operation.
     const resolved=resolveSync(preview.plan,{...choices}),body=encodeSync(resolved);

@@ -2918,6 +2918,24 @@ final class SourceSettingsTests: XCTestCase {
     sync();reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["发现 1 项冲突，请逐项选择后确认"].waitForExistence(timeout:15));let commit=app.buttons["cloud-sync-commit"];reveal(commit);XCTAssertFalse(commit.isEnabled);let remoteChoice=app.buttons["cloud-sync-remote-0"];reveal(remoteChoice);XCTAssertTrue(app.staticTexts["云端："+cloud+" · 0 首"].exists)
     let image=XCTAttachment(screenshot:app.screenshot());image.name="Three-way conflict preview";image.lifetime = .keepAlways;add(image)
     for (button,title) in [("预览本机版本",local),("预览云端版本",cloud)]{let detail=app.buttons[button];reveal(detail);detail.tap();XCTAssertTrue(app.buttons["关闭版本预览"].waitForExistence(timeout:5));XCTAssertTrue(app.staticTexts[title+" · 0 首"].exists);app.buttons["关闭版本预览"].tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
+    func syncCounts() throws -> [String:Int]{
+      let data=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/state")!)
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:data) as? [String:Int])
+    }
+    reveal(remoteChoice);remoteChoice.tap();reveal(commit);commit.tap()
+    XCTAssertTrue(app.alerts["确认同步音乐库？"].waitForExistence(timeout:5))
+    let beforeRefresh=try syncCounts()
+    XCUIDevice.shared.press(.home);app.activate()
+    XCTAssertTrue(app.alerts["确认同步音乐库？"].waitForExistence(timeout:5),"The original confirmation must remain open across foreground refresh")
+    let refreshed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      guard let current=try? syncCounts() else{return false}
+      return current["gets",default:0]>beforeRefresh["gets",default:0]
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[refreshed],timeout:10),.completed)
+    app.alerts.buttons["确认同步两端"].tap()
+    XCTAssertTrue(app.staticTexts["合并预览已改变，请核对当前预览并重新确认"].waitForExistence(timeout:10))
+    XCTAssertEqual(try syncCounts()["puts"],beforeRefresh["puts"],"An old confirmation must not PUT a refreshed plan")
+    let stale=XCTAttachment(screenshot:app.screenshot());stale.name="Stale sync confirmation rejected after foreground refresh";stale.lifetime = .keepAlways;add(stale)
     app.buttons["收起多设备同步"].tap();for _ in 0..<8{app.swipeDown()};let localRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",local+" ·")).firstMatch;reveal(localRow);XCTAssertTrue(localRow.exists,"Canceling a conflict preview must keep the local edit")
     sync();reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["发现 1 项冲突，请逐项选择后确认"].waitForExistence(timeout:15));reveal(remoteChoice);remoteChoice.tap();reveal(commit);confirm();app.buttons["收起多设备同步"].tap();app.terminate();app.launch();library();reveal(playlists);playlists.tap();let cloudRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",cloud+" ·")).firstMatch;reveal(cloudRow);XCTAssertTrue(cloudRow.exists);XCTAssertFalse(localRow.exists)
     cloudRow.tap();let removePlaylist=app.buttons["删除歌单"];reveal(removePlaylist);removePlaylist.tap();app.alerts.buttons["删除"].tap();sync();XCTAssertEqual(directory.value as? String,folder);reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15));confirm();app.buttons["收起多设备同步"].tap();app.terminate();app.launch();library();reveal(playlists);playlists.tap();XCTAssertFalse(cloudRow.exists)

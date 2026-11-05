@@ -740,6 +740,9 @@ const handleRequest = async (req, res) => {
   if(req.url==='/unified-mv-cover.png'&&searchUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.multi,'base64'));return;}
   if(req.url==='/playlist-cover.png'&&playlistCoverUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
+  if(req.url==='/sync-fixture/state'){
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({gets:counts.backup?.get??0,puts:counts.backup?.put??0}));return;
+  }
   if(req.url==='/sync-fixture/remote-edit'){
     counts.syncEdits=(counts.syncEdits??0)+1;
     const entry=[...backupFiles].find(([path,body])=>path.startsWith('/sync-dav/')&&path.endsWith('/library-v1.json'));

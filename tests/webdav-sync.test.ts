@@ -61,6 +61,26 @@ test('manual conflict choice is mandatory; cancelled preview changes neither end
 test('edits after preview are rejected before PUT and preserved',async()=>{
   const c=client();await c.configure();await c.library.createPlaylist('Old');await c.sync.preview();await c.library.favorite(song('new'));await assert.rejects(c.sync.commit(),isError('localChanged'));assert.equal(c.shared.puts(),0);assert.equal(c.library.getSnapshot().favorites.length,1);
 });
+test('confirmation of a replaced preview rejects old conflict choices before PUT',async()=>{
+  const one=client(),two=client(one.shared,'c'.repeat(32));await one.configure();await two.configure();
+  const id=await one.library.createPlaylist('Original');await cycle(one);await cycle(two);
+  await one.library.renamePlaylist(id,'Remote A');await cycle(one);await two.library.renamePlaylist(id,'Local choice');await two.sync.preview();
+  const confirmedPreview=two.sync.getSnapshot().preview!,conflictId=confirmedPreview.plan.conflicts[0]!.id,choices:SyncChoices={[conflictId]:'local'};
+  await one.library.renamePlaylist(id,'Remote B');await cycle(one);assert.equal(await two.sync.previewIfConfigured(),true);
+  const currentPreview=two.sync.getSnapshot().preview!,before=two.library.getSnapshot(),puts=one.shared.puts(),saved=structuredClone(two.records.get('webdav.sync.v1'));
+  assert.notEqual(currentPreview,confirmedPreview);assert.equal(currentPreview.plan.conflicts[0]!.id,conflictId);
+  await assert.rejects(two.sync.commit(choices,confirmedPreview),error=>error instanceof SyncError&&/预览已改变/.test(error.message));
+  assert.equal(one.shared.puts(),puts);assert.equal(two.library.getSnapshot(),before);assert.deepEqual(two.records.get('webdav.sync.v1'),saved);assert.equal(two.sync.getSnapshot().preview,currentPreview);
+  await two.sync.commit({[conflictId]:'remote'},currentPreview);assert.equal(two.library.getSnapshot().playlists[0]!.title,'Remote B');
+});
+test('cancelled preview confirmation cannot apply after a fresh read even with identical content',async()=>{
+  const c=client();await c.configure();await c.library.createPlaylist('Kept');await c.sync.preview();
+  const confirmedPreview=c.sync.getSnapshot().preview!;c.sync.cancel();await c.sync.preview();
+  const current=c.sync.getSnapshot().preview!,before=c.library.getSnapshot();
+  await assert.rejects(c.sync.commit({},confirmedPreview),error=>error instanceof SyncError&&/预览已改变/.test(error.message));
+  assert.equal(c.shared.puts(),0);assert.equal(c.library.getSnapshot(),before);assert.equal(c.sync.getSnapshot().preview,current);
+  await c.sync.commit({},current);assert.equal(c.shared.puts(),1);
+});
 test('edits queued during network commit apply after the atomic restore instead of being overwritten',async()=>{
   const c=client();await c.configure();const id=await c.library.createPlaylist('Old');await c.sync.preview();const entered=deferred(),wait=deferred();c.shared.hooks.beforePut=async()=>{entered.resolve();await wait.promise;};const commit=c.sync.commit();await entered.promise;
   const queued=c.library.renamePlaylist(id,'Queued');assert.equal(c.sync.cancel(),false);await assert.rejects(c.sync.preview(),isError('busy'));wait.resolve();await commit;await queued;assert.equal(c.library.getSnapshot().playlists[0]!.title,'Queued');assert.match(c.sync.getSnapshot().message,/完成/);

@@ -21,7 +21,7 @@ export function CloudSync({services}:{services:Services}){
   async function perform(action:()=>Promise<void>){setMessage('');try{await action();}catch(error){setMessage(error instanceof SyncError?error.message:'同步未确认完成，请重新预览并核对数据');}}
   const button=(label:string,onPress:()=>void,disabled=false,id?:string)=><Pressable accessibilityRole="button" testID={id} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={{padding:12,minHeight:44,borderRadius:14,backgroundColor:p.selected,opacity:disabled?.4:1}}><Text style={{color:p.accent}}>{label}</Text></Pressable>;
   const plan=state.preview?.plan,conflicts=plan?.conflicts??[],ready=!!plan&&conflicts.every(value=>choices[value.id]);
-  function confirm(){if(!ready)return;Alert.alert('确认同步音乐库？','将按预览合并歌曲收藏、目录收藏、歌单、音频匹配和歌词选择；冲突按所选版本处理。历史、统计、队列与凭据保留本机。',[{text:'取消',style:'cancel'},{text:'确认同步两端',onPress:()=>{void perform(()=>store.commit(choices));}}]);}
+  function confirm(){if(!ready||!state.preview)return;const preview=state.preview,confirmedChoices={...choices};Alert.alert('确认同步音乐库？','将按预览合并歌曲收藏、目录收藏、歌单、音频匹配和歌词选择；冲突按所选版本处理。历史、统计、队列与凭据保留本机。',[{text:'取消',style:'cancel'},{text:'确认同步两端',onPress:()=>{void perform(()=>store.commit(confirmedChoices,preview));}}]);}
   const version=(record:SyncRecord|undefined)=>record&&!record.deleted?record:undefined;
   const playlistDetails=details?.kind==='playlist'?details.payload as LocalPlaylist:undefined;
   return <View style={{marginVertical:10}}>{button('WebDAV多设备同步',show,false,'cloud-sync-open')}
