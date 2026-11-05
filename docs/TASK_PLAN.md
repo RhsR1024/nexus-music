@@ -1,3 +1,7 @@
+## 2026-11-05 下载批量选择独立回归
+
+真实第二任务按钮与取消2/2屏障候选，Release 1/0/0、251.875秒、sourceUnchanged及五图亲看通过；产品未改，旧云端失败未关闭。下一清洁交付并继续J25跨Tab搜索状态。见[回执](2026-11-05-download-batch-selection-report.md)。
+
 ## 2026-11-05 `withBase` 跨行候选
 
 J37/F27 新增一对一组合字素跨 TextKit 行分段绘制和普通字号注音间距。1022 业务检查、完整 native、正常/XXXL Release各1/0/0、三图亲看及 dirty unsigned 设备包通过；XXXL长段首末滚动覆盖，原失败保留。阶段交付及完整功能包仍开放；下一先独立验证最新云端下载取消2/2失败候选，再继续J25跨Tab搜索上下文。详见[回执](2026-11-05-ttml-withbase-wrap-report.md)。

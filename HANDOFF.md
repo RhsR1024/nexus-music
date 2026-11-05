@@ -1,3 +1,7 @@
+## 2026-11-05 下载批量选择候选独立回归通过
+
+旧f9121ca云端唯一下载组失败在取消2/2等待。既有候选使用真实第二任务按钮并确认2/2后取消；未改产品或减少断言。正式Release `1793842666037` 为1/0/0、251.875秒、sourceUnchanged=true，heldFull=2/fullFinished=2/authFailures=0，五图来源核验与亲看通过；仅合成WAV机制回归，不冒充真实平台/Range/实体后台。详见[回执](docs/2026-11-05-download-batch-selection-report.md)。下一提交候选、生成含注音修复的清洁包并核对新CI，再推进J25跨Tab搜索状态。
+
 ## 2026-11-05 `withBase` 注音跨行候选验证中
 
 已实现 J37/F27 一对一组合字素 `withBase` 自然换行与 TextKit 行配对绘制。1022 项业务检查、完整 native、正常/XXXL Release 各1/0/0、三张截图亲看与 dirty unsigned 设备包通过；两轮成功安装 bundle 相同，均 sourceUnchanged。XXXL 559pt 长段在418.6667pt视口通过首末两图连续覆盖，首轮同帧条件失败保留。下载批量选择独立改动不混入本批；最新 f9121ca 云端失败恰在该独立用例的取消2/2等待，下一优先单独验证，再继续J25搜索跨Tab草稿保留。详见[回执](docs/2026-11-05-ttml-withbase-wrap-report.md)与[场景](docs/ui-spec/ttml-withbase-wrap-2026-11-05.md)；清洁交付/云端/实体签名及完整J37/F27仍开放。
