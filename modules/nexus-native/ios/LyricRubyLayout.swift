@@ -17,6 +17,11 @@ enum LyricRubyAlignment: String {
 enum LyricRubyLayout {
   static let wordJoiner = "\u{2060}"
 
+  struct RubyBaseSegment {
+    let lineIndex: Int
+    let baseIndices: [Int]
+  }
+
   struct ProtectedText {
     let text: String
     private let sourceLength: Int
@@ -105,6 +110,44 @@ enum LyricRubyLayout {
       }
     }
     return result
+  }
+
+  static func withBaseSegments(
+    baseRanges: [NSRange],
+    lineRanges: [NSRange]
+  ) -> [RubyBaseSegment]? {
+    guard !baseRanges.isEmpty, !lineRanges.isEmpty,
+          baseRanges.allSatisfy({ $0.length > 0 }),
+          lineRanges.allSatisfy({ $0.length > 0 }) else { return nil }
+
+    var baseCursor = 0
+    for range in baseRanges {
+      guard range.location >= baseCursor else { return nil }
+      baseCursor = NSMaxRange(range)
+    }
+    var lineCursor = 0
+    for range in lineRanges {
+      guard range.location >= lineCursor else { return nil }
+      lineCursor = NSMaxRange(range)
+    }
+
+    var segments: [RubyBaseSegment] = []
+    var seen = Set<Int>()
+    for (lineIndex, lineRange) in lineRanges.enumerated() {
+      let indices = baseRanges.indices.filter {
+        NSIntersectionRange(baseRanges[$0], lineRange).length > 0
+      }
+      guard !indices.isEmpty,
+            let first = indices.first, let last = indices.last,
+            last - first + 1 == indices.count,
+            indices.allSatisfy({
+              NSIntersectionRange(baseRanges[$0], lineRange).length == baseRanges[$0].length &&
+                seen.insert($0).inserted
+            }) else { return nil }
+      segments.append(RubyBaseSegment(lineIndex: lineIndex, baseIndices: indices))
+    }
+    guard seen.count == baseRanges.count else { return nil }
+    return segments
   }
 
   static func horizontalOrigins(

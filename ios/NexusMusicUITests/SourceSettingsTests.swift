@@ -870,6 +870,38 @@ final class SourceSettingsTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(alignedRow.frame.minY,lyricList.frame.minY,"Start alignment must remain inside the large-text reader")
         XCTAssertLessThanOrEqual(alignedRow.frame.maxY,lyricList.frame.maxY,"End alignment must remain inside the large-text reader")
       }
+      let wrappedRow=lyricList.buttons.matching(NSPredicate(format:"label CONTAINS %@","注音：abcdefghijklmnopqrst")).firstMatch
+      reach(wrappedRow,viewportID:"full-lyrics-list")
+      XCTAssertTrue(waitForHittable(wrappedRow,timeout:10),"The wrapped with-base ruby row must remain reachable")
+      XCTAssertGreaterThan(wrappedRow.frame.height,alignedRow.frame.height,"A 20-grapheme with-base row must occupy more vertical space than the three-word aligned row")
+      if largeText {
+        let geometry=XCTAttachment(string:"wrapped=\(wrappedRow.frame); viewport=\(lyricList.frame)")
+        geometry.name="Wrapped with-base ruby geometry";geometry.lifetime = .keepAlways;add(geometry)
+        if wrappedRow.frame.height>lyricList.frame.height {
+          XCTAssertLessThanOrEqual(wrappedRow.frame.height,lyricList.frame.height*1.5,"Two overlapping reader captures must cover the complete wrapped row")
+          func revealWrappedEdge(bottom:Bool)->Bool{
+            for _ in 0..<24 {
+              let viewport=lyricList.frame,edge=bottom ? wrappedRow.frame.maxY:wrappedRow.frame.minY
+              let lower=bottom ? viewport.maxY-viewport.height*0.25:viewport.minY
+              let upper=bottom ? viewport.maxY:viewport.minY+viewport.height*0.25
+              if edge>=lower && edge<=upper{return true}
+              let up=edge>upper
+              let start=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:up ? 0.6:0.4))
+              let end=lyricList.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:up ? 0.4:0.6))
+              start.press(forDuration:0.05,thenDragTo:end)
+            }
+            return false
+          }
+          XCTAssertTrue(revealWrappedEdge(bottom:false),"The first base line and its readings must enter the reader")
+          let topImage=XCTAttachment(screenshot:app.screenshot());topImage.name="Wrapped with-base ruby first lines at accessibility XXXL";topImage.lifetime = .keepAlways;add(topImage)
+          XCTAssertTrue(revealWrappedEdge(bottom:true),"The final base line and its readings must enter the reader")
+        } else {
+          XCTAssertTrue(revealFullyInLyricList(wrappedRow),"The complete bounded wrapped ruby row must enter the large-text reader")
+        }
+      } else {
+        XCTAssertTrue(revealFullyInLyricList(wrappedRow),"The complete wrapped with-base ruby row must enter the reader viewport")
+      }
+      let wrappedImage=XCTAttachment(screenshot:app.screenshot());wrappedImage.name=largeText ? "Wrapped with-base ruby at accessibility XXXL":"Wrapped with-base ruby across multiple base lines";wrappedImage.lifetime = .keepAlways;add(wrappedImage)
       let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name=largeText ? "AMLL, double-sided and aligned ruby at accessibility XXXL":"AMLL, rtc, rbc, double-sided and aligned annotations rendered around base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
       if largeText {return}
     }

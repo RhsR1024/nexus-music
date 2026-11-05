@@ -162,12 +162,16 @@ final class NexusLyricLineView: ExpoView {
       if nextWords.isEmpty {
         nextSparseCues = LyricCueRanges.decode(text: text, cues: rawCues)
       }
-      // U+2060 keeps each annotated base span as one TextKit line-breaking
-      // unit. The renderer's layout delegate alone does not stop CJK breaks
-      // inside a word-wrapped range.
+      let protectedRanges = nextRuby
+        .filter { item in
+          guard item.alignment == .withBase else { return true }
+          let base = (text as NSString).substring(with: item.range)
+          return LyricRubyLayout.graphemes(base).count != LyricRubyLayout.graphemes(item.text).count
+        }
+        .map(\.range)
       let protected = LyricRubyLayout.protect(
         text: text,
-        ranges: nextRuby.map(\.range)
+        ranges: protectedRanges
       )
       storage.setAttributedString(NSAttributedString(
         string: protected.text,
@@ -256,61 +260,115 @@ final class NexusLyricLineView: ExpoView {
     for item in rubyAnnotations {
       let glyphs = manager.glyphRange(forCharacterRange: item.range, actualCharacterRange: nil)
       guard glyphs.length > 0 else { continue }
-      var lineGlyphs = NSRange()
-      _ = manager.lineFragmentRect(forGlyphAt: glyphs.location, effectiveRange: &lineGlyphs)
-      let firstLineGlyphs = NSIntersectionRange(glyphs, lineGlyphs)
-      let region = firstLineGlyphs.length > 0 ? manager.boundingRect(forGlyphRange: firstLineGlyphs, in: container) : .zero
-      guard region.width > 0 else { continue }
       let graphemes = LyricRubyLayout.graphemes(item.text)
       guard !graphemes.isEmpty else { continue }
-      var font = textFont.withSize(naturalSize)
-      func glyphWidths() -> [CGFloat] {
-        graphemes.map { ($0 as NSString).size(withAttributes: [.font: font]).width }
+
+      var lineFragments: [(range: NSRange, region: CGRect)] = []
+      var glyphCursor = glyphs.location
+      while glyphCursor < NSMaxRange(glyphs) {
+        var lineGlyphs = NSRange()
+        _ = manager.lineFragmentRect(forGlyphAt: glyphCursor, effectiveRange: &lineGlyphs)
+        let intersection = NSIntersectionRange(glyphs, lineGlyphs)
+        if intersection.length > 0 {
+          let characterRange = manager.characterRange(
+            forGlyphRange: intersection,
+            actualGlyphRange: nil
+          )
+          let region = manager.boundingRect(forGlyphRange: intersection, in: container)
+          if region.width > 0 {
+            lineFragments.append((characterRange, region))
+          }
+        }
+        let nextCursor = NSMaxRange(lineGlyphs)
+        guard nextCursor > glyphCursor else { break }
+        glyphCursor = nextCursor
       }
-      var widths = glyphWidths(),naturalWidth = widths.reduce(0, +)
-      if naturalWidth > region.width {
-        font = font.withSize(max(7, naturalSize * region.width / naturalWidth))
-        widths = glyphWidths()
-        naturalWidth = widths.reduce(0, +)
-      }
-      let height = ceil(font.lineHeight)
+
       let source = storage.string as NSString
       let baseText = source.substring(with: item.range)
-      let baseWidths: [CGFloat] = LyricRubyLayout.graphemeRanges(in: baseText).map { localRange in
-        let range = NSRange(
+      let baseRanges = LyricRubyLayout.graphemeRanges(in: baseText).map { localRange in
+        NSRange(
           location: item.range.location + localRange.location,
           length: localRange.length
         )
-        return manager.boundingRect(
+      }
+      let baseRects: [CGRect] = baseRanges.map { range in
+        manager.boundingRect(
           forGlyphRange: manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil),
           in: container
-        ).width
-      }
-      let origins = LyricRubyLayout.horizontalOrigins(
-        regionWidth: region.width,
-        glyphWidths: widths,
-        alignment: item.alignment,
-        baseWidths: baseWidths
-      )
-      guard origins.count == graphemes.count else { continue }
-      let y: CGFloat
-      switch item.position {
-      case .before:
-        guard rubyInset > 0 else { continue }
-        let baseTop = rubyInset + region.minY
-        // Each wrapped base line owns its annotation row. Clamping to the
-        // initial inset pulls every later annotation back above the first line.
-        y = max(0, baseTop - height - 1)
-      case .after:
-        guard rubyAfterInset > 0 else { continue }
-        let baseBottom = rubyInset + region.maxY
-        y = max(0, min(bounds.height - rubyAfterInset, baseBottom + 1))
-      }
-      for (index, grapheme) in graphemes.enumerated() {
-        (grapheme as NSString).draw(
-          at: CGPoint(x: region.minX + origins[index], y: y),
-          withAttributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.9)]
         )
+      }
+      let baseWidths = baseRects.map(\.width)
+
+      var segments: [(region: CGRect, baseWidths: [CGFloat], rubyIndices: [Int])] = []
+      if item.alignment == .withBase,
+         graphemes.count == baseRanges.count,
+         let grouped = LyricRubyLayout.withBaseSegments(
+           baseRanges: baseRanges,
+           lineRanges: lineFragments.map(\.range)
+         ) {
+        segments = grouped.map { group in
+          var region = CGRect.null
+          for index in group.baseIndices {
+            region = region.isNull ? baseRects[index] : region.union(baseRects[index])
+          }
+          return (
+            region: region.isNull ? lineFragments[group.lineIndex].region : region,
+            baseWidths: group.baseIndices.map { baseWidths[$0] },
+            rubyIndices: group.baseIndices
+          )
+        }
+      } else {
+        guard let firstLine = lineFragments.first else { continue }
+        segments = [(
+          region: firstLine.region,
+          baseWidths: baseWidths,
+          rubyIndices: Array(graphemes.indices)
+        )]
+      }
+
+      var font = textFont.withSize(naturalSize)
+      var widths = graphemes.map { ($0 as NSString).size(withAttributes: [.font: font]).width }
+      var scale = CGFloat(1)
+      for segment in segments {
+        let naturalWidth = segment.rubyIndices.reduce(CGFloat(0)) { $0 + widths[$1] }
+        if naturalWidth > segment.region.width {
+          scale = min(scale, segment.region.width / naturalWidth)
+        }
+      }
+      if scale < 1 {
+        font = font.withSize(max(7, naturalSize * scale))
+        widths = graphemes.map { ($0 as NSString).size(withAttributes: [.font: font]).width }
+      }
+
+      let height = ceil(font.lineHeight)
+      for segment in segments {
+        let segmentGraphemes = segment.rubyIndices.map { graphemes[$0] }
+        let segmentWidths = segment.rubyIndices.map { widths[$0] }
+        let origins = LyricRubyLayout.horizontalOrigins(
+          regionWidth: segment.region.width,
+          glyphWidths: segmentWidths,
+          alignment: item.alignment,
+          baseWidths: segment.baseWidths
+        )
+        guard origins.count == segmentGraphemes.count else { continue }
+        let y: CGFloat
+        switch item.position {
+        case .before:
+          guard rubyInset > 0 else { continue }
+          let baseTop = rubyInset + segment.region.minY
+          y = max(0, baseTop - height - 1)
+        case .after:
+          guard rubyAfterInset > 0 else { continue }
+          let baseBottom = rubyInset + segment.region.maxY
+          y = max(0, min(bounds.height - rubyAfterInset, baseBottom + 1))
+        }
+        for (index, grapheme) in segmentGraphemes.enumerated() {
+          (grapheme as NSString).draw(
+            at: CGPoint(x: segment.region.minX + origins[index], y: y),
+            withAttributes: [.font: font, .foregroundColor: color.withAlphaComponent(0.9)]
+          )
+        }
       }
     }
   }

@@ -30,6 +30,27 @@ import Foundation
     return result
   }
 
+  static func textKitLineRanges(_ text: String, width: CGFloat, font: NSFont) -> [NSRange] {
+    let storage = NSTextStorage(string: text, attributes: [.font: font])
+    let manager = NSLayoutManager()
+    let container = NSTextContainer(size: NSSize(width: width, height: 1000))
+    container.lineFragmentPadding = 0
+    container.lineBreakMode = .byWordWrapping
+    storage.addLayoutManager(manager)
+    manager.addTextContainer(container)
+    manager.ensureLayout(for: container)
+    var result: [NSRange] = []
+    var glyph = 0
+    let all = manager.numberOfGlyphs
+    while glyph < all {
+      var glyphRange = NSRange()
+      _ = manager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: &glyphRange)
+      result.append(manager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil))
+      glyph = NSMaxRange(glyphRange)
+    }
+    return result
+  }
+
   static func main() {
     let widths: [CGFloat] = [10, 10, 10]
     let source = "起边中间到尾"
@@ -66,6 +87,32 @@ import Foundation
     precondition(plainLines.contains { $0.contains("到") != $0.contains("尾") })
     precondition(protectedLines.contains { $0.contains("到") && $0.contains("尾") })
     precondition(!protectedLines.contains { $0.contains("到") != $0.contains("尾") })
+
+    let longBase = "一二三四五六"
+    let longRanges = LyricRubyLayout.graphemeRanges(in: longBase)
+    let wrappedLineRanges = textKitLineRanges(
+      longBase,
+      width: unit * 2 + 0.5,
+      font: font
+    )
+    let wrappedSegments = LyricRubyLayout.withBaseSegments(
+      baseRanges: longRanges,
+      lineRanges: wrappedLineRanges
+    )
+    precondition(wrappedSegments?.count == 3)
+    precondition(wrappedSegments?.map(\.baseIndices) == [[0, 1], [2, 3], [4, 5]])
+    precondition(LyricRubyLayout.withBaseSegments(
+      baseRanges: [NSRange(location: 0, length: 2)],
+      lineRanges: [NSRange(location: 0, length: 1)]
+    ) == nil)
+    precondition(LyricRubyLayout.withBaseSegments(
+      baseRanges: [NSRange(location: 0, length: 1), NSRange(location: 1, length: 1)],
+      lineRanges: [NSRange(location: 0, length: 2), NSRange(location: 1, length: 1)]
+    ) == nil)
+    precondition(LyricRubyLayout.withBaseSegments(
+      baseRanges: [NSRange(location: 0, length: 1), NSRange(location: 2, length: 1)],
+      lineRanges: [NSRange(location: 0, length: 1)]
+    ) == nil)
     precondition(close(LyricRubyLayout.horizontalOrigins(regionWidth: 100, glyphWidths: widths, alignment: .start), [0, 10, 20]))
     precondition(close(LyricRubyLayout.horizontalOrigins(regionWidth: 100, glyphWidths: widths, alignment: .center), [35, 45, 55]))
     precondition(close(LyricRubyLayout.horizontalOrigins(regionWidth: 100, glyphWidths: widths, alignment: .end), [70, 80, 90]))
@@ -78,6 +125,6 @@ import Foundation
     precondition(LyricRubyLayout.horizontalOrigins(regionWidth: 100, glyphWidths: [-1], alignment: .center).isEmpty)
     precondition(LyricRubyAlignment(raw: "spaceBetween") == .spaceBetween)
     precondition(LyricRubyAlignment(raw: "unsupported") == .center)
-    print("PASS ruby layout: six alignments, TextKit base protection, grapheme boundaries, with-base fallback and invalid inputs")
+    print("PASS ruby layout: six alignments, TextKit base protection, grapheme boundaries, wrapped with-base pairing and invalid inputs")
   }
 }
