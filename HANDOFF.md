@@ -1,3 +1,7 @@
+## 2026-11-05 本地收藏派生歌单
+
+设备歌单域默认“我喜欢的（仅本机）”此前恒为空。现改为本机音频`favorite`标志的派生视图，列表计数、封面、详情和批量选择共用同一结果；取消收藏走本机标志，不双写歌单成员，也不迁移`device.playlists.v1`。自建设备歌单、音乐库双体系隔离和唯一权威队列不变。最终Release`SourceUITests-1793850809039`的`testLocalPlaylistDualSystem`为1/0/0、84.332秒、`sourceUnchanged=true`；源码digest`a328cb8c…15dcaf`、安装bundle`50b44edd…d31dcef`、result info`7a67d636…93512`，6张1290×2796截图已亲看收藏恢复、派生详情、取消收藏空态和计数。`npm run check`1026/1026、完整native与diff检查通过；r1–r3失败/替代原件保留。见[专项回执](docs/2026-11-05-local-liked-playlist-report.md)。本批不关闭F11/F23、实体机、签名、iOS27终态或项目；无新增Sollin采集。
+
 ## 2026-11-05 音乐库随机播放清除单曲循环
 
 音乐库歌单、收藏和最近播放的“随机播放”原先只写`shuffle:true`，会保留队列先前持久化的`repeat:'one'`，造成随机与单曲同时选中且曲尾重复当前曲。现与相似歌曲/发现页一致改为`{repeat:'off',shuffle:true}`，不新增队列或偏好镜像。正式Release`SourceUITests-1793848700604`为1/0/0、210.308秒、`sourceUnchanged=true`；测试覆盖播放全部→单曲→返回音乐库随机→队列断言随机选中/单曲未选中，并在关闭前恢复顺序模式；1290×2796关键图已亲看，1025/1025检查通过。产品提交`17246a2`的clean unsigned IPA为17,859,667字节、SHA-256`eb9eb67d…f56b13`，151项archive/IPA核验通过；T7阶段473份/290,103,144字节0差异，源码tar与commit 1087个tracked文件一致，源证据保留且零删除。产品与docs收尾`e6e5668`已正常push并实核1运行/1排队：`41949520533/a328ee6`运行、`41962294108/e6e5668`唯一pending。详见[专项回执](docs/2026-11-05-library-random-report.md)。云端终态、实体机、自然曲尾、后台/锁屏及签名继续开放。

@@ -12,7 +12,7 @@ import {LocalAudioTools} from './LocalAudioTools.tsx';
 import {RetainedAudio} from './RetainedAudio.tsx';
 import {Cover} from './Cover.tsx';
 import {LocalPlaylistPicker} from './LocalPlaylistPicker.tsx';
-import {defaultDevicePlaylistId} from '../domain/devicePlaylist.ts';
+import {defaultDevicePlaylistId,devicePlaylistDisplayEntries,favoriteDevicePlaylistEntries} from '../domain/devicePlaylist.ts';
 import {trackKey,type Track} from '../domain/track.ts';
 import {BatchSelectionBar,SelectionMark,type BatchAction} from './BatchSelectionBar.tsx';
 import {selectionNone,selectionEnter,selectionToggle,selectionAll,selectionByListOrder} from '../domain/selection.ts';
@@ -29,10 +29,12 @@ export function LocalAudioLibrary({services}:{services:Services}) {
   const [selection,setSelection]=useState(selectionNone),[batchBusy,setBatchBusy]=useState(false);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const sort=preferences.localAudioSortField,direction=preferences.localAudioSortDirection;
+  const defaultEntries=useMemo(()=>favoriteDevicePlaylistEntries(files),[files]);
+  const playlistEntries=(playlist:typeof localPlaylists[number])=>playlist.id===defaultDevicePlaylistId?defaultEntries:devicePlaylistDisplayEntries(playlist,files);
   function setSort(field:LocalSortField,direction:LocalSortDirection){void services.preferences.update({localAudioSortField:field,localAudioSortDirection:direction}).catch(()=>setMessage('排序未保存，原顺序保留，请重试'));}
   const [localSelected,setLocalSelected]=useState<string|null>(null),[localName,setLocalName]=useState(''),[newLocalName,setNewLocalName]=useState('');
   const selectedLocal=localPlaylists.find(playlist=>playlist.id===localSelected);
-  const detailEntries=selectedLocal?.entries??[];
+  const detailEntries=selectedLocal?playlistEntries(selectedLocal):[];
   const selectedEntries=selectionByListOrder(selection,detailEntries,entry=>entry.id);
   const detailSelecting=selection.active&&mode==='playlists'&&!!selectedLocal;
   const filtered=useMemo(()=>viewLocalAudio(files,query,sort,direction),[files,query,sort,direction]);
@@ -60,8 +62,19 @@ export function LocalAudioLibrary({services}:{services:Services}) {
     if(action==='pl-remove'){
       if(!selectedLocal){setMessage('移出歌单仅在本地歌单详情可用');return;}
       setBatchBusy(true);
-      try{await services.devicePlaylists.removeEntries(selectedLocal.id,selected.map(item=>item.id));clearSelection();setMessage(`已从歌单移除 ${tracks.length} 首`);}
-      catch{setMessage('移除未保存，请重试');}finally{setBatchBusy(false);}
+      try{
+        if(selectedLocal.id===defaultDevicePlaylistId)await services.localAudio.setFavorites(selected.map(item=>item.id),false);
+        else await services.devicePlaylists.removeEntries(selectedLocal.id,selected.map(item=>item.id));
+        clearSelection();setMessage(selectedLocal.id===defaultDevicePlaylistId?`已取消收藏 ${tracks.length} 首（仅本机）`:`已从歌单移除 ${tracks.length} 首`);
+      }
+      catch{setMessage(selectedLocal.id===defaultDevicePlaylistId?'取消收藏未保存，请重试':'移除未保存，请重试');}finally{setBatchBusy(false);}
+      return;
+    }
+    if(action==='unfavorite'){
+      if(selectedLocal?.id!==defaultDevicePlaylistId){setMessage('取消收藏仅在“我喜欢的”歌单可用');return;}
+      setBatchBusy(true);
+      try{await services.localAudio.setFavorites(selected.map(item=>item.id),false);clearSelection();setMessage(`已取消收藏 ${tracks.length} 首（仅本机）`);}
+      catch{setMessage('取消收藏未保存，请重试');}finally{setBatchBusy(false);}
       return;
     }
     if(action==='delete'){removeIndex(selected.map(item=>item.id));return;}
@@ -107,15 +120,17 @@ export function LocalAudioLibrary({services}:{services:Services}) {
       {mode==='playlists'?(selectedLocal?<View style={{gap:10,flex:1}}>
         <Text style={{fontSize:22,fontWeight:'700',color:p.text}}>{selectedLocal.title}</Text>
         <View style={{flexDirection:'row',gap:10,flexWrap:'wrap',alignItems:'center'}}>
-          {!detailSelecting&&<><>{field({value:localName,onChangeText:setLocalName,placeholder:'歌单名称',label:'本地歌单名称'})}</>
-          {button('保存名称',()=>{void services.devicePlaylists.rename(selectedLocal.id,localName).then(()=>setMessage('本地歌单已重命名')).catch(()=>setMessage('本地歌单未重命名，请重试'));},!localName.trim())}
-          {selectedLocal.id!==defaultDevicePlaylistId&&button('删除歌单',()=>{void services.devicePlaylists.remove(selectedLocal.id).then(()=>{setLocalSelected(null);setMessage(`已删除本地歌单「${selectedLocal.title}」`);}).catch(()=>setMessage('本地歌单未删除，请重试'));})}</>}
+          {!detailSelecting&&<>{selectedLocal.id===defaultDevicePlaylistId?<Text style={{flex:1,color:p.secondary,fontSize:12,lineHeight:19}}>自动显示本机收藏的歌曲；取消收藏会同步移出此歌单。</Text>:<>
+            <>{field({value:localName,onChangeText:setLocalName,placeholder:'歌单名称',label:'本地歌单名称'})}</>
+            {button('保存名称',()=>{void services.devicePlaylists.rename(selectedLocal.id,localName).then(()=>setMessage('本地歌单已重命名')).catch(()=>setMessage('本地歌单未重命名，请重试'));},!localName.trim())}
+            {button('删除歌单',()=>{void services.devicePlaylists.remove(selectedLocal.id).then(()=>{setLocalSelected(null);setMessage(`已删除本地歌单「${selectedLocal.title}」`);}).catch(()=>setMessage('本地歌单未删除，请重试'));})}
+          </>}</>}
           {button('返回本地歌单',()=>{clearSelection();setLocalSelected(null);},batchBusy)}
         </View>
-        {detailSelecting&&<BatchSelectionBar count={selectedEntries.length} total={detailEntries.length} actions={['favorite','playlist','next','pl-remove']} onAction={action=>{void batch(action,selectedEntries.map(entry=>({id:entry.id,track:entry.track})));}} onSelectAll={()=>setSelection(selectedEntries.length===detailEntries.length?{active:true,ids:[]}:selectionAll(selection,detailEntries.map(entry=>entry.id)))} onCancel={clearSelection} allSelected={detailEntries.length>0&&selectedEntries.length===detailEntries.length} busy={batchBusy} testPrefix="local-playlist-batch"/>}
+        {detailSelecting&&<BatchSelectionBar count={selectedEntries.length} total={detailEntries.length} actions={selectedLocal.id===defaultDevicePlaylistId?['unfavorite','playlist','next']:['favorite','playlist','next','pl-remove']} onAction={action=>{void batch(action,selectedEntries.map(entry=>({id:entry.id,track:entry.track})));}} onSelectAll={()=>setSelection(selectedEntries.length===detailEntries.length?{active:true,ids:[]}:selectionAll(selection,detailEntries.map(entry=>entry.id)))} onCancel={clearSelection} allSelected={detailEntries.length>0&&selectedEntries.length===detailEntries.length} busy={batchBusy} testPrefix="local-playlist-batch"/>}
         <FlatList data={detailEntries} keyExtractor={entry=>entry.id} ListEmptyComponent={<Text style={{color:p.secondary}}>此本地歌单暂无歌曲</Text>} renderItem={({item,index})=><View style={{paddingVertical:10,borderBottomWidth:1,borderBottomColor:p.border,gap:8}}>
           <Pressable testID={`local-playlist-track-${index}`} accessibilityRole="button" accessibilityLabel={`${detailSelecting?(selection.ids.includes(item.id)?'已选，':'未选，'):'播放'}${item.track.title}`} accessibilityHint={detailSelecting?'点按切换选择':'播放此歌单'} accessibilityState={{selected:detailSelecting&&selection.ids.includes(item.id)}} disabled={batchBusy} onLongPress={()=>{Keyboard.dismiss();setSelection(selectionEnter(item.id));}} onPress={()=>detailSelecting?setSelection(selectionToggle(selection,item.id)):services.playTracks(detailEntries.map(entry=>entry.track),index)} style={{flexDirection:'row',gap:10,alignItems:'center'}}>{detailSelecting&&<SelectionMark selected={selection.ids.includes(item.id)}/>}<Cover services={services} track={item.track} size={44}/><View style={{flex:1}}><Text style={{color:p.text,fontWeight:'600'}} numberOfLines={1}>{item.track.title}</Text><Text style={{color:p.secondary,fontSize:12}} numberOfLines={1}>{item.track.artist}</Text></View></Pressable>
-          {!detailSelecting&&<View style={{flexDirection:'row',gap:10}}>{button('下一首',()=>services.addToQueue(item.track,true))}{button('移除',()=>{void services.devicePlaylists.removeEntry(selectedLocal.id,item.id).catch(()=>setMessage('移除未保存，请重试'));})}</View>}
+          {!detailSelecting&&<View style={{flexDirection:'row',gap:10}}>{button('下一首',()=>services.addToQueue(item.track,true))}{button(selectedLocal.id===defaultDevicePlaylistId?'取消收藏':'移除',()=>{const action=selectedLocal.id===defaultDevicePlaylistId?services.localAudio.setFavorites([item.id],false):services.devicePlaylists.removeEntry(selectedLocal.id,item.id);void action.then(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'已取消收藏（仅本机）':'已从歌单移除')).catch(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'取消收藏未保存，请重试':'移除未保存，请重试'));})}</View>}
         </View>}/>
       </View>:<View style={{gap:10,flex:1}}>
         <Text style={{color:p.secondary,fontSize:12,lineHeight:19}}>本地歌单只保存在当前设备，不参与云同步；与音乐库自建歌单完全隔离。</Text>
@@ -123,14 +138,14 @@ export function LocalAudioLibrary({services}:{services:Services}) {
           <>{field({value:newLocalName,onChangeText:setNewLocalName,placeholder:'新本地歌单名称',label:'新本地歌单名称'})}</>
           {button('新建本地歌单',()=>{Keyboard.dismiss();void services.devicePlaylists.create(newLocalName).then(id=>{setNewLocalName('');setLocalSelected(id);}).catch(()=>setMessage('本地歌单未创建，请重试'));},!newLocalName.trim(),'local-playlist-create')}
         </View>
-        <FlatList data={localPlaylists} keyExtractor={playlist=>playlist.id} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`打开本地歌单：${item.title} · ${item.entries.length}首`} onPress={()=>{Keyboard.dismiss();setLocalSelected(item.id);setLocalName(item.title);}} style={{paddingVertical:12,borderBottomWidth:1,borderBottomColor:p.border,flexDirection:'row',gap:12,alignItems:'center'}}>
-          <Cover services={services} track={item.entries[0]?.track} size={52}/>
-          <View style={{flex:1}}><Text style={{color:p.text,fontWeight:'600'}} numberOfLines={1}>{item.title}{item.id===defaultDevicePlaylistId?'（仅本机）':''}</Text><Text style={{color:p.secondary,fontSize:12}}>{item.entries.length} 首 · 仅本机</Text></View>
-        </Pressable>}/>
+        <FlatList data={localPlaylists} keyExtractor={playlist=>playlist.id} renderItem={({item})=>{const entries=playlistEntries(item);return <Pressable accessibilityRole="button" accessibilityLabel={`打开本地歌单：${item.title} · ${entries.length}首`} onPress={()=>{Keyboard.dismiss();setLocalSelected(item.id);setLocalName(item.title);}} style={{paddingVertical:12,borderBottomWidth:1,borderBottomColor:p.border,flexDirection:'row',gap:12,alignItems:'center'}}>
+          <Cover services={services} track={entries[0]?.track} size={52}/>
+          <View style={{flex:1}}><Text style={{color:p.text,fontWeight:'600'}} numberOfLines={1}>{item.title}{item.id===defaultDevicePlaylistId?'（仅本机）':''}</Text><Text style={{color:p.secondary,fontSize:12}}>{entries.length} 首 · 仅本机</Text></View>
+        </Pressable>;}}/>
       </View>):<>{group&&button(`返回${mode==='albums'?'专辑':mode==='folders'?'文件夹':'艺术家'}`,()=>setGroup(null))}
       {mode==='songs'||group?<FlatList style={{flex:1}} data={shown} keyboardShouldPersistTaps="handled" keyExtractor={file=>file.id} initialNumToRender={12} windowSize={5} ListEmptyComponent={<Text style={{color:p.secondary}}>没有匹配的本地音频</Text>} renderItem={({item,index})=><View style={{paddingVertical:12,gap:10,borderBottomWidth:1,borderBottomColor:p.border}}>
         <Pressable testID={`local-track-${index}`} accessibilityRole="button" accessibilityLabel={`${selection.active?(selection.ids.includes(item.id)?'已选，':'未选，'):''}${item.track.title}`} accessibilityState={{selected:selection.active&&selection.ids.includes(item.id)}} disabled={batchBusy} onLongPress={()=>{Keyboard.dismiss();setSelection(selectionEnter(item.id));}} onPress={()=>selection.active?setSelection(selectionToggle(selection,item.id)):services.playTracks(shown.map(file=>file.track),index)} style={{flexDirection:'row',gap:12,alignItems:'center'}}>{selection.active&&<SelectionMark selected={selection.ids.includes(item.id)}/>}<Cover services={services} track={item.track} size={54}/><View style={{flex:1}}><Text style={{color:p.text,fontWeight:'600'}}>{item.track.title}</Text><Text style={{color:p.secondary,fontSize:12}}>{item.track.artist} · {item.extension.toUpperCase()} · {(item.bytes/1048576).toFixed(1)} MB</Text></View></Pressable>
-        {!selection.active&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{button(item.favorite?'已收藏':'收藏',()=>{void services.localAudio.setFavorites([item.id],!item.favorite).catch(()=>setMessage('收藏未保存'));})}{button('下一首',()=>services.addToQueue(item.track,true))}{button('加入歌单',()=>setAdding([item.track]))}{button('从列表移除',()=>removeIndex([item.id]),batchBusy)}{button('删除音频',()=>Alert.alert('删除此设备的音频？','歌单引用仍保留，可重新导入同一文件恢复；正在使用的音频不能删除。',[{text:'取消',style:'cancel'},{text:'删除',style:'destructive',onPress:()=>{void services.localAudio.remove(item.id).then(result=>setMessage(result.pendingCleanup?'已移出曲库，暂存文件将在下次启动清理':'音频已删除')).catch(()=>setMessage('音频正在使用或删除失败，原数据保留'));}}]))}</View>}
+        {!selection.active&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{button(item.favorite?'已收藏':'收藏',()=>{const favorite=!item.favorite;void services.localAudio.setFavorites([item.id],favorite).then(()=>setMessage(favorite?'已收藏（仅本机）':'已取消收藏（仅本机）')).catch(()=>setMessage('收藏未保存'));})}{button('下一首',()=>services.addToQueue(item.track,true))}{button('加入歌单',()=>setAdding([item.track]))}{button('从列表移除',()=>removeIndex([item.id]),batchBusy)}{button('删除音频',()=>Alert.alert('删除此设备的音频？','歌单引用仍保留，可重新导入同一文件恢复；正在使用的音频不能删除。',[{text:'取消',style:'cancel'},{text:'删除',style:'destructive',onPress:()=>{void services.localAudio.remove(item.id).then(result=>setMessage(result.pendingCleanup?'已移出曲库，暂存文件将在下次启动清理':'音频已删除')).catch(()=>setMessage('音频正在使用或删除失败，原数据保留'));}}]))}</View>}
       </View>}/>:<FlatList key={`groups-${mode}`} data={groups} numColumns={mode==='albums'?2:1} columnWrapperStyle={mode==='albums'?{justifyContent:'space-between'}:undefined} keyExtractor={group=>group.key} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`${item.name} · ${item.files.length}首`} onPress={()=>setGroup(item.key)} style={{width:mode==='albums'?'48%':'100%',marginVertical:7,padding:12,borderRadius:20,backgroundColor:p.surface,gap:10,flexDirection:mode==='albums'?'column':'row',alignItems:mode==='albums'?'flex-start':'center'}}><Cover services={services} track={item.files[0]!.track} size={mode==='albums'?Math.min(180,Math.max(80,(width-76)/2-24)):48}/><View style={{gap:5,flexShrink:1}}><Text numberOfLines={2} style={{color:p.text,fontWeight:'600'}}>{item.name}</Text><Text style={{color:p.secondary,fontSize:12}}>{item.files.length} 首</Text></View></Pressable>}/>}</>}
       </View>
       <LocalScanSettings store={services.localAudio} visible={scanOpen} onClose={()=>setScanOpen(false)}/>

@@ -4315,13 +4315,49 @@ final class SourceSettingsTests: XCTestCase {
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
     func image(_ name:String){let a=XCTAttachment(screenshot:app.screenshot());a.name=name;a.lifetime = .keepAlways;add(a)}
-    XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
+    XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap()
+    // Simulator storage persists across local retries. Clear old favorite
+    // flags through the normal row control so this run starts from a known
+    // default-playlist count without deleting imported audio.
+    for _ in 0..<20{
+      let saved=app.buttons["已收藏"].firstMatch
+      if !saved.exists{break}
+      let before=app.buttons.matching(NSPredicate(format:"label == %@","已收藏")).count
+      saved.tap()
+      let removed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons.matching(NSPredicate(format:"label == %@","已收藏")).count == before-1},object:nil)
+      XCTAssertEqual(XCTWaiter.wait(for:[removed],timeout:5),.completed)
+    }
+    app.buttons["导入音频文件"].tap()
     selectLocalFixture("Synthetic Tagged Tone",in:app)
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:15))
+    let search=app.textFields["搜索本地歌曲艺术家专辑"];XCTAssertTrue(search.waitForExistence(timeout:8));search.tap();search.typeText("Synthetic");search.typeText("\n")
+    let favorite=app.buttons["收藏"].firstMatch
+    XCTAssertTrue(favorite.waitForExistence(timeout:8));favorite.tap()
+    XCTAssertTrue(app.buttons["已收藏"].firstMatch.waitForExistence(timeout:8))
     app.buttons["歌单"].tap()
-    image("Local playlists default list")
-    let liked=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","打开本地歌单：我喜欢的 · ")).firstMatch
-    XCTAssertTrue(liked.waitForExistence(timeout:10),"The default device-only playlist must always exist")
+    image("Local playlists default list with derived favorite")
+    let liked=app.buttons["打开本地歌单：我喜欢的 · 1首"]
+    XCTAssertTrue(liked.waitForExistence(timeout:10),"The default device-only playlist must show its local favorite projection")
+    liked.tap()
+    XCTAssertTrue(app.buttons["local-playlist-track-0"].waitForExistence(timeout:8),"A favorite local file must appear in the default playlist")
+    image("Local liked playlist derived detail")
+    app.buttons["local-playlist-track-0"].press(forDuration:1.1)
+    XCTAssertTrue(app.buttons["local-playlist-batch-action-取消收藏"].waitForExistence(timeout:8))
+    app.buttons["local-playlist-batch-cancel-selection"].tap()
+    XCTAssertTrue(app.buttons["取消收藏"].firstMatch.waitForExistence(timeout:8))
+    app.buttons["取消收藏"].firstMatch.tap()
+    XCTAssertTrue(app.staticTexts["此本地歌单暂无歌曲"].waitForExistence(timeout:8))
+    image("Local liked playlist empty after unfavorite")
+    app.buttons["返回本地歌单"].tap()
+    XCTAssertTrue(app.buttons["打开本地歌单：我喜欢的 · 0首"].waitForExistence(timeout:8))
+    app.buttons["歌曲"].tap()
+    app.buttons["收藏"].firstMatch.tap()
+    XCTAssertTrue(app.buttons["已收藏"].firstMatch.waitForExistence(timeout:8))
+    XCTAssertTrue(app.staticTexts["已收藏（仅本机）"].waitForExistence(timeout:8))
+    app.buttons["歌单"].tap()
+    XCTAssertTrue(app.buttons["打开本地歌单：我喜欢的 · 1首"].waitForExistence(timeout:8))
+    image("Local favorite projection restored")
+    app.buttons["歌单"].tap()
     // The device playlist store persists across runs; a run-unique suffix
     // keeps every query unambiguous despite leftovers from failed runs.
     let suffix=Int(Date().timeIntervalSince1970)%100000

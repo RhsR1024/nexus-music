@@ -6,6 +6,7 @@ import { validateTrack, type Track } from './track.ts';
 export interface DevicePlaylistEntry { id: string; track: Track }
 export interface DevicePlaylist { id: string; title: string; entries: readonly DevicePlaylistEntry[]; createdAt: number; updatedAt: number }
 export interface DevicePlaylistState { version: 1; playlists: readonly DevicePlaylist[] }
+export interface FavoriteDeviceAudio { id: string; favorite?: boolean; track: Track }
 
 export const defaultDevicePlaylistId = 'liked-local';
 export const defaultDevicePlaylistTitle = '我喜欢的';
@@ -13,6 +14,17 @@ export const defaultDevicePlaylistTitle = '我喜欢的';
 export function devicePlaylistEntries(tracks: readonly Track[], entryId: (index: number) => string): readonly DevicePlaylistEntry[] {
   tracks.forEach(validateTrack);
   return tracks.map((track, index) => ({ id: entryId(index), track }));
+}
+
+// The default device playlist is a derived view over local-audio favorite
+// flags. Keeping one source of truth avoids a second membership record that
+// could disagree after imports, removals or restarts.
+export function favoriteDevicePlaylistEntries(files: readonly FavoriteDeviceAudio[]): readonly DevicePlaylistEntry[] {
+  return files.filter(file => file.favorite === true).map(file => ({ id: file.id, track: file.track }));
+}
+
+export function devicePlaylistDisplayEntries(playlist: DevicePlaylist, favorites: readonly FavoriteDeviceAudio[]): readonly DevicePlaylistEntry[] {
+  return playlist.id === defaultDevicePlaylistId ? favoriteDevicePlaylistEntries(favorites) : playlist.entries;
 }
 
 export function withDefaultDevicePlaylist(playlists: readonly DevicePlaylist[], now = 0): readonly DevicePlaylist[] {

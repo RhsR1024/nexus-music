@@ -1,3 +1,14 @@
+## 2026-11-05 本地“我喜欢的（仅本机）”收藏派生
+
+- [x] `devicePlaylist.ts`新增收藏派生条目与默认歌单显示选择；自建歌单继续读取持久化`entries`。
+- [x] 本地歌单列表计数/封面、详情、逐曲与批量取消收藏统一投影既有`localAudio.favorite`，无第二份成员数据或迁移。
+- [x] 默认歌单不提供改名/删除，并显示自动派生说明；歌曲页收藏反馈明确为仅本机。
+- [x] `npm run check`1026/1026、完整native、`git diff --check`通过；正式Release 1/0/0、84.332秒、`sourceUnchanged=true`。
+- [x] 6张1290×2796截图来源绑定精确xcresult并亲看；r1–r3失败/替代原件保留。
+- [ ] clean归档、T7、push与Actions队列；实体机、签名、云端终态及完整F/J。
+
+详见[专项回执](2026-11-05-local-liked-playlist-report.md)。
+
 ## 2026-11-05 音乐库随机播放清除单曲循环
 
 - [x] `LibraryHome`随机播放由只写`shuffle:true`改为同时写`repeat:'off'`，复用既有权威队列和偏好存储。

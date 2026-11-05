@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addDeviceTracks, createDevicePlaylist, defaultDevicePlaylistId, defaultDevicePlaylistTitle, deleteDevicePlaylist, normalizeDevicePlaylists, removeDeviceEntries, removeDeviceEntry, renameDevicePlaylist, withDefaultDevicePlaylist } from '../src/domain/devicePlaylist.ts';
+import { addDeviceTracks, createDevicePlaylist, defaultDevicePlaylistId, defaultDevicePlaylistTitle, deleteDevicePlaylist, devicePlaylistDisplayEntries, favoriteDevicePlaylistEntries, normalizeDevicePlaylists, removeDeviceEntries, removeDeviceEntry, renameDevicePlaylist, withDefaultDevicePlaylist } from '../src/domain/devicePlaylist.ts';
 import { DevicePlaylistStore } from '../src/storage/devicePlaylists.ts';
 import { LibraryStore } from '../src/storage/library.ts';
 import { track } from './fixtures.ts';
@@ -68,6 +68,22 @@ test('device playlist batch removal removes many entries in one committed write'
   await store.removeEntries(id, [entries[0]!.id, entries[2]!.id]);
   assert.deepEqual(store.getSnapshot().find(playlist => playlist.id === id)!.entries.map(entry => entry.id), [entries[1]!.id]);
   await assert.rejects(store.removeEntries('missing', [entries[1]!.id]), /本地歌单不存在/);
+});
+
+test('the default device playlist derives its entries and counts from local favorite flags', () => {
+  const other = { ...track, origin: { kind: 'local' as const, id: 'b'.repeat(64) } };
+  const files = [
+    { id: 'a'.repeat(64), favorite: true, track },
+    { id: 'b'.repeat(64), track: other },
+    { id: 'c'.repeat(64), favorite: false, track: { ...track, origin: { kind: 'local' as const, id: 'c'.repeat(64) } } },
+  ];
+  const defaultPlaylist = withDefaultDevicePlaylist([], 1)[0]!;
+  const customPlaylist = { id: 'custom', title: 'Custom', entries: [{ id: 'stored', track: other }], createdAt: 1, updatedAt: 1 };
+  assert.deepEqual(favoriteDevicePlaylistEntries(files).map(entry => entry.id), ['a'.repeat(64)]);
+  assert.deepEqual(devicePlaylistDisplayEntries(defaultPlaylist, files).map(entry => entry.id), ['a'.repeat(64)]);
+  assert.deepEqual(devicePlaylistDisplayEntries(customPlaylist, files).map(entry => entry.id), ['stored']);
+  files[0]!.favorite = false;
+  assert.equal(devicePlaylistDisplayEntries(defaultPlaylist, files).length, 0);
 });
 
 
