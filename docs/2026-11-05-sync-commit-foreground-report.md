@@ -57,6 +57,19 @@
 
 T7 阶段 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sync-commit-97f452e` 保存 clean 分发、xcarchive、源码 tar/补丁、xcresult、运行清单、截图索引、check/archive/UI 日志、源码/文档快照与报告。1,114 份业务文件/119,152,758 字节逐文件源/目标 SHA-256 一致，0 差异、源保留、零删除；`inventory.json` SHA-256 `bcd7818dd6c131d33934afbe791a589bcf3f6d573970994247a55278414d0dee`，`SHA256SUMS` SHA-256 `f8ce6264143798277b3ba8b63269165d33f641ed63b952d59f9df452afd428b4`，`transfer-receipt.json` SHA-256 `b92b69b91cf40127c5b13571281540dfa7ca1d934a23551781ab2f8cbd1ff47b`。内盘约 58GiB、T7 约 568GiB，未做清理或搬移个人文件。
 
+## 正常push与云端
+
+产品与交付文档已正常push，远端 main 实核 `4d57bfcb71b8306143e345e3dcd62ad687dadd91`。
+
+2026-11-05 19:43（Asia/Shanghai）从 GitHub Actions 页面核对：
+
+- `42000006592/a55f90d` 正在运行；旧睡眠提交，不含本批同步代码。
+- `42021239018/4d57bfc` 是唯一等待串行任务，包含本批产品提交 `97f452e`。
+- 原唯一 pending `42017894763/10d5420` 已由 `queue: single` 自动替换为 `cancelled`；不是手动取消或重派，运行中的旧任务保持。
+- 实测 1 运行 / 1 排队。工作流忽略 `docs/**` 与 `**/*.md`，后续 docs-only 提交不改变队列。
+
+Actions 页面与三个运行页快照 SHA-256 分别为 `567ca0380889e6bb4903ac09fe1cd9a21bb4be49e7f1faf896dba4fbd712f87e`、`70356c4a8cad80908a23b8b35ca7bb6f5c9beda7af01ce0b9900d217f040068c`、`a542be25670f22ad578ba943b6b3f1552a963eda4d0d871e4d54a96d12f50096`、`823451b2945f20cebe65e8eae0c67a8e7a1f774bc7b6a25d06fbb19cb1f015db`。本记录不把旧运行当成本批云端结果，云端终态仍待。
+
 ## 边界
 
 本批不宣称完成 F33/J54：真实双设备/私人 WebDAV、长时并发与后台持续同步、进程终止后的自动恢复、实体机/签名与 iOS27 云端终态仍开放。自动流程仍只刷新预览，配置保存仍要求用户显式读取预览，提交仍必须由用户确认。

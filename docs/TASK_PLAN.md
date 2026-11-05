@@ -8,7 +8,8 @@
 - [x] 正式Release`1793878235033`为1/0/0、246.342秒、sourceUnchanged；提交回读挂起时Home/激活不新增GET，释放后仅一次补读且无额外PUT，1图1290×2796亲看。
 - [x] clean unsigned IPA`63978bd5…41841`为17,865,361字节，manifest clean/unsigned、63载荷/8隐私清单/0签名项与源码1,104条目核验通过。
 - [x] T7阶段1,114份/119,152,758字节逐项0差异、源保留且零删除；inventory`bcd7818d…0dee`、receipt`b92b69b9…f47b`。
-- [ ] push与云端终态。
+- [x] 正常push至`4d57bfc`（产品`97f452e`）并实核远端；Actions为旧`42000006592/a55f90d`运行、`42021239018/4d57bfc`唯一等待，1运行/1排队，原pending由`queue: single`自动替换，未手动取消/重派。
+- [ ] 云端终态。
 - [ ] 真实双设备/私人服务、长时并发/后台持续、实体机/签名与完整F33/J54。
 
 见[回执](2026-11-05-sync-commit-foreground-report.md)。
