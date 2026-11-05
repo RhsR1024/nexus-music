@@ -63,7 +63,7 @@ export class QQAccountTransfer {
     // Remove our observer before our own successful publication replaces it.
     this.unsubscribe?.();this.unsubscribe=undefined;this.publish({status:'saving',generation,name:candidate.name,hint:this.value.hint});
     try{
-      await this.deps.accounts.save({platform:'tx',username:candidate.username,label:'QQ 音乐',displayName:candidate.name,capabilities:[]},candidate.session,controller.signal,candidate.expected);
+      await this.deps.accounts.save({platform:'tx',username:candidate.username,label:'QQ 音乐',displayName:candidate.name,...(candidate.expected?.avatar?{avatar:candidate.expected.avatar}:{}),capabilities:[]},candidate.session,controller.signal,candidate.expected);
       if(this.controller!==controller||controller.signal.aborted)return;
       this.stop();this.publish({status:'succeeded',generation});
     }catch{if(this.controller===controller){this.stop();this.publish({status:'failed',generation,reason:'storage'});}}

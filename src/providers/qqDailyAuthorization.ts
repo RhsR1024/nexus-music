@@ -35,7 +35,7 @@ export class QQDailyAuthorization{
           const session={version:1,platform:'tx',accountId,userId:uin,cookies,qqDailyKey:payload.key,qqDailyKeyOwner:accountId};
           const existing=bound??this.options.accounts.getSnapshot().find(item=>item.id===accountId);
           await this.options.daily.validateKey({id:accountId,platform:'tx',username,label:'QQ 音乐',capabilities:[],updatedAt:0},session,payload.key,controller.signal);current();
-          await this.options.accounts.save({platform:'tx',username,label:'QQ 音乐',displayName:profile.nickname,capabilities:[...new Set([...(existing?.capabilities??[]),'daily' as const])]},session,controller.signal,existing??null);
+          await this.options.accounts.save({platform:'tx',username,label:'QQ 音乐',displayName:profile.nickname,...(existing?.avatar?{avatar:existing.avatar}:{}),capabilities:[...new Set([...(existing?.capabilities??[]),'daily' as const])]},session,controller.signal,existing??null);
           if(!active||controller.signal.aborted)throw new MusicAuthError('cancelled','授权已取消');
           if(active)emit({type:'success',value:undefined});
         }catch(error){if(active){const code=(error as {code?:unknown})?.code;if(code==='AUTH_CANCELLED')emit({type:'cancel'});else if(code==='AUTH_EXPIRED')emit({type:'expired'});else emit({type:'error',error});}}
@@ -48,6 +48,6 @@ export class QQDailyAuthorization{
     this.cancel();
     const session={...await this.options.accounts.session(account.id)};
     delete session.qqDailyKey;delete session.qqDailyKeyOwner;
-    await this.options.accounts.save({platform:account.platform,username:account.username,label:account.label,...(account.displayName?{displayName:account.displayName}:{}),capabilities:account.capabilities.filter(value=>value!=='daily')},session,signal,account);
+    await this.options.accounts.save({platform:account.platform,username:account.username,label:account.label,...(account.displayName?{displayName:account.displayName}:{}),...(account.avatar?{avatar:account.avatar}:{}),capabilities:account.capabilities.filter(value=>value!=='daily')},session,signal,account);
   }
 }

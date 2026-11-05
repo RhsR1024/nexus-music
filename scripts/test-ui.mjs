@@ -168,7 +168,8 @@ const discoveryUI=process.argv.slice(2).some(target=>target.endsWith('/testDisco
 const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHistoryAndStates')||target.endsWith('/testUnifiedSongAlbumArtistSearch')||target.endsWith('/testUnifiedSearchAggregateFivePlatformMatrix'));
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
 const accountFmUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountFmStationContinuation'));
-const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI;
+const accountAvatarUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountAvatarFixture'));
+const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountAvatarUI;
 const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
 lx.on('request',async({source,action})=>{
   if(action!=='musicUrl')throw new Error('unsupported fixture action');
@@ -738,6 +739,7 @@ const handleRequest = async (req, res) => {
     res.writeHead(400);res.end();return;
   }
   if(req.url==='/discovery-cover.png'&&discoveryUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
+  if((accountAvatarUI||accountFmUI)&&req.url==='/account-avatar.png'){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
   if(req.url==='/unified-mv-cover.png'&&searchUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.multi,'base64'));return;}
   if(req.url==='/playlist-cover.png'&&playlistCoverUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}

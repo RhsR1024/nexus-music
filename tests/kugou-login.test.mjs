@@ -12,7 +12,7 @@ const envelope=data=>({status:1,error_code:0,data});
 const qr=()=>({key:'synthetic-qr-key',mid:'a'.repeat(32),image,expiresAt:Date.now()+120_000});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return{promise,resolve};};
-const session={userId:'42',token:'synthetic-token',mid:'a'.repeat(32),nickname:'Synthetic listener'};
+const session={userId:'42',token:'synthetic-token',mid:'a'.repeat(32),nickname:'Synthetic listener',avatar:'https://imgsrc.kugou.com/avatar.jpg'};
 
 test('Kugou QR client signs only official requests, omits cookies and maps scan states',async()=>{
   const requests=[];let status=1;
@@ -22,12 +22,21 @@ test('Kugou QR client signs only official requests, omits cookies and maps scan 
     const canonical=[...parsed.searchParams].sort(([a],[b])=>a.localeCompare(b)).map(([key,value])=>`${key}=${value}`).join('');
     assert.equal(signature,await md5('NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt'+canonical+'NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt'));
     assert.equal(parsed.origin,'https://login-user.kugou.com');assert.equal(request.credentials,'omit');assert.equal(request.headers.Cookie,undefined);
-    return envelope(parsed.pathname==='/v2/qrcode'?{qrcode:'synthetic-qr-key',qrcode_img:image}:{status,...(status===4?{userid:'00042',token:session.token,nickname:session.nickname}:{})});
+    return envelope(parsed.pathname==='/v2/qrcode'?{qrcode:'synthetic-qr-key',qrcode_img:image}:{status,...(status===4?{userid:'00042',token:session.token,nickname:session.nickname,pic:'http://imgsrc.kugou.com/avatar.jpg?signature=private'}:{})});
   }});
   const signal=new AbortController().signal,challenge=await client.create(signal);
   assert.equal(challenge.expiresAt,1_120_000);assert.equal(challenge.mid,await md5('ephemeral-nonce'));
-  for(const [code,expected] of [[1,'waiting'],[2,'scanned'],[0,'expired'],[4,'connected']]){status=code;const result=await client.poll(challenge,signal);assert.equal(result.status,expected);if(code===4)assert.equal(result.session.userId,'42');}
+  for(const [code,expected] of [[1,'waiting'],[2,'scanned'],[0,'expired'],[4,'connected']]){status=code;const result=await client.poll(challenge,signal);assert.equal(result.status,expected);if(code===4){assert.equal(result.session.userId,'42');assert.equal(result.session.avatar,'https://imgsrc.kugou.com/avatar.jpg');}}
   assert.equal(requests.length,5);
+});
+
+test('Kugou connected session falls back to picurl and drops unsafe avatars',async()=>{
+  for(const [fields,expected] of [[{picurl:'http://imgsrc.kugou.com/fallback.jpg'},'https://imgsrc.kugou.com/fallback.jpg'],
+    [{pic:'javascript:alert(1)'},undefined],[{pic:'https://user:secret@example.test/a.jpg'},undefined]]){
+    const client=new KugouLoginClient({md5,nonce:()=> 'nonce',http:async()=>envelope({status:4,userid:'42',token:'synthetic-token',...fields})});
+    const result=await client.poll(qr(),new AbortController().signal);
+    assert.equal(result.status,'connected');assert.equal(result.session.avatar,expected);
+  }
 });
 
 test('QR image validation rejects external resources and unbounded decoded dimensions',()=>{
@@ -63,6 +72,7 @@ test('coordinator publishes scanned state, keeps secrets out of snapshots and sa
   assert.equal(coordinator.getSnapshot().status,'succeeded');assert.equal(snapshots.some(s=>s.status==='scanned'),true);
   assert.doesNotMatch(JSON.stringify(snapshots),/synthetic-qr-key|synthetic-token|"mid"/);
   assert.deepEqual(saved[0][0].capabilities,[]);assert.equal(saved[0][1].platform,'kg');assert.equal(saved[0][1].token,'synthetic-token');
+  assert.equal(saved[0][0].avatar,'https://imgsrc.kugou.com/avatar.jpg');assert.equal(saved[0][1].avatar,'https://imgsrc.kugou.com/avatar.jpg');
   assert.equal(snapshots.filter(s=>['saving','succeeded'].includes(s.status)).every(s=>!s.image),true);
 });
 

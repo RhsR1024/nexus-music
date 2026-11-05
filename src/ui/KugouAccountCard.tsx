@@ -5,6 +5,7 @@ import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {controls,space,radius,typography} from './tokens.ts';
+import {Cover} from './Cover.tsx';
 
 export function KugouAccountCard({services,disabled,onRevealQr}:{services:Services;disabled:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
   const {palette:p}=useTheme();
@@ -23,6 +24,7 @@ export function KugouAccountCard({services,disabled,onRevealQr}:{services:Servic
     <Text style={{...typography.heading,color:p.text}}>酷狗音乐</Text>
     <Text style={{...typography.caption,color:p.secondary}}>使用另一台设备中的酷狗音乐扫描官方二维码，并在酷狗中确认。登录凭据仅存本机，不参与备份或同步。</Text>
     {accounts.filter(account=>account.platform==='kg').map(account=><View key={account.id} style={{flexDirection:'row',alignItems:'center',gap:space.md}}>
+      <Cover services={services} url={account.avatar} size={40} radius={20} fallbackText={account.displayName??account.label} testID="music-account-avatar-kg"/>
       <Text style={{...typography.body,color:p.text,flex:1}}>{account.displayName??account.label}</Text>
       <Pressable testID="remove-music-account-kg" accessibilityRole="button" accessibilityLabel="退出酷狗账号" disabled={busy} onPress={()=>{setError('');void services.musicAccounts.remove(account.id).catch(()=>setError('账号未移除，原有会话仍保留'));}} style={{minHeight:controls.hit,minWidth:64,justifyContent:'center',alignItems:'center',opacity:busy?.5:1}}><Text style={{...typography.caption,color:p.accent}}>退出</Text></Pressable>
     </View>)}

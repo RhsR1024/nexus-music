@@ -97,9 +97,10 @@ export class MusicWebLoginCoordinator {
           const accountId=await this.hash(JSON.stringify([provider,username]));
           if(!active)return;
           const session:MusicWebSession=Object.freeze({version:1,platform:provider,accountId,userId:profile.userId,cookies});
+          const avatar='avatar' in profile&&typeof profile.avatar==='string'?profile.avatar:undefined;
           // Authorization remains waiting/cancellable through the store's own
           // hash and both writes. Success is published only after commit.
-          const account=await this.accounts.save({platform:provider,label:provider==='wy'?'网易云音乐':'QQ 音乐',username,displayName:profile.nickname,capabilities:provider==='wy'?['daily','fm']:[]},session,controller.signal);
+          const account=await this.accounts.save({platform:provider,label:provider==='wy'?'网易云音乐':'QQ 音乐',username,displayName:profile.nickname,...(avatar?{avatar}:{}),capabilities:provider==='wy'?['daily','fm']:[]},session,controller.signal);
           if(active)emit({type:'success',value:{account,session}});
         }
         catch(error){emit({type:'error',error});}

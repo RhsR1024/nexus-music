@@ -33,7 +33,7 @@ const initialize=()=>pending??=(async()=>{
     const username='netease:9000000000000000001';
     const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
     const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000001',cookies:Object.freeze({MUSIC_U:'synthetic-fm',__csrf:'synthetic-csrf'})});
-    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase FM',username,displayName:'Synthetic NetEase FM',capabilities:['daily','fm']},session);
+    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase FM',username,displayName:'Synthetic NetEase FM',avatar:'http://127.0.0.1:18439/account-avatar.png',capabilities:['daily','fm']},session);
   }
   return services;
 })().catch(error=>{pending=undefined;throw error;});

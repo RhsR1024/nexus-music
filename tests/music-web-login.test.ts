@@ -33,7 +33,7 @@ test('NetEase login rejects missing or header-injecting authentication cookies',
 test('login coordinator stores account metadata separately from secret cookies',async()=>{
   const f=accountsFixture(),flow=new MusicAuthFlow<Record<string,unknown>>();
   const calls:string[]=[];
-  const profile=new NeteaseAccountProfileClient({http:async()=>({code:200,profile:{userId:42,nickname:'Fixture listener'}}),endpoint:'https://fixture.test/account'});
+  const profile=new NeteaseAccountProfileClient({http:async()=>({code:200,profile:{userId:42,nickname:'Fixture listener',avatarUrl:'http://p1.music.126.net/avatar.jpg?param=200y200'}}),endpoint:'https://fixture.test/account'});
   const native={
     open:async(id:string,provider:string,url:string)=>{calls.push(`${id}:${provider}:${url}`);return JSON.stringify({MUSIC_U:'synthetic-auth',__csrf:'synthetic-csrf'});},
     cancel:async()=>{},
@@ -44,8 +44,10 @@ test('login coordinator stores account metadata separately from secret cookies',
   assert.equal(result.account.platform,'wy');
   assert.equal(result.account.username,'netease:42');
   assert.equal(result.account.displayName,'Fixture listener');
+  assert.equal(result.account.avatar,'https://p1.music.126.net/avatar.jpg');
   assert.deepEqual(result.account.capabilities,['daily','fm']);
   assert.doesNotMatch(JSON.stringify(f.records.get('music.accounts.v1')),/synthetic-auth|synthetic-csrf/);
+  assert.match(JSON.stringify(f.records.get('music.accounts.v1')),/https:\/\/p1\.music\.126\.net\/avatar\.jpg/);
   assert.match([...f.secrets.values()][0]!,/synthetic-auth/);
   assert.equal(result.session.accountId,result.account.id);
   assert.equal(login.getSnapshot().status,'succeeded');

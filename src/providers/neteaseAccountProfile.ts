@@ -3,10 +3,12 @@ import {HTTPResponseError} from './http.ts';
 import type {MusicSession} from './musicAccounts.ts';
 import {musicCookieHeader,parseNeteaseCookiePayload} from './musicWebLogin.ts';
 import {throwIfAborted} from './async.ts';
+import {normalizeAccountAvatar} from '../domain/accountAvatar.ts';
 
 export interface NeteaseAccountProfile {
   readonly userId:string;
   readonly nickname:string;
+  readonly avatar?:string;
 }
 
 export class NeteaseAccountProfileError extends Error {
@@ -26,7 +28,8 @@ export function parseNeteaseAccountProfile(raw:unknown):NeteaseAccountProfile{
   const userId=text(profile.userId)||text(account.id);
   const nickname=text(profile.nickname).trim();
   if(!/^\d{1,20}$/.test(userId)||!nickname||nickname.length>120||/[\u0000-\u001f\u007f]/.test(nickname))throw new NeteaseAccountProfileError('login_required');
-  return Object.freeze({userId,nickname});
+  const avatar=normalizeAccountAvatar(profile.avatarUrl);
+  return Object.freeze({userId,nickname,...(avatar?{avatar}:{})});
 }
 
 export interface NeteaseAccountProfileClientOptions {

@@ -6,7 +6,8 @@ import {NeteaseAccountProfileClient,NeteaseAccountProfileError,parseNeteaseAccou
 const session={platform:'wy' as const,cookies:{MUSIC_U:'synthetic-auth',__csrf:'synthetic-csrf'}};
 
 test('official account profile validates numeric identity and bounded nickname',()=>{
-  assert.deepEqual(parseNeteaseAccountProfile({code:200,profile:{userId:42,nickname:'Fixture listener'}}),{userId:'42',nickname:'Fixture listener'});
+  assert.deepEqual(parseNeteaseAccountProfile({code:200,profile:{userId:42,nickname:'Fixture listener',avatarUrl:'http://p1.music.126.net/avatar.jpg?param=200y200'}}),{userId:'42',nickname:'Fixture listener',avatar:'https://p1.music.126.net/avatar.jpg'});
+  assert.deepEqual(parseNeteaseAccountProfile({code:200,profile:{userId:42,nickname:'Fixture listener',avatarUrl:'javascript:alert(1)'}}),{userId:'42',nickname:'Fixture listener'});
   assert.throws(()=>parseNeteaseAccountProfile({code:200,profile:null}),(error)=>error instanceof NeteaseAccountProfileError&&error.kind==='login_required');
   assert.throws(()=>parseNeteaseAccountProfile({code:200,profile:{userId:'not-an-id',nickname:'x'}}),(error)=>error instanceof NeteaseAccountProfileError&&error.kind==='login_required');
 });
@@ -15,10 +16,11 @@ test('profile request sends only the bounded NetEase cookies to the official end
   let captured:string[]=[];
   const client=new NeteaseAccountProfileClient({endpoint:'https://fixture.test/account',http:async(_url,request)=>{
     captured=[request.headers?.Cookie??'',request.headers?.Referer??'',request.headers?.Origin??''];
-    return{code:200,profile:{userId:42,nickname:'Fixture listener'}};
+    return{code:200,profile:{userId:42,nickname:'Fixture listener',avatarUrl:'https://p1.music.126.net/avatar.jpg'}};
   }});
   const profile=await client.fetch(session,new AbortController().signal);
   assert.equal(profile.userId,'42');
+  assert.equal(profile.avatar,'https://p1.music.126.net/avatar.jpg');
   assert.deepEqual(captured,['MUSIC_U=synthetic-auth; __csrf=synthetic-csrf','https://music.163.com/','https://music.163.com']);
 });
 

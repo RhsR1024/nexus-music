@@ -3,9 +3,10 @@
 // NexusMusic owns cancellation, validation and storage; no playlist APIs.
 import {bounded,throwIfAborted} from './async.ts';
 import {HTTPResponseError,queryURL,type HTTPClient} from './http.ts';
+import {normalizeAccountAvatar} from '../domain/accountAvatar.ts';
 
 export interface KugouQr {readonly key:string;readonly image:string;readonly mid:string;readonly expiresAt:number}
-export interface KugouSession {readonly userId:string;readonly token:string;readonly mid:string;readonly nickname:string}
+export interface KugouSession {readonly userId:string;readonly token:string;readonly mid:string;readonly nickname:string;readonly avatar?:string}
 export type KugouQrResult={status:'waiting'|'scanned'|'expired'}|{status:'connected';session:KugouSession};
 export class KugouLoginError extends Error {
   readonly kind:'cancelled'|'unavailable'|'login_required';
@@ -73,6 +74,7 @@ export class KugouLoginClient {
     const userId=numericId(data.userid);
     if(![4,'4'].includes(data.status as number|string)||!userId||!opaque(data.token))throw new KugouLoginError();
     const nickname=typeof data.nickname==='string'&&data.nickname.trim()&&data.nickname.length<=120&&!/[\u0000-\u001f\u007f]/.test(data.nickname)?data.nickname.trim():'酷狗账号';
-    return{status:'connected',session:{userId,token:data.token,mid:qr.mid,nickname}};
+    const avatar=normalizeAccountAvatar(data.pic??data.picurl);
+    return{status:'connected',session:{userId,token:data.token,mid:qr.mid,nickname,...(avatar?{avatar}:{})}};
   }
 }

@@ -11,11 +11,49 @@ function fixture(){
 }
 
 test('music account metadata and session material are stored separately',async()=>{
-  const f=fixture(),account=await f.accounts.save({platform:'tx',label:'QQ Music',username:'u',displayName:'Fixture listener',capabilities:['playlist','daily']},{token:'secret',cookies:{sid:'private'}});
+  const f=fixture(),account=await f.accounts.save({platform:'tx',label:'QQ Music',username:'u',displayName:'Fixture listener',avatar:'http://p1.music.126.net/avatar.jpg?param=200y200',capabilities:['playlist','daily']},{token:'secret',cookies:{sid:'private'}});
   assert.equal(f.records.get('music.accounts.v1') instanceof Array,true);
   assert.equal(account.displayName,'Fixture listener');
+  assert.equal(account.avatar,'https://p1.music.126.net/avatar.jpg');
   assert.doesNotMatch(JSON.stringify(f.records.get('music.accounts.v1')),/secret|private/);
   assert.deepEqual(await f.accounts.session(account.id),{token:'secret',cookies:{sid:'private'}});
+});
+
+test('profile refresh updates avatar and nickname without replacing the session or its revision',async()=>{
+  const f=fixture(),account=await f.accounts.save({platform:'wy',label:'网易云',username:'u',displayName:'Old name',capabilities:['daily']},{token:'kept'});
+  const secret=[...f.secrets.values()][0],updatedAt=account.updatedAt;
+  const updated=await f.accounts.updateProfile(account.id,{displayName:'New name',avatar:'https://p1.music.126.net/new.jpg?param=200y200'});
+  assert.equal(updated.displayName,'New name');assert.equal(updated.avatar,'https://p1.music.126.net/new.jpg');assert.equal(updated.updatedAt,updatedAt);
+  assert.equal(f.accounts.getSnapshot()[0]!.avatar,'https://p1.music.126.net/new.jpg');
+  assert.equal(await f.accounts.session(account.id).then(session=>session.token),'kept');assert.equal([...f.secrets.values()][0],secret);
+});
+
+test('profile refresh ignores invalid avatar values and cannot resurrect a removed account',async()=>{
+  const f=fixture(),account=await f.accounts.save({platform:'wy',label:'网易云',username:'u',capabilities:[]},{token:'kept'});
+  const unchanged=await f.accounts.updateProfile(account.id,{avatar:'javascript:alert(1)'});assert.equal(unchanged.avatar,undefined);
+  await f.accounts.remove(account.id);
+  await assert.rejects(f.accounts.updateProfile(account.id,{displayName:'Late'}),/不存在/);
+  assert.deepEqual(f.accounts.getSnapshot(),[]);
+});
+
+test('a profile refresh cannot overwrite a replaced account with the same identity',async()=>{
+  const f=fixture(),first=await f.accounts.save({platform:'wy',label:'网易云',username:'u',displayName:'First',capabilities:[]},{token:'first'});
+  await new Promise(resolve=>setTimeout(resolve,2));
+  await f.accounts.save({platform:'wy',label:'网易云',username:'u',displayName:'Second',capabilities:[]},{token:'second'});
+  await assert.rejects(f.accounts.updateProfile(first.id,{displayName:'Stale'},undefined,first),/已更改/);
+  assert.equal(f.accounts.getSnapshot()[0]!.displayName,'Second');
+});
+
+test('profile refresh preserves published metadata when the repository write fails',async()=>{
+  const f=fixture(),account=await f.accounts.save({platform:'kg',label:'酷狗',username:'u',capabilities:[]},{token:'kept'});
+  f.setFail(true);await assert.rejects(f.accounts.updateProfile(account.id,{displayName:'Changed'}));
+  assert.equal(f.accounts.getSnapshot()[0]!.displayName,undefined);
+});
+
+test('restore rejects a persisted avatar that was not normalized',async()=>{
+  const f=fixture();await f.accounts.save({platform:'wy',label:'网易云',username:'u',capabilities:[]},{token:'fixture'});
+  const saved=f.records.get('music.accounts.v1') as Record<string,unknown>[];saved[0]!.avatar='https://p1.music.126.net/avatar.jpg?token=private';
+  await assert.rejects(f.accounts.restore(),/本地记录格式无效/);
 });
 
 test('replacing an account atomically rolls back its previous session on repository failure',async()=>{

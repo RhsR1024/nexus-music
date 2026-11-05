@@ -1,5 +1,6 @@
 import {InvalidRecordError} from '../storage/recovery.ts';
 import type {Repository} from '../storage/repository.ts';
+import {normalizeAccountAvatar,validAccountAvatar} from '../domain/accountAvatar.ts';
 import {throwIfAborted} from './async.ts';
 
 export type MusicPlatform='wy'|'tx'|'kg';
@@ -10,6 +11,7 @@ export interface MusicAccount {
   label:string;
   username:string;
   displayName?:string;
+  avatar?:string;
   capabilities:readonly MusicAccountCapability[];
   updatedAt:number;
 }
@@ -24,11 +26,12 @@ const validAccount=(value:unknown):value is MusicAccount=>{
   return typeof item.id==='string'&&/^[a-f0-9]{64}$/.test(item.id)&&platforms.has(item.platform as MusicPlatform)&&
     typeof item.label==='string'&&item.label.length>0&&item.label.length<=120&&typeof item.username==='string'&&
     item.username.length>0&&item.username.length<=256&&(item.displayName===undefined||typeof item.displayName==='string'&&item.displayName.length>0&&item.displayName.length<=120)&&
+    (item.avatar===undefined||validAccountAvatar(item.avatar))&&
     Array.isArray(item.capabilities)&&item.capabilities.every(value=>capabilities.has(value as MusicAccountCapability))&&
     Number.isSafeInteger(item.updatedAt)&&Number(item.updatedAt)>=0;
 };
 const safeSession=(value:unknown):value is MusicSession=>!!value&&typeof value==='object'&&!Array.isArray(value);
-const accountFields=(item:MusicAccount):MusicAccount=>({id:item.id,platform:item.platform,label:item.label,username:item.username,...(item.displayName?{displayName:item.displayName}:{}),capabilities:[...item.capabilities],updatedAt:item.updatedAt});
+const accountFields=(item:MusicAccount):MusicAccount=>({id:item.id,platform:item.platform,label:item.label,username:item.username,...(item.displayName?{displayName:item.displayName}:{}),...(item.avatar?{avatar:item.avatar}:{}),capabilities:[...item.capabilities],updatedAt:item.updatedAt});
 
 /** Account metadata is recoverable; session material is always kept in the platform keychain entry. */
 export class MusicAccounts {
@@ -56,7 +59,8 @@ export class MusicAccounts {
       check();
       if(expected===null&&this.value.some(item=>item.id===id)||expected&&(!this.value.includes(expected)||expected.id!==id))throw new Error('平台账号已更改，请重试');
       const displayName=account.displayName?.trim();
-      const record:MusicAccount={id,platform:account.platform,label:account.label.trim(),username:account.username.trim(),...(displayName?{displayName}:{}),capabilities:[...account.capabilities],updatedAt:now};
+      const avatar=normalizeAccountAvatar(account.avatar);
+      const record:MusicAccount={id,platform:account.platform,label:account.label.trim(),username:account.username.trim(),...(displayName?{displayName}:{}),...(avatar?{avatar}:{}),capabilities:[...account.capabilities],updatedAt:now};
       if(!validAccount(record))throw new Error('平台账号资料无效');
       const key=`nexus.music.${record.id}`,old=await this.secrets.get(key),next=[...this.value.filter(item=>item.id!==id),record];
       check();
@@ -69,6 +73,22 @@ export class MusicAccounts {
         finally{if(old===null)await this.secrets.remove(key);else await this.secrets.set(key,old);}
         throw error;
       }
+      this.publish(next);return record;
+    });
+  }
+  /** Refresh public profile metadata without touching the stored session or
+   * its revision. Missing or invalid values preserve the previous field. */
+  async updateProfile(id:string,profile:{displayName?:string;avatar?:string},signal?:AbortSignal,expected?:MusicAccount){
+    return this.mutate(async()=>{
+      const check=()=>{if(signal)throwIfAborted(signal);};check();
+      const account=this.value.find(item=>item.id===id);if(!account)throw new Error('平台账号不存在');
+      if(expected&&(!this.value.includes(expected)||expected.id!==id))throw new Error('平台账号已更改，请重试');
+      const displayName=profile.displayName?.trim(),avatar=normalizeAccountAvatar(profile.avatar);
+      const record:MusicAccount={...account,...(displayName?{displayName}:{}),...(avatar?{avatar}:{})};
+      if(!validAccount(record))throw new Error('平台账号资料无效');
+      if(record.displayName===account.displayName&&record.avatar===account.avatar)return account;
+      const next=this.value.map(item=>item.id===id?record:item);
+      await this.repository.put('music.accounts.v1',next);check();
       this.publish(next);return record;
     });
   }

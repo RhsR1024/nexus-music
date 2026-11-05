@@ -67,7 +67,7 @@ export class KugouLoginCoordinator {
           // Once a valid scan is confirmed, stop expiry of the consumed QR.
           clearTimeout(this.deadline);this.deadline=undefined;
           this.publish({status:'saving',generation});
-          await this.options.accounts.save({platform:'kg',label:'酷狗音乐',username:result.session.userId,displayName:result.session.nickname,capabilities:[]},{version:1,platform:'kg',...result.session},signal);
+          await this.options.accounts.save({platform:'kg',label:'酷狗音乐',username:result.session.userId,displayName:result.session.nickname,...(result.session.avatar?{avatar:result.session.avatar}:{}),capabilities:[]},{version:1,platform:'kg',...result.session},signal);
           finish('succeeded');return;
         }
         if(result.status!==this.value.status)this.publish({status:result.status,generation,image:qr.image,expiresAt:qr.expiresAt});

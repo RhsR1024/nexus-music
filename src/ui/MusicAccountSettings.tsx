@@ -11,6 +11,7 @@ import {KugouAccountCard} from './KugouAccountCard.tsx';
 import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
 import {AccountPlaylistImport} from './AccountPlaylistImport.tsx';
 import {AccountAlbumCatalog,AccountMVCatalog} from './AccountAlbumCatalog.tsx';
+import {Cover} from './Cover.tsx';
 
 export function MusicAccountSettings({services,active,onRevealQr}:{services:Services;active:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
   const {palette:p}=useTheme();
@@ -50,15 +51,17 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     void services.musicAccounts.remove(id).catch(()=>setError('账号未移除，原有会话仍保留'));
   };
   const verify=(id:string)=>{
-    const platform=accounts.find(account=>account.id===id)?.platform;
+    const account=accounts.find(item=>item.id===id),platform=account?.platform;
     verifyController.current?.abort();
     const controller=new AbortController();
     verifyController.current=controller;
     setError('');
     setVerified('');
     setVerifying(id);
-    void services.musicAccounts.session(id).then(session=>(platform==='tx'?services.qqProfile:services.neteaseProfile).fetch(session,controller.signal)).then(profile=>{
-      if(!controller.signal.aborted)setVerified(`${platform==='tx'?'资料可读取':'会话有效'} · ${profile.nickname}`);
+    void services.musicAccounts.session(id).then(session=>(platform==='tx'?services.qqProfile:services.neteaseProfile).fetch(session,controller.signal)).then(async profile=>{
+      const avatar='avatar' in profile&&typeof profile.avatar==='string'?profile.avatar:undefined;
+      try{await services.musicAccounts.updateProfile(id,{displayName:profile.nickname,...(avatar?{avatar}:{})},controller.signal,account);}catch{}
+      if(!controller.signal.aborted&&services.musicAccounts.getSnapshot().some(account=>account.id===id))setVerified(`${platform==='tx'?'资料可读取':'会话有效'} · ${profile.nickname}`);
     },()=>{
       if(!controller.signal.aborted)setError('登录会话已失效或暂时无法验证，请重新登录');
     }).finally(()=>{
@@ -73,6 +76,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
       </View>
       {provider.id==='tx'&&<Text style={{paddingHorizontal:18,paddingBottom:12,fontSize:13,lineHeight:20,color:p.secondary}}>使用 QQ 官方网页登录，不跳转 QQ App；微信账号可使用下方电脑配对。会检查音乐账号授权；日推仍需单独授权。</Text>}
       {accounts.filter(account=>account.platform===provider.id).map((account,index)=><View key={account.id} style={{minHeight:62,paddingHorizontal:18,flexDirection:'row',alignItems:'center',gap:12,borderTopWidth:index===0?1:0,borderTopColor:p.border,borderBottomWidth:1,borderBottomColor:p.border}}>
+        <Cover services={services} url={account.avatar} size={40} radius={20} fallbackText={account.displayName??account.label} testID={`music-account-avatar-${account.platform}`}/>
         <View style={{flex:1,gap:3}}><Text style={{fontSize:15,color:p.text}}>{account.displayName??account.label}</Text><Text numberOfLines={1} style={{fontSize:12,color:p.secondary}}>会话凭据已保存到本机</Text></View>
         <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`验证${provider.name}会话`} disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:64,minHeight:44,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:13,color:p.secondary}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
         <Pressable testID={`remove-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`退出${provider.name}账号`} onPress={()=>remove(account.id)} style={{minWidth:64,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13,color:p.accent}}>退出</Text></Pressable>

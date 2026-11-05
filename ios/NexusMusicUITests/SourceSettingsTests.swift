@@ -2759,6 +2759,15 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertGreaterThanOrEqual(requestCount(finalState),5)
     XCTAssertGreaterThanOrEqual(finalState["released"] as? Int ?? 0,2)
   }
+  func testAccountAvatarFixture() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_ACCOUNT_FM_FIXTURE"]="1"
+    app.launch()
+    openSettings(app,page:"accounts")
+    let avatar=app.descendants(matching:.any).matching(identifier:"music-account-avatar-wy-image").firstMatch
+    XCTAssertTrue(avatar.waitForExistence(timeout:20),"The saved NetEase fixture avatar must render from its public URL")
+    let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name="Music account avatar";shot.lifetime = .keepAlways;add(shot)
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.
