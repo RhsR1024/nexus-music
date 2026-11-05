@@ -1,3 +1,7 @@
+## 2026-11-05 J10 网易云平台歌单创建
+
+网易云账号页新增平台歌单创建：1–40字名称、默认私密、可显式公开；严格绑定账号/会话/`userId`/Cookie，仅发送一次 `/weapi/playlist/create`，随后用 `/weapi/user/playlist` 按ID、名称、创建者及可用隐私字段回读确认。创建已发出但回读失败、取消或账号变化只返回`unconfirmed`/`account_changed`，提示重新读取且不自动重试；`code:200`不冒充创建成功。17项专项、完整1107/1107；正式Release`SourceUITests-1793887965443`为1/0/0、25.446秒、sourceUnchanged，夹具reads1/writes1/created/invalid0，1290×2796图亲看。匿名端点仅证明需登录，真实账号、平台加歌/删除、QQ/酷狗建单、实体机/签名/iOS27/云端仍开放，J10保持B。见[回执](docs/2026-11-05-netease-platform-playlist-create-report.md)。
+
 ## 2026-11-05 网易云收藏交付与解析边界续批
 
 产品 `7c884a3` 与文档 `f218d09` 已正常push并核对远端。T7阶段 `2026-11-05-netease-favorite-7c884a3` 保存58份/58,309,560字节，逐文件SHA-256零差异、源保留且零删除；inventory `b4ff9983…68da`、receipt `94189985…a215`。Actions快照为 `42030288920/01837dc` 运行、`42038514883/f218d09` 唯一等待，1/1且无手动取消/重派；旧checks成功不代表iOS全过。续批发现空喜欢ID数组误报不可用、混杂非法ID可能过早确认，已补3项回归先失败复现并修正，专项22/22、完整1090/1090；正式Release夹具改为空数组→含目标ID数组，`1793886546069`为1/0/0、48.515秒、sourceUnchanged，reads3/writes1/invalid0且三图亲看。`6819e9b` clean IPA`c9eb9998…e708`为17,839,234字节，90ZIP/63载荷/8隐私/0签名及生产夹具标记排除通过；源码tar 1,161条目与1,113 tracked路径一致；T7 `2026-11-05-netease-array-6819e9b`为128份/111,568,545字节0差异、源保留且零删除，inventory `2f1c6899…d2c3`、receipt `e56c45ba…78ff`。push随后补记；酷狗收藏写入协议尚缺可靠“我喜欢”身份与自建单目标，完整目标保持active。交付与恢复见[回执](docs/2026-11-05-netease-platform-favorite-report.md)。

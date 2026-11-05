@@ -171,7 +171,8 @@ const accountFmUI=process.argv.slice(2).some(target=>target.endsWith('/testAccou
 const accountAvatarUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountAvatarFixture'));
 const qqFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testQQFavoriteFixture'));
 const wyFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteaseFavoriteFixture'));
-const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI;
+const wyPlaylistUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteasePlaylistCreateFixture'));
+const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI;
 const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
 lx.on('request',async({source,action})=>{
   if(action!=='musicUrl')throw new Error('unsupported fixture action');
@@ -221,6 +222,7 @@ const heldDiscoveryResponses=[];
 let discoveryDetailMode='normal',playlistLinkMode='normal',holdNextPlaylistLink=false,playlistLinkRequests=0;
 let qqFavoriteValue=false,qqFavoriteReads=0,qqFavoriteWrites=0,qqFavoriteInvalid=0;
 let wyFavoriteValue=false,wyFavoriteReads=0,wyFavoriteWrites=0,wyFavoriteInvalid=0;
+let wyPlaylistCreated=false,wyPlaylistReads=0,wyPlaylistWrites=0,wyPlaylistInvalid=0;
 const heldPlaylistLinkResponses=[];
 let styleCategoryMode='normal',stylePlaylistMode='normal',holdNextStyleCategories=false,holdStylePlaylists=false;
 const failedStyleTags=new Set(),heldStyleCategoryResponses=[],heldStylePlaylistResponses=[];
@@ -399,6 +401,13 @@ const handleRequest = async (req, res) => {
     counts.wyFavorite={reads:wyFavoriteReads,writes:wyFavoriteWrites,favorited:wyFavoriteValue,invalid:wyFavoriteInvalid};
     res.setHeader('Content-Type','application/json');
     res.end(JSON.stringify({reads:wyFavoriteReads,writes:wyFavoriteWrites,favorited:wyFavoriteValue,invalid:wyFavoriteInvalid}));return;
+  }
+  if(wyPlaylistUI&&req.url.startsWith('/wy-playlist-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1');
+    if(control.searchParams.has('reset')){wyPlaylistCreated=false;wyPlaylistReads=0;wyPlaylistWrites=0;wyPlaylistInvalid=0;}
+    counts.wyPlaylist={reads:wyPlaylistReads,writes:wyPlaylistWrites,created:wyPlaylistCreated,invalid:wyPlaylistInvalid};
+    res.setHeader('Content-Type','application/json');
+    res.end(JSON.stringify({reads:wyPlaylistReads,writes:wyPlaylistWrites,created:wyPlaylistCreated,invalid:wyPlaylistInvalid}));return;
   }
   if(req.url.startsWith('/qq-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
@@ -649,6 +658,20 @@ const handleRequest = async (req, res) => {
     }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){
+      if(wyPlaylistUI&&parsed.pathname==='/weapi/playlist/create'){
+        const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
+        const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
+        if(!valid){wyPlaylistInvalid++;res.end(JSON.stringify({code:1}));return;}
+        wyPlaylistWrites++;wyPlaylistCreated=true;
+        res.end(JSON.stringify({code:200,playlist:{id:'9100000000000000001',name:'合成网易云歌单'}}));return;
+      }
+      if(wyPlaylistUI&&parsed.pathname==='/weapi/user/playlist'){
+        const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
+        const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
+        if(!valid){wyPlaylistInvalid++;res.end(JSON.stringify({code:1}));return;}
+        wyPlaylistReads++;
+        res.end(JSON.stringify({code:200,more:false,playlist:wyPlaylistCreated?[{id:'9100000000000000001',name:'合成网易云歌单',privacy:10,trackCount:0,coverImgUrl:'',creator:{userId:'9000000000000000004'}}]:[]}));return;
+      }
       if(wyFavoriteUI&&parsed.pathname==='/weapi/song/like/check'){
         const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
         const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-favorite(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');

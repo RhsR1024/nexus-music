@@ -83,6 +83,16 @@ jobs:
           fi
           cp build/logs/sleep-wheels-app/ui-catalog.log build/logs/ui-sleep-wheels.log
           cp build/logs/sleep-wheels-app/ui-server-counts.json build/logs/ui-sleep-wheels-counts.json
+      - name: Verify NetEase platform playlist creation
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! NEXUS_UI_RUN_DIR=build/logs/platform-playlist-app node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testNeteasePlaylistCreateFixture 2>&1 | tee build/logs/ui-platform-playlist-runner.log; then
+            tail -n 100 build/logs/platform-playlist-app/ui-catalog.log
+            exit 1
+          fi
+          cp build/logs/platform-playlist-app/ui-catalog.log build/logs/ui-platform-playlist.log
+          cp build/logs/platform-playlist-app/ui-server-counts.json build/logs/ui-platform-playlist-counts.json
       - name: Verify matched playback, lyrics, source health and discovery actions
         shell: bash
         run: |

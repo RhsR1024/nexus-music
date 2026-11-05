@@ -1,5 +1,5 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator,Alert,Pressable,ScrollView,StyleSheet,View} from 'react-native';
+import {ActivityIndicator,Alert,Pressable,ScrollView,StyleSheet,TextInput,View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import type {Services} from '../app/services.ts';
 import {AccountPlaylistError,type AccountPlaylist,type AccountPlaylistPreview} from '../providers/accountPlaylists.ts';
@@ -16,16 +16,17 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
   const [visibleCount,setVisibleCount]=useState(100);
   const [detail,setDetail]=useState<AccountPlaylist|null>(null),[copied,setCopied]=useState(false);
   const [preview,setPreview]=useState<AccountPlaylistPreview|null>(null),[busy,setBusy]=useState(''),[message,setMessage]=useState('');
+  const [createName,setCreateName]=useState(''),[createPublic,setCreatePublic]=useState(false),[createMessage,setCreateMessage]=useState('');
   const account=available.find(item=>item.id===selected)??available[0];
   const controller=useRef<AbortController|null>(null),closeWhenSettled=useRef(false),mounted=useRef(true),latest=useRef({active,account,preview});latest.current={active,account,preview};
-  useLayoutEffect(()=>{controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');},[account]);
-  useLayoutEffect(()=>{if(active)return;controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');},[active]);
+  useLayoutEffect(()=>{controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');setCreateName('');setCreatePublic(false);setCreateMessage('');},[account]);
+  useLayoutEffect(()=>{if(active)return;controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');setCreateMessage('');},[active]);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;controller.current?.abort();controller.current=null;};},[]);
-  async function execute<T>(label:string,task:(signal:AbortSignal)=>Promise<T>,success:(value:T)=>void){
+  async function execute<T>(label:string,task:(signal:AbortSignal)=>Promise<T>,success:(value:T)=>void,failure:(message:string)=>void=setMessage){
     if(!mounted.current||!latest.current.active||!latest.current.account||controller.current)return;
     const next=new AbortController();controller.current=next;setBusy(label);setMessage('');
     try{const value=await task(next.signal);if(controller.current===next&&latest.current.active)success(value);}
-    catch(error){if(controller.current===next&&latest.current.active)setMessage(error instanceof AccountPlaylistError?error.message:'暂时无法读取或保存歌单，请重试');}
+    catch(error){if(controller.current===next&&latest.current.active)failure(error instanceof AccountPlaylistError?error.message:'暂时无法读取或保存歌单，请重试');}
     finally{if(controller.current===next){controller.current=null;setBusy('');if(closeWhenSettled.current){closeWhenSettled.current=false;setDetail(null);setPreview(null);}}}
   }
   const platformName=platform==='tx'?'QQ 音乐':platform==='kg'?'酷狗音乐':'网易云';
@@ -42,14 +43,38 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
       void execute('正在保存音枢歌单',signal=>services.accountPlaylists.importPreview(owner,value,signal),()=>{setCopied(true);setPreview(null);setMessage('已导入音枢歌单，可在音乐库查看和播放');});
     }}]);
   };
+  const createPlaylist=()=>{
+    if(!account||pending||!createName.trim())return;
+    setCreateMessage('');
+    void execute('正在创建网易云歌单',signal=>services.neteasePlaylist.create(account,createName,createPublic?0:10,signal),result=>{
+      if(result.status==='created'&&result.playlist){
+        setLists(current=>current?[result.playlist!,...current.filter(item=>item.id!==result.playlist!.id)]:null);
+        setCreateName('');setCreateMessage(`已创建网易云歌单「${result.playlist.title}」并回读确认`);
+      }else if(result.status==='unconfirmed'){
+        setCreateMessage(result.id?'平台已返回创建结果，但尚未回读确认。请重新读取账号歌单核对，不要重复创建。':'创建请求可能已提交，但未取得可核验结果。请重新读取账号歌单核对，不要重复创建。');
+      }else if(result.status==='login_required')setCreateMessage('网易云登录已失效，请重新登录');
+      else if(result.status==='account_changed')setCreateMessage('账号已更改；创建请求可能已提交，请重新登录后核对账号歌单');
+      else if(result.status==='cancelled')setCreateMessage('操作已取消，未创建歌单');
+      else if(result.status==='rejected')setCreateMessage('平台拒绝了新建歌单请求，未回读确认');
+      else if(result.status==='unsupported')setCreateMessage('歌单名称或隐私设置无效');
+      else setCreateMessage('暂时无法创建歌单，请重试');
+    },setCreateMessage);
+  };
   return <View testID={testID("account-playlists-card")} style={[styles.card,{borderColor:p.border,backgroundColor:p.surface}]}>
     <Text accessibilityRole="header" style={[styles.heading,{color:p.text}]}>{platformName}账号歌单</Text>
-    <Text style={[styles.caption,{color:p.secondary}]}>按需读取创建和收藏的歌单，确认后复制到音枢歌单。平台歌单不会被修改，也不会自动同步。</Text>
+    <Text style={[styles.caption,{color:p.secondary}]}>按需读取创建和收藏的歌单，确认后复制到音枢歌单。导入不会修改平台歌单，也不会自动同步。</Text>
     {!account?<>
       <Text testID={testID("account-playlists-login-required")} style={[styles.body,{color:p.secondary}]}>登录{platformName}后，可读取并导入账号歌单。</Text>
       {button('account-playlists-login',`登录${platformName}`,onLogin,disabled)}
     </>:<>
       {available.map(item=><Pressable key={item.id} testID={testID(`account-playlists-owner-${item.id}`)} accessibilityRole="radio" accessibilityState={{selected:item===account}} disabled={blocked} onPress={()=>setSelected(item.id)} style={[styles.owner,{backgroundColor:item===account?p.selected:p.surface}]}><Text style={[styles.body,{color:p.text}]}>{item.displayName??item.label}</Text></Pressable>)}
+      {platform==='wy'&&<View testID="account-playlist-create" style={[styles.create,{borderColor:p.border,backgroundColor:p.selected}]}>
+        <Text accessibilityRole="header" style={[styles.body,{color:p.text}]}>新建网易云歌单</Text>
+        <TextInput testID="account-playlist-create-name" accessibilityLabel="新建网易云歌单名称" placeholder="歌单名称（1–40字）" placeholderTextColor={p.secondary} value={createName} editable={!pending} onChangeText={value=>{setCreateName(value);setCreateMessage('');}} maxLength={80} style={[styles.input,{color:p.text,borderColor:p.border,backgroundColor:p.surface}]}/>
+        <Pressable testID="account-playlist-create-privacy" accessibilityRole="switch" accessibilityLabel="公开新歌单" accessibilityState={{checked:createPublic}} disabled={blocked} onPress={()=>setCreatePublic(value=>!value)} style={styles.privacy}><Text style={[styles.caption,{color:p.text}]}>{createPublic?'公开歌单':'私密歌单'}</Text><Text style={[styles.caption,{color:p.secondary}]}>{createPublic?'公开后可被他人看到':'默认仅自己可见'}</Text></Pressable>
+        <Pressable testID="account-playlist-create-submit" accessibilityRole="button" disabled={blocked||!createName.trim()} onPress={createPlaylist} style={[styles.button,{backgroundColor:p.surface},(blocked||!createName.trim())&&styles.disabled]}><Text style={[styles.body,{color:p.accent}]}>创建到网易云音乐</Text></Pressable>
+        {!!createMessage&&<Text testID="account-playlist-create-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{createMessage}</Text>}
+      </View>}
       {button('account-playlists-load',lists?'重新读取歌单':'读取账号歌单',()=>{setPreview(null);void execute('正在读取歌单',signal=>services.accountPlaylists.list(account,signal),value=>{setLists(value);setVisibleCount(100);setPreview(null);});})}
       {pending&&!detail&&progress}
       {!!message&&!detail&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{message}</Text>}
@@ -83,6 +108,9 @@ const styles=StyleSheet.create({
   button:{minHeight:controls.hit+space.xs,paddingHorizontal:space.lg,borderRadius:radius.md,justifyContent:'center'},
   owner:{minHeight:controls.hit,paddingHorizontal:space.md,borderRadius:radius.deck,justifyContent:'center'},
   row:{minHeight:controls.hit+space.xl,paddingVertical:space.md,gap:space.xs,borderTopWidth:StyleSheet.hairlineWidth},
+  create:{gap:space.sm,padding:space.md,borderRadius:radius.md,borderWidth:StyleSheet.hairlineWidth},
+  input:{minHeight:controls.hit,paddingHorizontal:space.md,borderRadius:radius.md,borderWidth:StyleSheet.hairlineWidth},
+  privacy:{minHeight:controls.hit,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space.sm},
   preview:{gap:space.sm,padding:space.md,borderRadius:radius.md},
   progress:{gap:space.sm},disabled:{opacity:0.55},
   modal:{flex:1},modalHeader:{padding:space.lg,gap:space.md},modalContent:{padding:space.lg,gap:space.md},

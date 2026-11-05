@@ -1,3 +1,7 @@
+## 2026-11-05 网易云平台歌单创建
+
+亲读 MIT Sollin-Music-Desktop 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `neteaseAuth.ts` `createPlaylist`，采用 `/api/playlist/create` 的 `name/privacy/type` 与响应字段事实；自写账号/会话绑定、单次创建、目录回读、取消与状态机，未复制运行时、UI、依赖或私有逻辑。未接入 `updatePlaylistTracks` 的平台加歌路径。匿名核验只证明端点需要登录，真实账号和跨设备效果未验。见[回执](2026-11-05-netease-platform-playlist-create-report.md)。
+
 ## 2026-11-05 网易云平台收藏
 
 亲读 MIT Sollin-Music-Desktop 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `neteaseAuth.ts` 中 `likeSong`/`getLikelist`，以及 NeteaseCloudMusicApi 固定 `984cc021b8598cf94c22134f32a8426887fb2de7` 的 `song_like`/`song_like_check`；仅采用端点和参数事实。音枢自写账号绑定、先读后单次写入、回读确认、取消竞态及19位ID不透明处理，没有复制运行时、UI、依赖或私有逻辑。五参考既有实现、维护、Android与许可边界保留；匿名核验只证明端点存在与鉴权要求，真实账号写入及跨设备效果仍未验收。见[回执](2026-11-05-netease-platform-favorite-report.md)。

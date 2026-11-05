@@ -2880,6 +2880,52 @@ final class SourceSettingsTests: XCTestCase {
     revealFull(status)
     image("Repeating the NetEase favorite action stays idempotent")
   }
+  func testNeteasePlaylistCreateFixture() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_WY_PLAYLIST_FIXTURE"]="1"
+    app.launch()
+    func control(_ query:String="") throws -> [String:Any] {
+      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/wy-playlist-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Any]) ?? [:]
+    }
+    func integer(_ key:String,in value:[String:Any])->Int{(value[key] as? NSNumber)?.intValue ?? -1}
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<20 {if element.exists&&element.isHittable{return}
+        if element.exists{let above=element.frame.midY<app.frame.midY
+          app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.3 : 0.75)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75 : 0.3)))
+        }else{
+          app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.75)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.3)))
+        }
+      }
+      XCTAssertTrue(element.exists&&element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func revealFull(_ element:XCUIElement){
+      for _ in 0..<4 {if element.exists&&element.frame.maxY<=app.frame.maxY-16{return}
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.85)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.55)))}
+      XCTAssertTrue(element.exists&&element.frame.maxY<=app.frame.maxY-16,"Expected fully visible text: \(element.identifier)")
+    }
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    _=try control("reset=1")
+    openSettings(app,page:"accounts")
+    let card=app.descendants(matching:.any).matching(identifier:"account-playlists-card").firstMatch
+    XCTAssertTrue(card.waitForExistence(timeout:20),"The NetEase account playlist card must be available")
+    let name=app.textFields["account-playlist-create-name"]
+    reveal(name);name.tap()
+    name.typeText("合成网易云歌单");name.typeText("\n")
+    XCTAssertEqual(name.value as? String,"合成网易云歌单")
+    let submit=app.buttons["account-playlist-create-submit"]
+    reveal(submit);submit.tap()
+    let status=app.staticTexts["account-playlist-create-status"]
+    XCTAssertTrue(status.waitForExistence(timeout:20),"The creation result must become visible")
+    XCTAssertEqual(status.label,"已创建网易云歌单「合成网易云歌单」并回读确认")
+    let result=try control()
+    XCTAssertEqual(integer("writes",in:result),1,"Playlist creation must send exactly one write")
+    XCTAssertGreaterThanOrEqual(integer("reads",in:result),1,"Creation must be confirmed by a playlist read-back")
+    XCTAssertEqual(integer("invalid",in:result),0,"Creation must bind the account session cookie")
+    XCTAssertEqual(integer("created",in:result),1)
+    revealFull(status)
+    image("NetEase playlist creation is confirmed by reading the new id back")
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.

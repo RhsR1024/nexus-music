@@ -55,6 +55,13 @@ const initialize=()=>pending??=(async()=>{
     const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000003',cookies:Object.freeze({MUSIC_U:'synthetic-wy-favorite',__csrf:'synthetic-wy-csrf'})});
     await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Favorite',username,displayName:'Synthetic NetEase Favorite',capabilities:[]},session);
   }
+  if(native.launchArgument('NEXUS_UI_WY_PLAYLIST_FIXTURE')==='1'){
+    const username='netease:9000000000000000004';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
+    for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'&&existing.username!==username)await services.musicAccounts.remove(existing.id);
+    const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000004',cookies:Object.freeze({MUSIC_U:'synthetic-wy-playlist',__csrf:'synthetic-wy-csrf'})});
+    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Playlist',username,displayName:'Synthetic NetEase Playlist',capabilities:[]},session);
+  }
   return services;
 })().catch(error=>{pending=undefined;throw error;});
 function FixtureApp(){return <MusicApplication initialize={initialize}/>;}
