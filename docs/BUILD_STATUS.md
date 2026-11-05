@@ -1,3 +1,7 @@
+## 2026-11-05 歌单封面 push 与云端队列实核
+
+`191574a2e1f699593ca03223419ac9ec68aab826`已正常push，`git ls-remote origin refs/heads/main`一致。14:24（Asia/Shanghai）Actions网页：`41973467272/258cac7`正在运行，`41979882570/191574a`唯一等待串行任务，1运行/1排队；未取消/重派。未认证REST API限流403，网页状态不能替代最终日志/IPA核验，云端仍待终态。
+
 ## 2026-11-05 歌单持久化封面 clean 归档
 
 最终`SourceUITests-1793858859629`为1/0/0、55.901秒、`sourceUnchanged=true`；源码digest`9192734b…e486`、安装bundle`84ef23b3…ef80`、result Info`89450fc0…0384`。创建→重启→列表封面→详情封面→删除通过，2张1290×2796截图亲看；详情先滚至顶部并验证图片`isHittable`。`npm run check`1028/1028（日志`aaf0dbc5…4d7c`）、完整native（日志`51bfcdb0…4e0d`）、Swift/Node/diff通过。r1–r9失败或替代原件保留。

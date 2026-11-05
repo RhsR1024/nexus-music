@@ -6414,6 +6414,57 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["sleep-status"].label.contains("剩余"))
     let cancel=app.buttons["取消睡眠定时"];reveal(cancel);cancel.tap();XCTAssertEqual(app.staticTexts["sleep-status"].label,"未开启")
   }
+  func testSleepCustomDurationAndRestart() throws {
+    let app=XCUIApplication();app.launch()
+    openSettings(app,page:"playback")
+    func reveal(_ element:XCUIElement){
+      let surface=app.descendants(matching:.any).matching(identifier:"settings-viewport-playback").firstMatch
+      XCTAssertTrue(surface.waitForExistence(timeout:10))
+      for _ in 0..<24 {
+        if waitForHittable(element,timeout:0.1) && element.frame.minY>=surface.frame.minY+8 && element.frame.maxY<=surface.frame.maxY-8{return}
+        let above=element.exists && element.frame.minY<surface.frame.minY+8
+        surface.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.25:0.75)).press(forDuration:0.05,thenDragTo:surface.coordinate(withNormalizedOffset:CGVector(dx:0.04,dy:above ? 0.75:0.25)))
+      }
+      XCTFail("Sleep control must be fully visible: \(element)")
+    }
+    let status=app.staticTexts["sleep-status"],field=app.textFields["睡眠定时分钟"],start=app.buttons["开始自定义定时"]
+    let cancel=app.buttons["取消睡眠定时"]
+    if cancel.exists {reveal(cancel);cancel.tap()}
+    reveal(field);replaceText(field,with:"2")
+    reveal(start);start.tap()
+    func seconds()->Int?{
+      let label=status.label
+      guard label.hasPrefix("剩余 ") else{return nil}
+      let parts=label.dropFirst(3).split(separator:":").compactMap{Int($0)}
+      guard parts.count==2 else{return nil}
+      return parts[0]*60+parts[1]
+    }
+    let started=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      guard let remaining=seconds() else{return false}
+      return remaining>90 && remaining<=120
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[started],timeout:5),.completed,"Custom duration must reach the native timer")
+    reveal(status)
+    let active=XCTAttachment(screenshot:app.screenshot());active.name="Sleep custom two minute timer active";active.lifetime = .keepAlways;add(active)
+    for invalid in ["0","1441"] {
+      reveal(field);replaceText(field,with:invalid)
+      reveal(start);start.tap()
+      XCTAssertTrue(app.staticTexts["请输入1到1440分钟"].waitForExistence(timeout:5))
+      XCTAssertNotNil(seconds(),"Rejected input must preserve the existing native timer")
+    }
+    let beforeBackground=try XCTUnwrap(seconds())
+    XCUIDevice.shared.press(.home)
+    RunLoop.current.run(until:Date().addingTimeInterval(3))
+    app.activate()
+    reveal(status)
+    let afterBackground=try XCTUnwrap(seconds())
+    XCTAssertLessThan(afterBackground,beforeBackground,"The native deadline must continue while the App is in the background")
+    XCTAssertGreaterThan(afterBackground,0)
+    app.terminate();app.launch();openSettings(app,page:"playback")
+    reveal(status);XCTAssertEqual(status.label,"未开启","Process restart must cancel sleep timing")
+    XCTAssertFalse(cancel.exists)
+    let restarted=XCTAttachment(screenshot:app.screenshot());restarted.name="Sleep timer cancelled after process restart";restarted.lifetime = .keepAlways;add(restarted)
+  }
   func testPlayerStyleSheetWithLargeTextAndPersistence() throws {
     let app=XCUIApplication()
     app.launchArguments=["-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]

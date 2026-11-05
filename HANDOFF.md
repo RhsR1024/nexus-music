@@ -1,3 +1,11 @@
+## 2026-11-05 J29 自定义计时与重启独立验收
+
+正式设置输入两分钟启动、0/1441拒绝且保留活动计时、Home返回继续递减、进程重启取消，Release `1793859946172`为1/0/0、75.088秒、sourceUnchanged；2图来源ready并亲看，1028检查通过。仅增XCTest，产品bundle与上批相同，不重复IPA；播放器双滚轮/本曲后停实音/切歌/实体签名仍待。旧云端`41962294108/e6e5668`实核核心24/1，唯一失败为歌单搜索排序去重，精确断言待附件，不推断产品根因。见[回执](docs/2026-11-05-sleep-custom-lifecycle-report.md)。下一修复F33旧确认弹窗复用新预览冲突选择的竞态；完整目标保持active。
+
+## 2026-11-05 歌单封面交付与云端队列补记
+
+产品与归档文档已正常 push，`git ls-remote` 实核远端 main 为 `191574a2e1f699593ca03223419ac9ec68aab826`。2026-11-05 14:24（Asia/Shanghai）从 GitHub Actions 页面核对：`41973467272/258cac7` 正在运行，`41979882570/191574a` 是唯一等待串行任务，队列为1运行/1排队；未取消或重派。未认证 REST API 返回限流403，改用实际网页核验；云端终态仍待。下一补 J29 自定义时长、无效输入保留活动计时、前后台与进程重启取消的独立正式 UI 回归，完整项目目标继续 active。
+
 ## 2026-11-05 歌单持久化封面列表与详情显示
 
 音枢歌单已保存的公开封面地址此前只写入元数据，列表和详情仍只看首曲封面。现以共用 `playlistCoverSource` 优先显示安全 `http/https` 公开封面，地址缺失或不安全时回退首曲；URL 拒绝凭据和敏感查询键，未新增迁移、网络代理或第二封面缓存。最终Release`SourceUITests-1793858859629`的`testLibraryPlaylistCoverURL`为1/0/0、55.901秒、`sourceUnchanged=true`；创建→重启→列表图片→详情图片→删除链路通过，2张1290×2796截图亲看。r1键盘遮挡、r2环境缺失、r3/r8截图页面外、r4/r5封面不可见、r6/r7残留旧夹具及r9注释改动前的证据均保留，未放宽断言。`npm run check`1028/1028，完整native、Swift/Node/diff通过。`3a2ecc2` clean unsigned IPA为17,821,674字节/SHA-256`1f5290d2…a4cdb`，manifest clean/unsigned，63载荷与90 ZIP项核验通过；历史`build/distribution`符号链接恢复且目标文件未变。T7阶段`2026-11-05-playlist-cover-3a2ecc2`为722份业务文件/410,722,802字节，逐项0差异且`SHA256SUMS` PASS；源码tar与1,093个tracked条目一致，源证据保留且零删除，receipt`7609b2f0…0206`。push随后补记；J24仍为B，实体手势、VoiceOver/字号/小屏、真实大歌单和签名未验。见[专项回执](docs/2026-11-05-playlist-cover-url-report.md)。
