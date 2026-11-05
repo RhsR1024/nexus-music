@@ -120,3 +120,49 @@ test('foreground refresh only previews configured sync and never commits automat
   assert.equal(await c.sync.previewIfConfigured(),true);assert.ok(c.sync.getSnapshot().preview);assert.equal(c.shared.puts(),0);
   assert.equal(c.sync.getSnapshot().message.includes('确认'),true);
 });
+test('foreground events during a pending read coalesce into one fresh preview without PUT',async()=>{
+  const c=client();await c.configure();await c.library.createPlaylist('Before');
+  const entered=deferred(),wait=deferred();let reads=0;
+  c.shared.hooks.beforeRead=async()=>{reads++;if(reads===1){entered.resolve();await wait.promise;}};
+  const initial=c.sync.preview();await entered.promise;
+  const refresh=c.sync.previewIfConfigured(),again=c.sync.previewIfConfigured();
+  await c.library.createPlaylist('After');wait.resolve();await initial;
+  assert.equal(await refresh,true);assert.equal(await again,true);assert.equal(reads,2);assert.equal(c.shared.puts(),0);
+  const records=c.sync.getSnapshot().preview!.plan.local.records.filter(value=>value.kind==='playlist'&&!value.deleted);
+  assert.equal(records.length,2);
+});
+test('cancel and connection changes discard queued foreground reads and late responses',async()=>{
+  for(const action of ['cancel','replace','remove']){
+    const c=client();await c.configure();const entered=deferred(),wait=deferred();let reads=0;
+    c.shared.hooks.beforeRead=async()=>{reads++;entered.resolve();await wait.promise;};
+    const initial=c.sync.preview();await entered.promise;const refresh=c.sync.previewIfConfigured();
+    if(action==='cancel')c.sync.cancel();else c.changeAccount(action==='remove');
+    assert.equal(await refresh,false);wait.resolve();await assert.rejects(initial);
+    assert.equal(reads,1);assert.equal(c.sync.getSnapshot().preview,undefined);assert.equal(c.shared.puts(),0);
+  }
+});
+test('queued foreground retry after a failed read is bounded and reports its own result',async()=>{
+  const c=client();await c.configure();const entered=deferred(),wait=deferred();let reads=0;
+  c.shared.hooks.beforeRead=async()=>{reads++;if(reads===1){entered.resolve();await wait.promise;}throw Error('fixture offline');};
+  const initial=c.sync.preview();await entered.promise;const refresh=c.sync.previewIfConfigured();
+  wait.resolve();await assert.rejects(initial);assert.equal(await refresh,false);
+  assert.equal(reads,2);assert.equal(c.shared.puts(),0);assert.equal(c.sync.getSnapshot().preview,undefined);
+});
+test('late canceled reads cannot consume a new directory foreground request',async()=>{
+  for(const failOld of [false,true]){
+    const c=client();await c.configure();const oldEntered=deferred(),oldWait=deferred(),newEntered=deferred(),newWait=deferred();let reads=0;
+    c.shared.hooks.beforeRead=async()=>{
+      const read=++reads;
+      if(read===1){oldEntered.resolve();await oldWait.promise;if(failOld)throw Error('old read failed');}
+      if(read===2){newEntered.resolve();await newWait.promise;}
+    };
+    const old=c.sync.preview(),oldRejected=assert.rejects(old);await oldEntered.promise;
+    const oldRefresh=c.sync.previewIfConfigured();c.sync.cancel();await c.sync.configure(account.id,'new/');
+    assert.equal(await oldRefresh,false);
+    const current=c.sync.preview();await newEntered.promise;const newRefresh=c.sync.previewIfConfigured();
+    oldWait.resolve();await oldRejected;
+    assert.equal(reads,2);assert.equal(c.sync.getSnapshot().busy,'preview');assert.equal(c.sync.getSnapshot().config!.directory,'new/');
+    newWait.resolve();await current;assert.equal(await newRefresh,true);
+    assert.equal(reads,3);assert.ok(c.sync.getSnapshot().preview);assert.equal(c.shared.puts(),0);
+  }
+});

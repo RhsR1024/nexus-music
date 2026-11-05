@@ -2898,6 +2898,10 @@ final class SourceSettingsTests: XCTestCase {
     func library(){app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();for _ in 0..<8{app.swipeDown()}}
     func sync(){let entry=app.buttons["cloud-sync-open"];reveal(entry);entry.tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
     func confirm(){let button=app.buttons["cloud-sync-commit"];reveal(button);XCTAssertTrue(button.isEnabled);button.tap();XCTAssertTrue(app.alerts["确认同步音乐库？"].waitForExistence(timeout:5));app.alerts.buttons["确认同步两端"].tap();XCTAssertTrue(app.staticTexts["同步已完成，音乐库与基线已保存；本机历史、统计和播放队列保留"].waitForExistence(timeout:20))}
+    func syncCounts() throws -> [String:Int]{
+      let data=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/state")!)
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:data) as? [String:Int])
+    }
     library();let webdav=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","WebDAV ·")).firstMatch;reveal(webdav);webdav.tap()
     let address=app.textFields["WebDAV服务器根目录"];if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
     let prior=app.buttons["移除WebDAV连接：Sync fixture"];if prior.exists{XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/sync-dav/"].exists);prior.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
@@ -2915,13 +2919,24 @@ final class SourceSettingsTests: XCTestCase {
     let save=app.buttons["cloud-sync-save"];reveal(save);save.tap();XCTAssertTrue(app.staticTexts["同步目录已保存，请读取合并预览"].waitForExistence(timeout:5));let preview=app.buttons["cloud-sync-preview"];reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["合并预览已就绪，确认后同步两端音乐库"].waitForExistence(timeout:15));confirm();app.buttons["收起多设备同步"].tap()
     let edit=try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/remote-edit")!,encoding:.utf8);XCTAssertEqual(edit,"ok")
     for _ in 0..<8{app.swipeDown()};let originalRow=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",original+" ·")).firstMatch;reveal(originalRow);originalRow.tap();let rename=app.textFields["音枢歌单名称"];reveal(rename);rename.tap();rename.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:(rename.value as? String)?.count ?? 0));rename.typeText(local);rename.typeText("\n");XCTAssertEqual(rename.value as? String,local);let saveInfo=app.buttons["保存信息"];reveal(saveInfo);XCTAssertTrue(saveInfo.isEnabled);saveInfo.tap();XCTAssertTrue(app.staticTexts[local].waitForExistence(timeout:10),"The saved title must update before leaving the editor");app.buttons["返回歌单列表"].tap()
-    sync();reveal(preview);preview.tap();XCTAssertTrue(app.staticTexts["发现 1 项冲突，请逐项选择后确认"].waitForExistence(timeout:15));let commit=app.buttons["cloud-sync-commit"];reveal(commit);XCTAssertFalse(commit.isEnabled);let remoteChoice=app.buttons["cloud-sync-remote-0"];reveal(remoteChoice);XCTAssertTrue(app.staticTexts["云端："+cloud+" · 0 首"].exists)
+    sync();reveal(preview)
+    let beforeHeldRead=try syncCounts()
+    XCTAssertEqual(try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/hold-next-read")!,encoding:.utf8),"ok")
+    preview.tap()
+    let held=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? syncCounts()["held"])==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[held],timeout:10),.completed)
+    XCUIDevice.shared.press(.home);app.activate()
+    XCTAssertEqual(try syncCounts()["held"],1)
+    XCTAssertEqual(try String(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/release-reads")!,encoding:.utf8),"ok")
+    let followup=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+      guard let current=try? syncCounts() else{return false}
+      return current["gets",default:0]==beforeHeldRead["gets",default:0]+2 && current["held"]==0
+    },object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[followup],timeout:10),.completed)
+    XCTAssertEqual(try syncCounts()["puts"],beforeHeldRead["puts"],"Foreground read replay must never PUT")
+    XCTAssertTrue(app.staticTexts["发现 1 项冲突，请逐项选择后确认"].waitForExistence(timeout:15));let commit=app.buttons["cloud-sync-commit"];reveal(commit);XCTAssertFalse(commit.isEnabled);let remoteChoice=app.buttons["cloud-sync-remote-0"];reveal(remoteChoice);XCTAssertTrue(app.staticTexts["云端："+cloud+" · 0 首"].exists)
     let image=XCTAttachment(screenshot:app.screenshot());image.name="Three-way conflict preview";image.lifetime = .keepAlways;add(image)
     for (button,title) in [("预览本机版本",local),("预览云端版本",cloud)]{let detail=app.buttons[button];reveal(detail);detail.tap();XCTAssertTrue(app.buttons["关闭版本预览"].waitForExistence(timeout:5));XCTAssertTrue(app.staticTexts[title+" · 0 首"].exists);app.buttons["关闭版本预览"].tap();XCTAssertTrue(app.buttons["收起多设备同步"].waitForExistence(timeout:5))}
-    func syncCounts() throws -> [String:Int]{
-      let data=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/sync-fixture/state")!)
-      return try XCTUnwrap(JSONSerialization.jsonObject(with:data) as? [String:Int])
-    }
     reveal(remoteChoice);remoteChoice.tap();reveal(commit);commit.tap()
     XCTAssertTrue(app.alerts["确认同步音乐库？"].waitForExistence(timeout:5))
     let beforeRefresh=try syncCounts()

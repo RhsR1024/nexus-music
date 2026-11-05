@@ -25,6 +25,7 @@ function status(value:number,allowed:readonly number[]){if(value===412)throw new
 export class WebDAVSync {
   private value:WebDAVSyncState={busy:null,message:'',error:''};private listeners=new Set<()=>void>();
   private deviceId:string;private baselines=new Map<string,SyncState>();private generation=0;private request?:AbortController;private account?:WebDAVAccount;
+  private foregroundRefresh?:{promise:Promise<boolean>;resolve:(result:boolean)=>void};
   private options:Options;
   constructor(options:Options){
     this.options=options;this.deviceId=options.uuid();
@@ -61,6 +62,7 @@ export class WebDAVSync {
   }
   cancel(){
     if(this.value.busy==='configure'||this.value.busy==='commit')return false;
+    this.foregroundRefresh?.resolve(false);this.foregroundRefresh=undefined;
     this.generation++;this.request?.abort();this.request=undefined;this.publish({...this.value,busy:null,preview:undefined,message:'',error:''});return true;
   }
   private async run(kind:'preview'|'commit',work:(context:{config:SyncConfig;account:WebDAVAccount;credentials:WebDAVCredentials;signal:AbortSignal;check:()=>void})=>Promise<Partial<WebDAVSyncState>>){
@@ -75,7 +77,13 @@ export class WebDAVSync {
       // connection changes while the in-memory library is being refreshed.
       if(kind==='preview')check();this.publish({...this.value,...result,busy:null});
     }catch(error){if(generation===this.generation)this.publish({...this.value,busy:null,preview:undefined,error:error instanceof SyncError?error.message:'同步未确认完成，请重新预览并核对本机与云端数据'});throw error;}
-    finally{if(this.request===request)this.request=undefined;}
+    finally{
+      if(this.request===request){
+        this.request=undefined;
+        const refresh=this.foregroundRefresh;this.foregroundRefresh=undefined;
+        if(refresh)void this.previewIfConfigured().then(refresh.resolve);
+      }
+    }
   }
   preview(){return this.run('preview',async({config,account,credentials,signal,check})=>{
     const baseline=this.baselines.get(space(config)),snapshot=this.options.library.getSnapshot(),local=buildSyncState(snapshot,this.deviceId,account.id,config.directory,baseline);
@@ -88,7 +96,16 @@ export class WebDAVSync {
    * Conflicts remain explicit and require the existing user confirmation path;
    * foreground refresh never commits data automatically. */
   previewIfConfigured(){
-    if(!this.value.config||this.value.busy||!this.selectedAccount())return Promise.resolve(false);
+    if(!this.value.config||!this.selectedAccount())return Promise.resolve(false);
+    if(this.value.busy==='preview'){
+      if(!this.foregroundRefresh){
+        let resolve!:(result:boolean)=>void;
+        const promise=new Promise<boolean>(done=>{resolve=done;});
+        this.foregroundRefresh={promise,resolve};
+      }
+      return this.foregroundRefresh.promise;
+    }
+    if(this.value.busy)return Promise.resolve(false);
     return this.preview().then(()=>true).catch(()=>false);
   }
   commit(choices:SyncChoices={},confirmedPreview=this.value.preview){

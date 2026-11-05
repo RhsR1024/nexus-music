@@ -153,6 +153,7 @@ audio.write('RIFF');audio.writeUInt32LE(audio.length-8,4);audio.write('WAVEfmt '
 for(let i=0;i<(audio.length-44)/2;i++)audio.writeInt16LE(Math.round(1000*Math.sin(2*Math.PI*1000*i/48000)),44+i*2);
 let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
+let syncHoldNextRead=false;const syncHeldReads=[];
 const counts={requests:{},authFailures:0,authSuccesses:0};
 counts.accountFm={mode:'normal',holdNext:false,held:0,released:0,requests:[],authFailures:0,daily:0,coverMetadata:0};
 let heldAccountFmResponses=[];
@@ -741,7 +742,12 @@ const handleRequest = async (req, res) => {
   if(req.url==='/playlist-cover.png'&&playlistCoverUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
   if(req.url==='/sync-fixture/state'){
-    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({gets:counts.backup?.get??0,puts:counts.backup?.put??0}));return;
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify({gets:counts.backup?.get??0,puts:counts.backup?.put??0,held:syncHeldReads.length}));return;
+  }
+  if(req.url==='/sync-fixture/hold-next-read'){syncHoldNextRead=true;res.end('ok');return;}
+  if(req.url==='/sync-fixture/release-reads'){
+    for(const release of syncHeldReads.splice(0))release();
+    res.end('ok');return;
   }
   if(req.url==='/sync-fixture/remote-edit'){
     counts.syncEdits=(counts.syncEdits??0)+1;
@@ -770,7 +776,11 @@ const handleRequest = async (req, res) => {
       backupFiles.set(req.url,body);if(liveBackupSettingsUI&&parsed.format==='nexus-music'){writeFileSync(resolve(runDirectory,'actual-cloud-backup.json'),body);if(!localFixtureDirectory)throw Error('real backup Files directory unavailable');writeFileSync(resolve(localFixtureDirectory,'Actual Public Music Backup.json'),body);}
       if(parsed.format==='nexus-music'&&!liveBackupSettingsUI)backupFiles.set(req.url.slice(0,req.url.lastIndexOf('/')+1)+'broken.json','{synthetic invalid JSON');res.writeHead(previous===undefined?201:204,{ETag:'"'+createHash('sha256').update(body).digest('hex')+'"'});res.end();return;
     }
-    if(req.method==='GET'){counts.backup.get++;if(!backupFiles.has(req.url)){res.writeHead(404);res.end();return;}const body=backupFiles.get(req.url),tag='"'+createHash('sha256').update(body).digest('hex')+'"';if(req.headers['if-match']&&req.headers['if-match']!==tag){res.writeHead(412);res.end();return;}res.writeHead(200,{'Content-Type':'application/json',ETag:tag});res.end(body);return;}
+    if(req.method==='GET'){
+      counts.backup.get++;
+      if(req.url.startsWith('/sync-dav/')&&syncHoldNextRead){syncHoldNextRead=false;await new Promise(done=>syncHeldReads.push(done));}
+      if(!backupFiles.has(req.url)){res.writeHead(404);res.end();return;}const body=backupFiles.get(req.url),tag='"'+createHash('sha256').update(body).digest('hex')+'"';if(req.headers['if-match']&&req.headers['if-match']!==tag){res.writeHead(412);res.end();return;}res.writeHead(200,{'Content-Type':'application/json',ETag:tag});res.end(body);return;
+    }
     if(req.method==='PROPFIND'){
       counts.backup.propfind++;if(!backupDirectories.has(req.url)&&!backupFiles.has(req.url)){res.writeHead(404);res.end();return;}
       const row=(path,directory)=>`<d:response><d:href>${path}</d:href><d:propstat><d:prop><d:resourcetype>${directory?'<d:collection/>':''}</d:resourcetype>${directory?'':`<d:getcontentlength>${Buffer.byteLength(backupFiles.get(path))}</d:getcontentlength><d:getetag>&quot;${createHash('sha256').update(backupFiles.get(path)).digest('hex')}&quot;</d:getetag>`}</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>`;
