@@ -1,3 +1,7 @@
+## 2026-11-05 歌单持久化封面本地 Release
+
+最终`SourceUITests-1793858859629`为1/0/0、55.901秒、`sourceUnchanged=true`；源码digest`9192734b…e486`、安装bundle`84ef23b3…ef80`、result Info`89450fc0…0384`。创建→重启→列表封面→详情封面→删除通过，2张1290×2796截图亲看；详情先滚至顶部并验证图片`isHittable`。`npm run check`1028/1028（日志`aaf0dbc5…4d7c`）、完整native（日志`51bfcdb0…4e0d`）、Swift/Node/diff通过。r1–r9失败或替代原件保留。clean unsigned archive、T7和push随后补记；本批不声明签名、实体机或项目完成。见[专项回执](2026-11-05-playlist-cover-url-report.md)。
+
 ## 2026-11-05 J29 睡眠即时停止清洁交付
 
 提交`96e6a64`的J29实现通过正式Release`SourceUITests-1793854177801`：1/0/0、631.892秒、`sourceUnchanged=true`，真实Navidrome合成音频完成定时→秒级倒计时→立即停止→原生计时清除→vinyl暂停；4张睡眠面板图和1张暂停图均亲看。两轮失败原件保留，原断言未放宽。`npm run check`1027/1027（日志SHA-256`2aeffb82…dd0e`），完整native通过（日志`51bfcdb0…4e0d`），仅既有Sendable/WeakMutability警告。

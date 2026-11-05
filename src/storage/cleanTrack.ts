@@ -1,6 +1,7 @@
 import type {Track} from "../domain/track.ts";
+import {safePublicURL} from "../domain/publicURL.ts";
+export {safePublicURL};
 const secret=/password|authorization|cookie|api[_-]?key|token|credential|secret|rawscript/i;
-export const safePublicURL=(value:string)=>{try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&![...url.searchParams.keys()].some(key=>secret.test(key)||['u','p','t','s'].includes(key));}catch{return false;}};
 export function cleanTrack(track:Track):Track {
   const metadata=JSON.parse(JSON.stringify(track.metadata,(key,value)=>{
     if(secret.test(key))return undefined;

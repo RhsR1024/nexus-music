@@ -1,3 +1,7 @@
+## 2026-11-05 歌单持久化封面列表与详情显示
+
+音枢歌单已保存的公开封面地址此前只写入元数据，列表和详情仍只看首曲封面。现以共用 `playlistCoverSource` 优先显示安全 `http/https` 公开封面，地址缺失或不安全时回退首曲；URL 拒绝凭据和敏感查询键，未新增迁移、网络代理或第二封面缓存。最终Release`SourceUITests-1793858859629`的`testLibraryPlaylistCoverURL`为1/0/0、55.901秒、`sourceUnchanged=true`；创建→重启→列表图片→详情图片→删除链路通过，2张1290×2796截图亲看。r1键盘遮挡、r2环境缺失、r3/r8截图页面外、r4/r5封面不可见、r6/r7残留旧夹具及r9注释改动前的证据均保留，未放宽断言。`npm run check`1028/1028，完整native、Swift/Node/diff通过。清洁归档/T7/push随后补记；J24仍为B，实体手势、VoiceOver/字号/小屏、真实大歌单和签名未验。见[专项回执](docs/2026-11-05-playlist-cover-url-report.md)。
+
 ## 2026-11-05 J29 睡眠定时器秒级倒计时与立即停止
 
 睡眠面板新增秒级倒计时和 48pt“立即停止播放”；停止动作先原子取消原生睡眠计时，再通过唯一播放控制器暂停真实音频。完整设置同步秒级显示，原生计时器仍是唯一权威。最终Release `SourceUITests-1793854177801` 的 Navidrome 合成实音/五皮肤回归为 1/0/0、631.892秒、`sourceUnchanged=true`；倒计时、立即停止、计时清除和 vinyl 暂停按钮均通过，5张1290×2796截图亲看。两轮测试状态污染/弹层遮挡失败原件保留，未放宽断言。`npm run check` 1027/1027、完整 native 与 diff 通过，检查日志SHA-256 `2aeffb82…dd0e`、native日志`51bfcdb0…4e0d`。提交级clean IPA 17,821,239字节、SHA-256 `b164ebc95f30f73864e1913ca5eb01199b5b135fd893870410345293bbefd58f`，manifest `dirty=false`/`workingTreeChanges=[]`/unsigned，ZIP、63载荷及39,213,600字节逐字节核验通过。T7阶段`2026-11-05-sleep-immediate-96e6a64`为804份业务文件、逐项0差异，`ready=true`，源证据保留且零删除；源码tar/补丁与恢复方式见回执。J29 仍保留自定义实际启动、本曲后停正式UI、重启/前后台组合、实体机、签名与 iOS27 边界，不写全部完成。见[专项回执](docs/2026-11-05-sleep-immediate-report.md)。

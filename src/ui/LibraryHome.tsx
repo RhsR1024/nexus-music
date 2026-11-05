@@ -17,6 +17,7 @@ import type {Services} from '../app/services.ts';
 import type {LocalPlaylist} from '../storage/library.ts';
 import {Toast} from './Toast.tsx';
 import type {Track} from '../domain/track.ts';
+import {playlistCoverSource} from '../domain/playlistCover.ts';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {SheetModal} from './AdaptiveModal.tsx';
 export function LibraryHome({services,openSearch,openSettings,openAccounts}:{services:Services;openSearch:()=>void;openSettings:()=>void;openAccounts:()=>void}) {
@@ -38,6 +39,7 @@ export function LibraryHome({services,openSearch,openSettings,openAccounts}:{ser
   const iconButton=(id:string,label:string,icon:React.ComponentProps<typeof Ionicons>['name'],action:()=>void)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.iconButton}><Ionicons name={icon} size={22} color={theme.palette.accent}/></Pressable>;
   const tabButton=(value:'favorites'|'history'|'playlists',label:string)=><Pressable key={value} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:tab===value}} onPress={()=>{setTab(value);setSelected(null);}} style={[styles.tabButton,tab===value&&styles.tabButtonSelected]}><Text style={[styles.tabLabel,tab===value&&styles.tabLabelSelected]}>{label}</Text></Pressable>;
   const tracks=playlist?playlist.entries.map(item=>item.track):tab==='favorites'?library.favorites:tab==='history'?library.history.map(item=>item.track):[];
+  const selectedCover=playlist?playlistCoverSource(playlist.coverUrl,playlist.entries[0]?.track):undefined;
   return <View>
     <View style={styles.header}><View style={{flex:1}}><Text style={styles.title}>我的音乐库</Text><Text style={styles.caption}>收藏 {library.favorites.length} · 歌单 {library.playlists.length} · 最近播放 {library.history.length} · 播放统计 {playbackStats.items.length}</Text></View><View style={styles.headerActions}>{iconButton('library-open-search','搜索歌曲','search-outline',openSearch)}{iconButton('library-create-playlist','创建歌单','add',openPlaylistComposer)}{iconButton('library-open-settings','音乐来源','settings-outline',openSettings)}</View></View>
     <SavedCatalogs services={services}/>
@@ -47,7 +49,7 @@ export function LibraryHome({services,openSearch,openSettings,openAccounts}:{ser
     <LocalAudioLibrary services={services}/><DeviceMediaLibrary services={services}/><WebDAVLibrary services={services}/>
     {services.recoveryWarnings.map((warning,index)=><Text key={index} style={styles.caption}>{warning}</Text>)}
     <View style={styles.tabs}>{tabButton('favorites','我的收藏')}{tabButton('history','最近播放')}{tabButton('playlists','我的歌单')}</View>
-    {playlist?<View><Text style={styles.heading}>{playlist.title}</Text><TextInput accessibilityLabel="音枢歌单名称" value={name} onChangeText={setName} style={styles.input}/>
+    {playlist?<View><View style={{flexDirection:"row",gap:16,alignItems:"center"}}><Cover services={services} url={selectedCover?.url} track={selectedCover?.track} size={88} testID="library-playlist-detail-cover"/><Text style={styles.heading}>{playlist.title}</Text></View><TextInput accessibilityLabel="音枢歌单名称" value={name} onChangeText={setName} style={styles.input}/>
       <TextInput accessibilityLabel="音枢歌单描述" value={description} onChangeText={setDescription} placeholder="歌单描述（可选）" placeholderTextColor="#768191" style={styles.input}/>
       <TextInput accessibilityLabel="音枢歌单封面地址" value={coverUrl} onChangeText={setCoverUrl} placeholder="封面图片地址（可选）" placeholderTextColor="#768191" style={styles.input}/><View style={styles.row}>
       {button('保存信息',()=>{void perform(async()=>{await services.library.renamePlaylist(playlist.id,name);await services.library.updatePlaylistMeta(playlist.id,{description,coverUrl});});},busy||!name.trim())}
@@ -58,7 +60,7 @@ export function LibraryHome({services,openSearch,openSettings,openAccounts}:{ser
       <TextInput accessibilityLabel="创建音枢歌单描述" value={description} onChangeText={setDescription} placeholder="歌单描述（可选）" placeholderTextColor="#768191" style={styles.input}/>
       <TextInput accessibilityLabel="创建音枢歌单封面地址" value={coverUrl} onChangeText={setCoverUrl} placeholder="封面图片地址（可选）" placeholderTextColor="#768191" style={styles.input}/>
       {button('创建歌单',()=>{void perform(async()=>{const id=await services.library.createPlaylist(name,[],{description,coverUrl});setSelected(id);});},busy||!name.trim(),'library-create-playlist-submit')}
-      {library.playlists.map(item=><Pressable accessibilityRole="button" accessibilityLabel={`${item.title} · ${item.entries.length}首`} key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><View style={{flexDirection:"row",gap:14,alignItems:"center"}}><Cover services={services} track={item.entries[0]?.track} size={58}/><View style={{flex:1}}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首{item.description?` · ${item.description}`:''}</Text></View></View></Pressable>)}
+      {library.playlists.map((item,index)=>{const cover=playlistCoverSource(item.coverUrl,item.entries[0]?.track);return <Pressable accessibilityRole="button" accessibilityLabel={`${item.title} · ${item.entries.length}首`} key={item.id} onPress={()=>setSelected(item.id)} style={styles.trackRow}><View style={{flexDirection:"row",gap:14,alignItems:"center"}}><Cover services={services} url={cover.url} track={cover.track} size={58} testID={`library-playlist-cover-${index}`}/><View style={{flex:1}}><Text style={styles.track}>{item.title}</Text><Text style={styles.caption}>{item.entries.length} 首{item.description?` · ${item.description}`:''}</Text></View></View></Pressable>})}
     </View>:null}
     {!!tracks.length&&<View style={styles.row}>{button('播放全部',()=>services.playTracks(tracks,0))}{button('随机播放',()=>{void services.preferences.update({repeat:'off',shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));})}</View>}
     {tracks.length>0&&button('全部歌曲与批量管理',()=>setListOpen(true))}
@@ -76,7 +78,7 @@ export function LibraryHome({services,openSearch,openSettings,openAccounts}:{ser
     <LibraryDataTools services={services}/>
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
     <Toast message={undoSnapshot?`已删除歌单「${undoSnapshot.title}」`:''} onDismiss={()=>setUndoSnapshot(null)} action={undoSnapshot?{label:'撤销',onRun:()=>{void perform(async()=>{await services.library.restorePlaylist(undoSnapshot);});}}:undefined}/>
-    <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} visible={listOpen} onClose={()=>setListOpen(false)}/>
+    <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} coverUrl={playlist?.coverUrl} visible={listOpen} onClose={()=>setListOpen(false)}/>
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
     <MatchModal services={services} track={matchingTrack} onClose={()=>setMatchingTrack(null)}/>
     <SheetModal visible={!!menu} animationType="slide" onRequestClose={()=>setMenu(null)}>

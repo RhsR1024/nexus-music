@@ -11,7 +11,8 @@ import {MatchModal} from './MatchModal.tsx';
 import {Cover} from './Cover.tsx';
 import {TrackListTools} from './TrackListTools.tsx';
 import {SwipeRemoveRow} from './SwipeRemoveRow.tsx';
-export function TrackListModal({services,tracks,entryIds,title,visible,onClose,playlistId,kind}:{services:Services;tracks:readonly Track[];entryIds?:readonly string[];title:string;visible:boolean;onClose:()=>void;playlistId?:string;kind:'favorites'|'history'|'playlist'}){
+import {playlistCoverSource} from '../domain/playlistCover.ts';
+export function TrackListModal({services,tracks,entryIds,title,coverUrl,visible,onClose,playlistId,kind}:{services:Services;tracks:readonly Track[];entryIds?:readonly string[];title:string;coverUrl?:string;visible:boolean;onClose:()=>void;playlistId?:string;kind:'favorites'|'history'|'playlist'}){
   const {palette:p}=useTheme(),[selected,setSelected]=useState<ReadonlySet<string>>(new Set()),[adding,setAdding]=useState<readonly Track[]>([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   const [query,setQuery]=useState(''),[sort,setSort]=useState<TrackSort>('original'),[matching,setMatching]=useState<Track|null>(null);
   useEffect(()=>{setSelected(new Set());setMessage('');setQuery('');setSort('original');},[visible,playlistId,kind]);
@@ -20,6 +21,7 @@ export function TrackListModal({services,tracks,entryIds,title,visible,onClose,p
   const shown=useMemo(()=>viewTrackRows(rows,query,sort),[rows,query,sort]),shownTracks=useMemo(()=>shown.map(row=>row.track),[shown]);
   useEffect(()=>{const valid=new Set(rows.map(row=>row.key));setSelected(old=>[...old].every(key=>valid.has(key))?old:new Set([...old].filter(key=>valid.has(key))));},[rows]);
   const chosen=useMemo(()=>selectedTrackRows(rows,selected),[rows,selected]);
+  const cover=playlistCoverSource(coverUrl,tracks[0]);
   const allShownSelected=shown.length>0&&shown.every(row=>selected.has(row.key));
   const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} onPress={action} style={{padding:11,backgroundColor:p.selected,borderRadius:10,opacity:disabled?.4:1}}><Text style={{color:p.accent}}>{label}</Text></Pressable>;
   async function removeRows(wanted:readonly TrackRow[]){
@@ -33,7 +35,7 @@ export function TrackListModal({services,tracks,entryIds,title,visible,onClose,p
   }
   const confirmRemove=(wanted:readonly TrackRow[])=>Alert.alert('移除所选条目？',`共 ${wanted.length} 条。此操作仅修改本地音乐库。`,[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void removeRows(wanted);}}]);
   const header=<View style={{gap:14,paddingBottom:20}}>
-    <View style={{flexDirection:'row',gap:16,alignItems:'center'}}><Cover services={services} track={tracks[0]} size={88}/><View style={{flex:1}}><Text accessibilityRole="header" style={{fontSize:24,color:p.text}}>{title}</Text><Text testID="track-list-count" style={{color:p.secondary,marginTop:7}}>显示 {shown.length} / {rows.length} 首 · 已选 {chosen.length} 条</Text></View></View>
+    <View style={{flexDirection:'row',gap:16,alignItems:'center'}}><Cover services={services} url={cover.url} track={cover.track} size={88} testID="track-list-cover"/><View style={{flex:1}}><Text accessibilityRole="header" style={{fontSize:24,color:p.text}}>{title}</Text><Text testID="track-list-count" style={{color:p.secondary,marginTop:7}}>显示 {shown.length} / {rows.length} 首 · 已选 {chosen.length} 条</Text></View></View>
     <TrackListTools query={query} onQuery={setQuery} sort={sort} onSort={setSort}/>
     <Text style={{color:p.secondary,fontSize:12}}>搜索和排序只改变显示顺序；向左滑动歌曲可移除此条。</Text>
     <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{button('播放当前结果',()=>services.playTracks(shownTracks,0),!shown.length)}{button(allShownSelected?'取消全选':'全选当前结果',()=>setSelected(old=>{const next=new Set(old);for(const row of shown)if(allShownSelected)next.delete(row.key);else next.add(row.key);return next;}),!shown.length||busy)}{chosen.length>0&&button('清除选择',()=>setSelected(new Set()),busy)}</View>

@@ -3164,6 +3164,63 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["收起歌曲列表"].tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
     XCTAssertFalse(playlist.exists)
   }
+  func testLibraryPlaylistCoverURL() throws {
+    let app=XCUIApplication();app.launch()
+    let title="Cover fixture \(Int(Date().timeIntervalSince1970))"
+    func keyboardGone(){
+      let keyboard=app.keyboards.firstMatch
+      if keyboard.exists {
+        expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:keyboard)
+        waitForExpectations(timeout:5)
+      }
+    }
+    func reach(_ element:XCUIElement){
+      for _ in 0..<30 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func revealDetailTop(_ element:XCUIElement){
+      for _ in 0..<12 {
+        if element.exists && element.isHittable{return}
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.35)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.8)))
+      }
+      XCTAssertTrue(element.exists && element.isHittable,"Playlist detail cover must be hittable at the top of the page before visual capture; frame=\(element.frame)")
+    }
+    func typeAndDismiss(_ field:XCUIElement,_ value:String){
+      field.tap();field.typeText(value);field.typeText("\n");keyboardGone()
+    }
+    let library=app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch;XCTAssertTrue(library.waitForExistence(timeout:10));library.tap()
+    let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
+    let coverFixtures=NSPredicate(format:"label BEGINSWITH %@","Cover fixture ")
+    for _ in 0..<20 {
+      let prior=app.buttons.matching(coverFixtures).firstMatch
+      if !prior.exists {break}
+      let before=app.buttons.matching(coverFixtures).count
+      reach(prior);prior.tap()
+      let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
+      let removed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons.matching(coverFixtures).count<before},object:nil)
+      XCTAssertEqual(XCTWaiter.wait(for:[removed],timeout:10),.completed,"Each prior cover fixture must leave the playlist list before the next cleanup step")
+    }
+    XCTAssertEqual(app.buttons.matching(coverFixtures).count,0,"Cover evidence must start without stale fixture playlists")
+    let create=app.buttons["library-create-playlist"];reach(create);create.tap()
+    let name=app.textFields["创建音枢歌单名称"];XCTAssertTrue(name.waitForExistence(timeout:10));typeAndDismiss(name,title)
+    let cover=app.textFields["创建音枢歌单封面地址"];reach(cover);typeAndDismiss(cover,"http://127.0.0.1:18439/playlist-cover.png")
+    let submit=app.buttons["library-create-playlist-submit"];reach(submit);XCTAssertTrue(submit.isEnabled);submit.tap()
+    let back=app.buttons["返回歌单列表"];reach(back);back.tap()
+    app.terminate();app.launch()
+    let relaunchedLibrary=app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch;XCTAssertTrue(relaunchedLibrary.waitForExistence(timeout:10));relaunchedLibrary.tap()
+    reach(playlists);playlists.tap()
+    let row=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@",title)).firstMatch;reach(row)
+    let image=row.descendants(matching:.image).firstMatch
+    XCTAssertTrue(image.waitForExistence(timeout:10),"A saved public playlist cover must render instead of remaining a write-only field")
+    let listScreenshot=XCTAttachment(screenshot:app.screenshot());listScreenshot.name="Library playlist renders persisted public cover URL";listScreenshot.lifetime = .keepAlways;add(listScreenshot)
+    row.tap()
+    let detailImage=app.descendants(matching:.image).matching(identifier:"library-playlist-detail-cover-image").firstMatch
+    XCTAssertTrue(detailImage.waitForExistence(timeout:10),"Playlist detail must render the same persisted public cover")
+    revealDetailTop(detailImage)
+    let detailScreenshot=XCTAttachment(screenshot:app.screenshot());detailScreenshot.name="Playlist detail renders persisted public cover URL";detailScreenshot.lifetime = .keepAlways;add(detailScreenshot)
+    let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
+  }
   func testLXMCImportCancelAndRestart() throws {
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement){

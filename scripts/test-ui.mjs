@@ -186,6 +186,7 @@ const classicUI=classicReferenceUI||structuredLyricsUI||classicShortUI||vinylRef
 const appearanceUI=process.argv.slice(2).some(target=>target.endsWith('/testVisualLabAppearanceDirect'));
 if((appearanceUI||classicUI)&&(process.argv.slice(2).length!==1||fixtureOnlineUI))throw new Error('The appearance capture entry requires its single explicit test target');
 const coverThemeUI=process.argv.slice(2).some(target=>target.endsWith('/testGlobalCoverThemeChangesAcrossPages'));
+const playlistCoverUI=process.argv.slice(2).some(target=>target.endsWith('/testLibraryPlaylistCoverURL'));
 const entryFile=vinylReferenceUI?'tests/e2e/vinyl.tsx':classicUI?'tests/e2e/classic.tsx':appearanceUI?'tests/e2e/appearance.tsx':fixtureOnlineUI||coverThemeUI?'tests/e2e/entry.tsx':null;
 const themeObservation=new ThemeObservation();
 // Optional public recording for this functional race regression. Controlled
@@ -737,6 +738,7 @@ const handleRequest = async (req, res) => {
   }
   if(req.url==='/discovery-cover.png'&&discoveryUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
   if(req.url==='/unified-mv-cover.png'&&searchUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.multi,'base64'));return;}
+  if(req.url==='/playlist-cover.png'&&playlistCoverUI){res.setHeader('Content-Type','image/png');res.end(Buffer.from(themeCovers.red,'base64'));return;}
   if(req.url==='/source.js'){seedLocalAudio();res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fixture);return;}
   if(req.url==='/sync-fixture/remote-edit'){
     counts.syncEdits=(counts.syncEdits??0)+1;
