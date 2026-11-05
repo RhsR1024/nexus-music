@@ -22,10 +22,11 @@ const expandPlaylistLink:PlaylistLinkExpander=async(url,signal)=>{
   return value.url;
 };
 const initialize=()=>pending??=(async()=>{
-  const boot=requireNativeModule<{launchArgument(name:string):string|null}>('NexusNative').launchArgument('NEXUS_UI_THEME_BOOT_ID');
+  const native=requireNativeModule<{launchArgument(name:string):string|null}>('NexusNative');
+  const boot=native.launchArgument('NEXUS_UI_THEME_BOOT_ID');
   const services=await createServices(boot?{}:{onlineHTTP:http,onlineTextHTTP:textHTTP,playlistLinkExpander:expandPlaylistLink});
   if(boot)observeTheme(services,boot);
-  const fixtureAccount=requireNativeModule<{launchArgument(name:string):string|null}>('NexusNative').launchArgument('NEXUS_UI_ACCOUNT_FM_FIXTURE')==='1';
+  const fixtureAccount=native.launchArgument('NEXUS_UI_ACCOUNT_FM_FIXTURE')==='1';
   if(fixtureAccount){
     // Simulator-only account/session fixture. The production entry does not
     // import this module; the account, secure session, FM guard and playback
@@ -34,6 +35,15 @@ const initialize=()=>pending??=(async()=>{
     const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
     const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000001',cookies:Object.freeze({MUSIC_U:'synthetic-fm',__csrf:'synthetic-csrf'})});
     await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase FM',username,displayName:'Synthetic NetEase FM',avatar:'http://127.0.0.1:18439/account-avatar.png',capabilities:['daily','fm']},session);
+  }
+  if(native.launchArgument('NEXUS_UI_QQ_FAVORITE_FIXTURE')==='1'){
+    // Separate simulator-only QQ account. The favorite action uses the real
+    // account store, Keychain session and provider; only provider transport is
+    // redirected to the local HTTP fixture.
+    const username='qq:2:9000000000000000002';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['tx',username]));
+    const session=Object.freeze({version:1,platform:'tx',accountId,userId:'9000000000000000002',cookies:Object.freeze({qqmusic_key:'synthetic-qq-favorite',qqmusic_uin:'9000000000000000002',login_type:'1'})});
+    await services.musicAccounts.save({platform:'tx',label:'Synthetic QQ Favorite',username,displayName:'Synthetic QQ Favorite',capabilities:[]},session);
   }
   return services;
 })().catch(error=>{pending=undefined;throw error;});

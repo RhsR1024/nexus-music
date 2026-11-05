@@ -2768,6 +2768,58 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(avatar.waitForExistence(timeout:20),"The saved NetEase fixture avatar must render from its public URL")
     let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name="Music account avatar";shot.lifetime = .keepAlways;add(shot)
   }
+  func testQQFavoriteFixture() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_QQ_FAVORITE_FIXTURE"]="1"
+    app.launch()
+    func reach(_ element:XCUIElement){
+      for _ in 0..<16 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func control(_ query:String="") throws -> [String:Any] {
+      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/qq-favorite-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Any]) ?? [:]
+    }
+    func integer(_ key:String,in value:[String:Any])->Int{(value[key] as? NSNumber)?.intValue ?? -1}
+    _=try control("reset=1")
+    let searchTab=app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch
+    XCTAssertTrue(searchTab.waitForExistence(timeout:15));searchTab.tap()
+    let songKind=app.descendants(matching:.any).matching(identifier:"search-kind-song").firstMatch
+    XCTAssertTrue(songKind.waitForExistence(timeout:10));reach(songKind);songKind.tap()
+    let qqPlatform=app.descendants(matching:.any).matching(identifier:"QQ音乐").firstMatch
+    XCTAssertTrue(qqPlatform.waitForExistence(timeout:10));reach(qqPlatform);qqPlatform.tap()
+    let field=app.textFields["搜索歌曲或歌手"]
+    XCTAssertTrue(field.waitForExistence(timeout:10));reach(field);field.tap()
+    for character in "Unified fixture"{field.typeText(String(character))}
+    let run=app.buttons["run-online-search"];reach(run);run.tap()
+    let more=app.buttons["search-more-tx-0"]
+    XCTAssertTrue(more.waitForExistence(timeout:20));reach(more);more.tap()
+    let favorite=app.buttons["search-action-qq-favorite"]
+    XCTAssertTrue(favorite.waitForExistence(timeout:10));reach(favorite)
+    image("QQ online track exposes a separate platform favorite action")
+    favorite.tap()
+    let status=app.staticTexts["search-qq-favorite-status"]
+    XCTAssertTrue(status.waitForExistence(timeout:20))
+    XCTAssertEqual(status.label,"已收藏到 QQ 音乐")
+    let first=try control()
+    XCTAssertEqual(integer("writes",in:first),1,"A confirmed favorite must send exactly one write")
+    XCTAssertGreaterThanOrEqual(integer("reads",in:first),2,"The action must read before and after writing")
+    XCTAssertEqual(integer("invalid",in:first),0,"The write must bind the account, song and signature")
+    XCTAssertEqual(integer("favorited",in:first),1)
+    image("QQ favorite is confirmed by a read-back, not by code zero alone")
+    let readsBefore=integer("reads",in:first)
+    let enabled=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:favorite)
+    XCTAssertEqual(XCTWaiter.wait(for:[enabled],timeout:5),.completed)
+    favorite.tap()
+    let reread=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? integer("reads",in:control())) ?? 0 > readsBefore},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[reread],timeout:20),.completed)
+    let second=try control()
+    XCTAssertEqual(integer("writes",in:second),1,"Tapping an already favorited song must not write again")
+    XCTAssertEqual(status.label,"已收藏到 QQ 音乐")
+    image("Repeating the QQ favorite action stays idempotent")
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.

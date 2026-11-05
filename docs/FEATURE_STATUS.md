@@ -1,3 +1,7 @@
+## 2026-11-05 J10 QQ 平台收藏纵向切片
+
+QQ 在线歌曲新增独立“收藏到 QQ 音乐”入口。流程先读 `IsSongFanByMid`，已收藏幂等不写；未收藏才严格核对 MID、安全正整数 ID 和普通歌曲类型，并通过签名 `musics.fcg` 的 `AddSonglist` 固定 `dirId:201` 发送一次写入，最多两次回读确认后才显示成功。写入失败、回读失败、鉴权失效、账号删除/替换、取消与迟到响应分别返回明确状态，不把响应 `code:0` 当成收藏成功。仅单一 QQ 账号显示入口，多账号要求用户先收敛，不自动猜归属；本地收藏、唯一队列和账号 capability 不变。新增 15 项单测，`npm run check`1068/1068；正式 Release`SourceUITests-1793881881959`为 1/0/0、`testQQFavoriteFixture()`31.360 秒、`sourceUnchanged=true`，夹具 `reads=3/writes=1/favorited=1/invalid=0`，三张 1290×2796 截图亲看空心星、已收藏和重复点击幂等。参考固定 Q-music `5db858f` 的 `qqFavorite.ts`/`qqCredentials.ts`/`playlists.ts`，Apache-2.0 与修改说明已记录。真实 QQ 账号、网易云/酷狗平台收藏、平台歌单创建、实体机/签名/iOS27 与云端终态仍开放，J10 仍为 B。见[回执](2026-11-05-qq-platform-favorite-report.md)。
+
 ## 2026-11-05 J10 平台账号公开头像与资料刷新
 
 网易云登录读取官方 `profile.avatarUrl`，酷狗扫码读取 `data.pic ?? data.picurl`，账号元数据保存经严格规范化的公开头像 URL；账号页网易云/QQ/酷狗共用 40pt 圆形头像并回退显示名首字。验证成功后只刷新昵称/头像，不改 Keychain 会话或账号版本；QQ 日推授权/撤销/电脑配对重存保留既有头像。新增头像 URL、旧记录恢复、非法值、删除/替换竞态、仓库失败、网易云/酷狗解析与协调器测试，`npm run check`1053/1053；正式Release`1793880508658`为1/0/0、sourceUnchanged，夹具账号真实 PNG 头像亲看通过；首轮夹具入口选择失败原件保留。clean unsigned IPA`714fc95f…794f8`为17,867,711字节，manifest clean/63载荷/8隐私/0签名及生产夹具标记排除通过。QQ官方头像字段未证实继续首字回退；真实三平台账号、收藏/创建歌单能力、实体机/签名/iOS27与云端终态仍开放，J10仍为B。见[回执](2026-11-05-music-account-avatar-report.md)。

@@ -1,3 +1,7 @@
+## 2026-11-05 J10 QQ 平台收藏纵向切片
+
+新增 `QQFavoriteClient` 与正式歌曲操作入口，完成 QQ 在线歌曲的平台收藏纵向路径：严格绑定账号/会话/Cookie 身份，先读 `IsSongFanByMid`，未收藏才校验歌曲详情并发送一次 `AddSonglist`（`dirId:201`），写后最多两次回读确认；已收藏、拒绝、未确认、未知、鉴权失效、账号变更和取消分别处理。仅单一 QQ 账号显示入口，多账号不猜归属；平台收藏与本地收藏、权威队列、下载和备份分域，账号 capability 不扩充。15 项新测试、`npm run check`1068/1068；正式 Release`SourceUITests-1793881881959`为 1/0/0、`sourceUnchanged=true`，三张截图亲看。真实 QQ 账号、网易云/酷狗收藏、平台歌单创建、实体机/签名/iOS27 与云端终态继续开放，J10 保持 B。见[回执](2026-11-05-qq-platform-favorite-report.md)。
+
 ## 2026-11-05 J10 平台账号公开头像与资料刷新
 
 网易云 `profile.avatarUrl` 与酷狗扫码 `data.pic ?? data.picurl` 现经 `accountAvatar` 规范化后写入账号元数据：只保留有界公开 `http/https` URL，拒绝凭据/控制字符/伪协议，去 query/fragment，公开 HTTP 升级 HTTPS，仅回环地址保留 HTTP 供本地夹具。旧账号记录缺少头像继续恢复，非法持久化值拒绝；验证成功只更新昵称/头像，不重写 Keychain 会话或账号版本，删除/同身份替换/仓库失败均不发布迟到资料。账号页网易云/QQ/酷狗共用 40pt 圆形头像并回退首字；QQ 日推授权、撤销和电脑配对重存显式保留既有头像；QQ 官方头像字段未证实，不猜测接入。新增4项头像测试并扩展账号/网易云/酷狗/网页登录契约，`npm run check`1053/1053；正式Release`1793880508658`为1/0/0、sourceUnchanged，夹具账号实际 PNG 头像1290×2796亲看通过；首轮新目标未选择夹具入口的失败原件保留。clean unsigned IPA`714fc95f…794f8`为17,867,711字节，manifest clean、178 ZIP项CRC/63载荷/8隐私/0签名与生产夹具标记排除通过，源码tar 1,106条目同源。J10仍为B，真实三平台账号、收藏/创建歌单能力逐项验收、实体机/签名/iOS27与云端终态继续。见[回执](2026-11-05-music-account-avatar-report.md)。

@@ -1,3 +1,17 @@
+## 2026-11-05 QQ 平台收藏纵向切片
+
+固定参考仍为 `5db858f32695d10c5e9ef0f7037d586aef6a8c4b`。本批亲读并适配以下源码路径：
+
+| 参考文件 | 采用内容 | 音枢修改 |
+| --- | --- | --- |
+| `src/core/musicAccount/qqFavorite.ts` | `IsSongFanByMid` 预读、QQ 歌曲详情 `mid/id/type` 校验、`AddSonglist` 的 `dirId:201` 与单次写入、写后两次回读 | 绑定音枢 `MusicAccount`/`MusicSession`、可取消请求、账号替换隔离、明确区分 `unconfirmed`/`unknown`，不返回参考的 owner/accountId 字段 |
+| `src/core/musicAccount/qqCredentials.ts` | QQ 网页 Cookie 的 `uin/authst/tmeLoginType`、`login_type` 与 CSRF token 语义 | 只使用已保存的音乐会话 Cookie 子集；不新增 Cookie 持久化或日志 |
+| `src/core/musicAccount/playlists.ts` | `dirId:201` 为“我喜欢”收藏目录 | 仅作为收藏写入常量，不接入目录读取、复制或平台歌单修改 |
+
+参考根许可为 Apache-2.0，NOTICE 保留 Nshpiter 与 LX Music Mobile/lyswhut 归属。音枢新增 `src/providers/qqFavorite.ts` 时在文件头保留固定提交、许可与修改说明；没有复制参考 UI、Android 工程、依赖或测试夹具。
+
+验证见[QQ 平台收藏回执](2026-11-05-qq-platform-favorite-report.md)。本批只覆盖单一 QQ 账号的合成纵向验收，不证明真实账号、真实服务、网易云/酷狗收藏或平台歌单创建；J10 仍为 B。
+
 ## 2026-11-02 网易公开评论楼层补充来源
 
 固定 Q-music `5db858f32695d10c5e9ef0f7037d586aef6a8c4b` 的 `wy/comment.js` 提供原曲评论、热门/最新及引用预览，没有完整 floor 查询。保留现有 v1 评论列表，独立实现官方匿名 HTTPS 楼层读取，不复制参考模块或依赖。
