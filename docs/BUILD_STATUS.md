@@ -1,5 +1,7 @@
 ## 2026-11-05 J29 自定义睡眠滚轮正式验收
 
+交付：`925befe`clean unsigned IPA 17,822,849字节/SHA-256`572dffa5…cc39`，manifest clean/unsigned，90ZIP/63载荷逐字节、生产标记与测试/私人排除通过，verification`787cf3a6…1942`为ready；历史distribution链接和原6文件不变。源码tar与1,099 Git条目一致，T7阶段`2026-11-05-sleep-wheel-925befe`145份/107,099,756字节逐项0差异、源保留/零删除，清单`4f19e711…ead7`。push/云端随后补记。
+
 产品修正0/0开始误取消；单元3/3、完整1035检查、完整native退出0。Release`1793865127400`为1/0/0、121.710秒、sourceUnchanged，四图ready并亲看：活动14:40拒绝、1小时59:59、1分钟0:59及本曲绑定。IPA/APK离线门禁与IPA strict review零错误/警告通过，无新增Sollin采集。见[回执](2026-11-05-sleep-wheel-report.md)。clean/T7/push及自然到期/实体/签名边界继续。
 
 ## 2026-11-05 F33 忙碌前台读事件正式验收

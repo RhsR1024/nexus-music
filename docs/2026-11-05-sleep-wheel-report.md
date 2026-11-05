@@ -41,4 +41,15 @@ NEXUS_UI_RUN_DIR=build/sleep-wheel-independent node scripts/test-ui.mjs NexusMus
 
 本批音枢原创输入修正与现有可调控件语义，不是Sollin私有服务探测或参考代码移植。reverse-skill R2/mobile-reverse路由及IPA/APK离线scope门禁通过，IPA严格review为58E/23WI/125 timeline/49F/49P、0错误/0警告；无新增样本分析或证据结论。
 
-J29仍保留实际自然到期暂停、播放中手动切歌组合、长时后台、实体手势/VoiceOver/动态字号、真实私人服务、签名和iOS27终态。合成音频和模拟器不能替代这些验收，不能据此关闭J29或全项目。clean归档、T7、push和新云端运行随后补记。
+J29仍保留实际自然到期暂停、播放中手动切歌组合、长时后台、实体手势/VoiceOver/动态字号、真实私人服务、签名和iOS27终态。合成音频和模拟器不能替代这些验收，不能据此关闭J29或全项目。
+
+## 清洁设备包与T7
+
+产品提交`925befe641783bf4c052cc8c1f499bbc45cb3f3e`的clean unsigned archive通过，manifest与提交一致、`dirty=false`、`workingTreeChanges=[]`、arm64/iphoneos26.2/iOS15.1/[1,2]、`signed=false`。独立核验90个ZIP项CRC、63份载荷逐字节、生产`customSleepSeconds`标记、测试/私人标记排除和未签名状态，`ready=true`。历史distribution符号链接已恢复，6个顶层文件内容/字节/mtime未变。
+
+- IPA：17,822,849字节，SHA-256`572dffa50f773141e52c9aafe5ecfb2ecbd93c610568e4f40f6046150d94cc39`。
+- manifest：`44b9062528cca6ed88736506a03a0a1840a19414ccb1688ede2e6dccdbaaa5fb`。
+- verification：`787cf3a6b515f1904e15ed18cb3a9bc9d088f5f8d1b6f2cd547c2f4983bd1942`。
+- 源码tar：8,090,830字节，SHA-256`4a2a464c94eef1f098c80e4e76b19cee0d1bcbe8f22e7f61e307bbed2c94dfcb`；Git树1,099条目模式/blob一致。
+
+T7阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-05-sleep-wheel-925befe`保存clean分发/xcarchive、源码tar/提交补丁、精确Release/xcresult/四图/来源与运行清单、检查/原生/门禁日志、路由和报告快照。145份业务文件/107,099,756字节逐项SHA-256一致，0差异、源保留、零删除；清单`4f19e71179b8cafc362f3ccffc3b3a79adaf06d49e7ba057a363e64b9308ead7`，transfer receipt`afe913864054d3d288b558bcbfdb76246367c639a00ae85437e13e64f5df1efa`。依inventory相对路径恢复，源码可由tar/提交重建。正常push与新云端随后核验。

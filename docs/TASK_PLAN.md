@@ -5,7 +5,8 @@
 - [x] 完整1035检查、完整native退出0；正式Release`1793865127400`为1/0/0、121.710秒、sourceUnchanged。
 - [x] 真实滚轮活动14:40保留、1小时59:59、1分钟0:59与本曲绑定通过；4图ready并亲看。
 - [x] IPA/APK离线门禁及IPA严格review 58E/23WI/125/49F/49P通过，无新增Sollin分析。
-- [ ] clean归档、T7、正常push与新云端终态。
+- [x] `925befe`clean unsigned IPA`572dffa5…cc39`、90ZIP/63载荷/隐私/未签名通过；源码1,099条目一致；T7为145份/107,099,756字节0差异且源保留。
+- [ ] 正常push与新云端终态。
 - [ ] 自然到期实音、手动切歌/长后台、实体手势/VoiceOver/字号、私人服务、签名与完整J29。
 
 见[回执](2026-11-05-sleep-wheel-report.md)与[场景](ui-spec/sleep-wheel-validation-2026-11-05.md)。
