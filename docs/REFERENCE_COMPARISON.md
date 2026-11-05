@@ -1,3 +1,7 @@
+## 2026-11-05 网易云平台收藏
+
+亲读 MIT Sollin-Music-Desktop 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `neteaseAuth.ts` 中 `likeSong`/`getLikelist`，以及 NeteaseCloudMusicApi 固定 `984cc021b8598cf94c22134f32a8426887fb2de7` 的 `song_like`/`song_like_check`；仅采用端点和参数事实。音枢自写账号绑定、先读后单次写入、回读确认、取消竞态及19位ID不透明处理，没有复制运行时、UI、依赖或私有逻辑。五参考既有实现、维护、Android与许可边界保留；匿名核验只证明端点存在与鉴权要求，真实账号写入及跨设备效果仍未验收。见[回执](2026-11-05-netease-platform-favorite-report.md)。
+
 ## 2026-11-04 网易新碟公开目录
 
 五参考既有实现、维护、Android与许可边界保留；本批不声称重新审查其全部目录模块。额外亲读MIT Sollin-Music-Desktop固定c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8的neteaseAuth.ts/getNewAlbums，仅采用官方`/api/album/new`与分页参数事实，自写匿名HTTPS、严格总数/身份/取消与正式导航。未复制运行时、素材、依赖、原生补丁或商业逻辑；不推断Sollin私有HTTP。见[回执](2026-11-04-new-albums-report.md)。
