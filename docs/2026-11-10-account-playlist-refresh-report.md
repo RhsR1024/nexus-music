@@ -37,3 +37,9 @@
 ## 仍开放的范围
 
 本批没有真实平台账号写入或实体机证据，J10仍为B。真实网易云创建与隐私、跨设备可见性，QQ/酷狗创建和平台加歌/删除，以及签名与iOS27验收继续开放。下一项已核对为音乐库单曲与批量动作接线，其后为每日推荐/私人雷达完整列表。
+
+## 本地交付
+
+产品修复提交 `6951056`，连同前次网易云创建提交 `bafeacd` 完成清洁工作树正式入口归档。unsigned IPA为17,844,411字节，SHA-256 `05ea097ae24297b57b631a95749f30d96d090a1ba63d5abc8390fd2118ade20a`；manifest `dirty=false`、arm64/iphoneos26.2、设备族[1,2]。90个ZIP条目CRC通过，63个业务载荷与xcarchive逐字节相同，8份隐私清单、0签名条目；生产bundle排除本批及既有测试标记。旧`build/distribution`链接及原文件摘要恢复一致。
+
+源码tar逐项核对Git blob通过。T7阶段`/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-10-account-playlist-refresh-6951056`保存124份/77,507,662字节，逐文件源/目标SHA-256零差异，源保留、零删除；清单SHA-256 `bfa8b2cecd5f97706f302a6120ca4093af27531714b7a99ce8048f77112c30b3`。恢复时按归档`root/`中的项目相对路径复制，xcarchive用独立tar解包，源码tar保留Git符号链接。推送及云端终态单独核对，未签名归档不增加实体机、个人签名或真实平台验收结论。
