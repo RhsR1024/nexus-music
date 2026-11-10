@@ -25,6 +25,16 @@ const initialize=()=>pending??=(async()=>{
   const native=requireNativeModule<{launchArgument(name:string):string|null}>('NexusNative');
   const boot=native.launchArgument('NEXUS_UI_THEME_BOOT_ID');
   const services=await createServices(boot?{}:{onlineHTTP:http,onlineTextHTTP:textHTTP,playlistLinkExpander:expandPlaylistLink});
+  if(native.launchArgument('NEXUS_UI_LIBRARY_ACTIONS_FIXTURE')==='1'){
+    // Delay only the requested original store command so the real UI can be
+    // closed and reopened before it settles. No fixture state enters the app.
+    const move=services.library.moveEntry.bind(services.library);
+    services.library.moveEntry=async(...args)=>{
+      await fetch('http://127.0.0.1:18439/library-actions-move?phase=before');
+      await move(...args);
+      await fetch('http://127.0.0.1:18439/library-actions-move?phase=after');
+    };
+  }
   if(boot)observeTheme(services,boot);
   const fixtureAccount=native.launchArgument('NEXUS_UI_ACCOUNT_FM_FIXTURE')==='1';
   if(fixtureAccount){

@@ -1,7 +1,7 @@
 import {useSongShare} from './useSongShare.ts';
 import {SimilarSongs} from './SimilarSongs.tsx';
 import {supportsSimilarSongs} from '../providers/similarSongs.ts';
-import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {Pressable,ScrollView,StyleSheet,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
@@ -40,9 +40,10 @@ const neteaseFavoriteCopy=(status:NeteaseFavoriteStatus)=>{
   if(status==='unavailable')return '暂时无法收藏到网易云音乐，请重试';
   return '';
 };
-export function TrackActions({services,track,onClose,prefix,extras=false}:{
+export interface AdditionalTrackAction {id:string;label:string;icon:React.ComponentProps<typeof Ionicons>['name'];run:()=>void|Promise<void>}
+export function TrackActions({services,track,onClose,prefix,extras=false,additionalActions=[],favoriteScope='song',closeLabel='收起歌曲更多操作'}:{
   services:Services;track:Track|null;onClose:()=>void;prefix:string;
-  extras?:boolean;
+  extras?:boolean;additionalActions?:readonly AdditionalTrackAction[];favoriteScope?:'song'|'library';closeLabel?:string;
 }){
   const theme=useTheme(),{share,sharing,error:shareError}=useSongShare(track);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
@@ -63,8 +64,12 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
     setWYFavoriteState('idle');setWYFavoriteMessage('');wyFavoriteController.current?.abort();wyFavoriteController.current=null;
   },[track]);
   const current=useRef(track);current.current=track;
+  const session=useRef(0);
+  useLayoutEffect(()=>{session.current++;return()=>{session.current++;};},[track]);
+  const owns=(owner:Track|null,epoch:number)=>current.current===owner&&session.current===epoch;
+  function close(){session.current++;qqFavoriteController.current?.abort();wyFavoriteController.current?.abort();onClose();}
   useEffect(()=>()=>{current.current=null;qqFavoriteController.current?.abort();qqFavoriteController.current=null;wyFavoriteController.current?.abort();wyFavoriteController.current=null;},[]);
-  const favorite=track?services.songFavorites.isFavorite(track):false;
+  const favorite=track?(favoriteScope==='library'?services.library.isFavorite(track):services.songFavorites.isFavorite(track)):false;
   const qqTrack=track?.origin.kind==='online'&&track.origin.platform==='tx'?track:null;
   const qqAccounts=accounts.filter(account=>account.platform==='tx');
   const qqAccount=qqAccounts.length===1?qqAccounts[0]:undefined;
@@ -72,67 +77,74 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
   const wyAccounts=accounts.filter(account=>account.platform==='wy');
   const wyAccount=wyAccounts.length===1?wyAccounts[0]:undefined;
   async function saveFavorite(){
-    if(!track||busy)return;setBusy(true);setError('');
-    try{await services.songFavorites.toggle(track);if(current.current===track)onClose();}
-    catch{if(current.current===track)setError('收藏未保存，原数据保留；请重试');}
-    finally{if(current.current===track)setBusy(false);}
+    if(!track||busy)return;const epoch=session.current;setBusy(true);setError('');
+    try{await (favoriteScope==='library'?services.library.favorite(track):services.songFavorites.toggle(track));if(owns(track,epoch))close();}
+    catch{if(owns(track,epoch))setError('收藏未保存，原数据保留；请重试');}
+    finally{if(owns(track,epoch))setBusy(false);}
   }
   async function saveQQFavorite(){
     if(!qqTrack||!qqAccount||busy)return;
-    const owner=qqTrack,account=qqAccount,controller=new AbortController();
+    const owner=qqTrack,account=qqAccount,controller=new AbortController(),epoch=session.current;
     qqFavoriteController.current?.abort();qqFavoriteController.current=controller;
     setBusy(true);setError('');setQQFavoriteState('pending');setQQFavoriteMessage('正在确认 QQ 音乐收藏…');
     try{
       const session=await services.musicAccounts.session(account.id);
-      if(controller.signal.aborted||current.current!==owner)return;
+      if(controller.signal.aborted||!owns(owner,epoch))return;
       const result=await services.qqFavorite.add(account,session,owner.origin.kind==='online'?owner.origin.id:'',controller.signal);
-      if(controller.signal.aborted||current.current!==owner)return;
+      if(controller.signal.aborted||!owns(owner,epoch))return;
       if(result.status==='added'||result.status==='already'){
         setQQFavoriteState('added');setQQFavoriteMessage('已收藏到 QQ 音乐');
       }else{
         setQQFavoriteState('idle');setQQFavoriteMessage(qqFavoriteCopy(result.status));
       }
     }catch{
-      if(!controller.signal.aborted&&current.current===owner){setQQFavoriteState('idle');setQQFavoriteMessage('QQ 音乐收藏未完成，请重试');}
+      if(!controller.signal.aborted&&owns(owner,epoch)){setQQFavoriteState('idle');setQQFavoriteMessage('QQ 音乐收藏未完成，请重试');}
     }finally{
-      if(qqFavoriteController.current===controller){qqFavoriteController.current=null;if(current.current===owner)setBusy(false);}
+      if(qqFavoriteController.current===controller){qqFavoriteController.current=null;if(owns(owner,epoch))setBusy(false);}
     }
   }
   async function saveNeteaseFavorite(){
     if(!wyTrack||!wyAccount||busy)return;
-    const owner=wyTrack,account=wyAccount,controller=new AbortController();
+    const owner=wyTrack,account=wyAccount,controller=new AbortController(),epoch=session.current;
     wyFavoriteController.current?.abort();wyFavoriteController.current=controller;
     setBusy(true);setError('');setWYFavoriteState('pending');setWYFavoriteMessage('正在确认网易云音乐收藏…');
     try{
       const session=await services.musicAccounts.session(account.id);
-      if(controller.signal.aborted||current.current!==owner)return;
+      if(controller.signal.aborted||!owns(owner,epoch))return;
       const result=await services.neteaseFavorite.add(account,session,owner.origin.kind==='online'?owner.origin.id:'',controller.signal);
-      if(controller.signal.aborted||current.current!==owner)return;
+      if(controller.signal.aborted||!owns(owner,epoch))return;
       if(result.status==='added'||result.status==='already'){
         setWYFavoriteState('added');setWYFavoriteMessage('已收藏到网易云音乐');
       }else{
         setWYFavoriteState('idle');setWYFavoriteMessage(neteaseFavoriteCopy(result.status));
       }
     }catch{
-      if(!controller.signal.aborted&&current.current===owner){setWYFavoriteState('idle');setWYFavoriteMessage('网易云音乐收藏未完成，请重试');}
+      if(!controller.signal.aborted&&owns(owner,epoch)){setWYFavoriteState('idle');setWYFavoriteMessage('网易云音乐收藏未完成，请重试');}
     }finally{
-      if(wyFavoriteController.current===controller){wyFavoriteController.current=null;if(current.current===owner)setBusy(false);}
+      if(wyFavoriteController.current===controller){wyFavoriteController.current=null;if(owns(owner,epoch))setBusy(false);}
     }
   }
   async function download(preferredQuality?:Quality){
-    if(!track||busy)return;if(!preferredQuality&&track.origin.kind==='online'&&!services.offlineDownloads.find(track)){setChoosingDownload(true);return;}setBusy(true);setError('');const owner=track;
-    try{const report=await services.submitDownloads([owner],preferredQuality?{preferredQuality}:undefined);if(current.current===owner){setChoosingDownload(false);setDownloadReport(report);}}
-    finally{if(current.current===owner)setBusy(false);}
+    if(!track||busy)return;if(!preferredQuality&&track.origin.kind==='online'&&!services.offlineDownloads.find(track)){setChoosingDownload(true);return;}setBusy(true);setError('');const owner=track,epoch=session.current;
+    try{const report=await services.submitDownloads([owner],preferredQuality?{preferredQuality}:undefined);if(owns(owner,epoch)){setChoosingDownload(false);setDownloadReport(report);}}
+    catch{if(owns(owner,epoch))setError('下载提交未完成，请查看下载管理中的已有任务');}
+    finally{if(owns(owner,epoch))setBusy(false);}
+  }
+  async function runAdditional(item:AdditionalTrackAction){
+    if(!track||busy)return;const owner=track,epoch=session.current;setBusy(true);setError('');
+    try{await item.run();if(owns(owner,epoch))close();}
+    catch{if(owns(owner,epoch))setError('操作未保存，原数据保留；请重试');}
+    finally{if(owns(owner,epoch))setBusy(false);}
   }
   const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void,id=label)=><Pressable key={id} testID={`${prefix}-action-${id}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.action,{backgroundColor:theme.palette.surface,opacity:busy||sharing?.5:1}]}><Ionicons name={icon} size={controls.icon} color={theme.palette.accent}/><Text style={[typography.body,{color:theme.palette.text,flex:1}]}>{label}</Text><Ionicons name="chevron-forward" size={18} color={theme.palette.secondary}/></Pressable>;
-  return <SheetModal visible={!!track} animationType="slide" onRequestClose={onClose}>
-    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{onClose();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={onClose}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
-      <Pressable accessibilityRole="button" accessibilityLabel="收起歌曲更多操作" onPress={onClose} style={styles.close}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable>
+  return <SheetModal visible={!!track} animationType="slide" onRequestClose={close}>
+    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{close();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={close}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
+      <Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={close} style={styles.close}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable>
       <Text accessibilityRole="header" style={[typography.title,{color:theme.palette.text}]}>{track?.title??'歌曲操作'}</Text>
       <Text style={[typography.caption,{color:theme.palette.secondary}]}>{track?.artist}{track?.album?` · ${track.album}`:''}</Text>
       {track&&<View style={styles.actions}>
-        {action('下一首','play-skip-forward',()=>{services.addToQueue(track,true);onClose();})}
-        {action('加入队列','list',()=>{services.addToQueue(track);onClose();})}
+        {action('下一首','play-skip-forward',()=>{services.addToQueue(track,true);close();})}
+        {action('加入队列','list',()=>{services.addToQueue(track);close();})}
         {action(favorite?'取消本地收藏':'本地收藏',favorite?'heart':'heart-outline',()=>{void saveFavorite();})}
         {qqTrack&&qqAccount&&action('收藏到 QQ 音乐',qqFavoriteState==='added'?'star':'star-outline',()=>{void saveQQFavorite();},'qq-favorite')}
         {wyTrack&&wyAccount&&action('收藏到网易云音乐',wyFavoriteState==='added'?'star':'star-outline',()=>{void saveNeteaseFavorite();},'wy-favorite')}
@@ -141,7 +153,8 @@ export function TrackActions({services,track,onClose,prefix,extras=false}:{
         {downloadableTrack(track)&&action('下载','download-outline',()=>{void download();})}
         {supportsSimilarSongs(track)&&action('相似歌曲','radio-outline',()=>setSimilar(true))}
         {extras&&action('歌曲评论','chatbubble-outline',()=>setCommenting(true))}
-        {extras&&action('匹配歌曲','search-outline',()=>setMatching(true))}
+        {extras&&(track.origin.kind==='online'||track.origin.kind==='imported')&&action('匹配歌曲','search-outline',()=>setMatching(true))}
+        {additionalActions.map(item=>action(item.label,item.icon,()=>{void runAdditional(item);},item.id))}
       </View>}
       {qqTrack&&qqAccounts.length>1&&<Text style={[typography.caption,{color:theme.palette.secondary}]}>已登录多个 QQ 音乐账号，请在设置中只保留一个后再收藏到平台。</Text>}
       {!!qqFavoriteMessage&&<Text testID={`${prefix}-qq-favorite-status`} accessibilityLiveRegion="polite" style={{color:qqFavoriteState==='added'?theme.palette.secondary:theme.palette.accent}}>{qqFavoriteMessage}</Text>}

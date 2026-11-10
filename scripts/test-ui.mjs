@@ -14,6 +14,9 @@ import {exportFailureEvidence} from './export-failure-evidence.mjs';
 import {ThemeObservation} from './lib/theme-observation.mjs';
 
 const runDirectory=process.env.NEXUS_UI_RUN_DIR??'build/logs';
+const libraryActionsUI=process.argv.slice(2).some(target=>target.endsWith('/testLibrarySongActions'));
+const libraryActionsSeed=Date.now();
+const libraryActionsFixture={name:'Nexus library actions fixture',list:['Library current','Batch Beta','Batch Alpha'].map((name,index)=>({id:`wy_${libraryActionsSeed}${index}`,name,singer:'Synthetic artist',source:'wy',interval:'02:00',meta:{songId:`${libraryActionsSeed}${index}`,albumName:'Library actions album'}}))};
 const popularArtistsUI=process.argv.slice(2).some(target=>(target.endsWith('/testLivePopularArtists')||target.endsWith('/testLiveNewAlbums')));
 const miguAlbumImportUI=process.argv.slice(2).some(target=>target.endsWith('/testLiveMiguAlbumImportPersistence'));
 const livePublicCatalogUI=popularArtistsUI||miguAlbumImportUI;
@@ -63,8 +66,9 @@ function seedLocalAudio() {
     // Deterministic original image for the real Files picker path. Production
     // code performs the resize/re-encode and metadata stripping after import.
     writeFileSync(resolve(localFixtureDirectory,'Nexus Visual Fixture.png'),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64'));
-    const list=Array.from({length:1000},(_,i)=>({id:`wy_${i<2?'90071992547409931234':i}`,name:i<2?'Duplicate fixture':`Fixture song ${i}`,singer:'Synthetic artist',source:'wy',interval:i<2?'03:00':'01:00',meta:{songId:i<2?'90071992547409931234':String(i),albumName:i<2?'Repeated album':'Bulk album'}}));
+    const list=Array.from({length:1000},(_,i)=>({id:`wy_${i<2?'90071992547409931234':i}`,name:i<2?'Duplicate fixture':`Fixture song ${i}`,singer:'Synthetic artist',source:'wy',interval:i===0?'03:00':i===1?'04:00':'01:00',meta:{songId:i<2?'90071992547409931234':String(i),albumName:i===0?'First duplicate album':i===1?'Second duplicate album':'Bulk album'}}));
     writeFileSync(resolve(localFixtureDirectory,'Nexus Playlist Fixture.json'),JSON.stringify({type:'playListPart_v2',data:{name:'Nexus list fixture',list}}));
+    writeFileSync(resolve(localFixtureDirectory,'Nexus Library Actions Fixture.json'),JSON.stringify({type:'playListPart_v2',data:libraryActionsFixture}));
     const wayfarerFixtureTrackId=`WAYFARER${Date.now().toString(36).toUpperCase()}`;
     wayfarerFixtureAudioPath=`/matching-audio/${wayfarerFixtureTrackId}.wav`;
     const wayfarerTrack=(id,providerId,title,durationMs=120000)=>({
@@ -99,7 +103,7 @@ function seedLocalAudio() {
       {id:'kg_2829_abcdef',name:'KG fixture',singer:'Synthetic artist',source:'kg',interval:'4:00',meta:{songId:'2829',hash:'abcdef'}},
     ]}};
     writeFileSync(resolve(localFixtureDirectory,'Nexus LXMC Fixture.lxmc'),gzipSync(Buffer.from(JSON.stringify(lxmc))));
-    for(const name of ['Synthetic Tagged Tone.mp3','Nexus Fixture.ttf','Nexus Visual Fixture.png','Nexus Playlist Fixture.json','Nexus Wayfarer Fixture.json','Nexus LXMC Fixture.lxmc']){
+    for(const name of ['Synthetic Tagged Tone.mp3','Nexus Fixture.ttf','Nexus Visual Fixture.png','Nexus Playlist Fixture.json','Nexus Library Actions Fixture.json','Nexus Wayfarer Fixture.json','Nexus LXMC Fixture.lxmc']){
       const path=resolve(localFixtureDirectory,name);if(!existsSync(path)||statSync(path).size===0)throw new Error(`Fixture not written: ${name}`);
     }
     console.log(`[ui-fixtures] ${localFixtureDirectory}`);
@@ -155,6 +159,8 @@ let starred=false;
 const backupDirectories=new Set(['/backup-dav/','/sync-dav/']),backupFiles=new Map();
 let syncHoldNextRead=false;const syncHeldReads=[];
 const counts={requests:{},authFailures:0,authSuccesses:0};
+let libraryMoveHold=false,libraryMoveCompleted=0;
+const heldLibraryMoves=[];
 counts.accountFm={mode:'normal',holdNext:false,held:0,released:0,requests:[],authFailures:0,daily:0,coverMetadata:0};
 let heldAccountFmResponses=[];
 let wyRepliesNextPageFails=true;
@@ -172,7 +178,7 @@ const accountAvatarUI=process.argv.slice(2).some(target=>target.endsWith('/testA
 const qqFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testQQFavoriteFixture'));
 const wyFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteaseFavoriteFixture'));
 const wyPlaylistUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteasePlaylistCreateFixture'));
-const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI;
+const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI||libraryActionsUI;
 const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
 lx.on('request',async({source,action})=>{
   if(action!=='musicUrl')throw new Error('unsupported fixture action');
@@ -462,6 +468,22 @@ const handleRequest = async (req, res) => {
     res.setHeader('Content-Type','application/json');
     res.end(JSON.stringify({matchAudio:counts.matchAudio??{},online:counts.online??{},expectedMatchingAudio:wayfarerFixtureAudioPath}));return;
   }
+  if(libraryActionsUI&&req.url==='/library-actions-fixture'){
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify(libraryActionsFixture));return;
+  }
+  if(libraryActionsUI&&req.url.startsWith('/library-actions-control')){
+    const params=new URL(req.url,'http://127.0.0.1').searchParams;
+    if(params.has('hold'))libraryMoveHold=true;
+    if(params.has('release'))for(const send of heldLibraryMoves.splice(0))send();
+    counts.libraryMoves={held:heldLibraryMoves.length,completed:libraryMoveCompleted};
+    res.setHeader('Content-Type','application/json');res.end(JSON.stringify(counts.libraryMoves));return;
+  }
+  if(libraryActionsUI&&req.url.startsWith('/library-actions-move')){
+    const phase=new URL(req.url,'http://127.0.0.1').searchParams.get('phase');
+    if(phase==='after')libraryMoveCompleted++;
+    const send=()=>res.end('{}');
+    if(phase==='before'&&libraryMoveHold){libraryMoveHold=false;heldLibraryMoves.push(send);}else send();return;
+  }
   if(req.url.startsWith('/matching-audio/')){
     if(!matchingUI){res.writeHead(404);res.end();return;}
     counts.matchAudio??={};counts.matchAudio[req.url]=(counts.matchAudio[req.url]??0)+1;
@@ -469,7 +491,7 @@ const handleRequest = async (req, res) => {
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),matchingAudio.length-1):matchingAudio.length-1;if(start>=matchingAudio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${matchingAudio.length}`);res.end(matchingAudio.subarray(start,end+1));}else res.end(matchingAudio);return;
   }
   if(req.url.startsWith('/unified-search-audio/')){
-    if(!searchUI&&!accountFmUI){res.writeHead(404);res.end();return;}
+    if(!searchUI&&!accountFmUI&&!libraryActionsUI){res.writeHead(404);res.end();return;}
     counts.unifiedSearchAudio??={};counts.unifiedSearchAudio[req.url]=(counts.unifiedSearchAudio[req.url]??0)+1;
     res.setHeader('Content-Type','audio/wav');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
     if(range){const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),matchingAudio.length-1):matchingAudio.length-1;if(start>=matchingAudio.length){res.writeHead(416);res.end();return;}res.statusCode=206;res.setHeader('Content-Range',`bytes ${start}-${end}/${matchingAudio.length}`);res.end(matchingAudio.subarray(start,end+1));}else res.end(matchingAudio);return;

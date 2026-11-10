@@ -2777,6 +2777,11 @@ final class SourceSettingsTests: XCTestCase {
         app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
       XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
     }
+    func revealFull(_ element:XCUIElement){
+      for _ in 0..<4 {if element.exists && element.frame.maxY<=app.frame.maxY-16{break}
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.85)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.55)))}
+      XCTAssertTrue(element.exists && element.frame.maxY<=app.frame.maxY-16,"Expected fully visible text: \(element.identifier)")
+    }
     func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
     func control(_ query:String="") throws -> [String:Any] {
       let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/qq-favorite-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
@@ -2793,7 +2798,7 @@ final class SourceSettingsTests: XCTestCase {
     let field=app.textFields["搜索歌曲或歌手"]
     XCTAssertTrue(field.waitForExistence(timeout:10));reach(field);field.tap()
     for character in "Unified fixture"{field.typeText(String(character))}
-    let run=app.buttons["run-online-search"];reach(run);run.tap()
+    XCTAssertEqual(field.value as? String,"Unified fixture");field.typeText("\n")
     let more=app.buttons["search-more-tx-0"]
     XCTAssertTrue(more.waitForExistence(timeout:20));reach(more);more.tap()
     let favorite=app.buttons["search-action-qq-favorite"]
@@ -2803,6 +2808,7 @@ final class SourceSettingsTests: XCTestCase {
     let status=app.staticTexts["search-qq-favorite-status"]
     XCTAssertTrue(status.waitForExistence(timeout:20))
     XCTAssertEqual(status.label,"已收藏到 QQ 音乐")
+    revealFull(status)
     let first=try control()
     XCTAssertEqual(integer("writes",in:first),1,"A confirmed favorite must send exactly one write")
     XCTAssertGreaterThanOrEqual(integer("reads",in:first),2,"The action must read before and after writing")
@@ -2812,12 +2818,13 @@ final class SourceSettingsTests: XCTestCase {
     let readsBefore=integer("reads",in:first)
     let enabled=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:favorite)
     XCTAssertEqual(XCTWaiter.wait(for:[enabled],timeout:5),.completed)
-    favorite.tap()
+    reach(favorite);favorite.tap()
     let reread=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? integer("reads",in:control())) ?? 0 > readsBefore},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[reread],timeout:20),.completed)
     let second=try control()
     XCTAssertEqual(integer("writes",in:second),1,"Tapping an already favorited song must not write again")
     XCTAssertEqual(status.label,"已收藏到 QQ 音乐")
+    revealFull(status)
     image("Repeating the QQ favorite action stays idempotent")
   }
   func testNeteaseFavoriteFixture() throws {
@@ -3430,15 +3437,20 @@ final class SourceSettingsTests: XCTestCase {
     let playlist=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch;reach(playlist);playlist.tap()
     let playAll=app.buttons["播放全部"];reach(playAll);playAll.tap()
     let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    // This thousand-row fixture checks queue modes and entry identity. A source
+    // enabled by an earlier test may fail these synthetic IDs and auto-advance;
+    // pause that intent before navigating controls whose geometry can change.
+    func pauseFixturePlayback(){let pause=app.buttons["暂停"].firstMatch;if pause.waitForExistence(timeout:5){pause.tap()};XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))}
+    pauseFixturePlayback()
     var queueEntry=app.buttons["查看播放队列"];reach(queueEntry);queueEntry.tap()
     var fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(fullQueue);fullQueue.tap()
     let single=app.descendants(matching:.any).matching(identifier:"queue-mode-one").firstMatch
-    reach(single);single.tap();XCTAssertTrue(single.isSelected)
+    XCTAssertTrue(single.waitForExistence(timeout:10));reach(single);single.tap();XCTAssertTrue(single.isSelected)
     app.buttons["收起队列"].tap()
     let optionsClose=app.buttons["收起播放选项"].firstMatch;reach(optionsClose);optionsClose.tap()
     let playerClose=app.buttons["收起播放页"].firstMatch;reach(playerClose);playerClose.tap()
     let random=app.buttons["随机播放"];reach(random);random.tap()
-    player.tap();queueEntry=app.buttons["查看播放队列"];reach(queueEntry);queueEntry.tap();fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(fullQueue);fullQueue.tap()
+    player.tap();pauseFixturePlayback();queueEntry=app.buttons["查看播放队列"];reach(queueEntry);queueEntry.tap();fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(fullQueue);fullQueue.tap()
     let shuffle=app.descendants(matching:.any).matching(identifier:"queue-mode-shuffle").firstMatch
     XCTAssertTrue(shuffle.isSelected,"Library random playback must disable single repeat")
     XCTAssertFalse(single.isSelected)
@@ -3460,22 +3472,138 @@ final class SourceSettingsTests: XCTestCase {
     filterDuplicates()
     let count=app.staticTexts["track-list-count"]
     func expectCount(_ label:String){expectation(for:NSPredicate(format:"label == %@",label),evaluatedWith:count);waitForExpectations(timeout:10)}
+    func assertFirstDuplicateRemains(_ stage:String){
+      // The song's Pressable is one accessible button, so its metadata is part
+      // of that button's label rather than a standalone StaticText element.
+      let remaining=app.buttons["track-row-0"];XCTAssertTrue(remaining.waitForExistence(timeout:10))
+      XCTAssertTrue(remaining.label.contains("First duplicate album"),"The first entry must survive \(stage): \(remaining.label)")
+      XCTAssertFalse(app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND label CONTAINS %@","track-row-","Second duplicate album")).firstMatch.exists,"The selected second entry must be absent \(stage)")
+      let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name="Library exact duplicate identity "+stage;shot.lifetime = .keepAlways;add(shot)
+    }
     expectCount("显示 2 / 1000 首 · 已选 0 条")
     let second=app.descendants(matching:.any).matching(identifier:"track-select-1").firstMatch;reach(second);second.tap()
     reach(search);app.buttons["选择歌曲排序"].tap();app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","时长从长到短")).firstMatch.tap()
     expectCount("显示 2 / 1000 首 · 已选 1 条")
     let remove=app.buttons["移除所选"];reach(remove);remove.tap();app.alerts.buttons["移除"].tap()
     expectCount("显示 1 / 999 首 · 已选 0 条")
+    assertFirstDuplicateRemains("after sorted removal")
     reach(search);app.buttons["清空歌曲筛选"].tap();expectCount("显示 999 / 999 首 · 已选 0 条")
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     app.buttons["收起歌曲列表"].tap();app.terminate();app.launch();library()
     reach(playlists);playlists.tap();reach(playlist);playlist.tap();reach(manage);manage.tap()
     filterDuplicates();expectCount("显示 1 / 999 首 · 已选 0 条")
+    assertFirstDuplicateRemains("after restart")
     let row=app.descendants(matching:.any).matching(identifier:"track-row-0").firstMatch;reach(row);row.swipeLeft()
     let swipe=app.buttons["确认移除：Duplicate fixture"];XCTAssertTrue(swipe.waitForExistence(timeout:5));swipe.tap();app.alerts.buttons["移除"].tap()
     expectCount("显示 0 / 998 首 · 已选 0 条")
     app.buttons["收起歌曲列表"].tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
     XCTAssertFalse(playlist.exists)
+  }
+  func testLibrarySongActions() throws {
+    let app=XCUIApplication();app.launchEnvironment["NEXUS_UI_LIBRARY_ACTIONS_FIXTURE"]="1";app.launch()
+    func reach(_ item:XCUIElement){for _ in 0..<24{if waitForHittable(item,timeout:0.2){return};if item.exists && item.frame.midY<app.frame.midY{app.swipeDown()}else{app.swipeUp()}};XCTAssertTrue(waitForHittable(item,timeout:5),"Expected reachable control: \(item.identifier)")}
+    func image(_ name:String){let value=XCTAttachment(screenshot:XCUIScreen.main.screenshot());value.name=name;value.lifetime = .keepAlways;add(value)}
+    func type(_ field:XCUIElement,_ text:String){reach(field);field.tap();for character in text{field.typeText(String(character))};XCTAssertEqual(field.value as? String,text);field.typeText("\n")}
+    let fixture=try XCTUnwrap(JSONSerialization.jsonObject(with:Data(contentsOf:URL(string:"http://127.0.0.1:18439/library-actions-fixture")!)) as? [String:Any])
+    let fixtureTracks=try XCTUnwrap(fixture["list"] as? [[String:Any]])
+    let betaMeta=try XCTUnwrap(fixtureTracks[1]["meta"] as? [String:Any]),betaID=try XCTUnwrap(betaMeta["songId"] as? String)
+    openSettings(app,page:"background")
+    let blush=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch;reach(blush);if !blush.isSelected{blush.tap()}
+    openSettings(app,page:"accent");let rose=app.descendants(matching:.any).matching(identifier:"accent-rose").firstMatch;reach(rose);if !rose.isSelected{rose.tap()}
+    openSettings(app,page:"sources")
+    let prior=app.descendants(matching:.any).matching(identifier:"选择音源：Nexus Unified Search Fixture").firstMatch
+    if prior.exists{reach(prior);prior.tap();app.buttons["删除"].firstMatch.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["完成 1 项"].waitForExistence(timeout:10))}
+    type(app.textFields["音源订阅地址"],"http://127.0.0.1:18439/unified-search-source.js")
+    let importSource=app.buttons["从地址导入"];reach(importSource);importSource.tap()
+    let enable=app.buttons["启用音源：Nexus Unified Search Fixture"];XCTAssertTrue(enable.waitForExistence(timeout:15));reach(enable);enable.tap()
+    XCTAssertTrue(app.buttons["停用音源：Nexus Unified Search Fixture"].waitForExistence(timeout:15))
+    let library=app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch;library.tap()
+    let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
+    let playlist=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus library actions fixture")).firstMatch
+    for _ in 0..<10{if !playlist.exists{break};reach(playlist);playlist.tap();let remove=app.buttons["删除歌单"];reach(remove);remove.tap();app.alerts.buttons["删除"].tap()}
+    let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
+    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+    selectLocalFixture("Nexus Library Actions Fixture",in:app)
+    XCTAssertTrue(app.alerts["导入LX歌单"].waitForExistence(timeout:15));app.alerts.buttons["追加导入"].tap()
+    XCTAssertTrue(app.staticTexts["已导入 1 个歌单、3 首歌曲"].waitForExistence(timeout:15))
+    reach(playlist);playlist.tap();let all=app.buttons["播放全部"];reach(all);all.tap()
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    XCTAssertTrue(app.staticTexts["Library current"].firstMatch.waitForExistence(timeout:15))
+    XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60))
+    let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch,before=progress.value as? String
+    RunLoop.current.run(until:Date().addingTimeInterval(3));XCTAssertNotEqual(progress.value as? String,before)
+    app.buttons["暂停"].firstMatch.tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))
+    RunLoop.current.run(until:Date().addingTimeInterval(0.5));let pausedClock=progress.value as? String;XCTAssertNotNil(pausedClock)
+    func assertPaused(){XCTAssertTrue(app.staticTexts["Library current"].firstMatch.exists);XCTAssertTrue(app.buttons["播放"].firstMatch.exists);XCTAssertEqual(progress.value as? String,pausedClock)}
+    app.buttons["收起播放页"].firstMatch.tap()
+
+    let betaMore=app.buttons["更多操作：Batch Beta"];reach(betaMore);betaMore.tap()
+    let share=app.buttons["library-action-分享歌曲"];reach(share)
+    XCTAssertTrue(app.buttons["library-action-下载"].exists);XCTAssertTrue(app.buttons["library-action-相似歌曲"].exists)
+    image("Library shared song menu exposes existing actions");share.tap()
+    let sharing=XCUIApplication(bundleIdentifier:"com.apple.SharingUIService"),caption=sharing.descendants(matching:.any).matching(identifier:"LP.CaptionBar.BottomCaption").firstMatch
+    XCTAssertTrue(caption.waitForExistence(timeout:15));XCTAssertTrue(caption.label.contains("Batch Beta — Synthetic artist"));XCTAssertTrue(caption.label.contains("https://music.163.com/#/song?id="+betaID))
+    image("Library shares the selected public song identity")
+    let shareFrame=sharing.windows.firstMatch.frame;XCTAssertGreaterThan(shareFrame.minY,app.frame.height*0.2)
+    app.coordinate(withNormalizedOffset:CGVector(dx:0,dy:0)).withOffset(CGVector(dx:app.frame.width-22,dy:shareFrame.minY-40)).tap()
+    XCTAssertTrue(waitForGone(caption,timeout:10));XCTAssertTrue(share.isEnabled)
+    let closeMenu=app.buttons["收起音乐库歌曲更多操作"];reach(closeMenu);closeMenu.tap();player.tap();assertPaused();app.buttons["收起播放页"].firstMatch.tap()
+
+    func moveControl(_ query:String="") throws -> [String:Any]{try XCTUnwrap(JSONSerialization.jsonObject(with:Data(contentsOf:URL(string:"http://127.0.0.1:18439/library-actions-control"+(query.isEmpty ? "" : "?"+query))!)) as? [String:Any])}
+    _=try moveControl("hold=1")
+    reach(betaMore);betaMore.tap();let moveUp=app.buttons["library-action-move-up"];reach(moveUp);moveUp.tap()
+    let held=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? (moveControl()["held"] as? NSNumber)?.intValue)==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[held],timeout:10),.completed)
+    reach(closeMenu);closeMenu.tap();reach(betaMore);betaMore.tap()
+    _=try moveControl("release=1")
+    let completed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? (moveControl()["completed"] as? NSNumber)?.intValue)==1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[completed],timeout:10),.completed)
+    let reopened=app.descendants(matching:.any).matching(identifier:"library-actions").firstMatch
+    image("Library reopened menu after the prior move completion")
+    XCTAssertTrue(reopened.waitForExistence(timeout:10),"An old move completion must not dismiss the reopened menu for the same Track object")
+    XCTAssertTrue(app.buttons["library-action-下载"].isEnabled);reach(closeMenu)
+    reach(closeMenu);closeMenu.tap()
+    let currentMore=app.buttons["更多操作：Library current"];reach(currentMore);currentMore.tap();reach(moveUp);moveUp.tap()
+    XCTAssertTrue(waitForGone(closeMenu,timeout:10),"The current menu's own move should still close after saving")
+
+    let manage=app.buttons["全部歌曲与批量管理"];reach(manage);manage.tap()
+    func filterBatch(){let query=app.textFields["搜索列表歌曲歌手专辑"];type(query,"Batch");let sort=app.buttons["选择歌曲排序"];reach(sort);sort.tap();app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","歌名排序")).firstMatch.tap()}
+    func selectBoth(){for index in [1,2]{let row=app.descendants(matching:.any).matching(identifier:"track-select-\(index)").firstMatch;reach(row);row.tap()}}
+    filterBatch();selectBoth()
+    let next=app.buttons["所选下一首播放"];reach(next);image("Library sorted selection offers next and download actions");next.tap()
+    XCTAssertEqual(app.staticTexts["track-list-count"].label,"显示 2 / 3 首 · 已选 0 条")
+    app.buttons["收起歌曲列表"].tap();player.tap();assertPaused()
+    let queue=app.buttons["查看播放队列"];reach(queue);queue.tap()
+    let full=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(full);full.tap()
+    for label in ["1. Library current","2. Batch Alpha","3. Batch Beta","4. Batch Beta","5. Batch Alpha"]{XCTAssertTrue(app.buttons[label].waitForExistence(timeout:10),"Selected songs must precede the original tail in displayed order")}
+    XCTAssertTrue(app.staticTexts["· 1/5"].exists);image("Library batch next preserves current and original tail")
+    app.buttons["收起队列"].tap();let optionsClose=app.buttons["收起播放选项"].firstMatch;reach(optionsClose);optionsClose.tap();assertPaused();app.buttons["收起播放页"].firstMatch.tap()
+
+    reach(manage);manage.tap();filterBatch()
+    let alphaMore=app.buttons["library-list-more-2"];reach(alphaMore);alphaMore.tap()
+    let download=app.buttons["library-list-action-下载"];reach(download);download.tap()
+    let quality=app.descendants(matching:.any).matching(identifier:"download-choice-128k").firstMatch;XCTAssertTrue(quality.waitForExistence(timeout:10));reach(quality);quality.tap()
+    let confirm=app.buttons["download-choice-confirm"];reach(confirm);confirm.tap()
+    let summary=app.staticTexts["download-submission-summary"];XCTAssertTrue(summary.waitForExistence(timeout:20));XCTAssertEqual(summary.label,"已受理 1 项 · 已有 0 项 · 未受理 0 项")
+    func savedTask(_ title:String)->String{
+      let remove=app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@ AND (label BEGINSWITH %@ OR label BEGINSWITH %@)","offline-remove-","删除离线文件："+title+" · ","移除记录："+title+" · ")).firstMatch
+      XCTAssertTrue(remove.waitForExistence(timeout:15));let id=String(remove.identifier.dropFirst("offline-remove-".count))
+      let status=app.descendants(matching:.any).matching(identifier:"offline-status-"+id).firstMatch
+      let complete=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in status.exists && status.label.contains("已保存")},object:nil)
+      XCTAssertEqual(XCTWaiter.wait(for:[complete],timeout:90),.completed,"This exact task must save synthetic audio")
+      return id
+    }
+    let alphaTask=savedTask("Batch Alpha");reach(summary);image("Library single download reaches its saved task")
+    let back=app.buttons["download-submission-back"];reach(back);back.tap();let closeListMenu=app.buttons["收起歌曲更多操作"];reach(closeListMenu);closeListMenu.tap()
+    selectBoth();let batch=app.buttons["下载所选歌曲"];reach(batch);batch.tap()
+    XCTAssertTrue(summary.waitForExistence(timeout:20));XCTAssertEqual(summary.label,"已受理 1 项 · 已有 1 项 · 未受理 0 项")
+    XCTAssertEqual(app.staticTexts["download-submission-item-0"].label,"Batch Alpha · 保留已有任务")
+    XCTAssertEqual(app.staticTexts["download-submission-item-1"].label,"Batch Beta · 已受理")
+    let betaTask=savedTask("Batch Beta");XCTAssertNotEqual(alphaTask,betaTask);reach(summary);image("Library batch download reports each existing and new task")
+    for id in [alphaTask,betaTask]{let remove=app.buttons["offline-remove-"+id];reach(remove);remove.tap();XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout:5));app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(remove,timeout:15))}
+    reach(back);back.tap();XCTAssertEqual(app.staticTexts["track-list-count"].label,"显示 2 / 3 首 · 已选 0 条")
+    app.buttons["收起歌曲列表"].tap();player.tap();assertPaused();image("Library actions retain original paused playback");app.buttons["收起播放页"].firstMatch.tap()
+    let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(playlist,timeout:10))
   }
   func testLibraryPlaylistCoverURL() throws {
     let app=XCUIApplication();app.launch()

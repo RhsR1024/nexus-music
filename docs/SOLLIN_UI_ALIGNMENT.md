@@ -1,3 +1,7 @@
+## 2026-11-10 音乐库歌曲动作本地验收
+
+按[状态规格](ui-spec/library-song-actions-2026-11-10.md)复用通用Sheet和下载结果，正式Release动作/千首/平台收藏分别1/1/2项通过，18图来源核验并亲看；批量下载全屏安全区及菜单会话隔离已修，旧失败保留。参见[回执](2026-11-10-library-song-actions-report.md)。按0079记录功能与UI质量，不新增目标像素/动效等价或实体机结论。
+
 ## 2026-11-05 音枢 `withBase` 注音跨行阅读
 
 音枢自有 TextKit 修复，无新增 Sollin 参考或像素一致性声明。正常/XXXL Release各1/0/0、三图 provenance ready并亲看；20字逐项注音在常态分两行、大字号分四行，XXXL 559pt长段以418.6667pt阅读区正常滚动首末重叠覆盖。1022检查、完整native、dirty包/T7 669份及后续56c8ac5 clean包/T7 230份核验通过。产品a328ee6与独立下载测试56c8ac5均已push；iOS27 41949520533运行、41951283649唯一排队，云端终态与实体签名仍待。详见[回执](2026-11-05-ttml-withbase-wrap-report.md)与[规格](ui-spec/ttml-withbase-wrap-2026-11-05.md)，不关闭完整J37/F27或项目。
