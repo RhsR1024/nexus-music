@@ -18,7 +18,7 @@
 - 只发送一次 `/weapi/playlist/create`。响应 `code:200` 本身不代表成功；必须再以 `/weapi/user/playlist` 回读，确认同一账号下存在同 ID、同名、创建者等于当前 `userId` 的条目，并在响应提供隐私字段时确认与请求一致。
 - 状态包括 `created`、`unconfirmed`、`rejected`、`unsupported`、`unavailable`、`login_required`、`account_changed`、`cancelled`。创建已发出但回读失败、取消或账号变化不能报告成功；结果最多带已返回的 ID，并提示重新读取账号歌单，不自动重试创建。
 - 同一账号/名称/隐私并发请求共享一次任务；不同名称不错误共享。分页最多 20 页，遇到畸形响应立即停止，不猜测新歌单位置。
-- `AccountPlaylistImport` 在网易云卡增加创建表单；创建成功后把回读条目插入当前目录（若已读取），并显示“已创建…并回读确认”。未读取目录时保留“读取账号歌单”显式操作。账号 capability 仍保持 `[]`，没有虚构完整平台写能力。
+- `AccountPlaylistImport` 在网易云卡增加创建表单，并显示“已创建…并回读确认”。2026-11-10修正：创建后清空旧目录，由显式读取登记可预览条目；原先直接插入创建回读对象会因目录成员校验失败而无法预览。刷新开始也清空旧列表，失败/取消后重试可恢复。见[修正回执](2026-11-10-account-playlist-refresh-report.md)。账号 capability 仍保持 `[]`，没有虚构完整平台写能力。
 
 ## 验证
 

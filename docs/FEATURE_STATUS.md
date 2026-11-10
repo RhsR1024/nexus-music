@@ -1,3 +1,7 @@
+## 2026-11-10 J10 账号歌单创建后预览恢复
+
+创建确认后清除旧目录并显式重读，避免未登记对象预览误报账号更改；刷新失败/取消后不再显示已失效旧行，重试可恢复。1108检查与正式Release `1794296288625`的1/0/0、51.340秒/sourceUnchanged通过，夹具writes1/reads7/invalid0，4图亲看及来源核验通过。J10仍为B，真实账号/跨设备/实体/签名/iOS27不增加结论。见[回执](2026-11-10-account-playlist-refresh-report.md)。
+
 ## 2026-11-05 J10 网易云平台歌单创建
 
 网易云账号页新增平台歌单创建表单，名称1–40字、默认私密、可显式公开。客户端严格绑定账号/会话/`userId`/Cookie，单次调用`/weapi/playlist/create`，再用`/weapi/user/playlist`按ID、名称、创建者和可用隐私字段回读；创建后取消、账号变化或回读失败只报`unconfirmed`/`account_changed`，不自动重试。新增17项测试、完整1107/1107；正式Release `1793887965443`为1/0/0、25.446秒、sourceUnchanged，夹具reads1/writes1/created/invalid0，截图亲看。匿名端点仅证明登录要求；真实账号、平台加歌/删除、QQ/酷狗建单、实体机/签名/iOS27仍开放，J10保持B。见[回执](2026-11-05-netease-platform-playlist-create-report.md)。

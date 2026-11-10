@@ -2909,9 +2909,12 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"accounts")
     let card=app.descendants(matching:.any).matching(identifier:"account-playlists-card").firstMatch
     XCTAssertTrue(card.waitForExistence(timeout:20),"The NetEase account playlist card must be available")
+    let load=app.buttons["account-playlists-load"]
+    reveal(load);load.tap()
+    XCTAssertTrue(app.staticTexts["account-playlists-empty"].waitForExistence(timeout:15),"Read the original empty catalog before creating")
     let name=app.textFields["account-playlist-create-name"]
     reveal(name);name.tap()
-    name.typeText("合成网易云歌单");name.typeText("\n")
+    for character in "合成网易云歌单"{name.typeText(String(character))};name.typeText("\n")
     XCTAssertEqual(name.value as? String,"合成网易云歌单")
     let submit=app.buttons["account-playlist-create-submit"]
     reveal(submit);submit.tap()
@@ -2920,11 +2923,57 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(status.label,"已创建网易云歌单「合成网易云歌单」并回读确认")
     let result=try control()
     XCTAssertEqual(integer("writes",in:result),1,"Playlist creation must send exactly one write")
-    XCTAssertGreaterThanOrEqual(integer("reads",in:result),1,"Creation must be confirmed by a playlist read-back")
+    XCTAssertEqual(integer("reads",in:result),2,"Read the initial catalog and confirm creation exactly once")
     XCTAssertEqual(integer("invalid",in:result),0,"Creation must bind the account session cookie")
     XCTAssertEqual(integer("created",in:result),1)
     revealFull(status)
     image("NetEase playlist creation is confirmed by reading the new id back")
+    let createdRow=app.buttons["account-playlist-9100000000000000001"]
+    XCTAssertFalse(createdRow.exists,"The stale import catalog must be discarded after creating")
+    reveal(load);load.tap()
+    XCTAssertTrue(createdRow.waitForExistence(timeout:15),"Explicit refresh must register the new entry in the import catalog")
+    reveal(createdRow);createdRow.tap()
+    let preview=app.descendants(matching:.any).matching(identifier:"account-playlist-preview").firstMatch
+    XCTAssertTrue(preview.waitForExistence(timeout:15),"The refreshed entry must open a valid import preview")
+    XCTAssertTrue(app.staticTexts["已读取完整歌单，共 0 首"].exists)
+    image("Explicit refresh registers the created playlist for import preview")
+    app.buttons["account-playlist-preview-close"].tap()
+
+    _=try control("mode=error")
+    reveal(load);load.tap()
+    let readStatus=app.staticTexts["account-playlists-status"]
+    XCTAssertTrue(readStatus.waitForExistence(timeout:15))
+    XCTAssertEqual(readStatus.label,"暂时无法读取或保存歌单，请重试")
+    XCTAssertFalse(createdRow.exists,"A failed refresh must not leave revoked entries available")
+    revealFull(readStatus)
+    image("Failed refresh removes invalid catalog entries and offers a retry")
+
+    _=try control("mode=normal")
+    reveal(load);load.tap()
+    XCTAssertTrue(createdRow.waitForExistence(timeout:15))
+    _=try control("mode=hold")
+    reveal(load);load.tap()
+    let held=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in (try? integer("held",in:control())) == 1},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[held],timeout:15),.completed)
+    XCTAssertFalse(createdRow.exists,"Refreshing must immediately revoke old rows")
+    let cancel=app.buttons["account-playlists-cancel"]
+    reveal(cancel);cancel.tap()
+    let cancelled=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in readStatus.exists&&readStatus.label=="操作已取消"},object:nil)
+    XCTAssertEqual(XCTWaiter.wait(for:[cancelled],timeout:15),.completed)
+    _=try control("mode=normal&release=1")
+    XCTAssertFalse(createdRow.exists,"Late cancelled results must not repopulate the catalog")
+    reveal(load);load.tap()
+    XCTAssertTrue(createdRow.waitForExistence(timeout:15))
+    reveal(createdRow);createdRow.tap()
+    XCTAssertTrue(preview.waitForExistence(timeout:15),"A retry after failure and cancellation must restore a usable preview")
+    XCTAssertTrue(app.staticTexts["已读取完整歌单，共 0 首"].exists)
+    image("Retry after refresh failure and cancellation restores playlist preview")
+    app.buttons["account-playlist-preview-close"].tap()
+    let final=try control()
+    XCTAssertEqual(integer("writes",in:final),1,"Refreshing and retrying must never create another playlist")
+    XCTAssertEqual(integer("reads",in:final),7)
+    XCTAssertEqual(integer("invalid",in:final),0)
+    XCTAssertEqual(integer("held",in:final),0)
   }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.

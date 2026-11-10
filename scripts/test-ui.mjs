@@ -223,6 +223,8 @@ let discoveryDetailMode='normal',playlistLinkMode='normal',holdNextPlaylistLink=
 let qqFavoriteValue=false,qqFavoriteReads=0,qqFavoriteWrites=0,qqFavoriteInvalid=0;
 let wyFavoriteValue=false,wyFavoriteReads=0,wyFavoriteWrites=0,wyFavoriteInvalid=0;
 let wyPlaylistCreated=false,wyPlaylistReads=0,wyPlaylistWrites=0,wyPlaylistInvalid=0;
+let wyPlaylistReadMode='normal';
+const heldWyPlaylistResponses=[];
 const heldPlaylistLinkResponses=[];
 let styleCategoryMode='normal',stylePlaylistMode='normal',holdNextStyleCategories=false,holdStylePlaylists=false;
 const failedStyleTags=new Set(),heldStyleCategoryResponses=[],heldStylePlaylistResponses=[];
@@ -404,10 +406,12 @@ const handleRequest = async (req, res) => {
   }
   if(wyPlaylistUI&&req.url.startsWith('/wy-playlist-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
-    if(control.searchParams.has('reset')){wyPlaylistCreated=false;wyPlaylistReads=0;wyPlaylistWrites=0;wyPlaylistInvalid=0;}
-    counts.wyPlaylist={reads:wyPlaylistReads,writes:wyPlaylistWrites,created:wyPlaylistCreated,invalid:wyPlaylistInvalid};
+    if(control.searchParams.has('reset')){wyPlaylistCreated=false;wyPlaylistReads=0;wyPlaylistWrites=0;wyPlaylistInvalid=0;wyPlaylistReadMode='normal';}
+    const mode=control.searchParams.get('mode');if(['normal','error','hold'].includes(mode))wyPlaylistReadMode=mode;
+    if(control.searchParams.has('release'))for(const send of heldWyPlaylistResponses.splice(0))send();
+    counts.wyPlaylist={reads:wyPlaylistReads,writes:wyPlaylistWrites,created:wyPlaylistCreated,invalid:wyPlaylistInvalid,held:heldWyPlaylistResponses.length};
     res.setHeader('Content-Type','application/json');
-    res.end(JSON.stringify({reads:wyPlaylistReads,writes:wyPlaylistWrites,created:wyPlaylistCreated,invalid:wyPlaylistInvalid}));return;
+    res.end(JSON.stringify(counts.wyPlaylist));return;
   }
   if(req.url.startsWith('/qq-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
@@ -658,6 +662,12 @@ const handleRequest = async (req, res) => {
     }
     if(parsed.hostname==='c.y.qq.com'){counts.lyrics??={wy:0,tx:0};counts.lyrics.tx++;res.end(JSON.stringify({lyric:'[00:00.000]Synthetic original lyric\n[00:30.000]Second original line'}));return;}
     if(parsed.hostname==='music.163.com'){
+      if(wyPlaylistUI&&parsed.pathname==='/api/nuser/account/get'){
+        res.end(JSON.stringify({code:200,profile:{userId:'9000000000000000004',nickname:'Synthetic NetEase Playlist'}}));return;
+      }
+      if(wyPlaylistUI&&parsed.pathname==='/weapi/v6/playlist/detail'){
+        res.end(JSON.stringify({code:200,playlist:{id:'9100000000000000001',trackIds:[],trackCount:0}}));return;
+      }
       if(wyPlaylistUI&&parsed.pathname==='/weapi/playlist/create'){
         const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
         const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
@@ -670,7 +680,10 @@ const handleRequest = async (req, res) => {
         const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
         if(!valid){wyPlaylistInvalid++;res.end(JSON.stringify({code:1}));return;}
         wyPlaylistReads++;
-        res.end(JSON.stringify({code:200,more:false,playlist:wyPlaylistCreated?[{id:'9100000000000000001',name:'合成网易云歌单',privacy:10,trackCount:0,coverImgUrl:'',creator:{userId:'9000000000000000004'}}]:[]}));return;
+        if(wyPlaylistReadMode==='error'){res.end(JSON.stringify({code:500}));return;}
+        const payload={code:200,more:false,playlist:wyPlaylistCreated?[{id:'9100000000000000001',name:'合成网易云歌单',privacy:10,trackCount:0,coverImgUrl:'',creator:{userId:'9000000000000000004'}}]:[]};
+        const send=()=>res.end(JSON.stringify(payload));
+        if(wyPlaylistReadMode==='hold')heldWyPlaylistResponses.push(send);else send();return;
       }
       if(wyFavoriteUI&&parsed.pathname==='/weapi/song/like/check'){
         const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');

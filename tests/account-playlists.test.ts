@@ -73,6 +73,20 @@ test('refresh invalidates old previews and malformed server errors stay redacted
   s.serve(async()=>{throw new Error('unit-only-hidden credential body');});
   await assert.rejects(s.client.list(owner,signal()),error=>error instanceof AccountPlaylistError&&!error.message.includes('unit-only-hidden'));
 });
+test('failed and cancelled refreshes revoke the old catalog until a successful explicit read',async()=>{
+  for(const cancel of [false,true]){
+    const s=setup(),lists=await s.client.list(owner,signal()),preview=await s.client.preview(owner,lists[0]!,signal()),controller=new AbortController();
+    s.serve(async()=>{if(cancel)controller.abort();throw new Error('unit-only-hidden');});
+    await reject(s.client.list(owner,controller.signal),cancel?'cancelled':'unavailable');
+    const requests=s.calls.length;
+    await reject(s.client.preview(owner,lists[0]!,signal()),'account_changed');
+    await reject(s.client.importPreview(owner,preview,signal()),'account_changed');
+    assert.equal(s.calls.length,requests);assert.equal(s.library.getSnapshot().playlists.length,0);
+    s.serve(async path=>path.endsWith('user/playlist')?{code:200,playlist:[catalog()],more:false}:{code:200,playlist:{id:'10',trackCount:0,trackIds:[]}});
+    const refreshed=await s.client.list(owner,signal());assert.notEqual(refreshed[0],lists[0]);
+    assert.deepEqual((await s.client.preview(owner,refreshed[0]!,signal())).tracks,[]);
+  }
+});
 test('cancellation or removal during a local write rolls back before publishing and does not poison later library writes',async()=>{
   for(const cancel of [true,false]){
     const s=setup(),lists=await s.client.list(owner,signal()),preview=await s.client.preview(owner,lists[0]!,signal()),controller=new AbortController();

@@ -48,7 +48,8 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
     setCreateMessage('');
     void execute('正在创建网易云歌单',signal=>services.neteasePlaylist.create(account,createName,createPublic?0:10,signal),result=>{
       if(result.status==='created'&&result.playlist){
-        setLists(current=>current?[result.playlist!,...current.filter(item=>item.id!==result.playlist!.id)]:null);
+        // Only list() registers entries for an account-bound import preview.
+        setLists(null);
         setCreateName('');setCreateMessage(`已创建网易云歌单「${result.playlist.title}」并回读确认`);
       }else if(result.status==='unconfirmed'){
         setCreateMessage(result.id?'平台已返回创建结果，但尚未回读确认。请重新读取账号歌单核对，不要重复创建。':'创建请求可能已提交，但未取得可核验结果。请重新读取账号歌单核对，不要重复创建。');
@@ -75,7 +76,7 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
         <Pressable testID="account-playlist-create-submit" accessibilityRole="button" disabled={blocked||!createName.trim()} onPress={createPlaylist} style={[styles.button,{backgroundColor:p.surface},(blocked||!createName.trim())&&styles.disabled]}><Text style={[styles.body,{color:p.accent}]}>创建到网易云音乐</Text></Pressable>
         {!!createMessage&&<Text testID="account-playlist-create-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{createMessage}</Text>}
       </View>}
-      {button('account-playlists-load',lists?'重新读取歌单':'读取账号歌单',()=>{setPreview(null);void execute('正在读取歌单',signal=>services.accountPlaylists.list(account,signal),value=>{setLists(value);setVisibleCount(100);setPreview(null);});})}
+      {button('account-playlists-load',lists?'重新读取歌单':'读取账号歌单',()=>{setLists(null);setPreview(null);void execute('正在读取歌单',signal=>services.accountPlaylists.list(account,signal),value=>{setLists(value);setVisibleCount(100);setPreview(null);});})}
       {pending&&!detail&&progress}
       {!!message&&!detail&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{message}</Text>}
       {lists?.length===0&&<Text testID={testID("account-playlists-empty")} style={[styles.body,{color:p.secondary}]}>平台当前没有可导入的歌单。</Text>}
