@@ -1,3 +1,9 @@
+## 2026-11-18 账号推荐歌单纵切片
+
+新增 `AccountRecommendedPlaylists`，以固定IPA `E-059/F-050/P-050` 的账号边界实现网易云推荐资源和QQ `GetRecommendFeed`，不移植目标客户端。Provider先验证当前账号、修订和Keychain会话，再做有界解析、去重、30项截断和五分钟账号修订缓存；`clear`、账号替换、取消和HTTP鉴权失败均不能发布迟到数据。酷狗没有等价证据，继续排除。
+
+`AccountRecommendations`新增只读横向卡片区、刷新、空态、失败和重试，卡片进入现有`Discovery`公开详情并返回“返回平台推荐”。专项7/7，完整检查1115/1115；合成网易云Release `1794975071176` 为1/0/0、30.431秒、sourceUnchanged，recommend4/detail1/authFailures0，五张1290×2796截图亲看。r1通过但首图未展示卡片，原件保留后仅修截图滚动；r2为最终视觉证据。真实账号、QQ UI、目标字段映射、心动模式、真实FM、实体机/签名/iOS27和云端终态继续，J08保持C。见[回执](2026-11-18-account-recommended-playlists-report.md)。
+
 ## 2026-11-18 QQ私人雷达完整列表与批量动作
 
 完整平台列表现按实际kind开放动作：仅QQ私人雷达（`tx_radar`）支持长按多选、收藏、加歌单、下一首和下载；每日推荐/官方日推/酷狗日推保持不可多选，只保留播放全部、全部入队和逐曲下一首。批量收藏按点选顺序、下一首按列表顺序，全部复用现有收藏/歌单/唯一权威队列/下载边界。合成QQ雷达30首正式Release `1794973754818` 为1/0/0、150.228秒、`sourceUnchanged`，长按1项→2项→批量下一首→队列准确为Radar1/Radar2，`accountRadar.requests=5`/`authFailures=0`，3张1290×2796图亲看；完整检查1108/1108、Swift/Node/diff通过。首轮已通过产品断言但清理时无条件点“收起队列”失败（清空后按钮消失），原件保留并修至条件关闭。见[回执](2026-11-18-platform-radar-batch-report.md)。前两笔本地提交`8858cb0`/`0f076bf`与本次推送仍因SSH publickey认证失败留本机、不写成已上云。真实QQ账号/雷达、推荐歌单入口、心动模式、实体机/签名/iOS27仍开放，J08保持C，整体active。
