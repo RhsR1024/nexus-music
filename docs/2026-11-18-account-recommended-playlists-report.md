@@ -65,4 +65,4 @@ NEXUS_UI_RUN_DIR=build/logs/account-recommended-playlists-20261118-r2 \
 
 ## 未完成
 
-本批只验证合成网易云账号推荐歌单。QQ Provider 有独立传输/鉴权/解析单测，但没有 QQ 账号 UI 夹具或真实响应；真实网易云/QQ 账号、目标 App 的字段映射、排序、分页和服务可用性均未证明。心动模式、推荐歌单内批量动作、真实私人 FM 供曲、实体机、签名与 iOS27 云端终态仍开放。J08 保持 C，整体目标保持 active。
+本批只验证合成网易云账号推荐歌单。QQ Provider 有独立传输/鉴权/解析单测；合成 QQ 账号的正式 UI 夹具随后已由[QQ UI 回执](2026-11-18-qq-account-recommended-playlists-ui-report.md)补齐，但这仍不是真实 QQ 账号或真实响应。真实网易云/QQ 账号、目标 App 的字段映射、排序、分页和服务可用性均未证明。心动模式、推荐歌单内批量动作、真实私人 FM 供曲、实体机、签名与 iOS27 云端终态仍开放。J08 保持 C，整体目标保持 active。

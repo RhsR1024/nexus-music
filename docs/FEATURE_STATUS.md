@@ -1,10 +1,14 @@
+## 2026-11-18 QQ账号推荐歌单UI纵切片
+
+在既有账号推荐歌单实现上补合成 QQ 账号的正式 UI 纵向夹具：`NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE=qq`、合成账号 `qq:2:9000000000000000010` 与 Keychain Cookie；产品仍走正式 `MusicAccounts`、`AccountRecommendedPlaylists`、`DiscoveryProvider`、公开详情、`Cover` 和主题，仅 HTTP 传输进入本机夹具。覆盖账号绑定文案、4 张卡片、公开详情、空态、失败/重试，校验推荐 `From:0`/`Size:30`、Cookie 和详情签名；同夹具显式返回空 QQ 雷达，消除错误态污染。最终 Release `1794980861756` 为 1/0/0、29.948 秒、sourceUnchanged，推荐4/QQ详情1/公开详情0/鉴权失败0，5 张 1290×2796 截图亲看；网易云同用例回归 `1794981130985` 为 1/0/0、40.477 秒，推荐4/公开详情1/鉴权失败0，证明共享清队列接入未破坏原夹具。完整检查 1123/1123，IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。r1 通过但含残留 mini 播放器与 QQ 雷达错误态，原件保留；r2 清队列+显式空雷达为最终视觉证据。真实 QQ 账号/服务、目标字段映射/排序/分页、酷狗等价推荐、真实心动/FM、实体机/签名/iOS27 仍开放，J08 保持 C，整体 active。见[回执](2026-11-18-qq-account-recommended-playlists-ui-report.md)。
+
 ## 2026-11-18 网易云心动模式纵切片
 
 网易云账号新增“心动模式”：读取账号拥有的喜欢歌单并按歌单/`song/like/get` 回退确定喜欢集合，从当前喜欢曲或喜欢列表种子开启 `/weapi/playmode/intelligence/list`（`fromPlayOne`、300 首），推荐详情按 500 首分批；以种子优先、推荐去重且剔除种子的顺序整体替换现有权威队列。歌单缺失、喜欢为空、种子不可用、推荐为空、服务失败和登录失效分别显示，迟到结果不发布；没有证据支持的关闭/恢复原队列行为未实现。新增 8 项 Provider 测试、完整检查 1123/1123、完整 native/typecheck/Swift/Node/diff 通过；最终合成网易云 Release `1794979905602` 为 1/0/0、172.222 秒、sourceUnchanged，`requests=20/playlist=4/like=1/detail=5/intelligence=3/authFailures=0`，7 张 1290×2796 截图亲看；IPA strict review 60E/25WI/130 timeline/51F/51P、0错误/0警告。最后失败是测试把 `liked_single` 的 4 首误写成 3 首，修正预期并重启隔离 Modal 后通过，前五次失败原件保留；r1 `1794979165515` 已通过，但被最终脚本隔离版 r2 取代，原件保留。真实网易云账号/服务、关闭恢复、QQ/酷狗、真实 FM、实体机/签名/iOS27 仍开放，J08 保持 C。见[回执](2026-11-18-netease-heartbeat-report.md)。
 
 ## 2026-11-18 账号推荐歌单纵切片
 
-平台推荐新增独立“推荐歌单”区：网易云账号读取 `/weapi/v1/discovery/recommend/resource`，QQ账号读取 `music.playlist.PlaylistSquare/GetRecommendFeed`，酷狗按证据边界不显示；结果有界去重、最多30项，空结果/失败/登录失效分开，五分钟账号修订缓存，替换、取消或清理后迟到结果不发布。卡片只读打开现有公开歌单详情，不自动导入或写本地库。合成网易云正式Release `1794975071176` 为1/0/0、30.431秒、`sourceUnchanged`，推荐请求4/公开详情1/鉴权失败0，5张1290×2796图亲看；完整检查1115/1115，IPA strict review 59E/24WI/129/50F/50P、0错误/0警告。r1通过但首图未展示卡片，原件保留后只修截图滚动并以r2为准。真实网易云/QQ账号与UI、目标字段映射、心动模式、真实FM、实体机/签名/iOS27仍开放，J08保持C，整体active。见[回执](2026-11-18-account-recommended-playlists-report.md)。
+平台推荐新增独立“推荐歌单”区：网易云账号读取 `/weapi/v1/discovery/recommend/resource`，QQ账号读取 `music.playlist.PlaylistSquare/GetRecommendFeed`，酷狗按证据边界不显示；结果有界去重、最多30项，空结果/失败/登录失效分开，五分钟账号修订缓存，替换、取消或清理后迟到结果不发布。卡片只读打开现有公开歌单详情，不自动导入或写本地库。合成网易云正式Release `1794975071176` 为1/0/0、30.431秒、`sourceUnchanged`，推荐请求4/公开详情1/鉴权失败0，5张1290×2796图亲看；完整检查1115/1115，IPA strict review 59E/24WI/129/50F/50P、0错误/0警告。r1通过但首图未展示卡片，原件保留后只修截图滚动并以r2为准。真实网易云/QQ账号与真实响应仍未验收（QQ合成UI夹具已由后续回执补齐），目标字段映射、心动模式、真实FM、实体机/签名/iOS27仍开放，J08保持C，整体active。见[回执](2026-11-18-account-recommended-playlists-report.md)。
 
 ## 2026-11-18 QQ私人雷达完整列表与批量动作
 

@@ -1,3 +1,9 @@
+## 2026-11-18 QQ账号推荐歌单UI纵切片
+
+在既有 `AccountRecommendedPlaylists` 上补合成 QQ 账号的正式 UI 纵向验证，不修改推荐协议、账号存储或公开详情。测试入口以 `NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE=qq` 保存合成账号与 Keychain Cookie，正式组件仅把 HTTP 传输接到本机夹具；`GetRecommendFeed` 校验账号、Cookie、`From:0`/`Size:30`，详情校验签名，QQ 雷达显式返回空结果。覆盖卡片、公开详情、空态、失败/重试，并让账号推荐夹具启动时清空权威队列以隔离残留 mini 播放器。
+
+最终 Release `1794980861756` 为 1/0/0、29.948 秒、sourceUnchanged，推荐4/QQ详情1/公开详情0/鉴权失败0，5 张 1290×2796 截图亲看；网易云同用例回归 `1794981130985` 为 1/0/0、40.477 秒，推荐4/公开详情1/鉴权失败0，证明共享清队列接入无回归。完整检查1123/1123，IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。r1 已通过但含残留 mini 与 QQ 雷达错误态，原件保留；r2 为最终视觉证据。真实 QQ 账号/服务、目标字段映射、酷狗等价、真实心动/FM、实体机/签名/iOS27继续，J08保持C。见[回执](2026-11-18-qq-account-recommended-playlists-ui-report.md)。
+
 ## 2026-11-18 网易云心动模式纵切片
 
 新增 `AccountHeartbeat`，按固定 IPA `E-060/F-051/P-051` 实现网易云账号专属心动模式。Provider 先验证当前账号、修订、`accountId`、`userId`、用户名与 Keychain weapi 会话，再查找当前用户拥有的 `specialType == 10` 喜欢歌单；优先歌单顺序，失败时回退 `/weapi/song/like/get`。种子优先复用当前喜欢曲，否则随机选择喜欢曲；请求 `/weapi/playmode/intelligence/list` 固定 `fromPlayOne` 与 300 首，推荐详情每 500 首分批，单批失败仅省略该批，登录失效继续终止。最终以 `[种子, ...去重推荐且剔除种子]` 通过 `playTracks` 整体替换唯一权威队列。未实现没有静态证据支持的关闭/恢复旧队列。
@@ -8,7 +14,7 @@
 
 新增 `AccountRecommendedPlaylists`，以固定IPA `E-059/F-050/P-050` 的账号边界实现网易云推荐资源和QQ `GetRecommendFeed`，不移植目标客户端。Provider先验证当前账号、修订和Keychain会话，再做有界解析、去重、30项截断和五分钟账号修订缓存；`clear`、账号替换、取消和HTTP鉴权失败均不能发布迟到数据。酷狗没有等价证据，继续排除。
 
-`AccountRecommendations`新增只读横向卡片区、刷新、空态、失败和重试，卡片进入现有`Discovery`公开详情并返回“返回平台推荐”。专项7/7，完整检查1115/1115；合成网易云Release `1794975071176` 为1/0/0、30.431秒、sourceUnchanged，recommend4/detail1/authFailures0，五张1290×2796截图亲看。r1通过但首图未展示卡片，原件保留后仅修截图滚动；r2为最终视觉证据。真实账号、QQ UI、目标字段映射、心动模式、真实FM、实体机/签名/iOS27和云端终态继续，J08保持C。见[回执](2026-11-18-account-recommended-playlists-report.md)。
+`AccountRecommendations`新增只读横向卡片区、刷新、空态、失败和重试，卡片进入现有`Discovery`公开详情并返回“返回平台推荐”。专项7/7，完整检查1115/1115；合成网易云Release `1794975071176` 为1/0/0、30.431秒、sourceUnchanged，recommend4/detail1/authFailures0，五张1290×2796截图亲看。r1通过但首图未展示卡片，原件保留后仅修截图滚动；r2为最终视觉证据。真实账号与真实响应仍未验收（QQ合成UI夹具已由后续回执补齐），目标字段映射、心动模式、真实FM、实体机/签名/iOS27和云端终态继续，J08保持C。见[回执](2026-11-18-account-recommended-playlists-report.md)。
 
 ## 2026-11-18 QQ私人雷达完整列表与批量动作
 

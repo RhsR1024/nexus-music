@@ -1,3 +1,18 @@
+## 2026-11-18 QQ账号推荐歌单UI纵切片
+
+- [x] 复用固定 `E-059 → F-050 → P-050 / WI-024` 与既有 Product/Provider，不改推荐协议、账号能力或详情边界。
+- [x] 新增 `testQQAccountRecommendedPlaylists`、`NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE=qq`、合成 QQ 账号与 Keychain Cookie；仅 HTTP 进入本机夹具。
+- [x] 覆盖账号文案、4 张卡片、公开详情、空态、失败/重试；校验 `From:0`/`Size:30`、Cookie、详情签名，并显式隔离 QQ 雷达空结果。
+- [x] 测试入口为两种账号推荐夹具清空权威队列，移除残留 mini 播放器；该变化不改变产品行为。
+- [x] 最终 Release`1794980861756`为1/0/0、29.948秒、sourceUnchanged；推荐4/QQ详情1/公开详情0/鉴权失败0，5张1290×2796图亲看。
+- [x] 网易云同用例回归`1794981130985`为1/0/0、40.477秒、同source digest/安装bundle；推荐4/公开详情1/鉴权失败0。
+- [x] `npm run check`1123/1123；IPA strict review 60E/25WI/130/51F/51P、0错误/0警告；Node/Swift parse/diff通过。
+- [x] r1`1794980571681`虽1/0/0，但含残留mini与QQ雷达错误态；原件保留，r2清队列+显式空雷达作为最终视觉证据。
+- [ ] 真实 QQ 账号与推荐服务、目标字段映射/排序/分页；酷狗等价推荐、真实心动/FM。
+- [ ] 实体机、签名、iOS27云端终态与完整J08。
+
+见[回执](2026-11-18-qq-account-recommended-playlists-ui-report.md)。J08保持C，整体active。
+
 ## 2026-11-18 网易云心动模式纵切片
 
 - [x] 固定 IPA `E-060 → F-051 → P-051 / WI-025`；strict review 60E/25WI/130 timeline/51F/51P、0错误/0警告。
@@ -23,7 +38,8 @@
 - [x] 新增7项Provider测试，`npm run check`1115/1115、Swift/Node/diff通过。
 - [x] 正式Release`1794975071176`为1/0/0、30.431秒、sourceUnchanged；推荐4/详情1/鉴权失败0，5张1290×2796图亲看。
 - [x] r1通过但首张卡片附件不可见，原件保留；仅补截图前滚动后以r2验收。
-- [ ] 真实网易云/QQ账号、QQ UI夹具、目标字段映射/排序/分页；心动模式、推荐歌单内批量动作、真实私人FM。
+- [x] 合成QQ账号UI夹具已由[后续回执](2026-11-18-qq-account-recommended-playlists-ui-report.md)补齐。
+- [ ] 真实网易云/QQ账号、目标字段映射/排序/分页；心动模式、推荐歌单内批量动作、真实私人FM。
 - [ ] 实体机、签名、iOS27云端终态与完整J08。
 
 见[回执](2026-11-18-account-recommended-playlists-report.md)。J08保持C，整体active。
