@@ -1,3 +1,7 @@
+## 2026-11-18 音乐库歌单弹层封面正式UI
+
+`SourceUITests-1794986935325` 为1 passed/0 failed/0 skipped，`testLibraryPlaylistCoverModal()` 29.309秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。合成歌单含一首首曲封面不可用的歌曲，正式弹层仍显示可用歌单封面，证明 `playlistCoverSource` 在 `track-list-cover` 路径生效；产品逻辑未改。源码digest`8df9aa8f…0085`、安装bundle`3d86f254…9a7d`、resultInfo`b272d53c…f2a6`；1张1290×2796截图亲看，索引`47937fc8…eeed`，provenance `ready:true`。`npm run check`1156/1156、typecheck、完整native、Swift/Node/diff通过。见[回执](2026-11-18-library-track-list-cover-modal-report.md)。
+
 ## 2026-11-18 网易云平台歌单删除正式UI
 
 `SourceUITests-1794986259141` 为1 passed/0 failed/0 skipped，48.533秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。设置页网易云账号歌单新增仅对创建行显示的删除按钮；独立 Provider 先读目录，单次删除写入，写后最多两次回读确认缺席。夹具控制历史：初始读1/0、拒绝2读/1写、重试成功4读/2写、未确认4读/1写，全程invalid0且未确认保留目标。5张1290×2796截图已亲看。源码digest`c218e283…3d4e`、安装bundle`42740e6d…c2b3`、resultInfo`320307bb…df26`；r1测试ID错误失败保留，r2因重复截图/缺历史被取代，r3因QQ/酷狗说明文案修正被r4取代。见[回执](2026-11-18-netease-platform-playlist-delete-report.md)。

@@ -1,3 +1,13 @@
+## 2026-11-18 音乐库歌曲列表弹层歌单封面
+
+- [x] 新增 `NEXUS_UI_PLAYLIST_COVER_MODAL_FIXTURE=1`，用正式 `LibraryStore.createPlaylist` 创建含单曲歌单；歌单封面可用、首曲 artwork 不可用。
+- [x] 新增 `testLibraryPlaylistCoverModal`：详情封面可见后打开“全部歌曲与批量管理”，等待 `track-list-cover-image`，证明弹层使用歌单封面而非首曲。
+- [x] 产品逻辑未改；`npm run check`1156/1156、typecheck、完整native、Swift/Node/diff通过。
+- [x] 正式Release`1794986935325`为1/0/0、29.309秒、sourceUnchanged，1张1290×2796图亲看，provenance `ready:true`。
+- [ ] 真实大歌单/封面CDN、实体机、VoiceOver/字号/小屏、签名与iOS27云端终态。
+
+见[回执](2026-11-18-library-track-list-cover-modal-report.md)与[UI规格](ui-spec/library-track-list-cover-modal-2026-11-18.md)。不增加Sollin页面完成量，J24与完整F11/F23不关闭，整体active。
+
 ## 2026-11-18 J10 网易云平台歌单删除
 
 - [x] 新增 `NeteasePlaylistDeleteClient`；只接受当前账号创建的 1–19 位歌单 ID，严格绑定平台/账号/会话/`userId`/用户名/Cookie 与 `creator.userId`。
@@ -228,7 +238,7 @@
 - [x] 正式Release`SourceUITests-1793858859629`为1/0/0、55.901秒、`sourceUnchanged=true`；创建→重启→列表→详情→删除通过，2图亲看。
 - [x] 清理仅限本测试`Cover fixture `前缀并等待计数下降；详情截图先滚到顶部并以`isHittable`验收；无关历史数据保留。
 - [x] `npm run check`1028/1028、完整native、Swift/Node/diff通过；r1–r9失败或替代原件保留。
-- [ ] `track-list-cover`实际弹层视觉；当前目标歌单为空，纯函数回退已测。
+- [x] `track-list-cover`实际弹层视觉已由2026-11-18专项夹具补齐：歌单封面可用而首曲封面不可用时仍显示歌单封面，[回执](2026-11-18-library-track-list-cover-modal-report.md)。
 - [x] `3a2ecc2` clean unsigned归档：IPA17,821,674字节/SHA-256`1f5290d2…a4cdb`，manifest clean/unsigned，63载荷/90 ZIP项通过；历史distribution链接恢复。
 - [x] T7阶段`2026-11-05-playlist-cover-3a2ecc2`为722份业务文件/410,722,802字节、逐项0差异且`SHA256SUMS` PASS；源码tar与1,093个tracked条目一致，源证据保留且零删除。
 - [x] 提交正常push，远端main实核为`191574a`；Actions网页实核`41973467272/258cac7`运行、`41979882570/191574a`唯一排队，1运行/1排队，无取消/重派。

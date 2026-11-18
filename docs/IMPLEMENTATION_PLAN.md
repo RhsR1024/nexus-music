@@ -1,3 +1,9 @@
+## 2026-11-18 音乐库歌曲列表弹层歌单封面
+
+补齐歌单封面在正式 `TrackListModal` 中的实际视觉验收。模拟器夹具通过正式 `LibraryStore.createPlaylist` 创建一个含单曲的歌单，歌单封面指向本机可用 PNG，歌曲 `artwork` 故意指向不存在地址；新增 `testLibraryPlaylistCoverModal` 从音乐库歌单详情打开“全部歌曲与批量管理”，断言 `track-list-cover-image` 出现。该断言在实现错误改用首曲封面时必然失败，因此能证明 `playlistCoverSource` 的封面优先级。产品代码未改，仅新增夹具开关、测试和测试脚本路由。
+
+`npm run check` 1156/1156、typecheck、完整native、Swift/Node/diff通过；正式Release`1794986935325`为1/0/0、29.309秒、sourceUnchanged，源码digest`8df9aa8f…0085`、安装bundle`3d86f254…9a7d`、resultInfo`b272d53c…f2a6`，1张1290×2796图亲看，provenance `ready:true`。真实大歌单/封面CDN、实体机、VoiceOver/字号/小屏、签名和iOS27继续。见[回执](2026-11-18-library-track-list-cover-modal-report.md)与[UI规格](ui-spec/library-track-list-cover-modal-2026-11-18.md)。
+
 ## 2026-11-18 J10 网易云平台歌单删除
 
 新增独立 `NeteasePlaylistDeleteClient` 和设置页账号歌单删除入口。Provider 只接受当前账号创建的 1–19 位歌单 ID；会话、平台、`accountId`、`userId`、`netease:` 用户名和 Cookie 必须一致；写前分页读取 `/weapi/user/playlist` 并核对 `creator.userId`。目标不存在返回零写 `absent`；存在才发送一次 `/weapi/playlist/remove`，`ids` 为 JSON 字符串单 ID 数组；最多两次 800ms 回读，只有目标缺席才返回 `deleted`。写后响应 500、301/401/403、HTTP 401/403 或畸形回读均返回 `unconfirmed`，不把 `code:200` 当成功。UI 增加 destructive 确认、删除状态、成功移除行、拒绝重试和未确认保留目标；收藏歌单无删除按钮，重命名继续因三字段 eAPI batch 风险关闭。
