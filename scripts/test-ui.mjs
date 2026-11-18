@@ -462,11 +462,14 @@ const handleRequest = async (req, res) => {
     const control=new URL(req.url,'http://127.0.0.1');
     if(control.searchParams.has('reset')){
       wyPlaylistTrackMode='normal';wyPlaylistTrackProfileReads=0;wyPlaylistTrackListReads=0;wyPlaylistTrackDetailReads=0;wyPlaylistTrackWrites=0;wyPlaylistTrackInvalid=0;
-      wyPlaylistTrackMembership=new Set(['1002','1003']);
+      wyPlaylistTrackMembership=new Set(control.searchParams.get('present')==='1'?['1001','1002','1003']:['1002','1003']);
     }
-    const mode=control.searchParams.get('mode');if(['normal','write-error'].includes(mode))wyPlaylistTrackMode=mode;
+    const mode=control.searchParams.get('mode');if(['normal','write-error','remove-success','remove-error'].includes(mode))wyPlaylistTrackMode=mode;
+    const state={profileReads:wyPlaylistTrackProfileReads,listReads:wyPlaylistTrackListReads,detailReads:wyPlaylistTrackDetailReads,writes:wyPlaylistTrackWrites,invalid:wyPlaylistTrackInvalid,trackPresent:wyPlaylistTrackMembership.has('1001'),mode:wyPlaylistTrackMode};
+    counts.wyPlaylistTrackControl=state;
+    counts.wyPlaylistTrackControls=[...(counts.wyPlaylistTrackControls??[]),{query:control.searchParams.toString(),...state}];
     res.setHeader('Content-Type','application/json');
-    res.end(JSON.stringify({profileReads:wyPlaylistTrackProfileReads,listReads:wyPlaylistTrackListReads,detailReads:wyPlaylistTrackDetailReads,writes:wyPlaylistTrackWrites,invalid:wyPlaylistTrackInvalid,trackPresent:wyPlaylistTrackMembership.has('1001'),mode:wyPlaylistTrackMode}));return;
+    res.end(JSON.stringify(state));return;
   }
   if(req.url.startsWith('/qq-comments-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1'),mode=control.searchParams.get('mode');
@@ -899,8 +902,9 @@ const handleRequest = async (req, res) => {
         const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist-tracks(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
         if(!valid){wyPlaylistTrackInvalid++;res.end(JSON.stringify({code:1}));return;}
         wyPlaylistTrackWrites++;
-        if(wyPlaylistTrackMode==='write-error'){res.end(JSON.stringify({code:500}));return;}
-        wyPlaylistTrackMembership.add('1001');
+        if(wyPlaylistTrackMode==='write-error'||wyPlaylistTrackMode==='remove-error'){res.end(JSON.stringify({code:500}));return;}
+        if(wyPlaylistTrackMode==='remove-success')wyPlaylistTrackMembership.delete('1001');
+        else wyPlaylistTrackMembership.add('1001');
         res.end(JSON.stringify({code:200}));return;
       }
       if(wyFavoriteUI&&parsed.pathname==='/weapi/song/like/check'){

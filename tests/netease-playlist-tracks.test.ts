@@ -90,6 +90,17 @@ test('removing an absent track is idempotent and never writes',async()=>{
   assert.equal(writes,0);
 });
 
+test('removing a duplicated membership still writes once and requires absence',async()=>{
+  let ids=['1001','1002','1001'];
+  let writes=0;
+  const {client:target}=client(async(path)=>{
+    if(path==='v6/playlist/detail')return detail(ids);
+    writes++;ids=ids.filter(id=>id!=='1001');return{code:200};
+  });
+  assert.deepEqual(await target.update(account,playlist,'1001','del',signal()),{status:'removed'});
+  assert.equal(writes,1);
+});
+
 test('a code 200 write without a matching read-back stays unconfirmed',async()=>{
   let reads=0,writes=0;
   const {client:target}=client(async(path)=>{
@@ -107,6 +118,16 @@ test('a write response error is rejected and does not gate on a second read',asy
     writes++;return{code:500};
   });
   assert.deepEqual(await target.update(account,playlist,'1001','add',signal()),{status:'rejected',code:500});
+  assert.equal(writes,1);assert.equal(reads,1);
+});
+
+test('a rejected remove is explicit and does not claim absence',async()=>{
+  let reads=0,writes=0;
+  const {client:target}=client(async(path)=>{
+    if(path==='v6/playlist/detail'){reads++;return detail(['1001','1002']);}
+    writes++;return{code:500};
+  });
+  assert.deepEqual(await target.update(account,playlist,'1001','del',signal()),{status:'rejected',code:500});
   assert.equal(writes,1);assert.equal(reads,1);
 });
 
