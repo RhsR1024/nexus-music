@@ -2584,6 +2584,56 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(settingsLogin.waitForExistence(timeout:15),"The account card CTA must open the existing NetEase login entry")
     let routed=XCTAttachment(screenshot:app.screenshot());routed.name="Account recommendations login route";routed.lifetime = .keepAlways;add(routed)
   }
+  func testPlatformDailyFullList() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_ACCOUNT_DAILY_FIXTURE"]="1"
+    app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func control() throws -> [String:Any] {
+      let url=URL(string:"http://127.0.0.1:18439/account-daily-fixture-control?t=\(Date().timeIntervalSince1970)")!
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:Data(contentsOf:url)) as? [String:Any])
+    }
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<28 {
+        if waitForHittable(element,timeout:0.2){return}
+        let above=element.exists&&element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.7))
+          .press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.35)))
+      }
+      XCTAssertTrue(waitForHittable(element,timeout:5),"Daily list element must be reachable: \(element)")
+    }
+    let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch
+    let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch
+    XCTAssertTrue(tab.waitForExistence(timeout:15));XCTAssertTrue(waitForHittable(tab,timeout:10));tab.tap()
+    let open=app.buttons["account-daily-open"]
+    reveal(open)
+    XCTAssertTrue(open.waitForExistence(timeout:20),"The full-list entry must wait for the platform response")
+    let fifthPreview=app.descendants(matching:.any).matching(identifier:"account-daily-track-4").firstMatch
+    XCTAssertTrue(fifthPreview.exists,"The collapsed recommendation keeps the five-row preview")
+    XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"account-daily-track-5").firstMatch.exists,"The collapsed recommendation must not render the complete list")
+    open.tap()
+    let full=app.descendants(matching:.any).matching(identifier:"account-daily-full").firstMatch
+    XCTAssertTrue(full.waitForExistence(timeout:10))
+    let count=app.staticTexts["account-daily-full-count"]
+    XCTAssertTrue(count.waitForExistence(timeout:10))
+    XCTAssertTrue(count.label.contains("共 30 首"),"The full list must expose all platform-provided rows")
+    XCTAssertTrue(count.label.contains("Synthetic NetEase Daily"),"The full list must stay bound to the selected fixture account")
+    XCTAssertTrue(app.buttons["account-daily-full-play-0"].waitForExistence(timeout:10))
+    let last=app.buttons["account-daily-full-play-29"]
+    for _ in 0..<24 {
+      if last.exists&&last.isHittable{break}
+      app.swipeUp()
+    }
+    XCTAssertTrue(last.waitForExistence(timeout:10),"The thirtieth platform row must remain reachable")
+    XCTAssertTrue(last.isHittable)
+    XCTAssertTrue(last.label.contains("Synthetic Daily 30"),"The thirtieth row must bind the thirtieth platform track")
+    image("Platform daily full list reaches the thirtieth returned row")
+    let fixtureState=try control()
+    XCTAssertEqual(fixtureState["authFailures"] as? Int,0)
+    XCTAssertGreaterThanOrEqual(fixtureState["requests"] as? Int ?? 0,1)
+    app.buttons["account-daily-full-close"].tap()
+    XCTAssertTrue(waitForGone(full,timeout:10))
+  }
   func testAccountFmStationContinuation() throws {
     let app=XCUIApplication()
     app.launchEnvironment["NEXUS_UI_ACCOUNT_FM_FIXTURE"]="1"

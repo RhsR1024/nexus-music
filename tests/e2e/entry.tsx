@@ -46,6 +46,16 @@ const initialize=()=>pending??=(async()=>{
     const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000001',cookies:Object.freeze({MUSIC_U:'synthetic-fm',__csrf:'synthetic-csrf'})});
     await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase FM',username,displayName:'Synthetic NetEase FM',avatar:'http://127.0.0.1:18439/account-avatar.png',capabilities:['daily','fm']},session);
   }
+  if(native.launchArgument('NEXUS_UI_ACCOUNT_DAILY_FIXTURE')==='1'){
+    // Separate simulator-only account for the full platform recommendation
+    // list. The production account store, Keychain session and daily client
+    // stay in use; only the provider transport reaches the local fixture.
+    for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'||existing.platform==='tx'||existing.platform==='kg')await services.musicAccounts.remove(existing.id);
+    const username='netease:9000000000000000005';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
+    const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000005',cookies:Object.freeze({MUSIC_U:'synthetic-daily',__csrf:'synthetic-daily-csrf'})});
+    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Daily',username,displayName:'Synthetic NetEase Daily',capabilities:['daily']},session);
+  }
   if(native.launchArgument('NEXUS_UI_QQ_FAVORITE_FIXTURE')==='1'){
     // Separate simulator-only QQ account. The favorite action uses the real
     // account store, Keychain session and provider; only provider transport is

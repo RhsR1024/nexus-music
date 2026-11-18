@@ -1,4 +1,4 @@
-import {useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator,Pressable,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
@@ -7,6 +7,7 @@ import {type DailyRecommendationKind} from '../providers/accountDaily.ts';
 import {accountRecommendationFailure as failure,ACCOUNT_LOGIN_REQUIRED as LOGIN} from './accountRecommendationFailure.ts';
 import type {MusicAccount} from '../providers/musicAccounts.ts';
 import {Cover} from './Cover.tsx';
+import {AccountTrackListModal} from './AccountTrackListModal.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 
@@ -22,6 +23,7 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
   const [selectedId,setSelectedId]=useState<string|undefined>();
   const account=supported.find(item=>item.id===selectedId)??supported[0];
   const [daily,setDaily]=useState<Panel>(idle),[fm,setFm]=useState<Panel>(idle);
+  const [dailyOpen,setDailyOpen]=useState(false);
   const dailyAbort=useRef<AbortController|null>(null),fmAbort=useRef<AbortController|null>(null);
   const dailyOp=useRef(0),fmOp=useRef(0);
   const dailyName=account?.platform==='tx'&&daily.kind!=='tx_official_daily'?'私人雷达':'每日推荐';
@@ -99,10 +101,13 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
   useLayoutEffect(()=>{
     dailyOp.current++;fmOp.current++;
     dailyAbort.current?.abort();fmAbort.current?.abort();
-    setDaily(idle);setFm(idle);
+    setDaily(idle);setFm(idle);setDailyOpen(false);
     if(account)void loadDaily(account,false);
     return()=>{dailyOp.current++;fmOp.current++;dailyAbort.current?.abort();fmAbort.current?.abort();};
   },[account]);
+  useEffect(()=>{
+    if(daily.phase==='idle'||daily.phase==='empty'||!daily.tracks.length)setDailyOpen(false);
+  },[daily.phase,daily.tracks.length]);
 
   const action=(label:string,onPress:()=>void,testID:string,disabled=false)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={disabled} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:p.selected,alignItems:'center',justifyContent:'center',opacity:disabled?.45:1}}><Text style={{fontSize:13,fontWeight:'600',color:p.accent}}>{label}</Text></Pressable>;
   const refresh=(testID:string,label:string,onPress:()=>void,busy:boolean)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={busy} style={{width:44,height:44,borderRadius:22,backgroundColor:p.selected,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="refresh" size={20} color={p.accent}/></Pressable>;
@@ -133,6 +138,7 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
       {status(daily,'account-daily')}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:4}}>
         {daily.tracks.length>0&&action(`播放全部 ${daily.tracks.length} 首`,()=>services.playTracks(daily.tracks,0),'account-daily-play')}
+        {daily.tracks.length>5&&action(`查看全部 ${daily.tracks.length} 首`,()=>setDailyOpen(true),'account-daily-open')}
         {daily.phase==='error'&&!daily.login&&action('重试',()=>{void loadDaily(account!,true);},'account-daily-retry')}
       </View>
     </View>}
@@ -145,5 +151,6 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
         {(fm.phase==='error'||fm.phase==='empty')&&action(fm.phase==='empty'?'换一批':'重试',()=>{void loadFm(account!,true,fm.phase==='empty');},'account-fm-retry')}
       </View>
     </View>}
+    {account&&<AccountTrackListModal services={services} tracks={daily.tracks} title={dailyName} subtitle={`${account.displayName??account.label} · ${daily.kind==='tx_official_daily'?'QQ 音乐官方每日推荐':daily.kind==='tx_radar'?'QQ 音乐私人雷达':daily.kind==='kugou_daily'?'酷狗每日推荐':'网易云每日推荐'} · 按平台返回顺序`} note={daily.message} visible={dailyOpen} onClose={()=>setDailyOpen(false)} prefix="account-daily"/>}
   </View>;
 }
