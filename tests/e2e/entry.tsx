@@ -68,15 +68,24 @@ const initialize=()=>pending??=(async()=>{
     await services.musicAccounts.save({platform:'tx',label:'Synthetic QQ Radar',username,displayName:'Synthetic QQ Radar',capabilities:['daily']},session);
     services.playback.controller.setQueue({entries:[],currentId:null,priorityIds:[]});
   }
-  if(native.launchArgument('NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE')==='1'){
-    // Separate simulator-only NetEase account for account-private recommended
+  const accountPlaylistsFixture=native.launchArgument('NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE');
+  if(accountPlaylistsFixture==='1'||accountPlaylistsFixture==='qq'){
+    // Separate simulator-only account for account-private recommended
     // playlists. Opening a card still uses the existing public playlist detail
     // boundary; only the provider transport reaches the local fixture.
     for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'||existing.platform==='tx'||existing.platform==='kg')await services.musicAccounts.remove(existing.id);
-    const username='netease:9000000000000000007';
-    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
-    const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000007',cookies:Object.freeze({MUSIC_U:'synthetic-account-playlists',__csrf:'synthetic-account-playlists-csrf'})});
-    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Recommended Playlists',username,displayName:'Synthetic NetEase Recommended Playlists',capabilities:['daily']},session);
+    if(accountPlaylistsFixture==='qq'){
+      const username='qq:2:9000000000000000010';
+      const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['tx',username]));
+      const session=Object.freeze({version:1,platform:'tx',accountId,userId:'9000000000000000010',cookies:Object.freeze({login_type:'1',qqmusic_uin:'9000000000000000010',qqmusic_key:'synthetic-qq-account-playlists'})});
+      await services.musicAccounts.save({platform:'tx',label:'Synthetic QQ Recommended Playlists',username,displayName:'Synthetic QQ Recommended Playlists',capabilities:['daily']},session);
+    }else{
+      const username='netease:9000000000000000007';
+      const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
+      const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000007',cookies:Object.freeze({MUSIC_U:'synthetic-account-playlists',__csrf:'synthetic-account-playlists-csrf'})});
+      await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Recommended Playlists',username,displayName:'Synthetic NetEase Recommended Playlists',capabilities:['daily']},session);
+    }
+    services.playback.controller.setQueue({entries:[],currentId:null,priorityIds:[]});
   }
   const heartbeatFixture=native.launchArgument('NEXUS_UI_ACCOUNT_HEARTBEAT_FIXTURE');
   if(heartbeatFixture){
