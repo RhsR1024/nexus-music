@@ -1,4 +1,10 @@
-## 2026-11-18 J10 网易云平台歌单删歌
+## 2026-11-18 J10 网易云平台歌单删除
+
+新增独立 `NeteasePlaylistDeleteClient` 和设置页账号歌单删除入口。Provider 只接受当前账号创建的 1–19 位歌单 ID；会话、平台、`accountId`、`userId`、`netease:` 用户名和 Cookie 必须一致；写前分页读取 `/weapi/user/playlist` 并核对 `creator.userId`。目标不存在返回零写 `absent`；存在才发送一次 `/weapi/playlist/remove`，`ids` 为 JSON 字符串单 ID 数组；最多两次 800ms 回读，只有目标缺席才返回 `deleted`。写后响应 500、301/401/403、HTTP 401/403 或畸形回读均返回 `unconfirmed`，不把 `code:200` 当成功。UI 增加 destructive 确认、删除状态、成功移除行、拒绝重试和未确认保留目标；收藏歌单无删除按钮，重命名继续因三字段 eAPI batch 风险关闭。
+
+新增17项 Provider 测试；完整 `npm run check` 1156/1156、typecheck、完整 native、Swift/Node/diff 通过；IPA strict review 61E/26WI/131/52F/52P、0错误/0警告。最终 Release `1794986259141` 为1/0/0、48.533秒、sourceUnchanged，控制历史拒绝2读/1写、重试成功4读/2写、未确认4读/1写，全程invalid0，5张1290×2796图亲看。r1查询ID错误失败保留；r2因重复截图和缺控制历史被取代，r3因QQ/酷狗说明文案修正被r4取代。平台说明文案已按平台区分：网易云提示新建/删除会修改平台数据，QQ/酷狗仍声明导入不修改平台歌单。真实账号/跨设备、平台重命名、QQ/酷狗、实体机/签名/iOS27继续，J10保持B。见[回执](2026-11-18-netease-platform-playlist-delete-report.md)与[UI规格](ui-spec/netease-platform-playlist-delete-2026-11-18.md)。
+
+## 2026-11-18 J10 网易云平台歌单删歌（歌曲）
 
 把既有 `PlatformPlaylistAdd` 重构为 `PlatformPlaylistUpdate`，以`operation: add | remove`复用账号创建歌单读取、加载/空态/失败重试/取消和主题；歌曲操作 Sheet 新增“从网易云歌单移除”。移除继续走 Provider `del`：严格账号/会话/创建者绑定，先读成员，目标不存在幂等零写，存在才单次写入并最多两次回读确认缺席；`code:200`不冒充成功，拒绝/未确认/未知/登录失效/账号变化/取消分开。专项16/16，新增重复成员删除与拒绝移除；完整检查1139/1139、typecheck、完整native、Swift/Node/diff通过。最终Release`1794984241898`为1/0/0、69.641秒、sourceUnchanged，控制历史保留删歌首次`2/2/5/3`、重复`3/3/6/3`、拒绝重试`1/1/3/2`，全程invalid0且最终缺席；11张1290×2796图亲看。r8已通过但因补夹具检查点由r9取代，原件保留。IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。真实账号/跨设备、平台歌单重命名/删除、QQ/酷狗、实体机/签名/iOS27继续，J10保持B。见[回执](2026-11-18-netease-playlist-track-remove-report.md)与[UI规格](ui-spec/netease-playlist-track-remove-2026-11-18.md)。
 

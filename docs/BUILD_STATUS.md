@@ -1,4 +1,8 @@
-## 2026-11-18 网易云平台歌单删歌正式UI
+## 2026-11-18 网易云平台歌单删除正式UI
+
+`SourceUITests-1794986259141` 为1 passed/0 failed/0 skipped，48.533秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。设置页网易云账号歌单新增仅对创建行显示的删除按钮；独立 Provider 先读目录，单次删除写入，写后最多两次回读确认缺席。夹具控制历史：初始读1/0、拒绝2读/1写、重试成功4读/2写、未确认4读/1写，全程invalid0且未确认保留目标。5张1290×2796截图已亲看。源码digest`c218e283…3d4e`、安装bundle`42740e6d…c2b3`、resultInfo`320307bb…df26`；r1测试ID错误失败保留，r2因重复截图/缺历史被取代，r3因QQ/酷狗说明文案修正被r4取代。见[回执](2026-11-18-netease-platform-playlist-delete-report.md)。
+
+## 2026-11-18 网易云平台歌单删歌正式UI（歌曲成员）
 
 `SourceUITests-1794984241898` 为1 passed/0 failed/0 skipped，69.641秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。正式歌曲操作 Sheet 新增“从网易云歌单移除”，与加歌共用 `PlatformPlaylistUpdate`。夹具控制历史保留加歌确认`profile/list/detail/writes=1/1/2/1`、重复`2/2/3/1`、拒绝重试`1/1/3/2`；删歌确认`2/2/5/3`、重复`3/3/6/3`、拒绝重试`1/1/3/2`，全程`invalid=0`，最终`trackPresent=false`。11张1290×2796截图已亲看。源码digest`9a061f67…0012`、安装bundle`17c14cb0…e675`、resultInfo`be84394d…f2c0`、manifest`5993d74b…a993`、summary`33b25f78…00b0`、counts`bfb8ef02…d27c8`、catalog`95a1f54d…e4e4b`、截图索引`9c82fd7c…288f`。r8`1794983764153`已通过，但补夹具检查点后由r9取代，原件保留。见[回执](2026-11-18-netease-playlist-track-remove-report.md)。
 
