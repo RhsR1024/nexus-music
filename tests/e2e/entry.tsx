@@ -68,6 +68,16 @@ const initialize=()=>pending??=(async()=>{
     await services.musicAccounts.save({platform:'tx',label:'Synthetic QQ Radar',username,displayName:'Synthetic QQ Radar',capabilities:['daily']},session);
     services.playback.controller.setQueue({entries:[],currentId:null,priorityIds:[]});
   }
+  if(native.launchArgument('NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE')==='1'){
+    // Separate simulator-only NetEase account for account-private recommended
+    // playlists. Opening a card still uses the existing public playlist detail
+    // boundary; only the provider transport reaches the local fixture.
+    for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'||existing.platform==='tx'||existing.platform==='kg')await services.musicAccounts.remove(existing.id);
+    const username='netease:9000000000000000007';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
+    const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000007',cookies:Object.freeze({MUSIC_U:'synthetic-account-playlists',__csrf:'synthetic-account-playlists-csrf'})});
+    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Recommended Playlists',username,displayName:'Synthetic NetEase Recommended Playlists',capabilities:['daily']},session);
+  }
   if(native.launchArgument('NEXUS_UI_QQ_FAVORITE_FIXTURE')==='1'){
     // Separate simulator-only QQ account. The favorite action uses the real
     // account store, Keychain session and provider; only provider transport is

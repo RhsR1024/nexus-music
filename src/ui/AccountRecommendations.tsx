@@ -1,18 +1,23 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator,Pressable,View} from 'react-native';
+import {ActivityIndicator,Pressable,ScrollView,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {type DailyRecommendationKind} from '../providers/accountDaily.ts';
+import type {AccountRecommendedPlaylist} from '../providers/accountRecommendedPlaylists.ts';
 import {accountRecommendationFailure as failure,ACCOUNT_LOGIN_REQUIRED as LOGIN} from './accountRecommendationFailure.ts';
 import type {MusicAccount} from '../providers/musicAccounts.ts';
 import {Cover} from './Cover.tsx';
+import {Discovery} from './Discovery.tsx';
 import {AccountTrackListModal} from './AccountTrackListModal.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 
 interface Panel {phase:'idle'|'loading'|'ready'|'empty'|'error';tracks:readonly Track[];message:string;login:boolean;kind?:DailyRecommendationKind}
+interface PlaylistPanel {phase:'idle'|'loading'|'ready'|'empty'|'error';items:readonly AccountRecommendedPlaylist[];message:string;login:boolean}
+type StatusPanel=Pick<Panel,'phase'|'message'|'login'>;
 const idle:Panel={phase:'idle',tracks:[],message:'',login:false};
+const idlePlaylists:PlaylistPanel={phase:'idle',items:[],message:'',login:false};
 /** Platform daily / QQ radar and NetEase personal FM. Legacy accounts saved without the
  * newer capabilities still load; no local or public list is shown in their
  * place when the platform call fails. */
@@ -23,10 +28,13 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
   const [selectedId,setSelectedId]=useState<string|undefined>();
   const account=supported.find(item=>item.id===selectedId)??supported[0];
   const [daily,setDaily]=useState<Panel>(idle),[fm,setFm]=useState<Panel>(idle);
+  const [playlists,setPlaylists]=useState<PlaylistPanel>(idlePlaylists);
+  const [playlistOpen,setPlaylistOpen]=useState<AccountRecommendedPlaylist|null>(null);
   const [dailyOpen,setDailyOpen]=useState(false);
-  const dailyAbort=useRef<AbortController|null>(null),fmAbort=useRef<AbortController|null>(null);
-  const dailyOp=useRef(0),fmOp=useRef(0);
+  const dailyAbort=useRef<AbortController|null>(null),fmAbort=useRef<AbortController|null>(null),playlistAbort=useRef<AbortController|null>(null);
+  const dailyOp=useRef(0),fmOp=useRef(0),playlistOp=useRef(0);
   const dailyName=account?.platform==='tx'&&daily.kind!=='tx_official_daily'?'私人雷达':'每日推荐';
+  const playlistSupported=account?.platform==='wy'||account?.platform==='tx';
 
   async function loadDaily(target:MusicAccount,force:boolean){
     const op=++dailyOp.current,controller=new AbortController();
@@ -42,6 +50,24 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
       const message=failure(error,'每日推荐暂时不可用，请稍后重试');
       if(!message)return;
       setDaily(previous=>({...previous,phase:'error',tracks:message===LOGIN?[]:previous.tracks,message,login:message===LOGIN}));
+    }
+  }
+
+  async function loadPlaylists(target:MusicAccount,force:boolean){
+    if(target.platform!=='wy'&&target.platform!=='tx')return;
+    const op=++playlistOp.current,controller=new AbortController();
+    playlistAbort.current?.abort();playlistAbort.current=controller;
+    setPlaylists(previous=>({...previous,phase:'loading',message:'',login:false}));
+    try{
+      const session=await services.musicAccounts.session(target.id);
+      const items=await services.accountRecommendedPlaylists.list(target,session,controller.signal,force);
+      if(op!==playlistOp.current||controller.signal.aborted)return;
+      setPlaylists(items.length?{phase:'ready',items,message:'',login:false}:{phase:'empty',items:[],message:'暂无推荐歌单',login:false});
+    }catch(error){
+      if(op!==playlistOp.current||controller.signal.aborted)return;
+      const message=failure(error,'推荐歌单暂时不可用，请稍后重试');
+      if(!message)return;
+      setPlaylists(previous=>({...previous,phase:'error',items:message===LOGIN?[]:previous.items,message,login:message===LOGIN}));
     }
   }
 
@@ -99,11 +125,11 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
   }
 
   useLayoutEffect(()=>{
-    dailyOp.current++;fmOp.current++;
-    dailyAbort.current?.abort();fmAbort.current?.abort();
-    setDaily(idle);setFm(idle);setDailyOpen(false);
-    if(account)void loadDaily(account,false);
-    return()=>{dailyOp.current++;fmOp.current++;dailyAbort.current?.abort();fmAbort.current?.abort();};
+    dailyOp.current++;fmOp.current++;playlistOp.current++;
+    dailyAbort.current?.abort();fmAbort.current?.abort();playlistAbort.current?.abort();
+    setDaily(idle);setFm(idle);setPlaylists(idlePlaylists);setDailyOpen(false);setPlaylistOpen(null);
+    if(account){void loadDaily(account,false);if(account.platform==='wy'||account.platform==='tx')void loadPlaylists(account,false);}
+    return()=>{dailyOp.current++;fmOp.current++;playlistOp.current++;dailyAbort.current?.abort();fmAbort.current?.abort();playlistAbort.current?.abort();};
   },[account]);
   useEffect(()=>{
     if(daily.phase==='idle'||daily.phase==='empty'||!daily.tracks.length)setDailyOpen(false);
@@ -115,7 +141,7 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     <Pressable accessibilityRole="button" accessibilityLabel={`播放：${track.title}`} onPress={play} style={{flex:1,minHeight:50,flexDirection:'row',alignItems:'center',gap:12}}><Cover services={services} track={track} size={42}/><View style={{flex:1}}><Text numberOfLines={1} style={{fontSize:15,color:p.text}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:12,color:p.secondary,marginTop:4}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View></Pressable>
     {extra}
   </View>;
-  const status=(panel:Panel,prefix:string)=><>
+  const status=(panel:StatusPanel,prefix:string)=><>
     {panel.phase==='loading'&&<View style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:10}}><ActivityIndicator size="small" color={p.accent}/><Text style={{fontSize:12,color:p.secondary}}>正在读取平台数据…</Text></View>}
     {panel.phase==='error'&&<View style={{gap:8}}><Text testID={`${prefix}-error`} accessibilityRole="alert" style={{fontSize:12,lineHeight:20,color:p.accent}}>{panel.message}</Text>{panel.login&&action('去登录',openAccounts,`${prefix}-login`)}</View>}
     {panel.phase==='empty'&&<Text testID={`${prefix}-empty`} accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:20,color:p.secondary}}>{panel.message}</Text>}
@@ -126,7 +152,7 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
       <View style={{flex:1}}>
         <Text style={{fontSize:18,fontWeight:'600',color:p.text}}>平台推荐</Text>
-        <Text style={{fontSize:12,lineHeight:19,color:p.secondary,marginTop:4}}>{account?`${account.displayName??account.label} · ${account.platform==='kg'?'酷狗':account.platform==='tx'?'QQ 音乐':'网易云'}账号`:'登录网易云或酷狗获取每日推荐，QQ 音乐提供私人雷达；私人FM仅支持网易云。未登录时不展示替代内容。'}</Text>
+        <Text style={{fontSize:12,lineHeight:19,color:p.secondary,marginTop:4}}>{account?`${account.displayName??account.label} · ${account.platform==='kg'?'酷狗':account.platform==='tx'?'QQ 音乐':'网易云'}账号`:'登录网易云、QQ 音乐或酷狗获取账号推荐；除私人FM外，未登录时不展示替代内容。'}</Text>
       </View>
       {account&&refresh('account-daily-refresh',`刷新${dailyName}`,()=>{void loadDaily(account,true);},daily.phase==='loading')}
     </View>
@@ -142,6 +168,21 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
         {daily.phase==='error'&&!daily.login&&action('重试',()=>{void loadDaily(account!,true);},'account-daily-retry')}
       </View>
     </View>}
+    {account&&playlistSupported&&<View testID="account-playlists" style={{gap:8,marginTop:8,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+        <View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>推荐歌单</Text><Text testID="account-playlists-account" style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>{account.platform==='tx'?'来自当前 QQ 音乐账号；打开后仍按公开歌单详情读取。':'来自当前网易云账号；打开后仍按公开歌单详情读取。'}</Text></View>
+        {refresh('account-playlists-refresh','刷新推荐歌单',()=>{void loadPlaylists(account,true);},playlists.phase==='loading')}
+      </View>
+      {playlists.phase==='ready'&&<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:12,paddingVertical:4}}>
+        {playlists.items.map((item,index)=><Pressable key={`${item.platform}:${item.id}`} testID={`account-playlist-${index}`} accessibilityRole="button" accessibilityLabel={`打开推荐歌单：${item.title}${item.author?`，${item.author}`:''}`} onPress={()=>setPlaylistOpen(item)} style={{width:132,gap:7}}>
+          <Cover services={services} url={item.artwork} size={132}/>
+          <Text numberOfLines={2} style={{fontSize:13,lineHeight:18,fontWeight:'600',color:p.text}}>{item.title}</Text>
+          <Text numberOfLines={1} style={{fontSize:11,color:p.secondary}}>{item.count!==undefined?`${item.count} 首`:'平台推荐'} {item.author?`· ${item.author}`:''}</Text>
+        </Pressable>)}
+      </ScrollView>}
+      {status(playlists,'account-playlists')}
+      {playlists.phase==='error'&&!playlists.login&&action('重试',()=>{void loadPlaylists(account,true);},'account-playlists-retry')}
+    </View>}
     {account?.platform==='wy'&&<View style={{gap:4,marginTop:10,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>私人FM</Text><Text style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>按账号偏好取一批歌曲；不喜欢会提交到网易云。</Text></View>{fm.phase==='ready'&&refresh('account-fm-refresh','换一批私人FM',()=>{void loadFm(account!,true,false);},false)}</View>
       {fm.tracks.slice(0,5).map((track,index)=>row('account-fm',index,track,()=>{void playFm(account!,index);},<Pressable key={`${track.origin.id}-discard`} testID={`account-fm-discard-${index}`} accessibilityRole="button" accessibilityLabel={`不喜欢：${track.title}`} onPress={()=>{void discardFm(account!,track);}} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="thumbs-down-outline" size={20} color={p.secondary}/></Pressable>))}
@@ -152,5 +193,6 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
       </View>
     </View>}
     {account&&<AccountTrackListModal services={services} tracks={daily.tracks} title={dailyName} subtitle={`${account.displayName??account.label} · ${daily.kind==='tx_official_daily'?'QQ 音乐官方每日推荐':daily.kind==='tx_radar'?'QQ 音乐私人雷达':daily.kind==='kugou_daily'?'酷狗每日推荐':'网易云每日推荐'} · 按平台返回顺序`} note={daily.message} visible={dailyOpen} onClose={()=>setDailyOpen(false)} prefix="account-daily" selectionEnabled={daily.kind==='tx_radar'}/>}
+    {playlistOpen&&<Discovery key={`${playlistOpen.platform}:${playlistOpen.id}`} services={services} initialCollection={{platform:playlistOpen.platform,collection:playlistOpen,returnLabel:'返回平台推荐'}} onClose={()=>setPlaylistOpen(null)}/>}
   </View>;
 }

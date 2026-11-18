@@ -2704,6 +2704,73 @@ final class SourceSettingsTests: XCTestCase {
     let collapse=app.buttons["收起播放页"].firstMatch
     if collapse.exists{collapse.tap()}
   }
+  func testAccountRecommendedPlaylists() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE"]="1"
+    app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func control(_ query:String="") throws -> [String:Any] {
+      let url=URL(string:"http://127.0.0.1:18439/account-playlists-fixture-control"+(query.isEmpty ? "" : "?\(query)&")+"t=\(Date().timeIntervalSince1970)")!
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:Data(contentsOf:url)) as? [String:Any])
+    }
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<28 {
+        if waitForHittable(element,timeout:0.2){return}
+        let above=element.exists&&element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.7))
+          .press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.35)))
+      }
+      XCTAssertTrue(waitForHittable(element,timeout:5),"Recommended playlist element must be reachable: \(element)")
+    }
+    _=try control("reset=1")
+    let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch
+    let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch
+    XCTAssertTrue(tab.waitForExistence(timeout:15));XCTAssertTrue(waitForHittable(tab,timeout:10));tab.tap()
+    let section=app.descendants(matching:.any).matching(identifier:"account-playlists").firstMatch
+    let refresh=app.buttons["account-playlists-refresh"]
+    reveal(refresh)
+    XCTAssertTrue(section.waitForExistence(timeout:20),"The account recommendation section must render")
+    let account=app.staticTexts["account-playlists-account"]
+    XCTAssertTrue(account.waitForExistence(timeout:10))
+    XCTAssertTrue(account.label.contains("当前网易云账号"),"Recommendations must name the account boundary")
+    let first=app.buttons["account-playlist-0"]
+    XCTAssertTrue(first.waitForExistence(timeout:20),"The authenticated recommendation response must publish cards")
+    XCTAssertTrue(first.label.contains("Synthetic Recommended Playlist 1"))
+    XCTAssertTrue(first.label.contains("Account fixture creator"))
+    reveal(first)
+    image("Account-bound recommended playlists")
+    first.tap()
+    let back=app.buttons["返回平台推荐"]
+    XCTAssertTrue(back.waitForExistence(timeout:15),"A recommendation card must open the existing public detail")
+    XCTAssertTrue(app.staticTexts["Synthetic Recommended Playlist 1"].waitForExistence(timeout:10))
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"discovery-track-0").firstMatch.waitForExistence(timeout:15))
+    image("Recommended playlist opens through public detail")
+    var state=try control()
+    XCTAssertGreaterThanOrEqual((state["recommendRequests"] as? NSNumber)?.intValue ?? 0,1)
+    XCTAssertGreaterThanOrEqual((state["detailRequests"] as? NSNumber)?.intValue ?? 0,1)
+    XCTAssertEqual((state["authFailures"] as? NSNumber)?.intValue,0)
+    back.tap()
+    XCTAssertTrue(waitForGone(back,timeout:10))
+    _=try control("mode=empty")
+    reveal(refresh);refresh.tap()
+    XCTAssertTrue(app.staticTexts["account-playlists-empty"].waitForExistence(timeout:15),"An empty private feed must be explicit")
+    XCTAssertFalse(first.exists,"Empty recommendations must clear old cards")
+    image("Recommended playlists empty state")
+    _=try control("mode=error")
+    reveal(refresh);refresh.tap()
+    let error=app.staticTexts["account-playlists-error"]
+    XCTAssertTrue(error.waitForExistence(timeout:15),"A failed private feed must be retryable")
+    XCTAssertEqual(error.label,"推荐歌单暂时不可用，请稍后重试")
+    image("Recommended playlists failure offers retry")
+    _=try control("mode=normal")
+    let retry=app.buttons["account-playlists-retry"]
+    reveal(retry);retry.tap()
+    XCTAssertTrue(first.waitForExistence(timeout:15),"Retry must restore the current account recommendations")
+    state=try control()
+    XCTAssertEqual((state["authFailures"] as? NSNumber)?.intValue,0)
+    XCTAssertGreaterThanOrEqual((state["recommendRequests"] as? NSNumber)?.intValue ?? 0,4)
+    image("Recommended playlists recover after retry")
+  }
   func testAccountFmStationContinuation() throws {
     let app=XCUIApplication()
     app.launchEnvironment["NEXUS_UI_ACCOUNT_FM_FIXTURE"]="1"
