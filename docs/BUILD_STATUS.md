@@ -1,3 +1,7 @@
+## 2026-11-18 QQ私人雷达批量动作正式UI
+
+`SourceUITests-1794973754818` 为1 passed/0 failed/0 skipped，150.228秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`。合成QQ雷达30首；长按1项→2项→批量下一首→队列准确为Radar1/Radar2，`accountRadar.requests=5`/`authFailures=0`。3张1290×2796截图已亲看。首轮`1794973578072`产品断言通过、仅清理按钮消失导致失败，原件保留。见[回执](2026-11-18-platform-radar-batch-report.md)。
+
 ## 2026-11-18 平台推荐完整列表正式UI
 
 `SourceUITests-1794972944246` 为1 passed/0 failed/0 skipped，152.256秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`。合成网易云日推30首；折叠区前5行、完整列表总数、第30行可达和关闭返回均通过，`accountDaily.requests=1`/`authFailures=0`。截图1290×2796 SHA-256 `8a13f93e66506f60ef9bf0410762cff000ceef8df089c115f77883285d079382`。本批无原生产品变更；真实平台、实体机、签名与iOS27云端仍开放。见[回执](2026-11-18-platform-daily-full-list-report.md)。
