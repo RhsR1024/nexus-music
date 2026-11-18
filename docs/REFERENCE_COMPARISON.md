@@ -1,6 +1,6 @@
-## 2026-11-05 网易云平台歌单创建
+## 2026-11-05 网易云平台歌单创建与 2026-11-18 加歌
 
-亲读 MIT Sollin-Music-Desktop 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `neteaseAuth.ts` `createPlaylist`，采用 `/api/playlist/create` 的 `name/privacy/type` 与响应字段事实；自写账号/会话绑定、单次创建、目录回读、取消与状态机，未复制运行时、UI、依赖或私有逻辑。未接入 `updatePlaylistTracks` 的平台加歌路径。匿名核验只证明端点需要登录，真实账号和跨设备效果未验。见[回执](2026-11-05-netease-platform-playlist-create-report.md)。
+亲读 MIT Sollin-Music-Desktop 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `neteaseAuth.ts` `createPlaylist`，采用 `/api/playlist/create` 的 `name/privacy/type` 与响应字段事实；自写账号/会话绑定、单次创建、目录回读、取消与状态机，未复制运行时、UI、依赖或私有逻辑。平台加歌在 2026-11-18 接入：采用 `updatePlaylistTracks` 的 `/api/playlist/manipulate/tracks` 参数事实和 `/v6/playlist/detail` 的 `trackIds/trackCount/creator.userId` 字段事实，自写创建者核对、先读后单写、回读确认、重复成员处理、取消和幂等状态机。匿名核验只证明端点需要登录，真实账号和跨设备效果未验。见[创建回执](2026-11-05-netease-platform-playlist-create-report.md)与[加歌回执](2026-11-18-netease-playlist-track-add-report.md)。
 
 ## 2026-11-05 网易云平台收藏
 

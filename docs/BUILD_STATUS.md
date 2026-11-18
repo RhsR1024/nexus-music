@@ -1,3 +1,7 @@
+## 2026-11-18 网易云平台歌单加歌正式UI
+
+`SourceUITests-1794983029561` 为1 passed/0 failed/0 skipped，47.537秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。合成网易云账号只把HTTP接到本机夹具；首次加歌读取`profile/list/detail=1/1/2`、写1，重复加歌`2/2/3`、写1，拒绝后重试写2并回读确认，`invalid=0`、`trackPresent=1`。6张1290×2796截图已亲看；`001`与`004`同SHA-256，是同一最终滚动/成功状态的两个断言附件。源码digest`e44c0271…10f4`、安装bundle`a55b1616…54fa`、resultInfo`26bd6b72…acff`、manifest`c82f901d…9770`、summary`cdd6aa3c…04c1`、counts`562d6def…71a`、catalog`45190c4d…40c1`、截图索引`a679fa0c…0704`。r6`1794982727314`通过后被创建者核对与重复成员回归版r7取代，原件保留。见[回执](2026-11-18-netease-playlist-track-add-report.md)。
+
 ## 2026-11-18 QQ私人雷达批量动作正式UI
 
 `SourceUITests-1794973754818` 为1 passed/0 failed/0 skipped，150.228秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`。合成QQ雷达30首；长按1项→2项→批量下一首→队列准确为Radar1/Radar2，`accountRadar.requests=5`/`authFailures=0`。3张1290×2796截图已亲看。首轮`1794973578072`产品断言通过、仅清理按钮消失导致失败，原件保留。见[回执](2026-11-18-platform-radar-batch-report.md)。

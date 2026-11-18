@@ -1,3 +1,9 @@
+## 2026-11-18 J10 网易云平台歌单加歌
+
+新增 `NeteasePlaylistTracksClient` 和 `PlatformPlaylistAdd`，在网易云在线歌曲操作 Sheet 提供“添加到网易云歌单”。客户端只接受当前账号创建的 1–19 位歌单/歌曲身份，读取 `/weapi/v6/playlist/detail` 时核对 `creator.userId`；已存在返回 `already` 且零写，未存在才单次发送 `/weapi/playlist/manipulate/tracks`，最多两次回读后确认 `added`。写拒绝、写后读失败、未确认、鉴权失效、账号变化、取消和不支持分别返回稳定状态，响应 `code:200` 不作为成功依据；现有证据未提供成员唯一约束，故重复成员不误判为畸形，但不宣称真实重复曲序已验证。Provider 支持 `add`/`del`，产品只开放加歌；多账号继续不猜归属，账号 capability 不扩充。
+
+新增 14 项 Provider 测试，完整 `npm run check` 1137/1137、typecheck、完整 native、Swift/Node/diff 通过；IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。最终合成网易云 Release `1794983029561` 为 1/0/0、47.537 秒、sourceUnchanged，源码 digest `e44c0271…10f4`、安装 bundle `a55b1616…54fa`；夹具首次读取 `profile/list/detail=1/1/2`、写1，重复读取 `2/2/3`、写1，拒绝后重试写2并回读确认，`invalid=0`。6 张 1290×2796 截图亲看，含入口、目标列表、错误、幂等、确认和重试；最终截图索引 `a679fa0c…0704`。r6 已通过但因补创建者核对与重复成员回归被 r7 取代，原件保留。真实账号/服务/跨设备、删歌 UI、QQ/酷狗、实体机/签名/iOS27继续，J10保持B。见[回执](2026-11-18-netease-playlist-track-add-report.md)与[UI规格](ui-spec/netease-playlist-track-add-2026-11-18.md)。
+
 ## 2026-11-18 QQ账号推荐歌单UI纵切片
 
 在既有 `AccountRecommendedPlaylists` 上补合成 QQ 账号的正式 UI 纵向验证，不修改推荐协议、账号存储或公开详情。测试入口以 `NEXUS_UI_ACCOUNT_PLAYLISTS_FIXTURE=qq` 保存合成账号与 Keychain Cookie，正式组件仅把 HTTP 传输接到本机夹具；`GetRecommendFeed` 校验账号、Cookie、`From:0`/`Size:30`，详情校验签名，QQ 雷达显式返回空结果。覆盖卡片、公开详情、空态、失败/重试，并让账号推荐夹具启动时清空权威队列以隔离残留 mini 播放器。
