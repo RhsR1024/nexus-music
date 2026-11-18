@@ -1,3 +1,7 @@
+## 2026-11-18 平台推荐完整列表正式UI
+
+`SourceUITests-1794972944246` 为1 passed/0 failed/0 skipped，152.256秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`。合成网易云日推30首；折叠区前5行、完整列表总数、第30行可达和关闭返回均通过，`accountDaily.requests=1`/`authFailures=0`。截图1290×2796 SHA-256 `8a13f93e66506f60ef9bf0410762cff000ceef8df089c115f77883285d079382`。本批无原生产品变更；真实平台、实体机、签名与iOS27云端仍开放。见[回执](2026-11-18-platform-daily-full-list-report.md)。
+
 ## 2026-11-05 F33 提交期间前台刷新与后台排队
 
 产品源`webdavSync.ts`新增提交期间排队与后台清空：`preview`/`commit`忙碌时前台刷新只排队，提交结束重查前台/目录/连接后补读一次；`setForeground(false)`立即结束排队者，避免预览/提交`finally`在后台发起隐藏GET；提交中连接替换/删除先结束排队者再中止请求。目录保存仍为显式读取预览，自动流程零PUT/不自动确认。新增4项同步测试，完整检查1043/1043，Swift parse/Node/diff通过。正式Release`SourceUITests-1793878235033`为1 passed/0 failed/0 skipped、246.342秒、sourceUnchanged、exit0；夹具挂起提交回读→Home/激活期间GET数不增→释放后仅一次补读，相对提交前PUT+1/GET+2，界面恢复无冲突预览；1张1290×2796截图已导出并亲看。source digest`197dfc00…f043`、安装bundle`d2ff1262…c19c`、run manifest`27b35f00…b65b`、ui-summary`a3f39aa8…a3b3`、ui-server-counts`db1b53aa…fc01`、ui-catalog`0134fb8c…f5e0`。
