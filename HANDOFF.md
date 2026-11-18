@@ -1,4 +1,10 @@
+## 2026-11-18 J10 网易云平台歌单删歌
+
+网易云在线歌曲新增“从网易云歌单移除”，与既有加歌共用 `PlatformPlaylistUpdate`、当前唯一网易云账号、仅创建歌单目录和同一主题/滚动布局。Provider `del` 保持严格账号/会话/`userId`/`netease:`用户名/Cookie 与 `creator.userId` 绑定：目标不存在幂等零写，存在才单次调用 `/weapi/playlist/manipulate/tracks`，最多两次回读确认缺席，`code:200`不冒充成功；拒绝、未确认、未知、登录失效、账号变化、取消和不支持分别处理。专项16/16、完整检查1139/1139、typecheck、完整native、Swift/Node/diff通过；最终Release`1794984241898`为1/0/0、69.641秒、sourceUnchanged，源码digest`9a061f67…0012`、安装bundle`17c14cb0…e675`，控制历史保留删歌首次`2/2/5/3`、重复`3/3/6/3`、拒绝重试`1/1/3/2`，全程invalid0且最终缺席，11张1290×2796图亲看。r8`1794983764153`已通过，但补夹具检查点后以r9为最终证据，原件保留。IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。真实网易云账号/服务/跨设备、平台歌单重命名/删除、QQ/酷狗等价写操作、实体机/签名/iOS27仍开放，J10保持B，整体active。见[回执](docs/2026-11-18-netease-playlist-track-remove-report.md)与[UI规格](docs/ui-spec/netease-playlist-track-remove-2026-11-18.md)。
+
 ## 2026-11-18 J10 网易云平台歌单加歌
+
+> 同日后续已开放平台删歌 UI；本段保留加歌批次历史，删歌见上方回执。
 
 网易云在线歌曲新增“添加到网易云歌单”纵向切片：仅单一网易云账号显示，只列当前账号创建歌单；写入前读取 `v6/playlist/detail`，并在写入前后核对 `creator.userId`。已存在幂等零写，未存在才单次调用 `/weapi/playlist/manipulate/tracks`，最多两次回读确认；`code:200` 不冒充成功，现有证据未提供成员唯一约束，重复成员不误判为畸形但不宣称真实重复曲序已验证，取消/账号替换/写后读失败/登录失效/拒绝分别隔离。Provider 支持 `del`，UI 只开放加歌。14项专项测试、完整检查1137/1137、typecheck、完整native、Swift/Node/diff通过；最终Release`SourceUITests-1794983029561`为1/0/0、47.537秒、sourceUnchanged，源码digest`e44c0271…10f4`、安装bundle`a55b1616…54fa`，首次`profile/list/detail/writes=1/1/2/1`、重复`2/2/3/1`、拒绝后重试`1/-/3/2`且invalid0，6张1290×2796图亲看。r6`1794982727314`已通过但被最终创建者核对/重复成员版r7取代；五个编译/夹具/计数/裁切失败原件保留。IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。真实网易云账号/服务/跨设备、删歌UI、QQ/酷狗、实体机/签名/iOS27仍开放，J10保持B，整体active。见[回执](docs/2026-11-18-netease-playlist-track-add-report.md)与[UI规格](docs/ui-spec/netease-playlist-track-add-2026-11-18.md)。
 

@@ -2,6 +2,8 @@
 
 本批为 J10 增加网易云平台歌单加歌：网易云在线歌曲的操作 Sheet 在恰好一个网易云账号已登录时显示“添加到网易云歌单”，只列出当前账号创建的歌单，选择后先读取成员关系，未存在才发送一次写入，并通过重新读取歌单确认成员变化。平台歌单与音枢本地歌单、唯一权威队列和下载边界保持分离。
 
+> 同日后续批次已把同一 UI 扩展为加歌/删歌共用组件并开放“从网易云歌单移除”；本回执保留加歌批次的协议、实现和历史证据，最新删歌验收见[删歌回执](2026-11-18-netease-playlist-track-remove-report.md)。
+
 ## 协议与许可
 
 亲读 MIT [Sollin-Music-Desktop](https://github.com/Ryderwe/Sollin-Music-Desktop) 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `src/services/neteaseAuth.ts`：

@@ -1,4 +1,21 @@
+## 2026-11-18 J10 网易云平台歌单删歌
+
+- [x] 将平台歌单子视图重构为加歌/删歌共用 `PlatformPlaylistUpdate`；保留当前唯一网易云账号、仅创建歌单、加载/空态/读取失败重试/取消和主题布局。
+- [x] 歌曲操作 Sheet 新增“从网易云歌单移除”；成功显示“已从「…」移除”，目标不存在显示“这首歌不在「…」中”且零写。
+- [x] Provider `del` 继续严格绑定账号/会话/`userId`/`netease:`用户名/Cookie 与 `creator.userId`；先读成员、单次写入、最多两次回读确认缺席，`code:200`不冒充成功。
+- [x] 拒绝、未确认、未知、登录失效、账号变化、取消和不支持分别处理；不自动重发写入。
+- [x] 合成夹具新增删歌成功/拒绝、初始成员播种和每次控制请求的快照历史，保留读取、写入、invalid 与成员状态。
+- [x] 专项16/16；完整检查1139/1139、typecheck、完整native、Swift/Node/diff通过；IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。
+- [x] 最终Release`1794984241898`为1/0/0、69.641秒、sourceUnchanged；删歌首次`2/2/5/3`、重复`3/3/6/3`、拒绝重试`1/1/3/2`，全程invalid0、最终缺席；11张1290×2796图亲看。
+- [x] r8`1794983764153`已通过，但补夹具检查点后以r9为最终证据；r8原件保留且不计失败。
+- [ ] 真实网易云账号/服务/跨设备效果、平台歌单重命名/删除、QQ/酷狗等价写操作。
+- [ ] 实体机、签名、iOS27云端终态与完整J10。
+
+见[回执](2026-11-18-netease-playlist-track-remove-report.md)与[UI规格](ui-spec/netease-playlist-track-remove-2026-11-18.md)。J10保持B，整体active。
+
 ## 2026-11-18 J10 网易云平台歌单加歌
+
+> 本段保留加歌批次历史；同日后续删歌 UI 已完成，见[删歌回执](2026-11-18-netease-playlist-track-remove-report.md)。
 
 - [x] 网易云在线歌曲操作 Sheet 新增“添加到网易云歌单”；恰好一个网易云账号时可见，只列当前账号创建的歌单。
 - [x] 严格绑定平台、账号、会话版本、`userId`、`netease:` 用户名与 Cookie；详情写入前后核对 `creator.userId`。
@@ -8,7 +25,8 @@
 - [x] 14项专项测试通过；完整检查1137/1137、typecheck、完整native、Swift/Node/diff通过；IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。
 - [x] 最终Release`1794983029561`为1/0/0、47.537秒、sourceUnchanged；首次`profile/list/detail/writes=1/1/2/1`，重复`2/2/3/1`，拒绝后重试`1/-/3/2`、`invalid=0`；6张1290×2796图亲看。
 - [x] r6`1794982727314`已通过但被最终创建者核对/重复成员回归版r7取代；五个编译、夹具、计数和裁切失败原件保留。
-- [ ] 真实网易云账号/服务/跨设备效果、平台删歌UI、QQ/酷狗等价能力。
+- [x] 平台删歌 UI 已由同日后续批次补齐，见[删歌回执](2026-11-18-netease-playlist-track-remove-report.md)。
+- [ ] 真实网易云账号/服务/跨设备效果、QQ/酷狗等价能力。
 - [ ] 实体机、签名、iOS27云端终态与完整J10。
 
 见[回执](2026-11-18-netease-playlist-track-add-report.md)与[UI规格](ui-spec/netease-playlist-track-add-2026-11-18.md)。J10保持B，整体active。

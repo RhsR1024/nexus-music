@@ -1,4 +1,10 @@
+## 2026-11-18 网易云平台歌单删歌正式UI
+
+`SourceUITests-1794984241898` 为1 passed/0 failed/0 skipped，69.641秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。正式歌曲操作 Sheet 新增“从网易云歌单移除”，与加歌共用 `PlatformPlaylistUpdate`。夹具控制历史保留加歌确认`profile/list/detail/writes=1/1/2/1`、重复`2/2/3/1`、拒绝重试`1/1/3/2`；删歌确认`2/2/5/3`、重复`3/3/6/3`、拒绝重试`1/1/3/2`，全程`invalid=0`，最终`trackPresent=false`。11张1290×2796截图已亲看。源码digest`9a061f67…0012`、安装bundle`17c14cb0…e675`、resultInfo`be84394d…f2c0`、manifest`5993d74b…a993`、summary`33b25f78…00b0`、counts`bfb8ef02…d27c8`、catalog`95a1f54d…e4e4b`、截图索引`9c82fd7c…288f`。r8`1794983764153`已通过，但补夹具检查点后由r9取代，原件保留。见[回执](2026-11-18-netease-playlist-track-remove-report.md)。
+
 ## 2026-11-18 网易云平台歌单加歌正式UI
+
+> 同日后续已开放删歌 UI；本段保留加歌正式UI历史。
 
 `SourceUITests-1794983029561` 为1 passed/0 failed/0 skipped，47.537秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。合成网易云账号只把HTTP接到本机夹具；首次加歌读取`profile/list/detail=1/1/2`、写1，重复加歌`2/2/3`、写1，拒绝后重试写2并回读确认，`invalid=0`、`trackPresent=1`。6张1290×2796截图已亲看；`001`与`004`同SHA-256，是同一最终滚动/成功状态的两个断言附件。源码digest`e44c0271…10f4`、安装bundle`a55b1616…54fa`、resultInfo`26bd6b72…acff`、manifest`c82f901d…9770`、summary`cdd6aa3c…04c1`、counts`562d6def…71a`、catalog`45190c4d…40c1`、截图索引`a679fa0c…0704`。r6`1794982727314`通过后被创建者核对与重复成员回归版r7取代，原件保留。见[回执](2026-11-18-netease-playlist-track-add-report.md)。
 

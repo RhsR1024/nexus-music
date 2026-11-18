@@ -1,4 +1,10 @@
+## 2026-11-18 J10 网易云平台歌单删歌
+
+把既有 `PlatformPlaylistAdd` 重构为 `PlatformPlaylistUpdate`，以`operation: add | remove`复用账号创建歌单读取、加载/空态/失败重试/取消和主题；歌曲操作 Sheet 新增“从网易云歌单移除”。移除继续走 Provider `del`：严格账号/会话/创建者绑定，先读成员，目标不存在幂等零写，存在才单次写入并最多两次回读确认缺席；`code:200`不冒充成功，拒绝/未确认/未知/登录失效/账号变化/取消分开。专项16/16，新增重复成员删除与拒绝移除；完整检查1139/1139、typecheck、完整native、Swift/Node/diff通过。最终Release`1794984241898`为1/0/0、69.641秒、sourceUnchanged，控制历史保留删歌首次`2/2/5/3`、重复`3/3/6/3`、拒绝重试`1/1/3/2`，全程invalid0且最终缺席；11张1290×2796图亲看。r8已通过但因补夹具检查点由r9取代，原件保留。IPA strict review 60E/25WI/130/51F/51P、0错误/0警告。真实账号/跨设备、平台歌单重命名/删除、QQ/酷狗、实体机/签名/iOS27继续，J10保持B。见[回执](2026-11-18-netease-playlist-track-remove-report.md)与[UI规格](ui-spec/netease-playlist-track-remove-2026-11-18.md)。
+
 ## 2026-11-18 J10 网易云平台歌单加歌
+
+> 本段保留加歌批次历史；同日后续已开放平台删歌 UI，见[删歌回执](2026-11-18-netease-playlist-track-remove-report.md)。
 
 新增 `NeteasePlaylistTracksClient` 和 `PlatformPlaylistAdd`，在网易云在线歌曲操作 Sheet 提供“添加到网易云歌单”。客户端只接受当前账号创建的 1–19 位歌单/歌曲身份，读取 `/weapi/v6/playlist/detail` 时核对 `creator.userId`；已存在返回 `already` 且零写，未存在才单次发送 `/weapi/playlist/manipulate/tracks`，最多两次回读后确认 `added`。写拒绝、写后读失败、未确认、鉴权失效、账号变化、取消和不支持分别返回稳定状态，响应 `code:200` 不作为成功依据；现有证据未提供成员唯一约束，故重复成员不误判为畸形，但不宣称真实重复曲序已验证。Provider 支持 `add`/`del`，产品只开放加歌；多账号继续不猜归属，账号 capability 不扩充。
 
