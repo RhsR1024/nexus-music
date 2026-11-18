@@ -5,6 +5,7 @@ import {MusicApplication} from '../../App.tsx';
 import {createServices,type Services} from '../../src/app/services.ts';
 import {parseProviderJSON,type HTTPClient,type TextHTTPClient} from '../../src/providers/http.ts';
 import type {PlaylistLinkExpander} from '../../src/providers/playlistLink.ts';
+import type {Track} from '../../src/domain/track.ts';
 import {observeTheme} from './themeObservation.ts';
 const requestOnlineText=async(url:string,request:Parameters<TextHTTPClient>[1],signal:AbortSignal)=>{
   const response=await fetch('http://127.0.0.1:18439/nexus-ui-test-online-adapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,request}),signal});
@@ -25,6 +26,15 @@ const initialize=()=>pending??=(async()=>{
   const native=requireNativeModule<{launchArgument(name:string):string|null}>('NexusNative');
   const boot=native.launchArgument('NEXUS_UI_THEME_BOOT_ID');
   const services=await createServices(boot?{}:{onlineHTTP:http,onlineTextHTTP:textHTTP,playlistLinkExpander:expandPlaylistLink});
+  if(native.launchArgument('NEXUS_UI_PLAYLIST_COVER_MODAL_FIXTURE')==='1'){
+    // The saved playlist cover must win over the first track's artwork in the
+    // full track-list modal. The synthetic track deliberately has no loadable
+    // artwork, so a rendered header image can only come from the cover URL.
+    const title='Playlist cover modal fixture';
+    for(const existing of services.library.getSnapshot().playlists)if(existing.title===title)await services.library.deletePlaylist(existing.id);
+    const track:Track={origin:{kind:'online',platform:'wy',id:'9900'},title:'Synthetic cover track',artist:'Cover artist',album:'Cover album',durationMs:120000,artwork:'http://127.0.0.1:18439/missing-track-cover.png',metadata:{},qualities:[]};
+    await services.library.createPlaylist(title,[track],{coverUrl:'http://127.0.0.1:18439/playlist-cover.png'});
+  }
   if(native.launchArgument('NEXUS_UI_LIBRARY_ACTIONS_FIXTURE')==='1'){
     // Delay only the requested original store command so the real UI can be
     // closed and reopened before it settles. No fixture state enters the app.

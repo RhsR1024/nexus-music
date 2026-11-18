@@ -4286,6 +4286,28 @@ final class SourceSettingsTests: XCTestCase {
     let detailScreenshot=XCTAttachment(screenshot:app.screenshot());detailScreenshot.name="Playlist detail renders persisted public cover URL";detailScreenshot.lifetime = .keepAlways;add(detailScreenshot)
     let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
   }
+  func testLibraryPlaylistCoverModal() throws {
+    let app=XCUIApplication();app.launchEnvironment["NEXUS_UI_PLAYLIST_COVER_MODAL_FIXTURE"]="1";app.launch()
+    func reach(_ element:XCUIElement){
+      for _ in 0..<30 {if element.exists && element.isHittable{return};let above=element.exists && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(element.exists && element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    let library=app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch;XCTAssertTrue(library.waitForExistence(timeout:10));library.tap()
+    let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
+    let row=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Playlist cover modal fixture")).firstMatch
+    XCTAssertTrue(row.waitForExistence(timeout:10),"The seeded playlist must be listed");reach(row);row.tap()
+    let detailCover=app.descendants(matching:.any).matching(identifier:"library-playlist-detail-cover-image").firstMatch
+    XCTAssertTrue(detailCover.waitForExistence(timeout:10),"The saved playlist cover must render in detail before opening the modal")
+    let manage=app.buttons["全部歌曲与批量管理"];reach(manage);manage.tap()
+    let modalCover=app.descendants(matching:.any).matching(identifier:"track-list-cover-image").firstMatch
+    XCTAssertTrue(modalCover.waitForExistence(timeout:10),"The track-list modal must show the saved playlist cover; the first track's artwork is intentionally unavailable")
+    XCTAssertTrue(app.staticTexts["track-list-count"].exists)
+    image("Track list modal shows the saved playlist cover instead of the missing first-track artwork")
+    app.buttons["收起歌曲列表"].tap()
+    let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()
+  }
   func testLXMCImportCancelAndRestart() throws {
     let app=XCUIApplication();app.launch()
     func reach(_ element:XCUIElement){
