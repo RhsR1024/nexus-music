@@ -141,6 +141,14 @@ const initialize=()=>pending??=(async()=>{
     await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Playlist Tracks',username,displayName:'Synthetic NetEase Playlist Tracks',capabilities:[]},session);
     services.playback.controller.setQueue({entries:[],currentId:null,priorityIds:[]});
   }
+  if(native.launchArgument('NEXUS_UI_WY_PLAYLIST_DELETE_FIXTURE')==='1'){
+    const username='netease:9000000000000000007';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
+    for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'&&existing.username!==username)await services.musicAccounts.remove(existing.id);
+    const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000007',cookies:Object.freeze({MUSIC_U:'synthetic-wy-playlist-delete',__csrf:'synthetic-wy-csrf'})});
+    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Playlist Delete',username,displayName:'Synthetic NetEase Playlist Delete',capabilities:[]},session);
+    services.playback.controller.setQueue({entries:[],currentId:null,priorityIds:[]});
+  }
   return services;
 })().catch(error=>{pending=undefined;throw error;});
 function FixtureApp(){return <MusicApplication initialize={initialize}/>;}

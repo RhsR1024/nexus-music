@@ -3497,6 +3497,115 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(integer("trackPresent",in:removeRetry),0)
     image("Retry after a rejected NetEase playlist remove restores the intended absence")
   }
+  func testNeteasePlaylistDeleteFixture() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_WY_PLAYLIST_DELETE_FIXTURE"]="1"
+    app.launch()
+    func control(_ query:String="") throws -> [String:Any] {
+      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/wy-playlist-delete-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Any]) ?? [:]
+    }
+    func integer(_ key:String,in value:[String:Any])->Int{(value[key] as? NSNumber)?.intValue ?? -1}
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<20 {if element.exists&&element.isHittable{return}
+        if element.exists{let above=element.frame.midY<app.frame.midY
+          app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.3 : 0.75)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.75 : 0.3)))
+        }else{
+          app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.75)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.3)))
+        }
+      }
+      XCTAssertTrue(element.exists&&element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func revealFull(_ element:XCUIElement){
+      for _ in 0..<6 {if element.exists&&element.frame.maxY<=app.frame.maxY-16&&element.frame.minY>=app.frame.minY+16{return}
+        let above=element.exists&&element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.3 : 0.85)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.85 : 0.45)))
+      }
+      XCTAssertTrue(element.exists&&element.frame.maxY<=app.frame.maxY-16&&element.frame.minY>=app.frame.minY+16,"Expected fully visible text: \(element.identifier)")
+    }
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func confirmDelete(_ alert:XCUIElement){
+      XCTAssertTrue(alert.waitForExistence(timeout:10),"The destructive confirmation must appear")
+      alert.buttons["删除"].tap()
+    }
+    _=try control("reset=1")
+    openSettings(app,page:"accounts")
+    let card=app.descendants(matching:.any).matching(identifier:"account-playlists-card").firstMatch
+    XCTAssertTrue(card.waitForExistence(timeout:20),"The NetEase account playlist card must be available")
+    let load=app.buttons["account-playlists-load"]
+    reveal(load);load.tap()
+    let row=app.buttons["account-playlist-9100000000000000011"]
+    let favoriteRow=app.buttons["account-playlist-9100000000000000012"]
+    XCTAssertTrue(row.waitForExistence(timeout:15),"Read the created playlist target")
+    XCTAssertTrue(favoriteRow.waitForExistence(timeout:15),"Read the favorite playlist without delete controls")
+    let delete=app.buttons["account-playlist-delete-9100000000000000011"]
+    XCTAssertTrue(delete.exists,"Only a created playlist exposes deletion")
+    XCTAssertFalse(app.buttons["account-playlist-delete-9100000000000000012"].exists,"A favorite playlist must not expose deletion")
+    reveal(delete)
+    image("Created NetEase playlist row exposes delete while the favorite row does not")
+    let note=app.staticTexts["account-playlist-management-note"]
+    revealFull(note)
+    XCTAssertEqual(note.label,"重命名暂未开放：现有协议需要同时写入描述和标签，音枢不会用猜测值覆盖平台资料。")
+
+    reveal(delete);delete.tap()
+    let alert=app.alerts.firstMatch
+    XCTAssertTrue(alert.waitForExistence(timeout:10))
+    XCTAssertTrue(alert.staticTexts["删除这个网易云歌单？"].exists)
+    image("Deleting a NetEase playlist requires a destructive confirmation")
+    alert.buttons["取消"].tap()
+    XCTAssertTrue(row.waitForExistence(timeout:10),"Cancelling confirmation must keep the row")
+    let cancelled=try control()
+    XCTAssertEqual(integer("writes",in:cancelled),0,"Cancelling confirmation must not write")
+    XCTAssertEqual(integer("invalid",in:cancelled),0)
+
+    _=try control("mode=error")
+    reveal(delete);delete.tap()
+    confirmDelete(app.alerts.firstMatch)
+    let status=app.staticTexts["account-playlist-delete-status"]
+    XCTAssertTrue(status.waitForExistence(timeout:20),"A rejected deletion must publish an explicit result")
+    XCTAssertEqual(status.label,"网易云音乐拒绝删除歌单，请检查账号权限")
+    XCTAssertTrue(row.waitForExistence(timeout:10),"A rejected deletion must keep the playlist")
+    revealFull(status)
+    image("A rejected NetEase playlist deletion keeps the row and offers a retry")
+    let rejected=try control()
+    XCTAssertEqual(integer("writes",in:rejected),1,"A rejected deletion sends exactly one write")
+    XCTAssertEqual(integer("reads",in:rejected),2,"Read before the rejected write and never confirm it")
+    XCTAssertEqual(integer("invalid",in:rejected),0)
+    XCTAssertEqual(integer("present",in:rejected),1)
+
+    _=try control("mode=normal")
+    reveal(delete);delete.tap()
+    confirmDelete(app.alerts.firstMatch)
+    let removed=NSPredicate(format:"label == %@","已从网易云音乐删除「Synthetic Delete Playlist」并回读确认")
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:removed,object:status)],timeout:20),.completed)
+    XCTAssertTrue(waitForGone(row,timeout:10),"A confirmed deletion must remove the row")
+    XCTAssertTrue(waitForGone(delete,timeout:10),"The deleted row must not keep a delete button")
+    XCTAssertTrue(favoriteRow.exists,"A favorite playlist must survive the created playlist deletion")
+    revealFull(status)
+    image("NetEase playlist deletion is confirmed only after the catalog reread")
+    let confirmed=try control()
+    XCTAssertEqual(integer("writes",in:confirmed),2,"The rejection retry sends one further write")
+    XCTAssertEqual(integer("reads",in:confirmed),4,"The retry reads before writing and confirms absence after")
+    XCTAssertEqual(integer("invalid",in:confirmed),0)
+    XCTAssertEqual(integer("present",in:confirmed),0)
+
+    _=try control("reset=1")
+    reveal(load);load.tap()
+    XCTAssertTrue(row.waitForExistence(timeout:15),"A fresh catalog must restore the synthetic target")
+    _=try control("mode=unconfirmed")
+    reveal(delete);delete.tap()
+    confirmDelete(app.alerts.firstMatch)
+    let pending=NSPredicate(format:"label == %@","删除请求可能已提交，但未回读确认；请重新读取账号歌单核对，不要重复删除")
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:pending,object:status)],timeout:20),.completed)
+    XCTAssertTrue(row.exists,"An unconfirmed deletion must not remove the row")
+    revealFull(status)
+    image("An unconfirmed NetEase playlist deletion keeps the row and warns against repeating")
+    let unconfirmed=try control()
+    XCTAssertEqual(integer("writes",in:unconfirmed),1,"An unconfirmed deletion sends exactly one write")
+    XCTAssertEqual(integer("reads",in:unconfirmed),4,"Read once before writing and twice to confirm absence")
+    XCTAssertEqual(integer("invalid",in:unconfirmed),0)
+    XCTAssertEqual(integer("present",in:unconfirmed),1)
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.

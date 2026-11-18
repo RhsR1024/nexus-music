@@ -17,16 +17,17 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
   const [detail,setDetail]=useState<AccountPlaylist|null>(null),[copied,setCopied]=useState(false);
   const [preview,setPreview]=useState<AccountPlaylistPreview|null>(null),[busy,setBusy]=useState(''),[message,setMessage]=useState('');
   const [createName,setCreateName]=useState(''),[createPublic,setCreatePublic]=useState(false),[createMessage,setCreateMessage]=useState('');
+  const [deleteMessage,setDeleteMessage]=useState('');
   const account=available.find(item=>item.id===selected)??available[0];
   const controller=useRef<AbortController|null>(null),closeWhenSettled=useRef(false),mounted=useRef(true),latest=useRef({active,account,preview});latest.current={active,account,preview};
-  useLayoutEffect(()=>{controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');setCreateName('');setCreatePublic(false);setCreateMessage('');},[account]);
-  useLayoutEffect(()=>{if(active)return;controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');setCreateMessage('');},[active]);
+  useLayoutEffect(()=>{controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');setCreateName('');setCreatePublic(false);setCreateMessage('');setDeleteMessage('');},[account]);
+  useLayoutEffect(()=>{if(active)return;controller.current?.abort();controller.current=null;closeWhenSettled.current=false;setLists(null);setDetail(null);setPreview(null);setBusy('');setMessage('');setCreateMessage('');setDeleteMessage('');},[active]);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;controller.current?.abort();controller.current=null;};},[]);
-  async function execute<T>(label:string,task:(signal:AbortSignal)=>Promise<T>,success:(value:T)=>void,failure:(message:string)=>void=setMessage){
+  async function execute<T>(label:string,task:(signal:AbortSignal)=>Promise<T>,success:(value:T)=>void,failure:(message:string)=>void=setMessage,failureText='暂时无法读取或保存歌单，请重试'){
     if(!mounted.current||!latest.current.active||!latest.current.account||controller.current)return;
     const next=new AbortController();controller.current=next;setBusy(label);setMessage('');
     try{const value=await task(next.signal);if(controller.current===next&&latest.current.active)success(value);}
-    catch(error){if(controller.current===next&&latest.current.active)failure(error instanceof AccountPlaylistError?error.message:'暂时无法读取或保存歌单，请重试');}
+    catch(error){if(controller.current===next&&latest.current.active)failure(error instanceof AccountPlaylistError?error.message:failureText);}
     finally{if(controller.current===next){controller.current=null;setBusy('');if(closeWhenSettled.current){closeWhenSettled.current=false;setDetail(null);setPreview(null);}}}
   }
   const platformName=platform==='tx'?'QQ 音乐':platform==='kg'?'酷狗音乐':'网易云';
@@ -61,9 +62,33 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
       else setCreateMessage('暂时无法创建歌单，请重试');
     },setCreateMessage);
   };
+  const deletePlaylist=(item:AccountPlaylist)=>{
+    if(!account||pending||platform!=='wy'||item.kind!=='created')return;
+    Alert.alert('删除这个网易云歌单？',`将从当前网易云账号删除「${item.title}」。歌单与歌曲不会被复制到音枢。`,[
+      {text:'取消',style:'cancel'},
+      {text:'删除',style:'destructive',onPress:()=>{
+        if(!mounted.current||!latest.current.active||latest.current.account!==account)return;
+        setDeleteMessage('');
+        void execute('正在删除网易云歌单',signal=>services.neteasePlaylistDelete.delete(account,item,signal),result=>{
+          if(result.status==='deleted'||result.status==='absent'){
+            setLists(value=>value?.filter(row=>row.id!==item.id)??null);
+            setDetail(current=>current?.id===item.id?null:current);
+            setPreview(null);
+            setDeleteMessage(result.status==='deleted'?`已从网易云音乐删除「${item.title}」并回读确认`:`「${item.title}」已不在账号歌单中`);
+          }else if(result.status==='unconfirmed')setDeleteMessage('删除请求可能已提交，但未回读确认；请重新读取账号歌单核对，不要重复删除');
+          else if(result.status==='rejected')setDeleteMessage('网易云音乐拒绝删除歌单，请检查账号权限');
+          else if(result.status==='login_required')setDeleteMessage('网易云登录已失效，请在设置中重新登录');
+          else if(result.status==='account_changed')setDeleteMessage('网易云账号已更改，请重新读取账号歌单');
+          else if(result.status==='cancelled')setDeleteMessage('操作已取消，未继续等待删除结果');
+          else if(result.status==='unsupported')setDeleteMessage('这个歌单暂不支持删除');
+          else setDeleteMessage('暂时无法删除网易云歌单，请重试');
+        },setDeleteMessage,'暂时无法删除网易云歌单，请重试');
+      }},
+    ]);
+  };
   return <View testID={testID("account-playlists-card")} style={[styles.card,{borderColor:p.border,backgroundColor:p.surface}]}>
     <Text accessibilityRole="header" style={[styles.heading,{color:p.text}]}>{platformName}账号歌单</Text>
-    <Text style={[styles.caption,{color:p.secondary}]}>按需读取创建和收藏的歌单，确认后复制到音枢歌单。导入不会修改平台歌单，也不会自动同步。</Text>
+    <Text style={[styles.caption,{color:p.secondary}]}>{platform==='wy'?'按需读取创建和收藏的歌单，确认后复制到音枢歌单。新建与删除会直接修改平台数据；导入不会，也不会自动同步。':'按需读取创建和收藏的歌单，确认后复制到音枢歌单。导入不会修改平台歌单，也不会自动同步。'}</Text>
     {!account?<>
       <Text testID={testID("account-playlists-login-required")} style={[styles.body,{color:p.secondary}]}>登录{platformName}后，可读取并导入账号歌单。</Text>
       {button('account-playlists-login',`登录${platformName}`,onLogin,disabled)}
@@ -75,12 +100,17 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
         <Pressable testID="account-playlist-create-privacy" accessibilityRole="switch" accessibilityLabel="公开新歌单" accessibilityState={{checked:createPublic}} disabled={blocked} onPress={()=>setCreatePublic(value=>!value)} style={styles.privacy}><Text style={[styles.caption,{color:p.text}]}>{createPublic?'公开歌单':'私密歌单'}</Text><Text style={[styles.caption,{color:p.secondary}]}>{createPublic?'公开后可被他人看到':'默认仅自己可见'}</Text></Pressable>
         <Pressable testID="account-playlist-create-submit" accessibilityRole="button" disabled={blocked||!createName.trim()} onPress={createPlaylist} style={[styles.button,{backgroundColor:p.surface},(blocked||!createName.trim())&&styles.disabled]}><Text style={[styles.body,{color:p.accent}]}>创建到网易云音乐</Text></Pressable>
         {!!createMessage&&<Text testID="account-playlist-create-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{createMessage}</Text>}
+        <Text testID="account-playlist-management-note" style={[styles.caption,{color:p.secondary}]}>重命名暂未开放：现有协议需要同时写入描述和标签，音枢不会用猜测值覆盖平台资料。</Text>
       </View>}
       {button('account-playlists-load',lists?'重新读取歌单':'读取账号歌单',()=>{setLists(null);setPreview(null);void execute('正在读取歌单',signal=>services.accountPlaylists.list(account,signal),value=>{setLists(value);setVisibleCount(100);setPreview(null);});})}
       {pending&&!detail&&progress}
       {!!message&&!detail&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{message}</Text>}
+      {!!deleteMessage&&!detail&&<Text testID="account-playlist-delete-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{deleteMessage}</Text>}
       {lists?.length===0&&<Text testID={testID("account-playlists-empty")} style={[styles.body,{color:p.secondary}]}>平台当前没有可导入的歌单。</Text>}
-      {lists?.slice(0,visibleCount).map(item=><Pressable key={item.id} testID={testID(`account-playlist-${item.id}`)} accessibilityRole="button" accessibilityLabel={`${item.kind==='created'?'创建':'收藏'}的歌单：${item.title}，${item.count}首，预览导入`} disabled={blocked} onPress={()=>readDetail(item)} style={[styles.row,{borderTopColor:p.border},blocked&&styles.disabled]}><Text style={[styles.body,{color:p.text}]}>{item.title}</Text><Text style={[styles.caption,{color:p.secondary}]}>{item.kind==='created'?'创建':'收藏'} · {item.count} 首 · 预览导入</Text></Pressable>)}
+      {lists?.slice(0,visibleCount).map(item=><View key={item.id} style={[styles.row,{borderTopColor:p.border},blocked&&styles.disabled]}>
+        <Pressable testID={testID(`account-playlist-${item.id}`)} accessibilityRole="button" accessibilityLabel={`${item.kind==='created'?'创建':'收藏'}的歌单：${item.title}，${item.count}首，预览导入`} disabled={blocked} onPress={()=>readDetail(item)} style={styles.rowMain}><Text style={[styles.body,{color:p.text}]}>{item.title}</Text><Text style={[styles.caption,{color:p.secondary}]}>{item.kind==='created'?'创建':'收藏'} · {item.count} 首 · 预览导入</Text></Pressable>
+        {platform==='wy'&&item.kind==='created'&&<Pressable testID={`account-playlist-delete-${item.id}`} accessibilityRole="button" accessibilityLabel={`删除网易云歌单：${item.title}`} disabled={blocked} onPress={()=>deletePlaylist(item)} style={[styles.delete,{borderColor:p.border}]}><Text style={[styles.caption,{color:p.accent}]}>删除</Text></Pressable>}
+      </View>)}
       {lists&&lists.length>visibleCount&&button('account-playlists-more','显示更多歌单',()=>setVisibleCount(value=>value+100))}
     </>}
     <SheetModal visible={active&&!!detail} animationType="slide" onRequestClose={closeDetail}>
@@ -108,7 +138,9 @@ const styles=StyleSheet.create({
   heading:typography.heading,body:typography.body,caption:typography.caption,
   button:{minHeight:controls.hit+space.xs,paddingHorizontal:space.lg,borderRadius:radius.md,justifyContent:'center'},
   owner:{minHeight:controls.hit,paddingHorizontal:space.md,borderRadius:radius.deck,justifyContent:'center'},
-  row:{minHeight:controls.hit+space.xl,paddingVertical:space.md,gap:space.xs,borderTopWidth:StyleSheet.hairlineWidth},
+  row:{minHeight:controls.hit+space.xl,paddingVertical:space.md,gap:space.md,borderTopWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center'},
+  rowMain:{flex:1,gap:space.xs},
+  delete:{minHeight:controls.hit,minWidth:controls.hit,paddingHorizontal:space.md,borderRadius:radius.md,borderWidth:StyleSheet.hairlineWidth,justifyContent:'center',alignItems:'center'},
   create:{gap:space.sm,padding:space.md,borderRadius:radius.md,borderWidth:StyleSheet.hairlineWidth},
   input:{minHeight:controls.hit,paddingHorizontal:space.md,borderRadius:radius.md,borderWidth:StyleSheet.hairlineWidth},
   privacy:{minHeight:controls.hit,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space.sm},

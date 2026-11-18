@@ -187,7 +187,8 @@ const qqFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testQQFa
 const wyFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteaseFavoriteFixture'));
 const wyPlaylistUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteasePlaylistCreateFixture'));
 const wyPlaylistTracksUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteasePlaylistTrackFixture'));
-const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountDailyUI||accountRadarUI||accountPlaylistsUI||accountHeartbeatUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI||wyPlaylistTracksUI||libraryActionsUI;
+const wyPlaylistDeleteUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteasePlaylistDeleteFixture'));
+const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountDailyUI||accountRadarUI||accountPlaylistsUI||accountHeartbeatUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI||wyPlaylistTracksUI||wyPlaylistDeleteUI||libraryActionsUI;
 const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
 lx.on('request',async({source,action})=>{
   if(action!=='musicUrl')throw new Error('unsupported fixture action');
@@ -240,6 +241,7 @@ let wyFavoriteValue=false,wyFavoriteReads=0,wyFavoriteWrites=0,wyFavoriteInvalid
 let wyPlaylistCreated=false,wyPlaylistReads=0,wyPlaylistWrites=0,wyPlaylistInvalid=0;
 let wyPlaylistReadMode='normal';
 const heldWyPlaylistResponses=[];
+let wyPlaylistDeletePresent=true,wyPlaylistDeleteMode='normal',wyPlaylistDeleteReads=0,wyPlaylistDeleteWrites=0,wyPlaylistDeleteInvalid=0;
 let wyPlaylistTrackMode='normal',wyPlaylistTrackProfileReads=0,wyPlaylistTrackListReads=0,wyPlaylistTrackDetailReads=0,wyPlaylistTrackWrites=0,wyPlaylistTrackInvalid=0;
 let wyPlaylistTrackMembership=new Set(['1002','1003']);
 const heldPlaylistLinkResponses=[];
@@ -457,6 +459,19 @@ const handleRequest = async (req, res) => {
     counts.wyPlaylist={reads:wyPlaylistReads,writes:wyPlaylistWrites,created:wyPlaylistCreated,invalid:wyPlaylistInvalid,held:heldWyPlaylistResponses.length};
     res.setHeader('Content-Type','application/json');
     res.end(JSON.stringify(counts.wyPlaylist));return;
+  }
+  if(wyPlaylistDeleteUI&&req.url.startsWith('/wy-playlist-delete-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1');
+    if(control.searchParams.has('reset')){
+      wyPlaylistDeletePresent=control.searchParams.get('present')!=='0';
+      wyPlaylistDeleteMode='normal';wyPlaylistDeleteReads=0;wyPlaylistDeleteWrites=0;wyPlaylistDeleteInvalid=0;
+    }
+    const mode=control.searchParams.get('mode');if(['normal','error','unconfirmed'].includes(mode))wyPlaylistDeleteMode=mode;
+    const state={present:wyPlaylistDeletePresent?1:0,mode:wyPlaylistDeleteMode,reads:wyPlaylistDeleteReads,writes:wyPlaylistDeleteWrites,invalid:wyPlaylistDeleteInvalid};
+    counts.wyPlaylistDelete={...state};
+    counts.wyPlaylistDeleteControls=[...(counts.wyPlaylistDeleteControls??[]),{query:control.searchParams.toString(),...state}];
+    res.setHeader('Content-Type','application/json');
+    res.end(JSON.stringify(state));return;
   }
   if(wyPlaylistTracksUI&&req.url.startsWith('/wy-playlist-tracks-fixture-control')){
     const control=new URL(req.url,'http://127.0.0.1');
@@ -862,6 +877,13 @@ const handleRequest = async (req, res) => {
         wyPlaylistTrackProfileReads++;
         res.end(JSON.stringify({code:200,profile:{userId:'9000000000000000008',nickname:'Synthetic NetEase Playlist Tracks'}}));return;
       }
+      if(wyPlaylistDeleteUI&&parsed.pathname==='/api/nuser/account/get'){
+        const cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
+        if(request.method!=='GET'||!/MUSIC_U=synthetic-wy-playlist-delete(?:;|$)/.test(cookie)){
+          wyPlaylistDeleteInvalid++;res.end(JSON.stringify({code:401}));return;
+        }
+        res.end(JSON.stringify({code:200,profile:{userId:'9000000000000000007',nickname:'Synthetic NetEase Playlist Delete'}}));return;
+      }
       if(wyPlaylistUI&&parsed.pathname==='/weapi/v6/playlist/detail'){
         res.end(JSON.stringify({code:200,playlist:{id:'9100000000000000001',trackIds:[],trackCount:0}}));return;
       }
@@ -889,6 +911,15 @@ const handleRequest = async (req, res) => {
         wyPlaylistTrackListReads++;
         res.end(JSON.stringify({code:200,more:false,playlist:[{id:'9100000000000000011',name:'Synthetic Target Playlist',privacy:10,trackCount:wyPlaylistTrackMembership.size,coverImgUrl:'',creator:{userId:'9000000000000000008'}}]}));return;
       }
+      if(wyPlaylistDeleteUI&&parsed.pathname==='/weapi/user/playlist'){
+        const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
+        const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist-delete(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
+        if(!valid){wyPlaylistDeleteInvalid++;res.end(JSON.stringify({code:1}));return;}
+        wyPlaylistDeleteReads++;
+        const entries=[{id:'9100000000000000012',name:'Synthetic Favorite Playlist',privacy:10,trackCount:3,coverImgUrl:'',creator:{userId:'9000000000000000099'}}];
+        if(wyPlaylistDeletePresent)entries.unshift({id:'9100000000000000011',name:'Synthetic Delete Playlist',privacy:10,trackCount:2,coverImgUrl:'',creator:{userId:'9000000000000000007'}});
+        res.end(JSON.stringify({code:200,more:false,playlist:entries}));return;
+      }
       if(wyPlaylistTracksUI&&parsed.pathname==='/weapi/v6/playlist/detail'){
         const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
         const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist-tracks(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
@@ -905,6 +936,15 @@ const handleRequest = async (req, res) => {
         if(wyPlaylistTrackMode==='write-error'||wyPlaylistTrackMode==='remove-error'){res.end(JSON.stringify({code:500}));return;}
         if(wyPlaylistTrackMode==='remove-success')wyPlaylistTrackMembership.delete('1001');
         else wyPlaylistTrackMembership.add('1001');
+        res.end(JSON.stringify({code:200}));return;
+      }
+      if(wyPlaylistDeleteUI&&parsed.pathname==='/weapi/playlist/remove'){
+        const body=new URLSearchParams(request.body??''),cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
+        const valid=request.method==='POST'&&/MUSIC_U=synthetic-wy-playlist-delete(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
+        if(!valid){wyPlaylistDeleteInvalid++;res.end(JSON.stringify({code:1}));return;}
+        wyPlaylistDeleteWrites++;
+        if(wyPlaylistDeleteMode==='error'){res.end(JSON.stringify({code:500}));return;}
+        if(wyPlaylistDeleteMode==='normal')wyPlaylistDeletePresent=false;
         res.end(JSON.stringify({code:200}));return;
       }
       if(wyFavoriteUI&&parsed.pathname==='/weapi/song/like/check'){
@@ -1346,7 +1386,7 @@ try {
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountFmStationContinuation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformDailyFullList','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformRadarBatchActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountRecommendedPlaylists','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQAccountRecommendedPlaylists','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountHeartbeat','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQFavoriteFixture','-skip-testing:NexusMusicUITests/SourceSettingsTests/testNeteaseFavoriteFixture','-skip-testing:NexusMusicUITests/SourceSettingsTests/testNeteasePlaylistCreateFixture','-skip-testing:NexusMusicUITests/SourceSettingsTests/testNeteasePlaylistTrackFixture');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountFmStationContinuation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformDailyFullList','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformRadarBatchActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountRecommendedPlaylists','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQAccountRecommendedPlaylists','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountHeartbeat','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQFavoriteFixture','-skip-testing:NexusMusicUITests/SourceSettingsTests/testNeteaseFavoriteFixture','-skip-testing:NexusMusicUITests/SourceSettingsTests/testNeteasePlaylistCreateFixture','-skip-testing:NexusMusicUITests/SourceSettingsTests/testNeteasePlaylistTrackFixture','-skip-testing:NexusMusicUITests/SourceSettingsTests/testNeteasePlaylistDeleteFixture');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
   if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyricsAtAccessibilityXXXL');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');
