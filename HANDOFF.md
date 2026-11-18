@@ -1,3 +1,9 @@
+## 2026-11-18 网易云心动模式纵切片
+
+基于固定 IPA `E-060 → F-051 → P-051 / WI-025`，平台推荐新增网易云专属“心动模式”：严格绑定当前网易云账号与 Keychain weapi 会话，读取账号拥有的 `specialType == 10` 喜欢歌单，优先歌单顺序并回退 `/weapi/song/like/get`；当前曲属于喜欢集合时作为种子，否则从喜欢歌曲选择种子。推荐调用 `/weapi/playmode/intelligence/list`（`fromPlayOne`、`count=300`），详情每 500 首分批并只省略失败推荐批次，最终以种子优先、推荐去重且剔除种子的顺序整体替换现有权威队列。没有静态证据支持的关闭/恢复原队列行为未新增。
+
+新增 `AccountHeartbeat`、8 项 Provider 测试和正式账号推荐 UI 接线；合成网易云夹具覆盖当前曲、喜欢曲种子、歌单缺失、喜欢为空、推荐为空、服务失败/重试、登录失效/去登录及账号删除。完整 `npm run check` 1123/1123、`typecheck`、完整 native、Swift/Node/diff 通过。最终正式 Release `SourceUITests-1794979905602` 为 1/0/0、`testAccountHeartbeat()` 172.222 秒、sourceUnchanged，夹具 `heartbeat requests=20/detail=5/intelligence=3/authFailures=0`，7 张 1290×2796 截图亲看。r1 `SourceUITests-1794979165515` 已通过（173.219 秒），随后仅因测试脚本增加非在线夹具隔离行产生源码变化，故保留 r1 原件并由 r2 作为最终证据；r1 不是失败。最后一轮失败原为 `liked_single` 被误写成 3 首，实际正确队列是 4 首 `9901/9902/9904/9905`；仅修正测试预期并增加第二场景后的 App 重启，前五次失败 `.xcresult` 全部保留。IPA strict review 60E/25WI/130 timeline/51F/51P、0错误/0警告。见[回执](docs/2026-11-18-netease-heartbeat-report.md)。真实网易云账号/推荐服务、关闭恢复语义、QQ/酷狗等价能力、真实 FM、实体机/签名/iOS27 仍开放，J08 保持 C，整体 active。
+
 ## 2026-11-18 账号推荐歌单纵切片
 
 基于固定 IPA `E-059 → F-050 → P-050 / WI-024`，平台推荐新增独立“推荐歌单”折叠区：网易云走账号 weapi 推荐资源，QQ 走 `PlaylistSquare/GetRecommendFeed`，酷狗不显示该区；结果有界去重并最多30项，空态/失败/登录失效分开，五分钟账号修订缓存，替换、取消或清理后迟到响应不发布。卡片只读打开现有公开歌单详情，不自动导入或写本地库。合成网易云专项 Release `1794975071176` 为1/0/0、30.431秒、`sourceUnchanged`，推荐请求4/公开详情1/鉴权失败0，5张1290×2796图亲看；完整检查1115/1115，IPA strict review 59E/24WI/129/50F/50P、0错误/0警告。r1虽通过但首张附件未展示卡片，原件保留后只修截图滚动并以r2为准。见[回执](docs/2026-11-18-account-recommended-playlists-report.md)。真实网易云/QQ账号与UI、目标字段映射、心动模式、真实FM、实体机/签名/iOS27仍开放，J08保持C，整体active。

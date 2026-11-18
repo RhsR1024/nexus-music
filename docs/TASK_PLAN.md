@@ -1,3 +1,19 @@
+## 2026-11-18 网易云心动模式纵切片
+
+- [x] 固定 IPA `E-060 → F-051 → P-051 / WI-025`；strict review 60E/25WI/130 timeline/51F/51P、0错误/0警告。
+- [x] 网易云账号严格绑定；喜欢歌单按 `specialType == 10` + creator user ID 匹配，歌单顺序优先并回退 `song/like/get`。
+- [x] 当前喜欢曲或喜欢曲随机种子；`playmode/intelligence/list` 固定 `fromPlayOne`/300，详情每500首分批，推荐批次部分失败不丢成功结果。
+- [x] 种子优先、推荐去重且剔除种子，通过现有 `playTracks` 整体替换唯一权威队列；酷狗/QQ 不猜等价入口，不新增关闭/恢复假行为。
+- [x] 网易云专属加载、成功、空/缺失、失败/重试、登录/去登录与账号删除状态接入现有账号推荐页。
+- [x] 8项Provider测试，`npm run check`1123/1123、typecheck、完整native、Swift/Node/diff通过。
+- [x] 最终Release`1794979905602`为1/0/0、172.222秒、sourceUnchanged；heartbeat requests20/detail5/intelligence3/authFailures0，7张1290×2796图亲看。
+- [x] 末次失败确认是测试把喜欢曲种子队列误写为3首；正确为`9901/9902/9904/9905`4首，修正预期并增加第二场景后App重启，前五次失败原件保留。
+- [x] r1 `1794979165515`已通过，但因测试脚本隔离行变化由最终r2取代；r1原件保留且不作为失败记录。
+- [ ] 真实网易云账号与推荐服务、关闭/恢复原队列语义、QQ/酷狗等价能力、真实FM。
+- [ ] 实体机、签名、iOS27云端终态与完整J08。
+
+见[回执](2026-11-18-netease-heartbeat-report.md)。J08保持C，整体active。
+
 ## 2026-11-18 账号推荐歌单纵切片
 
 - [x] 固定 IPA `E-059 → F-050 → P-050 / WI-024`；strict review 59E/24WI/129/50F/50P、0错误/0警告。
