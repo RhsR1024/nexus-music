@@ -3360,6 +3360,93 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertEqual(integer("invalid",in:final),0)
     XCTAssertEqual(integer("held",in:final),0)
   }
+  func testNeteasePlaylistTrackFixture() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_WY_PLAYLIST_TRACKS_FIXTURE"]="1"
+    app.launch()
+    func reach(_ element:XCUIElement){
+      for _ in 0..<18 {if element.isHittable{break};let above=element.exists && element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35 : 0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7 : 0.35)))}
+      XCTAssertTrue(element.isHittable,"Expected visible control: \(element.identifier)")
+    }
+    func revealFull(_ element:XCUIElement){
+      for _ in 0..<5 {if element.exists && element.frame.maxY<=app.frame.maxY-16{break}
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.85)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.55)))}
+      XCTAssertTrue(element.exists && element.frame.maxY<=app.frame.maxY-16,"Expected fully visible text: \(element.identifier)")
+    }
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;self.add(shot)}
+    func control(_ query:String="") throws -> [String:Any] {
+      let bytes=try Data(contentsOf:URL(string:"http://127.0.0.1:18439/wy-playlist-tracks-fixture-control"+(query.isEmpty ? "" : "?"+query))!)
+      return (try JSONSerialization.jsonObject(with:bytes) as? [String:Any]) ?? [:]
+    }
+    func integer(_ key:String,in value:[String:Any])->Int{(value[key] as? NSNumber)?.intValue ?? -1}
+    _=try control("reset=1")
+    let searchTab=app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch
+    XCTAssertTrue(searchTab.waitForExistence(timeout:15));searchTab.tap()
+    let songKind=app.descendants(matching:.any).matching(identifier:"search-kind-song").firstMatch
+    XCTAssertTrue(songKind.waitForExistence(timeout:10));reach(songKind);songKind.tap()
+    let wyPlatform=app.descendants(matching:.any).matching(identifier:"网易云").firstMatch
+    XCTAssertTrue(wyPlatform.waitForExistence(timeout:10));reach(wyPlatform);wyPlatform.tap()
+    let field=app.textFields["搜索歌曲或歌手"]
+    XCTAssertTrue(field.waitForExistence(timeout:10));reach(field);field.tap()
+    for character in "Unified fixture"{field.typeText(String(character))}
+    field.typeText("\n")
+    let more=app.buttons["search-more-wy-0"]
+    XCTAssertTrue(more.waitForExistence(timeout:20));reach(more);more.tap()
+    let add=app.buttons["search-action-wy-playlist"]
+    XCTAssertTrue(add.waitForExistence(timeout:10));reach(add)
+    image("NetEase online track exposes a separate platform playlist action")
+    add.tap()
+    let target=app.buttons["platform-playlist-target-0"]
+    XCTAssertTrue(target.waitForExistence(timeout:20),"The current account's created playlists must be selectable")
+    XCTAssertTrue(target.label.contains("Synthetic Target Playlist"))
+    XCTAssertTrue(target.label.contains("2 首"))
+    image("NetEase platform playlist targets are loaded from the current account")
+    target.tap()
+    let status=app.staticTexts["search-wy-playlist-status"]
+    XCTAssertTrue(status.waitForExistence(timeout:20),"A confirmed add must publish a local result")
+    XCTAssertEqual(status.label,"已添加到「Synthetic Target Playlist」")
+    revealFull(status)
+    let first=try control()
+    XCTAssertEqual(integer("profileReads",in:first),1)
+    XCTAssertEqual(integer("listReads",in:first),1)
+    XCTAssertEqual(integer("detailReads",in:first),2,"The target must be read before and after one write")
+    XCTAssertEqual(integer("writes",in:first),1)
+    XCTAssertEqual(integer("invalid",in:first),0)
+    XCTAssertEqual(integer("trackPresent",in:first),1)
+    image("NetEase playlist add is confirmed by reading the track membership back")
+    reach(add);add.tap()
+    XCTAssertTrue(target.waitForExistence(timeout:15));reach(target);target.tap()
+    let idempotent=NSPredicate(format:"label == %@","这首歌已在「Synthetic Target Playlist」中")
+    XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:idempotent,object:status)],timeout:20),.completed)
+    revealFull(status)
+    let second=try control()
+    XCTAssertEqual(integer("profileReads",in:second),2)
+    XCTAssertEqual(integer("listReads",in:second),2)
+    XCTAssertEqual(integer("detailReads",in:second),3)
+    XCTAssertEqual(integer("writes",in:second),1,"Repeating an add must not write again")
+    image("Repeating the NetEase playlist add stays idempotent")
+    _=try control("reset=1&mode=write-error")
+    reach(add);add.tap()
+    XCTAssertTrue(target.waitForExistence(timeout:15));reach(target);target.tap()
+    let error=app.staticTexts["platform-playlist-error"]
+    XCTAssertTrue(error.waitForExistence(timeout:20))
+    XCTAssertEqual(error.label,"网易云音乐拒绝添加到歌单，请检查账号权限")
+    revealFull(error)
+    image("A rejected NetEase playlist write remains an explicit error")
+    _=try control("mode=normal")
+    reach(target);target.tap()
+    XCTAssertTrue(status.waitForExistence(timeout:20))
+    XCTAssertEqual(status.label,"已添加到「Synthetic Target Playlist」")
+    revealFull(status)
+    let retry=try control()
+    XCTAssertEqual(integer("profileReads",in:retry),1)
+    XCTAssertEqual(integer("writes",in:retry),2,"Failure and retry must send one rejected and one successful write")
+    XCTAssertEqual(integer("detailReads",in:retry),3)
+    XCTAssertEqual(integer("invalid",in:retry),0)
+    XCTAssertEqual(integer("trackPresent",in:retry),1)
+    image("Retry after a rejected NetEase playlist write restores the membership")
+  }
   func testOnlineMatching() throws {
     // scripts/test-ui.mjs selects a separate simulator entry with an HTTP adapter.
     // The real provider parsing, LX host, routing, storage and PCM backend still run.

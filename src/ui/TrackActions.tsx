@@ -10,6 +10,7 @@ import {SheetModal} from './AdaptiveModal.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
 import {MatchModal} from './MatchModal.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
+import {PlatformPlaylistAdd} from './PlatformPlaylistAdd.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {controls,radius,space,typography} from './tokens.ts';
@@ -57,11 +58,14 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
   const qqFavoriteController=useRef<AbortController|null>(null);
   const [wyFavoriteState,setWYFavoriteState]=useState<'idle'|'pending'|'added'>('idle');
   const [wyFavoriteMessage,setWYFavoriteMessage]=useState('');
+  const [platformAdding,setPlatformAdding]=useState(false);
+  const [wyPlaylistMessage,setWYPlaylistMessage]=useState('');
   const wyFavoriteController=useRef<AbortController|null>(null);
   useEffect(()=>{
     setSimilar(false);setAdding(false);setCommenting(false);setMatching(false);setError('');setDownloadReport(null);setChoosingDownload(false);setBusy(false);
     setQQFavoriteState('idle');setQQFavoriteMessage('');qqFavoriteController.current?.abort();qqFavoriteController.current=null;
     setWYFavoriteState('idle');setWYFavoriteMessage('');wyFavoriteController.current?.abort();wyFavoriteController.current=null;
+    setPlatformAdding(false);setWYPlaylistMessage('');
   },[track]);
   const current=useRef(track);current.current=track;
   const session=useRef(0);
@@ -138,7 +142,7 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
   }
   const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void,id=label)=><Pressable key={id} testID={`${prefix}-action-${id}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.action,{backgroundColor:theme.palette.surface,opacity:busy||sharing?.5:1}]}><Ionicons name={icon} size={controls.icon} color={theme.palette.accent}/><Text style={[typography.body,{color:theme.palette.text,flex:1}]}>{label}</Text><Ionicons name="chevron-forward" size={18} color={theme.palette.secondary}/></Pressable>;
   return <SheetModal visible={!!track} animationType="slide" onRequestClose={close}>
-    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{close();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={close}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
+    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{close();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&platformAdding&&wyAccount?<PlatformPlaylistAdd services={services} track={track} account={wyAccount} onBack={()=>setPlatformAdding(false)} onAdded={(title,already)=>{setWYPlaylistMessage(already?`这首歌已在「${title}」中`:`已添加到「${title}」`);setPlatformAdding(false);}}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={close}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
       <Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={close} style={styles.close}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable>
       <Text accessibilityRole="header" style={[typography.title,{color:theme.palette.text}]}>{track?.title??'歌曲操作'}</Text>
       <Text style={[typography.caption,{color:theme.palette.secondary}]}>{track?.artist}{track?.album?` · ${track.album}`:''}</Text>
@@ -148,6 +152,7 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
         {action(favorite?'取消本地收藏':'本地收藏',favorite?'heart':'heart-outline',()=>{void saveFavorite();})}
         {qqTrack&&qqAccount&&action('收藏到 QQ 音乐',qqFavoriteState==='added'?'star':'star-outline',()=>{void saveQQFavorite();},'qq-favorite')}
         {wyTrack&&wyAccount&&action('收藏到网易云音乐',wyFavoriteState==='added'?'star':'star-outline',()=>{void saveNeteaseFavorite();},'wy-favorite')}
+        {wyTrack&&wyAccount&&action('添加到网易云歌单','add-circle-outline',()=>{setWYPlaylistMessage('');setPlatformAdding(true);},'wy-playlist')}
         {action('加入歌单','albums-outline',()=>setAdding(true))}
         {action('分享歌曲','share-outline',()=>{setError('');void share();})}
         {downloadableTrack(track)&&action('下载','download-outline',()=>{void download();})}
@@ -158,8 +163,9 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
       </View>}
       {qqTrack&&qqAccounts.length>1&&<Text style={[typography.caption,{color:theme.palette.secondary}]}>已登录多个 QQ 音乐账号，请在设置中只保留一个后再收藏到平台。</Text>}
       {!!qqFavoriteMessage&&<Text testID={`${prefix}-qq-favorite-status`} accessibilityLiveRegion="polite" style={{color:qqFavoriteState==='added'?theme.palette.secondary:theme.palette.accent}}>{qqFavoriteMessage}</Text>}
-      {wyTrack&&wyAccounts.length>1&&<Text style={[typography.caption,{color:theme.palette.secondary}]}>已登录多个网易云音乐账号，请在设置中只保留一个后再收藏到平台。</Text>}
+      {wyTrack&&wyAccounts.length>1&&<Text style={[typography.caption,{color:theme.palette.secondary}]}>已登录多个网易云音乐账号，请在设置中只保留一个后再收藏或添加平台歌单。</Text>}
       {!!wyFavoriteMessage&&<Text testID={`${prefix}-wy-favorite-status`} accessibilityLiveRegion="polite" style={{color:wyFavoriteState==='added'?theme.palette.secondary:theme.palette.accent}}>{wyFavoriteMessage}</Text>}
+      {!!wyPlaylistMessage&&<Text testID={`${prefix}-wy-playlist-status`} accessibilityLiveRegion="polite" style={{color:theme.palette.secondary}}>{wyPlaylistMessage}</Text>}
       {!!(error||shareError)&&<Text accessibilityLiveRegion="polite" style={{color:theme.palette.accent}}>{error||shareError}</Text>}
     </ScrollView>}
     <MatchModal services={services} track={matching?track:null} onClose={()=>setMatching(false)}/>
