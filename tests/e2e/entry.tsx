@@ -56,6 +56,18 @@ const initialize=()=>pending??=(async()=>{
     const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000005',cookies:Object.freeze({MUSIC_U:'synthetic-daily',__csrf:'synthetic-daily-csrf'})});
     await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Daily',username,displayName:'Synthetic NetEase Daily',capabilities:['daily']},session);
   }
+  if(native.launchArgument('NEXUS_UI_ACCOUNT_RADAR_FIXTURE')==='1'){
+    // Separate simulator-only QQ radar account. The production account store,
+    // Keychain session, QQ radar client and authoritative queue stay in use;
+    // only provider transport is redirected to the local HTTP fixture. The
+    // queue is cleared so the batch action proves its exact two entries.
+    for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'||existing.platform==='tx'||existing.platform==='kg')await services.musicAccounts.remove(existing.id);
+    const username='qq:2:9000000000000000006';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['tx',username]));
+    const session=Object.freeze({version:1,platform:'tx',accountId,userId:'9000000000000000006',cookies:Object.freeze({login_type:'1',qqmusic_uin:'9000000000000000006',qqmusic_key:'synthetic-radar'})});
+    await services.musicAccounts.save({platform:'tx',label:'Synthetic QQ Radar',username,displayName:'Synthetic QQ Radar',capabilities:['daily']},session);
+    services.playback.controller.setQueue({entries:[],currentId:null,priorityIds:[]});
+  }
   if(native.launchArgument('NEXUS_UI_QQ_FAVORITE_FIXTURE')==='1'){
     // Separate simulator-only QQ account. The favorite action uses the real
     // account store, Keychain session and provider; only provider transport is

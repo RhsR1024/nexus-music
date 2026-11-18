@@ -2634,6 +2634,76 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["account-daily-full-close"].tap()
     XCTAssertTrue(waitForGone(full,timeout:10))
   }
+  func testPlatformRadarBatchActions() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_ACCOUNT_RADAR_FIXTURE"]="1"
+    app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func control() throws -> [String:Any] {
+      let url=URL(string:"http://127.0.0.1:18439/account-radar-fixture-control?t=\(Date().timeIntervalSince1970)")!
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:Data(contentsOf:url)) as? [String:Any])
+    }
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<28 {
+        if waitForHittable(element,timeout:0.2){return}
+        let above=element.exists&&element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.7))
+          .press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.35)))
+      }
+      XCTAssertTrue(waitForHittable(element,timeout:5),"Radar list element must be reachable: \(element)")
+    }
+    let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch
+    let tab=rail.exists ? rail : app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch
+    XCTAssertTrue(tab.waitForExistence(timeout:15));XCTAssertTrue(waitForHittable(tab,timeout:10));tab.tap()
+    let open=app.buttons["account-daily-open"]
+    reveal(open)
+    XCTAssertTrue(open.waitForExistence(timeout:20),"The radar full-list entry must wait for the platform response")
+    open.tap()
+    let full=app.descendants(matching:.any).matching(identifier:"account-daily-full").firstMatch
+    XCTAssertTrue(full.waitForExistence(timeout:10))
+    let count=app.staticTexts["account-daily-full-count"]
+    XCTAssertTrue(count.waitForExistence(timeout:10))
+    XCTAssertTrue(count.label.contains("共 30 首"),"The radar list must expose all returned rows")
+    XCTAssertTrue(count.label.contains("Synthetic QQ Radar"),"The radar list must stay bound to the QQ fixture account")
+    let first=app.buttons["account-daily-full-play-0"]
+    XCTAssertTrue(first.waitForExistence(timeout:10));XCTAssertTrue(first.isHittable)
+    first.press(forDuration:1.2)
+    let bar=app.descendants(matching:.any).matching(identifier:"account-daily-selection-bar").firstMatch
+    XCTAssertTrue(bar.waitForExistence(timeout:5),"A long press must enter radar batch selection")
+    XCTAssertTrue(bar.label.contains("已选 1 / 30 首"),"The first radar row must be selected")
+    image("Radar long press enters batch selection")
+    app.buttons["account-daily-full-play-1"].tap()
+    for _ in 0..<20 {if bar.label.contains("已选 2 / 30 首"){break};usleep(200_000)}
+    XCTAssertTrue(bar.label.contains("已选 2 / 30 首"),"The second radar row must join the selection")
+    image("Radar selection contains two returned rows")
+    app.buttons["account-daily-action-下一首"].tap()
+    XCTAssertTrue(app.staticTexts["已添加 2 首到下一首播放"].waitForExistence(timeout:10))
+    XCTAssertTrue(waitForGone(bar,timeout:10))
+    app.buttons["account-daily-full-close"].tap()
+    XCTAssertTrue(waitForGone(full,timeout:10))
+    let player=app.buttons["打开播放页"]
+    XCTAssertTrue(player.waitForExistence(timeout:15),"A radar batch next must create the visible authoritative queue")
+    player.tap()
+    let queueEntry=app.buttons["查看播放队列"]
+    XCTAssertTrue(queueEntry.waitForExistence(timeout:10));queueEntry.tap()
+    let fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
+    XCTAssertTrue(fullQueue.waitForExistence(timeout:10));fullQueue.tap()
+    for label in ["1. Synthetic Radar 1","2. Synthetic Radar 2"]{
+      XCTAssertTrue(app.buttons[label].waitForExistence(timeout:10),"Radar batch next must preserve selected order: \(label)")
+    }
+    image("Radar batch next preserves authoritative queue order")
+    let fixtureState=try control()
+    XCTAssertEqual(fixtureState["authFailures"] as? Int,0)
+    XCTAssertGreaterThanOrEqual(fixtureState["requests"] as? Int ?? 0,1)
+    let clear=app.buttons["清空播放队列"]
+    if clear.exists{clear.tap();app.alerts.buttons["清空"].tap()}
+    let closeQueue=app.buttons["收起队列"]
+    if closeQueue.exists{closeQueue.tap()}
+    let optionsClose=app.buttons["收起播放选项"].firstMatch
+    if optionsClose.exists{optionsClose.tap()}
+    let collapse=app.buttons["收起播放页"].firstMatch
+    if collapse.exists{collapse.tap()}
+  }
   func testAccountFmStationContinuation() throws {
     let app=XCUIApplication()
     app.launchEnvironment["NEXUS_UI_ACCOUNT_FM_FIXTURE"]="1"

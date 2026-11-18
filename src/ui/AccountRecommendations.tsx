@@ -151,6 +151,6 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
         {(fm.phase==='error'||fm.phase==='empty')&&action(fm.phase==='empty'?'换一批':'重试',()=>{void loadFm(account!,true,fm.phase==='empty');},'account-fm-retry')}
       </View>
     </View>}
-    {account&&<AccountTrackListModal services={services} tracks={daily.tracks} title={dailyName} subtitle={`${account.displayName??account.label} · ${daily.kind==='tx_official_daily'?'QQ 音乐官方每日推荐':daily.kind==='tx_radar'?'QQ 音乐私人雷达':daily.kind==='kugou_daily'?'酷狗每日推荐':'网易云每日推荐'} · 按平台返回顺序`} note={daily.message} visible={dailyOpen} onClose={()=>setDailyOpen(false)} prefix="account-daily"/>}
+    {account&&<AccountTrackListModal services={services} tracks={daily.tracks} title={dailyName} subtitle={`${account.displayName??account.label} · ${daily.kind==='tx_official_daily'?'QQ 音乐官方每日推荐':daily.kind==='tx_radar'?'QQ 音乐私人雷达':daily.kind==='kugou_daily'?'酷狗每日推荐':'网易云每日推荐'} · 按平台返回顺序`} note={daily.message} visible={dailyOpen} onClose={()=>setDailyOpen(false)} prefix="account-daily" selectionEnabled={daily.kind==='tx_radar'}/>}
   </View>;
 }

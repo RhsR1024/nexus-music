@@ -163,6 +163,7 @@ let libraryMoveHold=false,libraryMoveCompleted=0;
 const heldLibraryMoves=[];
 counts.accountFm={mode:'normal',holdNext:false,held:0,released:0,requests:[],authFailures:0,daily:0,coverMetadata:0};
 counts.accountDaily={requests:0,authFailures:0};
+counts.accountRadar={requests:0,authFailures:0};
 let heldAccountFmResponses=[];
 let wyRepliesNextPageFails=true;
 let qqCommentsMode='normal',qqCommentsNextPageFails=true,qqRepliesNextPageFails=true,qqRepliesMode='normal',miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
@@ -176,11 +177,12 @@ const searchUI=process.argv.slice(2).some(target=>target.endsWith('/testSearchHi
 const qishuiUI=process.argv.slice(2).some(target=>target.endsWith('/testQishuiPublicPlaylistImport'));
 const accountFmUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountFmStationContinuation'));
 const accountDailyUI=process.argv.slice(2).some(target=>target.endsWith('/testPlatformDailyFullList'));
+const accountRadarUI=process.argv.slice(2).some(target=>target.endsWith('/testPlatformRadarBatchActions'));
 const accountAvatarUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountAvatarFixture'));
 const qqFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testQQFavoriteFixture'));
 const wyFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteaseFavoriteFixture'));
 const wyPlaylistUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteasePlaylistCreateFixture'));
-const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountDailyUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI||libraryActionsUI;
+const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountDailyUI||accountRadarUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI||libraryActionsUI;
 const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
 lx.on('request',async({source,action})=>{
   if(action!=='musicUrl')throw new Error('unsupported fixture action');
@@ -294,6 +296,11 @@ const handleRequest = async (req, res) => {
     res.setHeader('Content-Type','application/json');
     res.setHeader('Cache-Control','no-store');
     res.end(JSON.stringify(counts.accountDaily));return;
+  }
+  if(accountRadarUI&&req.url?.startsWith('/account-radar-fixture-control')){
+    res.setHeader('Content-Type','application/json');
+    res.setHeader('Cache-Control','no-store');
+    res.end(JSON.stringify(counts.accountRadar));return;
   }
   if(liveCatalogUI&&req.url==='/live-source-index'){
     counts.liveSourceIndex=(counts.liveSourceIndex??0)+1;
@@ -540,6 +547,30 @@ const handleRequest = async (req, res) => {
         dt:120000
       }));
       res.end(JSON.stringify({code:200,data:{dailySongs:songs}}));return;
+    }
+    if(accountRadarUI&&parsed.hostname==='u.y.qq.com'&&parsed.pathname==='/cgi-bin/musicu.fcg'){
+      const cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
+      counts.accountRadar.requests++;
+      if(!/qqmusic_key=synthetic-radar(?:;|$)/.test(cookie)){
+        counts.accountRadar.authFailures++;
+        res.end(JSON.stringify({code:401}));return;
+      }
+      const body=JSON.parse(String(request.body??'{}'));
+      const song=id=>{
+        const number=Number(String(id).slice(1));
+        return {mid:id,title:`Synthetic Radar ${number}`,singer:[{name:'Radar artist'}],album:{mid:'radar-album',name:'Radar album'},file:{media_mid:id,size_128mp3:1000},interval:120};
+      };
+      if(body.radio){
+        const page=Number(body.radio.param?.Page),start=(page-1)*20+1;
+        const rows=Array.from({length:20},(_,index)=>({Track:{mid:`r${String(start+index).padStart(2,'0')}`}}));
+        res.end(JSON.stringify({code:0,radio:{code:0,data:{VecSongs:rows}}}));return;
+      }
+      const result={code:0};
+      for(const key of Object.keys(body).filter(key=>key.startsWith('detail_'))){
+        const id=body[key]?.param?.song_mid;
+        result[key]={code:0,data:{track_info:song(id)}};
+      }
+      res.end(JSON.stringify(result));return;
     }
     if(accountFmUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/v1/radio/get'){
       const number=counts.accountFm.requests.length+1,cookie=String(request.headers?.Cookie??request.headers?.cookie??'');
@@ -1139,7 +1170,7 @@ try {
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountFmStationContinuation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformDailyFullList','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQFavoriteFixture');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountFmStationContinuation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformDailyFullList','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformRadarBatchActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQFavoriteFixture');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
   if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyricsAtAccessibilityXXXL');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');
