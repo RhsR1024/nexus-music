@@ -165,6 +165,7 @@ counts.accountFm={mode:'normal',holdNext:false,held:0,released:0,requests:[],aut
 counts.accountDaily={requests:0,authFailures:0};
 counts.accountRadar={requests:0,authFailures:0};
 counts.accountPlaylists={recommendRequests:0,detailRequests:0,authFailures:0,mode:'normal'};
+counts.accountHeartbeat={requests:0,playlistRequests:0,likeRequests:0,detailRequests:0,intelligenceRequests:0,authFailures:0,mode:'normal'};
 let heldAccountFmResponses=[];
 let wyRepliesNextPageFails=true;
 let qqCommentsMode='normal',qqCommentsNextPageFails=true,qqRepliesNextPageFails=true,qqRepliesMode='normal',miguCommentsMode='normal',miguCommentsNextPageFails=true,miguRepliesNextPageFails=true,miguRepliesMode='normal',kuwoCommentsMode='normal',kuwoCommentsNextPageFails=true,kugouCommentsMode='normal',kugouCommentsNextPageFails=true,kugouRepliesNextPageFails=true;
@@ -180,11 +181,12 @@ const accountFmUI=process.argv.slice(2).some(target=>target.endsWith('/testAccou
 const accountDailyUI=process.argv.slice(2).some(target=>target.endsWith('/testPlatformDailyFullList'));
 const accountRadarUI=process.argv.slice(2).some(target=>target.endsWith('/testPlatformRadarBatchActions'));
 const accountPlaylistsUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountRecommendedPlaylists'));
+const accountHeartbeatUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountHeartbeat'));
 const accountAvatarUI=process.argv.slice(2).some(target=>target.endsWith('/testAccountAvatarFixture'));
 const qqFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testQQFavoriteFixture'));
 const wyFavoriteUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteaseFavoriteFixture'));
 const wyPlaylistUI=process.argv.slice(2).some(target=>target.endsWith('/testNeteasePlaylistCreateFixture'));
-const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountDailyUI||accountRadarUI||accountPlaylistsUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI||libraryActionsUI;
+const fixtureOnlineUI=matchingUI||discoveryUI||searchUI||qishuiUI||accountFmUI||accountDailyUI||accountRadarUI||accountPlaylistsUI||accountHeartbeatUI||accountAvatarUI||qqFavoriteUI||wyFavoriteUI||wyPlaylistUI||libraryActionsUI;
 const unifiedSearchScript=`/**\n * @name Nexus Unified Search Fixture\n * @version 1.0-test\n */
 lx.on('request',async({source,action})=>{
   if(action!=='musicUrl')throw new Error('unsupported fixture action');
@@ -312,6 +314,15 @@ const handleRequest = async (req, res) => {
     res.setHeader('Content-Type','application/json');
     res.setHeader('Cache-Control','no-store');
     res.end(JSON.stringify(counts.accountPlaylists));return;
+  }
+  if(accountHeartbeatUI&&req.url?.startsWith('/account-heartbeat-fixture-control')){
+    const control=new URL(req.url,'http://127.0.0.1');
+    if(control.searchParams.has('reset'))counts.accountHeartbeat={requests:0,playlistRequests:0,likeRequests:0,detailRequests:0,intelligenceRequests:0,authFailures:0,mode:'normal'};
+    const mode=control.searchParams.get('mode');
+    if(mode&&['normal','fallback','liked_single','liked_empty','favorite_missing','recommendations_empty','error','login'].includes(mode))counts.accountHeartbeat.mode=mode;
+    res.setHeader('Content-Type','application/json');
+    res.setHeader('Cache-Control','no-store');
+    res.end(JSON.stringify(counts.accountHeartbeat));return;
   }
   if(liveCatalogUI&&req.url==='/live-source-index'){
     counts.liveSourceIndex=(counts.liveSourceIndex??0)+1;
@@ -561,6 +572,47 @@ const handleRequest = async (req, res) => {
     }
     if(accountPlaylistsUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/v3/discovery/recommend/songs'){
       res.end(JSON.stringify({code:200,data:{dailySongs:[]}}));return;
+    }
+    if(accountHeartbeatUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/v3/discovery/recommend/songs'){
+      res.end(JSON.stringify({code:200,data:{dailySongs:[]}}));return;
+    }
+    if(accountHeartbeatUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/v1/discovery/recommend/resource'){
+      res.end(JSON.stringify({code:200,recommend:[]}));return;
+    }
+    if(accountHeartbeatUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/user/playlist'){
+      counts.accountHeartbeat.requests++;
+      const cookie=String(request.headers?.Cookie??request.headers?.cookie??''),body=new URLSearchParams(request.body??'');
+      const authenticated=request.method==='POST'&&/MUSIC_U=synthetic-heartbeat(?:;|$)/.test(cookie)&&/^[^&]+$/.test(body.get('params')??'')&&/^[a-f0-9]{256}$/.test(body.get('encSecKey')??'');
+      if(!authenticated){counts.accountHeartbeat.authFailures++;res.end(JSON.stringify({code:401}));return;}
+      if(counts.accountHeartbeat.mode==='login'){res.end(JSON.stringify({code:401}));return;}
+      if(counts.accountHeartbeat.mode==='error'){res.end(JSON.stringify({code:503}));return;}
+      const favorite={id:'7901',name:'我喜欢的音乐',specialType:10,creator:{userId:'9000000000000000008'},trackCount:3};
+      const decoy={id:'7900',name:'Synthetic other list',specialType:10,creator:{userId:'9000000000000000009'},trackCount:1};
+      res.end(JSON.stringify({code:200,playlist:counts.accountHeartbeat.mode==='favorite_missing'?[decoy]:[decoy,favorite]}));return;
+    }
+    if(accountHeartbeatUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/v3/playlist/detail'){
+      counts.accountHeartbeat.requests++;counts.accountHeartbeat.playlistRequests++;
+      if(counts.accountHeartbeat.mode==='fallback'||counts.accountHeartbeat.mode==='liked_single'){res.end(JSON.stringify({code:503}));return;}
+      const trackIds=counts.accountHeartbeat.mode==='liked_empty'?[]:[{id:'9901'},{id:'9902'},{id:'9903'},{id:'9902'}];
+      res.end(JSON.stringify({code:200,playlist:{id:'7901',name:'我喜欢的音乐',trackIds}}));return;
+    }
+    if(accountHeartbeatUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/song/like/get'){
+      counts.accountHeartbeat.requests++;counts.accountHeartbeat.likeRequests++;
+      const ids=counts.accountHeartbeat.mode==='liked_empty'?[]:counts.accountHeartbeat.mode==='liked_single'?['9901']:['9901','9902','9903'];
+      res.end(JSON.stringify({code:200,ids}));return;
+    }
+    if(accountHeartbeatUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/playmode/intelligence/list'){
+      counts.accountHeartbeat.requests++;counts.accountHeartbeat.intelligenceRequests++;
+      if(counts.accountHeartbeat.mode==='recommendations_empty'){res.end(JSON.stringify({code:200,data:{list:[]}}));return;}
+      res.end(JSON.stringify({code:200,data:{list:[{songInfo:{id:'9902'}},{songInfo:{id:'9904'}},{song:{id:'9905'}},{songInfo:{id:'9904'}}]}}));return;
+    }
+    if(accountHeartbeatUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/v3/song/detail'){
+      counts.accountHeartbeat.requests++;counts.accountHeartbeat.detailRequests++;
+      const ids=['9901','9902','9903','9904','9905'];
+      res.end(JSON.stringify({code:200,songs:ids.map(id=>({
+        id,name:`Synthetic Heartbeat ${id}`,ar:[{id:'fixture-heartbeat-artist',name:'Heartbeat artist'}],
+        al:{id:'fixture-heartbeat-album',name:'Heartbeat album',picUrl:'http://127.0.0.1:18439/account-playlist-cover.png'},dt:120000
+      }))}));return;
     }
     if(accountPlaylistsUI&&parsed.hostname==='music.163.com'&&parsed.pathname==='/weapi/v1/discovery/recommend/resource'){
       counts.accountPlaylists.recommendRequests++;
@@ -1216,7 +1268,7 @@ try {
   // Always spell out the entry: a previous fixture build must not leak into a
   // later normal-navigation or distribution build via incremental settings.
   args.push(`ENTRY_FILE=${resolve(entryFile??'index.ts')}`);
-  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountFmStationContinuation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformDailyFullList','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformRadarBatchActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountRecommendedPlaylists','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQFavoriteFixture');
+  if(!fixtureOnlineUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testOnlineMatching','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSourceHealth','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicQQComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicMiguComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKuwoComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPublicKugouComments','-skip-testing:NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testStyleRecommendation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testSearchHistoryAndStates','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSongAlbumArtistSearch','-skip-testing:NexusMusicUITests/SourceSettingsTests/testUnifiedSearchAggregateFivePlatformMatrix','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQishuiPublicPlaylistImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountFmStationContinuation','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformDailyFullList','-skip-testing:NexusMusicUITests/SourceSettingsTests/testPlatformRadarBatchActions','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountRecommendedPlaylists','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAccountHeartbeat','-skip-testing:NexusMusicUITests/SourceSettingsTests/testQQFavoriteFixture');
   if(!sequentialLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testSequentialTTMLLyrics');
   if(!amllLyricsUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyrics','-skip-testing:NexusMusicUITests/SourceSettingsTests/testAMLLProfileLyricsAtAccessibilityXXXL');
   if(!navidromeNavigationUI)args.push('-skip-testing:NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory');

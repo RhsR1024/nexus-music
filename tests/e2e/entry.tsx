@@ -78,6 +78,26 @@ const initialize=()=>pending??=(async()=>{
     const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000007',cookies:Object.freeze({MUSIC_U:'synthetic-account-playlists',__csrf:'synthetic-account-playlists-csrf'})});
     await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Recommended Playlists',username,displayName:'Synthetic NetEase Recommended Playlists',capabilities:['daily']},session);
   }
+  const heartbeatFixture=native.launchArgument('NEXUS_UI_ACCOUNT_HEARTBEAT_FIXTURE');
+  if(heartbeatFixture){
+    // Simulator-only NetEase account for the real heartbeat provider and
+    // authoritative queue. Only provider transport reaches the local fixture.
+    for(const existing of services.musicAccounts.getSnapshot())if(existing.platform==='wy'||existing.platform==='tx'||existing.platform==='kg')await services.musicAccounts.remove(existing.id);
+    const username='netease:9000000000000000008';
+    const accountId=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,JSON.stringify(['wy',username]));
+    const session=Object.freeze({version:1,platform:'wy',accountId,userId:'9000000000000000008',cookies:Object.freeze({MUSIC_U:'synthetic-heartbeat',__csrf:'synthetic-heartbeat-csrf'})});
+    await services.musicAccounts.save({platform:'wy',label:'Synthetic NetEase Heartbeat',username,displayName:'Synthetic NetEase Heartbeat',capabilities:['daily','fm']},session);
+    const fixtureTrack=(id:string,title:string)=>({origin:{kind:'online' as const,platform:'wy' as const,id},title,artist:'Heartbeat artist',album:'Heartbeat album',durationMs:120000,metadata:{},qualities:[]});
+    const seed=fixtureTrack('9902','Synthetic Heartbeat 9902');
+    if(heartbeatFixture==='current'){
+      services.playback.controller.setQueue({entries:[
+        {id:'fixture-old-queue',track:fixtureTrack('9800','Synthetic Old Queue')},
+        {id:'fixture-heartbeat-seed',track:seed},
+      ],currentId:'fixture-heartbeat-seed',priorityIds:[]});
+    }else{
+      services.playback.controller.setQueue({entries:[],currentId:null,priorityIds:[]});
+    }
+  }
   if(native.launchArgument('NEXUS_UI_QQ_FAVORITE_FIXTURE')==='1'){
     // Separate simulator-only QQ account. The favorite action uses the real
     // account store, Keychain session and provider; only provider transport is

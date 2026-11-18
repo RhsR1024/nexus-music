@@ -24,17 +24,20 @@ const idlePlaylists:PlaylistPanel={phase:'idle',items:[],message:'',login:false}
 export function AccountRecommendations({services,openAccounts}:{services:Services;openAccounts:()=>void}){
   const {palette:p}=useTheme();
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
+  const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const supported=accounts.filter(item=>item.platform==='wy'||item.platform==='kg'||item.platform==='tx');
   const [selectedId,setSelectedId]=useState<string|undefined>();
   const account=supported.find(item=>item.id===selectedId)??supported[0];
   const [daily,setDaily]=useState<Panel>(idle),[fm,setFm]=useState<Panel>(idle);
+  const [heartbeat,setHeartbeat]=useState<Panel>(idle);
   const [playlists,setPlaylists]=useState<PlaylistPanel>(idlePlaylists);
   const [playlistOpen,setPlaylistOpen]=useState<AccountRecommendedPlaylist|null>(null);
   const [dailyOpen,setDailyOpen]=useState(false);
-  const dailyAbort=useRef<AbortController|null>(null),fmAbort=useRef<AbortController|null>(null),playlistAbort=useRef<AbortController|null>(null);
-  const dailyOp=useRef(0),fmOp=useRef(0),playlistOp=useRef(0);
+  const dailyAbort=useRef<AbortController|null>(null),fmAbort=useRef<AbortController|null>(null),playlistAbort=useRef<AbortController|null>(null),heartbeatAbort=useRef<AbortController|null>(null);
+  const dailyOp=useRef(0),fmOp=useRef(0),playlistOp=useRef(0),heartbeatOp=useRef(0);
   const dailyName=account?.platform==='tx'&&daily.kind!=='tx_official_daily'?'私人雷达':'每日推荐';
   const playlistSupported=account?.platform==='wy'||account?.platform==='tx';
+  const currentTrack=playback.queue.entries.find(entry=>entry.id===playback.queue.currentId)?.track;
 
   async function loadDaily(target:MusicAccount,force:boolean){
     const op=++dailyOp.current,controller=new AbortController();
@@ -124,12 +127,33 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     }
   }
 
+  async function startHeartbeat(target:MusicAccount){
+    if(target.platform!=='wy')return;
+    const op=++heartbeatOp.current,controller=new AbortController();
+    heartbeatAbort.current?.abort();heartbeatAbort.current=controller;
+    setHeartbeat(previous=>({...previous,phase:'loading',message:'',login:false}));
+    try{
+      const session=await services.musicAccounts.session(target.id);
+      const state=services.playback.controller.getSnapshot();
+      const current=state.queue.entries.find(entry=>entry.id===state.queue.currentId)?.track;
+      const result=await services.accountHeartbeat.start(target,session,current,controller.signal);
+      if(op!==heartbeatOp.current||controller.signal.aborted)return;
+      services.playTracks(result.tracks,0);
+      setHeartbeat({phase:'ready',tracks:result.tracks,message:result.source==='current'?'已从当前歌曲开启心动模式':'已使用“我喜欢的音乐”开启心动模式',login:false});
+    }catch(error){
+      if(op!==heartbeatOp.current||controller.signal.aborted)return;
+      const message=failure(error,'心动模式暂时不可用，请稍后重试');
+      if(!message)return;
+      setHeartbeat(previous=>({...previous,phase:'error',tracks:message===LOGIN?[]:previous.tracks,message:message===LOGIN?message:`心动模式开启失败：${message}`,login:message===LOGIN}));
+    }
+  }
+
   useLayoutEffect(()=>{
-    dailyOp.current++;fmOp.current++;playlistOp.current++;
-    dailyAbort.current?.abort();fmAbort.current?.abort();playlistAbort.current?.abort();
-    setDaily(idle);setFm(idle);setPlaylists(idlePlaylists);setDailyOpen(false);setPlaylistOpen(null);
+    dailyOp.current++;fmOp.current++;playlistOp.current++;heartbeatOp.current++;
+    dailyAbort.current?.abort();fmAbort.current?.abort();playlistAbort.current?.abort();heartbeatAbort.current?.abort();
+    setDaily(idle);setFm(idle);setHeartbeat(idle);setPlaylists(idlePlaylists);setDailyOpen(false);setPlaylistOpen(null);
     if(account){void loadDaily(account,false);if(account.platform==='wy'||account.platform==='tx')void loadPlaylists(account,false);}
-    return()=>{dailyOp.current++;fmOp.current++;playlistOp.current++;dailyAbort.current?.abort();fmAbort.current?.abort();playlistAbort.current?.abort();};
+    return()=>{dailyOp.current++;fmOp.current++;playlistOp.current++;heartbeatOp.current++;dailyAbort.current?.abort();fmAbort.current?.abort();playlistAbort.current?.abort();heartbeatAbort.current?.abort();};
   },[account]);
   useEffect(()=>{
     if(daily.phase==='idle'||daily.phase==='empty'||!daily.tracks.length)setDailyOpen(false);
@@ -190,6 +214,17 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:4}}>
         <Pressable testID="account-fm-start" accessibilityRole="button" accessibilityLabel="播放私人FM" onPress={()=>{void loadFm(account!,false,true);}} disabled={fm.phase==='loading'} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:fm.phase==='loading'?.65:1}}>{fm.phase==='loading'?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="radio-outline" size={20} color="#FFFFFF"/>}<Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>{fm.tracks.length?'播放本批私人FM':'播放私人FM'}</Text></Pressable>
         {(fm.phase==='error'||fm.phase==='empty')&&action(fm.phase==='empty'?'换一批':'重试',()=>{void loadFm(account!,true,fm.phase==='empty');},'account-fm-retry')}
+      </View>
+    </View>}
+    {account?.platform==='wy'&&<View testID="account-heartbeat" style={{gap:8,marginTop:10,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
+      <View><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>心动模式</Text><Text style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>智能推荐队列 · {currentTrack?`当前歌曲：${currentTrack.title}`:'当前没有播放歌曲时，会从“我喜欢的音乐”随机选择种子。'}</Text></View>
+      {heartbeat.phase==='loading'&&<View style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:4}}><ActivityIndicator size="small" color={p.accent}/><Text style={{fontSize:12,color:p.secondary}}>正在根据喜欢歌曲构建心动队列…</Text></View>}
+      {heartbeat.phase==='error'&&<Text testID="account-heartbeat-error" accessibilityRole="alert" style={{fontSize:12,lineHeight:20,color:p.accent}}>{heartbeat.message}</Text>}
+      {heartbeat.phase==='ready'&&<><Text testID="account-heartbeat-message" accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:20,color:p.secondary}}>{heartbeat.message}</Text><Text testID="account-heartbeat-summary" style={{fontSize:11,lineHeight:18,color:p.secondary}}>已加入 {heartbeat.tracks.length} 首，种子：{heartbeat.tracks[0]?.title??'未知歌曲'}</Text></>}
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+        <Pressable testID="account-heartbeat-start" accessibilityRole="button" accessibilityLabel="开启心动模式" onPress={()=>{void startHeartbeat(account!);}} disabled={heartbeat.phase==='loading'} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:heartbeat.phase==='loading'?.65:1}}>{heartbeat.phase==='loading'?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="heart-outline" size={20} color="#FFFFFF"/>}<Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>{heartbeat.phase==='ready'?'重新开启心动模式':'开启心动模式'}</Text></Pressable>
+        {heartbeat.phase==='error'&&!heartbeat.login&&action('重试',()=>{void startHeartbeat(account!);},'account-heartbeat-retry')}
+        {heartbeat.phase==='error'&&heartbeat.login&&action('去登录',openAccounts,'account-heartbeat-login')}
       </View>
     </View>}
     {account&&<AccountTrackListModal services={services} tracks={daily.tracks} title={dailyName} subtitle={`${account.displayName??account.label} · ${daily.kind==='tx_official_daily'?'QQ 音乐官方每日推荐':daily.kind==='tx_radar'?'QQ 音乐私人雷达':daily.kind==='kugou_daily'?'酷狗每日推荐':'网易云每日推荐'} · 按平台返回顺序`} note={daily.message} visible={dailyOpen} onClose={()=>setDailyOpen(false)} prefix="account-daily" selectionEnabled={daily.kind==='tx_radar'}/>}

@@ -2771,6 +2771,129 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertGreaterThanOrEqual((state["recommendRequests"] as? NSNumber)?.intValue ?? 0,4)
     image("Recommended playlists recover after retry")
   }
+  func testAccountHeartbeat() throws {
+    let app=XCUIApplication()
+    app.launchEnvironment["NEXUS_UI_ACCOUNT_HEARTBEAT_FIXTURE"]="current"
+    app.launch()
+    func image(_ name:String){let shot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
+    func control(_ query:String="") throws -> [String:Any] {
+      let suffix=query.isEmpty ? "" : "?\(query)&"
+      let url=URL(string:"http://127.0.0.1:18439/account-heartbeat-fixture-control\(suffix)t=\(Date().timeIntervalSince1970)")!
+      return try XCTUnwrap(JSONSerialization.jsonObject(with:Data(contentsOf:url)) as? [String:Any])
+    }
+    func reveal(_ element:XCUIElement){
+      for _ in 0..<32 {
+        if waitForHittable(element,timeout:0.2){return}
+        let above=element.exists&&element.frame.midY<app.frame.midY
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.35:0.7))
+          .press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:above ? 0.7:0.35)))
+      }
+      XCTAssertTrue(waitForHittable(element,timeout:5),"Heartbeat element must be reachable: \(element)")
+    }
+    func tapVisible(_ element:XCUIElement,_ name:String){
+      if waitForHittable(element,timeout:5){element.tap();return}
+      XCTAssertTrue(hasVisibleFrame(element,in:app),"\(name) must retain a visible frame before its final transition")
+      element.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()
+    }
+    func closeIfPresent(_ label:String){
+      let control=app.buttons[label].firstMatch
+      guard control.waitForExistence(timeout:5) else{return}
+      tapVisible(control,label)
+      _=waitForGone(control,timeout:5)
+    }
+    func goLibrary(){
+      closeIfPresent("收起队列")
+      closeIfPresent("收起播放选项")
+      closeIfPresent("收起播放页")
+      let rail=app.descendants(matching:.any).matching(identifier:"rail-tab-library").firstMatch
+      let tab=rail.exists ? rail:app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch
+      XCTAssertTrue(tab.waitForExistence(timeout:15),"All player overlays must dismiss before the library tab returns")
+      XCTAssertTrue(waitForHittable(tab,timeout:10));tab.tap()
+    }
+    func openQueue(_ count:Int){
+      let player=app.buttons["打开播放页"];XCTAssertTrue(player.waitForExistence(timeout:15));reveal(player);player.tap()
+      let queue=app.buttons["查看播放队列"].firstMatch;XCTAssertTrue(queue.waitForExistence(timeout:10));reveal(queue);queue.tap()
+      let full=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch
+      XCTAssertTrue(full.waitForExistence(timeout:10));XCTAssertEqual(full.label,"完整队列与拖动排序 · \(count) 首");reveal(full);full.tap()
+    }
+    _=try control("reset=1")
+    goLibrary()
+    let start=app.buttons["account-heartbeat-start"]
+    reveal(start)
+    XCTAssertTrue(start.waitForExistence(timeout:20),"The NetEase heartbeat action must render for an account")
+    start.tap()
+    let message=app.staticTexts["account-heartbeat-message"]
+    XCTAssertTrue(message.waitForExistence(timeout:20),"The current-song success message must publish after the real provider and queue replacement")
+    XCTAssertEqual(message.label,"已从当前歌曲开启心动模式")
+    let summary=app.staticTexts["account-heartbeat-summary"]
+    XCTAssertTrue(summary.waitForExistence(timeout:10))
+    XCTAssertTrue(summary.label.contains("已加入 3 首"),"The seed and two successful recommendation details must reach the authoritative queue")
+    XCTAssertTrue(summary.label.contains("Synthetic Heartbeat 9902"))
+    image("Heartbeat builds from the current liked NetEase song")
+    openQueue(3)
+    for label in ["1. Synthetic Heartbeat 9902","2. Synthetic Heartbeat 9904","3. Synthetic Heartbeat 9905"]{
+      XCTAssertTrue(app.buttons[label].waitForExistence(timeout:10),"Heartbeat must preserve seed-first deduplicated order: \(label)")
+    }
+    XCTAssertFalse(app.buttons["1. Synthetic Old Queue"].exists,"Heartbeat must replace, not append to, the old queue")
+    image("Heartbeat replaces the authoritative queue and keeps seed-first order")
+    // Leave the nested queue modal through a real app restart. This also proves
+    // the stored NetEase session is reused by the next heartbeat attempt.
+    app.terminate();app.launch()
+    goLibrary()
+
+    _=try control("mode=liked_single")
+    reveal(start);start.tap()
+    XCTAssertTrue(message.waitForExistence(timeout:20))
+    XCTAssertEqual(message.label,"已使用“我喜欢的音乐”开启心动模式")
+    XCTAssertTrue(summary.label.contains("Synthetic Heartbeat 9901"))
+    image("Heartbeat selects a liked seed when no current liked song exists")
+    openQueue(4)
+    XCTAssertTrue(app.buttons["1. Synthetic Heartbeat 9901"].waitForExistence(timeout:10))
+    for label in ["2. Synthetic Heartbeat 9902","3. Synthetic Heartbeat 9904","4. Synthetic Heartbeat 9905"]{
+      XCTAssertTrue(app.buttons[label].waitForExistence(timeout:10),"A liked seed must remain first while recommendations keep their order: \(label)")
+    }
+    XCTAssertFalse(app.buttons["1. Synthetic Heartbeat 9903"].exists,"Liked-list membership without a recommendation detail must not enter the heartbeat queue")
+    image("Heartbeat liked seed preserves the full ordered recommendation queue")
+    // Restart before the failure matrix: clearing/replacing the queue unmounts
+    // the nested player stack, so dismissing it through hidden controls is not
+    // a reliable observation point for subsequent product states.
+    app.terminate();app.launch()
+    goLibrary()
+
+    func expectFailure(_ mode:String,_ expected:String){
+      _=try? control("mode=\(mode)")
+      let retry=app.buttons["account-heartbeat-retry"]
+      if retry.exists&&retry.isHittable{retry.tap()}
+      else{reveal(start);start.tap()}
+      let error=app.staticTexts["account-heartbeat-error"]
+      XCTAssertTrue(error.waitForExistence(timeout:20),"Heartbeat failure must be visible for \(mode)")
+      XCTAssertEqual(error.label,expected)
+    }
+    expectFailure("favorite_missing","心动模式开启失败：没有找到“我喜欢的音乐”歌单")
+    image("Heartbeat missing favorite playlist is explicit")
+    expectFailure("liked_empty","心动模式开启失败：你的“我喜欢的音乐”还是空的")
+    expectFailure("recommendations_empty","心动模式开启失败：网易云心动模式返回了空列表，请换一首歌再试")
+    expectFailure("error","心动模式开启失败：心动模式暂时不可用，请稍后重试")
+    image("Heartbeat service failure offers retry")
+    _=try control("mode=login")
+    let retry=app.buttons["account-heartbeat-retry"]
+    if retry.exists&&retry.isHittable{retry.tap()}else{reveal(start);start.tap()}
+    let loginError=app.staticTexts["account-heartbeat-error"]
+    XCTAssertTrue(loginError.waitForExistence(timeout:20))
+    XCTAssertEqual(loginError.label,"登录已失效，请重新登录")
+    XCTAssertTrue(app.buttons["account-heartbeat-login"].waitForExistence(timeout:10),"Expired NetEase login must route to the existing account entry")
+    image("Heartbeat expired login routes to account settings")
+    let state=try control()
+    XCTAssertEqual((state["authFailures"] as? NSNumber)?.intValue,0,"Every fixture request must use the stored NetEase session")
+    XCTAssertGreaterThanOrEqual((state["intelligenceRequests"] as? NSNumber)?.intValue ?? 0,3)
+
+    openSettings(app,page:"accounts")
+    let remove=app.buttons["remove-music-account-wy"]
+    XCTAssertTrue(remove.waitForExistence(timeout:10));remove.tap()
+    XCTAssertTrue(app.buttons["login-music-account-wy"].waitForExistence(timeout:10))
+    goLibrary()
+    XCTAssertFalse(app.descendants(matching:.any).matching(identifier:"account-heartbeat").firstMatch.exists,"Heartbeat entry must disappear after account removal")
+  }
   func testAccountFmStationContinuation() throws {
     let app=XCUIApplication()
     app.launchEnvironment["NEXUS_UI_ACCOUNT_FM_FIXTURE"]="1"
