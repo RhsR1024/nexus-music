@@ -326,7 +326,7 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
       </SheetModal>
       {open&&panel&&<View style={{position:'absolute',left:0,right:0,top:0,bottom:0}}>
         <Pressable accessibilityRole="button" accessibilityLabel="关闭面板" onPress={()=>{setPanelReturnsToMenu(false);setPanel(null);}} style={{flex:1,backgroundColor:'rgba(24,18,16,0.28)'}}/>
-        <SafeAreaView edges={['bottom']} style={{maxHeight:'78%',borderTopLeftRadius:28,borderTopRightRadius:28,overflow:'hidden'}}>
+        <SafeAreaView edges={['bottom']} style={{maxHeight:'86%',borderTopLeftRadius:28,borderTopRightRadius:28,overflow:'hidden'}}>
           <LinearGradient colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
           <View style={{alignSelf:'center',width:38,height:4.5,borderRadius:2.25,backgroundColor:s.dark?'rgba(255,255,255,0.28)':'rgba(60,48,50,0.26)',marginTop:10}}/>
           <ScrollView testID="playback-control-panel-scroll" contentContainerStyle={{paddingBottom:20}}>

@@ -133,7 +133,7 @@ export function LyricOffsetPanel({services,track,onBack}:{services:Services;trac
 const makeStyles=(theme:Theme)=>{
   const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   return StyleSheet.create({
-  root:{flexGrow:1,backgroundColor:'transparent',paddingHorizontal:20,paddingBottom:space.xxl,gap:14},
+  root:{flexGrow:1,backgroundColor:'transparent',paddingHorizontal:20,paddingBottom:space.xxl,gap:12},
   topRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:12},
   back:{flexDirection:'row',alignItems:'center',gap:2,minHeight:40},
   backText:{fontSize:14,color:s.muted},

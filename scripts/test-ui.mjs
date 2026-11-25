@@ -1431,7 +1431,14 @@ try {
     writeFileSync(resolve(runDirectory,'ui-summary.json'),summaryJSON);
     const summary=JSON.parse(summaryJSON);
     console.log(`UI results: ${summary.passedTests} passed, ${summary.failedTests} failed, ${summary.skippedTests} skipped; ${resultPath}`);
-    for(const failure of summary.testFailures??[])console.error(`${failure.testIdentifierString}: ${failure.failureText}`);
+    for(const failure of summary.testFailures??[]){
+      const line=`${failure.testIdentifierString}: ${failure.failureText}`;
+      console.error(line);
+      if(process.env.GITHUB_ACTIONS==='true'){
+        const clean=line.replace(/[\r\n]+/g,' ').slice(0,500);
+        console.log(`::error title=UI test failure::${clean}`);
+      }
+    }
     if(summary.failedTests>0){
       try{console.log(`Failure screenshots and text: ${exportFailureEvidence(resultPath,summary.testFailures.map(failure=>failure.testIdentifierString))}`);}
       catch(error){console.error(`Failure attachment export unavailable: ${error.message}; original result: ${resultPath}`);}
