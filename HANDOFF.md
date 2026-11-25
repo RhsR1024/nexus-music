@@ -1,3 +1,9 @@
+## 2026-11-25 用户最新指令：全量功能收口 + 前端 UI 恢复 ≥90% Sollin 对齐（决策 0082）
+
+用户明确要求持续推进直到完成所有任务功能开发与前端 UI 与 Sollin 对齐，尽量做到 UI 90% 以上复刻参考，做不到必须说明理由（当前实现 UI 过于粗糙）。此指令覆盖 0079 中“取消全局 90% UI 相似度门槛”的放宽，详见[决策0082](docs/decisions/0082-sollin-ui-90-fidelity-restoration.md)。保留音枢特有能力、reverse-skill 证据门禁、唯一权威队列与隐私/许可边界。
+
+同步复核并提交 2026-11-18 遗留未提交的 TTML 内联与引用样式批次（产品提交 `bf0606f`）：`npm run check` 1161/1161、`npm run test:native` 通过（含 `LyricInlineStyleTests.swift`），常规字号 `SourceUITests-1794989536225` 与 XXXL `SourceUITests-1794989904242` 均 1/0/0、`sourceUnchanged=true`、`verifyCaptureEvidence` `ready:true` 且双图亲看通过；刷新本机 `tool-index` 后 `sollin-reverse-gate.mjs ipa --review` 通过（61E/26WI/131/52F/52P、0 错误/0 警告）。见[TTML样式回执](docs/2026-11-25-ttml-inline-style-report.md)。随后按波次全面重构全站 Sollin UI 与补齐剩余功能。
+
 ## 2026-11-18 音乐库歌曲列表弹层歌单封面
 
 音乐库歌单弹层此前只测到列表/详情封面；目标歌单为空，`track-list-cover` 实际视觉未验。现补仅模拟器夹具：正式 `LibraryStore.createPlaylist` 创建含单曲歌单，歌单封面可用、首曲 artwork 故意不可用；XCTest 打开歌单详情→全部歌曲与批量管理，断言 `track-list-cover-image` 出现，证明弹层使用歌单封面而非首曲。产品逻辑未改，正式Release`SourceUITests-1794986935325`为1/0/0、29.309秒、sourceUnchanged，源码digest`8df9aa8f…0085`、安装bundle`3d86f254…9a7d`、resultInfo`b272d53c…f2a6`；1张1290×2796图亲看，索引`47937fc8…eeed`。`npm run check`1156/1156、typecheck、Swift/Node/diff通过。真实大歌单/封面CDN、实体机、VoiceOver/字号/小屏、签名和iOS27仍开放；不增加Sollin页面完成量，J24与完整F11/F23不关闭，整体active。见[回执](docs/2026-11-18-library-track-list-cover-modal-report.md)与[UI规格](docs/ui-spec/library-track-list-cover-modal-2026-11-18.md)。
