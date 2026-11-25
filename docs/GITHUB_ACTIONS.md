@@ -1,3 +1,15 @@
+## 2026-11-26 单 Job 180 分钟超时定位与 iOS 27 并行分片（零删测）
+
+Run #340（`45690622785` / `d8cfe41`）中 `checks` 通过，`ios` 的 **Steps 1–13 零失败全部通过**（Step 10 核心 25 项 133m41s、Step 11 睡眠 5 项 16m17s、Step 12 音乐库动作 9m36s、Step 13 网易云歌单创建 4m05s），仅在 Step 14 因单 Job 达到 3 小时执行上限（`timeout-minutes: 180`）被系统取消（官方 Annotation：`The job has exceeded the maximum execution time of 3h0m0s`，零测试失败）。
+
+本次保持 `queue: single`、`cancel-in-progress: false`、iOS 27 工具链门禁与**全部 45 项 UI 测试 + 原生契约测试原样不删减**，将原串行单 Job 拆分为 3 个并行 `xcode-27` 测试 Job（各 `timeout-minutes: 150`）+ 1 个汇总门禁归档 Job：
+1. `ios-core`（原 Step 10 前 14 项：核心皮肤/外观/动态背景/源管理）；
+2. `ios-playback`（原 Step 10 后 11 项：均衡器/字体歌词/歌单/云同步/备份/WebDAV/本地音频/Navidrome）；
+3. `ios-features`（原 Steps 11–15 全部 20 项：睡眠定时/库动作/平台歌单/跨平台歌词与匹配/源健康/漫途导入/搜索/TTML/断网下载）；
+4. `ios`（`needs: [checks, ios-core, ios-playback, ios-features]`，`timeout-minutes: 60`）：全部测试通过后执行 `npm run test:native` 与 `npm run ios:archive`，上传同名无签名产物 `NexusMusic-iOS27-unsigned-${{ github.sha }}`。
+
+各分片均独立上传不重名的紧凑日志/失败取证/诊断产物，待新一次云端运行实际终态验证。
+
 ## 2026-11-03 嵌套测试摘要进入紧凑诊断产物
 
 `78018c7`/`41510740220`在第11步`testSequentialTTMLLyrics`失败后，完整诊断756,359,033字节超过当前下载通道512 MiB上限；原紧凑包仅保留顶层日志，缺少子命令目录中的`ui-summary.json`与`ui-catalog.log`，网络中断不能据此归因为具体 XCTest 或产品故障。

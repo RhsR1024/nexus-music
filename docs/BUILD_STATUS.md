@@ -1,3 +1,9 @@
+## 2026-11-26 iOS 27 Run #340 Steps 1–13 零失败与并行分片交付
+
+- **提交 `d8cfe41` 清洁本地无签名 IPA**：`build/distribution-20261126-d8cfe41/NexusMusic-unsigned.ipa`（`17,998,273` 字节，SHA-256 `c2555b548af35ea2beeab26a365aa2455770de9579e832cf6302c9ea04764f13`），`dirty: false` / `workingTreeChanges: []`、`arm64` / `iphoneos26.2` / `minimumOS 15.1` / `deviceFamilies [1,2]`、`signed: false`，`verify-archive.mjs`、ZIP CRC、零私源/零测试标记/未签名检查全通过，且已镜像校验归档至 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-26-sollin-final-d8cfe41/`（`T7_SHA_MATCH_OK`，历史 `build/distribution` 符号链接保持完整）。
+- **云端 iOS 27 Run #340（`45690622785` / `d8cfe41`）**：`checks` 通过，`ios` **Steps 1–13 全部通过、零测试失败**（Step 10 133m41s、Step 11 16m17s、Step 12 9m36s、Step 13 4m05s），仅在 Step 14 触发单 Job 3 小时上限（`timeout-minutes: 180`）取消。
+- **工作流零删测并行拆分**：将 `.github/workflows/ios.yml` 拆分为 `ios-core`（14 项）、`ios-playback`（11 项）、`ios-features`（20 项）并行验证 + 汇总门禁 `ios`（`npm run test:native` + `npm run ios:archive` + `NexusMusic-iOS27-unsigned-<sha>`），45 项 UI 测试与 `queue: single` / `cancel-in-progress: false` 完整保留，推送后跟踪最新云端 iOS 27 终态。
+
 ## 2026-11-26 iOS 27 Run #338 Step 10 全通与 Step 11/14 两处精准收口
 
 - **提交 `84ca6d0` 本地干净无签名 IPA**：`dirty: false` / `workingTreeChanges: []`、`arm64` / `iphoneos26.2` / `minimumOS 15.1` / `deviceFamilies [1,2]`、`signed: false`（`codesign` 未签名）、ZIP CRC 无错、零测试标记/零私源/零签名项；体积 `17,998,058` 字节，SHA-256 `c52e6e22fc1c1f2a90d775f32baa0f72de2147347109a91711e3499ee65e9025`（产物存至 `build/distribution-20261125-84ca6d0/`，历史 `build/distribution` T7 符号链接保持完整）。

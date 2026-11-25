@@ -26,11 +26,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-  ios:
+
+  ios-core:
     needs: checks
     runs-on: xcode-27
-    # Full iPhone and offline checks exceeded the former two-hour budget.
-    timeout-minutes: 180
+    timeout-minutes: 150
     env:
       CI: 'true'
       DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
@@ -57,11 +57,9 @@ jobs:
           test "$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)" = 27
       - run: npm ci
       - run: npm run ios:pods
-      - name: Native contracts and audio processing
-        run: npm run test:native
       - name: Create iOS 27 simulator
         run: node scripts/ci-simulator.mjs
-      - name: Verify source management and Navidrome playback in the App
+      - name: Verify core player skins, appearance, backgrounds and source manager
         shell: bash
         run: |
           mkdir -p build/logs
@@ -69,13 +67,161 @@ jobs:
           # Current UI acceptance is iPhone normal size. Large-text and iPad
           # regression cases remain in the test bundle for manual compatibility
           # runs, but are not a delivery gate.
-          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testClassicPlayerWindowSafeArea NexusMusicUITests/SourceSettingsTests/testAM2PlayerWindowRotation NexusMusicUITests/SourceSettingsTests/testAMPlayerWindowRotation NexusMusicUITests/SourceSettingsTests/testStageStylesAndWindow NexusMusicUITests/SourceSettingsTests/testPhotoArtworkAspectAndFallback NexusMusicUITests/SourceSettingsTests/testPhotoPlayerWindowRotation NexusMusicUITests/SourceSettingsTests/testAppIconOnHomeScreen NexusMusicUITests/SourceSettingsTests/testAppIconSelectionPersistsAndRestoresPrimary NexusMusicUITests/SourceSettingsTests/testGroupedSettingsNavigationAndDrafts NexusMusicUITests/SourceSettingsTests/testGlobalCoverThemeChangesAcrossPages NexusMusicUITests/SourceSettingsTests/testTapeCoverPersistenceAndMainCoverScope NexusMusicUITests/SourceSettingsTests/testAppearancePersistenceAndPrimaryNavigation NexusMusicUITests/SourceSettingsTests/testVisualImagesAndPlayerBackgroundPersistence NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker NexusMusicUITests/SourceSettingsTests/testGraphicalEQPresetPersistence NexusMusicUITests/SourceSettingsTests/testFontImportAndLyricStyle NexusMusicUITests/SourceSettingsTests/testPlaylistSearchSortAndDuplicateRemoval NexusMusicUITests/SourceSettingsTests/testUCloudSyncPreviewConflictRestartAndDeletion NexusMusicUITests/SourceSettingsTests/testVCloudBackupUploadRestartPreviewRestore NexusMusicUITests/SourceSettingsTests/testWWebDAVBrowseTagsPlaybackAndRemoval NexusMusicUITests/SourceSettingsTests/testXDeviceMediaAuthorization NexusMusicUITests/SourceSettingsTests/testYLocalAudioFileImport NexusMusicUITests/SourceSettingsTests/testNeteaseLoginLauncherCancellation NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials 2>&1 | tee build/logs/ui-core-runner.log; then
+          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testClassicPlayerWindowSafeArea NexusMusicUITests/SourceSettingsTests/testAM2PlayerWindowRotation NexusMusicUITests/SourceSettingsTests/testAMPlayerWindowRotation NexusMusicUITests/SourceSettingsTests/testStageStylesAndWindow NexusMusicUITests/SourceSettingsTests/testPhotoArtworkAspectAndFallback NexusMusicUITests/SourceSettingsTests/testPhotoPlayerWindowRotation NexusMusicUITests/SourceSettingsTests/testAppIconOnHomeScreen NexusMusicUITests/SourceSettingsTests/testAppIconSelectionPersistsAndRestoresPrimary NexusMusicUITests/SourceSettingsTests/testGroupedSettingsNavigationAndDrafts NexusMusicUITests/SourceSettingsTests/testGlobalCoverThemeChangesAcrossPages NexusMusicUITests/SourceSettingsTests/testTapeCoverPersistenceAndMainCoverScope NexusMusicUITests/SourceSettingsTests/testAppearancePersistenceAndPrimaryNavigation NexusMusicUITests/SourceSettingsTests/testVisualImagesAndPlayerBackgroundPersistence NexusMusicUITests/SourceSettingsTests/testSourceManagerAndFilePicker 2>&1 | tee build/logs/ui-core-runner.log; then
             tail -n 100 build/logs/ui-catalog.log
             exit 1
           fi
+      - name: Upload compact test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-test-logs-core-${{ github.sha }}
+          path: |
+            build/logs/*.log
+            build/logs/**/*.log
+            build/logs/*summary*.json
+            build/logs/**/*summary*.json
+            build/logs/*counts*.json
+            build/logs/**/*counts*.json
+            build/logs/*.verification.txt
+            build/logs/**/*.verification.txt
+            build/logs/*.csv
+            build/logs/**/*.csv
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload failure screenshots and text
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-failure-evidence-core-${{ github.sha }}
+          path: build/failure-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-build-diagnostics-core-${{ github.sha }}
+          path: |
+            build/logs/
+            build/SourceUITests-*.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ios-playback:
+    needs: checks
+    runs-on: xcode-27
+    timeout-minutes: 150
+    env:
+      CI: 'true'
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+      NEXUS_EXPECTED_IOS_SDK_MAJOR: '27'
+      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
+      BUNDLE_FORCE_RUBY_PLATFORM: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1
+        with:
+          ruby-version: '3.3'
+          bundler: '2.4.22'
+          bundler-cache: true
+      - name: Verify Apple Silicon and iOS 27 toolchain
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcodebuild -showsdks
+          test "$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)" = 27
+      - run: npm ci
+      - run: npm run ios:pods
+      - name: Create iOS 27 simulator
+        run: node scripts/ci-simulator.mjs
+      - name: Verify EQ, fonts, playlists, cloud sync, WebDAV, local audio and Navidrome
+        shell: bash
+        run: |
+          mkdir -p build/logs
+          set -o pipefail
+          if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testGraphicalEQPresetPersistence NexusMusicUITests/SourceSettingsTests/testFontImportAndLyricStyle NexusMusicUITests/SourceSettingsTests/testPlaylistSearchSortAndDuplicateRemoval NexusMusicUITests/SourceSettingsTests/testUCloudSyncPreviewConflictRestartAndDeletion NexusMusicUITests/SourceSettingsTests/testVCloudBackupUploadRestartPreviewRestore NexusMusicUITests/SourceSettingsTests/testWWebDAVBrowseTagsPlaybackAndRemoval NexusMusicUITests/SourceSettingsTests/testXDeviceMediaAuthorization NexusMusicUITests/SourceSettingsTests/testYLocalAudioFileImport NexusMusicUITests/SourceSettingsTests/testNeteaseLoginLauncherCancellation NexusMusicUITests/SourceSettingsTests/testNavidromeBrowseHistory NexusMusicUITests/SourceSettingsTests/testZNavidromePlaybackAndCredentials 2>&1 | tee build/logs/ui-playback-runner.log; then
+            tail -n 100 build/logs/ui-catalog.log
+            exit 1
+          fi
+      - name: Upload compact test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-test-logs-playback-${{ github.sha }}
+          path: |
+            build/logs/*.log
+            build/logs/**/*.log
+            build/logs/*summary*.json
+            build/logs/**/*summary*.json
+            build/logs/*counts*.json
+            build/logs/**/*counts*.json
+            build/logs/*.verification.txt
+            build/logs/**/*.verification.txt
+            build/logs/*.csv
+            build/logs/**/*.csv
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload failure screenshots and text
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-failure-evidence-playback-${{ github.sha }}
+          path: build/failure-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-build-diagnostics-playback-${{ github.sha }}
+          path: |
+            build/logs/
+            build/SourceUITests-*.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ios-features:
+    needs: checks
+    runs-on: xcode-27
+    timeout-minutes: 150
+    env:
+      CI: 'true'
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+      NEXUS_EXPECTED_IOS_SDK_MAJOR: '27'
+      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
+      BUNDLE_FORCE_RUBY_PLATFORM: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1
+        with:
+          ruby-version: '3.3'
+          bundler: '2.4.22'
+          bundler-cache: true
+      - name: Verify Apple Silicon and iOS 27 toolchain
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcodebuild -showsdks
+          test "$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)" = 27
+      - run: npm ci
+      - run: npm run ios:pods
+      - name: Create iOS 27 simulator
+        run: node scripts/ci-simulator.mjs
       - name: Verify custom sleep timer wheels and lifecycle
         shell: bash
         run: |
+          mkdir -p build/logs
           set -o pipefail
           if ! NEXUS_UI_RUN_DIR=build/logs/sleep-wheels-app node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testSleepCustomDurationAndRestart NexusMusicUITests/SourceSettingsTests/testSleepCustomWheelsPreserveActiveTimer NexusMusicUITests/SourceSettingsTests/testSleepDurationExpiryPausesAudio NexusMusicUITests/SourceSettingsTests/testSleepTrackBindingClearsOnManualTrackChange NexusMusicUITests/SourceSettingsTests/testSleepTrackBindingPausesAtTrackEndInBackground 2>&1 | tee build/logs/ui-sleep-wheels-runner.log; then
             tail -n 100 build/logs/sleep-wheels-app/ui-catalog.log
@@ -107,8 +253,6 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cp build/logs/ui-catalog.log build/logs/ui-core.log
-          cp build/logs/ui-server-counts.json build/logs/ui-core-counts.json
           if ! node scripts/test-ui.mjs NexusMusicUITests/SourceSettingsTests/testCrossPlatformLyrics NexusMusicUITests/SourceSettingsTests/testOnlineMatching NexusMusicUITests/SourceSettingsTests/testSourceHealth NexusMusicUITests/SourceSettingsTests/testPublicComments NexusMusicUITests/SourceSettingsTests/testDiscoverySongActions NexusMusicUITests/SourceSettingsTests/testStyleRecommendation NexusMusicUITests/SourceSettingsTests/testWayfarerAppImport 2>&1 | tee build/logs/ui-online-runner.log; then
             tail -n 100 build/logs/ui-catalog.log
             exit 1
@@ -155,6 +299,75 @@ jobs:
           fi
           cp build/logs/download-task-batch-app/ui-catalog.log build/logs/ui-download-batch.log
           cp build/logs/download-task-batch-app/ui-server-counts.json build/logs/ui-download-batch-counts.json
+      - name: Upload compact test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-test-logs-features-${{ github.sha }}
+          path: |
+            build/logs/*.log
+            build/logs/**/*.log
+            build/logs/*summary*.json
+            build/logs/**/*summary*.json
+            build/logs/*counts*.json
+            build/logs/**/*counts*.json
+            build/logs/*.verification.txt
+            build/logs/**/*.verification.txt
+            build/logs/*.csv
+            build/logs/**/*.csv
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload failure screenshots and text
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-failure-evidence-features-${{ github.sha }}
+          path: build/failure-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: ios-build-diagnostics-features-${{ github.sha }}
+          path: |
+            build/logs/
+            build/SourceUITests-*.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ios:
+    needs: [checks, ios-core, ios-playback, ios-features]
+    runs-on: xcode-27
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+      NEXUS_EXPECTED_IOS_SDK_MAJOR: '27'
+      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
+      BUNDLE_FORCE_RUBY_PLATFORM: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1
+        with:
+          ruby-version: '3.3'
+          bundler: '2.4.22'
+          bundler-cache: true
+      - name: Verify Apple Silicon and iOS 27 toolchain
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcodebuild -showsdks
+          test "$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)" = 27
+      - run: npm ci
+      - run: npm run ios:pods
+      - name: Native contracts and audio processing
+        run: npm run test:native
       - name: Archive unsigned device IPA
         shell: bash
         run: |
@@ -175,35 +388,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
         with:
-          name: ios-test-logs-${{ github.sha }}
+          name: ios-test-logs-archive-${{ github.sha }}
           path: |
             build/logs/*.log
             build/logs/**/*.log
             build/logs/*summary*.json
             build/logs/**/*summary*.json
-            build/logs/*counts*.json
-            build/logs/**/*counts*.json
-            build/logs/*.verification.txt
-            build/logs/**/*.verification.txt
-            build/logs/*.csv
-            build/logs/**/*.csv
-          if-no-files-found: ignore
-          retention-days: 7
-      - name: Upload failure screenshots and text
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
-        with:
-          name: ios-failure-evidence-${{ github.sha }}
-          path: build/failure-evidence/
-          if-no-files-found: ignore
-          retention-days: 7
-      - name: Upload build diagnostics
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
-        with:
-          name: ios-build-diagnostics-${{ github.sha }}
-          path: |
-            build/logs/
-            build/SourceUITests-*.xcresult
           if-no-files-found: ignore
           retention-days: 7
