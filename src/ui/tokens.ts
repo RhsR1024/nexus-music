@@ -123,10 +123,10 @@ export const paperProgressShadow = {shadowColor:'#4A2325',shadowOpacity:.28,shad
 export function sollinTokens(mode:'light'|'dark',accent:string,appearance?:Pick<AppearanceOptions,'cardOpacity'>){
   const dark=mode==='dark';
   const opacity=appearance?Math.max(0,Math.min(1,appearance.cardOpacity)):1;
-  const cardAlpha=dark?Math.max(0.05,0.08*opacity+0.03):Math.max(0.24,0.58*opacity);
+  const cardAlpha=dark?Math.max(0.05,0.08*opacity+0.03):Math.max(0.22,0.46*opacity);
   const control=controlColor(accent,dark);
   const accentRgb=/^#[0-9a-f]{6}$/i.test(accent)?[1,3,5].map(i=>parseInt(accent.slice(i,i+2),16)):[232,61,86];
-  const accentSoft=`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},${dark?0.20:0.12})`;
+  const accentSoft=`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},${dark?0.20:0.10})`;
   const accentPill=`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},${dark?0.26:0.14})`;
   return {
     dark,
@@ -138,16 +138,16 @@ export function sollinTokens(mode:'light'|'dark',accent:string,appearance?:Pick<
     accentSoft,
     accentPill,
     card:dark?`rgba(255,255,255,${Number(cardAlpha.toFixed(3))})`:`rgba(255,255,255,${Number(cardAlpha.toFixed(3))})`,
-    cardElevated:dark?'rgba(42,34,48,0.86)':'rgba(255,255,255,0.78)',
-    cardBorder:dark?'rgba(255,255,255,0.11)':'rgba(255,255,255,0.72)',
-    hairline:dark?'rgba(255,255,255,0.09)':'rgba(42,36,31,0.075)',
-    chip:dark?'rgba(255,255,255,0.09)':'rgba(255,255,255,0.56)',
-    chipBorder:dark?'rgba(255,255,255,0.13)':'rgba(42,36,31,0.08)',
-    inputBg:dark?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.68)',
-    sheetGradient:(dark?['#241C28','#2E2130','#1F1B26']:['#FBF5F5','#F7E7EB','#F8EFF1']) as readonly [string,string,string],
-    switchTrack:{false:dark?'rgba(255,255,255,0.20)':'rgba(130,118,120,0.34)',true:dark?`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},0.44)`:'rgba(143,74,78,0.40)'},
-    switchThumb:(on:boolean)=>on?control:(dark?'#E3DDE6':'#1E1A1C'),
-    dockShadow:{shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.08,shadowRadius:16,shadowOffset:{width:0,height:4}},
-    cardShadow:{shadowColor:'#2B181C',shadowOpacity:dark?0.24:0.05,shadowRadius:12,shadowOffset:{width:0,height:3}},
+    cardElevated:dark?'rgba(42,34,48,0.86)':'rgba(255,255,255,0.74)',
+    cardBorder:dark?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.44)',
+    hairline:dark?'rgba(255,255,255,0.08)':'rgba(42,36,31,0.065)',
+    chip:dark?'rgba(255,255,255,0.09)':'rgba(255,255,255,0.48)',
+    chipBorder:dark?'rgba(255,255,255,0.12)':'rgba(42,36,31,0.065)',
+    inputBg:dark?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.62)',
+    sheetGradient:(dark?['#241C28','#2E2130','#1F1B26']:['#FAF3EE','#F3DFD9','#F7EAE6']) as readonly [string,string,string],
+    switchTrack:{false:dark?'rgba(255,255,255,0.20)':'rgba(142,146,154,0.34)',true:dark?`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},0.48)`:'rgba(182,118,128,0.48)'},
+    switchThumb:(on:boolean)=>on?(dark?accent:'#C93B52'):(dark?'#E3DDE6':'#1C1A1C'),
+    dockShadow:{shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.07,shadowRadius:18,shadowOffset:{width:0,height:4}},
+    cardShadow:{shadowColor:'#2B181C',shadowOpacity:dark?0.24:0.045,shadowRadius:12,shadowOffset:{width:0,height:3}},
   };
 }

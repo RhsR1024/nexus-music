@@ -23,6 +23,7 @@ interface NativePlayback extends SystemMediaNative {
   configureVolume(value:number):Promise<void>;
   configureRate(value:number):Promise<void>;
   configureMixWithOthers?(enabled:boolean):Promise<void>;
+  configureFade?(enabled:boolean,durationMs:number):Promise<void>;
   configureEQ(enabled: boolean, gains: readonly number[], preampDB: number): Promise<void>;
   addListener(event: string, callback: (event: Record<string, unknown>) => void): { remove(): void };
 }
@@ -43,12 +44,15 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   // Keep the native player's rate in sync with the persisted preference so a
   // relaunch or a change from the settings page applies immediately.
   let appliedRate=preferences.getSnapshot().rate,appliedMix=preferences.getSnapshot().mixWithOtherAudio;
+  let appliedFadeEnabled=preferences.getSnapshot().playbackFadeEnabled,appliedFadeMs=preferences.getSnapshot().playbackFadeDurationMs;
   void native.configureRate(appliedRate).catch(()=>{});
   void native.configureMixWithOthers?.(appliedMix)?.catch(()=>{});
+  void native.configureFade?.(appliedFadeEnabled,appliedFadeMs)?.catch(()=>{});
   preferences.subscribe(()=>{
     const snapshot=preferences.getSnapshot();
     if(snapshot.rate!==appliedRate){appliedRate=snapshot.rate;void native.configureRate(appliedRate).catch(()=>{});}
     if(snapshot.mixWithOtherAudio!==appliedMix){appliedMix=snapshot.mixWithOtherAudio;void native.configureMixWithOthers?.(appliedMix)?.catch(()=>{});}
+    if(snapshot.playbackFadeEnabled!==appliedFadeEnabled||snapshot.playbackFadeDurationMs!==appliedFadeMs){appliedFadeEnabled=snapshot.playbackFadeEnabled;appliedFadeMs=snapshot.playbackFadeDurationMs;void native.configureFade?.(appliedFadeEnabled,appliedFadeMs)?.catch(()=>{});}
   });
   native.addListener('sleep',sleepStore.update);
   void native.sleepSnapshot().then(sleepStore.update).catch(()=>{});
@@ -95,8 +99,9 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   let skipFailures = 0;
   controller.subscribe(()=>{if(controller.getSnapshot().phase==='ready')skipFailures=0;});
   controller.setResolveFailureHandler(queue => {
-    if (skipFailures >= 15) { skipFailures = 0; return false; }
     const settings = preferences.getSnapshot();
+    if (!settings.smartSkipOnFailure) { skipFailures = 0; return false; }
+    if (skipFailures >= 15) { skipFailures = 0; return false; }
     let target = advance(queue, settings.repeat === 'all' ? 'all' : 'off');
     if (settings.shuffle && !queue.priorityIds.length) target = shuffle.next(queue, settings.repeat === 'all', 1);
     const nextId = target.currentId;
@@ -136,5 +141,5 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   });
   const configure = () => { const value = preferences.getSnapshot(); safe(native.configureVolume(value.volume)); safe(native.configureEQ(value.eqEnabled, value.gains, value.preampDB));safe(native.configureCache(value.cacheLimitMB)); };
   preferences.subscribe(configure); configure();
-  return { controller, spectrum, next, sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');},stopNow:async()=>{const value=await native.configureSleep(0,false);sleepStore.update(value);controller.pause();}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onListening:(listener:(sample:ListeningSample)=>void)=>{listeningListeners.add(listener);return()=>{listeningListeners.delete(listener);};}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};}, setRate:async(value:number)=>{if(!Number.isFinite(value)||value<.5||value>3)throw new Error('播放倍速无效');await preferences.update({rate:value});await native.configureRate(value);} };
+  return { controller, spectrum, next, setSystemLyricLine:(line:string|null,position:'artist'|'title')=>systemMedia.setLyricLine(line,position), sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');},stopNow:async()=>{const value=await native.configureSleep(0,false);sleepStore.update(value);controller.pause();}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onListening:(listener:(sample:ListeningSample)=>void)=>{listeningListeners.add(listener);return()=>{listeningListeners.delete(listener);};}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};}, setRate:async(value:number)=>{if(!Number.isFinite(value)||value<.5||value>3)throw new Error('播放倍速无效');await preferences.update({rate:value});await native.configureRate(value);} };
 }

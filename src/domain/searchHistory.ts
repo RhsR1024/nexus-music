@@ -35,6 +35,12 @@ export function clearSearchHistory(): readonly string[] {
   return [];
 }
 
+export function removeSearchHistory(history: readonly string[], query: string): readonly string[] {
+  const key = queryKey(query);
+  if (!key) return history;
+  return history.filter(item => queryKey(item) !== key);
+}
+
 export function suggestSearchQueries(history: readonly string[], draft: string, limit = searchSuggestionLimit): readonly string[] {
   const key = queryKey(draft);
   if (!key) return [];

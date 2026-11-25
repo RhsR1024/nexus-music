@@ -1,11 +1,13 @@
 import {QQAccountTransferCard} from './QQAccountTransferCard.tsx';
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator,Pressable,View} from 'react-native';
+import {ActivityIndicator,Pressable,StyleSheet,View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {MusicWebLoginProvider} from '../providers/musicWebLogin.ts';
 import {MusicAuthError} from '../providers/musicAuth.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 import {QQDailyAuthorizationCard} from './QQDailyAuthorizationCard.tsx';
 import {KugouAccountCard} from './KugouAccountCard.tsx';
 import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
@@ -14,7 +16,7 @@ import {AccountAlbumCatalog,AccountMVCatalog} from './AccountAlbumCatalog.tsx';
 import {Cover} from './Cover.tsx';
 
 export function MusicAccountSettings({services,active,onRevealQr}:{services:Services;active:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
-  const {palette:p}=useTheme();
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const auth=useSyncExternalStore(services.musicWebLogin.subscribe,services.musicWebLogin.getSnapshot);
   const kugouAuth=useSyncExternalStore(services.kugouLogin.subscribe,services.kugouLogin.getSnapshot);
@@ -27,7 +29,10 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const [verified,setVerified]=useState('');
   const verifyController=useRef<AbortController|null>(null);
   const [loginProvider,setLoginProvider]=useState<MusicWebLoginProvider>('wy');
-  const providers=[{id:'wy' as const,name:'网易云',title:'网易云音乐'},{id:'tx' as const,name:'QQ 音乐',title:'QQ 音乐'}];
+  const providers=[
+    {id:'wy' as const,name:'网易云',title:'网易云音乐',icon:'musical-notes' as const},
+    {id:'tx' as const,name:'QQ 音乐',title:'QQ 音乐',icon:'disc-outline' as const},
+  ];
   const webWaiting=auth.status==='waiting',waiting=webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting||transferWaiting;
   useEffect(()=>()=>{verifyController.current?.abort();services.musicWebLogin.cancel();},[services]);
   // Settings caches visited pages. Hidden pages are not unmounted, so revoke
@@ -68,38 +73,59 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
       if(verifyController.current===controller){verifyController.current=null;setVerifying('');}
     });
   };
-  return <View style={{gap:18}}>
-    {providers.map(provider=><View key={provider.id} style={{borderRadius:18,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,overflow:'hidden'}}>
-      <View style={{padding:18,gap:8}}>
-        <Text style={{fontSize:18,fontWeight:'600',color:p.text}}>{provider.title}</Text>
-        <Text style={{fontSize:13,lineHeight:20,color:p.secondary}}>在官方网页完成登录。登录凭据仅保存在本机，不参与备份或同步。</Text>
-      </View>
-      {provider.id==='tx'&&<Text style={{paddingHorizontal:18,paddingBottom:12,fontSize:13,lineHeight:20,color:p.secondary}}>使用 QQ 官方网页登录，不跳转 QQ App；微信账号可使用下方电脑配对。会检查音乐账号授权；日推仍需单独授权。</Text>}
-      {accounts.filter(account=>account.platform===provider.id).map((account,index)=><View key={account.id} style={{minHeight:62,paddingHorizontal:18,flexDirection:'row',alignItems:'center',gap:12,borderTopWidth:index===0?1:0,borderTopColor:p.border,borderBottomWidth:1,borderBottomColor:p.border}}>
-        <Cover services={services} url={account.avatar} size={40} radius={20} fallbackText={account.displayName??account.label} testID={`music-account-avatar-${account.platform}`}/>
-        <View style={{flex:1,gap:3}}><Text style={{fontSize:15,color:p.text}}>{account.displayName??account.label}</Text><Text numberOfLines={1} style={{fontSize:12,color:p.secondary}}>会话凭据已保存到本机</Text></View>
-        <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`验证${provider.name}会话`} disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:64,minHeight:44,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:13,color:p.secondary}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
-        <Pressable testID={`remove-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`退出${provider.name}账号`} onPress={()=>remove(account.id)} style={{minWidth:64,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13,color:p.accent}}>退出</Text></Pressable>
-      </View>)}
-      <View style={{padding:18,flexDirection:'row',alignItems:'center',gap:12}}>
-        <Pressable testID={`login-music-account-${provider.id}`} accessibilityRole="button" accessibilityLabel={`${accounts.some(account=>account.platform===provider.id)?'添加':'登录'}${provider.name}账号`} disabled={waiting} onPress={()=>login(provider.id)} style={{minHeight:48,paddingHorizontal:18,borderRadius:14,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:waiting?.65:1}}>
-          {webWaiting&&loginProvider===provider.id?<ActivityIndicator size="small" color="#FFFFFF"/>:null}
-          <Text style={{fontSize:15,fontWeight:'600',color:'#FFFFFF'}}>{webWaiting&&loginProvider===provider.id?'等待官方网页登录':`${accounts.some(account=>account.platform===provider.id)?'添加':'登录'}${provider.name}账号`}</Text>
-        </Pressable>
-        {webWaiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.name}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:44,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,color:p.secondary}}>取消</Text></Pressable>}
-      </View>
-      {provider.id==='tx'&&<QQAccountTransferCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting}/>}
-      {provider.id==='tx'&&<QQDailyAuthorizationCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||transferWaiting}/>}
-    </View>)}
-    {!!error&&<Text testID="music-account-error" accessibilityRole="alert" style={{fontSize:13,lineHeight:20,color:p.accent}}>{error}</Text>}
-    {auth.status==='cancelled'&&<Text testID="music-account-cancelled" style={{fontSize:13,color:p.secondary}}>登录已取消</Text>}
-    {auth.status==='expired'&&<Text testID="music-account-expired" accessibilityRole="alert" style={{fontSize:13,color:p.accent}}>登录已过期，请重新打开官方网页。</Text>}
-    {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:p.secondary}}>{verified}</Text>}
+  return <View style={{gap:14,paddingTop:6}}>
+    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginBottom:-6}}>平台账号与本机会话</Text>
+    {providers.map(provider=>{
+      const platformAccounts=accounts.filter(account=>account.platform===provider.id);
+      const signedIn=platformAccounts.length>0;
+      return <View key={provider.id} style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+        <View style={{padding:16,gap:8}}>
+          <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
+            <View style={{width:38,height:38,borderRadius:12,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+              <Ionicons name={provider.icon} size={20} color={s.control}/>
+            </View>
+            <View style={{flex:1,gap:2}}>
+              <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+                <Text style={{fontSize:16.5,fontWeight:'700',color:s.ink}}>{provider.title}</Text>
+                <View style={{paddingHorizontal:8,paddingVertical:2,borderRadius:10,backgroundColor:signedIn?s.accentSoft:s.chip,borderWidth:1,borderColor:signedIn?`${s.control}33`:s.chipBorder}}>
+                  <Text style={{fontSize:11,fontWeight:'600',color:signedIn?s.control:s.muted}}>{signedIn?`已登录 ${platformAccounts.length}`:'未登录'}</Text>
+                </View>
+              </View>
+              <Text style={{fontSize:12,lineHeight:17,color:s.muted}}>在官方网页完成登录。凭据仅保存在本机，不参与备份或同步。</Text>
+            </View>
+          </View>
+          {provider.id==='tx'&&<Text style={{fontSize:12,lineHeight:18,color:s.muted}}>使用 QQ 官方网页登录，不跳转 QQ App；微信账号可使用下方电脑配对。会检查音乐账号授权；日推仍需单独授权。</Text>}
+        </View>
+        {platformAccounts.map((account,index)=><View key={account.id}>
+          <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:index===0?0:68,backgroundColor:s.hairline}}/>
+          <View style={{minHeight:62,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12}}>
+            <Cover services={services} url={account.avatar} size={40} radius={20} fallbackText={account.displayName??account.label} testID={`music-account-avatar-${account.platform}`}/>
+            <View style={{flex:1,gap:2}}><Text style={{fontSize:15,fontWeight:'600',color:s.ink}}>{account.displayName??account.label}</Text><Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>会话凭据已保存到本机</Text></View>
+            <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`验证${provider.name}会话`} disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:56,minHeight:36,paddingHorizontal:10,borderRadius:18,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
+            <Pressable testID={`remove-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`退出${provider.name}账号`} onPress={()=>remove(account.id)} style={{minWidth:56,minHeight:36,paddingHorizontal:10,borderRadius:18,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.control}}>退出</Text></Pressable>
+          </View>
+        </View>)}
+        <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>
+        <View style={{padding:14,flexDirection:'row',alignItems:'center',gap:10}}>
+          <Pressable testID={`login-music-account-${provider.id}`} accessibilityRole="button" accessibilityLabel={`${signedIn?'添加':'登录'}${provider.name}账号`} disabled={waiting} onPress={()=>login(provider.id)} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:waiting?.6:1}}>
+            {webWaiting&&loginProvider===provider.id?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="log-in-outline" size={17} color="#FFFFFF"/>}
+            <Text style={{fontSize:14.5,fontWeight:'600',color:'#FFFFFF'}}>{webWaiting&&loginProvider===provider.id?'等待官方网页登录':`${signedIn?'添加':'登录'}${provider.name}账号`}</Text>
+          </Pressable>
+          {webWaiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.name}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:40,paddingHorizontal:12,borderRadius:20,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>取消</Text></Pressable>}
+        </View>
+        {provider.id==='tx'&&<QQAccountTransferCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting}/>}
+        {provider.id==='tx'&&<QQDailyAuthorizationCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||transferWaiting}/>}
+      </View>;
+    })}
+    {!!error&&<Text testID="music-account-error" accessibilityRole="alert" style={{fontSize:13,lineHeight:20,color:s.accent,marginLeft:4}}>{error}</Text>}
+    {auth.status==='cancelled'&&<Text testID="music-account-cancelled" style={{fontSize:13,color:s.muted,marginLeft:4}}>登录已取消</Text>}
+    {auth.status==='expired'&&<Text testID="music-account-expired" accessibilityRole="alert" style={{fontSize:13,color:s.accent,marginLeft:4}}>登录已过期，请重新打开官方网页。</Text>}
+    {!!verified&&<Text testID="music-account-verified" accessibilityLiveRegion="polite" style={{fontSize:13,color:s.control,fontWeight:'600',marginLeft:4}}>{verified}</Text>}
     <AccountPlaylistImport services={services} active={active} disabled={waiting} onLogin={()=>login('wy')}/>
     <AccountAlbumCatalog services={services} active={active} disabled={waiting} onLogin={()=>login('wy')}/>
     <AccountMVCatalog services={services} active={active} disabled={waiting} onLogin={()=>login('wy')}/>
     <AccountPlaylistImport services={services} active={active} disabled={waiting} platform="tx" onLogin={()=>login('tx')}/>
-    <Text style={{fontSize:12,lineHeight:19,color:p.secondary}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。网易云和QQ歌单可手动复制到音枢歌单，酷狗歌单也可复制到音枢歌单，账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
+    <Text style={{fontSize:12,lineHeight:18,color:s.muted,paddingHorizontal:4}}>QQ 私人雷达可在音乐库获取；官方每日推荐需完成独立授权。网易云和QQ歌单可手动复制到音枢歌单，酷狗歌单也可复制到音枢歌单，账号播放暂未开放。账号验证失败时，可重试或重新登录。</Text>
     <KugouAccountCard services={services} disabled={webWaiting||dailyWaiting||transferWaiting} onRevealQr={onRevealQr}/>
     <AccountPlaylistImport services={services} active={active} disabled={waiting} platform="kg" onLogin={()=>{void services.kugouLogin.login();}}/>
   </View>;

@@ -4,6 +4,7 @@ import type {LibraryStore} from '../storage/library.ts';
 export interface SystemMediaNative {
   setSystemArtwork(file:string,itemID:string):Promise<void>;
   setSystemFavorite(favorite:boolean,itemID:string):Promise<void>;
+  setSystemLyricLine?(line:string|null,position:'artist'|'title',itemID:string):Promise<void>;
 }
 interface Item {id:string;original:Track;abort:AbortController;ready:boolean}
 
@@ -31,6 +32,10 @@ export class SystemMediaSession {
     }).catch(()=>{});
   }
   isCurrent(id:unknown){return this.item!==undefined&&this.item.id===id;}
+  setLyricLine(line:string|null,position:'artist'|'title'){
+    const item=this.item;if(!item?.ready)return;
+    void this.native.setSystemLyricLine?.(line,position,item.id)?.catch(()=>{});
+  }
   private refresh(){
     const item=this.item;if(!item?.ready)return;
     void this.native.setSystemFavorite(this.library.isFavorite(item.original),item.id).catch(()=>{});

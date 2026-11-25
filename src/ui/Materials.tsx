@@ -48,12 +48,12 @@ export function GlassSurface({children,style,variant='liquid',radius=30}:PropsWi
   const dark=theme.mode==='dark';
   const useBlur=theme.appearance.glassNavigation&&!reduce;
   const fill=useBlur
-    ?(variant==='acrylic'?(dark?'rgba(32,26,38,0.62)':'rgba(255,253,252,0.58)')
-      :variant==='frosted'?(dark?'rgba(36,29,42,0.82)':'rgba(255,251,250,0.80)')
-      :(dark?'rgba(40,32,46,0.72)':'rgba(255,252,251,0.74)'))
+    ?(variant==='acrylic'?(dark?'rgba(32,26,38,0.52)':'rgba(255,253,253,0.44)')
+      :variant==='frosted'?(dark?'rgba(36,29,42,0.80)':'rgba(255,250,250,0.78)')
+      :(dark?'rgba(40,32,46,0.64)':'rgba(255,252,252,0.52)'))
     :(dark?'rgba(42,34,48,0.96)':'rgba(255,251,249,0.96)');
-  const borderColor=dark?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.82)';
-  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.09,shadowRadius:16,shadowOffset:{width:0,height:4}},style]}>
+  const borderColor=dark?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.88)';
+  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.07,shadowRadius:18,shadowOffset:{width:0,height:4}},style]}>
     <View style={{flexGrow:1,borderRadius:radius,overflow:'hidden',borderWidth:1,borderColor}}>
       {useBlur&&<NativeMaterial pointerEvents="none" dark={dark} style={StyleSheet.absoluteFill}/>}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:fill}]}/>

@@ -1,3 +1,14 @@
+## 2026-11-25 第三轮全站 Sollin 对齐、缺失功能补齐与 20 项本地 Release CI 预演全通
+
+本轮完成原生 `NativePlaybackEngine` 淡入淡出与 Now Playing 实时歌词、`NexusMeshView` 全出血无接缝修复、15+ 项 Sollin 客户端功能补齐与全站 32 态 UI 对齐：
+- **基础检查与原生测试**：`npm run check` **1170/1170**（TypeScript 0 错误，含新增 `tests/sollin-features.test.ts` 6 项）；`npm run test:native` 全通；`sollin-reverse-gate.mjs ipa --review`（61E/26WI/131 timeline/52F/52P，0 错误/0 警告）与 `apk` 全通。
+- **全套本地 Release 模拟器 CI 预演（20/20 全通过，iPhone 15 Pro Max / iOS 26.3.1）**：
+  - 批次 1（`SourceUITests-1795602727360`）：`testAMPlayerWindowRotation`、`testPhotoPlayerWindowRotation`、`testStageStylesAndWindow`、`testPlaylistSearchSortAndDuplicateRemoval`、`testLiveSourceMeshBackground`（5/5 通过，Mesh 实景无缝亲看）。
+  - 批次 2（`SourceUITests-1795604865536` / `1795607795669` / `1795610071680` / `1795611294536`）：`testAM2PlayerWindowRotation`、`testAppearancePersistenceAndPrimaryNavigation`、`testGraphicalEQPresetPersistence`、`testGroupedSettingsNavigationAndDrafts`、`testFontImportAndLyricStyle`（内嵌完整 `testZNavidromePlaybackAndCredentials` 全 8 套皮肤 + `wave-seek-ring` + `am2-volume-value`）、`testYLocalAudioFileImport`、纯净态 `testSourceManagerAndFilePicker`（8/8 通过）。
+  - 批次 3（`SourceUITests-1795611438064` / `1795611639823` / `1795612071411` / `1795614006322` / `1795614354030` / `1795614472155`）：`testSleepCustomDurationAndRestart`、`testLibrarySongActions`、`testPublicComments`、`testDiscoverySongActions`、`testSearchHistoryAndStates`、`testDownloadSettingsAndOfflinePlayback`、`testDownloadTaskBatchActions`（7/7 通过）。
+  - 实源与视觉审计：`testLiveSourceCatalog`（`SourceUITests-1795599556700`，369.2s，7 个脱敏真实 LX 音源实播）通过；32 态浅粉默认主题截图（`SourceUITests-1795601490738`）逐张亲看；4/5 黄金态 `visual-lab.mjs` 复测零回退（`4854` 93.09%、`4851` 91.45%、`4855` 90.80%、`4856` 94.13%）。
+- **下一步**：提交干净代码树后执行 `npm run ios:archive` + `node scripts/verify-archive.mjs` 生成并核验 `dirty: false` 本地无签名 IPA，随后正常 `git push origin main` 并跟进 GitHub Actions iOS 27 至全绿通过。详见[第三轮阶段回执](2026-11-25-sollin-ui-alignment-and-features-report.md)。
+
 ## 2026-11-18 音乐库歌单弹层封面正式UI
 
 `SourceUITests-1794986935325` 为1 passed/0 failed/0 skipped，`testLibraryPlaylistCoverModal()` 29.309秒，iPhone 15 Pro Max/iOS 26.3.1/x86_64，`sourceUnchanged=true`、`exitCode=0`。合成歌单含一首首曲封面不可用的歌曲，正式弹层仍显示可用歌单封面，证明 `playlistCoverSource` 在 `track-list-cover` 路径生效；产品逻辑未改。源码digest`8df9aa8f…0085`、安装bundle`3d86f254…9a7d`、resultInfo`b272d53c…f2a6`；1张1290×2796截图亲看，索引`47937fc8…eeed`，provenance `ready:true`。`npm run check`1156/1156、typecheck、完整native、Swift/Node/diff通过。见[回执](2026-11-18-library-track-list-cover-modal-report.md)。

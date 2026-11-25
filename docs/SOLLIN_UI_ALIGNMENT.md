@@ -1,3 +1,15 @@
+## 2026-11-25 第三轮全站 32 态对齐（对照 T7 Touch 实机截图）+ 原生 Mesh 修复 + 4/5 黄金态零回退复测
+
+对照外置 SSD `/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023/evidence/` 实机截屏与本地参考图完成全站所有 Tab、设置子页、8 套播放器皮肤与全部弹层的第三轮精修：
+- **原生渲染缺陷修复**：修复 `NexusMeshView.swift` 中 SwiftUI `MeshGradient` 边界顶点内收与安全区裁剪导致的四边倾斜接缝（`.scaleEffect(1.30).ignoresSafeArea()` + `controller.safeAreaRegions = []`），实源 Mesh 截图 `008-Live-source-AM-mesh-playing.png` 验证全屏无缝铺满。
+- **32 态全量 Release 浅粉默认主题截图亲看**（`build/sollin-audit-r3-screens/`，`SourceUITests-1795601490738`）：发现首页、歌单详情、搜索、音乐库（含深色毛玻璃日历卡片）、本地音频（含 A–Z 字母快查栏）、设置各子页、EQ 单行细调滑块、8 套播放皮肤（含声波核顺时针白进度环与 60 刻度、写真暗底悬浮栏、AM2 顶栏与百分比音量条）及全部菜单/偏移/倍速/睡眠/评论弹层均已逐张人工核验；同时修复深色经典文字可读性、圆角方形缩略封面（`radius={10}`）与沉浸封面顶角直角细节。
+- **4/5 黄金态零回退复测**：
+  - `4854-classic`（`r20261125-4854-final`，`SourceUITests-1795615402509`，`provenanceReady: true`）：控件 SSIM **93.09%**、ΔE00 **0.95**（p90 0.24）、可比区 **93.89%**、内容一致估算 **96.32%** → **通过**；
+  - `4851-vinyl`（`r20261125-4851-regression`）：控件 SSIM **91.45%**、ΔE00 **3.25**、可比区 **94.42%**、播放键 ΔE00 **0.00**、估算 **97.38%** → **通过**；
+  - `4855-appearance`（`r20261125-4855-regression`）：控件 SSIM **90.80%**、ΔE00 **1.12**、可比区 **93.89%**、估算 **96.08%** → **通过**；
+  - `4856-appearance-scrolled`（`r20261125-4856-regression`）：控件 SSIM **94.13%**、ΔE00 **0.51**、可比区 **93.93%** → **通过**；
+  - `4861-am-lyrics` 仍维持“因合成条纹封面取色暗度差与皮肤按钮入口差异未达 90% 严框”的诚实记录；真机连续动效录屏（G8）仍开放。详见[第三轮阶段回执](2026-11-25-sollin-ui-alignment-and-features-report.md)。
+
 ## 2026-11-25 第二轮精修：4855/4856 控件区突破 90%（4/5 黄金态正式通过）与真实源实景亲看
 
 提交 `ad8608c` 针对 `4855`/`4856` 差异热图完成像素级收敛，并统一剩余 4 处次级页面（`NavidromeLibrary`、`PlaylistPicker`、`MatchModal`、`LocalPlaylistPicker`）至 `sollinTokens`：

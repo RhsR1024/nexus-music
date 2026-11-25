@@ -15,39 +15,51 @@ export function EqualizerSettings({services}:{services:Services}){
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{void services.preferences.update(patch).then(()=>setError('')).catch(reason=>setError(reason instanceof Error?reason.message:'保存失败'));};
   const reset=()=>update({preampDB:0,gains:Array(10).fill(0)});
   return <View style={styles.root}>
-    <View style={styles.enableRow}><View style={styles.enableCopy}><Text style={styles.heroTitle}>均衡器</Text><Text style={styles.caption}>开启后应用当前曲线</Text></View><Switch accessibilityLabel="启用均衡器" value={value.eqEnabled} onValueChange={eqEnabled=>update({eqEnabled})} trackColor={s.switchTrack} thumbColor={s.switchThumb(value.eqEnabled)}/></View>
-    <Text style={styles.caption}>{spectrum.supported?`当前音频可处理 · 前级余量 ${spectrum.headroomDB.toFixed(1)} dB`:'播放后检测 PCM 支持；不支持处理的媒体会明确提示。'}</Text>
-    <View style={styles.panel}>
+    <View style={[styles.enableCard,s.cardShadow]}>
+      <View style={styles.enableRow}>
+        <View style={styles.enableCopy}>
+          <Text style={styles.panelTitle}>均衡器</Text>
+          <Text style={styles.caption}>{spectrum.supported?`开启后应用当前曲线 · 前级余量 ${spectrum.headroomDB.toFixed(1)} dB`:'开启后应用当前曲线；不支持处理的媒体会明确提示'}</Text>
+        </View>
+        <Switch accessibilityLabel="启用均衡器" value={value.eqEnabled} onValueChange={eqEnabled=>update({eqEnabled})} trackColor={s.switchTrack} thumbColor={s.switchThumb(value.eqEnabled)}/>
+      </View>
+    </View>
+    <View style={[styles.panel,s.cardShadow]}>
       <View style={styles.panelHeader}><Text style={styles.panelTitle}>整体增益 · 前置放大器</Text><Pressable accessibilityRole="button" accessibilityLabel="前级归零" style={styles.textAction} onPress={()=>update({preampDB:0})}><Text style={styles.link}>归零</Text></Pressable></View>
       <GainSlider testID="eq-preamp-slider" label="" accessibilityLabel="整体增益 · 前置放大器" value={value.preampDB} onChange={preampDB=>update({preampDB})} showBounds/>
       <Text style={styles.panelCaption}>在频段调节前统一调整输入电平。提升频段时可降低此增益，留出余量；正增益可能引起削波。</Text>
     </View>
-    <View style={styles.panel}>
+    <View style={[styles.panel,s.cardShadow]}>
       <View style={styles.panelHeader}><Text style={styles.panelTitle}>频率 · 增益</Text><Pressable accessibilityRole="button" accessibilityLabel="重置均衡器曲线" style={styles.textAction} onPress={reset}><Text style={styles.link}>重置</Text></Pressable></View>
       <EqualizerGraph gains={value.gains} onChange={gains=>update({gains})}/>
-      <Text style={styles.panelCaption}>拖动曲线上的控制点调音，下方滑杆可精细调整当前频段。</Text>
     </View>
+    <Text style={styles.graphHint}>拖动曲线上的控制点调音，下方滑杆可精细调整。</Text>
     <Text style={styles.sectionTitle}>声音预设</Text>
     <View testID="eq-preset-grid" onLayout={event=>setGridWidth(event.nativeEvent.layout.width)} style={styles.wrap}>{builtInEQ.map((preset,index)=><View key={preset.name} style={{width:cardWidth||'100%'}}><EQPresetCard testID={`eq-builtin-${index}`} preset={preset} gains={value.gains} preampDB={value.preampDB} onPress={()=>update({gains:preset.gains,preampDB:preset.preampDB})}/></View>)}</View>
-    <View style={styles.customHeader}><View style={styles.panelHeader}><Text style={styles.panelTitle}>自定义预设</Text><Text style={styles.caption}>{value.eqPresets.length} / 24</Text></View><Text style={styles.caption}>保存当前曲线与前级</Text></View>
-    {!value.eqPresets.length&&<Text testID="eq-custom-empty" style={styles.panelCaption}>还没有自定义预设。调好曲线后，为当前声音起个名字。</Text>}
-    <TextInput testID="eq-preset-name" accessibilityLabel="自定义声音预设名称" placeholder="预设名称（同名覆盖）" placeholderTextColor={s.subtle} maxLength={32} value={name} onChangeText={setName} style={styles.input}/>
-    <Pressable testID="eq-save-preset" accessibilityRole="button" style={styles.preset} onPress={()=>{void services.preferences.saveEQPreset(name).then(()=>{setName('');setError('');}).catch(reason=>setError(reason instanceof Error?reason.message:'保存失败'));}}><Text style={styles.text}>保存当前声音预设</Text></Pressable>
-    {value.eqPresets.map(preset=><View key={preset.name} style={styles.savedRow}><View style={{flex:1}}><EQPresetCard preset={preset} gains={value.gains} preampDB={value.preampDB} onPress={()=>update({gains:preset.gains,preampDB:preset.preampDB})}/></View><Pressable accessibilityRole="button" accessibilityLabel={`删除预设${preset.name}`} style={styles.deletePreset} onPress={()=>{void services.preferences.deleteEQPreset(preset.name).catch(()=>setError('删除失败'));}}><Text style={styles.caption}>删除</Text></Pressable></View>)}
-    {error?<Text accessibilityRole="alert" style={{color:s.accent}}>{error}</Text>:null}
-    <Text style={styles.caption}>关闭均衡器后前级和频段全部旁路，播放队列和播放意图不受影响。</Text>
+    <View style={[styles.panel,s.cardShadow]}>
+      <View style={styles.customHeader}><View style={styles.panelHeader}><Text style={styles.panelTitle}>自定义预设</Text><Text style={styles.caption}>{value.eqPresets.length} / 24</Text></View><Text style={styles.caption}>保存当前曲线与前级</Text></View>
+      {!value.eqPresets.length&&<Text testID="eq-custom-empty" style={styles.panelCaption}>还没有自定义预设。调好曲线后，为当前声音起个名字。</Text>}
+      <TextInput testID="eq-preset-name" accessibilityLabel="自定义声音预设名称" placeholder="预设名称（同名覆盖）" placeholderTextColor={s.subtle} maxLength={32} value={name} onChangeText={setName} style={styles.input}/>
+      <Pressable testID="eq-save-preset" accessibilityRole="button" style={styles.preset} onPress={()=>{void services.preferences.saveEQPreset(name).then(()=>{setName('');setError('');}).catch(reason=>setError(reason instanceof Error?reason.message:'保存失败'));}}><Text style={styles.text}>保存当前声音预设</Text></Pressable>
+      {value.eqPresets.map(preset=><View key={preset.name} style={styles.savedRow}><View style={{flex:1}}><EQPresetCard preset={preset} gains={value.gains} preampDB={value.preampDB} onPress={()=>update({gains:preset.gains,preampDB:preset.preampDB})}/></View><Pressable accessibilityRole="button" accessibilityLabel={`删除预设${preset.name}`} style={styles.deletePreset} onPress={()=>{void services.preferences.deleteEQPreset(preset.name).catch(()=>setError('删除失败'));}}><Text style={styles.deleteText}>删除</Text></Pressable></View>)}
+    </View>
+    {error?<Text accessibilityRole="alert" style={{color:s.accent,marginLeft:4}}>{error}</Text>:null}
+    <Text style={styles.graphHint}>关闭均衡器后前级和频段全部旁路，播放队列和播放意图不受影响。</Text>
   </View>;
 }
 const makeStyles=(theme:Theme)=>{
   const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   return StyleSheet.create({
-  root:{gap:14,paddingVertical:10},enableRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:4},enableCopy:{gap:2},
-  heroTitle:{color:s.ink,fontSize:28,fontWeight:'800'},sectionTitle:{color:s.ink,fontSize:20,fontWeight:'700',marginTop:6},
-  panel:{padding:16,borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:12},panelHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},
-  panelTitle:{color:s.ink,fontSize:16,fontWeight:'700'},link:{color:s.control,fontSize:14,fontWeight:'600'},textAction:{minWidth:44,minHeight:36,alignItems:'center',justifyContent:'center'},
-  panelCaption:{color:s.muted,fontSize:12,lineHeight:19},caption:{color:s.muted,fontSize:12,lineHeight:18},text:{color:'#FFFFFF',fontSize:14,fontWeight:'600'},
-  wrap:{flexDirection:'row',flexWrap:'wrap',gap:10},deletePreset:{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'},
+  root:{gap:14,paddingVertical:6},
+  enableCard:{paddingHorizontal:16,paddingVertical:14,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder},
+  enableRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},enableCopy:{flex:1,gap:2},
+  sectionTitle:{color:s.ink,fontSize:18,fontWeight:'700',marginTop:4,marginLeft:2},
+  panel:{padding:16,borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:12},
+  panelHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},
+  panelTitle:{color:s.ink,fontSize:15.5,fontWeight:'700'},link:{color:s.control,fontSize:14,fontWeight:'600'},textAction:{minWidth:44,minHeight:34,alignItems:'flex-end',justifyContent:'center'},
+  panelCaption:{color:s.muted,fontSize:12,lineHeight:18},caption:{color:s.muted,fontSize:12,lineHeight:17},graphHint:{color:s.muted,fontSize:12,lineHeight:18,marginLeft:4,marginTop:-4},text:{color:'#FFFFFF',fontSize:14,fontWeight:'600'},
+  wrap:{flexDirection:'row',flexWrap:'wrap',gap:10},deletePreset:{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'},deleteText:{color:s.control,fontSize:13,fontWeight:'600'},
   preset:{backgroundColor:s.control,minHeight:44,justifyContent:'center',alignItems:'center',paddingHorizontal:16,paddingVertical:11,borderRadius:22},
-  input:{color:s.ink,borderWidth:1,borderColor:s.cardBorder,paddingHorizontal:14,paddingVertical:12,borderRadius:16,backgroundColor:s.inputBg},customHeader:{gap:3,marginTop:4},savedRow:{flexDirection:'row',alignItems:'center',gap:12},
+  input:{color:s.ink,borderWidth:1,borderColor:s.cardBorder,paddingHorizontal:14,paddingVertical:12,borderRadius:16,backgroundColor:s.inputBg},customHeader:{gap:2},savedRow:{flexDirection:'row',alignItems:'center',gap:10},
   });
 };

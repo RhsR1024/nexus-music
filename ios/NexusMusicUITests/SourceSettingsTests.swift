@@ -136,9 +136,16 @@ final class SourceSettingsTests: XCTestCase {
         XCTFail("Text field contents exceeded the bounded replacement budget");return
       }
       field.tap()
-      field.typeKey(XCUIKeyboardKey.rightArrow.rawValue,modifierFlags:.command)
-      field.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:existing.count+1))
-      let cleared=field.value as? String ?? ""
+      if !existing.isEmpty && existing != field.placeholderValue {
+        field.typeKey("a",modifierFlags:.command)
+        field.typeText(XCUIKeyboardKey.delete.rawValue)
+      }
+      var cleared=field.value as? String ?? ""
+      if !cleared.isEmpty && cleared != field.placeholderValue {
+        field.typeKey(XCUIKeyboardKey.rightArrow.rawValue,modifierFlags:.command)
+        field.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:cleared.count+1))
+        cleared=field.value as? String ?? ""
+      }
       guard cleared.isEmpty || cleared==field.placeholderValue else {
         XCTFail("Text replacement must observe an empty field before retrying");return
       }
@@ -455,6 +462,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertFalse(app.buttons["settings-open-background"].exists,"The underlying category must leave the accessibility tree while its sheet is open")
     evidence("Theme mode native sheet")
     app.buttons["theme-sheet-close"].tap()
+    XCTAssertTrue(waitForGone(app.buttons["theme-sheet-close"],timeout:5),"Closing the picker must dismiss the sheet")
     XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists,"Closing the picker must preserve its category")
     openSettings(app,page:"appearance");app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the active settings tab must return to the settings root")
@@ -4078,18 +4086,21 @@ final class SourceSettingsTests: XCTestCase {
     var queueEntry=app.buttons["查看播放队列"];reach(queueEntry);queueEntry.tap()
     var fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(fullQueue);fullQueue.tap()
     let single=app.descendants(matching:.any).matching(identifier:"queue-mode-one").firstMatch
-    XCTAssertTrue(single.waitForExistence(timeout:10));reach(single);single.tap();XCTAssertTrue(single.isSelected)
+    XCTAssertTrue(single.waitForExistence(timeout:10));reach(single);single.tap()
+    expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:single);waitForExpectations(timeout:5)
     app.buttons["收起队列"].tap()
     let optionsClose=app.buttons["收起播放选项"].firstMatch;reach(optionsClose);optionsClose.tap()
     let playerClose=app.buttons["收起播放页"].firstMatch;reach(playerClose);playerClose.tap()
     let random=app.buttons["随机播放"];reach(random);random.tap()
     player.tap();pauseFixturePlayback();queueEntry=app.buttons["查看播放队列"];reach(queueEntry);queueEntry.tap();fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(fullQueue);fullQueue.tap()
     let shuffle=app.descendants(matching:.any).matching(identifier:"queue-mode-shuffle").firstMatch
-    XCTAssertTrue(shuffle.isSelected,"Library random playback must disable single repeat")
+    XCTAssertTrue(shuffle.waitForExistence(timeout:5))
+    expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:shuffle);waitForExpectations(timeout:5)
     XCTAssertFalse(single.isSelected)
     let randomModeImage=XCTAttachment(screenshot:app.screenshot());randomModeImage.name="Library random disables single repeat";randomModeImage.lifetime = .keepAlways;add(randomModeImage)
     let sequence=app.descendants(matching:.any).matching(identifier:"queue-mode-off").firstMatch
-    reach(sequence);sequence.tap();XCTAssertTrue(sequence.isSelected)
+    reach(sequence);sequence.tap()
+    expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:sequence);waitForExpectations(timeout:5)
     app.buttons["收起队列"].tap()
     reach(optionsClose);optionsClose.tap()
     reach(playerClose);playerClose.tap()
@@ -6147,7 +6158,7 @@ final class SourceSettingsTests: XCTestCase {
     // second lyric remains active, and retain the paused playback intent.
     let clock=beforeSeek?.components(separatedBy:" / ").first?.components(separatedBy:":").compactMap(Int.init) ?? []
     let currentSeconds=clock.count==2 ? clock[0]*60+clock[1] : 0
-    let target:CGFloat=currentSeconds>=70 && currentSeconds<=95 ? 0.9 : 0.7
+    let target:CGFloat=currentSeconds>=70 && currentSeconds<=95 ? 0.35 : 0.7
     progress.coordinate(withNormalizedOffset:CGVector(dx:0.25,dy:0.5)).press(forDuration:0.1,thenDragTo:progress.coordinate(withNormalizedOffset:CGVector(dx:target,dy:0.5)))
     XCTAssertTrue(app.buttons["播放"].exists, "Seeking must preserve paused intent")
     expectation(for:NSPredicate(format:"value != %@",beforeSeek ?? ""),evaluatedWith:progress);waitForExpectations(timeout:5)
@@ -8962,6 +8973,216 @@ final class SourceSettingsTests: XCTestCase {
     reveal(favoriteButton)
     XCTAssertTrue(favoriteButton.isSelected,"Favorite appearance theme survives normal navigation")
     XCTAssertTrue(close.isHittable);close.tap();XCTAssertTrue(waitForGone(close,timeout:5),"Fixed close handle remains reachable after reopening")
+  }
+
+  func testSollinFullVisualAudit() throws {
+    let app=XCUIApplication();app.launch()
+    let dismiss=app.buttons["player-drag-handle"].firstMatch
+    if dismiss.waitForExistence(timeout:2) {
+      if dismiss.isHittable {dismiss.tap()} else {dismiss.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap()}
+      _ = waitForGone(dismiss,timeout:6)
+    }
+    func snap(_ name:String){
+      Thread.sleep(forTimeInterval:0.7)
+      let a=XCTAttachment(screenshot:XCUIScreen.main.screenshot())
+      a.name=name;a.lifetime = .keepAlways;add(a)
+    }
+    func tapTab(_ id:String){
+      let t=app.descendants(matching:.any).matching(identifier:id).firstMatch
+      if t.waitForExistence(timeout:8) && t.isHittable { t.tap() }
+    }
+    func reach(_ item:XCUIElement, maxSwipes:Int=12){
+      for _ in 0..<maxSwipes {
+        if item.exists && item.isHittable { break }
+        if item.exists && item.frame.midY < app.frame.midY { app.swipeDown() } else { app.swipeUp() }
+      }
+    }
+
+    // Reset theme to Light + Blush so screenshots match Sollin default light blush palette
+    openSettings(app,page:"theme")
+    let lightTheme=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","浅色")).firstMatch
+    if lightTheme.waitForExistence(timeout:5) && lightTheme.isHittable { lightTheme.tap() }
+    let themeClose=app.buttons["theme-sheet-close"].firstMatch
+    if themeClose.waitForExistence(timeout:3) && themeClose.isHittable { themeClose.tap(); _ = waitForGone(themeClose,timeout:5) }
+    openSettings(app,page:"background")
+    let blush=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
+    if blush.waitForExistence(timeout:5) { reach(blush); if blush.isHittable { blush.tap() } }
+    let bgClose=app.buttons["background-sheet-close"].firstMatch
+    if bgClose.waitForExistence(timeout:3) && bgClose.isHittable { bgClose.tap(); _ = waitForGone(bgClose,timeout:5) }
+
+    // 1. Discover Home & Playlist Detail
+    tapTab("tab-discover")
+    _ = app.buttons["discovery-item-0"].waitForExistence(timeout:20)
+    snap("audit-01-discover-home")
+    let firstPlaylist=app.buttons["discovery-item-0"]
+    if firstPlaylist.exists && firstPlaylist.isHittable {
+      firstPlaylist.tap()
+      Thread.sleep(forTimeInterval:2.2)
+      snap("audit-02-discover-playlist-detail")
+      let back=app.buttons.matching(NSPredicate(format:"label CONTAINS %@ OR label == %@","返回","发现")).firstMatch
+      if back.exists && back.isHittable { back.tap() }
+    }
+
+    // 2. Search Home & Results (and start a live track so player & mini bar are populated)
+    tapTab("tab-search")
+    let query=app.textFields["搜索歌曲或歌手"]
+    XCTAssertTrue(query.waitForExistence(timeout:10))
+    snap("audit-03-search-home")
+    let wy=app.descendants(matching:.any).matching(identifier:"网易云").firstMatch
+    if wy.exists && wy.isHittable { wy.tap() }
+    query.tap()
+    for ch in "Shape of You" { query.typeText(String(ch)) }
+    query.typeText("\n")
+    let firstResult=app.buttons["search-track-wy-0"]
+    if firstResult.waitForExistence(timeout:35) {
+      snap("audit-04-search-results")
+      let moreBtn=app.buttons["search-more-wy-0"].firstMatch
+      if moreBtn.exists && moreBtn.isHittable {
+        moreBtn.tap()
+        snap("audit-28-sheet-track-actions")
+        let closeTrack=app.buttons["收起歌曲更多操作"].firstMatch
+        if closeTrack.exists && closeTrack.isHittable { closeTrack.tap() }
+      }
+      if firstResult.isHittable { firstResult.tap() }
+    }
+    Thread.sleep(forTimeInterval:2.0)
+
+    // 3. Library & Local Audio
+    tapTab("tab-library")
+    Thread.sleep(forTimeInterval:1.0)
+    snap("audit-05-library-home")
+    tapTab("tab-local")
+    Thread.sleep(forTimeInterval:1.0)
+    snap("audit-06-local-audio")
+
+    // 4. Settings Home & Key Subpages
+    tapTab("tab-settings")
+    Thread.sleep(forTimeInterval:0.8)
+    snap("audit-07-settings-home")
+    let subpages:[(String,String)]=[
+      ("playback","audit-08-settings-playback"),
+      ("equalizer","audit-09-settings-equalizer"),
+      ("appearance","audit-10-settings-appearance"),
+      ("accounts","audit-11-settings-accounts"),
+      ("downloads","audit-12-settings-download"),
+      ("storage","audit-13-settings-cache"),
+      ("sources","audit-14-settings-sources"),
+    ]
+    for (page,name) in subpages {
+      openSettings(app,page:page)
+      Thread.sleep(forTimeInterval:1.0)
+      snap(name)
+    }
+
+    // 5. Full Player — all 8 skins & interactive sheets
+    tapTab("tab-discover")
+    let openPlayer=app.buttons["打开播放页"].firstMatch
+    if openPlayer.waitForExistence(timeout:10) {
+      openPlayer.tap()
+      Thread.sleep(forTimeInterval:1.5)
+      func closePlayerOptions(){
+        let closeOpt=app.buttons["收起播放选项"].firstMatch
+        if closeOpt.waitForExistence(timeout:3) && closeOpt.isHittable {
+          closeOpt.tap()
+          _ = waitForGone(closeOpt,timeout:6)
+          Thread.sleep(forTimeInterval:0.5)
+        }
+      }
+      func switchSkin(_ id:String){
+        closePlayerOptions()
+        let more=app.buttons["更多播放控制"].firstMatch
+        if more.waitForExistence(timeout:5) && more.isHittable {
+          more.tap()
+          let styleBtn=app.buttons["播放界面样式"].firstMatch
+          if styleBtn.waitForExistence(timeout:5) {
+            reach(styleBtn); styleBtn.tap()
+            let skin=app.descendants(matching:.any).matching(identifier:"play-skin-\(id)").firstMatch
+            if skin.waitForExistence(timeout:5) {
+              reach(skin); skin.tap()
+              _ = skin.waitForNonExistence(timeout:6)
+              Thread.sleep(forTimeInterval:1.2)
+            }
+          }
+        }
+      }
+
+      switchSkin("classic")
+      snap("audit-15-player-classic")
+      // Capture sheets from classic player
+      let more=app.buttons["更多播放控制"].firstMatch
+      if more.waitForExistence(timeout:5) && more.isHittable {
+        more.tap()
+        snap("audit-23-sheet-player-menu")
+        let offsetBtn=app.buttons["歌词时间偏移"].firstMatch
+        if offsetBtn.waitForExistence(timeout:4) {
+          reach(offsetBtn); offsetBtn.tap()
+          snap("audit-26-sheet-lyric-offset")
+          let back=app.buttons["返回播放选项"].firstMatch
+          if back.exists && back.isHittable { back.tap(); Thread.sleep(forTimeInterval:0.5) }
+        }
+        let rateBtn=app.buttons["播放倍速"].firstMatch
+        if rateBtn.waitForExistence(timeout:4) {
+          reach(rateBtn); rateBtn.tap()
+          Thread.sleep(forTimeInterval:0.5)
+          snap("audit-24-sheet-rate")
+          let back=app.buttons["返回播放选项"].firstMatch
+          if back.exists && back.isHittable { back.tap(); Thread.sleep(forTimeInterval:0.8) }
+        }
+        let sleepBtn=app.buttons["睡眠定时器"].firstMatch
+        if sleepBtn.waitForExistence(timeout:4) {
+          reach(sleepBtn); sleepBtn.tap()
+          Thread.sleep(forTimeInterval:0.5)
+          snap("audit-25-sheet-sleep")
+          let back=app.buttons["返回播放选项"].firstMatch
+          if back.exists && back.isHittable { back.tap(); Thread.sleep(forTimeInterval:0.8) }
+        }
+        closePlayerOptions()
+      }
+
+      // Comments sheet
+      let commentBtn=app.buttons["歌曲评论"].firstMatch
+      if commentBtn.waitForExistence(timeout:4) && commentBtn.isHittable {
+        commentBtn.tap()
+        Thread.sleep(forTimeInterval:2.0)
+        snap("audit-27-sheet-comments")
+        let closeComments=app.buttons["收起歌曲评论"].firstMatch
+        if closeComments.exists && closeComments.isHittable { closeComments.tap(); _ = waitForGone(closeComments,timeout:5); Thread.sleep(forTimeInterval:0.5) }
+      }
+
+      switchSkin("vinyl")
+      snap("audit-16-player-vinyl")
+
+      switchSkin("am")
+      snap("audit-17-player-am-cover")
+      let amLyrics=app.descendants(matching:.any).matching(identifier:"am-content-lyrics").firstMatch
+      if amLyrics.exists && amLyrics.isHittable { amLyrics.tap(); snap("audit-18-player-am-lyrics") }
+      let amQueue=app.descendants(matching:.any).matching(identifier:"am-content-queue").firstMatch
+      if amQueue.exists && amQueue.isHittable { amQueue.tap(); snap("audit-19-player-am-queue") }
+
+      switchSkin("am2")
+      snap("audit-20-player-am2-cover")
+      let am2Lyrics=app.descendants(matching:.any).matching(identifier:"am2-content-lyrics").firstMatch
+      if am2Lyrics.exists && am2Lyrics.isHittable { am2Lyrics.tap(); snap("audit-21-player-am2-lyrics") }
+
+      switchSkin("immersive")
+      snap("audit-22-player-immersive")
+
+      switchSkin("wave")
+      snap("audit-29-player-wave")
+
+      switchSkin("photo")
+      snap("audit-30-player-photo")
+      let photoToggle=app.descendants(matching:.any).matching(identifier:"photo-actions-toggle").firstMatch
+      if photoToggle.exists && photoToggle.isHittable { photoToggle.tap(); snap("audit-31-player-photo-actions") }
+
+      switchSkin("stage")
+      snap("audit-32-player-stage")
+
+      // Return to classic & pause
+      switchSkin("classic")
+      let pause=app.buttons["暂停"].firstMatch
+      if pause.exists && pause.isHittable { pause.tap() }
+    }
   }
 
 }

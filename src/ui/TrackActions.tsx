@@ -15,7 +15,7 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {PlatformPlaylistUpdate,type PlatformPlaylistOperation} from './PlatformPlaylistUpdate.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {controls,radius,sollinTokens,space,typography} from './tokens.ts';
+import {sollinTokens,typography} from './tokens.ts';
 import {downloadableTrack,type DownloadSubmission} from '../app/downloadSubmission.ts';
 import {DownloadSubmissionView} from './DownloadSubmission.tsx';
 import {DownloadQualityChoice} from './DownloadQualityChoice.tsx';
@@ -44,9 +44,10 @@ const neteaseFavoriteCopy=(status:NeteaseFavoriteStatus)=>{
   return '';
 };
 export interface AdditionalTrackAction {id:string;label:string;icon:React.ComponentProps<typeof Ionicons>['name'];run:()=>void|Promise<void>}
-export function TrackActions({services,track,onClose,prefix,extras=false,additionalActions=[],favoriteScope='song',closeLabel='收起歌曲更多操作'}:{
+export function TrackActions({services,track,onClose,prefix,extras=false,additionalActions=[],favoriteScope='song',closeLabel='收起歌曲更多操作',onSearchArtist,onSearchAlbum}:{
   services:Services;track:Track|null;onClose:()=>void;prefix:string;
   extras?:boolean;additionalActions?:readonly AdditionalTrackAction[];favoriteScope?:'song'|'library';closeLabel?:string;
+  onSearchArtist?:(artist:string)=>void;onSearchAlbum?:(album:string)=>void;
 }){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),{share,sharing,error:shareError}=useSongShare(track);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
@@ -142,35 +143,65 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
     catch{if(owns(owner,epoch))setError('操作未保存，原数据保留；请重试');}
     finally{if(owns(owner,epoch))setBusy(false);}
   }
-  const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void,id=label)=><Pressable key={id} testID={`${prefix}-action-${id}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.action,{borderBottomColor:s.hairline,opacity:busy||sharing?.5:1}]}><View style={[styles.iconBadge,{backgroundColor:s.accentSoft}]}><Ionicons name={icon} size={18} color={s.accent}/></View><Text style={{color:s.ink,fontSize:15,fontWeight:'500',flex:1}}>{label}</Text><Ionicons name="chevron-forward" size={16} color={s.subtle}/></Pressable>;
+  const tile=(label:string,shortLabel:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void,id=label)=>(
+    <Pressable key={id} testID={`${prefix}-action-${id}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.tileButton,{opacity:busy||sharing?.5:1}]}>
+      <View style={[styles.tileCircle,{backgroundColor:s.accentSoft}]}><Ionicons name={icon} size={22} color={s.accent}/></View>
+      <Text numberOfLines={1} style={{color:s.ink,fontSize:12,fontWeight:'500'}}>{shortLabel}</Text>
+    </Pressable>
+  );
+  const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void,id=label,last=false)=>(
+    <Pressable key={id} testID={`${prefix}-action-${id}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.action,{borderBottomWidth:last?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,opacity:busy||sharing?.5:1}]}>
+      <View style={[styles.iconBadge,{backgroundColor:s.accentSoft}]}><Ionicons name={icon} size={18} color={s.accent}/></View>
+      <Text style={{color:s.ink,fontSize:15,fontWeight:'500',flex:1}}>{label}</Text>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+    </Pressable>
+  );
+  const canDownload=track?downloadableTrack(track):false;
+  const discoverRows:React.ReactNode[]=[];
+  if(track){
+    if(supportsSimilarSongs(track))discoverRows.push(action('相似歌曲','radio-outline',()=>setSimilar(true)));
+    if(extras)discoverRows.push(action('歌曲评论','chatbubble-outline',()=>setCommenting(true)));
+    if(extras&&(track.origin.kind==='online'||track.origin.kind==='imported'))discoverRows.push(action('匹配歌曲','search-outline',()=>setMatching(true)));
+    if(onSearchArtist&&track.artist.trim())discoverRows.push(action(`搜索歌手：${track.artist}`,'person-outline',()=>{close();onSearchArtist(track.artist);},'search-artist'));
+    const albumName=track.album?.trim();
+    if(onSearchAlbum&&albumName)discoverRows.push(action(`查看专辑：${albumName}`,'disc-outline',()=>{close();onSearchAlbum(albumName);},'search-album'));
+  }
   return <SheetModal visible={!!track} animationType="slide" onRequestClose={close}>
-    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{close();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&platformEditing&&wyAccount?<PlatformPlaylistUpdate services={services} track={track} account={wyAccount} operation={platformEditing} onBack={()=>setPlatformEditing(null)} onUpdated={(title,unchanged,operation)=>{setWYPlaylistMessage(operation==='add'?(unchanged?`这首歌已在「${title}」中`:`已添加到「${title}」`):(unchanged?`这首歌不在「${title}」中`:`已从「${title}」移除`));setPlatformEditing(null);}}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={close}/>:<View style={{flex:1,backgroundColor:s.sheetGradient[0]}}>
+    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close} onSearchArtist={onSearchArtist} onSearchAlbum={onSearchAlbum}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{close();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&platformEditing&&wyAccount?<PlatformPlaylistUpdate services={services} track={track} account={wyAccount} operation={platformEditing} onBack={()=>setPlatformEditing(null)} onUpdated={(title,unchanged,operation)=>{setWYPlaylistMessage(operation==='add'?(unchanged?`这首歌已在「${title}」中`:`已添加到「${title}」`):(unchanged?`这首歌不在「${title}」中`:`已从「${title}」移除`));setPlatformEditing(null);}}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={close}/>:<View style={{flex:1,backgroundColor:s.sheetGradient[0]}}>
       <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
       <ScrollView testID={`${prefix}-actions`} contentContainerStyle={styles.content}>
       <View style={{alignItems:'center'}}><Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={close} style={styles.close}><View style={{width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66'}}/></Pressable></View>
       <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
-        {track&&<Cover services={services} track={track} size={52} radius={11}/>}
+        {track&&<Cover services={services} track={track} size={56} radius={12}/>}
         <View style={{flex:1,gap:2}}>
           <Text accessibilityRole="header" numberOfLines={2} style={{fontSize:19,fontWeight:'700',color:s.ink}}>{track?.title??'歌曲操作'}</Text>
           <Text numberOfLines={1} style={{fontSize:13,color:s.muted}}>{track?.artist}{track?.album?` · ${track.album}`:''}</Text>
         </View>
       </View>
-      {track&&<View style={[styles.actions,{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}]}>
-        {action('下一首','play-skip-forward',()=>{services.addToQueue(track,true);close();})}
-        {action('加入队列','list',()=>{services.addToQueue(track);close();})}
-        {action(favorite?'取消本地收藏':'本地收藏',favorite?'heart':'heart-outline',()=>{void saveFavorite();})}
-        {qqTrack&&qqAccount&&action('收藏到 QQ 音乐',qqFavoriteState==='added'?'star':'star-outline',()=>{void saveQQFavorite();},'qq-favorite')}
-        {wyTrack&&wyAccount&&action('收藏到网易云音乐',wyFavoriteState==='added'?'star':'star-outline',()=>{void saveNeteaseFavorite();},'wy-favorite')}
-        {wyTrack&&wyAccount&&action('添加到网易云歌单','add-circle-outline',()=>{setWYPlaylistMessage('');setPlatformEditing('add');},'wy-playlist')}
-        {wyTrack&&wyAccount&&action('从网易云歌单移除','remove-circle-outline',()=>{setWYPlaylistMessage('');setPlatformEditing('remove');},'wy-playlist-remove')}
-        {action('加入歌单','albums-outline',()=>setAdding(true))}
-        {action('分享歌曲','share-outline',()=>{setError('');void share();})}
-        {downloadableTrack(track)&&action('下载','download-outline',()=>{void download();})}
-        {supportsSimilarSongs(track)&&action('相似歌曲','radio-outline',()=>setSimilar(true))}
-        {extras&&action('歌曲评论','chatbubble-outline',()=>setCommenting(true))}
-        {extras&&(track.origin.kind==='online'||track.origin.kind==='imported')&&action('匹配歌曲','search-outline',()=>setMatching(true))}
-        {additionalActions.map(item=>action(item.label,item.icon,()=>{void runAdditional(item);},item.id))}
-      </View>}
+      {track&&<>
+        <View style={[styles.tilesCard,{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}]}>
+          {tile('下一首','下一首','play-skip-forward',()=>{services.addToQueue(track,true);close();})}
+          {tile('加入队列','加入队列','list',()=>{services.addToQueue(track);close();})}
+          {tile(favorite?'取消本地收藏':'本地收藏',favorite?'已收藏':'收藏',favorite?'heart':'heart-outline',()=>{void saveFavorite();})}
+          {canDownload?tile('下载','下载','download-outline',()=>{void download();}):tile('分享歌曲','分享','share-outline',()=>{setError('');void share();})}
+        </View>
+        <Text style={[styles.section,{color:s.muted}]}>歌曲与歌单</Text>
+        <View style={[styles.actions,{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}]}>
+          {action('加入歌单','albums-outline',()=>setAdding(true))}
+          {canDownload&&action('分享歌曲','share-outline',()=>{setError('');void share();})}
+          {qqTrack&&qqAccount&&action('收藏到 QQ 音乐',qqFavoriteState==='added'?'star':'star-outline',()=>{void saveQQFavorite();},'qq-favorite')}
+          {wyTrack&&wyAccount&&action('收藏到网易云音乐',wyFavoriteState==='added'?'star':'star-outline',()=>{void saveNeteaseFavorite();},'wy-favorite')}
+          {wyTrack&&wyAccount&&action('添加到网易云歌单','add-circle-outline',()=>{setWYPlaylistMessage('');setPlatformEditing('add');},'wy-playlist')}
+          {wyTrack&&wyAccount&&action('从网易云歌单移除','remove-circle-outline',()=>{setWYPlaylistMessage('');setPlatformEditing('remove');},'wy-playlist-remove')}
+          {additionalActions.map((item,idx)=>action(item.label,item.icon,()=>{void runAdditional(item);},item.id,idx===additionalActions.length-1))}
+        </View>
+        {discoverRows.length>0&&<>
+          <Text style={[styles.section,{color:s.muted}]}>探索与更多</Text>
+          <View style={[styles.actions,{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}]}>
+            {discoverRows}
+          </View>
+        </>}
+      </>}
       {qqTrack&&qqAccounts.length>1&&<Text style={[typography.caption,{color:s.muted}]}>已登录多个 QQ 音乐账号，请在设置中只保留一个后再收藏到平台。</Text>}
       {!!qqFavoriteMessage&&<Text testID={`${prefix}-qq-favorite-status`} accessibilityLiveRegion="polite" style={{color:qqFavoriteState==='added'?s.muted:s.accent}}>{qqFavoriteMessage}</Text>}
       {wyTrack&&wyAccounts.length>1&&<Text style={[typography.caption,{color:s.muted}]}>已登录多个网易云音乐账号，请在设置中只保留一个后再收藏或添加平台歌单。</Text>}
@@ -181,4 +212,14 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
     <MatchModal services={services} track={matching?track:null} onClose={()=>setMatching(false)}/>
   </SheetModal>;
 }
-const styles=StyleSheet.create({content:{paddingHorizontal:18,paddingTop:10,paddingBottom:36,gap:14},close:{minWidth:80,minHeight:28,alignItems:'center',justifyContent:'center'},actions:{borderRadius:20,overflow:'hidden'},action:{minHeight:54,paddingHorizontal:14,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:12},iconBadge:{width:34,height:34,borderRadius:10,alignItems:'center',justifyContent:'center'}});
+const styles=StyleSheet.create({
+  content:{paddingHorizontal:18,paddingTop:10,paddingBottom:36,gap:14},
+  close:{minWidth:80,minHeight:28,alignItems:'center',justifyContent:'center'},
+  tilesCard:{flexDirection:'row',alignItems:'stretch',justifyContent:'space-between',borderRadius:20,paddingHorizontal:8,paddingVertical:14},
+  tileButton:{flex:1,alignItems:'center',justifyContent:'center',gap:7,minHeight:64},
+  tileCircle:{width:44,height:44,borderRadius:13,alignItems:'center',justifyContent:'center'},
+  section:{fontSize:12,fontWeight:'500',marginBottom:-6,paddingLeft:6},
+  actions:{borderRadius:20,overflow:'hidden'},
+  action:{minHeight:54,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:12},
+  iconBadge:{width:32,height:32,borderRadius:9,alignItems:'center',justifyContent:'center'},
+});

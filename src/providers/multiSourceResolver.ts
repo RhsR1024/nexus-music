@@ -1,4 +1,4 @@
-import type { Track } from '../domain/track.ts';
+import type { OnlinePlatform, Track } from '../domain/track.ts';
 import { fallbackQualities, normalizeQuality, type Quality } from '../domain/quality.ts';
 import type { MediaResolver, ResolvedMedia } from '../playback/controller.ts';
 import { makeLXRequest } from './lx.ts';
@@ -26,20 +26,30 @@ function mediaURL(result: unknown): string | undefined {
   catch { /* No script output/URL in diagnostics. */ }
 }
 
+export interface SmartSwitchPolicy {
+  qualityForPlatform?: (platform: OnlinePlatform) => Quality;
+  degradeMode?: () => 'progressive' | 'direct128k';
+  crossScript?: () => boolean;
+}
+
 export class MultiSourceResolver {
   private registry: SourceRegistry; private transport: LXTransport; private preference: () => Quality;
-  private timeoutMs: number;
-  constructor(registry: SourceRegistry, transport: LXTransport, preference: () => Quality, timeoutMs = 8000) {
-    this.registry = registry; this.transport = transport; this.preference = preference; this.timeoutMs = timeoutMs;
+  private timeoutMs: number; private policy: SmartSwitchPolicy;
+  constructor(registry: SourceRegistry, transport: LXTransport, preference: () => Quality, timeoutMs = 8000, policy: SmartSwitchPolicy = {}) {
+    this.registry = registry; this.transport = transport; this.preference = preference; this.timeoutMs = timeoutMs; this.policy = policy;
   }
   async resolve(track: Track, signal: AbortSignal, excluded: ReadonlySet<string> = new Set(), qualityScope?:readonly Quality[], trace?:PlaybackTraceSink): Promise<RoutedMedia> {
     throwIfAborted(signal);
     if (track.origin.kind !== 'online') throw new Error('LX仅处理在线平台歌曲');
     const platform = track.origin.platform;
-    const preference = this.preference();
+    const preference = this.policy.qualityForPlatform?.(platform) ?? this.preference();
     const sources = this.registry.getSnapshot().filter(source => this.registry.isCurrent(source));
     const attempts: RouteAttempt[] = [];
-    for (const quality of qualityScope??fallbackQualities(preference)) {
+    const degrade = this.policy.degradeMode?.() ?? 'progressive';
+    const allowCrossScript = this.policy.crossScript?.() ?? true;
+    const qualities: readonly Quality[] = qualityScope ?? (degrade === 'direct128k' ? (preference === '128k' ? ['128k'] : [preference, '128k']) : fallbackQualities(preference));
+    for (const quality of qualities) {
+      let triedSourceForQuality = false;
       for (const source of sources) {
         throwIfAborted(signal);
         if (!this.registry.isCurrent(source)) continue;
@@ -48,6 +58,8 @@ export class MultiSourceResolver {
         const capability = source.capabilities.find(item => item.platform === platform && item.actions.includes('musicUrl'));
         const scriptQuality = capability?.qualities.find(type => normalizeQuality(type) === quality);
         if (!capability || !scriptQuality) continue;
+        if (!allowCrossScript && triedSourceForQuality) break;
+        triedSourceForQuality = true;
         trace?.({stage:'source',status:'info',title:`尝试 ${safePlaybackTraceText(source.name)??'LX 音源'} · ${quality}`,sourceId:source.id,sourceName:source.name,platform,quality});
         try {
           const result = await bounded(child => this.transport.request(source, makeLXRequest(track, scriptQuality, capability), child), signal, this.timeoutMs);

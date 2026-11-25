@@ -1,4 +1,4 @@
-import {addSearchHistory, clearSearchHistory, normalizeSearchHistory} from '../domain/searchHistory.ts';
+import {addSearchHistory, clearSearchHistory, normalizeSearchHistory, removeSearchHistory} from '../domain/searchHistory.ts';
 import type { Repository } from './repository.ts';
 
 export class SearchHistoryStore {
@@ -18,6 +18,7 @@ export class SearchHistoryStore {
   }
 
   record(query: string) { return this.mutate(history => addSearchHistory(history, query)); }
+  remove(query: string) { return this.mutate(history => removeSearchHistory(history, query)); }
   clear() { return this.mutate(() => clearSearchHistory()); }
 
   private mutate(patch: (history: readonly string[]) => readonly string[]) {

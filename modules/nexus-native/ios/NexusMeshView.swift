@@ -25,7 +25,10 @@ private struct MeshContentView: View {
         height: 3,
         points: field.points(at: clock.effectiveTime(context.date)).map { SIMD2<Float>(Float($0.x), Float($0.y)) },
         colors: field.colors.map { Color($0.cgColor) })
+        .scaleEffect(1.30)
+        .ignoresSafeArea()
     }
+    .ignoresSafeArea()
   }
 }
 
@@ -86,6 +89,7 @@ private final class MeshCanvas: UIView {
     if #available(iOS 18.0, *) {
       if hostController == nil {
         let controller = UIHostingController(rootView: MeshContentView(field: field, clock: clock))
+        controller.safeAreaRegions = []
         controller.view.backgroundColor = .clear
         controller.view.isUserInteractionEnabled = false
         hostController = controller

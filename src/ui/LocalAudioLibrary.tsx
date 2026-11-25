@@ -1,17 +1,21 @@
 import {Text,TextInput} from './Typography.tsx';
-import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
+import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator, Alert, FlatList, Keyboard, Pressable, StyleSheet, View, useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Modal} from './AdaptiveModal.tsx';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
+import type {LocalAudioRecord} from '../storage/localAudio.ts';
 import {viewLocalAudio,type LocalSortField,type LocalSortDirection} from '../domain/localAudioSort.ts';
 import {LocalScanSettings} from './LocalScanSettings.tsx';
 import {scanFolderKey} from '../domain/localScan.ts';
 import {LocalAudioTools} from './LocalAudioTools.tsx';
 import {RetainedAudio} from './RetainedAudio.tsx';
 import {Cover} from './Cover.tsx';
+import {QualityBadge} from './QualityBadge.tsx';
+import {TrackActions,type AdditionalTrackAction} from './TrackActions.tsx';
+import {AlphabetIndexBar,buildAlphabetIndexMap,type AlphabetLetter} from './AlphabetIndexBar.tsx';
 import {LocalPlaylistPicker} from './LocalPlaylistPicker.tsx';
 import {defaultDevicePlaylistId,devicePlaylistDisplayEntries,favoriteDevicePlaylistEntries} from '../domain/devicePlaylist.ts';
 import {trackKey,type Track} from '../domain/track.ts';
@@ -19,17 +23,33 @@ import {BatchSelectionBar,SelectionMark,type BatchAction} from './BatchSelection
 import {selectionNone,selectionEnter,selectionToggle,selectionAll,selectionByListOrder} from '../domain/selection.ts';
 import {useTheme} from './theme.tsx';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {controls,sollinTokens,space,typography} from './tokens.ts';
-export function LocalAudioLibrary({services,embedded=false}:{services:Services;embedded?:boolean}) {
+import {sollinTokens,space,typography} from './tokens.ts';
+
+const SOLLIN_PLAY_ALL_BG='#8C4A4F';
+
+export function LocalAudioLibrary({
+  services,
+  embedded=false,
+  bottomInset=28,
+}:{
+  services:Services;
+  embedded?:boolean;
+  bottomInset?:number;
+}){
   const {width}=useWindowDimensions(),insets=useSafeAreaInsets();
-  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),files=useSyncExternalStore(services.localAudio.subscribe,services.localAudio.getSnapshot);
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
+  const files=useSyncExternalStore(services.localAudio.subscribe,services.localAudio.getSnapshot);
   const localPlaylists=useSyncExternalStore(services.devicePlaylists.subscribe,services.devicePlaylists.getSnapshot);
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[mode,setMode]=useState<'songs'|'albums'|'artists'|'folders'|'playlists'>('songs'),[group,setGroup]=useState<string|null>(null),[message,setMessage]=useState(''),[adding,setAdding]=useState<readonly Track[]>();
   const [scanOpen,setScanOpen]=useState(false);
   const [retainedOpen,setRetainedOpen]=useState(false);
+  const [menuFile,setMenuFile]=useState<LocalAudioRecord|null>(null);
+  const [activeLetter,setActiveLetter]=useState<AlphabetLetter|undefined>(undefined);
   const [selection,setSelection]=useState(selectionNone),[batchBusy,setBatchBusy]=useState(false);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const sort=preferences.localAudioSortField,direction=preferences.localAudioSortDirection;
+  const listRef=useRef<FlatList<LocalAudioRecord>>(null);
+
   const defaultEntries=useMemo(()=>favoriteDevicePlaylistEntries(files),[files]);
   const playlistEntries=(playlist:typeof localPlaylists[number])=>playlist.id===defaultDevicePlaylistId?defaultEntries:devicePlaylistDisplayEntries(playlist,files);
   function setSort(field:LocalSortField,direction:LocalSortDirection){void services.preferences.update({localAudioSortField:field,localAudioSortDirection:direction}).catch(()=>setMessage('排序未保存，原顺序保留，请重试'));}
@@ -43,8 +63,21 @@ export function LocalAudioLibrary({services,embedded=false}:{services:Services;e
   const groupKeys=(file:typeof filtered[number])=>mode==='folders'?(file.locations?.length?[...new Set(file.locations.map(scanFolderKey))]:['__imports__']):[groupKey(file)];
   const groups=useMemo(()=>{const values=new Map<string,typeof filtered>();for(const file of filtered)for(const key of groupKeys(file)){const list=values.get(key);if(list)list.push(file);else values.set(key,[file]);}return [...values].map(([key,files])=>({key,name:mode==='albums'?files[0]!.track.album||'未知专辑':mode==='folders'?(key==='__imports__'?'单独导入':(()=>{const folder=files[0]!.locations!.find(value=>scanFolderKey(value)===key)!;return folder.rootName+(folder.path?' / '+folder.path:'');})()):files[0]!.track.artist,files})).sort((a,b)=>a.name.localeCompare(b.name,'zh'));},[filtered,mode]);
   const shown=useMemo(()=>group?filtered.filter(file=>groupKeys(file).includes(group)):filtered,[filtered,mode,group]);
-  useEffect(()=>{setSelection(selectionNone);},[query,sort,direction,mode,group,localSelected,open]);
+  useEffect(()=>{setSelection(selectionNone);setMenuFile(null);},[query,sort,direction,mode,group,localSelected,open]);
   const selectedFiles=selectionByListOrder(selection,shown,file=>file.id);
+
+  const showAlphabet=mode==='songs'&&!group&&!selection.active&&shown.length>=15;
+  const alphabetMap=useMemo(()=>showAlphabet?buildAlphabetIndexMap(shown,file=>file.track.title):new Map<AlphabetLetter,number>(),[shown,showAlphabet]);
+  const availableLetters=useMemo(()=>new Set(alphabetMap.keys()),[alphabetMap]);
+
+  function jumpToLetter(letter:AlphabetLetter){
+    setActiveLetter(letter);
+    const index=alphabetMap.get(letter);
+    if(index!==undefined){
+      listRef.current?.scrollToIndex({index,animated:false,viewPosition:0});
+    }
+  }
+
   function clearSelection(){setSelection(selectionNone);}
   function removeIndex(ids:readonly string[]) {
     Alert.alert('从本地列表移除？',`将移除 ${ids.length} 首歌曲，不会删除设备上的原文件或音枢内的音频副本。可用“恢复已移除歌曲”重新显示。`,[
@@ -52,9 +85,20 @@ export function LocalAudioLibrary({services,embedded=false}:{services:Services;e
       {text:'移除',style:'destructive',onPress:()=>{setBatchBusy(true);void services.localAudio.removeFromIndex(ids).then(()=>{clearSelection();setMessage(`已从列表移除 ${ids.length} 首，音频文件保留`);}).catch(()=>setMessage('移除未保存，原列表保留，请重试')).finally(()=>setBatchBusy(false));}},
     ]);
   }
-  // Batch actions read an explicit item list so the same contract serves both
-  // the library list (files) and the playlist detail (entries, whose ids are
-  // playlist entry ids, not audio ids).
+  function confirmDeleteFile(item:LocalAudioRecord){
+    Alert.alert('删除此设备的音频？','歌单引用仍保留，可重新导入同一文件恢复；正在使用的音频不能删除。',[
+      {text:'取消',style:'cancel'},
+      {text:'删除',style:'destructive',onPress:()=>{void services.localAudio.remove(item.id).then(result=>setMessage(result.pendingCleanup?'已移出曲库，暂存文件将在下次启动清理':'音频已删除')).catch(()=>setMessage('音频正在使用或删除失败，原数据保留'));}},
+    ]);
+  }
+  function showTrackMetadataInfo(item:LocalAudioRecord){
+    const durationSec=item.track.durationMs?Math.round(item.track.durationMs/1000):0;
+    const durationStr=`${Math.floor(durationSec/60)}:${String(durationSec%60).padStart(2,'0')}`;
+    const sizeStr=`${(item.bytes/1048576).toFixed(2)} MB`;
+    const locationText=item.locations?.length?item.locations.map(l=>`${l.rootName}${l.path?'/'+l.path:''}`).join('\n'):'单独导入到音枢';
+    Alert.alert('音频信息',`标题：${item.track.title}\n歌手：${item.track.artist}\n专辑：${item.track.album||'未知专辑'}\n格式：${item.extension.toUpperCase()} · ${sizeStr} · ${durationStr}\n内嵌歌词：${item.lyric.trim()?'有':'无'}\n位置：${locationText}`,[{text:'知道了'}]);
+  }
+
   async function batch(action:BatchAction,items?:readonly {id:string;track:Track}[]) {
     const selected=items??selectedFiles.map(file=>({id:file.id,track:file.track}));
     if(batchBusy||!selected.length)return;
@@ -94,6 +138,7 @@ export function LocalAudioLibrary({services,embedded=false}:{services:Services;e
       clearSelection();
     }catch{setMessage('操作未完成，请重试');}finally{setBatchBusy(false);}
   }
+
   async function importFiles() {
     setBusy(true);setMessage('');let assets:readonly {uri:string;name:string}[]=[];
     try {
@@ -102,42 +147,82 @@ export function LocalAudioLibrary({services,embedded=false}:{services:Services;e
     }catch(error){setMessage(error instanceof Error?error.message:'导入失败，原曲库保留');}
     finally{for(const asset of assets)if(asset.uri.startsWith(Paths.cache.uri)){try{const file=new File(asset.uri);if(file.exists)file.delete();}catch{}}setBusy(false);}
   }
-  const button=(label:string,action:()=>void,disabled=false,testID?:string,primary=false)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={action} style={{minHeight:40,paddingHorizontal:14,paddingVertical:8,borderRadius:20,justifyContent:'center',alignItems:'center',backgroundColor:primary?s.control:s.card,borderWidth:primary?0:1,borderColor:s.cardBorder,opacity:disabled?.45:1}}><Text style={{color:primary?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{label}</Text></Pressable>;
-  const field=(props:{value:string;onChangeText:(value:string)=>void;placeholder:string;label:string})=><TextInput {...props} placeholderTextColor={s.subtle} style={{flex:1,color:s.ink,backgroundColor:s.inputBg,borderWidth:1,borderColor:s.cardBorder,paddingHorizontal:14,paddingVertical:10,borderRadius:16,fontSize:14}}/>;
+
+  const softSurface=s.dark?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.44)';
+  const button=(label:string,action:()=>void,disabled=false,testID?:string,primary=false)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={action} style={{minHeight:40,paddingHorizontal:14,paddingVertical:8,borderRadius:20,justifyContent:'center',alignItems:'center',backgroundColor:primary?s.accent:softSurface,opacity:disabled?.45:1}}><Text style={{color:primary?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{label}</Text></Pressable>;
+  const field=(props:{value:string;onChangeText:(value:string)=>void;placeholder:string;label:string})=><TextInput {...props} placeholderTextColor={s.subtle} style={{flex:1,color:s.ink,backgroundColor:s.inputBg,paddingHorizontal:14,paddingVertical:10,borderRadius:16,fontSize:14}}/>;
   const tabDefs=([['songs','所有歌曲','musical-note','歌曲'],['folders','文件夹','folder-outline','文件夹'],['artists','艺术家','people-outline','艺术家'],['albums','专辑','disc-outline','专辑'],['playlists','歌单','list','歌单']] as const);
-  const body=<View style={{flex:1,paddingHorizontal:20,paddingTop:embedded?6:insets.top+10,paddingBottom:embedded?8:insets.bottom+12,backgroundColor:embedded?'transparent':p.background[0],gap:12}}>
-      <View style={{flex:1,gap:12}} accessibilityElementsHidden={scanOpen||!!adding} importantForAccessibility={scanOpen||adding?'no-hide-descendants':'auto'}>
+
+  const localActions:AdditionalTrackAction[]=menuFile?[
+    {id:'local-favorite',label:menuFile.favorite?'取消本机收藏':'本机收藏',icon:menuFile.favorite?'heart':'heart-outline',run:async()=>{
+      const fav=!menuFile.favorite;
+      await services.localAudio.setFavorites([menuFile.id],fav);
+      setMessage(fav?'已收藏（仅本机）':'已取消收藏（仅本机）');
+    }},
+    {id:'local-add-playlist',label:'加入本地歌单',icon:'folder-open-outline',run:()=>{
+      const target=menuFile.track;
+      setTimeout(()=>setAdding([target]),120);
+    }},
+    {id:'local-info',label:'查看音频信息',icon:'information-circle-outline',run:()=>{
+      const target=menuFile;
+      setTimeout(()=>showTrackMetadataInfo(target),120);
+    }},
+    {id:'local-hide',label:'从列表移除',icon:'eye-off-outline',run:()=>{
+      const id=menuFile.id;
+      setTimeout(()=>removeIndex([id]),120);
+    }},
+    {id:'local-delete',label:'删除音频文件',icon:'trash-outline',run:()=>{
+      const target=menuFile;
+      setTimeout(()=>confirmDeleteFile(target),120);
+    }},
+  ]:[];
+
+  const listBottomPadding=embedded?bottomInset:28;
+
+  const body=<View style={{flex:1,paddingHorizontal:20,paddingTop:embedded?6:insets.top+10,paddingBottom:embedded?0:insets.bottom+12,backgroundColor:embedded?'transparent':p.background[0],gap:12}}>
+    <View style={{flex:1,gap:12}} accessibilityElementsHidden={scanOpen||!!adding} importantForAccessibility={scanOpen||adding?'no-hide-descendants':'auto'}>
+      {/* Sollin 665-id3-all-songs.png: Display header + sleek icon-only top bar controls */}
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
         <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
-          {!embedded&&<Pressable accessibilityRole="button" accessibilityLabel="收起本地音频" onPress={()=>setOpen(false)} style={{width:38,height:38,borderRadius:19,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-back" size={20} color={s.ink}/></Pressable>}
-          <Text accessibilityRole="header" style={{fontSize:32,fontWeight:'800',color:s.ink,letterSpacing:-0.5}}>{embedded?'本地':'本地音频'}</Text>
+          {!embedded&&<Pressable accessibilityRole="button" accessibilityLabel="收起本地音频" onPress={()=>setOpen(false)} style={{width:38,height:38,borderRadius:19,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-back" size={20} color={s.ink}/></Pressable>}
+          <Text accessibilityRole="header" style={{fontSize:30,fontWeight:'700',lineHeight:36,color:s.ink,letterSpacing:-0.5}}>{embedded?'本地':'本地音频'}</Text>
         </View>
         <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-          <Pressable accessibilityRole="button" accessibilityLabel="导入音频文件" disabled={busy} onPress={()=>{void importFiles();}} style={{width:38,height:38,borderRadius:19,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="add" size={21} color={s.ink}/></Pressable>
-          <Pressable testID="local-scan-open" accessibilityRole="button" accessibilityLabel="文件夹与扫描" disabled={busy} onPress={()=>setScanOpen(true)} style={{width:38,height:38,borderRadius:19,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="folder-open-outline" size={19} color={s.ink}/></Pressable>
-          <Pressable testID="local-retained-open" accessibilityRole="button" accessibilityLabel={`管理保留副本（${services.localAudio.getRetainedSnapshot().length} 首）`} disabled={busy||batchBusy} onPress={()=>setRetainedOpen(true)} style={{width:38,height:38,borderRadius:19,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center',justifyContent:'center',opacity:busy||batchBusy?.45:1}}><Ionicons name="archive-outline" size={19} color={s.ink}/></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="导入音频文件" disabled={busy} onPress={()=>{void importFiles();}} style={{width:38,height:38,borderRadius:19,backgroundColor:softSurface,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="add" size={21} color={s.ink}/></Pressable>
+          <Pressable testID="local-scan-open" accessibilityRole="button" accessibilityLabel="文件夹与扫描" disabled={busy} onPress={()=>setScanOpen(true)} style={{width:38,height:38,borderRadius:19,backgroundColor:softSurface,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="folder-open-outline" size={19} color={s.ink}/></Pressable>
+          <Pressable testID="local-retained-open" accessibilityRole="button" accessibilityLabel={`管理保留副本（${services.localAudio.getRetainedSnapshot().length} 首）`} disabled={busy||batchBusy} onPress={()=>setRetainedOpen(true)} style={{width:38,height:38,borderRadius:19,backgroundColor:softSurface,alignItems:'center',justifyContent:'center',opacity:busy||batchBusy?.45:1}}><Ionicons name="archive-outline" size={19} color={s.ink}/></Pressable>
         </View>
       </View>
+
+      {/* Sollin 665-id3-all-songs.png: 5-tab icon strip with coral underline indicator */}
       {!selection.active&&<View style={{flexDirection:'row',borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
         {tabDefs.map(([value,title,icon,a11y])=>{
           const active=mode===value;
-          return <Pressable key={value} accessibilityRole="tab" accessibilityLabel={a11y} accessibilityState={{selected:active}} onPress={()=>{setMode(value);setGroup(null);setLocalSelected(null);}} style={{flex:1,alignItems:'center',paddingVertical:8,gap:4}}>
+          return <Pressable key={value} accessibilityRole="button" accessibilityLabel={a11y} accessibilityState={{selected:active}} onPress={()=>{setMode(value);setGroup(null);setLocalSelected(null);}} style={{flex:1,alignItems:'center',paddingVertical:8,gap:4}}>
             <Ionicons name={icon} size={18} color={active?s.accent:s.muted}/>
             <Text numberOfLines={1} style={{color:active?s.accent:s.muted,fontSize:12,fontWeight:active?'700':'500'}}>{title}</Text>
             <View style={{width:24,height:2.5,borderRadius:1.25,backgroundColor:active?s.accent:'transparent',marginTop:2}}/>
           </Pressable>;
         })}
       </View>}
+
       {busy&&<ActivityIndicator accessibilityLabel="正在导入音频" color={s.accent}/>}
       {services.localAudio.hiddenCount()>0&&<View style={{alignSelf:'flex-start'}}>{button(`恢复已移除歌曲（${services.localAudio.hiddenCount()} 首）`,()=>{void services.localAudio.restoreIndex().then(()=>setMessage('已恢复本设备保留的音频索引')).catch(()=>setMessage('恢复未保存，请重试'));},batchBusy,'local-restore-index')}</View>}
       {!!message&&<Text accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{message}</Text>}
       {!selection.active&&files.length>0&&<><LocalAudioTools query={query} onQuery={value=>{setQuery(value);setGroup(null);}} field={sort} direction={direction} onSort={setSort}/>
       {(sort==='modifiedAt'||sort==='addedAt')&&files.some(file=>file[sort]===undefined)&&<Text style={{...typography.caption,color:s.muted}}>旧条目缺少时间记录，排在已知时间之后；不会推测原文件时间。</Text>}</>}
+
+      {/* Sollin 665-id3-all-songs.png: Count label + solid dark rose #8C4A4F 播放全部 capsule */}
       {mode!=='playlists'&&<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-        <Text testID="local-filter-count" style={{color:s.muted,fontSize:13,fontWeight:'600'}}>{shown.length===files.length?`${files.length} 首歌曲`:`${shown.length} / ${files.length} 首`}</Text>
-        {files.length>0&&mode==='songs'&&!selection.active&&<Pressable accessibilityRole="button" accessibilityLabel="播放全部" onPress={()=>services.playTracks(shown.map(file=>file.track),0)} style={{flexDirection:'row',alignItems:'center',gap:5,paddingHorizontal:12,paddingVertical:6,borderRadius:15,backgroundColor:s.accentSoft}}><Ionicons name="play" size={13} color={s.control}/><Text style={{color:s.control,fontSize:12,fontWeight:'600'}}>播放全部</Text></Pressable>}
+        <Text testID="local-filter-count" accessibilityLabel={`${shown.length} / ${files.length} 首`} style={{color:s.muted,fontSize:14,fontWeight:'700',fontVariant:['tabular-nums']}}>{shown.length===files.length?`${files.length} 首歌曲`:`${shown.length} / ${files.length} 首`}</Text>
+        {files.length>0&&(mode==='songs'||!!group)&&!selection.active&&<Pressable accessibilityRole="button" accessibilityLabel="播放全部" onPress={()=>services.playTracks(shown.map(file=>file.track),0)} style={{flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:16,paddingVertical:8,borderRadius:18,backgroundColor:SOLLIN_PLAY_ALL_BG}}>
+          <Ionicons name="play" size={14} color="#FFFFFF"/>
+          <Text style={{color:'#FFFFFF',fontSize:13.5,fontWeight:'600'}}>播放全部</Text>
+        </Pressable>}
       </View>}
+
       {selection.active&&mode!=='playlists'&&<BatchSelectionBar count={selectedFiles.length} total={shown.length} actions={['favorite','playlist','next','delete']} onAction={action=>{void batch(action);}} onSelectAll={()=>setSelection(selectedFiles.length===shown.length?{active:true,ids:[]}:selectionAll(selection,shown.map(file=>file.id)))} onCancel={clearSelection} allSelected={shown.length>0&&selectedFiles.length===shown.length} busy={batchBusy} testPrefix="local-batch"/>}
+
       {mode==='playlists'?(selectedLocal?<View style={{gap:10,flex:1}}>
         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
           <Text style={{fontSize:21,fontWeight:'700',color:s.ink,flex:1}}>{selectedLocal.title}</Text>
@@ -149,9 +234,22 @@ export function LocalAudioLibrary({services,embedded=false}:{services:Services;e
           {button('删除歌单',()=>{void services.devicePlaylists.remove(selectedLocal.id).then(()=>{setLocalSelected(null);setMessage(`已删除本地歌单「${selectedLocal.title}」`);}).catch(()=>setMessage('本地歌单未删除，请重试'));})}
         </View>}</View>}
         {detailSelecting&&<BatchSelectionBar count={selectedEntries.length} total={detailEntries.length} actions={selectedLocal.id===defaultDevicePlaylistId?['unfavorite','playlist','next']:['favorite','playlist','next','pl-remove']} onAction={action=>{void batch(action,selectedEntries.map(entry=>({id:entry.id,track:entry.track})));}} onSelectAll={()=>setSelection(selectedEntries.length===detailEntries.length?{active:true,ids:[]}:selectionAll(selection,detailEntries.map(entry=>entry.id)))} onCancel={clearSelection} allSelected={detailEntries.length>0&&selectedEntries.length===detailEntries.length} busy={batchBusy} testPrefix="local-playlist-batch"/>}
-        <FlatList data={detailEntries} keyExtractor={entry=>entry.id} ListEmptyComponent={<Text style={{color:s.muted,paddingVertical:24,textAlign:'center'}}>此本地歌单暂无歌曲</Text>} renderItem={({item,index})=><View style={{paddingVertical:10,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,gap:8}}>
-          <Pressable testID={`local-playlist-track-${index}`} accessibilityRole="button" accessibilityLabel={`${detailSelecting?(selection.ids.includes(item.id)?'已选，':'未选，'):'播放'}${item.track.title}`} accessibilityHint={detailSelecting?'点按切换选择':'播放此歌单'} accessibilityState={{selected:detailSelecting&&selection.ids.includes(item.id)}} disabled={batchBusy} onLongPress={()=>{Keyboard.dismiss();setSelection(selectionEnter(item.id));}} onPress={()=>detailSelecting?setSelection(selectionToggle(selection,item.id)):services.playTracks(detailEntries.map(entry=>entry.track),index)} style={{flexDirection:'row',gap:12,alignItems:'center'}}>{detailSelecting&&<SelectionMark selected={selection.ids.includes(item.id)}/>}<Cover services={services} track={item.track} size={46} radius={10}/><View style={{flex:1}}><Text style={{color:s.ink,fontSize:15,fontWeight:'600'}} numberOfLines={1}>{item.track.title}</Text><Text style={{color:s.muted,fontSize:12}} numberOfLines={1}>{item.track.artist}</Text></View></Pressable>
-          {!detailSelecting&&<View style={{flexDirection:'row',gap:8}}>{button('下一首',()=>services.addToQueue(item.track,true))}{button(selectedLocal.id===defaultDevicePlaylistId?'取消收藏':'移除',()=>{const action=selectedLocal.id===defaultDevicePlaylistId?services.localAudio.setFavorites([item.id],false):services.devicePlaylists.removeEntry(selectedLocal.id,item.id);void action.then(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'已取消收藏（仅本机）':'已从歌单移除')).catch(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'取消收藏未保存，请重试':'移除未保存，请重试'));})}</View>}
+        <FlatList data={detailEntries} keyExtractor={entry=>entry.id} contentContainerStyle={{paddingBottom:listBottomPadding}} ListEmptyComponent={<Text style={{color:s.muted,paddingVertical:24,textAlign:'center'}}>此本地歌单暂无歌曲</Text>} renderItem={({item,index})=><View style={{paddingVertical:9,flexDirection:'row',alignItems:'center',gap:8}}>
+          <Pressable testID={`local-playlist-track-${index}`} accessibilityRole="button" accessibilityLabel={`${detailSelecting?(selection.ids.includes(item.id)?'已选，':'未选，'):'播放'}${item.track.title}`} accessibilityHint={detailSelecting?'点按切换选择':'播放此歌单'} accessibilityState={{selected:detailSelecting&&selection.ids.includes(item.id)}} disabled={batchBusy} onLongPress={()=>{Keyboard.dismiss();setSelection(selectionEnter(item.id));}} onPress={()=>detailSelecting?setSelection(selectionToggle(selection,item.id)):services.playTracks(detailEntries.map(entry=>entry.track),index)} style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
+            {detailSelecting&&<SelectionMark selected={selection.ids.includes(item.id)}/>}
+            <Cover services={services} track={item.track} size={46} radius={10}/>
+            <View style={{flex:1,gap:2}}>
+              <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}} numberOfLines={1}>{item.track.title}</Text>
+              <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                <QualityBadge track={item.track}/>
+                <Text style={{color:s.muted,fontSize:12,flex:1}} numberOfLines={1}>{item.track.artist}</Text>
+              </View>
+            </View>
+          </Pressable>
+          {!detailSelecting&&<View style={{flexDirection:'row',gap:6}}>
+            <Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.addToQueue(item.track,true)} style={{width:34,height:34,borderRadius:17,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}><Ionicons name="play-skip-forward-outline" size={16} color={s.ink}/></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={selectedLocal.id===defaultDevicePlaylistId?'取消收藏':'移除'} onPress={()=>{const action=selectedLocal.id===defaultDevicePlaylistId?services.localAudio.setFavorites([item.id],false):services.devicePlaylists.removeEntry(selectedLocal.id,item.id);void action.then(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'已取消收藏（仅本机）':'已从歌单移除')).catch(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'取消收藏未保存，请重试':'移除未保存，请重试'));}} style={{width:34,height:34,borderRadius:17,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}><Ionicons name={selectedLocal.id===defaultDevicePlaylistId?'heart-dislike-outline':'remove-circle-outline'} size={16} color={s.muted}/></Pressable>
+          </View>}
         </View>}/>
       </View>:<View style={{gap:10,flex:1}}>
         <Text style={{color:s.muted,fontSize:12,lineHeight:18}}>本地歌单只保存在当前设备，与音乐库自建歌单隔离。</Text>
@@ -159,29 +257,71 @@ export function LocalAudioLibrary({services,embedded=false}:{services:Services;e
           {field({value:newLocalName,onChangeText:setNewLocalName,placeholder:'新本地歌单名称',label:'新本地歌单名称'})}
           {button('新建本地歌单',()=>{Keyboard.dismiss();void services.devicePlaylists.create(newLocalName).then(id=>{setNewLocalName('');setLocalSelected(id);}).catch(()=>setMessage('本地歌单未创建，请重试'));},!newLocalName.trim(),'local-playlist-create',true)}
         </View>
-        <FlatList data={localPlaylists} keyExtractor={playlist=>playlist.id} renderItem={({item})=>{const entries=playlistEntries(item);return <Pressable accessibilityRole="button" accessibilityLabel={`打开本地歌单：${item.title} · ${entries.length}首`} onPress={()=>{Keyboard.dismiss();setLocalSelected(item.id);setLocalName(item.title);}} style={{padding:12,marginBottom:8,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',gap:12,alignItems:'center'}}>
+        <FlatList data={localPlaylists} keyExtractor={playlist=>playlist.id} contentContainerStyle={{paddingBottom:listBottomPadding}} renderItem={({item})=>{const entries=playlistEntries(item);return <Pressable accessibilityRole="button" accessibilityLabel={`打开本地歌单：${item.title} · ${entries.length}首`} onPress={()=>{Keyboard.dismiss();setLocalSelected(item.id);setLocalName(item.title);}} style={{padding:12,marginBottom:8,borderRadius:16,backgroundColor:softSurface,flexDirection:'row',gap:12,alignItems:'center'}}>
           <Cover services={services} track={entries[0]?.track} size={50} radius={10}/>
           <View style={{flex:1}}><Text style={{color:s.ink,fontSize:15,fontWeight:'600'}} numberOfLines={1}>{item.title}{item.id===defaultDevicePlaylistId?'（仅本机）':''}</Text><Text style={{color:s.muted,fontSize:12}}>{entries.length} 首 · 仅本机</Text></View>
           <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
         </Pressable>;}}/>
-      </View>):files.length===0?<View style={{flex:1,alignItems:'center',justifyContent:'center',paddingVertical:36,gap:14}}>
+      </View>):files.length===0?<View style={{flex:1,alignItems:'center',justifyContent:'center',paddingVertical:36,paddingBottom:listBottomPadding,gap:14}}>
         <Ionicons name="musical-notes-outline" size={56} color={s.subtle}/>
         <Text style={{color:s.ink,fontSize:18,fontWeight:'700'}}>还没有本地歌曲</Text>
         <Text style={{color:s.muted,fontSize:12,textAlign:'center',lineHeight:19,paddingHorizontal:18}}>支持 MP3、FLAC、AAC、M4A、WAV、AIFF，可导入文件或配置扫描文件夹。</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="导入音频文件" disabled={busy} onPress={()=>{void importFiles();}} style={{width:'78%',minHeight:48,borderRadius:24,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:busy?.45:1}}><Ionicons name="add-circle-outline" size={18} color="#FFFFFF"/><Text style={{color:'#FFFFFF',fontSize:15,fontWeight:'600'}}>导入音频文件</Text></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="添加扫描文件夹" disabled={busy} onPress={()=>setScanOpen(true)} style={{width:'78%',minHeight:48,borderRadius:24,borderWidth:1.2,borderColor:s.control,backgroundColor:s.card,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:busy?.45:1}}><Ionicons name="folder-open-outline" size={18} color={s.control}/><Text style={{color:s.control,fontSize:15,fontWeight:'600'}}>文件夹与扫描</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="从文件导入音频" disabled={busy} onPress={()=>{void importFiles();}} style={{width:'78%',minHeight:48,borderRadius:24,backgroundColor:SOLLIN_PLAY_ALL_BG,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:busy?.45:1}}><Ionicons name="add-circle-outline" size={18} color="#FFFFFF"/><Text style={{color:'#FFFFFF',fontSize:15,fontWeight:'600'}}>导入音频文件</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="添加扫描文件夹" disabled={busy} onPress={()=>setScanOpen(true)} style={{width:'78%',minHeight:48,borderRadius:24,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:busy?.45:1}}><Ionicons name="folder-open-outline" size={18} color={s.ink}/><Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>文件夹与扫描</Text></Pressable>
       </View>:<>{group&&<View style={{alignSelf:'flex-start'}}>{button(`返回${mode==='albums'?'专辑':mode==='folders'?'文件夹':'艺术家'}`,()=>setGroup(null))}</View>}
-      {mode==='songs'||group?<FlatList style={{flex:1}} data={shown} keyboardShouldPersistTaps="handled" keyExtractor={file=>file.id} initialNumToRender={12} windowSize={5} ListEmptyComponent={<Text style={{color:s.muted,paddingVertical:24,textAlign:'center'}}>没有匹配的本地音频</Text>} renderItem={({item,index})=><View style={{paddingVertical:10,gap:8,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
-        <Pressable testID={`local-track-${index}`} accessibilityRole="button" accessibilityLabel={`${selection.active?(selection.ids.includes(item.id)?'已选，':'未选，'):''}${item.track.title}`} accessibilityState={{selected:selection.active&&selection.ids.includes(item.id)}} disabled={batchBusy} onLongPress={()=>{Keyboard.dismiss();setSelection(selectionEnter(item.id));}} onPress={()=>selection.active?setSelection(selectionToggle(selection,item.id)):services.playTracks(shown.map(file=>file.track),index)} style={{flexDirection:'row',gap:12,alignItems:'center'}}>{selection.active&&<SelectionMark selected={selection.ids.includes(item.id)}/>}<Cover services={services} track={item.track} size={48} radius={10}/><View style={{flex:1,gap:2}}><Text numberOfLines={1} style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.track.title}</Text><Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{item.track.artist} · {item.extension.toUpperCase()} · {(item.bytes/1048576).toFixed(1)} MB</Text></View></Pressable>
-        {!selection.active&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{button(item.favorite?'已收藏':'收藏',()=>{const favorite=!item.favorite;void services.localAudio.setFavorites([item.id],favorite).then(()=>setMessage(favorite?'已收藏（仅本机）':'已取消收藏（仅本机）')).catch(()=>setMessage('收藏未保存'));})}{button('下一首',()=>services.addToQueue(item.track,true))}{button('加入歌单',()=>setAdding([item.track]))}{button('从列表移除',()=>removeIndex([item.id]),batchBusy)}{button('删除音频',()=>Alert.alert('删除此设备的音频？','歌单引用仍保留，可重新导入同一文件恢复；正在使用的音频不能删除。',[{text:'取消',style:'cancel'},{text:'删除',style:'destructive',onPress:()=>{void services.localAudio.remove(item.id).then(result=>setMessage(result.pendingCleanup?'已移出曲库，暂存文件将在下次启动清理':'音频已删除')).catch(()=>setMessage('音频正在使用或删除失败，原数据保留'));}}]))}</View>}
-      </View>}/>:<FlatList key={`groups-${mode}`} data={groups} numColumns={mode==='albums'?2:1} columnWrapperStyle={mode==='albums'?{justifyContent:'space-between'}:undefined} keyExtractor={group=>group.key} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`${item.name} · ${item.files.length}首`} onPress={()=>setGroup(item.key)} style={{width:mode==='albums'?'48%':'100%',marginVertical:6,padding:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:10,flexDirection:mode==='albums'?'column':'row',alignItems:mode==='albums'?'flex-start':'center'}}><Cover services={services} track={item.files[0]!.track} size={mode==='albums'?Math.min(180,Math.max(80,(width-76)/2-24)):48} radius={12}/><View style={{gap:4,flexShrink:1}}><Text numberOfLines={2} style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.name}</Text><Text style={{color:s.muted,fontSize:12}}>{item.files.length} 首</Text></View></Pressable>}/>}</>}
-      </View>
-      <LocalScanSettings store={services.localAudio} visible={scanOpen} onClose={()=>setScanOpen(false)}/>
-      {retainedOpen&&<RetainedAudio services={services} onClose={()=>setRetainedOpen(false)}/>}
-      {!!adding&&<View style={{position:'absolute',top:0,bottom:0,left:0,right:0,paddingTop:insets.top+space.md,backgroundColor:p.background[0]}}><LocalPlaylistPicker services={services} tracks={adding??[]} visible={!!adding} onClose={()=>setAdding(undefined)} onAdded={title=>{clearSelection();setMessage(`已添加到本地歌单「${title}」`);}}/></View>}
-    </View>;
+      {mode==='songs'||group?<View style={{flex:1,position:'relative'}}>
+        <FlatList
+          ref={listRef}
+          style={{flex:1}}
+          data={shown}
+          keyboardShouldPersistTaps="handled"
+          keyExtractor={file=>file.id}
+          initialNumToRender={14}
+          windowSize={7}
+          contentContainerStyle={{paddingBottom:listBottomPadding,paddingRight:showAlphabet?24:0}}
+          onScrollToIndexFailed={info=>{listRef.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false});}}
+          ListEmptyComponent={<Text style={{color:s.muted,paddingVertical:24,textAlign:'center'}}>没有匹配的本地音频</Text>}
+          renderItem={({item,index})=><View style={{flexDirection:'row',alignItems:'center',gap:6,paddingVertical:9}}>
+            <Pressable testID={`local-track-${index}`} accessibilityRole="button" accessibilityLabel={`${selection.active?(selection.ids.includes(item.id)?'已选，':'未选，'):''}${item.track.title}`} accessibilityState={{selected:selection.active&&selection.ids.includes(item.id)}} disabled={batchBusy} onLongPress={()=>{Keyboard.dismiss();setSelection(selectionEnter(item.id));}} onPress={()=>selection.active?setSelection(selectionToggle(selection,item.id)):services.playTracks(shown.map(file=>file.track),index)} style={{flex:1,minHeight:48,flexDirection:'row',gap:12,alignItems:'center'}}>
+              {selection.active&&<SelectionMark selected={selection.ids.includes(item.id)}/>}
+              <Cover services={services} track={item.track} size={46} radius={10}/>
+              <View style={{flex:1,gap:3}}>
+                <Text numberOfLines={1} style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.track.title}</Text>
+                <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                  <QualityBadge track={item.track} label={item.extension.toUpperCase()}/>
+                  <Text numberOfLines={1} style={{color:s.muted,fontSize:12,flex:1}}>{item.track.artist} · {(item.bytes/1048576).toFixed(1)} MB</Text>
+                </View>
+              </View>
+            </Pressable>
+            {!selection.active&&<View style={{flexDirection:'row',alignItems:'center',gap:2}}>
+              <Pressable accessibilityRole="button" accessibilityLabel={item.favorite?'已收藏':'收藏'} onPress={()=>{const favorite=!item.favorite;void services.localAudio.setFavorites([item.id],favorite).then(()=>setMessage(favorite?'已收藏（仅本机）':'已取消收藏（仅本机）')).catch(()=>setMessage('收藏未保存'));}} style={{width:32,height:38,alignItems:'center',justifyContent:'center'}}>
+                <Ionicons name={item.favorite?'heart':'heart-outline'} size={17} color={item.favorite?s.accent:s.subtle}/>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="删除音频" onPress={()=>confirmDeleteFile(item)} style={{width:32,height:38,alignItems:'center',justifyContent:'center'}}>
+                <Ionicons name="trash-outline" size={17} color={s.subtle}/>
+              </Pressable>
+              <Pressable testID={`local-more-${index}`} accessibilityRole="button" accessibilityLabel={`更多操作：${item.track.title}`} onPress={()=>setMenuFile(item)} style={{width:34,height:38,alignItems:'center',justifyContent:'center'}}>
+                <Ionicons name="ellipsis-horizontal" size={19} color={s.muted}/>
+              </Pressable>
+            </View>}
+          </View>}
+        />
+        {showAlphabet&&<AlphabetIndexBar available={availableLetters} activeLetter={activeLetter} onSelect={jumpToLetter}/>}
+      </View>:<FlatList key={`groups-${mode}`} data={groups} numColumns={mode==='albums'?2:1} columnWrapperStyle={mode==='albums'?{justifyContent:'space-between'}:undefined} contentContainerStyle={{paddingBottom:listBottomPadding}} keyExtractor={group=>group.key} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`${item.name} · ${item.files.length}首`} onPress={()=>setGroup(item.key)} style={{width:mode==='albums'?'48%':'100%',marginVertical:6,padding:12,borderRadius:18,backgroundColor:softSurface,gap:10,flexDirection:mode==='albums'?'column':'row',alignItems:mode==='albums'?'flex-start':'center'}}><Cover services={services} track={item.files[0]!.track} size={mode==='albums'?Math.min(180,Math.max(80,(width-76)/2-24)):48} radius={12}/><View style={{gap:4,flexShrink:1}}><Text numberOfLines={2} style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.name}</Text><Text style={{color:s.muted,fontSize:12}}>{item.files.length} 首</Text></View></Pressable>}/>}</>}
+    </View>
+    <LocalScanSettings store={services.localAudio} visible={scanOpen} onClose={()=>setScanOpen(false)}/>
+    {retainedOpen&&<RetainedAudio services={services} onClose={()=>setRetainedOpen(false)}/>}
+    <TrackActions services={services} track={menuFile?.track??null} prefix="local" additionalActions={localActions} closeLabel="收起本地歌曲更多操作" onClose={()=>setMenuFile(null)}/>
+    {!!adding&&<View style={{position:'absolute',top:0,bottom:0,left:0,right:0,paddingTop:insets.top+space.md,backgroundColor:p.background[0]}}><LocalPlaylistPicker services={services} tracks={adding??[]} visible={!!adding} onClose={()=>setAdding(undefined)} onAdded={title=>{clearSelection();setMessage(`已添加到本地歌单「${title}」`);}}/></View>}
+  </View>;
+
   if(embedded)return body;
-  return <View style={{marginVertical:4}}><Pressable accessibilityRole="button" accessibilityLabel={`本地音频 · ${files.length} 首`} onPress={()=>setOpen(true)} style={{minHeight:48,paddingHorizontal:14,paddingVertical:10,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',gap:10}}><Ionicons name="phone-portrait-outline" size={19} color={s.control}/><Text style={{flex:1,color:s.ink,fontSize:14,fontWeight:'600'}}>本地音频 · {files.length} 首</Text><Ionicons name="chevron-forward" size={16} color={s.subtle}/></Pressable>
+  return <View style={{marginVertical:4}}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`本地音频 · ${files.length} 首`} onPress={()=>setOpen(true)} style={{minHeight:48,paddingHorizontal:14,paddingVertical:10,borderRadius:16,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:10}}>
+      <Ionicons name="phone-portrait-outline" size={19} color={s.accent}/>
+      <Text style={{flex:1,color:s.ink,fontSize:14,fontWeight:'600'}}>本地音频 · {files.length} 首</Text>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+    </Pressable>
     <Modal visible={open} animationType="slide" onRequestClose={()=>setOpen(false)}>{body}</Modal>
   </View>;
 }

@@ -21,8 +21,8 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
   const navLabels={liquid:'液态玻璃',frosted:'磨砂融合',acrylic:'亚克力中置'} as const;
   type Row={id:string;title:string;icon:React.ComponentProps<typeof Ionicons>['name'];detail?:string;subtitle?:string;page?:AppearanceSection|'globalFont'|'lyricFont';toggle?:{value:boolean;change:(next:boolean)=>void}};
   const displayRows:Row[]=[
-    {id:'theme',title:'软件主题',icon:'contrast',detail:{system:'跟随系统',light:'浅色',dark:'深色'}[value.theme],page:'theme'},
-    {id:'background',title:'主题与背景',icon:'color-palette',detail:`${themes[value.visualTheme]} · ${styles[value.backgroundStyle]}`,page:'background'},
+    {id:'theme',title:'软件主题',icon:'contrast',subtitle:'浅色、深色或跟随系统外观',detail:{system:'跟随系统',light:'浅色',dark:'深色'}[value.theme],page:'theme'},
+    {id:'background',title:'主题与背景',icon:'color-palette',detail:`${themes[value.visualTheme]} · ${styles[value.backgroundStyle]} · 卡片 ${Math.round(value.cardOpacity*100)}%`,page:'background'},
     {id:'cover-color',title:'背景随封面变化',icon:'color-filter-outline',subtitle:'使用封面主体色，应用到全局及播放器',toggle:{value:value.coverColor,change:coverColor=>update({coverColor})}},
     {id:'motion',title:'动态背景',icon:'pulse',subtitle:'封面色彩流动并优先显示；暂停或减少动态效果时停止',toggle:{value:value.dynamicBackground,change:dynamicBackground=>update({dynamicBackground})}},
     {id:'icons',title:'软件图标',icon:'apps',detail:'默认图标',page:'icons'},
@@ -43,26 +43,27 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
   function row(item:Row,last:boolean){
     const body=<>
       <View style={{width:28,alignItems:'center',justifyContent:'center'}}>
-        <Ionicons name={item.icon} size={21} color={item.id==='accent'?s.accent:s.ink}/>
+        <Ionicons name={item.icon} size={20} color={item.id==='accent'?s.accent:s.ink}/>
       </View>
-      <View style={{flex:1,minWidth:0,gap:3}}>
-        <Text style={{color:s.ink,fontSize:16,fontWeight:'500'}}>{item.title}</Text>
+      <View style={{flex:1,minWidth:0,gap:2}}>
+        <Text style={{color:s.ink,fontSize:15.5,fontWeight:'700'}}>{item.title}</Text>
         {item.subtitle&&<Text style={{color:s.muted,fontSize:12,lineHeight:17}}>{item.subtitle}</Text>}
         {stacked&&item.detail&&<Text style={{color:s.muted,fontSize:13}}>{item.detail}</Text>}
       </View>
       {item.toggle?<Switch testID={`appearance-${item.id}`} accessibilityLabel={item.title} value={item.toggle.value} onValueChange={item.toggle.change} trackColor={s.switchTrack} thumbColor={s.switchThumb(item.toggle.value)}/>
-        :<>{!stacked&&!!item.detail&&<Text numberOfLines={2} style={{color:s.muted,fontSize:14,textAlign:'right',maxWidth:'42%',flexShrink:1}}>{item.detail}</Text>}{item.page&&<Ionicons name="chevron-forward" size={16} color={s.subtle}/>}</>}
+        :<>{!stacked&&!!item.detail&&<Text numberOfLines={2} style={{color:s.muted,fontSize:13.5,textAlign:'right',maxWidth:'42%',flexShrink:1}}>{item.detail}</Text>}{item.page&&<Ionicons name="chevron-forward" size={16} color={s.subtle}/>}</>}
     </>;
-    const style={paddingVertical:14,paddingHorizontal:16,flexDirection:'row' as const,alignItems:'center' as const,gap:12,minHeight:56};
-    return <View key={item.id} style={{borderBottomWidth:last?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
+    const style={paddingVertical:13.5,paddingHorizontal:16,flexDirection:'row' as const,alignItems:'center' as const,gap:12,minHeight:56};
+    return <View key={item.id}>
       {item.page?<Pressable testID={`settings-open-${item.id}`} accessibilityRole="button" accessibilityLabel={item.title} accessibilityValue={{text:item.detail}} onPress={()=>open(item.page!)} style={style}>{body}</Pressable>:<View style={style}>{body}</View>}
+      {!last&&<View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:56,backgroundColor:s.hairline}}/>}
     </View>;
   }
   return <View style={{gap:10,paddingTop:6}}>
-    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,marginLeft:6,marginTop:4}}>显示</Text>
-    <View style={{borderRadius:20,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}>{displayRows.map((item,i)=>row(item,i===displayRows.length-1))}</View>
-    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,marginLeft:6,marginTop:10}}>播放器</Text>
-    <View style={{borderRadius:20,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}>{playerRows.map((item,i)=>row(item,i===playerRows.length-1))}</View>
+    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginTop:2}}>显示</Text>
+    <View style={[{borderRadius:20,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder},s.cardShadow]}>{displayRows.map((item,i)=>row(item,i===displayRows.length-1))}</View>
+    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginTop:8}}>播放器</Text>
+    <View style={[{borderRadius:20,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder},s.cardShadow]}>{playerRows.map((item,i)=>row(item,i===playerRows.length-1))}</View>
     {!!error&&<Text accessibilityRole="alert" style={{color:s.accent,marginLeft:6}}>{error}</Text>}
   </View>;
 }

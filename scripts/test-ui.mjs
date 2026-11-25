@@ -978,7 +978,7 @@ const handleRequest = async (req, res) => {
       if(searchUI&&parsed.pathname==='/api/v6/playlist/detail'){
         res.end(JSON.stringify({code:200,playlist:{id:4001,name:'Unified fixture playlist',trackIds:[],tracks:[]}}));return;
       }
-      if(parsed.pathname==='/api/search/get/web'&&req.method==='POST'){
+      if((parsed.pathname==='/api/cloudsearch/pc'||parsed.pathname==='/api/search/get/web')&&req.method==='POST'){
         const body=new URLSearchParams(request.body??''),type=body.get('type'),query=body.get('s'),offset=Number(body.get('offset')??0);
         if(type==='10'){
           res.end(JSON.stringify({code:200,result:{albumCount:1,albums:[{id:query==='Unified aggregate fixture'?'2101':'2001',name:query==='Unified aggregate fixture'?'Unified aggregate album WY':'Unified fixture album',artist:{name:'Fixture artist'},size:12,publishTime:0}]}}));return;

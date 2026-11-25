@@ -7,7 +7,7 @@ const fields=[
   'visualTheme','accent','backgroundStyle','backgroundOpacity','cardOpacity','backgroundMask','maskColor','playerBackground','playerBlur','playerDarkness','coverRadius','coverColor','globalBackgroundMotion','dynamicBackground','glassNavigation',
   'miniActions','miniLyrics','localAudioSortField','localAudioSortDirection','stageStyle','stageBackdrop','am2AutoLyrics','am2DelaySeconds','am2ShowVolume','lyricStyle','autoMatch','lyricAlignment','lyricOffsets','volume','preampDB','eqPresets','playerLayout','favoriteVisualTheme','quality','eqEnabled','gains','repeat','shuffle','lyricOffsetMs','fontScale','rate','theme','cacheLimitMB','offlineLimitMB',
 ] as const satisfies readonly (keyof Preferences)[];
-const optionalFields=['tapeStyle','navigationStyle','showLocalTab','playlistAddPosition','keepScreenOn','fullScreenMode','autoPlayOnLaunch','openPlayerOnLaunch','mixWithOtherAudio','preloadNextTrack','lyricChineseMode'] as const satisfies readonly (keyof Preferences)[];
+const optionalFields=['tapeStyle','navigationStyle','showLocalTab','playlistAddPosition','keepScreenOn','fullScreenMode','autoPlayOnLaunch','autoPlaySource','openPlayerOnLaunch','mixWithOtherAudio','preloadNextTrack','preloadCount','playbackFadeEnabled','playbackFadeDurationMs','systemLyricsEnabled','systemLyricsPosition','playbackQualities','smartDegradeMode','smartCrossScript','smartSkipOnFailure','homePlatform','lyricChineseMode'] as const satisfies readonly (keyof Preferences)[];
 export interface BackupSettings {version:1;preferences:Pick<Preferences,(typeof fields)[number]>&Partial<Pick<Preferences,(typeof optionalFields)[number]|'downloadQualities'>>}
 function portableOffsetKey(key:string){
   try{const value=JSON.parse(key);if(!Array.isArray(value)||value.length!==3||value.some(x=>typeof x!=='string')||JSON.stringify(value)!==key)return false;
@@ -26,7 +26,7 @@ export function cleanBackupSettings(value:unknown):BackupSettings{
   for(const field of optionalFields)if(Object.hasOwn(selected,field))(selected as Record<string,unknown>)[field]=valid[field];
   if(Object.hasOwn(selected,'downloadQualities'))selected.downloadQualities=valid.downloadQualities;
   return {version:1,preferences:{...selected,gains:[...valid.gains],miniActions:[...valid.miniActions],eqPresets:valid.eqPresets.map(preset=>({name:preset.name,gains:[...preset.gains],preampDB:preset.preampDB})),
-    lyricStyle:{activeColor:style.activeColor,inactiveColor:style.inactiveColor,lineHeight:style.lineHeight,spacing:style.spacing,blur:style.blur,emphasis:style.emphasis},
+    lyricStyle:{activeColor:style.activeColor,inactiveColor:style.inactiveColor,lineHeight:style.lineHeight,spacing:style.spacing,blur:style.blur,emphasis:style.emphasis,...(style.showTranslation!==undefined?{showTranslation:style.showTranslation}:{}),...(style.showRomanization!==undefined?{showRomanization:style.showRomanization}:{}),...(style.secondaryScale!==undefined?{secondaryScale:style.secondaryScale}:{})},
     lyricOffsets:Object.fromEntries(Object.entries(normalizeLyricOffsets(valid.lyricOffsets)).filter(([key])=>portableOffsetKey(key))),
   }};
 }

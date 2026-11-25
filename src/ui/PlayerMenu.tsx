@@ -4,23 +4,25 @@ import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
-import type {Track} from '../domain/track.ts';
+import {trackKey,type Track} from '../domain/track.ts';
+import {lyricOffset} from '../lyrics/settings.ts';
 import {Cover} from './Cover.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme, type Theme} from './theme.tsx';
-import {radius, sollinTokens, space, typography} from './tokens.ts';
+import {sollinTokens, space, typography} from './tokens.ts';
 
 const platformName:Record<string,string>={wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水'};
 
-export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onQueue,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,onDiagnostics,downloadLabel='下载'}:{
+export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onLyricOffset,onEQ,onAudioOutput,onQueue,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,onDiagnostics,downloadLabel='下载'}:{
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
-  onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
+  onStyle:()=>void;onLyricsSettings:()=>void;onLyricOffset?:()=>void;onEQ?:()=>void;onAudioOutput?:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
 }){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),styles=makeStyles(theme),{share,sharing,error:shareError}=useSongShare(track);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
   const sleepLabel=sleep.mode==='off'?'已关闭':sleep.mode==='track'?'本曲结束后':`剩余 ${Math.max(0,Math.ceil((sleep.deadline-Date.now())/60000))} 分钟`;
+  const effectiveOffset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,trackKey(track.origin));
   const favorite=services.songFavorites.isFavorite(favoriteTrack);
   const platform=track.origin.kind==='online'?platformName[track.origin.platform]:track.origin.kind==='imported'?'汽水':'本地';
   const subtitle=[track.artist,track.album,platform].filter(Boolean).join(' · ');
@@ -57,8 +59,11 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
     <View style={styles.group}>
       {row('options-outline','播放界面样式',layoutLabel,onStyle)}
       {row('text-outline','歌词显示设置','字体与颜色',onLyricsSettings)}
+      {onLyricOffset&&row('time-outline','歌词时间偏移',effectiveOffset===0?'默认':`${effectiveOffset>0?'+':''}${effectiveOffset}ms`,onLyricOffset)}
       {row('speedometer-outline','播放倍速',`${preferences.rate}x`,onRate)}
       {row('moon-outline','睡眠定时器',sleepLabel,onSleep)}
+      {onEQ&&row('stats-chart-outline','均衡器',preferences.eqEnabled?'已开启':'已关闭',onEQ)}
+      {onAudioOutput&&row('volume-medium-outline','音频输出设备','AirPlay / 蓝牙',onAudioOutput)}
       {row('pulse-outline','播放链路诊断','查看过程',onDiagnostics)}
       {row('list-outline','队列与播放选项',`${queueCount} 首`,onQueue,true)}
     </View>
@@ -89,9 +94,9 @@ const makeStyles=(theme:Theme)=>{
   cardLabel:{fontSize:12,fontWeight:'500',color:s.ink},
   section:{fontSize:12,fontWeight:'500',color:s.muted,marginBottom:-6,paddingLeft:6},
   group:{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,borderRadius:20,overflow:'hidden'},
-  row:{minHeight:56,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:14},
+  row:{minHeight:54,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:14},
   rowBorder:{borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline},
-  rowIcon:{width:34,height:34,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:s.accentSoft},
+  rowIcon:{width:32,height:32,borderRadius:9,alignItems:'center',justifyContent:'center',backgroundColor:s.accentSoft},
   rowTitle:{fontSize:15,fontWeight:'500',color:s.ink,flex:1},
   rowValue:{fontSize:13,color:s.muted,maxWidth:'38%'},
   });

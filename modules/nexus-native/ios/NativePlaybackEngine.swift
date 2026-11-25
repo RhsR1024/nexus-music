@@ -16,6 +16,13 @@ final class NativePlaybackEngine {
   private lazy var sleepTimer = PlaybackSleepTimer(changed: { [weak self] body in self?.emit("sleep", body) }, expired: { [weak self] in self?.remotePause() })
   private var wantsPlay = false
   private var playbackRate: Float = 1
+  private var targetVolume: Float = 1
+  private var fadeEnabled = false
+  private var fadeDurationMs = 500
+  private var fadeTimer: Timer?
+  private var fadeGeneration = 0
+  private var systemLyricLine: String?
+  private var systemLyricPosition = "artist"
   private var loading: Task<Void, Never>?
   private var retainedLocalURL: URL?
   private var offlinePlaybackAlias: URL?
@@ -213,10 +220,10 @@ final class NativePlaybackEngine {
                   self.player.seek(to: CMTime(seconds:position,preferredTimescale:600),toleranceBefore:.zero,toleranceAfter:.zero) { [weak self] _ in
                     DispatchQueue.main.async {
                       guard let self,self.player.currentItem === item else { return }
-                      self.initialSeekPending=false;if self.wantsPlay {self.player.play(); self.player.rate = self.playbackRate}
+                      self.initialSeekPending=false;if self.wantsPlay {self.startPlaybackWithFade()}
                     }
                   }
-                } else {self.initialSeekPending=false;if self.wantsPlay {self.player.play(); self.player.rate = self.playbackRate}}
+                } else {self.initialSeekPending=false;if self.wantsPlay {self.startPlaybackWithFade()}}
               }
             }
           }
@@ -243,6 +250,42 @@ final class NativePlaybackEngine {
     try? session.setCategory(.playback, mode: .default, options: enabled ? [.mixWithOthers] : [])
     #endif
   }
+  private func cancelFade(restoreVolume: Bool = false) {
+    fadeTimer?.invalidate(); fadeTimer = nil; fadeGeneration += 1
+    if restoreVolume { player.volume = targetVolume }
+  }
+  private func startPlaybackWithFade() {
+    cancelFade()
+    if fadeEnabled && fadeDurationMs >= 100 && targetVolume > 0 {
+      let stepSec = 0.02
+      let steps = max(1, Int(Double(fadeDurationMs) / 20.0))
+      var currentStep = 0
+      let token = fadeGeneration
+      player.volume = 0
+      player.play(); player.rate = playbackRate
+      fadeTimer = Timer.scheduledTimer(withTimeInterval: stepSec, repeats: true) { [weak self] timer in
+        guard let self, self.fadeGeneration == token, self.wantsPlay else { timer.invalidate(); return }
+        currentStep += 1
+        let ratio = min(1.0, Float(currentStep) / Float(steps))
+        self.player.volume = self.targetVolume * ratio
+        if currentStep >= steps { timer.invalidate(); self.fadeTimer = nil; self.player.volume = self.targetVolume }
+      }
+    } else {
+      player.volume = targetVolume
+      player.play(); player.rate = playbackRate
+    }
+  }
+  func configureFade(_ enabled: Bool, _ durationMs: Int) {
+    fadeEnabled = enabled
+    fadeDurationMs = min(3000, max(100, durationMs))
+  }
+  func setSystemLyricLine(_ line: String?, _ position: String, _ itemID: String) {
+    guard !itemID.isEmpty, itemID == systemItemID else { return }
+    let trimmed = line?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    systemLyricLine = trimmed.isEmpty ? nil : trimmed
+    systemLyricPosition = position == "title" ? "title" : "artist"
+    updateNowPlaying()
+  }
   func play(_ id: String, _ newGeneration: Int) {
     guard newGeneration == generation, entryID == id else { return }
     do {
@@ -251,17 +294,37 @@ final class NativePlaybackEngine {
       try session.setCategory(.playback, mode: .default, options: mixWithOthers ? [.mixWithOthers] : [])
       try session.setActive(true)
       #endif
-      wantsPlay = true; if player.currentItem?.status == .readyToPlay && !initialSeekPending { player.play(); player.rate = playbackRate }; report("status")
+      wantsPlay = true; if player.currentItem?.status == .readyToPlay && !initialSeekPending { startPlaybackWithFade() }; report("status")
     } catch { report("error") }
   }
-  func pause(_ newGeneration: Int) {
+  func pause(_ newGeneration: Int, immediate: Bool = false) {
     guard newGeneration >= generation else { return }
-    generation = newGeneration; wantsPlay = false; player.pause(); report("paused")
+    generation = newGeneration; wantsPlay = false
+    cancelFade()
+    if !immediate && fadeEnabled && fadeDurationMs >= 100 && player.rate > 0 {
+      let startVolume = player.volume
+      let stepSec = 0.02
+      let steps = max(1, Int(Double(fadeDurationMs) / 20.0))
+      var currentStep = 0
+      let token = fadeGeneration
+      fadeTimer = Timer.scheduledTimer(withTimeInterval: stepSec, repeats: true) { [weak self] timer in
+        guard let self, self.fadeGeneration == token, !self.wantsPlay else { timer.invalidate(); return }
+        currentStep += 1
+        let ratio = max(0.0, 1.0 - Float(currentStep) / Float(steps))
+        self.player.volume = startVolume * ratio
+        if currentStep >= steps {
+          timer.invalidate(); self.fadeTimer = nil
+          self.player.pause(); self.player.volume = self.targetVolume; self.report("paused")
+        }
+      }
+      return
+    }
+    player.pause(); player.volume = targetVolume; report("paused")
     if player.currentItem == nil { loading?.cancel(); loading = nil; loader?.destroy(); loader = nil }
   }
   private func remotePause() {
     let id = entryID, itemID = systemItemID
-    pause(generation + 1)
+    pause(generation + 1, immediate: true)
     emit("remote", ["action": "pause", "generation": generation, "entryId": id, "itemID": itemID])
   }
   func stop(_ newGeneration: Int, preservingSleep: Bool = false) {
@@ -270,11 +333,12 @@ final class NativePlaybackEngine {
     if !preservingSleep { sleepTimer.trackChanged(to: "") }
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
     observation = nil; durationObservation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
+    cancelFade(restoreVolume: true)
     player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
     if let offlinePlaybackAlias { try? FileManager.default.removeItem(at: offlinePlaybackAlias) }; offlinePlaybackAlias = nil
     if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
     if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
-    entryID = ""; metadata = [:]; knownDuration = 0; systemItemID = ""; systemFavorite = false; systemArtwork = nil; artworkRevision += 1
+    entryID = ""; metadata = [:]; knownDuration = 0; systemItemID = ""; systemFavorite = false; systemArtwork = nil; systemLyricLine = nil; artworkRevision += 1
     updateSystemCommands()
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     MPNowPlayingInfoCenter.default().playbackState = .stopped
@@ -306,7 +370,9 @@ final class NativePlaybackEngine {
     if wantsPlay && player.rate > 0 { player.rate = playbackRate }
   }
   func configureVolume(_ value: Double) {
-    guard value.isFinite else { return }; player.volume = Float(min(1, max(0, value)))
+    guard value.isFinite else { return }
+    targetVolume = Float(min(1, max(0, value)))
+    cancelFade(restoreVolume: true)
   }
   func configureSleep(_ seconds: Double, _ finishCurrent: Bool) -> [String: Any] {
     if finishCurrent && entryID.isEmpty { return sleepTimer.snapshot() }
@@ -335,7 +401,12 @@ final class NativePlaybackEngine {
   }
   private func updateNowPlaying() {
     guard !entryID.isEmpty else { return }
-    var info: [String: Any] = [MPMediaItemPropertyTitle: metadata["title"] as? String ?? "音枢", MPMediaItemPropertyArtist: metadata["artist"] as? String ?? "",
+    var title = metadata["title"] as? String ?? "音枢"
+    var artist = metadata["artist"] as? String ?? ""
+    if wantsPlay && player.rate > 0, let lyric = systemLyricLine, !lyric.isEmpty {
+      if systemLyricPosition == "title" { title = lyric } else { artist = lyric }
+    }
+    var info: [String: Any] = [MPMediaItemPropertyTitle: title, MPMediaItemPropertyArtist: artist,
       MPMediaItemPropertyAlbumTitle: metadata["album"] as? String ?? "",
       MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
       MPNowPlayingInfoPropertyPlaybackRate: player.rate]

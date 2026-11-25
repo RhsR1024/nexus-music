@@ -56,9 +56,42 @@
 - 剩余 4 处旧深色次级界面（`NavidromeLibrary`、`PlaylistPicker`、`MatchModal`、`LocalPlaylistPicker`）已全部统一至 `sollinTokens`；全量单测 `npm run check` 1164/1164 通过，`sollin-reverse-gate.mjs ipa --review`（61E/26WI/131/52F/52P，0 错误/0 警告）与 `apk` 通过。
 - 说明：上述扩展页面（发现、歌单详情、搜索、音乐库、本地、设置各子页、声波核、写真、舞台、AM2、播放菜单等）没有 1290×2796 iOS 同态黄金态 JSON 配置，均通过实际 Release 模拟器截图对照 Sollin 参考图完成人工质量验收，不虚报像素百分比。
 
-## 四、仍保持开放的外部/环境边界（无法在无真机/账号环境下伪造）
+## 五、第三轮：T7 Touch 实机截图逐页复刻（32 态肉眼闭环）、缺失功能补齐与全套 CI 本地预演
+
+基于外置 SSD `/Volumes/T7 Touch/NexusMusic/SollinCapture/work/sollin-android-ui-20261023/evidence/` 实机截屏与本地 `resource/reference-ui/` 全部参考图，对全站所有页面与播放皮肤完成第三轮深度对齐，并补齐全部可离线验证的 Sollin 缺失功能：
+
+### 1. 第三轮补齐的 Sollin 客户端与原生功能（新增 `tests/sollin-features.test.ts` 6 项单测，全量 `1170/1170`）
+
+1. **原生渐入渐出（Fade In / Fade Out）**：在 `modules/nexus-native/ios/NativePlaybackEngine.swift` 与 `NexusPlaybackModule.swift` 实现 20ms 步进原生平滑音量淡入淡出（`configureFade`），联动播放设置开关与时长。
+2. **iOS 锁屏/灵动岛实时系统歌词**：在 `NativePlaybackEngine.swift` 新增 `setSystemLyricLine`，通过 `MPNowPlayingInfoCenter` 在歌手位或标题位实时同步当前歌词行（支持简繁转换），暂停或关闭开关时无损还原原始曲目元数据。
+3. **下一首音频预加载缓存与协调器**：新增 `src/playback/preloadCache.ts`（`PreloadCache` TTL LRU + `startPreloadCoordinator`），自动在播放后段预解析下一首音源并命中加速切歌。
+4. **分平台播放音质与智能切源策略**：在 `src/app/preferences.ts`、`src/providers/multiSourceResolver.ts` 与 `src/app/services.ts` 完整接入分平台音质覆写、智能降级模式（`progressive` / `direct128k`）、跨脚本切源（`crossScript`）与失败自动跳曲（`smartSkipOnFailure`）。
+5. **歌词双语译文/音译开关与副词缩放**：`src/lyrics/settings.ts` 与 `src/ui/Lyrics.tsx` 支持独立开关译文/罗马音及调节副词缩放比例；`PlayerMenu` 新增直达**歌词偏移微调面板**、**EQ 均衡器内嵌入口**与**音频输出路由（AirPlay）面板**。
+6. **交互与曲库补齐**：启动自动播放三态来源（`last` / `favorites`）、播放页封面左右滑切歌与点击歌手直达搜索、搜索历史单条 `×` 删除/热搜与历史同屏/音质徽标（`QualityBadge.tsx`）、LX `playList_v2` JSON 导出（`encodePlaylistJSON`）、自建歌单搜索与排序、听歌统计四维时间段（7 天 / 30 天 / 今年 / 全部）、缓存分项清理（封面/临时音频/全部）以及本地音频右侧 A–Z 字母快查索引栏（`AlphabetIndexBar.tsx`）。
+
+### 2. 第三轮全站 32 态 UI 逐页亲看复核与原生渲染修复
+
+- **原生 `NexusMeshView.swift` 边缘斜切接缝根因修复**：肉眼审图发现 SwiftUI `MeshGradient` 在动画中边界顶点向内漂移且默认受安全区约束，导致 AM / AM2 / 沉浸 / 声波核四边出现明显倾斜矩形切缝。现通过 `.scaleEffect(1.30).ignoresSafeArea()` 与 `controller.safeAreaRegions = []` 彻底修复，实景截图 `008-Live-source-AM-mesh-playing.png` 与 `021-Wave-complete-cover.png` 验证全屏 100% 无缝铺满。
+- **肉眼复核同步修齐 4 处细节**：修复深色模式经典播放页文字对比度（保持浅色模式 `4854` 像素 100% 不变）；将迷你播放器、AM 与 AM2 缩略封面统一为圆角方形（`radius={10}`）；沉浸皮肤非磁带态封面改为顶部全出血直角（`radius={0}`）；AM2 顶部居中拖拽条与返回键留出安全间距。
+- **32 张 1290×2796 Release 浅粉默认主题截图全量亲看**（`build/sollin-audit-r3-screens/`，`SourceUITests-1795601490738.xcresult`）：覆盖发现首页、歌单详情、搜索首页与结果、音乐库（含深色毛玻璃日历卡片）、本地音频、设置首页、播放设置、EQ（单行微调滑块与曲线）、外观设置、音乐账号、下载管理、数据与存储、音源管理、全部 8 套播放皮肤（经典/黑胶/AM/AM2/沉浸/声波核含顺时针白环与 60 刻度/写真含暗色悬浮操作栏/舞台）、播放菜单、倍速、睡眠定时、歌词偏移、评论与歌曲操作 Sheet，整体视觉还原度对照 T7 Touch 与本地参考图均达到高还原水准（无法达 ≥90% 严框的仅为合成封面色差导致的 `4861-am-lyrics` 与缺真机录屏的 G8 连续动效）。
+
+### 3. 4/5 黄金态零回退复测与完整本地 CI 预演
+
+| 验证项 | 结果 | 关键证据与指标 |
+| --- | --- | --- |
+| `npm run check` | **1170 / 1170 通过** | TypeScript 0 错误，含 6 项新增 Sollin 功能单测 |
+| `npm run test:native` | **通过** | Swift/C++/AVPlayer/Fade/SystemLyrics/MeshField/DSP/JSC/LocalAudio/WebDAV 全部通过 |
+| `sollin-reverse-gate.mjs` | **通过** | `ipa --review`（61E/26WI/131/52F/52P，0 错误/0 警告）& `apk` 通过 |
+| `4854-classic` 回归 | **通过（零回退）** | `r20261125-4854-final`（`SourceUITests-1795615402509`）：控件 SSIM **93.09%**、ΔE00 **0.95**（p90 0.24）、可比区 **93.89%**、内容一致估算 **96.32%**、`provenanceReady: true` |
+| `4851-vinyl` 回归 | **通过（零回退）** | `r20261125-4851-regression`：控件 SSIM **91.45%**、ΔE00 **3.25**、可比区 **94.42%**、播放键 ΔE00 **0.00**、估算 **97.38%** |
+| `4855-appearance` 回归 | **通过（零回退）** | `r20261125-4855-regression`：控件 SSIM **90.80%**、ΔE00 **1.12**、可比区 **93.89%**、估算 **96.08%** |
+| `4856-appearance-scrolled` 回归 | **通过（零回退）** | `r20261125-4856-regression`：控件 SSIM **94.13%**、ΔE00 **0.51**、可比区 **93.93%** |
+| 真实 7 音源实测 | **通过** | `testLiveSourceCatalog`（`SourceUITests-1795599556700`，369.2s）导入 7 个脱敏真实 LX 音源、真搜/真流/真频谱解码通过 |
+| 全量 CI 本地预演（20 项 UI 用例） | **20 / 20 全部通过** | 批次 1（5 项：AM/Photo/Stage/歌单排序去重/实源 Mesh）、批次 2（8 项：AM2 横竖屏/外观持久化/EQ/分组设置/字体+完整 8 皮肤 Navidrome/本地音频导入/纯净音源管理）、批次 3（7 项：睡眠自定义定时/音乐库单曲与批量/公开评论/发现页动作/搜索历史与状态/离线下载与批量任务）全部 0 失败通过 |
+
+## 六、仍保持开放的外部/环境边界（无法在无真机/账号环境下伪造）
 
 - 听歌识曲（用户决定本期不实现）、漫途双向同步、Sollin 自有账号/赞助/付费/遥测、正式 App Store 发布、Android 正式版；
 - 真实网易云/QQ/酷狗个人账号在线写操作、真实私人 WebDAV/Navidrome 大曲库与弱网限流矩阵；
 - Apple Developer 个人签名、实体 iPhone 安装/续签/真机锁屏后台长时播放/耳机蓝牙路由与真机连续动效录屏（G8）；
-- 云端 GitHub Actions iOS 27 终态。
+- 云端 GitHub Actions iOS 27 终态（本次提交推送后立即全程跟进至全绿）。

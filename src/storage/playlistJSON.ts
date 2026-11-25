@@ -48,3 +48,28 @@ export function decodePlaylistJSON(input:string):PlaylistJSONPreview {
   });
   return{collections,unsupported,total};
 }
+export function encodePlaylistJSON(collections:readonly PlaylistCollection[]):string {
+  const formatInterval=(ms?:number)=>{if(!ms||!Number.isFinite(ms)||ms<=0)return undefined;const s=Math.floor(ms/1000);return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;};
+  const data=collections.map((collection,index)=>({
+    id:`nexus_export_${index+1}`,
+    name:collection.title,
+    list:collection.tracks.flatMap(track=>{
+      if(track.origin.kind!=='online')return [];
+      const platform=track.origin.platform,songId=typeof track.metadata.songId==='string'&&track.metadata.songId?track.metadata.songId:track.origin.id;
+      return [{
+        id:`${platform}_${track.origin.id}`,
+        name:track.title,
+        singer:track.artist,
+        source:platform,
+        ...(formatInterval(track.durationMs)?{interval:formatInterval(track.durationMs)}:{}),
+        meta:{
+          songId,
+          ...(track.album?{albumName:track.album}:{}),
+          ...(track.artwork?{picUrl:track.artwork}:{}),
+          qualitys:(track.qualities??[]).map(q=>({type:q.id})),
+        },
+      }];
+    }),
+  })).filter(item=>item.list.length>0);
+  return JSON.stringify({type:'playList_v2',data},null,2);
+}

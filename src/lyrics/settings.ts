@@ -1,5 +1,5 @@
 export type LyricAlignment='auto'|'left'|'center';
-export interface LyricStyle {activeColor:string;inactiveColor:string;lineHeight:number;spacing:number;blur:number;emphasis:boolean}
+export interface LyricStyle {activeColor:string;inactiveColor:string;lineHeight:number;spacing:number;blur:number;emphasis:boolean;showTranslation?:boolean;showRomanization?:boolean;secondaryScale?:number}
 export const lyricStyleDefaults:LyricStyle={activeColor:'auto',inactiveColor:'auto',lineHeight:1.35,spacing:8,blur:0,emphasis:true};
 export function normalizeLyricStyle(value:unknown):LyricStyle {
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('歌词样式无效');
@@ -7,6 +7,9 @@ export function normalizeLyricStyle(value:unknown):LyricStyle {
   if(!color(style.activeColor)||!color(style.inactiveColor)||typeof style.emphasis!=='boolean'||
     !Number.isFinite(style.lineHeight)||style.lineHeight<1.1||style.lineHeight>2||
     !Number.isFinite(style.spacing)||style.spacing<0||style.spacing>32||!Number.isFinite(style.blur)||style.blur<0||style.blur>4)throw new Error('歌词样式无效');
+  if(style.showTranslation!==undefined&&typeof style.showTranslation!=='boolean')throw new Error('歌词样式无效');
+  if(style.showRomanization!==undefined&&typeof style.showRomanization!=='boolean')throw new Error('歌词样式无效');
+  if(style.secondaryScale!==undefined&&(!Number.isFinite(style.secondaryScale)||style.secondaryScale<0.7||style.secondaryScale>1.4))throw new Error('歌词样式无效');
   return {...style};
 }
 export function normalizeLyricOffsets(value:unknown):Record<string,number> {

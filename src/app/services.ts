@@ -39,6 +39,9 @@ import { restoreRecord } from '../storage/recovery.ts';
 import { FontStore } from '../storage/fonts.ts';
 import { LyricService } from '../lyrics/service.ts';
 import {LyricSelection} from '../lyrics/selection.ts';
+import {LyricPreview,miniLyricText} from '../lyrics/preview.ts';
+import {convertLyricScript} from '../lyrics/chineseScript.ts';
+import {lyricOffset} from '../lyrics/settings.ts';
 import * as Crypto from 'expo-crypto';
 import * as Font from 'expo-font';
 import { openRepository } from '../storage/nativeDatabase.ts';
@@ -51,10 +54,11 @@ import { SearchHistoryStore } from '../storage/searchHistory.ts';
 import { DevicePlaylistStore } from '../storage/devicePlaylists.ts';
 import { MultiSourceResolver } from '../providers/multiSourceResolver.ts';
 import { createPlaybackSession } from '../playback/nativeSession.ts';
+import { PreloadCache, startPreloadCoordinator } from '../playback/preloadCache.ts';
 import { AccountFmStation } from '../playback/accountFmStation.ts';
 import { OnlineProvider } from '../providers/online.ts';
 import { SearchCoordinator,PagedSearchCoordinator } from '../providers/searchCoordinator.ts';
-import { makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../domain/queue.ts';
+import { currentEntry, makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../domain/queue.ts';
 import { trackKey } from '../domain/track.ts';
 import type { OnlinePlatform,Track } from '../domain/track.ts';
 import {requestJSON,type HTTPClient,type TextHTTPClient} from '../providers/http.ts';
@@ -165,13 +169,28 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const sourcesReady = catalog.restoreEnabled();
   const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal,size)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size},signal),(track,signal)=>track.origin.kind==='webdav'?davMedia.cover(track,signal):track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track),(track,signal)=>online.artwork(track,signal));
-  const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality, 15000);
+  const playbackQualityFor=(platform:OnlinePlatform)=>preferences.getSnapshot().playbackQualities[platform]??preferences.getSnapshot().quality;
+  const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality, 15000, {
+    qualityForPlatform: playbackQualityFor,
+    degradeMode: () => preferences.getSnapshot().smartDegradeMode,
+    crossScript: () => preferences.getSnapshot().smartCrossScript,
+  });
   const matching=new CrossPlatformMatcher(online);
   const comments=new PublicComments(options.onlineHTTP,{md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
   const sourceHealth=new SourceHealth({registry,open:createSourceDiagnostics(catalog,loadNativeDiagnosticLX(),Crypto.randomUUID),online,probe:loadAudioProbe(Crypto.randomUUID)});
   const qishui=new QishuiProvider(options.onlineHTTP);
-  const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,hash,
+  const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,qualityForPlatform:playbackQualityFor,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
+  const preloadCache=new PreloadCache({maxEntries:12,ttlMs:180_000});
+  const preloadQualityFor=(track:Track)=>track.origin.kind==='online'?playbackQualityFor(track.origin.platform):preferences.getSnapshot().quality;
+  const preloadRevision=()=>JSON.stringify([
+    registry.getSnapshot().filter(source=>registry.isCurrent(source)).map(source=>[source.id,source.revision]),
+    preferences.getSnapshot().smartDegradeMode,
+    preferences.getSnapshot().smartCrossScript,
+    preferences.getSnapshot().autoMatch,
+    preferences.getSnapshot().quality,
+    preferences.getSnapshot().playbackQualities,
+  ]);
   const resolveTrack=async(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>,trace?:PlaybackTraceSink)=>{
     const mark=(title:string,sourceName:string)=>trace?.({stage:'source',status:'success',title,sourceName});
     if(track.origin.kind==='webdav'){const media=await davMedia.resolve(track,signal);mark('读取 WebDAV 媒体','WebDAV');return media;}
@@ -202,11 +221,35 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
       trace?.({stage:'offline',status:'success',title:'命中永久离线文件',detail:'本轮不会请求在线音源'});
       return saved;
     }
+    if(!excluded?.size&&(track.origin.kind==='online'||track.origin.kind==='imported')){
+      const cached=preloadCache.get(track,preloadQualityFor(track),preloadRevision());
+      if(cached){
+        trace?.({stage:'source',status:'success',title:'命中下一首预加载缓存',detail:'已提前完成跨源解析，直接起播'});
+        return cached;
+      }
+    }
     if(track.origin.kind==='online'||track.origin.kind==='imported')trace?.({stage:'offline',status:'info',title:'永久离线文件未命中',detail:'继续按当前播放规则解析'});
     return resolveTrack(track,signal,excluded,trace);
   };
   const playback = createPlaybackSession({resolve:(track,signal,excluded)=>resolvePlayback(track,signal,excluded),resolveWithTrace:resolvePlayback}, preferences,{covers,library});
   playbackController=playback.controller;
+  const preloader=startPreloadCoordinator({
+    cache:preloadCache,
+    controller:playback.controller,
+    enabled:()=>preferences.getSnapshot().preloadNextTrack,
+    count:()=>preferences.getSnapshot().preloadCount,
+    repeat:()=>preferences.getSnapshot().repeat,
+    qualityFor:preloadQualityFor,
+    sourceRevision:preloadRevision,
+    resolve:(track,signal)=>resolveTrack(track,signal),
+  });
+  let lastPreloadRev=preloadRevision(),lastPreloadEnabled=preferences.getSnapshot().preloadNextTrack,lastPreloadCount=preferences.getSnapshot().preloadCount;
+  registry.subscribe(()=>{lastPreloadRev=preloadRevision();preloader.invalidate();});
+  preferences.subscribe(()=>{
+    const rev=preloadRevision(),snap=preferences.getSnapshot();
+    if(rev!==lastPreloadRev||snap.preloadCount!==lastPreloadCount){lastPreloadRev=rev;lastPreloadCount=snap.preloadCount;preloader.invalidate();}
+    if(snap.preloadNextTrack!==lastPreloadEnabled){lastPreloadEnabled=snap.preloadNextTrack;preloader.refresh();}
+  });
   const accountFmStation=new AccountFmStation({client:accountFm,accounts:musicAccounts,playback:playback.controller,uuid:Crypto.randomUUID});
   musicAccounts.subscribe(()=>accountFmStation.stop());
   bindManualMatches(library,playback.controller);bindMatchPolicy(library,preferences,playback.controller);
@@ -248,14 +291,36 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const playlistSearch=new PagedSearchCoordinator<PlaylistSearchItem>(new PlaylistSearchProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),deviceId:Crypto.randomUUID}),item=>item.id);
   const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},options.onlineHTTP,decodeKRC,decodeQRC);
   const lyrics=new LyricSelection(rawLyrics,matching,library);
+  const systemLyricPreview=new LyricPreview((track,signal)=>lyrics.load(track,signal));
+  let systemLyricLoadedKey='',systemLyricSentKey='';
+  const syncSystemLyrics=()=>{
+    const pref=preferences.getSnapshot(),state=playback.controller.getSnapshot(),entry=currentEntry(state.queue);
+    if(!pref.systemLyricsEnabled||!entry||state.intent!=='playing'||state.phase!=='ready'){
+      if(systemLyricSentKey!==''){systemLyricSentKey='';playback.setSystemLyricLine(null,pref.systemLyricsPosition);}
+      return;
+    }
+    const savedMatch=entry.track.origin.kind==='imported'||entry.track.origin.kind==='online'?library.matchFor(entry.track):undefined;
+    const lyricTrack=state.media?.matchedTrack??(entry.track.origin.kind==='imported'?savedMatch?.target:savedMatch?.method==='manual'&&!state.media?savedMatch.target:undefined)??entry.track;
+    const sig=`${trackKey(lyricTrack.origin)}:${JSON.stringify(library.lyricChoiceFor(lyricTrack)??null)}`;
+    if(systemLyricLoadedKey!==sig){systemLyricLoadedKey=sig;void systemLyricPreview.load(lyricTrack);}
+    const preview=systemLyricPreview.getSnapshot();
+    const raw=miniLyricText(preview.document,state.position*1000,lyricOffset(pref.lyricOffsetMs,pref.lyricOffsets,trackKey(lyricTrack.origin)));
+    const line=raw?convertLyricScript(raw,pref.lyricChineseMode):null;
+    const nextKey=`${pref.systemLyricsPosition}:${line??''}`;
+    if(nextKey!==systemLyricSentKey){systemLyricSentKey=nextKey;playback.setSystemLyricLine(line,pref.systemLyricsPosition);}
+  };
+  playback.controller.subscribe(syncSystemLyrics);
+  preferences.subscribe(syncSystemLyrics);
+  systemLyricPreview.subscribe(syncSystemLyrics);
+  library.subscribe(syncSystemLyrics);
   const managedAttachments=new ManagedDownloadAttachments(repository,{downloads:offlineDownloads,files:attachmentFiles,maximumBytes:()=>preferences.getSnapshot().offlineLimitMB*1048576,lyrics:async(track,signal)=>(await lyrics.load(track,signal)).document,cover:(track,signal,size)=>covers.loadForExport(track,signal,size)});
   if(!await restore('managedDownloadAttachments.v1','下载附加文件',()=>managedAttachments.restore()))await managedAttachments.restore().catch(()=>{});
   const downloadDelivery=new DownloadDelivery(repository,{downloads:offlineDownloads,attachments:managedAttachments,destination:downloadDestination,files:offlineAudioExportFiles});
   if(!await restore('downloadDelivery.v1','目录保存',()=>downloadDelivery.restore()))await downloadDelivery.restore().catch(()=>{});
-  accounts.subscribe(()=>lyrics.clear());
+  accounts.subscribe(()=>{lyrics.clear();systemLyricLoadedKey='';});
   let previousDAVAccounts=davAccounts.getSnapshot();
-  davAccounts.subscribe(()=>{const old=previousDAVAccounts;previousDAVAccounts=davAccounts.getSnapshot();lyrics.clear();const state=playback.controller.getSnapshot(),origin=state.queue.entries.find(item=>item.id===state.queue.currentId)?.track.origin;if(origin?.kind==='webdav'&&old.find(item=>item.id===origin.accountId)!==previousDAVAccounts.find(item=>item.id===origin.accountId))playback.controller.setQueue({...state.queue,currentId:null,priorityIds:[]});});
-  deviceMedia.subscribe(()=>{const state=deviceMedia.getSnapshot();if(state.authorization!=='authorized'||state.stale)lyrics.clear();});
+  davAccounts.subscribe(()=>{const old=previousDAVAccounts;previousDAVAccounts=davAccounts.getSnapshot();lyrics.clear();systemLyricLoadedKey='';const state=playback.controller.getSnapshot(),origin=state.queue.entries.find(item=>item.id===state.queue.currentId)?.track.origin;if(origin?.kind==='webdav'&&old.find(item=>item.id===origin.accountId)!==previousDAVAccounts.find(item=>item.id===origin.accountId))playback.controller.setQueue({...state.queue,currentId:null,priorityIds:[]});});
+  deviceMedia.subscribe(()=>{const state=deviceMedia.getSnapshot();if(state.authorization!=='authorized'||state.stale){lyrics.clear();systemLyricLoadedKey='';}});
   const playTracks = (tracks: readonly Track[], index: number) => {
     const entries = tracks.map(track => ({id:Crypto.randomUUID(),track}));
     if (entries[index]) void playback.controller.play(makeQueue(entries, entries[index]!.id));

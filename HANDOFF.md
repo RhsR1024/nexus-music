@@ -1,3 +1,11 @@
+## 2026-11-25 第三轮收口：T7 Touch 全站 32 态对齐、15+ 缺失功能补齐、Mesh 原生修复与 20 项本地 CI 预演全通
+
+本轮围绕 [决策 0082](docs/decisions/0082-sollin-ui-90-fidelity-restoration.md) 对照 T7 Touch 实机截屏与本地参考图完成全站第三轮对齐，并补齐全部可离线验证的 Sollin 缺失功能：
+- **功能与原生补齐**：原生 20ms 渐入渐出（`configureFade`）、iOS Now Playing 实时系统歌词（`setSystemLyricLine`）、下一首预加载 TTL LRU 缓存与协调器（`src/playback/preloadCache.ts`）、分平台音质与智能切源策略（`progressive`/`direct128k`/`crossScript`/`smartSkipOnFailure`）、译文/罗马音双语开关与副词缩放、`PlayerMenu` 直达歌词偏移/EQ/AirPlay 音频输出、三态启动自动播放、封面滑切与歌手直达搜索、搜索历史单条 `×` 删除与音质徽标、LX `playList_v2` JSON 导出、自建歌单搜索排序、听歌统计四维时间段（7d/30d/year/all）、分项缓存清理与本地音频 A–Z 字母索引栏。
+- **全站 UI 对齐与原生渲染修复**：修复 `NexusMeshView.swift` 的 SwiftUI `MeshGradient` 边界内收与安全区斜切接缝（`.scaleEffect(1.30).ignoresSafeArea()` + `controller.safeAreaRegions = []`），实源 Mesh 全屏无缝亲看；完成 32 张 1290×2796 Release 默认浅粉主题截图逐张肉眼闭环（含深色经典可读性、圆角方形缩略封面、沉浸顶角直角与声波核顺时针白进度环）。
+- **验证证据（零回退）**：`npm run check` **1170/1170**、`npm run test:native`、`sollin-reverse-gate.mjs ipa --review`（61E/26WI/131/52F/52P，0 错误/0 警告）与 `apk` 全部通过；4/5 黄金态 `visual-lab.mjs` 复测零回退（`4854` 93.09% / ΔE00 0.95、`4851` 91.45% / ΔE00 3.25、`4855` 90.80% / ΔE00 1.12、`4856` 94.13% / ΔE00 0.51；`4861` 未过严框原因与 G8 真机录屏边界如实保留）；7 个脱敏真实 LX 音源实播（`testLiveSourceCatalog`）与 20 项本地 CI 回归用例全部通过（零私源入库）。详见[第三轮阶段回执](docs/2026-11-25-sollin-ui-alignment-and-features-report.md)与[量化进度](docs/PROGRESS_ESTIMATE.md)。
+- **立即执行**：提交干净工作树 → 本地构建并核验 `dirty: false` 无签名 IPA → 正常推送至 `RhsR1024/nexus-music` 并全程追踪 GitHub Actions iOS 27 至全绿通过。
+
 ## 2026-11-25 4855/4856 严框突破 90%（4/5 黄金态通过）+ 真实 LX 音源实机解码播放收口
 
 产品提交 `ad8608c` 完成第二轮精细收敛与真实音源实测修复，全部经本机 Release 模拟器实测通过：

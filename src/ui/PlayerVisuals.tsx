@@ -115,24 +115,38 @@ export function FrequencyHalo({services,playing,children}:PropsWithChildren<{ser
   useEffect(()=>()=>gesture.cancel(),[gesture]);
   useEffect(()=>{const listener=AppState.addEventListener('change',value=>{if(value!=='active'){gesture.cancel();setPreview(undefined);}});return()=>listener.remove();},[gesture]);
   const cancel=()=>{gesture.cancel();setPreview(undefined);};
-  const fraction=(event:GestureResponderEvent)=>ringFraction(event.nativeEvent.locationX,event.nativeEvent.locationY,148,26);
+  const fraction=(event:GestureResponderEvent)=>ringFraction(event.nativeEvent.locationX,event.nativeEvent.locationY,152,26);
   const clock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
   const timeline=playbackTimeline(state),enabled=timeline.seekable;
   const effectivePreview=gesture.preview(token,state.duration)===undefined?undefined:preview;
   const progress=effectivePreview??timeline.progress;
   const position=effectivePreview===undefined?timeline.position:effectivePreview*state.duration;
   const showSpectrum=playing&&spectrum.supported&&spectrum.bands.length>=32;
-  return <View style={{width:148,height:148,alignItems:'center',justifyContent:'center'}}>
+  const clamped=Math.max(0,Math.min(1,progress));
+  const ringSize=98,half=ringSize/2,stroke=4;
+  const rightDeg=Math.min(180,clamped*360)-180;
+  const leftDeg=Math.max(0,clamped*360-180)-180;
+  return <View style={{width:152,height:152,alignItems:'center',justifyContent:'center'}}>
     <View testID="wave-seek-ring" accessible accessibilityRole="adjustable" accessibilityLabel="环形播放进度" accessibilityHint="沿外环拖动，松手定位；中心按钮播放或暂停" accessibilityState={{disabled:!enabled}} accessibilityValue={{min:0,max:Math.floor(timeline.duration),now:Math.floor(position),text:`${clock(position)} / ${clock(timeline.duration)}`}} accessibilityActions={[{name:'increment'},{name:'decrement'}]}
       onAccessibilityAction={event=>{if(enabled){cancel();controller.seek(controller.getSnapshot().position+(event.nativeEvent.actionName==='increment'?10:-10));}}}
-      onStartShouldSetResponder={event=>{const {locationX:x,locationY:y,touches}=event.nativeEvent,radius=Math.hypot(x-74,y-74);return enabled&&touches.length===1&&radius>=52&&radius<=74;}}
+      onStartShouldSetResponder={event=>{const {locationX:x,locationY:y,touches}=event.nativeEvent,radius=Math.hypot(x-76,y-76);return enabled&&touches.length===1&&radius>=48&&radius<=76;}}
       onResponderGrant={event=>{const value=current();setPreview(gesture.begin(value.token,value.duration,fraction(event)));}}
       onResponderMove={event=>{if(event.nativeEvent.touches.length!==1){cancel();return;}const value=current();setPreview(gesture.move(value.token,value.duration,fraction(event)));}}
       onResponderRelease={event=>{const value=current();if(fraction(event)===undefined){cancel();return;}gesture.move(value.token,value.duration,fraction(event));const seconds=gesture.finish(value.token,value.duration);setPreview(undefined);if(seconds!==undefined)controller.seek(seconds);}}
-      onResponderTerminationRequest={()=>false} onResponderTerminate={cancel} style={{position:'absolute',width:148,height:148}}>
-      <View pointerEvents="none" accessible={false} style={{width:148,height:148}}>{Array.from({length:60},(_,i)=>{const angle=i/60*Math.PI*2-Math.PI/2,passed=i/60<progress,tickLen=passed?9.5:6.5;return <View key={i} style={{position:'absolute',left:74+Math.cos(angle)*64-1.2,top:74+Math.sin(angle)*64-tickLen/2,width:2.4,height:tickLen,borderRadius:1.2,backgroundColor:passed?'rgba(255,255,255,0.92)':'rgba(255,255,255,0.34)',transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>
+      onResponderTerminationRequest={()=>false} onResponderTerminate={cancel} style={{position:'absolute',width:152,height:152}}>
+      <View pointerEvents="none" accessible={false} style={{width:152,height:152}}>{Array.from({length:60},(_,i)=>{const angle=i/60*Math.PI*2-Math.PI/2,passed=i/60<=clamped,tickLen=passed?8.5:6;return <View key={i} style={{position:'absolute',left:76+Math.cos(angle)*64-1.1,top:76+Math.sin(angle)*64-tickLen/2,width:2.2,height:tickLen,borderRadius:1.1,backgroundColor:passed?'rgba(255,255,255,0.88)':'rgba(255,255,255,0.34)',transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>
     </View>
-    {showSpectrum&&<View testID="wave-spectrum-bars" pointerEvents="none" accessible={false} style={{position:'absolute',width:148,height:148}}>{Array.from({length:32},(_,i)=>{const angle=(i/32)*Math.PI*2-Math.PI/2,length=5+Math.min(1,Math.max(0,spectrum.bands[i]??0))*14;return <View key={i} accessible={false} style={{position:'absolute',width:2.6,height:length,borderRadius:1.3,backgroundColor:'rgba(255,255,255,0.88)',left:74+Math.cos(angle)*64-1.3,top:74+Math.sin(angle)*64-length/2,transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>}
-    <View style={{width:96,height:96,borderRadius:48,borderWidth:3.5,borderColor:'rgba(255,255,255,0.78)',backgroundColor:'rgba(255,255,255,0.06)',alignItems:'center',justifyContent:'center',shadowColor:'#FFFFFF',shadowOpacity:0.22,shadowRadius:10,shadowOffset:{width:0,height:0}}}>{children}</View>
+    {showSpectrum&&<View testID="wave-spectrum-bars" pointerEvents="none" accessible={false} style={{position:'absolute',width:152,height:152}}>{Array.from({length:32},(_,i)=>{const angle=(i/32)*Math.PI*2-Math.PI/2,length=5+Math.min(1,Math.max(0,spectrum.bands[i]??0))*15;return <View key={i} accessible={false} style={{position:'absolute',width:2.4,height:length,borderRadius:1.2,backgroundColor:'rgba(255,255,255,0.92)',left:76+Math.cos(angle)*65-1.2,top:76+Math.sin(angle)*65-length/2,transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>}
+    {/* Base ring + true clockwise white progress arc around central transport disc */}
+    <View pointerEvents="none" style={{position:'absolute',width:ringSize,height:ringSize,borderRadius:half,borderWidth:stroke,borderColor:'rgba(255,255,255,0.16)',backgroundColor:'rgba(255,255,255,0.05)'}}/>
+    {clamped>0.002&&<View pointerEvents="none" style={{position:'absolute',width:ringSize,height:ringSize}}>
+      <View style={{position:'absolute',right:0,top:0,width:half,height:ringSize,overflow:'hidden'}}>
+        <View style={{position:'absolute',right:0,top:0,width:ringSize,height:ringSize,borderRadius:half,borderWidth:stroke,borderColor:'#FFFFFF',borderLeftColor:'transparent',borderBottomColor:'transparent',transform:[{rotate:`${rightDeg+45}deg`}]}}/>
+      </View>
+      {clamped>0.5&&<View style={{position:'absolute',left:0,top:0,width:half,height:ringSize,overflow:'hidden'}}>
+        <View style={{position:'absolute',left:0,top:0,width:ringSize,height:ringSize,borderRadius:half,borderWidth:stroke,borderColor:'#FFFFFF',borderRightColor:'transparent',borderTopColor:'transparent',transform:[{rotate:`${leftDeg+45}deg`}]}}/>
+      </View>}
+    </View>}
+    <View style={{width:ringSize-stroke*2,height:ringSize-stroke*2,borderRadius:(ringSize-stroke*2)/2,alignItems:'center',justifyContent:'center'}}>{children}</View>
   </View>;
 }
