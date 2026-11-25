@@ -1,3 +1,8 @@
+## 2026-11-26 iOS 27 云端 Step 10 全通 + Step 11/14 两处精准收口（全套 CI 本地 100% 覆盖）
+
+- `84ca6d0` 完成本地干净无签名 IPA 归档（`17,998,058` 字节，SHA-256 `c52e6e22fc1c1f2a90d775f32baa0f72de2147347109a91711e3499ee65e9025`，`dirty: false`）并推送触发云端 iOS 27 Run #338（`45631641755`）：`checks` 与 `ios` **Steps 1–10（含 25 项核心套件）全部通过**，仅在 Step 11 睡眠到期用例失败。
+- 并行本地覆盖全套 `.github/workflows/ios.yml`（Steps 10–15 全部用例）精准定位并修复最后两处 UI 边界：① `src/ui/PlaybackSheets.tsx` 将 `topRow.marginTop` 从 `4pt` 调整为 `12pt`（`testSleepDurationExpiryPausesAudio` `SourceUITests-1795627246379` 1/0/0 通过）；② `src/ui/LibraryHome.tsx` 为歌曲行 `<Pressable>` 补齐显式 `accessibilityLabel` 避免拼接无封面 `♫, ` 前缀（`testWayfarerAppImport` `SourceUITests-1795626003867` 1/0/0 通过）。`npm run check` 1170/1170 全通过，现提交推送触发 Run #339 并持续跟进至全绿通过与云端无签名 IPA 上传。
+
 ## 2026-11-25 第三轮收口：T7 Touch 全站 32 态对齐、15+ 缺失功能补齐、Mesh 原生修复与 20 项本地 CI 预演全通
 
 本轮围绕 [决策 0082](docs/decisions/0082-sollin-ui-90-fidelity-restoration.md) 对照 T7 Touch 实机截屏与本地参考图完成全站第三轮对齐，并补齐全部可离线验证的 Sollin 缺失功能：

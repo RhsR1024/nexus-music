@@ -1,3 +1,12 @@
+## 2026-11-26 iOS 27 Run #338 Step 10 全通与 Step 11/14 两处精准收口
+
+- **提交 `84ca6d0` 本地干净无签名 IPA**：`dirty: false` / `workingTreeChanges: []`、`arm64` / `iphoneos26.2` / `minimumOS 15.1` / `deviceFamilies [1,2]`、`signed: false`（`codesign` 未签名）、ZIP CRC 无错、零测试标记/零私源/零签名项；体积 `17,998,058` 字节，SHA-256 `c52e6e22fc1c1f2a90d775f32baa0f72de2147347109a91711e3499ee65e9025`（产物存至 `build/distribution-20261125-84ca6d0/`，历史 `build/distribution` T7 符号链接保持完整）。
+- **云端 iOS 27 Run #338（`45631641755` / `84ca6d0`）**：`checks` 通过（41s），`ios` **Steps 1–10 全部通过**（含全部 25 项核心/皮肤/外观/同步/Navidrome 用例），仅在 **Step 11** `testSleepDurationExpiryPausesAudio` 失败。
+- **两处精准修复与全套本地 100% 覆盖复验**：
+  1. **Step 11 睡眠面板顶距修复**：`src/ui/PlaybackSheets.tsx` 中 `topRow.marginTop` 由 `4pt` 调整为 `12pt`，满足滚动容器顶部 `insetBy(dx: 0, dy: 8)` 可见断言；本机 Release `SourceUITests-1795627246379`（188.5s）1/0/0 通过，其余 4 项睡眠用例（`testSleepCustomDurationAndRestart`、`testSleepCustomWheelsPreserveActiveTimer`、`testSleepTrackBindingClearsOnManualTrackChange`、`testSleepTrackBindingPausesAtTrackEndInBackground`）均已通过。
+  2. **Step 14 漫途导入提前拦截修复**：本机提前跑完 Step 13 & 14 其余全部用例时发现 `src/ui/LibraryHome.tsx` 歌曲行 `<Pressable>` 未显式声明 `accessibilityLabel` 导致无封面时拼接子 `<Cover>` 的 `♫, ` 前缀；现已补齐完整显式 `accessibilityLabel`（保留歌曲名/歌手/专辑/来源与匹配状态），本机 Release `SourceUITests-1795626003867`（225.6s）`testWayfarerAppImport` 1/0/0 通过。
+  3. 同步完成本机 Step 10 剩余 13 项（`SourceUITests-1795616323184`，12 passed / 0 failed / 1 expected simulator skip，含 177 帧动态过渡视频）、Step 13（`testNeteasePlaylistCreateFixture`）及 Step 14 全部其余用例（`testCrossPlatformLyrics`、`testOnlineMatching`、`testStyleRecommendation`、`testStructuredNavidromeLyrics`、`testSequentialTTMLLyrics`、`testAMLLProfileLyrics`）全量通过，实现 `.github/workflows/ios.yml` 全部测试组本地 100% 覆盖验证。
+
 ## 2026-11-25 第三轮全站 Sollin 对齐、缺失功能补齐与 20 项本地 Release CI 预演全通
 
 本轮完成原生 `NativePlaybackEngine` 淡入淡出与 Now Playing 实时歌词、`NexusMeshView` 全出血无接缝修复、15+ 项 Sollin 客户端功能补齐与全站 32 态 UI 对齐：

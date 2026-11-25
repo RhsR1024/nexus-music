@@ -263,16 +263,16 @@ export function LibraryHome({
       <View testID={tab==='history'?`history-item-${index}`:undefined} style={tab==='history'?styles.historyRow:styles.trackRow}>
         {tab==='history'&&<View style={styles.historyRail}><View style={styles.historyDot}/><View style={styles.historyLine}/><Text style={styles.historyTime}>{historyTimestamp(library.history[index]?.playedAt).clock}</Text></View>}
         <View style={tab==='history'?styles.historyCard:styles.trackInner}>
-          <Pressable accessibilityRole="button" onPress={()=>services.playTracks(tracks,index)} style={{flex:1,flexDirection:'row',alignItems:'center',gap:12}}>
+          {(()=>{const sub=`${track.artist}${track.album?` · ${track.album}`:''} · ${track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='local'?'本地音频':track.origin.kind==='device'?'设备媒体库':track.origin.kind==='webdav'?'WebDAV':'私人曲库'}`;return <Pressable accessibilityRole="button" accessibilityLabel={`${track.title}, ${sub}`} onPress={()=>services.playTracks(tracks,index)} style={{flex:1,flexDirection:'row',alignItems:'center',gap:12}}>
             <Cover services={services} track={track} size={46} radius={10}/>
             <View style={{flex:1,gap:3}}>
               <Text numberOfLines={1} style={styles.track}>{track.title}</Text>
               <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
                 <QualityBadge track={track}/>
-                <Text numberOfLines={1} style={[styles.caption,{flex:1}]}>{track.artist}{track.album?` · ${track.album}`:''} · {track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='local'?'本地音频':track.origin.kind==='device'?'设备媒体库':track.origin.kind==='webdav'?'WebDAV':'私人曲库'}</Text>
+                <Text numberOfLines={1} style={[styles.caption,{flex:1}]}>{sub}</Text>
               </View>
             </View>
-          </Pressable>
+          </Pressable>;})()}
           <Pressable accessibilityRole="button" accessibilityLabel={`更多操作：${track.title}`} onPress={()=>setMenu({track,entryId:playlist?.entries[index]?.id,playlistId:playlist?.id,history:tab==='history'})} style={styles.moreButton}><Ionicons name="ellipsis-horizontal" size={19} color={s.muted}/></Pressable>
         </View>
       </View>

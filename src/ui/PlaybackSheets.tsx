@@ -134,7 +134,7 @@ const makeStyles=(theme:Theme)=>{
   const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   return StyleSheet.create({
   root:{flexGrow:1,backgroundColor:'transparent',paddingHorizontal:20,paddingBottom:space.xxl,gap:14},
-  topRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:4},
+  topRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:12},
   back:{flexDirection:'row',alignItems:'center',gap:2,minHeight:40},
   backText:{fontSize:14,color:s.muted},
   badgeText:{fontSize:14,fontWeight:'700',color:s.accent,fontVariant:['tabular-nums']},
