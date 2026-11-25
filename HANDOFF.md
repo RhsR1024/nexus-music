@@ -1,3 +1,10 @@
+## 2026-11-25 4855/4856 严框突破 90%（4/5 黄金态通过）+ 真实 LX 音源实机解码播放收口
+
+产品提交 `ad8608c` 完成第二轮精细收敛与真实音源实测修复，全部经本机 Release 模拟器实测通过：
+- **4855/4856 严框双通过（4/5 黄金态正式通过）**：依据像素测量为「颜色」两框补齐 Sollin 共享磨砂卡片与分割线、修正 7pt 圆角与「遮罩颜色」不透明遮罩底色、校准玫瑰选中色 `#FEDADA`、四条滑轨垂直偏移（`+1pt`）、非激活 `4pt` 轨高、滑块左偏距（`+2pt`）及真实刻度数（`17/41/18/41`）。正式 Release 采集 `SourceUITests-1795592488790`（`build/visual-20261125-appearance-final`，`provenanceReady: true`）：`4855-appearance` 控件区 SSIM **91.09%**、ΔE00 **0.07**（p90 0.51）、整屏 **93.06%**、可比区 **93.98%**、内容一致估算 **96.13%**，正式通过；`4856-appearance-scrolled` 控件区 SSIM **94.13%**、ΔE00 **0.51**（p90 1.42）、整屏/可比区 **93.98%**，正式通过。
+- **真实 LX 音源与网易云公开搜索实测修复**：使用本地脱敏隔离目录的 7 个真实 LX 音源在纯净 Release 模拟器实测全流程，暴露并修复 3 处真实生产缺陷：① 网易云 `/api/search/get/web` 现返回加密 hex 串导致静默空结果，`online.ts`/`albums.ts`/`artists.ts`/`playlistSearch.ts` 统一迁至 `/api/cloudsearch/pc` 并拦截异常密文；② `lx.ts` 在 `musicInfo` 顶层补齐 `songmid`（及 `hash`/`copyrightId`）兼容社区音源；③ `services.ts` 将 `MultiSourceResolver` 单源预算与原生 `ScriptRuntime` 对齐至 `15000ms`。实测 `testLiveSourceCatalog`（282.5s，7/7 真实音源导入初始化→实时搜到 302 首→真实封面/歌词→真实 MP3 流解码播放与实时 FFT PCM 频谱）、`testLiveQueueEditing`（94.1s）与 `testLiveSourceSearchStates`（85.0s）全部通过，所有导出截图已逐张人工亲看（零私源内容入库）。
+- **剩余旧配色清理与无障碍审计**：`NavidromeLibrary.tsx`、`PlaylistPicker.tsx`、`MatchModal.tsx`、`LocalPlaylistPicker.tsx` 全部统一至 `sollinTokens`；全量修改 UI 按钮审计补齐 `LocalAudioLibrary.tsx` 的 `accessibilityLabel="播放全部"` 及单选标签。`npm run check` 1164/1164、`sollin-reverse-gate.mjs ipa --review`（61E/26WI/131/52F/52P，0 错误/0 警告）与 `apk` 均通过；详见[阶段回执](docs/2026-11-25-sollin-ui-alignment-and-features-report.md)。
+
 ## 2026-11-25 全量功能补齐与全站 Sollin UI 对齐阶段交付
 
 按[决策0082](docs/decisions/0082-sollin-ui-90-fidelity-restoration.md)完成剩余可落地 Sollin 客户端功能与全站前端 UI 重构：

@@ -1,3 +1,10 @@
+## 2026-11-25 第二轮精修：4855/4856 控件区突破 90%（4/5 黄金态正式通过）与真实源实景亲看
+
+提交 `ad8608c` 针对 `4855`/`4856` 差异热图完成像素级收敛，并统一剩余 4 处次级页面（`NavidromeLibrary`、`PlaylistPicker`、`MatchModal`、`LocalPlaylistPicker`）至 `sollinTokens`：
+- **`4855-appearance`（正式通过，`provenanceReady: true`）**：补齐「颜色」共享磨砂外卡与分割线、7pt 圆角框及 `#FEDADA` 玫瑰选中色。正式 Release（`build/visual-20261125-appearance-final` → `build/visual-lab/r20261125-4855-final/report.json`）实测：控件区 SSIM **91.09%**（+2.89pp）、ΔE00 **0.07**（p90 0.51）、整屏 **93.06%**、可比区 **93.98%**、内容一致估算 **96.13%**，预览卡/选中分段/强调色 ΔE00 均为 **0.00**。
+- **`4856-appearance-scrolled`（正式通过，`provenanceReady: true`）**：校准四条滑轨 `+1pt` 垂直定位、非激活 `4pt` 轨高、滑块左偏距 `+2pt`、真实刻度数（`17/41/18/41`）及「遮罩颜色」去穿线遮罩底色 `#D8E5F0`。正式 Release（`build/visual-lab/r20261125-4856-final/report.json`）实测：控件区 SSIM **94.13%**（+5.31pp）、ΔE00 **0.51**（p90 1.42，改善 10×）、整屏/可比区 **93.98%**，遮罩色块 ΔE00 **0.08**。
+- **真实音源实景 UI 核验**：纯净环境下 7 个真实 LX 音源实测导出 6 张实景截图（`build/live-sources-20261125-r3/screenshots/`），人工亲看真实封面/封面取色底图、同步歌词、播控进度、队列锁定与清空全部表现自然；`4861-am-lyrics` 仍维持“因合成条纹底图亮度差与皮肤按钮入口差异未过像素门禁”的诚实记录；真机连续动效录屏（G8）仍开放。
+
 ## 2026-11-25 全站 Sollin UI 重构与 4854/4851/4855/4856/4861 正式 `visual-lab.mjs` 复测
 
 按[决策0082](decisions/0082-sollin-ui-90-fidelity-restoration.md)恢复 ≥90% 对齐方向并完成全站毛玻璃视觉体系与全部页面/弹层精修（详见[阶段回执](2026-11-25-sollin-ui-alignment-and-features-report.md)）：
