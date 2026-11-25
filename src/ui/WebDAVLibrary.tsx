@@ -1,6 +1,7 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator, Alert, FlatList, Image, Pressable, ScrollView, View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
@@ -8,9 +9,10 @@ import {WebDAVError,type DAVEntry} from '../providers/webdav.ts';
 import {isDAVAudio} from '../providers/webdavMedia.ts';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {useTheme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 type Row={entry:DAVEntry;track?:Track;cover?:string};
 export function WebDAVLibrary({services}:{services:Services}){
-  const {palette:p}=useTheme(),accounts=useSyncExternalStore(services.davAccounts.subscribe,services.davAccounts.getSnapshot);
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),accounts=useSyncExternalStore(services.davAccounts.subscribe,services.davAccounts.getSnapshot);
   const [open,setOpen]=useState(false),[manage,setManage]=useState(false),[accountId,setAccountId]=useState(accounts[0]?.id??''),[path,setPath]=useState('');
   const [rows,setRows]=useState<Row[]>([]),[visible,setVisible]=useState(20),[query,setQuery]=useState(''),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
   const [url,setURL]=useState(''),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[label,setLabel]=useState(''),[adding,setAdding]=useState<readonly Track[]>();
@@ -34,12 +36,12 @@ export function WebDAVLibrary({services}:{services:Services}){
     finally{if(generation===revision.current)setLoading(false);}
   }
   useEffect(()=>{setRows([]);setQuery('');if(open&&accountId&&!manage)void load();return()=>{revision.current++;pending.current.abort();};},[open,accountId,path,manage]);
-  const button=(text:string,run:()=>void,disabled=false)=><Pressable accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={run} style={{padding:12,borderRadius:14,backgroundColor:p.selected,opacity:disabled?.4:1}}><Text style={{color:p.accent}}>{text}</Text></Pressable>;
-  const input=(name:string,value:string,setValue:(value:string)=>void,secret=false)=><TextInput accessibilityLabel={name} placeholder={name} placeholderTextColor={p.secondary} value={value} onChangeText={setValue} secureTextEntry={secret} autoCapitalize="none" autoCorrect={false} editable={!busy} style={{padding:12,borderRadius:14,borderColor:p.border,borderWidth:1,color:p.text}}/>;
+  const button=(text:string,run:()=>void,disabled=false)=><Pressable accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={run} style={{paddingHorizontal:14,paddingVertical:10,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,opacity:disabled?.4:1}}><Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>{text}</Text></Pressable>;
+  const input=(name:string,value:string,setValue:(value:string)=>void,secret=false)=><TextInput accessibilityLabel={name} placeholder={name} placeholderTextColor={s.subtle} value={value} onChangeText={setValue} secureTextEntry={secret} autoCapitalize="none" autoCorrect={false} editable={!busy} style={{paddingHorizontal:14,paddingVertical:11,borderRadius:14,backgroundColor:s.inputBg,borderColor:s.cardBorder,borderWidth:1,color:s.ink}}/>;
   const showManage=manage||!accounts.length;
   const filtered=rows.filter(row=>!query.trim()||`${row.entry.name} ${row.track?.title??''} ${row.track?.artist??''} ${row.track?.album??''}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   useEffect(()=>{if(!open||showManage||!query.trim())return;const timer=setTimeout(()=>{void scan(filtered.slice(0,visible),pending.current.signal,revision.current);},300);return()=>clearTimeout(timer);},[query,open,showManage]);
-  return <View style={{marginBottom:18}}>{button(`WebDAV · ${accounts.length}个连接`,()=>{setManage(false);setOpen(true);})}
+  return <View style={{marginVertical:2}}><Pressable accessibilityRole="button" accessibilityLabel={`WebDAV · ${accounts.length}个连接`} onPress={()=>{setManage(false);setOpen(true);}} style={{minHeight:48,paddingHorizontal:14,paddingVertical:10,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',gap:10}}><Ionicons name="cloud-outline" size={19} color={s.control}/><Text style={{flex:1,color:s.ink,fontSize:14,fontWeight:'600'}}>WebDAV · {accounts.length}个连接</Text><Ionicons name="chevron-forward" size={16} color={s.subtle}/></Pressable>
     <Modal visible={open} onRequestClose={()=>setOpen(false)} animationType="slide"><View style={{flex:1,padding:22,paddingTop:64,gap:12,backgroundColor:p.background[0]}}>
       {button('收起WebDAV',()=>setOpen(false))}<Text style={{fontSize:30,fontWeight:'700',color:p.text}}>WebDAV音乐</Text>
       {button(showManage?'返回WebDAV目录':'管理WebDAV连接',()=>setManage(!showManage),!accounts.length&&showManage)}

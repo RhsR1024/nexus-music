@@ -6,9 +6,10 @@ import type {Track} from '../domain/track.ts';
 import {PlayerCover} from './TapeCover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {QueuePanel} from './QueueView.tsx';
+import {CommentsModal} from './CommentsModal.tsx';
 import {Text} from './Typography.tsx';
 
-type Content='cover'|'lyrics'|'queue';
+type Content='cover'|'lyrics'|'comments'|'queue';
 export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,onMore,onStyle,onComments}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void;onComments?:()=>void}){
   const {width,height,fontScale}=useWindowDimensions(),columns=width>height&&width>=600&&fontScale<1.8;
   const [content,setContent]=useState<Content>('cover');
@@ -43,7 +44,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
   // body does; the tool row itself stays anchored to the bottom margin.
   const tools=<View testID="am-tools" style={{flexDirection:'row',justifyContent:'space-around',paddingTop:6,paddingHorizontal:20.3,marginBottom:39,marginTop:content==='cover'?28:45.1}}>
     {tool(color=><MaterialCommunityIcons name="subtitles" size={21} color={color}/>,'歌词',()=>select('lyrics'),'am-content-lyrics',content==='lyrics')}
-    {tool(color=><View style={{transform:[{scaleX:-1}]}}><Ionicons name="chatbox-outline" size={23} color={color}/></View>,'评论',()=>onComments?.(),'am-content-comments')}
+    {tool(color=><View style={{transform:[{scaleX:-1}]}}><Ionicons name={content==='comments'?'chatbox':'chatbox-outline'} size={23} color={color}/></View>,'评论',()=>select('comments'),'am-content-comments',content==='comments')}
     {tool(color=><Ionicons name="options-outline" size={24} color={color}/>,'调整播放界面',onStyle)}
     {tool(color=><MaterialCommunityIcons name="playlist-music" size={22} color={color}/>,'播放队列',()=>select('queue'),'am-content-queue',content==='queue')}
   </View>;
@@ -65,7 +66,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
         <View style={{flex:1,minHeight:0,gap:8}}>
           {bodyInfo}
           <View testID="am-body" collapsable={false} style={{flex:1,minHeight:0,overflow:'hidden',marginHorizontal:content==='queue'?-4:0}}>
-            {content==='lyrics'?<View testID="am-lyrics-panel" style={{flex:1}}><Lyrics services={services} track={lyricTrack} font={font} presentation="am" chrome={columns}/></View>:<View testID="am-queue-panel" style={{flex:1}}><QueuePanel services={services} tone="dark"/></View>}
+            {content==='lyrics'?<View testID="am-lyrics-panel" style={{flex:1}}><Lyrics services={services} track={lyricTrack} font={font} presentation="am" chrome={columns}/></View>:content==='comments'?<View testID="am-comments-panel" style={{flex:1}}><CommentsModal services={services} track={favoriteTrack} embedded tone="dark" onClose={()=>setContent('cover')}/></View>:<View testID="am-queue-panel" style={{flex:1}}><QueuePanel services={services} tone="dark"/></View>}
           </View>
         </View>
         <View testID="am-controls" style={{flexShrink:0,width:columns?Math.min(360,width*.42):undefined}}>

@@ -11,7 +11,7 @@ import {CommentsModal} from './CommentsModal.tsx';
 import {GainSlider} from './EqualizerGraph.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity,visible,controls,onMore}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;identity:string;visible:boolean;controls:ReactNode;onMore:()=>void}){
+export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity,visible,controls,onMore,onLyricSource}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;identity:string;visible:boolean;controls:ReactNode;onMore:()=>void;onLyricSource?:()=>void}){
   const theme=useTheme();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
@@ -28,13 +28,14 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
     const selected=view.content===content,label={cover:'封面',lyrics:'歌词',comments:'评论',queue:'队列'}[content];
     return <Pressable key={content} testID={`am2-content-${content}`} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={()=>model.select(content)} style={{minWidth:60,minHeight:44,justifyContent:'center',alignItems:'center',borderRadius:14,backgroundColor:selected?'rgba(255,255,255,.2)':'transparent'}}><Text style={{color:'#FFFFFF',fontWeight:selected?'700':'400'}}>{label}</Text></Pressable>;
   });
-  const content=view.content==='queue'?<QueuePanel services={services}/>:view.content==='comments'?<CommentsModal services={services} track={favoriteTrack} embedded onClose={()=>model.select('cover')}/>:view.content==='lyrics'?<Lyrics services={services} track={lyricTrack} font={font} presentation="am2"/>:null;
+  const content=view.content==='queue'?<QueuePanel services={services} tone="dark"/>:view.content==='comments'?<CommentsModal services={services} track={favoriteTrack} embedded tone="dark" onClose={()=>model.select('cover')}/>:view.content==='lyrics'?<Lyrics services={services} track={lyricTrack} font={font} presentation="am2" chrome={false}/>:null;
   const artwork=<PlayerCover services={services} track={track} size={Math.min(columns?(width-96)*.42:width-64,height*.3,340)}/>;
-  const transport=<View style={{gap:6}}>{controls}{preferences.am2ShowVolume&&<View style={{backgroundColor:theme.palette.surface,borderRadius:12,padding:10}}><GainSlider testID="am2-volume" label="App 音量" value={preferences.volume*24-12} format={value=>`${Math.round((value+12)/24*100)}%`} onChange={value=>update({volume:(value+12)/24})}/></View>}</View>;
+  const transport=<View style={{gap:6}}>{controls}{preferences.am2ShowVolume&&<View style={{backgroundColor:'rgba(255,255,255,0.12)',borderWidth:1,borderColor:'rgba(255,255,255,0.18)',borderRadius:14,padding:12}}><GainSlider testID="am2-volume" label="App 音量" dark value={preferences.volume*24-12} format={value=>`${Math.round((value+12)/24*100)}%`} onChange={value=>update({volume:(value+12)/24})}/></View>}</View>;
   return <View testID={columns?'am2-horizontal':'am2-vertical'} style={{flex:1,gap:10}} onTouchStart={()=>model.setTouching(true)} onTouchEnd={event=>model.setTouching(event.nativeEvent.touches.length>0)} onTouchCancel={()=>model.setTouching(false)}>
-    <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
+    <View style={{flexDirection:'row',alignItems:'center',gap:10,paddingLeft:34}}>
       {view.content!=='cover'&&<PlayerCover services={services} track={track} size={48}/>}
       <View style={{flex:1}}><Text numberOfLines={1} style={{fontSize:22,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:13,color:'#D5D5DA'}}>{track.artist}</Text></View>
+      {onLyricSource&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={onLyricSource} style={{minHeight:48,minWidth:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="language-outline" color="rgba(255,255,255,0.75)" size={21}/></Pressable>}
       <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:favorite?'已收藏':'未收藏'}} onPress={()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>setError('收藏未保存，之前的数据保留。'));}} style={{minHeight:48,minWidth:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={favorite?'heart':'heart-outline'} color="#FFFFFF" size={24}/></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="更多播放控制" onPress={onMore} style={{minHeight:48,minWidth:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="ellipsis-horizontal" color="#FFFFFF" size={24}/></Pressable>
     </View>

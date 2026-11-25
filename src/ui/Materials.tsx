@@ -29,23 +29,35 @@ export function AmbientBackground({services,visible=true,gradient}:{services?:Se
   const flowColors=theme.appearance.globalBackgroundMotion?cover.flowPalette:undefined;
   const fallback=flowColors?flowThemeGradient(flowColors,theme.mode):theme.palette.background;
   const hasCover=!!((theme.appearance.globalBackgroundMotion&&cover.uri)||(theme.appearance.coverColor&&cover.color));
-  const base=hasCover?<LinearGradient colors={fallback} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+  const useExplicitGradient=!!gradient&&!theme.appearance.globalBackgroundMotion&&theme.appearance.backgroundStyle==='gradient';
+  const base=useExplicitGradient?<LinearGradient colors={gradient.colors} locations={gradient.locations} start={{x:.5,y:0}} end={{x:.5,y:1}} style={StyleSheet.absoluteFill}/>
+    :hasCover?<LinearGradient colors={fallback} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
     :theme.appearance.backgroundStyle==='image'&&uri?<View style={StyleSheet.absoluteFill}><Image source={{uri}} resizeMode="cover" style={[StyleSheet.absoluteFill,{opacity:theme.appearance.backgroundOpacity}]}/><View style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0],opacity:.78}]}/></View>
     :theme.appearance.backgroundStyle==='gradient'?<LinearGradient colors={gradient?.colors??theme.palette.background} locations={gradient?.locations} start={gradient?{x:.5,y:0}:{x:0,y:0}} end={gradient?{x:.5,y:1}:{x:1,y:1}} style={StyleSheet.absoluteFill}/>:null;
   const maskOpacity=Math.max(0,Math.min(1,theme.appearance.backgroundMask));
   return <View testID={hasCover?'ambient-cover-background':undefined} pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}>
     {base}
     {maskOpacity>0&&<View testID="ambient-mask" style={[StyleSheet.absoluteFill,{backgroundColor:theme.appearance.maskColor,opacity:maskOpacity}]}/>}
-    {shown&&hasCover&&cover.uri&&!flowColors&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
+    {shown&&hasCover&&!useExplicitGradient&&cover.uri&&!flowColors&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
     {shown&&theme.appearance.globalBackgroundMotion&&<View testID={flowColors?'ambient-three-color':undefined} pointerEvents="none" style={StyleSheet.absoluteFill}><AmbientSoftLights colors={flowColors??[]} identity={cover.uri??''} moving={moving} pending={!!cover.pending} dark={theme.mode==='dark'}/></View>}
   </View>;
 }
-export function GlassSurface({children,style}:PropsWithChildren<{style?:StyleProp<ViewStyle>}>){
+export function GlassSurface({children,style,variant='liquid',radius=30}:PropsWithChildren<{style?:StyleProp<ViewStyle>;variant?:'liquid'|'frosted'|'acrylic';radius?:number}>){
   const theme=useTheme(),[reduce,setReduce]=useState(true);
   useEffect(()=>{let active=true;void AccessibilityInfo.isReduceTransparencyEnabled().then(value=>{if(active)setReduce(value);});const subscription=AccessibilityInfo.addEventListener('reduceTransparencyChanged',setReduce);return()=>{active=false;subscription.remove();};},[]);
-  return <View style={[{borderRadius:30,overflow:'hidden',borderWidth:1,borderColor:theme.palette.border},style]}>
-    {theme.appearance.glassNavigation&&!reduce&&<NativeMaterial pointerEvents="none" dark={theme.mode==='dark'} style={StyleSheet.absoluteFill}/>}
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:reduce||!theme.appearance.glassNavigation?theme.palette.surface:theme.palette.glass}]}/>
-    {children}
+  const dark=theme.mode==='dark';
+  const useBlur=theme.appearance.glassNavigation&&!reduce;
+  const fill=useBlur
+    ?(variant==='acrylic'?(dark?'rgba(32,26,38,0.62)':'rgba(255,253,252,0.58)')
+      :variant==='frosted'?(dark?'rgba(36,29,42,0.82)':'rgba(255,251,250,0.80)')
+      :(dark?'rgba(40,32,46,0.72)':'rgba(255,252,251,0.74)'))
+    :(dark?'rgba(42,34,48,0.96)':'rgba(255,251,249,0.96)');
+  const borderColor=dark?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.82)';
+  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.09,shadowRadius:16,shadowOffset:{width:0,height:4}},style]}>
+    <View style={{flexGrow:1,borderRadius:radius,overflow:'hidden',borderWidth:1,borderColor}}>
+      {useBlur&&<NativeMaterial pointerEvents="none" dark={dark} style={StyleSheet.absoluteFill}/>}
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:fill}]}/>
+      {children}
+    </View>
   </View>;
 }

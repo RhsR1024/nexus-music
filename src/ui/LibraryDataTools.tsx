@@ -12,15 +12,16 @@ import {CloudBackup} from './CloudBackup.tsx';
 import {CloudSync} from './CloudSync.tsx';
 import {QishuiImport} from './QishuiImport.tsx';
 import {useTheme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 import {PlaybackStatistics} from './PlaybackStatistics.tsx';
 import {StatisticsCloud} from './StatisticsCloud.tsx';
 
 // One implementation shared by the music library and data settings.
 export function LibraryDataTools({services}:{services:Services}){
-  const {palette:p}=useTheme();
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
   const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('操作未确认完成，请核对本机数据与文件后重试');}finally{setBusy(false);}}
-  const button=(label:string,action:()=>void)=><Pressable accessibilityRole="button" disabled={busy} accessibilityState={{disabled:busy}} onPress={action} style={{padding:13,minHeight:44,borderRadius:14,backgroundColor:p.selected,opacity:busy?.4:1}}><Text style={{color:p.accent}}>{label}</Text></Pressable>;
+  const button=(label:string,action:()=>void,primary=false)=><Pressable accessibilityRole="button" disabled={busy} accessibilityState={{disabled:busy}} onPress={action} style={{paddingHorizontal:14,paddingVertical:10,minHeight:42,borderRadius:21,backgroundColor:primary?s.control:s.chip,borderWidth:primary?0:1,borderColor:s.chipBorder,justifyContent:'center',alignItems:'center',opacity:busy?.4:1}}><Text style={{color:primary?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{label}</Text></Pressable>;
   async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(await services.snapshotBackup());await Share.share({url:file.uri,title:'音枢音乐库备份'});}finally{if(file.exists)file.delete();}}
   async function importBackup(){
     const result=await DocumentPicker.getDocumentAsync({type:'*/*',copyToCacheDirectory:true});if(result.canceled)return;
@@ -51,16 +52,21 @@ export function LibraryDataTools({services}:{services:Services}){
       Alert.alert('导入漫途备份',`${preview.collections.length} 个歌单、${count} 条歌单歌曲、${preview.favorites.length} 首收藏。${preview.unsupported} 条未支持来源将跳过。\n保留顺序和重复项，作为新歌单追加；收藏去重。忽略 ${preview.ignoredSources} 个连接/音源配置及全部设置，不迁移账号、解析地址或下载文件。`,[{text:'取消',style:'cancel'},{text:'追加导入',onPress:()=>{void perform(async()=>{await services.library.importCollections(preview.collections,preview.favorites);setMessage(`漫途导入完成：${preview.collections.length} 个歌单、${count} 条歌曲`);});}}]);
     }finally{if(file.exists)file.delete();}
   }
-  return <View style={{gap:12,marginVertical:20}}>
+  return <View style={{gap:12,marginVertical:14}}>
     <PlaybackStatistics services={services}/>
     <StatisticsCloud services={services}/>
-    <Text accessibilityRole="header" style={{color:p.text,fontSize:20,fontWeight:'600'}}>备份与迁移</Text>
-    <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>{button('导出音乐库备份',()=>{void perform(exportBackup);})}{button('恢复音枢备份',()=>{void perform(importBackup);})}</View>
-    <CloudBackup services={services}/><CloudSync services={services}/>
-    {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
-    {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
-    <QishuiImport services={services}/>
-    <Text style={{color:p.secondary,fontSize:12,lineHeight:21}}>备份包含音乐库、实际播放统计及播放/歌词/EQ/外观设置；不含密码、JS音源、音频/图片/字体文件。旧备份无设置时保留当前设置。漫途QQ曲目保留MID，播放时需获取缺失元数据。</Text>
-    {!!message&&<Text testID="library-data-message" accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
+    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,marginLeft:6}}>备份</Text>
+    <View style={{padding:16,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:10}}>
+      <Text accessibilityRole="header" style={{color:s.ink,fontSize:16,fontWeight:'700'}}>备份与迁移</Text>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{button('导出音乐库备份',()=>{void perform(exportBackup);},true)}{button('恢复音枢备份',()=>{void perform(importBackup);})}</View>
+      <CloudBackup services={services}/><CloudSync services={services}/>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+        {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
+        {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
+      </View>
+      <QishuiImport services={services}/>
+      <Text style={{color:s.muted,fontSize:12,lineHeight:19}}>备份包含音乐库、实际播放统计及播放/歌词/EQ/外观设置；不含密码、JS音源、音频/图片/字体文件。</Text>
+    </View>
+    {!!message&&<Text testID="library-data-message" accessibilityLiveRegion="polite" style={{color:s.accent,marginLeft:6}}>{message}</Text>}
   </View>;
 }

@@ -3,17 +3,19 @@ import {SimilarSongs} from './SimilarSongs.tsx';
 import {supportsSimilarSongs} from '../providers/similarSongs.ts';
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {Pressable,ScrollView,StyleSheet,View} from 'react-native';
+import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {SheetModal} from './AdaptiveModal.tsx';
+import {Cover} from './Cover.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
 import {MatchModal} from './MatchModal.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {PlatformPlaylistUpdate,type PlatformPlaylistOperation} from './PlatformPlaylistUpdate.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {controls,radius,space,typography} from './tokens.ts';
+import {controls,radius,sollinTokens,space,typography} from './tokens.ts';
 import {downloadableTrack,type DownloadSubmission} from '../app/downloadSubmission.ts';
 import {DownloadSubmissionView} from './DownloadSubmission.tsx';
 import {DownloadQualityChoice} from './DownloadQualityChoice.tsx';
@@ -46,7 +48,7 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
   services:Services;track:Track|null;onClose:()=>void;prefix:string;
   extras?:boolean;additionalActions?:readonly AdditionalTrackAction[];favoriteScope?:'song'|'library';closeLabel?:string;
 }){
-  const theme=useTheme(),{share,sharing,error:shareError}=useSongShare(track);
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),{share,sharing,error:shareError}=useSongShare(track);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const [commenting,setCommenting]=useState(false),[matching,setMatching]=useState(false);
@@ -140,13 +142,20 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
     catch{if(owns(owner,epoch))setError('操作未保存，原数据保留；请重试');}
     finally{if(owns(owner,epoch))setBusy(false);}
   }
-  const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void,id=label)=><Pressable key={id} testID={`${prefix}-action-${id}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.action,{backgroundColor:theme.palette.surface,opacity:busy||sharing?.5:1}]}><Ionicons name={icon} size={controls.icon} color={theme.palette.accent}/><Text style={[typography.body,{color:theme.palette.text,flex:1}]}>{label}</Text><Ionicons name="chevron-forward" size={18} color={theme.palette.secondary}/></Pressable>;
+  const action=(label:string,icon:React.ComponentProps<typeof Ionicons>['name'],run:()=>void,id=label)=><Pressable key={id} testID={`${prefix}-action-${id}`} accessibilityRole="button" accessibilityLabel={label} disabled={busy||sharing} onPress={run} style={[styles.action,{borderBottomColor:s.hairline,opacity:busy||sharing?.5:1}]}><View style={[styles.iconBadge,{backgroundColor:s.accentSoft}]}><Ionicons name={icon} size={18} color={s.accent}/></View><Text style={{color:s.ink,fontSize:15,fontWeight:'500',flex:1}}>{label}</Text><Ionicons name="chevron-forward" size={16} color={s.subtle}/></Pressable>;
   return <SheetModal visible={!!track} animationType="slide" onRequestClose={close}>
-    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{close();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&platformEditing&&wyAccount?<PlatformPlaylistUpdate services={services} track={track} account={wyAccount} operation={platformEditing} onBack={()=>setPlatformEditing(null)} onUpdated={(title,unchanged,operation)=>{setWYPlaylistMessage(operation==='add'?(unchanged?`这首歌已在「${title}」中`:`已添加到「${title}」`):(unchanged?`这首歌不在「${title}」中`:`已从「${title}」移除`));setPlatformEditing(null);}}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={close}/>:<ScrollView testID={`${prefix}-actions`} style={{backgroundColor:theme.palette.background[0]}} contentContainerStyle={styles.content}>
-      <Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={close} style={styles.close}><Ionicons name="chevron-down" size={26} color={theme.palette.text}/></Pressable>
-      <Text accessibilityRole="header" style={[typography.title,{color:theme.palette.text}]}>{track?.title??'歌曲操作'}</Text>
-      <Text style={[typography.caption,{color:theme.palette.secondary}]}>{track?.artist}{track?.album?` · ${track.album}`:''}</Text>
-      {track&&<View style={styles.actions}>
+    {track&&similar?<SimilarSongs services={services} track={track} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close}/>} onBack={()=>setSimilar(false)} onSelect={(tracks,index)=>{close();services.playTracks(tracks,index);}}/>:track&&choosingDownload?<DownloadQualityChoice services={services} track={track} busy={busy} onBack={()=>setChoosingDownload(false)} onConfirm={q=>{void download(q);}}/>:track&&downloadReport?<DownloadSubmissionView services={services} report={downloadReport} backLabel="返回歌曲操作" onClose={()=>setDownloadReport(null)}/>:track&&commenting?<CommentsModal embedded services={services} track={track} onClose={()=>setCommenting(false)}/>:track&&platformEditing&&wyAccount?<PlatformPlaylistUpdate services={services} track={track} account={wyAccount} operation={platformEditing} onBack={()=>setPlatformEditing(null)} onUpdated={(title,unchanged,operation)=>{setWYPlaylistMessage(operation==='add'?(unchanged?`这首歌已在「${title}」中`:`已添加到「${title}」`):(unchanged?`这首歌不在「${title}」中`:`已从「${title}」移除`));setPlatformEditing(null);}}/>:track&&adding?<PlaylistPicker inline services={services} tracks={[track]} visible onClose={close}/>:<View style={{flex:1,backgroundColor:s.sheetGradient[0]}}>
+      <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+      <ScrollView testID={`${prefix}-actions`} contentContainerStyle={styles.content}>
+      <View style={{alignItems:'center'}}><Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={close} style={styles.close}><View style={{width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66'}}/></Pressable></View>
+      <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
+        {track&&<Cover services={services} track={track} size={52} radius={11}/>}
+        <View style={{flex:1,gap:2}}>
+          <Text accessibilityRole="header" numberOfLines={2} style={{fontSize:19,fontWeight:'700',color:s.ink}}>{track?.title??'歌曲操作'}</Text>
+          <Text numberOfLines={1} style={{fontSize:13,color:s.muted}}>{track?.artist}{track?.album?` · ${track.album}`:''}</Text>
+        </View>
+      </View>
+      {track&&<View style={[styles.actions,{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}]}>
         {action('下一首','play-skip-forward',()=>{services.addToQueue(track,true);close();})}
         {action('加入队列','list',()=>{services.addToQueue(track);close();})}
         {action(favorite?'取消本地收藏':'本地收藏',favorite?'heart':'heart-outline',()=>{void saveFavorite();})}
@@ -162,14 +171,14 @@ export function TrackActions({services,track,onClose,prefix,extras=false,additio
         {extras&&(track.origin.kind==='online'||track.origin.kind==='imported')&&action('匹配歌曲','search-outline',()=>setMatching(true))}
         {additionalActions.map(item=>action(item.label,item.icon,()=>{void runAdditional(item);},item.id))}
       </View>}
-      {qqTrack&&qqAccounts.length>1&&<Text style={[typography.caption,{color:theme.palette.secondary}]}>已登录多个 QQ 音乐账号，请在设置中只保留一个后再收藏到平台。</Text>}
-      {!!qqFavoriteMessage&&<Text testID={`${prefix}-qq-favorite-status`} accessibilityLiveRegion="polite" style={{color:qqFavoriteState==='added'?theme.palette.secondary:theme.palette.accent}}>{qqFavoriteMessage}</Text>}
-      {wyTrack&&wyAccounts.length>1&&<Text style={[typography.caption,{color:theme.palette.secondary}]}>已登录多个网易云音乐账号，请在设置中只保留一个后再收藏或添加平台歌单。</Text>}
-      {!!wyFavoriteMessage&&<Text testID={`${prefix}-wy-favorite-status`} accessibilityLiveRegion="polite" style={{color:wyFavoriteState==='added'?theme.palette.secondary:theme.palette.accent}}>{wyFavoriteMessage}</Text>}
-      {!!wyPlaylistMessage&&<Text testID={`${prefix}-wy-playlist-status`} accessibilityLiveRegion="polite" style={{color:theme.palette.secondary}}>{wyPlaylistMessage}</Text>}
-      {!!(error||shareError)&&<Text accessibilityLiveRegion="polite" style={{color:theme.palette.accent}}>{error||shareError}</Text>}
-    </ScrollView>}
+      {qqTrack&&qqAccounts.length>1&&<Text style={[typography.caption,{color:s.muted}]}>已登录多个 QQ 音乐账号，请在设置中只保留一个后再收藏到平台。</Text>}
+      {!!qqFavoriteMessage&&<Text testID={`${prefix}-qq-favorite-status`} accessibilityLiveRegion="polite" style={{color:qqFavoriteState==='added'?s.muted:s.accent}}>{qqFavoriteMessage}</Text>}
+      {wyTrack&&wyAccounts.length>1&&<Text style={[typography.caption,{color:s.muted}]}>已登录多个网易云音乐账号，请在设置中只保留一个后再收藏或添加平台歌单。</Text>}
+      {!!wyFavoriteMessage&&<Text testID={`${prefix}-wy-favorite-status`} accessibilityLiveRegion="polite" style={{color:wyFavoriteState==='added'?s.muted:s.accent}}>{wyFavoriteMessage}</Text>}
+      {!!wyPlaylistMessage&&<Text testID={`${prefix}-wy-playlist-status`} accessibilityLiveRegion="polite" style={{color:s.muted}}>{wyPlaylistMessage}</Text>}
+      {!!(error||shareError)&&<Text accessibilityLiveRegion="polite" style={{color:s.accent}}>{error||shareError}</Text>}
+    </ScrollView></View>}
     <MatchModal services={services} track={matching?track:null} onClose={()=>setMatching(false)}/>
   </SheetModal>;
 }
-const styles=StyleSheet.create({content:{padding:space.xxl,paddingTop:space.section,gap:space.lg},close:{minHeight:controls.hit,justifyContent:'center'},actions:{gap:space.md},action:{minHeight:56,paddingHorizontal:space.lg,borderRadius:radius.lg,flexDirection:'row',alignItems:'center',gap:space.md}});
+const styles=StyleSheet.create({content:{paddingHorizontal:18,paddingTop:10,paddingBottom:36,gap:14},close:{minWidth:80,minHeight:28,alignItems:'center',justifyContent:'center'},actions:{borderRadius:20,overflow:'hidden'},action:{minHeight:54,paddingHorizontal:14,borderBottomWidth:StyleSheet.hairlineWidth,flexDirection:'row',alignItems:'center',gap:12},iconBadge:{width:34,height:34,borderRadius:10,alignItems:'center',justifyContent:'center'}});

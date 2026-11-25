@@ -1,27 +1,43 @@
-import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
+import {useTheme} from './theme.tsx';
 import {requireNativeView} from 'expo';
+import {LinearGradient} from 'expo-linear-gradient';
 import {memo,useCallback,useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,FlatList,Pressable,ScrollView,Text as LyricText,View,useWindowDimensions,type PressableProps,type ViewProps} from 'react-native';
+import {AccessibilityInfo,FlatList,Pressable,ScrollView,StyleSheet,Text as LyricText,View,useWindowDimensions,type ViewProps} from 'react-native';
 import {SheetModal} from './AdaptiveModal.tsx';
 import {Text} from './Typography.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {trackKey} from '../domain/track.ts';
 import {buildStageTimeline,activeStageGroup} from '../lyrics/stage.ts';
-import type {LyricLine} from '../lyrics/parser.ts';
+import type {LyricDocument,LyricLine} from '../lyrics/parser.ts';
 import type {LyricStyle} from '../lyrics/settings.ts';
 import {activeLyric,lyricSpokenText} from '../lyrics/parser.ts';
+import {convertLyricScript} from '../lyrics/chineseScript.ts';
 import type {SelectedLyrics} from '../lyrics/selection.ts';
 import {lyricSignature} from '../domain/matching.ts';
 import {LyricChoiceModal,lyricPlatformLabel} from './LyricChoiceModal.tsx';
 import {lyricOffset} from '../lyrics/settings.ts';
 import {NativeLyricLine} from './NativeLyricLine.tsx';
-import {classicInk,classicLyricRow} from './tokens.ts';
-import type {StageStyle} from '../app/preferences.ts';
+import {classicInk,classicLyricRow,sollinTokens} from './tokens.ts';
+import type {LyricChineseMode,StageStyle} from '../app/preferences.ts';
 import {SharedRequests} from '../lyrics/sharedRequests.ts';
 const inactiveLyric=(line:LyricLine):LyricLine=>({...line,words:line.words?.some(word=>word.ruby?.trim()||word.rubyAfter?.trim())?line.words.map(word=>({...word,startMs:86400000,endMs:86400000})):undefined,timedCues:undefined});
-export function Lyrics({services,track,font,presentation,visibleLines,chrome=true,chromeOnly=false,openRequest=0}:{services:Services;track:Track;font?:string;presentation?:'am'|'immersive'|'photo'|'stage'|'am2';visibleLines?:number;chrome?:boolean;chromeOnly?:boolean;openRequest?:number}){
-  const theme=useTheme();
+function convertDocument(doc:LyricDocument|undefined,mode:LyricChineseMode):LyricDocument|undefined{
+  if(!doc||mode==='original')return doc;
+  const c=(text:string)=>convertLyricScript(text,mode);
+  return {
+    ...doc,
+    plain:doc.plain.map(c),
+    lines:doc.lines.map(line=>({
+      ...line,
+      text:c(line.text),
+      translation:line.translation?c(line.translation):undefined,
+      words:line.words?.map(word=>({...word,text:c(word.text)})),
+    })),
+  };
+}
+export function Lyrics({services,track,font,presentation,visibleLines,chrome=true,chromeOnly=false,openRequest=0}:{services:Services;track:Track;font?:string;presentation?:'am'|'immersive'|'photo'|'stage'|'am2'|'wave';visibleLines?:number;chrome?:boolean;chromeOnly?:boolean;openRequest?:number}){
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.library.subscribe,services.library.getSnapshot);
@@ -46,22 +62,23 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     if(delta>1.5)setSeekRevision(value=>value+1);
   },[state.position]);
   const chooser=<LyricChoiceModal services={services} track={choosing?track:null} onClose={()=>setChoosing(false)}/>;
-  const offset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,key),center=preferences.lyricAlignment==='center'||preferences.lyricAlignment==='auto'&&presentation==='immersive';
+  const offset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,key),center=preferences.lyricAlignment==='center'||preferences.lyricAlignment==='auto'&&(presentation==='immersive'||presentation==='wave');
   const seek=useCallback((startMs:number,index:number,now:number)=>{const elapsed=now-lastTap.current.time;if(screenReader||lastTap.current.key===key&&lastTap.current.index===index&&elapsed>=0&&elapsed<350){services.playback.controller.seek(Math.max(0,(startMs+offset)/1000));lastTap.current={index:-1,time:0,key:''};}else lastTap.current={index,time:now,key};},[services,key,offset,screenReader]);
   const openAllLyrics=useCallback(()=>setExpanded(true),[]);
-  const settings=<View style={{gap:12}}><Text style={{color:theme.palette.secondary}}>歌词偏移：全局 {preferences.lyricOffsetMs}ms · 本曲 {preferences.lyricOffsets[key]??0}ms（正值延后）</Text><View style={{flexDirection:'row',gap:18}}>{(['track','global'] as const).map(value=><Pressable key={value} accessibilityRole="radio" accessibilityState={{selected:scope===value}} onPress={()=>setScope(value)}><Text style={{color:scope===value?theme.palette.accent:theme.palette.secondary}}>{value==='track'?'调整本曲':'调整全局'}</Text></Pressable>)}</View><View style={{flexDirection:'row',flexWrap:'wrap',gap:18}}>{[-500,-100,0,100,500].map(delta=><Pressable key={delta} accessibilityRole="button" onPress={()=>{const current=scope==='global'?preferences.lyricOffsetMs:preferences.lyricOffsets[key]??0,next=delta===0?0:Math.max(-600000,Math.min(600000,current+delta));void (scope==='global'?services.preferences.update({lyricOffsetMs:next}):services.preferences.setLyricOffset(key,next)).then(()=>setSettingError('')).catch(()=>setSettingError('偏移未保存，原设置保留'));}}><Text style={{color:theme.palette.accent}}>{delta===0?'重置':`${delta>0?'+':''}${delta}ms`}</Text></Pressable>)}</View>{!!settingError&&<Text accessibilityRole="alert" style={{color:theme.palette.accent}}>{settingError}</Text>}</View>;
-  const document=variant>=0?result?.variants[variant]?.document:result?.document;
+  const settings=<View style={{gap:10,padding:14,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.muted,fontSize:13}}>歌词偏移：全局 {preferences.lyricOffsetMs}ms · 本曲 {preferences.lyricOffsets[key]??0}ms（正值延后）</Text><View style={{flexDirection:'row',gap:8}}>{(['track','global'] as const).map(value=><Pressable key={value} accessibilityRole="radio" accessibilityState={{selected:scope===value}} onPress={()=>setScope(value)} style={{paddingHorizontal:14,paddingVertical:8,borderRadius:999,backgroundColor:scope===value?s.control:s.chip}}><Text style={{color:scope===value?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{value==='track'?'调整本曲':'调整全局'}</Text></Pressable>)}</View><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{[-500,-100,0,100,500].map(delta=><Pressable key={delta} accessibilityRole="button" onPress={()=>{const current=scope==='global'?preferences.lyricOffsetMs:preferences.lyricOffsets[key]??0,next=delta===0?0:Math.max(-600000,Math.min(600000,current+delta));void (scope==='global'?services.preferences.update({lyricOffsetMs:next}):services.preferences.setLyricOffset(key,next)).then(()=>setSettingError('')).catch(()=>setSettingError('偏移未保存，原设置保留'));}} style={{paddingHorizontal:12,paddingVertical:8,borderRadius:10,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>{delta===0?'重置':`${delta>0?'+':''}${delta}ms`}</Text></Pressable>)}</View>{!!settingError&&<Text accessibilityRole="alert" style={{color:s.accent,fontSize:12}}>{settingError}</Text>}</View>;
+  const rawDocument=variant>=0?result?.variants[variant]?.document:result?.document;
+  const document=useMemo(()=>convertDocument(rawDocument,preferences.lyricChineseMode),[rawDocument,preferences.lyricChineseMode]);
   const stageLines=useMemo(()=>document&&presentation==='stage'?buildStageTimeline(document,state.duration*1000):[],[document,presentation,state.duration]);
   const stageGroup=activeStageGroup(stageLines,state.position*1000,offset);
   const active=document?activeLyric(document.lines,state.position*1000,offset):-1;
   const {fontScale:systemFontScale}=useWindowDimensions();
   const fullPage=presentation==='am'||presentation==='am2'||presentation==='photo',alignStart=(presentation==='am'||presentation==='photo')&&systemFontScale>1.8;
-  const count=visibleLines??(presentation==='am'?3:presentation?2:4),firstVisible=Math.max(0,active-(count===1?0:1));
+  const count=visibleLines??(presentation==='am'||presentation==='wave'?3:presentation?2:4),firstVisible=Math.max(0,active-(count===1?0:1));
   useEffect(()=>{if(expanded&&active>=0)list.current?.scrollToIndex({index:active,animated:true,viewPosition:.45});},[active,expanded]);
-  const size=(presentation==='stage'?80:presentation==='am'?21:presentation==='am2'?24:presentation==='photo'?20:presentation?22:20)*preferences.fontScale;
+  const size=(presentation==='stage'?80:presentation==='am'?21:presentation==='am2'?24:presentation==='photo'?20:presentation==='wave'?17:presentation?20:19)*preferences.fontScale;
   const style=preferences.lyricStyle;
   const auxiliaryFont={fontFamily:font,fontSize:14,lineHeight:Math.ceil(14*style.lineHeight)};
-  const activeColor=style.activeColor==='auto'?(presentation==='stage'&&preferences.stageStyle==='classic'?'rgba(255,255,255,0.56)':presentation?'#FFFFFF':theme.color('#D9F49B')):style.activeColor,inactiveColor=style.inactiveColor==='auto'?(presentation==='am'||presentation==='photo'?'rgba(255,255,255,0.32)':presentation?'rgba(255,255,255,0.45)':theme.color('#959EAC')):style.inactiveColor;
+  const activeColor=style.activeColor==='auto'?(presentation==='stage'&&preferences.stageStyle==='classic'?'rgba(255,255,255,0.56)':presentation?'#FFFFFF':s.accent):style.activeColor,inactiveColor=style.inactiveColor==='auto'?(presentation==='am'||presentation==='photo'?'rgba(255,255,255,0.32)':presentation?'rgba(255,255,255,0.45)':s.muted):style.inactiveColor;
   return <View style={{gap:12,...(presentation?{height:'100%'}:{})}}>
     {!chrome?null:<View style={presentation==='stage'?{position:'absolute',top:0,left:44,right:44,height:44,zIndex:2,flexDirection:'row',alignItems:'center',justifyContent:'space-between'}:{flexDirection:'row',alignItems:'center',gap:12}}>
     <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:presentation?(presentation==='stage'?'rgba(255,255,255,0.5)':'#FFFFFF'):theme.palette.accent,fontSize:13}}>选择歌词来源</Text></Pressable>
@@ -84,31 +101,41 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     </View>}
         {presentation!=='stage'&&!fullPage&&document?.synced&&!expanded&&document.lines.slice(firstVisible,firstVisible+count).map((item,index)=>{
       const actual=firstVisible+index,time=state.position*1000-offset,singing=time>=item.startMs&&(item.endMs===undefined||time<item.endMs);
+      const isWave=presentation==='wave',live=actual===active||!!item.background&&singing;
       // Give every row a stable Pressable owner. Replacing an inline onPress
       // while the first seek realigns a FlatList can cancel the second tap.
-      return <LyricGesture key={actual} accessibilityRole="button" accessibilityLabel={lyricSpokenText(item)} onTap={now=>seek(item.startMs,actual,now)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:item.background?4:count===1?0:style.spacing,opacity:item.background?.65:1}}>
-        <NativeLyricLine line={actual===active||item.background&&singing?item:inactiveLyric(item)} position={actual===active||item.background&&singing?state.position*1000-offset:0} playing={(actual===active||!!item.background&&singing)&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={actual===active||item.background&&singing?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={actual===active||item.background&&singing?0:style.blur} emphasis={style.emphasis}/>
-        {item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:13,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
+      return <LyricGesture key={actual} accessibilityRole="button" accessibilityLabel={lyricSpokenText(item)} onTap={now=>seek(item.startMs,actual,now)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:isWave?4:item.background?4:count===1?0:style.spacing,opacity:item.background?.65:1}}>
+        <NativeLyricLine line={live?item:inactiveLyric(item)} position={live?state.position*1000-offset:0} playing={live&&state.intent==='playing'&&!state.buffering} size={isWave&&live?size+1.5:size} font={font} fontURI={services.fonts.selectedURI()} color={live?activeColor:inactiveColor} center={center} maxLines={isWave?1:undefined} lineHeight={isWave?1.35:style.lineHeight} blur={live?0:style.blur} emphasis={style.emphasis} weight={isWave?(live?'700':'500'):undefined}/>
+        {!isWave&&item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{!isWave&&item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:13,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
       </LyricGesture>;
     })}
     {!document?.synced&&(fullPage||presentation==='stage')&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
     {!document?.synced&&!fullPage&&presentation!=='stage'&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
     </View>}
     <SheetModal visible={expanded} onRequestClose={()=>setExpanded(false)} animationType="slide">
-      <View style={{flex:1,backgroundColor:theme.color('#111318'),padding:24,paddingTop:64}}>
-        <ScrollView testID="full-lyrics-header" style={systemFontScale>1.8?{flexGrow:0,flexShrink:1,maxHeight:'46%'}:{flexGrow:0,flexShrink:1}} contentContainerStyle={{paddingBottom:12}}>
-          <Pressable accessibilityRole="button" onPress={()=>setExpanded(false)}><Text style={{color:theme.color('#D9F49B'),padding:16}}>收起全部歌词</Text></Pressable>
-          {settings}
-          <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{paddingVertical:12}}><Text style={{color:theme.palette.accent}}>选择歌词来源</Text></Pressable>
-          {expanded&&chooser}
-          {(result?.variants.length??0)>1&&<View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:theme.palette.accent}}>{item.label}</Text></Pressable>)}</View>}
-        </ScrollView>
-        {!document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:size,color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
-        {document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
-          onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
-          renderItem={({item,index})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>seek(item.startMs,index,time)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
-            <View><NativeLyricLine line={index===active?item:inactiveLyric(item)} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={size} font={font} fontURI={services.fonts.selectedURI()} color={index===active?activeColor:inactiveColor} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
-          </LyricGesture>}/>}
+      <View style={{flex:1}}>
+        <LinearGradient colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
+        <View style={{flex:1,paddingHorizontal:20,paddingTop:14,paddingBottom:24,gap:12}}>
+          <View style={{alignSelf:'center',width:38,height:4.5,borderRadius:2.25,backgroundColor:s.dark?'rgba(255,255,255,0.28)':'rgba(60,48,50,0.26)'}}/>
+          <ScrollView testID="full-lyrics-header" style={systemFontScale>1.8?{flexGrow:0,flexShrink:1,maxHeight:'46%'}:{flexGrow:0,flexShrink:1}} contentContainerStyle={{gap:10,paddingBottom:8}}>
+            <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
+              <Text style={{color:s.ink,fontSize:22,fontWeight:'700'}}>全部歌词</Text>
+              <Pressable accessibilityRole="button" onPress={()=>setExpanded(false)} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>收起全部歌词</Text></Pressable>
+            </View>
+            {settings}
+            <View style={{flexDirection:'row',flexWrap:'wrap',gap:10,alignItems:'center'}}>
+              <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.control}}><Text style={{color:'#FFFFFF',fontSize:13,fontWeight:'600'}}>选择歌词来源</Text></Pressable>
+              {(result?.variants.length??0)>1&&result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)} style={{paddingHorizontal:12,paddingVertical:8,borderRadius:999,backgroundColor:variant===index?s.accentSoft:s.chip,borderWidth:1,borderColor:variant===index?s.accent:s.cardBorder}}><Text style={{color:variant===index?s.accent:s.ink,fontSize:13,fontWeight:'600'}}>{item.label}</Text></Pressable>)}
+            </View>
+            {expanded&&chooser}
+          </ScrollView>
+          {!document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:18*preferences.fontScale,color:s.ink,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
+          {document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision,preferences.lyricChineseMode]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
+            onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
+            renderItem={({item,index})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>seek(item.startMs,index,time)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
+              <View><NativeLyricLine line={index===active?item:inactiveLyric(item)} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={18*preferences.fontScale} font={font} fontURI={services.fonts.selectedURI()} color={index===active?s.accent:s.muted} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{item.translation&&<LyricText style={{...auxiliaryFont,color:s.muted}}>{item.translation}</LyricText>}{item.romanization&&<LyricText style={{...auxiliaryFont,color:s.subtle}}>{item.romanization}</LyricText>}
+            </LyricGesture>}/>}
+        </View>
       </View>
     </SheetModal>
   </View>;
@@ -195,7 +222,8 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const {value,error,retry}=useLyricDocument(services,track);
-  const document=value?.document,key=trackKey(track.origin);
+  const document=useMemo(()=>convertDocument(value?.document,preferences.lyricChineseMode),[value?.document,preferences.lyricChineseMode]);
+  const key=trackKey(track.origin);
   const offset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,key);
   const active=document?activeLyric(document.lines,state.position*1000,offset):-1;
   // IMG_4854 keeps ~35pt between classic lyric baselines; the shared lyric style

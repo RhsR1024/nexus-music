@@ -1,5 +1,5 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator,Pressable,ScrollView,View} from 'react-native';
+import {ActivityIndicator,Pressable,ScrollView,StyleSheet,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
@@ -12,6 +12,7 @@ import {Discovery} from './Discovery.tsx';
 import {AccountTrackListModal} from './AccountTrackListModal.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 
 interface Panel {phase:'idle'|'loading'|'ready'|'empty'|'error';tracks:readonly Track[];message:string;login:boolean;kind?:DailyRecommendationKind}
 interface PlaylistPanel {phase:'idle'|'loading'|'ready'|'empty'|'error';items:readonly AccountRecommendedPlaylist[];message:string;login:boolean}
@@ -22,7 +23,7 @@ const idlePlaylists:PlaylistPanel={phase:'idle',items:[],message:'',login:false}
  * newer capabilities still load; no local or public list is shown in their
  * place when the platform call fails. */
 export function AccountRecommendations({services,openAccounts}:{services:Services;openAccounts:()=>void}){
-  const {palette:p}=useTheme();
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const supported=accounts.filter(item=>item.platform==='wy'||item.platform==='kg'||item.platform==='tx');
@@ -159,31 +160,31 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
     if(daily.phase==='idle'||daily.phase==='empty'||!daily.tracks.length)setDailyOpen(false);
   },[daily.phase,daily.tracks.length]);
 
-  const action=(label:string,onPress:()=>void,testID:string,disabled=false)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={disabled} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:p.selected,alignItems:'center',justifyContent:'center',opacity:disabled?.45:1}}><Text style={{fontSize:13,fontWeight:'600',color:p.accent}}>{label}</Text></Pressable>;
-  const refresh=(testID:string,label:string,onPress:()=>void,busy:boolean)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={busy} style={{width:44,height:44,borderRadius:22,backgroundColor:p.selected,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="refresh" size={20} color={p.accent}/></Pressable>;
-  const row=(prefix:string,index:number,track:Track,play:()=>void,extra?:React.ReactNode)=><View key={`${prefix}-${index}`} testID={`${prefix}-track-${index}`} style={{minHeight:58,paddingVertical:8,borderTopWidth:1,borderColor:p.border,flexDirection:'row',alignItems:'center',gap:10}}>
-    <Pressable accessibilityRole="button" accessibilityLabel={`播放：${track.title}`} onPress={play} style={{flex:1,minHeight:50,flexDirection:'row',alignItems:'center',gap:12}}><Cover services={services} track={track} size={42}/><View style={{flex:1}}><Text numberOfLines={1} style={{fontSize:15,color:p.text}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:12,color:p.secondary,marginTop:4}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View></Pressable>
+  const action=(label:string,onPress:()=>void,testID:string,disabled=false)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={disabled} style={{minHeight:40,paddingHorizontal:14,borderRadius:20,backgroundColor:s.accentSoft,borderWidth:1,borderColor:s.cardBorder,alignItems:'center',justifyContent:'center',opacity:disabled?.45:1}}><Text style={{fontSize:13,fontWeight:'600',color:s.control}}>{label}</Text></Pressable>;
+  const refresh=(testID:string,label:string,onPress:()=>void,busy:boolean)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={busy} style={{width:38,height:38,borderRadius:19,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}><Ionicons name="refresh" size={18} color={s.control}/></Pressable>;
+  const row=(prefix:string,index:number,track:Track,play:()=>void,extra?:React.ReactNode)=><View key={`${prefix}-${index}`} testID={`${prefix}-track-${index}`} style={{minHeight:54,paddingVertical:7,borderTopWidth:StyleSheet.hairlineWidth,borderColor:s.hairline,flexDirection:'row',alignItems:'center',gap:10}}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`播放：${track.title}`} onPress={play} style={{flex:1,minHeight:46,flexDirection:'row',alignItems:'center',gap:11}}><Cover services={services} track={track} size={42} radius={9}/><View style={{flex:1}}><Text numberOfLines={1} style={{fontSize:14,fontWeight:'600',color:s.ink}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:12,color:s.muted,marginTop:2}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View></Pressable>
     {extra}
   </View>;
   const status=(panel:StatusPanel,prefix:string)=><>
-    {panel.phase==='loading'&&<View style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:10}}><ActivityIndicator size="small" color={p.accent}/><Text style={{fontSize:12,color:p.secondary}}>正在读取平台数据…</Text></View>}
-    {panel.phase==='error'&&<View style={{gap:8}}><Text testID={`${prefix}-error`} accessibilityRole="alert" style={{fontSize:12,lineHeight:20,color:p.accent}}>{panel.message}</Text>{panel.login&&action('去登录',openAccounts,`${prefix}-login`)}</View>}
-    {panel.phase==='empty'&&<Text testID={`${prefix}-empty`} accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:20,color:p.secondary}}>{panel.message}</Text>}
-    {panel.message&&panel.phase!=='error'&&panel.phase!=='empty'&&<Text accessibilityLiveRegion="polite" style={{fontSize:12,color:p.secondary}}>{panel.message}</Text>}
+    {panel.phase==='loading'&&<View style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:8}}><ActivityIndicator size="small" color={s.accent}/><Text style={{fontSize:12,color:s.muted}}>正在读取平台数据…</Text></View>}
+    {panel.phase==='error'&&<View style={{gap:8}}><Text testID={`${prefix}-error`} accessibilityRole="alert" style={{fontSize:12,lineHeight:19,color:s.accent}}>{panel.message}</Text>{panel.login&&action('去登录',openAccounts,`${prefix}-login`)}</View>}
+    {panel.phase==='empty'&&<Text testID={`${prefix}-empty`} accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:19,color:s.muted}}>{panel.message}</Text>}
+    {panel.message&&panel.phase!=='error'&&panel.phase!=='empty'&&<Text accessibilityLiveRegion="polite" style={{fontSize:12,color:s.muted}}>{panel.message}</Text>}
   </>;
 
-  return <View testID="account-recommendations" style={{padding:20,marginTop:22,borderWidth:1,borderColor:p.border,borderRadius:18,backgroundColor:p.surface,gap:10}}>
+  return <View testID="account-recommendations" style={{padding:14,borderWidth:1,borderColor:s.cardBorder,borderRadius:20,backgroundColor:s.card,gap:10}}>
     <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
       <View style={{flex:1}}>
-        <Text style={{fontSize:18,fontWeight:'600',color:p.text}}>平台推荐</Text>
-        <Text style={{fontSize:12,lineHeight:19,color:p.secondary,marginTop:4}}>{account?`${account.displayName??account.label} · ${account.platform==='kg'?'酷狗':account.platform==='tx'?'QQ 音乐':'网易云'}账号`:'登录网易云、QQ 音乐或酷狗获取账号推荐；除私人FM外，未登录时不展示替代内容。'}</Text>
+        <Text style={{fontSize:17,fontWeight:'700',color:s.ink}}>平台推荐</Text>
+        <Text style={{fontSize:12,lineHeight:18,color:s.muted,marginTop:2}}>{account?`${account.displayName??account.label} · ${account.platform==='kg'?'酷狗':account.platform==='tx'?'QQ 音乐':'网易云'}账号`:'登录网易云、QQ 音乐或酷狗获取每日推荐、推荐歌单与私人 FM。'}</Text>
       </View>
       {account&&refresh('account-daily-refresh',`刷新${dailyName}`,()=>{void loadDaily(account,true);},daily.phase==='loading')}
     </View>
-    {supported.length>1&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{supported.map((item,index)=>{const active=item.id===account?.id;return <Pressable key={item.id} testID={`account-recommendations-account-${index}`} accessibilityRole="button" accessibilityState={{selected:active}} accessibilityLabel={`选择${item.platform==='kg'?'酷狗':item.platform==='tx'?'QQ 音乐':'网易云'}账号：${item.displayName??item.label}`} onPress={()=>setSelectedId(item.id)} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:active?p.selected:p.surface,borderWidth:1,borderColor:active?p.accent:p.border,justifyContent:'center'}}><Text style={{fontSize:13,fontWeight:active?'600':'400',color:active?p.accent:p.secondary}}>{item.platform==='tx'?'QQ':item.platform==='kg'?'酷狗':'网易云'} · {item.displayName??item.label}</Text></Pressable>;})}</View>}
-    {!account&&<View><Pressable testID="account-recommendations-login" accessibilityRole="button" accessibilityLabel="登录音乐账号" onPress={openAccounts} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>去登录</Text></Pressable></View>}
+    {supported.length>1&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{supported.map((item,index)=>{const active=item.id===account?.id;return <Pressable key={item.id} testID={`account-recommendations-account-${index}`} accessibilityRole="button" accessibilityState={{selected:active}} accessibilityLabel={`选择${item.platform==='kg'?'酷狗':item.platform==='tx'?'QQ 音乐':'网易云'}账号：${item.displayName??item.label}`} onPress={()=>setSelectedId(item.id)} style={{minHeight:38,paddingHorizontal:13,borderRadius:19,backgroundColor:active?s.control:s.chip,borderWidth:1,borderColor:active?s.control:s.chipBorder,justifyContent:'center'}}><Text style={{fontSize:13,fontWeight:'600',color:active?'#FFFFFF':s.muted}}>{item.platform==='tx'?'QQ':item.platform==='kg'?'酷狗':'网易云'} · {item.displayName??item.label}</Text></Pressable>;})}</View>}
+    {!account&&<View style={{alignSelf:'flex-start'}}><Pressable testID="account-recommendations-login" accessibilityRole="button" accessibilityLabel="登录音乐账号" onPress={openAccounts} style={{minHeight:42,paddingHorizontal:20,borderRadius:21,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6}}><Ionicons name="person-add-outline" size={16} color="#FFFFFF"/><Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>去登录</Text></Pressable></View>}
     {account&&<View style={{gap:4}}>
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:6}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>{dailyName}</Text>{daily.phase==='ready'&&<Text style={{fontSize:11,color:p.secondary}}>共 {daily.tracks.length} 首</Text>}</View>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:4}}><Text style={{fontSize:15,fontWeight:'700',color:s.ink}}>{dailyName}</Text>{daily.phase==='ready'&&<Text style={{fontSize:11,color:s.muted}}>共 {daily.tracks.length} 首</Text>}</View>
       {daily.tracks.slice(0,5).map((track,index)=>row('account-daily',index,track,()=>services.playTracks(daily.tracks,index)))}
       {status(daily,'account-daily')}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:4}}>
@@ -192,37 +193,37 @@ export function AccountRecommendations({services,openAccounts}:{services:Service
         {daily.phase==='error'&&!daily.login&&action('重试',()=>{void loadDaily(account!,true);},'account-daily-retry')}
       </View>
     </View>}
-    {account&&playlistSupported&&<View testID="account-playlists" style={{gap:8,marginTop:8,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
+    {account&&playlistSupported&&<View testID="account-playlists" style={{gap:8,marginTop:6,paddingTop:10,borderTopWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-        <View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>推荐歌单</Text><Text testID="account-playlists-account" style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>{account.platform==='tx'?'来自当前 QQ 音乐账号；打开后仍按公开歌单详情读取。':'来自当前网易云账号；打开后仍按公开歌单详情读取。'}</Text></View>
+        <View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'700',color:s.ink}}>推荐歌单</Text><Text testID="account-playlists-account" style={{fontSize:11,lineHeight:17,color:s.muted,marginTop:2}}>{account.platform==='tx'?'来自当前 QQ 音乐账号':'来自当前网易云账号'}</Text></View>
         {refresh('account-playlists-refresh','刷新推荐歌单',()=>{void loadPlaylists(account,true);},playlists.phase==='loading')}
       </View>
       {playlists.phase==='ready'&&<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:12,paddingVertical:4}}>
-        {playlists.items.map((item,index)=><Pressable key={`${item.platform}:${item.id}`} testID={`account-playlist-${index}`} accessibilityRole="button" accessibilityLabel={`打开推荐歌单：${item.title}${item.author?`，${item.author}`:''}`} onPress={()=>setPlaylistOpen(item)} style={{width:132,gap:7}}>
-          <Cover services={services} url={item.artwork} size={132}/>
-          <Text numberOfLines={2} style={{fontSize:13,lineHeight:18,fontWeight:'600',color:p.text}}>{item.title}</Text>
-          <Text numberOfLines={1} style={{fontSize:11,color:p.secondary}}>{item.count!==undefined?`${item.count} 首`:'平台推荐'} {item.author?`· ${item.author}`:''}</Text>
+        {playlists.items.map((item,index)=><Pressable key={`${item.platform}:${item.id}`} testID={`account-playlist-${index}`} accessibilityRole="button" accessibilityLabel={`打开推荐歌单：${item.title}${item.author?`，${item.author}`:''}`} onPress={()=>setPlaylistOpen(item)} style={{width:124,gap:6}}>
+          <Cover services={services} url={item.artwork} size={124} radius={13}/>
+          <Text numberOfLines={2} style={{fontSize:13,lineHeight:17,fontWeight:'600',color:s.ink}}>{item.title}</Text>
+          <Text numberOfLines={1} style={{fontSize:11,color:s.muted}}>{item.count!==undefined?`${item.count} 首`:'平台推荐'} {item.author?`· ${item.author}`:''}</Text>
         </Pressable>)}
       </ScrollView>}
       {status(playlists,'account-playlists')}
       {playlists.phase==='error'&&!playlists.login&&action('重试',()=>{void loadPlaylists(account,true);},'account-playlists-retry')}
     </View>}
-    {account?.platform==='wy'&&<View style={{gap:4,marginTop:10,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>私人FM</Text><Text style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>按账号偏好取一批歌曲；不喜欢会提交到网易云。</Text></View>{fm.phase==='ready'&&refresh('account-fm-refresh','换一批私人FM',()=>{void loadFm(account!,true,false);},false)}</View>
-      {fm.tracks.slice(0,5).map((track,index)=>row('account-fm',index,track,()=>{void playFm(account!,index);},<Pressable key={`${track.origin.id}-discard`} testID={`account-fm-discard-${index}`} accessibilityRole="button" accessibilityLabel={`不喜欢：${track.title}`} onPress={()=>{void discardFm(account!,track);}} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="thumbs-down-outline" size={20} color={p.secondary}/></Pressable>))}
+    {account?.platform==='wy'&&<View style={{gap:4,marginTop:6,paddingTop:10,borderTopWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View style={{flex:1}}><Text style={{fontSize:15,fontWeight:'700',color:s.ink}}>私人FM</Text><Text style={{fontSize:11,lineHeight:17,color:s.muted,marginTop:2}}>按账号偏好取一批歌曲；不喜欢会提交到网易云。</Text></View>{fm.phase==='ready'&&refresh('account-fm-refresh','换一批私人FM',()=>{void loadFm(account!,true,false);},false)}</View>
+      {fm.tracks.slice(0,5).map((track,index)=>row('account-fm',index,track,()=>{void playFm(account!,index);},<Pressable key={`${track.origin.id}-discard`} testID={`account-fm-discard-${index}`} accessibilityRole="button" accessibilityLabel={`不喜欢：${track.title}`} onPress={()=>{void discardFm(account!,track);}} style={{width:40,height:40,alignItems:'center',justifyContent:'center'}}><Ionicons name="thumbs-down-outline" size={18} color={s.muted}/></Pressable>))}
       {status(fm,'account-fm')}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:4}}>
-        <Pressable testID="account-fm-start" accessibilityRole="button" accessibilityLabel="播放私人FM" onPress={()=>{void loadFm(account!,false,true);}} disabled={fm.phase==='loading'} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:fm.phase==='loading'?.65:1}}>{fm.phase==='loading'?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="radio-outline" size={20} color="#FFFFFF"/>}<Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>{fm.tracks.length?'播放本批私人FM':'播放私人FM'}</Text></Pressable>
+        <Pressable testID="account-fm-start" accessibilityRole="button" accessibilityLabel="播放私人FM" onPress={()=>{void loadFm(account!,false,true);}} disabled={fm.phase==='loading'} style={{minHeight:42,paddingHorizontal:16,borderRadius:21,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,opacity:fm.phase==='loading'?.65:1}}>{fm.phase==='loading'?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="radio-outline" size={18} color="#FFFFFF"/>}<Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>{fm.tracks.length?'播放本批私人FM':'播放私人FM'}</Text></Pressable>
         {(fm.phase==='error'||fm.phase==='empty')&&action(fm.phase==='empty'?'换一批':'重试',()=>{void loadFm(account!,true,fm.phase==='empty');},'account-fm-retry')}
       </View>
     </View>}
-    {account?.platform==='wy'&&<View testID="account-heartbeat" style={{gap:8,marginTop:10,paddingTop:10,borderTopWidth:1,borderColor:p.border}}>
-      <View><Text style={{fontSize:15,fontWeight:'600',color:p.text}}>心动模式</Text><Text style={{fontSize:11,lineHeight:18,color:p.secondary,marginTop:2}}>智能推荐队列 · {currentTrack?`当前歌曲：${currentTrack.title}`:'当前没有播放歌曲时，会从“我喜欢的音乐”随机选择种子。'}</Text></View>
-      {heartbeat.phase==='loading'&&<View style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:4}}><ActivityIndicator size="small" color={p.accent}/><Text style={{fontSize:12,color:p.secondary}}>正在根据喜欢歌曲构建心动队列…</Text></View>}
-      {heartbeat.phase==='error'&&<Text testID="account-heartbeat-error" accessibilityRole="alert" style={{fontSize:12,lineHeight:20,color:p.accent}}>{heartbeat.message}</Text>}
-      {heartbeat.phase==='ready'&&<><Text testID="account-heartbeat-message" accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:20,color:p.secondary}}>{heartbeat.message}</Text><Text testID="account-heartbeat-summary" style={{fontSize:11,lineHeight:18,color:p.secondary}}>已加入 {heartbeat.tracks.length} 首，种子：{heartbeat.tracks[0]?.title??'未知歌曲'}</Text></>}
+    {account?.platform==='wy'&&<View testID="account-heartbeat" style={{gap:8,marginTop:6,paddingTop:10,borderTopWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
+      <View><Text style={{fontSize:15,fontWeight:'700',color:s.ink}}>心动模式</Text><Text style={{fontSize:11,lineHeight:17,color:s.muted,marginTop:2}}>智能推荐队列 · {currentTrack?`当前歌曲：${currentTrack.title}`:'从“我喜欢的音乐”随机选择种子。'}</Text></View>
+      {heartbeat.phase==='loading'&&<View style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:4}}><ActivityIndicator size="small" color={s.accent}/><Text style={{fontSize:12,color:s.muted}}>正在根据喜欢歌曲构建心动队列…</Text></View>}
+      {heartbeat.phase==='error'&&<Text testID="account-heartbeat-error" accessibilityRole="alert" style={{fontSize:12,lineHeight:19,color:s.accent}}>{heartbeat.message}</Text>}
+      {heartbeat.phase==='ready'&&<><Text testID="account-heartbeat-message" accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:19,color:s.muted}}>{heartbeat.message}</Text><Text testID="account-heartbeat-summary" style={{fontSize:11,lineHeight:17,color:s.muted}}>已加入 {heartbeat.tracks.length} 首，种子：{heartbeat.tracks[0]?.title??'未知歌曲'}</Text></>}
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-        <Pressable testID="account-heartbeat-start" accessibilityRole="button" accessibilityLabel="开启心动模式" onPress={()=>{void startHeartbeat(account!);}} disabled={heartbeat.phase==='loading'} style={{minHeight:46,paddingHorizontal:16,borderRadius:14,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:heartbeat.phase==='loading'?.65:1}}>{heartbeat.phase==='loading'?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="heart-outline" size={20} color="#FFFFFF"/>}<Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>{heartbeat.phase==='ready'?'重新开启心动模式':'开启心动模式'}</Text></Pressable>
+        <Pressable testID="account-heartbeat-start" accessibilityRole="button" accessibilityLabel="开启心动模式" onPress={()=>{void startHeartbeat(account!);}} disabled={heartbeat.phase==='loading'} style={{minHeight:42,paddingHorizontal:16,borderRadius:21,backgroundColor:s.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,opacity:heartbeat.phase==='loading'?.65:1}}>{heartbeat.phase==='loading'?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="heart" size={17} color="#FFFFFF"/>}<Text style={{fontSize:14,fontWeight:'600',color:'#FFFFFF'}}>{heartbeat.phase==='ready'?'重新开启心动模式':'开启心动模式'}</Text></Pressable>
         {heartbeat.phase==='error'&&!heartbeat.login&&action('重试',()=>{void startHeartbeat(account!);},'account-heartbeat-retry')}
         {heartbeat.phase==='error'&&heartbeat.login&&action('去登录',openAccounts,'account-heartbeat-login')}
       </View>

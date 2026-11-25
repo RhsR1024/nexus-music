@@ -1,5 +1,6 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 import {useState,useSyncExternalStore} from 'react';
 import {Alert,Pressable,View} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -10,11 +11,11 @@ import {lyricStyleDefaults,type LyricStyle} from '../lyrics/settings.ts';
 export type FontSection='global'|'lyric'|'display';
 export function FontSettings({services,section,onOpen}:{services:Services;section?:FontSection;onOpen?:(section:FontSection)=>void}){
   const [localSection,setLocalSection]=useState<FontSection>('display'),mode=section??localSection,open=onOpen??setLocalSection;
-  const theme=useTheme(),p=theme.palette;
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
   const fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot),preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[colors,setColors]=useState({activeColor:'',inactiveColor:''});
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch(error){setMessage(error instanceof Error?error.message:'字体操作失败');}finally{setBusy(false);}}
-  const button=(label:string,action:()=>void,id?:string,selected?:boolean)=><Pressable testID={id} accessibilityRole="button" accessibilityState={{selected,disabled:busy}} disabled={busy} onPress={action} style={{padding:12,minHeight:44,backgroundColor:selected?p.selected:p.surface,borderRadius:10}}><Text style={{color:p.accent}}>{label}{selected?' ✓':''}</Text></Pressable>;
+  const button=(label:string,action:()=>void,id?:string,selected?:boolean)=><Pressable testID={id} accessibilityRole="button" accessibilityState={{selected,disabled:busy}} disabled={busy} onPress={action} style={{paddingHorizontal:13,paddingVertical:9,minHeight:40,backgroundColor:selected?s.control:s.card,borderWidth:1,borderColor:selected?s.control:s.cardBorder,borderRadius:20,justifyContent:'center'}}><Text style={{color:selected?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{label}{selected?' ✓':''}</Text></Pressable>;
   const update=(patch:Partial<LyricStyle>)=>{void perform(()=>services.preferences.updateLyricStyle(patch));};
   const name=(id:string|null|undefined)=>fonts.fonts.find(item=>item.id===id)?.name??'系统字体';
   const change=(field:'lineHeight'|'spacing'|'blur',step:number)=>{void perform(()=>services.preferences.adjustLyricStyle(field,step));};

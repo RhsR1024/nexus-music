@@ -1,5 +1,6 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 import { useState, useSyncExternalStore } from 'react';
 import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -98,18 +99,21 @@ export function SourceSettings({ catalog,health }: { catalog: SourceCatalog;heal
     <SourceHealthModal health={health} ids={selected.length?selected:sources.filter(s=>s.enabled).map(s=>s.id)} visible={checking} onClose={()=>setChecking(false)}/>
   </View>;
 }
-const makeStyles=(theme:Theme)=>StyleSheet.create({
-  card: { marginTop: 24, padding: 18, borderRadius: 20, backgroundColor: theme.color('#1D222B'), borderWidth: 1, borderColor: theme.color('#2A303A') },
+const makeStyles=(theme:Theme)=>{
+  const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
+  return StyleSheet.create({
+  card: { marginTop: 14, padding: 16, borderRadius: 20, backgroundColor: s.card, borderWidth: 1, borderColor: s.cardBorder },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  title: { color: theme.color('#ECEBF3'), fontSize: 18, fontWeight: '600' },
-  description: { color: theme.color('#9296A2'), fontSize: 12, lineHeight: 21, marginVertical: 12 },
-  caption: { color: theme.color('#9296A2'), fontSize: 11, lineHeight: 20, flexShrink: 1 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  button: { backgroundColor: theme.color('#303A32'), borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, marginVertical: 5 },
-  buttonText: { color: theme.color('#D9F49B'), fontSize: 12 }, disabled: { opacity: 0.4 },
-  input: { color: theme.color('#EEECE7'), borderColor: theme.color('#414754'), borderWidth: 1, borderRadius: 10, padding: 12, marginTop: 12, fontSize: 12 },
-  source: { borderTopWidth: 1, borderTopColor: theme.color('#353A46'), paddingTop: 15, marginTop: 14 },
-  name: { color: theme.color('#ECEBF3'), fontSize: 15, lineHeight: 23 },
-  state: { color: theme.color('#C7AC90'), fontSize: 12, marginVertical: 8 }, ready: { color: theme.color('#D9F49B') },
-  message: { color: theme.color('#C4C8D4'), fontSize: 12, lineHeight: 20, marginTop: 12 },
-});
+  title: { color: s.ink, fontSize: 17, fontWeight: '700' },
+  description: { color: s.muted, fontSize: 12, lineHeight: 19, marginVertical: 10 },
+  caption: { color: s.muted, fontSize: 12, lineHeight: 18, flexShrink: 1 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  button: { backgroundColor: s.chip, borderWidth: 1, borderColor: s.chipBorder, borderRadius: 19, paddingHorizontal: 13, paddingVertical: 9, marginVertical: 3 },
+  buttonText: { color: s.ink, fontSize: 13, fontWeight: '600' }, disabled: { opacity: 0.4 },
+  input: { color: s.ink, backgroundColor: s.inputBg, borderColor: s.cardBorder, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, marginTop: 10, fontSize: 13 },
+  source: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: s.hairline, paddingTop: 14, marginTop: 12 },
+  name: { color: s.ink, fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  state: { color: s.muted, fontSize: 12, marginVertical: 6 }, ready: { color: s.control, fontWeight: '600' },
+  message: { color: s.control, fontSize: 12, lineHeight: 19, marginTop: 10 },
+  });
+};

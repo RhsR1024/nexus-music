@@ -1,22 +1,24 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator, FlatList, Linking, Pressable, View, useWindowDimensions} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {useTheme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 export function DeviceMediaLibrary({services}:{services:Services}) {
-  const {palette:p}=useTheme(),{width}=useWindowDimensions(),store=services.deviceMedia,state=useSyncExternalStore(store.subscribe,store.getSnapshot);
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),{width}=useWindowDimensions(),store=services.deviceMedia,state=useSyncExternalStore(store.subscribe,store.getSnapshot);
   const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[mode,setMode]=useState<'songs'|'albums'|'artists'>('songs'),[group,setGroup]=useState<string|null>(null),[adding,setAdding]=useState<readonly Track[]>(),[message,setMessage]=useState('');
   useEffect(()=>{if(open)void store.checkAuthorization().then(status=>{if(status==='authorized')return store.search(query);}).catch(()=>setMessage('无法读取媒体库权限'));},[open]);
   const groupKey=(track:Track)=>mode==='albums'?JSON.stringify([track.album||'未知专辑',track.metadata.albumArtist??track.artist]):track.artist;
   const groups=useMemo(()=>{const values=new Map<string,Track[]>();for(const track of state.tracks){const key=groupKey(track),list=values.get(key);if(list)list.push(track);else values.set(key,[track]);}return [...values].map(([key,tracks])=>({key,name:mode==='albums'?tracks[0]!.album||'未知专辑':tracks[0]!.artist,tracks})).sort((a,b)=>a.name.localeCompare(b.name,'zh'));},[state.tracks,mode]);
   const shown=useMemo(()=>group?state.tracks.filter(track=>groupKey(track)===group):state.tracks,[state.tracks,mode,group]);
   const status={authorized:'已授权',denied:'已拒绝授权',restricted:'系统限制访问',notDetermined:'尚未授权',unavailable:'当前无法访问'}[state.authorization];
-  const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} accessibilityState={{disabled}} onPress={action} style={{padding:12,borderRadius:15,backgroundColor:p.selected,opacity:disabled?.4:1}}><Text style={{color:p.accent}}>{label}</Text></Pressable>;
-  return <View style={{marginBottom:18}}>{button(`设备媒体库 · ${status}`,()=>setOpen(true))}
+  const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} accessibilityState={{disabled}} onPress={action} style={{paddingHorizontal:14,paddingVertical:10,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,opacity:disabled?.4:1}}><Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>{label}</Text></Pressable>;
+  return <View style={{marginVertical:2}}><Pressable accessibilityRole="button" accessibilityLabel={`设备媒体库 · ${status}`} onPress={()=>setOpen(true)} style={{minHeight:48,paddingHorizontal:14,paddingVertical:10,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',gap:10}}><Ionicons name="musical-notes-outline" size={19} color={s.control}/><Text style={{flex:1,color:s.ink,fontSize:14,fontWeight:'600'}}>设备媒体库 · {status}</Text><Ionicons name="chevron-forward" size={16} color={s.subtle}/></Pressable>
     <Modal visible={open} onRequestClose={()=>setOpen(false)} animationType="slide"><View style={{flex:1,padding:22,paddingTop:64,gap:14,backgroundColor:p.background[0]}}>
       {button('收起设备媒体库',()=>setOpen(false))}<Text style={{fontSize:30,fontWeight:'700',color:p.text}}>设备媒体库</Text>
       <Text testID="device-media-authorization" style={{color:p.secondary}}>{status}</Text>

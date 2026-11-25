@@ -10,7 +10,7 @@ import type {Services} from '../app/services.ts';
 import {accentColors,appearanceDefaults,themeBackground,themeSwatchBackground,visualThemeLabels as themeLabels,visualThemes,type Accent,type VisualTheme} from '../domain/appearance.ts';
 import {useTheme} from './theme.tsx';
 import {useVisualAssets} from './VisualBackground.tsx';
-import {settingsInk,settingsLegend,settingsMuted,settingsSheet,themeChoiceLayout as chips} from './tokens.ts';
+import {settingsInk,settingsLegend,settingsMuted,settingsSheet,sollinTokens,themeChoiceLayout as chips} from './tokens.ts';
 const styleLabels:Record<'gradient'|'solid'|'image',string>={gradient:'渐变',solid:'纯色',image:'图片'};
 const segmentIconSize={solid:16.4,gradient:15.1,image:16.4} as const;
 const segmentGlyphFontSize=16.4;
@@ -41,8 +41,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
     catch{setError('播放界面未保存，请重试；之前的设置已保留。');}
     finally{savingStyle.current=false;setStyleBusy(false);}
   };
-  const section=(title:string,children:React.ReactNode)=><View style={{gap:14,paddingVertical:18,borderBottomWidth:1,borderBottomColor:theme.palette.border}}><Text style={{fontSize:16,fontWeight:'600',color:theme.palette.text}}>{title}</Text>{children}</View>;
-  const choice=(id:string,label:string,selected:boolean,onPress:()=>void,disabled=false)=><Pressable key={id} testID={id} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} onPress={onPress} style={{minHeight:56,paddingHorizontal:14,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:theme.palette.border,opacity:disabled?.5:1}}><Text style={{color:selected?theme.palette.accent:theme.palette.text,fontWeight:selected?'600':'400',fontSize:15}}>{label}</Text>{selected&&<Ionicons name="checkmark-circle" size={21} color={theme.palette.accent}/>}</Pressable>;
+  const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
+  const section=(title:string,children:React.ReactNode)=><View style={{gap:12,paddingVertical:10}}><Text style={{fontSize:13,fontWeight:'500',color:s.muted,marginLeft:4}}>{title}</Text>{children}</View>;
+  const choice=(id:string,label:string,selected:boolean,onPress:()=>void,disabled=false,last=false)=><Pressable key={id} testID={id} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} onPress={onPress} style={{minHeight:54,paddingHorizontal:16,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:last?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,opacity:disabled?.5:1}}><Text style={{color:selected?s.accent:s.ink,fontWeight:selected?'600':'500',fontSize:16}}>{label}</Text>{selected&&<Ionicons name="checkmark" size={20} color={s.accent}/>}</Pressable>;
   // IMG_4855 keeps the sections on the sheet's own tinted surface; only the
   // summary card and control rows carry a fill.
   const flat=page==='background';
@@ -81,8 +82,8 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
     <Text testID={`${key}-hex`} style={{flex:1,color:ink,fontSize:17,fontVariant:['tabular-nums']}}>{hex.toUpperCase()}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={key==='accent'?'选择强调色':'背景颜色说明'} onPress={action} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={21} color={legend}/></Pressable>
   </View>;
-  return <View style={{gap:8,marginVertical:flat?14.5:5.5,padding:flat?0:8,borderRadius:flat?0:22,backgroundColor:flat?'transparent':theme.palette.surface}}>
-    {page==='theme'&&<View style={{gap:12}}><View>{(['system','light','dark']as const).map((mode,index)=>choice(`theme-${mode}`,['跟随系统','浅色','深色'][index]!,value.theme===mode,()=>update({theme:mode})))}</View><Text style={{color:theme.palette.secondary,fontSize:13,lineHeight:20,padding:14}}>选择后立即保存。</Text></View>}
+  return <View style={{gap:8,marginVertical:flat?14.5:10,padding:flat?0:0,borderRadius:flat?0:20,backgroundColor:'transparent'}}>
+    {page==='theme'&&<View style={{gap:12}}><View style={{borderRadius:18,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}>{(['system','light','dark']as const).map((mode,index)=>choice(`theme-${mode}`,['跟随系统','浅色','深色'][index]!,value.theme===mode,()=>update({theme:mode}),false,index===2))}</View><Text style={{color:s.muted,fontSize:13,lineHeight:20,paddingHorizontal:6}}>选择后立即保存。</Text></View>}
     {page==='background'&&<View style={{gap:0,paddingBottom:16}}>
       {/* IMG_4855 card: 114pt tall, a shadowed summary pill pinned to the lower-left. */}
       <View testID="theme-preview-card" style={{borderRadius:16,backgroundColor:darkMode?theme.palette.surface:settingsSheet.card,paddingHorizontal:14,paddingBottom:16,minHeight:120,justifyContent:'flex-end'}}>
@@ -126,25 +127,42 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
         {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'),darkMode?theme.palette.background[1]:settingsSheet.fieldBackdrop[1])}
       </View>
     </View>}
-    {page==='skins'&&section('播放界面样式',<View accessibilityLabel="可选播放界面样式" style={{borderRadius:18,overflow:'hidden',borderWidth:1,borderColor:theme.palette.border}}>{([
-      ['classic','经典','albums-outline','歌词、播放控制与队列'],
-      ['am','AM 风格','musical-notes-outline','大幅歌词与紧凑歌曲信息'],
-      ['immersive','封面沉浸','image-outline','封面背景与居中歌词'],
-      ['photo','写真歌词','person-outline','自定义写真背景与歌词'],
-      ['vinyl','黑胶唱机','disc-outline','唱盘视觉与播放控制'],
-      ['wave','声波核','pulse-outline','实时音频频谱环'],
-      ['stage','歌词舞台','text-outline','当前歌词分段与原生逐字绘制'],
-      ['am2','AM2','reader-outline','封面、歌词与内容面板'],
+    {page==='skins'&&<View style={{gap:10}}><View accessibilityLabel="可选播放界面样式" style={{borderRadius:18,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}>{([
+      ['classic','经典','disc-outline','封面与歌词分栏、原始播放器布局'],
+      ['vinyl','黑胶唱机','musical-note','旋转黑胶唱片与动态唱针'],
+      ['am','AM 风格','list','大幅歌词、动态封面与三态队列'],
+      ['am2','AM2','pulse','流动封面背景与逐词歌词动画'],
+      ['immersive','封面沉浸','tablet-landscape','大封面沉浸与居中歌词'],
+      ['wave','声波核','radio','环形进度、实时音频频谱环与居中歌词'],
+      ['photo','写真歌词','image','写真封面、长歌词与轻触快捷操作'],
+      ['stage','歌词舞台','text','全屏逐字大字舞台与多种视觉风格'],
     ] as const).map(([id,label,icon,detail],index)=>{
       const selected=value.playerLayout===id;
-      return <Pressable key={id} testID={`player-layout-${id}`} accessibilityRole="radio" accessibilityLabel={label} accessibilityValue={{text:detail}} accessibilityState={{selected,disabled:styleBusy,busy:styleBusy}} disabled={styleBusy} onPress={()=>{void selectStyle(id);}} style={{minHeight:72,paddingHorizontal:14,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:13,borderBottomWidth:id==='am2'?0:1,borderBottomColor:theme.palette.border,backgroundColor:selected?theme.palette.selected:theme.palette.surface,opacity:styleBusy?.5:1}}>
-        <View style={{width:40,height:40,borderRadius:13,alignItems:'center',justifyContent:'center',backgroundColor:selected?theme.palette.accent:theme.palette.selected}}><Ionicons name={icon} size={20} color={selected?theme.palette.surface:theme.palette.accent}/></View>
-        <View style={{flex:1,gap:3}}><Text style={{color:selected?theme.palette.accent:theme.palette.text,fontSize:15,fontWeight:selected?'600':'500'}}>{label}</Text><Text style={{color:theme.palette.secondary,fontSize:12,lineHeight:17}}>{detail}</Text></View>
-        <Ionicons name={selected?'checkmark-circle':'chevron-forward'} size={21} color={selected?theme.palette.accent:theme.palette.secondary}/>
+      return <Pressable key={id} testID={`player-layout-${id}`} accessibilityRole="radio" accessibilityLabel={label} accessibilityValue={{text:detail}} accessibilityState={{selected,disabled:styleBusy,busy:styleBusy}} disabled={styleBusy} onPress={()=>{void selectStyle(id);}} style={{minHeight:66,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:14,borderBottomWidth:index===7?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,opacity:styleBusy?.5:1}}>
+        <View style={{width:28,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={22} color={selected?s.accent:s.ink}/></View>
+        <View style={{flex:1,gap:3}}><Text style={{color:s.ink,fontSize:16,fontWeight:'600'}}>{label}</Text><Text style={{color:s.muted,fontSize:12,lineHeight:17}}>{detail}</Text></View>
+        {selected&&<Ionicons name="checkmark" size={20} color={s.accent}/>}
       </Pressable>;
-    })}<Text accessibilityLiveRegion="polite" style={{color:theme.palette.secondary,fontSize:12,lineHeight:18,padding:14}}>{styleBusy?'正在保存…':'选择后保存并应用；播放进度、队列和播放意图保持不变。'}</Text></View>)}
-    {page==='accent'&&section('强调色',<View style={{flexDirection:'row',gap:14,flexWrap:'wrap'}}>{(Object.entries(accentColors) as [Accent,readonly[string,string]][]).map(([id,colors],index)=><Pressable key={id} testID={`accent-${id}`} accessibilityLabel={['玫瑰','珊瑚','紫色','蓝色','橙色'][index]} accessibilityRole="radio" accessibilityState={{selected:value.accent===id}} onPress={()=>update({accent:id})} style={{minWidth:44,minHeight:44,borderRadius:22,backgroundColor:colors[theme.mode==='dark'?1:0],alignItems:'center',justifyContent:'center',borderWidth:value.accent===id?3:0,borderColor:theme.palette.text}}><Text style={{color:'#FFFFFF',fontSize:20}}>{value.accent===id?'✓':''}</Text></Pressable>)}</View>)}
-    {page==='navigation'&&<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:16,gap:12}}><View style={{flex:1}}><Text style={{fontSize:16,fontWeight:'600',color:theme.palette.text}}>玻璃底栏</Text><Text style={{color:theme.palette.secondary,lineHeight:20,marginTop:6}}>关闭或开启系统“降低透明度”时，使用实色表面。</Text></View><Switch accessibilityLabel="玻璃底栏" value={value.glassNavigation} onValueChange={glassNavigation=>update({glassNavigation})} trackColor={{true:theme.palette.accent}}/></View>}
+    })}</View><Text accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:12,lineHeight:18,paddingHorizontal:6}}>{styleBusy?'正在保存…':'选择后立即保存并应用；播放进度、队列和播放意图保持不变。'}</Text></View>}
+    {page==='accent'&&section('强调色',<View style={{borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,padding:16,flexDirection:'row',gap:14,flexWrap:'wrap'}}>{(Object.entries(accentColors) as [Accent,readonly[string,string]][]).map(([id,colors],index)=><Pressable key={id} testID={`accent-${id}`} accessibilityLabel={['玫瑰','珊瑚','紫色','蓝色','橙色'][index]} accessibilityRole="radio" accessibilityState={{selected:value.accent===id}} onPress={()=>update({accent:id})} style={{minWidth:44,minHeight:44,borderRadius:22,backgroundColor:colors[theme.mode==='dark'?1:0],alignItems:'center',justifyContent:'center',borderWidth:value.accent===id?3:0,borderColor:s.ink}}><Text style={{color:'#FFFFFF',fontSize:20}}>{value.accent===id?'✓':''}</Text></Pressable>)}</View>)}
+    {page==='navigation'&&<View style={{gap:14}}>
+      <View style={{borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,paddingHorizontal:16,paddingVertical:14,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12}}>
+        <View style={{flex:1,gap:3}}><Text style={{fontSize:15,fontWeight:'600',color:s.ink}}>玻璃底栏</Text><Text style={{color:s.muted,fontSize:12,lineHeight:18}}>关闭或开启系统“降低透明度”时，使用实色表面。</Text></View>
+        <Switch accessibilityLabel="玻璃底栏" value={value.glassNavigation} onValueChange={glassNavigation=>update({glassNavigation})} trackColor={s.switchTrack} thumbColor={s.switchThumb(value.glassNavigation)}/>
+      </View>
+      <View style={{borderRadius:18,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}>{([
+        ['liquid','液态玻璃','sparkles','现有的悬浮液态玻璃底栏'],
+        ['frosted','磨砂融合','albums','迷你播放器与一级页底栏融合，二级页单独显示'],
+        ['acrylic','亚克力中置','apps','透明亚克力底栏，播放器悬浮在底栏上方'],
+      ] as const).map(([id,label,icon,detail],index)=>{
+        const selected=value.navigationStyle===id;
+        return <Pressable key={id} testID={`nav-style-${id}`} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{selected}} onPress={()=>update({navigationStyle:id})} style={{minHeight:64,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:14,borderBottomWidth:index===2?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
+          <View style={{width:28,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={22} color={selected?s.accent:s.ink}/></View>
+          <View style={{flex:1,gap:3}}><Text style={{color:s.ink,fontSize:16,fontWeight:'600'}}>{label}</Text><Text style={{color:s.muted,fontSize:12,lineHeight:17}}>{detail}</Text></View>
+          {selected&&<Ionicons name="checkmark" size={20} color={s.accent}/>}
+        </Pressable>;
+      })}</View>
+    </View>}
     {page==='background'&&<><VisualSettings services={services}/><Text accessibilityRole="header" style={{color:muted,fontSize:13,marginLeft:4,marginTop:12,marginBottom:8}}>音枢扩展主题 · {themeLabels[value.visualTheme]}</Text>{themeChoices(['soft','classic'])}</>} {page==='mini'&&<MiniPlayerSettings services={services}/>}
     {!!error&&<Text accessibilityLiveRegion="polite" style={{color:theme.palette.accent}}>{error}</Text>}
   </View>;

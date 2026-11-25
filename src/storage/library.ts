@@ -53,8 +53,8 @@ export function validateLibrary(value:unknown):LibraryState {
 export class LibraryStore {
   private repository:Pick<Repository,'get'|'put'>;private uuid:()=>string;private now:()=>number;
   private value:LibraryState=emptyLibrary;private listeners=new Set<()=>void>();private tail:Promise<unknown>=Promise.resolve();
-  private mutations:MutationQueue;
-  constructor(repository:Pick<Repository,'get'|'put'>,uuid:()=>string,now:()=>number=Date.now,mutations=new MutationQueue()){this.repository=repository;this.uuid=uuid;this.now=now;this.mutations=mutations;}
+  private mutations:MutationQueue;private addPosition?:()=>'end'|'start';
+  constructor(repository:Pick<Repository,'get'|'put'>,uuid:()=>string,now:()=>number=Date.now,mutations=new MutationQueue(),addPosition?:()=>'end'|'start'){this.repository=repository;this.uuid=uuid;this.now=now;this.mutations=mutations;this.addPosition=addPosition;}
   getSnapshot=()=>this.value;
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
   async restore(){const value=await this.repository.get<unknown>('library.v1');if(value){try{this.value=validateLibrary(value);}catch{throw new InvalidRecordError();}}for(const listener of this.listeners)listener();}
@@ -114,7 +114,7 @@ export class LibraryStore {
   updatePlaylistMeta(id:string,meta:{description?:string;coverUrl?:string}){return this.updatePlaylist(id,playlist=>({...playlist,...(meta.description!==undefined?{description:meta.description.trim()||undefined}:{}),...(meta.coverUrl!==undefined?{coverUrl:meta.coverUrl.trim()||undefined}:{})}));}
   renamePlaylist(id:string,title:string){return this.updatePlaylist(id,playlist=>({...playlist,title:title.trim()}));}
   deletePlaylist(id:string){return this.change(current=>({...current,playlists:current.playlists.filter(item=>item.id!==id)}));}
-  addTracks(id:string,tracks:readonly Track[]){tracks.forEach(validateTrack);return this.updatePlaylist(id,playlist=>({...playlist,entries:[...playlist.entries,...tracks.map(track=>({id:this.uuid(),track}))]}));}
+  addTracks(id:string,tracks:readonly Track[],position?:'end'|'start'){tracks.forEach(validateTrack);const mode=position??this.addPosition?.()??'end';return this.updatePlaylist(id,playlist=>{const added=tracks.map(track=>({id:this.uuid(),track}));return {...playlist,entries:mode==='start'?[...added,...playlist.entries]:[...playlist.entries,...added]};});}
   removeEntry(id:string,entryId:string){return this.updatePlaylist(id,playlist=>({...playlist,entries:playlist.entries.filter(item=>item.id!==entryId)}));}
   removeEntries(id:string,entryIds:readonly string[]){const wanted=new Set(entryIds);return this.updatePlaylist(id,playlist=>({...playlist,entries:playlist.entries.filter(item=>!wanted.has(item.id))}));}
   removeFavorites(tracks:readonly Track[]){const wanted=new Set(tracks.map(track=>trackKey(track.origin)));return this.change(current=>({...current,favorites:current.favorites.filter(track=>!wanted.has(trackKey(track.origin)))}));}

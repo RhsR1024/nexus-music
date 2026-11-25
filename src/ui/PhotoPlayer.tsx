@@ -38,7 +38,7 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
       </Pressable>
       <View style={{flex:1,minHeight:0,gap:12}}>
         <View testID="photo-song-info" style={{flexDirection:'row',alignItems:'center',gap:6}}>
-          <View style={{flex:1,minWidth:0,gap:4}}><Text numberOfLines={1} style={{fontSize:22,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:14,color:'rgba(255,255,255,0.66)'}}>{track.artist}</Text></View>
+          <View style={{flex:1,minWidth:0,gap:3}}><Text numberOfLines={1} style={{fontSize:23,fontWeight:'700',color:'#FFFFFF',letterSpacing:-0.2}}>{track.title}</Text><Text numberOfLines={1} style={{fontSize:14,color:'rgba(255,255,255,0.68)'}}>{track.artist}</Text></View>
           {tool(state.intent==='playing'?'pause':'play',state.intent==='playing'?'暂停':'播放',()=>{if(state.intent==='playing')controller.pause();else void controller.play();},30)}
           {favoriteButton}{tool('ellipsis-horizontal','更多播放控制',onMore)}
         </View>
@@ -46,7 +46,7 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
         <View testID="photo-lyric-viewport" collapsable={false} style={{flex:1,minHeight:0,overflow:'hidden'}}><Lyrics services={services} track={lyricTrack} font={font} presentation="photo" chrome={columns}/></View>
       </View>
     </View>
-    {shown&&<Animated.View testID="photo-quick-actions" onTouchStart={()=>presentation.touch(true)} onTouchEnd={()=>presentation.touch(false)} onTouchCancel={()=>presentation.touch(false)} style={{opacity,transform:[{scale}],borderRadius:24,backgroundColor:'rgba(15,19,26,.94)',paddingHorizontal:12}}>
+    {shown&&<Animated.View testID="photo-quick-actions" onTouchStart={()=>presentation.touch(true)} onTouchEnd={()=>presentation.touch(false)} onTouchCancel={()=>presentation.touch(false)} style={{opacity,transform:[{scale}],borderRadius:26,backgroundColor:'rgba(18,20,28,0.92)',borderWidth:1,borderColor:'rgba(255,255,255,0.12)',paddingHorizontal:14,paddingTop:4}}>
       <ScrollView style={{maxHeight:Math.max(90,height*.27)}} contentContainerStyle={{paddingBottom:4}}>
         <PlaybackProgress services={services} adaptive/>
         <View style={{flexDirection:'row',justifyContent:'space-around'}}>{tool('play-back','上一首',()=>services.playback.next(-1))}{tool('play-forward','下一首',()=>services.playback.next())}{favoriteButton}{tool('list','队列与播放选项',onMore)}{tool('repeat',`循环：${prefs.repeat}`,()=>{void services.preferences.update({repeat:prefs.repeat==='off'?'all':prefs.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));})}{tool('options-outline','调整播放界面',onStyle)}</View>

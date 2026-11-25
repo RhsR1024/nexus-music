@@ -1,4 +1,5 @@
 import type {TextStyle} from 'react-native';
+import {controlColor,type AppearanceOptions} from '../domain/appearance.ts';
 
 // Measured from the 1290x2796 (430x932pt) Sollin reference captures in
 // resource/reference-ui. Values are points, not device pixels.
@@ -80,11 +81,11 @@ export const paper = {
   armDark: '#5C6167',
 } as const;
 
-// Screenshot-driven classic blush skin approximation (4854 r21); not a recovered
-// cover-color algorithm. Applied below user masks, only to the default theme.
+// Screenshot-driven classic blush skin approximation (4854 exact sRGB ramp);
+// applied below user masks on the default light blush theme.
 export const classicBlushBackground = {
-  colors: ['#F6F2EE', '#F2D4C6', '#F6D8CE', '#FCE7E6'],
-  locations: [0, .39, .74, 1],
+  colors: ['#F7F3EF', '#F4EDE8', '#F1D9CD', '#EFCEBF', '#F1D1C4', '#F3D5CB', '#F7DBD4', '#F8E0DC'],
+  locations: [0, .11, .39, .54, .72, .80, .88, 1],
 } as const;
 
 // 4854 three-line block: reclaim 23pt before the lyrics and return 11pt after
@@ -114,3 +115,37 @@ export const classicSkipIcon = {size:23.58,lineHeight:28,triangleWidth:13,gap:2,
 
 // Paper progress thumb: compact downward shadow; the 12pt entity is unchanged.
 export const paperProgressShadow = {shadowColor:'#4A2325',shadowOpacity:.28,shadowRadius:2.5,shadowOffset:{width:0,height:1.5}} as const;
+
+// Shared Sollin frosted-glass surface tokens across tabs, cards, sheets, and switches.
+// Keeps 4855/4856 (which read settingsSheet directly) untouched.
+export function sollinTokens(mode:'light'|'dark',accent:string,appearance?:Pick<AppearanceOptions,'cardOpacity'>){
+  const dark=mode==='dark';
+  const opacity=appearance?Math.max(0,Math.min(1,appearance.cardOpacity)):1;
+  const cardAlpha=dark?Math.max(0.05,0.08*opacity+0.03):Math.max(0.24,0.58*opacity);
+  const control=controlColor(accent,dark);
+  const accentRgb=/^#[0-9a-f]{6}$/i.test(accent)?[1,3,5].map(i=>parseInt(accent.slice(i,i+2),16)):[232,61,86];
+  const accentSoft=`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},${dark?0.20:0.12})`;
+  const accentPill=`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},${dark?0.26:0.14})`;
+  return {
+    dark,
+    ink:dark?'#F5EFF2':'#171717',
+    muted:dark?'#B6ACB9':'#7C7270',
+    subtle:dark?'#8B8190':'#9B918E',
+    accent,
+    control,
+    accentSoft,
+    accentPill,
+    card:dark?`rgba(255,255,255,${Number(cardAlpha.toFixed(3))})`:`rgba(255,255,255,${Number(cardAlpha.toFixed(3))})`,
+    cardElevated:dark?'rgba(42,34,48,0.86)':'rgba(255,255,255,0.78)',
+    cardBorder:dark?'rgba(255,255,255,0.11)':'rgba(255,255,255,0.72)',
+    hairline:dark?'rgba(255,255,255,0.09)':'rgba(42,36,31,0.075)',
+    chip:dark?'rgba(255,255,255,0.09)':'rgba(255,255,255,0.56)',
+    chipBorder:dark?'rgba(255,255,255,0.13)':'rgba(42,36,31,0.08)',
+    inputBg:dark?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.68)',
+    sheetGradient:(dark?['#241C28','#2E2130','#1F1B26']:['#FBF5F5','#F7E7EB','#F8EFF1']) as readonly [string,string,string],
+    switchTrack:{false:dark?'rgba(255,255,255,0.20)':'rgba(130,118,120,0.34)',true:dark?`rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},0.44)`:'rgba(143,74,78,0.40)'},
+    switchThumb:(on:boolean)=>on?control:(dark?'#E3DDE6':'#1E1A1C'),
+    dockShadow:{shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.08,shadowRadius:16,shadowOffset:{width:0,height:4}},
+    cardShadow:{shadowColor:'#2B181C',shadowOpacity:dark?0.24:0.05,shadowRadius:12,shadowOffset:{width:0,height:3}},
+  };
+}

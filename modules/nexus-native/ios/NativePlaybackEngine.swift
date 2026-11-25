@@ -235,12 +235,20 @@ final class NativePlaybackEngine {
       }
     }
   }
+  private var mixWithOthers = false
+  func configureMixWithOthers(_ enabled: Bool) {
+    mixWithOthers = enabled
+    #if os(iOS)
+    let session = AVAudioSession.sharedInstance()
+    try? session.setCategory(.playback, mode: .default, options: enabled ? [.mixWithOthers] : [])
+    #endif
+  }
   func play(_ id: String, _ newGeneration: Int) {
     guard newGeneration == generation, entryID == id else { return }
     do {
       #if os(iOS)
       let session = AVAudioSession.sharedInstance()
-      try session.setCategory(.playback, mode: .default, options: [])
+      try session.setCategory(.playback, mode: .default, options: mixWithOthers ? [.mixWithOthers] : [])
       try session.setActive(true)
       #endif
       wantsPlay = true; if player.currentItem?.status == .readyToPlay && !initialSeekPending { player.play(); player.rate = playbackRate }; report("status")

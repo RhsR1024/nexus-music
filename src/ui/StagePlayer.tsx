@@ -10,9 +10,9 @@ import {Text} from './Typography.tsx';
 
 export const stageStyles=[['classic','经典'],['neon','霓虹'],['cyberpunk','赛博'],['aurora','炫彩']] as const;
 const backgrounds:Record<StageStyle,readonly [string,string,string]>={classic:['#09131F','#09131F','#09131F'],neon:['#132938','#251C39','#0A1723'],cyberpunk:['#062C39','#30182E','#0A1723'],aurora:['#202955','#362444','#10372D']};
-export function StagePlayer({services,track,lyricTrack,font,controls,onMore,onStyle}:{services:Services;track:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void}){
+export function StagePlayer({services,track,lyricTrack,font,controls,onMore,onStyle,onLyricSource}:{services:Services;track:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void;onLyricSource?:()=>void}){
   const prefs=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  const [choosing,setChoosing]=useState(false),[error,setError]=useState('');
+  const [choosing,setChoosing]=useState(false),[error,setError]=useState(''),[lyricsRequest,setLyricsRequest]=useState(0);
   const {width,height,fontScale}=useWindowDimensions(),largeText=fontScale>1.4;
   const save=(patch:{stageStyle?:StageStyle;stageBackdrop?:boolean})=>{void services.preferences.update(patch).then(()=>setError('')).catch(()=>setError('舞台设置未保存，原设置保留'));};
   const backdrop=prefs.stageBackdrop&&prefs.stageStyle!=='classic';
@@ -20,9 +20,11 @@ export function StagePlayer({services,track,lyricTrack,font,controls,onMore,onSt
     {/* IMG_4872 has no title row; keep the track name in the AX tree for skin parity. */}
     <Text accessibilityLabel={track.title} style={{position:'absolute',top:0,left:0,width:1,height:1,fontSize:1,color:'transparent'}}>{track.title}</Text>
     {backdrop&&<LinearGradient testID="stage-backdrop" pointerEvents="none" colors={backgrounds[prefs.stageStyle]} style={StyleSheet.absoluteFill}/>}
+    {onLyricSource&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={onLyricSource} style={{position:'absolute',top:0,right:88,width:44,height:44,zIndex:3,alignItems:'center',justifyContent:'center'}}><Ionicons name="language-outline" size={19} color="rgba(255,255,255,0.52)"/></Pressable>}
+    <Pressable accessibilityRole="button" accessibilityLabel="打开全部歌词与偏移设置" onPress={()=>setLyricsRequest(v=>v+1)} style={{position:'absolute',top:0,right:44,width:44,height:44,zIndex:3,alignItems:'center',justifyContent:'center'}}><Ionicons name="text-outline" size={19} color="rgba(255,255,255,0.52)"/></Pressable>
     <Pressable accessibilityRole="button" accessibilityLabel="更多播放控制" onPress={onMore} style={{position:'absolute',top:0,right:0,width:44,height:44,zIndex:3,alignItems:'center',justifyContent:'center'}}><Ionicons name="ellipsis-horizontal" size={22} color="rgba(255,255,255,0.72)"/></Pressable>
     <View testID="stage-lyric-viewport" collapsable={false} style={{flex:1,minHeight:0,overflow:'hidden'}}>
-      <Lyrics services={services} track={lyricTrack} font={font} presentation="stage" chrome={!choosing}/>
+      <Lyrics services={services} track={lyricTrack} font={font} presentation="stage" chrome={false} openRequest={lyricsRequest}/>
       {choosing&&<Pressable accessibilityRole="button" accessibilityLabel="收起舞台样式" onPress={()=>setChoosing(false)} style={{position:'absolute',right:0,bottom:0,width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={20} color="rgba(255,255,255,0.72)"/></Pressable>}
     </View>
     <View style={{flexShrink:0,gap:2,paddingBottom:10}}>

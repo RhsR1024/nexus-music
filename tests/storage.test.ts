@@ -294,3 +294,47 @@ test('stage preferences migrate independently, persist and reject invalid or fai
   const write=repository.put.bind(repository);repository.put=async()=>{throw new Error('disk full');};await assert.rejects(preferences.update({stageStyle:'classic'}));assert.equal(preferences.getSnapshot(),before);
   repository.put=write;await preferences.update({stageStyle:'cyberpunk'});assert.equal(preferences.getSnapshot().stageBackdrop,false);db.close();
 });
+
+test('navigation style and local tab visibility migrate legacy records, persist, backup and reject invalid values',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');const {cleanBackupSettings}=await import('../src/storage/backupSettings.ts');
+  const {navigationStyle,showLocalTab,...legacy}=defaults;await repository.put('preferences.v1',legacy);
+  const preferences=new PreferenceStore(repository);await preferences.restore();
+  assert.equal(preferences.getSnapshot().navigationStyle,'liquid');assert.equal(preferences.getSnapshot().showLocalTab,true);
+  await preferences.update({navigationStyle:'frosted',showLocalTab:false});
+  const restored=new PreferenceStore(repository);await restored.restore();
+  assert.equal(restored.getSnapshot().navigationStyle,'frosted');assert.equal(restored.getSnapshot().showLocalTab,false);
+  const backup=cleanBackupSettings({version:1,preferences:restored.getSnapshot()});
+  assert.equal(backup.preferences.navigationStyle,'frosted');assert.equal(backup.preferences.showLocalTab,false);
+  const legacyBackup=cleanBackupSettings({version:1,preferences:legacy});
+  assert.equal(Object.hasOwn(legacyBackup.preferences,'navigationStyle'),false);
+  const before=restored.getSnapshot();
+  await assert.rejects(restored.update({navigationStyle:'floating' as never}));
+  await assert.rejects(restored.update({showLocalTab:'yes' as never}));
+  assert.equal(restored.getSnapshot(),before);
+  db.close();
+});
+
+test('playback display and add-position preferences migrate, persist, apply to playlist additions and reject invalid values',async()=>{
+  const {db,repository}=store();await repository.migrate();const {PreferenceStore,defaults}=await import('../src/app/preferences.ts');const {LibraryStore}=await import('../src/storage/library.ts');const {cleanBackupSettings}=await import('../src/storage/backupSettings.ts');const {track}=await import('./fixtures.ts');
+  const {playlistAddPosition,keepScreenOn,fullScreenMode,autoPlayOnLaunch,openPlayerOnLaunch,mixWithOtherAudio,preloadNextTrack,lyricChineseMode,...legacy}=defaults;
+  await repository.put('preferences.v1',legacy);
+  const preferences=new PreferenceStore(repository);await preferences.restore();
+  assert.equal(preferences.getSnapshot().playlistAddPosition,'end');assert.equal(preferences.getSnapshot().keepScreenOn,false);assert.equal(preferences.getSnapshot().lyricChineseMode,'original');
+  await preferences.update({playlistAddPosition:'start',keepScreenOn:true,fullScreenMode:true,autoPlayOnLaunch:true,openPlayerOnLaunch:true,mixWithOtherAudio:true,preloadNextTrack:true,lyricChineseMode:'traditional'});
+  const restored=new PreferenceStore(repository);await restored.restore();
+  assert.equal(restored.getSnapshot().playlistAddPosition,'start');assert.equal(restored.getSnapshot().keepScreenOn,true);assert.equal(restored.getSnapshot().mixWithOtherAudio,true);assert.equal(restored.getSnapshot().lyricChineseMode,'traditional');
+  const backup=cleanBackupSettings({version:1,preferences:restored.getSnapshot()});
+  assert.equal(backup.preferences.playlistAddPosition,'start');assert.equal(backup.preferences.lyricChineseMode,'traditional');
+  for(const bad of [{playlistAddPosition:'middle'},{lyricChineseMode:'jp'},{keepScreenOn:1},{mixWithOtherAudio:'true'}])await assert.rejects(restored.update(bad as never));
+  let seq=0;const library=new LibraryStore(repository,()=>`id-${++seq}`,()=>1,undefined,()=>restored.getSnapshot().playlistAddPosition);
+  const first={...track,origin:{kind:'online' as const,platform:'wy' as const,id:'1'},title:'First'};
+  const second={...track,origin:{kind:'online' as const,platform:'wy' as const,id:'2'},title:'Second'};
+  const third={...track,origin:{kind:'online' as const,platform:'wy' as const,id:'3'},title:'Third'};
+  const pid=await library.createPlaylist('P',[first]);
+  await library.addTracks(pid,[second]);
+  assert.deepEqual(library.getSnapshot().playlists[0]!.entries.map(e=>e.track.title),['Second','First']);
+  await restored.update({playlistAddPosition:'end'});
+  await library.addTracks(pid,[third]);
+  assert.deepEqual(library.getSnapshot().playlists[0]!.entries.map(e=>e.track.title),['Second','First','Third']);
+  db.close();
+});

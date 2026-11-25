@@ -20,6 +20,7 @@ public final class NexusPlaybackModule: Module {
     AsyncFunction("seek") { (seconds: Double, entryID: String, generation: Int) in self.engine.seek(seconds, entryID, generation) }.runOnQueue(.main)
     AsyncFunction("configureVolume") { (value: Double) in self.engine.configureVolume(value) }.runOnQueue(.main)
     AsyncFunction("configureRate") { (value: Double) in self.engine.configureRate(value) }.runOnQueue(.main)
+    AsyncFunction("configureMixWithOthers") { (enabled: Bool) in self.engine.configureMixWithOthers(enabled) }.runOnQueue(.main)
     AsyncFunction("configureSleep") { (seconds: Double, finishCurrent: Bool) in self.engine.configureSleep(seconds, finishCurrent) }.runOnQueue(.main)
     AsyncFunction("sleepSnapshot") { self.engine.sleepSnapshot() }.runOnQueue(.main)
     AsyncFunction("configureEQ") { (enabled: Bool, gains: [Double], preampDB: Double) in self.engine.configureEQ(enabled, gains, preampDB) }.runOnQueue(.main)

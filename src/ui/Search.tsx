@@ -4,7 +4,7 @@ import {MVDetail,videoDuration} from './MVDetail.tsx';
 import type {ArtistItem} from '../providers/artists.ts';
 import {Discovery,type DiscoveryTarget} from './Discovery.tsx';
 import {Cover} from './Cover.tsx';
-import {controls,space,catalogArtwork,radius} from './tokens.ts';
+import {controls,space,catalogArtwork,radius,sollinTokens} from './tokens.ts';
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -25,6 +25,8 @@ import {DownloadSubmissionModal} from './DownloadSubmission.tsx';
 export const platformNames: Readonly<Record<OnlinePlatform,string>> = {wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕'};
 
 const kindNames={song:'歌曲',playlist:'歌单',album:'专辑',artist:'艺术家',mv:'MV'} as const;
+const kindIcons={all:'apps',song:'musical-note',playlist:'albums-outline',album:'disc-outline',artist:'person-circle-outline',mv:'play-circle-outline'} as const;
+const platformIcons={all:'grid',wy:'musical-note',tx:'albums-outline',kw:'pulse',kg:'mic-outline',mg:'sparkles-outline'} as const;
 type SearchKind=keyof typeof kindNames;
 type SearchTab='all'|SearchKind;
 export interface SearchSession {
@@ -37,7 +39,7 @@ const unifiedKinds=['song','playlist','album','artist','mv'] as const;
 const unifiedPreviewLimit=2;
 
 export function Search({ services,session,onSessionChange }: { services: Services;session:SearchSession;onSessionChange:(update:Partial<SearchSession>)=>void }) {
-  const theme=useTheme();const styles=useThemedStyles(makeStyles);
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);const styles=useThemedStyles(makeStyles);
   const songState = useSyncExternalStore(services.search.subscribe,services.search.getSnapshot);
   const playlistState=useSyncExternalStore(services.playlistSearch.subscribe,services.playlistSearch.getSnapshot);
   const {kind,query,platform}=session;
@@ -141,11 +143,20 @@ export function Search({ services,session,onSessionChange }: { services: Service
   }
 
   const assistanceSections=assistance.groups.map(group=><View key={group.platform} style={styles.section}>
-      <Text accessibilityRole="header" style={styles.heading}>{platformNames[group.platform]}{assistance.mode==='hot'?'热搜词':group.platform==='mg'?'匹配建议':'搜索建议'}</Text>
+      <View style={styles.sectionHeader}>
+        <Text accessibilityRole="header" style={styles.heading}>{assistance.mode==='hot'?`热搜词 · ${platformNames[group.platform]}`:`${platformNames[group.platform]}${group.platform==='mg'?'匹配建议':'搜索建议'}`}</Text>
+        {group.error&&group.retryable&&<Pressable testID={`search-assistance-retry-${group.platform}`} accessibilityRole="button" accessibilityLabel={`重试${platformNames[group.platform]}关键词`} onPress={()=>{void services.searchAssistance.retry(group.platform);}} style={styles.sectionAction}><Text style={styles.link}>重试</Text></Pressable>}
+      </View>
       {assistance.mode==='suggest'&&group.platform==='mg'&&<Text style={styles.caption}>根据公开歌曲匹配生成，点击后重新搜索。</Text>}
-      {group.loading&&<ActivityIndicator accessibilityLabel="加载关键词" color={theme.palette.accent}/>}
-      {group.error?<><Text style={styles.caption}>{group.error}</Text>{group.retryable&&<Pressable testID={`search-assistance-retry-${group.platform}`} accessibilityRole="button" accessibilityLabel={`重试${platformNames[group.platform]}关键词`} onPress={()=>{void services.searchAssistance.retry(group.platform);}} style={styles.sectionAction}><Text style={styles.link}>重试</Text></Pressable>}</>:!group.loading&&!group.items.length?<Text style={styles.caption}>{assistance.mode==='hot'?'暂无热搜词':'暂无搜索建议'}</Text>:null}
-      {group.items.map((word,index)=><Pressable key={word} testID={`search-public-${assistance.mode}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`${platformNames[group.platform]}${assistance.mode==='hot'?'热搜词':group.platform==='mg'?'匹配建议':'搜索建议'}：${word}`} onPress={()=>submit(word)} style={styles.historyRow}><Text accessible={false} style={styles.caption}>{assistance.mode==='hot'?`${index+1}.`:'·'}</Text><Text style={styles.historyText}>{word}</Text></Pressable>)}
+      {group.loading&&<ActivityIndicator accessibilityLabel="加载关键词" color={s.accent}/>}
+      {group.error?<Text style={styles.caption}>{group.error}</Text>:!group.loading&&!group.items.length?<Text style={styles.caption}>{assistance.mode==='hot'?'暂无热搜词':'暂无搜索建议'}</Text>:null}
+      {assistance.mode==='hot'?<View style={styles.hotWrap}>{group.items.map((word,index)=>{
+        const top3=index<3;
+        return <Pressable key={word} testID={`search-public-${assistance.mode}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`${platformNames[group.platform]}热搜词：${word}`} onPress={()=>submit(word)} style={[styles.hotChip,top3&&styles.hotChipTop]}>
+          <Text accessible={false} style={[styles.hotRank,top3&&styles.hotRankTop]}>{String(index+1).padStart(2,'0')}</Text>
+          <Text style={styles.hotWord}>{word}</Text>
+        </Pressable>;
+      })}</View>:group.items.map((word,index)=><Pressable key={word} testID={`search-public-${assistance.mode}-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`${platformNames[group.platform]}${group.platform==='mg'?'匹配建议':'搜索建议'}：${word}`} onPress={()=>submit(word)} style={styles.historyRow}><Ionicons name="search-outline" size={16} color={s.subtle}/><Text style={styles.historyText}>{word}</Text></Pressable>)}
     </View>);
 
   function renderUnifiedEntity(type:typeof unifiedKinds[number],platform:OnlinePlatform,group?:SearchGroup<Track>|SearchGroup<BrowseItem>){
@@ -177,18 +188,36 @@ export function Search({ services,session,onSessionChange }: { services: Service
     </View>;
   }
 
-  return <View>
-    <Text style={styles.title}>寻找下一首喜欢的歌</Text>
-    <Text style={styles.caption}>歌曲、歌单、专辑、艺术家与MV按平台分别搜索、展示。“全部”并列预览这五类结果，键入时向所选平台获取关键词建议。</Text>
+  return <View style={{gap:2}}>
+    <Text accessibilityRole="header" style={styles.title}>搜索</Text>
+    <View style={styles.kindRow}>{(['all','song','playlist','album','artist','mv']as const).map(type=>{
+      const active=kind===type,label=type==='all'?'全部':kindNames[type];
+      return <Pressable key={type} testID={`search-kind-${type}`} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{selected:active}} onPress={()=>selectKind(type)} style={[styles.kindCard,active&&styles.kindCardActive]}>
+        <Ionicons name={kindIcons[type]} size={20} color={active?'#FFFFFF':s.ink}/>
+        <Text numberOfLines={1} style={[styles.kindLabel,active&&styles.kindLabelActive]}>{label}</Text>
+      </Pressable>;
+    })}</View>
+    <Text style={styles.subLabel}>音乐平台</Text>
+    <View style={styles.platformGrid}>{(['all',...platforms] as const).map(item => {
+      const active=platform===item,label=item==='all'?'聚合':platformNames[item];
+      return <Pressable key={item} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{selected:active}} onPress={() => {setPlatform(item);submit(query,item,false);}} style={[styles.platformTile,active&&styles.platformTileActive]}>
+        <Ionicons name={platformIcons[item]} size={15} color={active?'#FFFFFF':s.ink}/>
+        <Text numberOfLines={1} style={[styles.platformLabel,active&&styles.platformLabelActive]}>{label}</Text>
+      </Pressable>;
+    })}</View>
     <View style={styles.inputRow}>
-      <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':kind==='all'?'搜索歌曲、歌单、专辑、艺术家或MV':`搜索${kindNames[kind]}`} placeholder={kind==='song'?'歌曲、歌手':kind==='all'?'歌曲、歌单、专辑、艺术家、MV':`${kindNames[kind]}关键词`} placeholderTextColor="#768191" autoCorrect={false} onFocus={()=>setEditing(true)} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
-      {!!query&&<Pressable testID="search-clear" accessibilityRole="button" accessibilityLabel="清除搜索输入" onPress={clearQuery} style={styles.clear}><Ionicons name="close-circle" size={22} color={theme.palette.secondary}/></Pressable>}
+      <View style={styles.inputShell}>
+        <Ionicons name="search-outline" size={18} color={s.subtle}/>
+        <TextInput accessibilityLabel={kind==='song'?'搜索歌曲或歌手':kind==='all'?'搜索歌曲、歌单、专辑、艺术家或MV':`搜索${kindNames[kind]}`} placeholder={kind==='song'?'搜索歌曲、歌手或专辑':kind==='all'?'歌曲、歌单、专辑、艺术家、MV':`搜索${kindNames[kind]}关键词`} placeholderTextColor={s.subtle} autoCorrect={false} onFocus={()=>setEditing(true)} value={query} onChangeText={change} onSubmitEditing={run} returnKeyType="search" style={styles.input}/>
+        {!!query&&<Pressable testID="search-clear" accessibilityRole="button" accessibilityLabel="清除搜索输入" onPress={clearQuery} style={styles.clear}><Ionicons name="close-circle" size={19} color={s.subtle}/></Pressable>}
+      </View>
+      <Pressable testID="run-online-search" accessibilityRole="button" onPress={run} style={styles.searchButton}><Text style={styles.searchButtonText}>搜索</Text></Pressable>
     </View>
     {assistance.mode==='suggest'&&assistanceSections}
     {!!suggestions.length&&<View style={styles.section}>
       <Text style={styles.heading}>搜索建议</Text>
       {suggestions.map((item,index)=><Pressable key={item} testID={`search-suggestion-${index}`} accessibilityRole="button" accessibilityLabel={`搜索建议：${item}`} onPress={()=>submit(item)} style={styles.historyRow}>
-        <Ionicons name="search-outline" size={18} color={theme.palette.secondary}/>
+        <Ionicons name="search-outline" size={16} color={s.subtle}/>
         <Text style={styles.historyText} numberOfLines={1}>{item}</Text>
       </Pressable>)}
     </View>}
@@ -198,15 +227,11 @@ export function Search({ services,session,onSessionChange }: { services: Service
           <Text style={styles.heading}>搜索历史</Text>
           <Pressable testID="search-history-clear" accessibilityRole="button" accessibilityLabel="清空搜索历史" onPress={()=>{void services.searchHistory.clear().catch(()=>toast.show('搜索历史未清除，请重试'));}} style={styles.sectionAction}><Text style={styles.link}>清空</Text></Pressable>
         </View>
-        {history.map((item,index)=><Pressable key={item} testID={`search-history-${index}`} accessibilityRole="button" accessibilityLabel={`搜索历史：${item}`} onPress={()=>submit(item)} style={styles.historyRow}>
-          <Ionicons name="time-outline" size={18} color={theme.palette.secondary}/>
-          <Text style={styles.historyText} numberOfLines={1}>{item}</Text>
-        </Pressable>)}
+        <View style={styles.hotWrap}>{history.map((item,index)=><Pressable key={item} testID={`search-history-${index}`} accessibilityRole="button" accessibilityLabel={`搜索历史：${item}`} onPress={()=>submit(item)} style={styles.historyPill}>
+          <Text style={styles.hotWord} numberOfLines={1}>{item}</Text>
+        </Pressable>)}</View>
       </>:<Text style={styles.caption}>{kind==='song'?'输入歌曲、歌手或专辑名开始搜索。':kind==='all'?'输入歌曲、歌单、专辑、艺术家或MV关键词开始全局搜索。':`输入${kindNames[kind]}关键词开始搜索。`}</Text>}
     </View>}
-    <View style={styles.row}>{(['all','song','playlist','album','artist','mv']as const).map(type=><Pressable key={type} testID={`search-kind-${type}`} accessibilityRole="radio" accessibilityState={{selected:kind===type}} onPress={()=>selectKind(type)} style={[styles.chip,kind===type&&styles.selected]}><Text style={styles.text}>{type==='all'?'全部':kindNames[type]}</Text></Pressable>)}</View>
-    <View style={styles.row}>{(['all',...platforms] as const).map(item => <Pressable key={item} accessibilityRole="radio" accessibilityState={{selected:platform===item}} onPress={() => {setPlatform(item);submit(query,item,false);}} style={[styles.chip,platform===item&&styles.selected]}><Text style={styles.text}>{item==='all'?'聚合':platformNames[item]}</Text></Pressable>)}</View>
-    <Pressable testID="run-online-search" accessibilityRole="button" onPress={run} style={styles.button}><Text style={styles.text}>搜索</Text></Pressable>
     {assistance.mode==='hot'&&assistanceSections}
     {kind==='all'&&<View testID="unified-search-results">
       <View style={styles.section}><Text accessibilityRole="header" style={styles.heading}>跨类型结果</Text><Text style={styles.caption}>按平台分组；歌曲、歌单、专辑、艺术家与MV各自保留加载、失败和分页状态。</Text></View>
@@ -229,10 +254,11 @@ export function Search({ services,session,onSessionChange }: { services: Service
         <Pressable accessibilityRole="button" testID={`search-track-${group.platform}-${index}`} accessibilityLabel={`${selected?'选择':'播放'}${track.title}`} accessibilityState={{selected}} style={{flex:1,minHeight:44,flexDirection:'row',alignItems:'center',gap:10}}
           onLongPress={()=>{setPicking(false);setSelection({platform:group.platform,model:selectionEnter(id)});}}
           onPress={() => { if(model.active){setSelection({platform:group.platform,model:selectionToggle(model,id)});} else services.playTracks(group.items,index); }}>
-          {model.active&&<Ionicons name={selected?'checkmark-circle':'ellipse-outline'} size={22} color={selected?theme.palette.accent:theme.palette.secondary}/>}
-          <View style={{flex:1}}><Text style={styles.track}>{track.title}</Text><Text style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
+          {model.active&&<Ionicons name={selected?'checkmark-circle':'ellipse-outline'} size={21} color={selected?s.control:s.subtle}/>}
+          <Cover services={services} track={track} size={46} radius={10}/>
+          <View style={{flex:1,gap:2}}><Text numberOfLines={1} style={styles.track}>{track.title}</Text><Text numberOfLines={1} style={styles.caption}>{track.artist}{track.album?` · ${track.album}`:''}</Text></View>
         </Pressable>
-        {!model.active&&<Pressable testID={`search-more-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`更多操作：${track.title}`} onPress={()=>setMenuTrack(track)} style={styles.more}><Ionicons name="ellipsis-horizontal" size={24} color={theme.palette.accent}/></Pressable>}
+        {!model.active&&<Pressable testID={`search-more-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`更多操作：${track.title}`} onPress={()=>setMenuTrack(track)} style={styles.more}><Ionicons name="ellipsis-horizontal" size={20} color={s.muted}/></Pressable>}
       </View>;})}
       {model.active&&!picking&&<BatchSelectionBar
         count={selectionCount(model)} total={group.items.length}
@@ -274,23 +300,49 @@ export function Search({ services,session,onSessionChange }: { services: Service
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 }
-const makeStyles=(theme:Theme)=>StyleSheet.create({
-  title:{color:theme.color('#F1EDE7'),fontSize:26,fontWeight:'600'},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:20,marginTop:5},
-  inputRow:{flexDirection:'row',alignItems:'center',marginVertical:18},input:{color:theme.color('#EEECE7'),borderWidth:1,borderColor:theme.color('#414754'),borderRadius:13,padding:14,flex:1,fontSize:15},
-  clear:{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',marginLeft:4},
-  row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:8},chip:{minHeight:controls.hit,justifyContent:'center',backgroundColor:theme.color('#263329'),borderRadius:10,paddingHorizontal:11,paddingVertical:9},selected:{borderWidth:1,borderColor:theme.color('#D9F49B')},
-  text:{color:theme.color('#D9F49B'),fontSize:12},button:{backgroundColor:theme.color('#303A32'),borderRadius:12,padding:13,alignItems:'center',marginVertical:10},
-  section:{marginTop:14,marginBottom:4},sectionHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionAction:{minWidth:44,minHeight:44,alignItems:'flex-end',justifyContent:'center'},link:{color:theme.color('#D9F49B'),fontSize:13},
-  historyRow:{flexDirection:'row',alignItems:'center',gap:10,minHeight:44,borderBottomWidth:1,borderBottomColor:theme.color('#2E3440')},historyText:{color:theme.color('#DFE4EE'),fontSize:14,flex:1},
-  group:{marginTop:26},heading:{color:theme.color('#E5E8E0'),fontSize:18},track:{color:theme.color('#DFE4EE'),fontSize:15,lineHeight:23},more:{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'},trackRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,paddingVertical:13,borderBottomWidth:1,borderBottomColor:theme.color('#2E3440')},error:{color:theme.color('#D3AB94'),fontSize:12},
-  catalogRow:{minHeight:controls.hit,flexDirection:'row',alignItems:'center',gap:space.md,paddingVertical:space.md,borderBottomWidth:1,borderBottomColor:theme.palette.border},
-  status:{alignItems:'center',paddingVertical:16,gap:4},end:{color:theme.color('#929CAB'),fontSize:12,textAlign:'center',marginTop:14},
-  unifiedEntity:{marginTop:space.lg,borderTopWidth:1,borderTopColor:theme.palette.border,paddingTop:space.sm},
-  unifiedEntityHeader:{minHeight:controls.hit,flexDirection:'row',alignItems:'center',gap:space.sm},
-  unifiedEntityTitle:{color:theme.color('#E5E8E0'),fontSize:15,fontWeight:'600',minWidth:48},
-  unifiedViewAll:{minHeight:controls.hit,justifyContent:'center',marginLeft:'auto',paddingHorizontal:space.xs},
-  unifiedRow:{minHeight:controls.hit,flexDirection:'row',alignItems:'center',gap:space.sm,paddingVertical:space.sm,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:theme.palette.border},
-  unifiedTypeIcon:{width:catalogArtwork.square,height:catalogArtwork.square,borderRadius:radius.md,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.selected},
+const makeStyles=(theme:Theme)=>{
+  const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
+  return StyleSheet.create({
+  title:{color:s.ink,fontSize:34,fontWeight:'800',letterSpacing:-0.6,marginBottom:12},
+  subLabel:{color:s.muted,fontSize:13,fontWeight:'600',marginTop:14,marginBottom:8},
+  caption:{color:s.muted,fontSize:12,lineHeight:18},
+  kindRow:{flexDirection:'row',gap:8},
+  kindCard:{flex:1,minHeight:62,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center',justifyContent:'center',gap:5,paddingVertical:8,paddingHorizontal:4},
+  kindCardActive:{backgroundColor:s.accent,borderColor:s.accent},
+  kindLabel:{color:s.ink,fontSize:12,fontWeight:'600'},
+  kindLabelActive:{color:'#FFFFFF'},
+  platformGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},
+  platformTile:{width:'31%',minHeight:42,borderRadius:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:8},
+  platformTileActive:{backgroundColor:s.accent,borderColor:s.accent},
+  platformLabel:{color:s.ink,fontSize:13,fontWeight:'600'},
+  platformLabelActive:{color:'#FFFFFF'},
+  inputRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:14,marginBottom:6},
+  inputShell:{flex:1,flexDirection:'row',alignItems:'center',gap:8,minHeight:46,paddingHorizontal:14,borderRadius:23,backgroundColor:s.inputBg,borderWidth:1,borderColor:s.cardBorder},
+  input:{color:s.ink,flex:1,fontSize:15,paddingVertical:8},
+  clear:{minWidth:34,minHeight:34,alignItems:'center',justifyContent:'center'},
+  searchButton:{minHeight:46,paddingHorizontal:18,borderRadius:23,backgroundColor:s.control,alignItems:'center',justifyContent:'center'},
+  searchButtonText:{color:'#FFFFFF',fontSize:14,fontWeight:'600'},
+  text:{color:s.control,fontSize:13,fontWeight:'600'},
+  button:{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,borderRadius:20,paddingVertical:11,paddingHorizontal:16,alignItems:'center',marginVertical:10},
+  section:{marginTop:16,marginBottom:4,gap:8},sectionHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionAction:{minWidth:44,minHeight:36,alignItems:'flex-end',justifyContent:'center'},link:{color:s.control,fontSize:13,fontWeight:'600'},
+  hotWrap:{flexDirection:'row',flexWrap:'wrap',gap:8},
+  hotChip:{minHeight:38,paddingHorizontal:14,paddingVertical:8,borderRadius:19,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',gap:7},
+  hotChipTop:{backgroundColor:s.accentSoft,borderColor:s.accent+'55'},
+  hotRank:{color:s.subtle,fontSize:13,fontWeight:'700',fontVariant:['tabular-nums']},
+  hotRankTop:{color:s.accent},
+  hotWord:{color:s.ink,fontSize:14,fontWeight:'600'},
+  historyPill:{minHeight:38,paddingHorizontal:16,paddingVertical:8,borderRadius:19,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,justifyContent:'center'},
+  historyRow:{flexDirection:'row',alignItems:'center',gap:10,minHeight:44,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline},historyText:{color:s.ink,fontSize:14,flex:1},
+  group:{marginTop:20,gap:4},heading:{color:s.ink,fontSize:19,fontWeight:'800'},track:{color:s.ink,fontSize:15,fontWeight:'600',lineHeight:21},more:{minWidth:40,minHeight:44,alignItems:'center',justifyContent:'center'},trackRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8,paddingVertical:9,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline},error:{color:s.accent,fontSize:12},
+  catalogRow:{minHeight:controls.hit,flexDirection:'row',alignItems:'center',gap:space.md,paddingVertical:10,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline},
+  status:{alignItems:'center',paddingVertical:14,gap:6},end:{color:s.subtle,fontSize:12,textAlign:'center',marginTop:12},
+  unifiedEntity:{marginTop:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,padding:12,gap:4},
+  unifiedEntityHeader:{minHeight:36,flexDirection:'row',alignItems:'center',gap:space.sm},
+  unifiedEntityTitle:{color:s.ink,fontSize:15,fontWeight:'700',minWidth:42},
+  unifiedViewAll:{minHeight:36,justifyContent:'center',marginLeft:'auto',paddingHorizontal:space.xs},
+  unifiedRow:{minHeight:controls.hit,flexDirection:'row',alignItems:'center',gap:space.sm,paddingVertical:8,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:s.hairline},
+  unifiedTypeIcon:{width:54,height:54,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:s.accentSoft},
   unifiedStatus:{alignItems:'center',gap:space.xs,paddingVertical:space.sm},
   unifiedRetry:{minHeight:controls.hit,justifyContent:'center',paddingHorizontal:space.md},
-});
+  });
+};

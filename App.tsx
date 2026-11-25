@@ -5,7 +5,10 @@ import {FutureRecordError} from './src/storage/recovery.ts';
 import {ThemeContext,useAppearance} from './src/ui/theme.tsx';
 import {AmbientBackground,GlassSurface} from './src/ui/Materials.tsx';
 import {SettingsScreen,type SettingsPage} from './src/ui/SettingsScreen.tsx';
-import {useEffect,useState} from 'react';
+import {LocalAudioLibrary} from './src/ui/LocalAudioLibrary.tsx';
+import {sollinTokens} from './src/ui/tokens.ts';
+import {defaults} from './src/app/preferences.ts';
+import {useEffect,useState,useSyncExternalStore} from 'react';
 import {getServices,type Services} from './src/app/services';
 import {Player} from './src/ui/Player';
 import {Search,type SearchSession} from './src/ui/Search';
@@ -17,7 +20,11 @@ import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaProvider,useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Linking, Pressable, ScrollView, View, useWindowDimensions} from 'react-native';
-type Tab='discover'|'library'|'search'|'settings';
+type Tab='discover'|'library'|'local'|'search'|'settings';
+const emptySubscribe=()=>()=>{};
+const defaultPrefs=()=>defaults;
+const emptyQueueSub=()=>()=>{};
+const emptyHasTrack=()=>false;
 export default function App(){return <MusicApplication initialize={getServices}/>;}
 type ApplicationProps={initialize:()=>Promise<Services>;initialSettingsPage?:SettingsPage};
 export function MusicApplication(props:ApplicationProps){return <PresentationProvider><SafeAreaProvider><MusicApp {...props}/></SafeAreaProvider></PresentationProvider>;}
@@ -33,39 +40,79 @@ function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
   const insets=useSafeAreaInsets(),{width,height,fontScale}=useWindowDimensions();
   const expanded=width>=768&&height>=500&&width/Math.max(1,fontScale)>=620;
   const railWidth=expanded?196:0;
-  const navigation=[['discover','grid-outline','发现'],['library','albums-outline','音乐库'],['settings','settings-outline','设置'],['search','search-outline','搜索']] as const;
+  const preferences=useSyncExternalStore(services?.preferences.subscribe??emptySubscribe,services?.preferences.getSnapshot??defaultPrefs);
+  const hasCurrentTrack=useSyncExternalStore(services?.playback.controller.subscribe??emptyQueueSub,()=>services?!!services.playback.controller.getSnapshot().queue.currentId:emptyHasTrack());
+  const effectiveTab:Tab=tab==='local'&&!preferences.showLocalTab?'library':tab;
+  const barTabs=([
+    ['discover','grid-outline','grid','发现'],
+    ['library','albums-outline','albums','音乐库'],
+    ...(preferences.showLocalTab?([['local','phone-portrait-outline','phone-portrait','本地']] as const):[]),
+    ['settings','settings-outline','settings','设置'],
+  ] as const);
+  const navigation=[
+    ...barTabs,
+    ['search','search-outline','search','搜索'] as const,
+  ] as const;
   const startup=()=>{setStartupError(undefined);void initialize().then(setServices,error=>setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。'));};
   useEffect(()=>{let active=true;void initialize().then(value=>{if(active)setServices(value);},error=>{if(active)setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。');});return()=>{active=false;};},[initialize]);
   useEffect(()=>{const open=(url:string|null)=>{if(url?.startsWith('com.nexusmusic.app://settings')){setSettingsEntry('home');setTab('settings');}};void Linking.getInitialURL().then(open);const subscription=Linking.addEventListener('url',event=>open(event.url));return()=>subscription.remove();},[]);
-  const theme=useAppearance(services?.preferences,services?.coverTheme),p=theme.palette;
-  const text={color:p.text},caption={color:p.secondary};
+  const theme=useAppearance(services?.preferences,services?.coverTheme),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
+  const navStyle=preferences.navigationStyle;
+  const text={color:s.ink},caption={color:s.muted};
+  const tabItem=(key:Tab,outline:React.ComponentProps<typeof Ionicons>['name'],filled:React.ComponentProps<typeof Ionicons>['name'],title:string,compact=false)=>{
+    const selected=effectiveTab===key;
+    return <Pressable key={key} testID={`tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected}} onPress={()=>navigateTab(key)} style={{flex:1,alignItems:'center',justifyContent:'center',minHeight:compact?46:50,borderRadius:24,marginHorizontal:2,paddingVertical:4,backgroundColor:selected&&navStyle==='liquid'?s.accentSoft:'transparent',gap:2}}>
+      <Ionicons name={selected?filled:outline} size={compact?21:22} color={selected?s.accent:s.ink}/>
+      <Text numberOfLines={1} style={{color:selected?s.accent:s.muted,fontSize:11,lineHeight:14,fontWeight:selected?'600':'500'}}>{title}</Text>
+    </Pressable>;
+  };
   return <ThemeContext.Provider value={theme}><TypographyProvider store={services?.fonts}><View style={{flex:1,backgroundColor:p.background[0]}}>
-    <AmbientBackground services={services}/><StatusBar style={theme.mode==='dark'?'light':'dark'}/>
-    <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+(tab==='settings'?0:12),paddingLeft:insets.left,paddingRight:insets.right,paddingBottom:chromeHeight+Math.max(insets.bottom,12)+10}}>
+    <AmbientBackground services={services}/><StatusBar hidden={preferences.fullScreenMode} style={theme.mode==='dark'?'light':'dark'}/>
+    <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+(effectiveTab==='settings'?0:6),paddingLeft:insets.left,paddingRight:insets.right,paddingBottom:chromeHeight+Math.max(insets.bottom,10)+8}}>
       <View style={{width:railWidth,display:expanded?'flex':'none',paddingHorizontal:16}}>
         <Text accessibilityRole="header" style={[text,{fontSize:24,fontWeight:'700',padding:12,marginBottom:20}]}>音枢</Text>
-        <View style={{gap:12}}>{navigation.map(([key,icon,title])=><Pressable key={key} testID={`rail-tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected:tab===key}} onPress={()=>navigateTab(key)} style={{minHeight:52,padding:12,borderRadius:16,backgroundColor:tab===key?p.selected:p.surface,flexDirection:'row',alignItems:'center',gap:12}}><Ionicons name={icon} size={24} color={tab===key?p.accent:p.secondary}/><Text style={{color:tab===key?p.accent:p.text,fontSize:16,flexShrink:1}}>{title}</Text></Pressable>)}</View>
+        <View style={{gap:10}}>{navigation.map(([key,outline,filled,title])=><Pressable key={key} testID={`rail-tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected:effectiveTab===key}} onPress={()=>navigateTab(key)} style={{minHeight:50,paddingHorizontal:14,paddingVertical:10,borderRadius:16,backgroundColor:effectiveTab===key?s.accentSoft:s.card,borderWidth:1,borderColor:effectiveTab===key?s.accentPill:s.cardBorder,flexDirection:'row',alignItems:'center',gap:12}}><Ionicons name={effectiveTab===key?filled:outline} size={22} color={effectiveTab===key?s.accent:s.muted}/><Text style={{color:effectiveTab===key?s.accent:s.ink,fontSize:15,fontWeight:effectiveTab===key?'600':'500',flexShrink:1}}>{title}</Text></Pressable>)}</View>
       </View>
       <View style={{flex:1,minWidth:0,maxWidth:1120,alignSelf:'stretch',marginHorizontal:expanded?'auto':0}}>
-      {tab==='discover'&&services&&!startupError?<Discovery services={services} embedded catalogShortcuts={<SavedCatalogs services={services}/>}/>:tab==='settings'&&services&&!startupError?<SettingsScreen key={settingsEntry} services={services} initialPage={settingsEntry} homeRequest={settingsRevision} onExit={()=>setTab(settingsEntry==='sources'?'library':'discover')}/>:<ScrollView testID={tab==='search'?'search-viewport':undefined} automaticallyAdjustKeyboardInsets keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:14,paddingBottom:32}}>
-        <Text style={[caption,{fontSize:11,letterSpacing:3,marginBottom:12}]}>音枢 · NEXUS MUSIC</Text>
-        {startupError?<View><Text style={caption}>{startupError}</Text><Pressable accessibilityRole="button" onPress={startup} style={{padding:16}}><Text style={{color:p.accent}}>重试打开</Text></Pressable></View>:!services?<Text style={caption}>正在打开音乐数据…</Text>:tab==='library'?<>
-          <View style={{flexDirection:'row',gap:12,marginBottom:22}}>{([false,true]as const).map(value=><Pressable key={String(value)} testID={value?'tab-private':'library-local'} accessibilityRole="tab" accessibilityState={{selected:privateLibrary===value}} onPress={()=>setPrivateLibrary(value)} style={{paddingHorizontal:18,paddingVertical:12,borderRadius:22,backgroundColor:privateLibrary===value?p.selected:p.surface}}><Text style={{color:privateLibrary===value?p.accent:p.secondary,fontWeight:'600'}}>{value?'私人曲库':'我的音乐'}</Text></Pressable>)}</View>
-          {privateLibrary?<NavidromeLibrary services={services} openSettings={openSources}/>:<LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={openSources} openAccounts={openAccounts}/>}
-        </>:<Search services={services} session={searchSession} onSessionChange={update=>setSearchSession(previous=>({...previous,...update}))}/>}
-      </ScrollView>}
+      {effectiveTab==='discover'&&services&&!startupError?<Discovery services={services} embedded openAccounts={openAccounts} openSources={openSources} catalogShortcuts={<SavedCatalogs services={services} compact/>}/>
+        :effectiveTab==='settings'&&services&&!startupError?<SettingsScreen key={settingsEntry} services={services} initialPage={settingsEntry} homeRequest={settingsRevision} onExit={()=>setTab(settingsEntry==='sources'?'library':'discover')}/>
+        :effectiveTab==='local'&&services&&!startupError?<LocalAudioLibrary services={services} embedded/>
+        :<ScrollView testID={effectiveTab==='search'?'search-viewport':undefined} automaticallyAdjustKeyboardInsets keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:20,paddingTop:8,paddingBottom:28}}>
+          {startupError?<View style={{paddingVertical:32,gap:12}}><Text style={caption}>{startupError}</Text><Pressable accessibilityRole="button" onPress={startup} style={{alignSelf:'flex-start',paddingHorizontal:18,paddingVertical:12,borderRadius:20,backgroundColor:s.accentSoft}}><Text style={{color:s.accent,fontWeight:'600'}}>重试打开</Text></Pressable></View>:!services?<Text style={[caption,{paddingVertical:24}]}>正在打开音乐数据…</Text>:effectiveTab==='library'?<>
+            <View style={{flexDirection:'row',gap:8,marginBottom:14}}>{([false,true]as const).map(value=><Pressable key={String(value)} testID={value?'tab-private':'library-local'} accessibilityRole="tab" accessibilityState={{selected:privateLibrary===value}} onPress={()=>setPrivateLibrary(value)} style={{paddingHorizontal:16,paddingVertical:9,borderRadius:20,backgroundColor:privateLibrary===value?s.control:s.chip,borderWidth:1,borderColor:privateLibrary===value?s.control:s.chipBorder}}><Text style={{color:privateLibrary===value?'#FFFFFF':s.muted,fontSize:13,fontWeight:'600'}}>{value?'私人曲库':'我的音乐'}</Text></Pressable>)}</View>
+            {privateLibrary?<NavidromeLibrary services={services} openSettings={openSources}/>:<LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={openSources} openAccounts={openAccounts}/>}
+          </>:<Search services={services} session={searchSession} onSessionChange={update=>setSearchSession(previous=>({...previous,...update}))}/>}
+        </ScrollView>}
       </View>
     </View>
-    <View pointerEvents="box-none" onLayout={event=>{const height=event.nativeEvent.layout.height;setChromeHeight(previous=>Math.abs(previous-height)<.5?previous:height);}} style={{position:'absolute',bottom:Math.max(insets.bottom,12),left:expanded?insets.left+railWidth+16:16,right:insets.right+16,gap:10}}>
-      {services&&<Player services={services}/>}
-      <View style={{flexDirection:'row',gap:10,alignItems:'center',display:expanded?'none':'flex'}}>
-        <GlassSurface style={{flex:1}}><View style={{flexDirection:'row',paddingVertical:9}}>{([
-          ['discover','grid-outline','发现'],['library','albums-outline','音乐库'],['settings','settings-outline','设置'],
-        ]as const).map(([key,icon,title])=><Pressable key={key} testID={`tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected:tab===key}} onPress={()=>navigateTab(key)} style={{flex:1,alignItems:'center',gap:4,minHeight:48,justifyContent:'center'}}>
-          <Ionicons name={icon} size={24} color={tab===key?p.accent:p.secondary}/><Text style={{color:tab===key?p.accent:p.secondary,fontSize:12,fontWeight:tab===key?'700':'400'}}>{title}</Text>
-        </Pressable>)}</View></GlassSurface>
-        <GlassSurface style={{width:70,height:70,borderRadius:35}}><Pressable testID="tab-search" accessibilityLabel="搜索" accessibilityRole="tab" accessibilityState={{selected:tab==='search'}} onPress={()=>setTab('search')} style={{flex:1,alignItems:'center',justifyContent:'center'}}><Ionicons name="search-outline" size={28} color={tab==='search'?p.accent:p.text}/></Pressable></GlassSurface>
-      </View>
+    <View pointerEvents="box-none" onLayout={event=>{const height=event.nativeEvent.layout.height;setChromeHeight(previous=>Math.abs(previous-height)<.5?previous:height);}} style={{position:'absolute',bottom:Math.max(insets.bottom,10),left:expanded?insets.left+railWidth+16:14,right:insets.right+14,gap:8}}>
+      {navStyle==='frosted'&&!expanded?(
+        <GlassSurface variant="frosted" radius={28}>
+          <View>
+            {services&&hasCurrentTrack&&<View style={{borderBottomWidth:1,borderBottomColor:s.hairline}}><Player services={services} fused/></View>}
+            <View style={{flexDirection:'row',paddingHorizontal:6,paddingVertical:6,alignItems:'center'}}>
+              {barTabs.map(([key,outline,filled,title])=>tabItem(key,outline,filled,title,true))}
+              {tabItem('search','search-outline','search','搜索',true)}
+            </View>
+          </View>
+        </GlassSurface>
+      ):(
+        <>
+          {services&&<Player services={services} barVariant={navStyle}/>}
+          <View style={{flexDirection:'row',gap:10,alignItems:'center',justifyContent:navStyle==='acrylic'?'center':'flex-start',display:expanded?'none':'flex'}}>
+            <GlassSurface variant={navStyle} radius={31} style={navStyle==='acrylic'?{minWidth:268,maxWidth:330,flex:1}:{flex:1}}>
+              <View style={{flexDirection:'row',paddingHorizontal:6,paddingVertical:5}}>
+                {barTabs.map(([key,outline,filled,title])=>tabItem(key,outline,filled,title))}
+              </View>
+            </GlassSurface>
+            <GlassSurface variant={navStyle} radius={31} style={{width:62,height:62}}>
+              <Pressable testID="tab-search" accessibilityLabel="搜索" accessibilityRole="tab" accessibilityState={{selected:effectiveTab==='search'}} onPress={()=>setTab('search')} style={{flex:1,alignItems:'center',justifyContent:'center',borderRadius:31,backgroundColor:effectiveTab==='search'?s.accentSoft:'transparent'}}>
+                <Ionicons name={effectiveTab==='search'?'search':'search-outline'} size={24} color={effectiveTab==='search'?s.accent:s.ink}/>
+              </Pressable>
+            </GlassSurface>
+          </View>
+        </>
+      )}
     </View>
   </View></TypographyProvider></ThemeContext.Provider>;
 }

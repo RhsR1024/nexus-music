@@ -1,5 +1,6 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 import { useState, useSyncExternalStore } from 'react';
 import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import type { Services } from '../app/services.ts';
@@ -33,4 +34,7 @@ export function NavidromeSettings({services}:{services:Services}) {
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.caption}>{message}</Text>}
   </View>;
 }
-const makeStyles=(theme:Theme)=>StyleSheet.create({card:{marginTop:24,padding:18,borderRadius:20,backgroundColor:theme.color('#1D222B'),gap:12},title:{color:theme.color('#ECEBF3'),fontSize:18,fontWeight:'600'},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:20},text:{color:theme.color('#D9E1CE'),fontSize:12},button:{backgroundColor:theme.color('#303A32'),borderRadius:10,padding:12},row:{flexDirection:'row',flexWrap:'wrap',gap:8},input:{color:theme.color('#EEECE7'),borderColor:theme.color('#414754'),borderWidth:1,borderRadius:11,padding:12,fontSize:13},account:{borderBottomWidth:1,borderColor:theme.color('#343B49'),paddingBottom:14,gap:8}});
+const makeStyles=(theme:Theme)=>{
+  const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
+  return StyleSheet.create({card:{marginTop:10,padding:16,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:10},title:{color:s.ink,fontSize:17,fontWeight:'700'},caption:{color:s.muted,fontSize:12,lineHeight:18},text:{color:s.ink,fontSize:13,fontWeight:'600'},button:{backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,borderRadius:19,paddingHorizontal:14,paddingVertical:10},row:{flexDirection:'row',flexWrap:'wrap',gap:8},input:{color:s.ink,backgroundColor:s.inputBg,borderColor:s.cardBorder,borderWidth:1,borderRadius:14,paddingHorizontal:14,paddingVertical:11,fontSize:13},account:{borderBottomWidth:StyleSheet.hairlineWidth,borderColor:s.hairline,paddingBottom:12,gap:6}});
+};

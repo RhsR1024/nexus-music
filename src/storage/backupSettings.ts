@@ -7,7 +7,7 @@ const fields=[
   'visualTheme','accent','backgroundStyle','backgroundOpacity','cardOpacity','backgroundMask','maskColor','playerBackground','playerBlur','playerDarkness','coverRadius','coverColor','globalBackgroundMotion','dynamicBackground','glassNavigation',
   'miniActions','miniLyrics','localAudioSortField','localAudioSortDirection','stageStyle','stageBackdrop','am2AutoLyrics','am2DelaySeconds','am2ShowVolume','lyricStyle','autoMatch','lyricAlignment','lyricOffsets','volume','preampDB','eqPresets','playerLayout','favoriteVisualTheme','quality','eqEnabled','gains','repeat','shuffle','lyricOffsetMs','fontScale','rate','theme','cacheLimitMB','offlineLimitMB',
 ] as const satisfies readonly (keyof Preferences)[];
-const optionalFields=['tapeStyle'] as const satisfies readonly (keyof Preferences)[];
+const optionalFields=['tapeStyle','navigationStyle','showLocalTab','playlistAddPosition','keepScreenOn','fullScreenMode','autoPlayOnLaunch','openPlayerOnLaunch','mixWithOtherAudio','preloadNextTrack','lyricChineseMode'] as const satisfies readonly (keyof Preferences)[];
 export interface BackupSettings {version:1;preferences:Pick<Preferences,(typeof fields)[number]>&Partial<Pick<Preferences,(typeof optionalFields)[number]|'downloadQualities'>>}
 function portableOffsetKey(key:string){
   try{const value=JSON.parse(key);if(!Array.isArray(value)||value.length!==3||value.some(x=>typeof x!=='string')||JSON.stringify(value)!==key)return false;

@@ -139,7 +139,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const musicWebLogin=new MusicWebLoginCoordinator({native:loadNativeMusicAuth(),flow:musicAuth.wy,accounts:musicAccounts,profile:neteaseProfile,qqProfile,hash,uuid:Crypto.randomUUID});
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
   await Font.loadAsync({CupertinoIcons:require('../../assets/fonts/CupertinoIcons.ttf')});
-  const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations);await restore('library.v1','音乐库',()=>library.restore());
+  const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations,()=>preferences.getSnapshot().playlistAddPosition);await restore('library.v1','音乐库',()=>library.restore());
   const playbackStats=new PlaybackStatsStore(repository,Date.now,libraryMutations,Crypto.randomUUID);await restore('playbackStats.v1','播放统计',()=>playbackStats.restore());
   // Recommendations are derived from local library/statistics only. No Sollin
   // account, private endpoint, or remote recommendation protocol is involved.

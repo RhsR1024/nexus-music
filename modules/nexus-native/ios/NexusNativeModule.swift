@@ -1,4 +1,5 @@
 import ExpoModulesCore
+import UIKit
 
 public final class NexusNativeModule: Module {
   private let runtimeQueue = DispatchQueue(label: "nexus.lx.registry")
@@ -25,6 +26,16 @@ public final class NexusNativeModule: Module {
     }
     Function("isLowPowerModeEnabled") {
       ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+    AsyncFunction("setKeepScreenOn") { (enabled: Bool) in
+      UIApplication.shared.isIdleTimerDisabled = enabled
+    }.runOnQueue(.main)
+    Function("convertChinese") { (text: String, mode: String) -> String in
+      guard mode == "simplified" || mode == "traditional", !text.isEmpty else { return text }
+      let mutable = NSMutableString(string: text) as CFMutableString
+      let transform = (mode == "traditional" ? "Simplified-Traditional" : "Traditional-Simplified") as CFString
+      CFStringTransform(mutable, nil, transform, false)
+      return mutable as String
     }
     View(NexusMaterialView.self) {
       Prop("dark") { (view: NexusMaterialView, dark: Bool) in view.setDark(dark) }

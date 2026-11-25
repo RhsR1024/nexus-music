@@ -4,16 +4,17 @@ import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme, type Theme} from './theme.tsx';
-import {radius, space, typography} from './tokens.ts';
+import {radius, sollinTokens, space, typography} from './tokens.ts';
 import {customSleepSeconds,sleepCountdown} from '../playback/sleep.ts';
 
 const rates=[0.5,0.75,1,1.25,1.5,2,3] as const;
 const presets=[15,30,45,60,90] as const;
 
 function chipStyle(selected:boolean,theme:Theme){
-  return [stylesChip.base,{backgroundColor:selected?theme.palette.selected:theme.palette.surface,borderColor:selected?theme.palette.accent:theme.palette.border}];
+  const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
+  return [stylesChip.base,{backgroundColor:selected?s.accentSoft:s.cardElevated,borderColor:selected?s.control:s.chipBorder}];
 }
-const stylesChip=StyleSheet.create({base:{minWidth:70,minHeight:44,paddingHorizontal:8,borderRadius:radius.md,borderWidth:1,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:6}});
+const stylesChip=StyleSheet.create({base:{minWidth:76,minHeight:42,paddingHorizontal:12,borderRadius:12,borderWidth:1,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:5}});
 
 export function RatePanel({services,onBack}:{services:Services;onBack:()=>void}){
   const theme=useTheme(),styles=makeStyles(theme);
@@ -50,7 +51,7 @@ function Wheel({values,index,onChange,label,theme}:{values:number[];index:number
 }
 
 export function SleepPanel({services,onBack}:{services:Services;onBack:()=>void}){
-  const theme=useTheme(),styles=makeStyles(theme);
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),styles=makeStyles(theme);
   const sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
   const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const [custom,setCustom]=useState(false),[hours,setHours]=useState(0),[minutes,setMinutes]=useState(30),[now,setNow]=useState(Date.now()),[error,setError]=useState('');
@@ -78,31 +79,34 @@ export function SleepPanel({services,onBack}:{services:Services;onBack:()=>void}
     </>}
     <View style={styles.switchRow}>
       <Text style={styles.switchLabel}>播完当前歌曲再停止</Text>
-      <Switch accessibilityLabel="播完当前歌曲再停止" value={sleep.mode==='track'} onValueChange={value=>{if(value)apply(0,true);else apply(0);}} trackColor={{true:theme.palette.accent,false:theme.palette.border}} thumbColor="#FFFFFF"/>
+      <Switch accessibilityLabel="播完当前歌曲再停止" value={sleep.mode==='track'} onValueChange={value=>{if(value)apply(0,true);else apply(0);}} trackColor={s.switchTrack} thumbColor={s.switchThumb(sleep.mode==='track')}/>
     </View>
-    <Pressable accessibilityRole="button" accessibilityLabel="立即停止播放" disabled={!playback.queue.currentId} onPress={stopNow} style={[styles.immediate,!playback.queue.currentId&&{opacity:.4}]}><Ionicons name="stop-circle-outline" size={18} color={theme.palette.accent}/><Text style={[styles.chipText,{color:theme.palette.accent}]}>立即停止播放</Text></Pressable>
-    {sleep.mode!=='off'&&<Pressable accessibilityRole="button" accessibilityLabel="取消睡眠定时" onPress={()=>apply(0)} style={styles.cancel}><Text style={[styles.chipText,{color:theme.palette.accent}]}>取消睡眠定时</Text></Pressable>}
+    <Pressable accessibilityRole="button" accessibilityLabel="立即停止播放" disabled={!playback.queue.currentId} onPress={stopNow} style={[styles.immediate,!playback.queue.currentId&&{opacity:.4}]}><Ionicons name="stop-circle-outline" size={18} color={s.control}/><Text style={[styles.chipText,{color:s.control,fontWeight:'600'}]}>立即停止播放</Text></Pressable>
+    {sleep.mode!=='off'&&<Pressable accessibilityRole="button" accessibilityLabel="取消睡眠定时" onPress={()=>apply(0)} style={styles.cancel}><Text style={[styles.chipText,{color:s.accent,fontWeight:'600'}]}>取消睡眠定时</Text></Pressable>}
     {!!error&&<Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>}
   </View>;
 }
 
-const makeStyles=(theme:Theme)=>StyleSheet.create({
-  root:{flexGrow:1,backgroundColor:theme.palette.background[0],paddingHorizontal:space.lg,paddingBottom:space.xxl,gap:space.md},
-  back:{flexDirection:'row',alignItems:'center',gap:2,minHeight:44,marginTop:space.sm},
-  backText:{...typography.caption,color:theme.palette.secondary},
-  title:{...typography.title,color:theme.palette.text},
-  status:{...typography.caption,color:theme.palette.secondary},
-  chips:{flexDirection:'row',flexWrap:'wrap',gap:space.sm,marginTop:space.xs},
-  chipText:{...typography.body,fontSize:15,color:theme.palette.text},
-  hint:{...typography.micro,color:theme.palette.secondary},
+const makeStyles=(theme:Theme)=>{
+  const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
+  return StyleSheet.create({
+  root:{flexGrow:1,backgroundColor:'transparent',paddingHorizontal:20,paddingBottom:space.xxl,gap:14},
+  back:{flexDirection:'row',alignItems:'center',gap:2,minHeight:40,marginTop:4},
+  backText:{fontSize:14,color:s.muted},
+  title:{fontSize:22,fontWeight:'800',color:s.ink},
+  status:{fontSize:13,color:s.muted},
+  chips:{flexDirection:'row',flexWrap:'wrap',gap:9,marginTop:2},
+  chipText:{fontSize:14,fontWeight:'500',color:s.ink},
+  hint:{fontSize:12,color:s.muted},
   wheels:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:space.sm},
-  wheelText:{...typography.body,fontSize:17,color:theme.palette.text},
-  wheelUnit:{...typography.caption,color:theme.palette.secondary},
-  start:{minHeight:52,borderRadius:radius.xl,backgroundColor:theme.palette.accent,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:space.sm},
-  startText:{...typography.body,fontSize:16,fontWeight:'600',color:'#FFFFFF'},
-  switchRow:{minHeight:52,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space.md},
-  switchLabel:{...typography.body,fontSize:16,color:theme.palette.text},
-  immediate:{minHeight:48,borderWidth:1,borderColor:theme.palette.border,borderRadius:radius.lg,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:space.sm},
+  wheelText:{fontSize:17,fontWeight:'600',color:s.ink},
+  wheelUnit:{fontSize:13,color:s.muted},
+  start:{minHeight:50,borderRadius:25,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},
+  startText:{fontSize:16,fontWeight:'600',color:'#FFFFFF'},
+  switchRow:{minHeight:50,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space.md},
+  switchLabel:{fontSize:15,fontWeight:'500',color:s.ink},
+  immediate:{minHeight:48,borderWidth:1,borderColor:s.control,backgroundColor:s.card,borderRadius:24,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},
   cancel:{minHeight:44,alignItems:'center',justifyContent:'center'},
-  error:{...typography.micro,color:'#B3261E'},
-});
+  error:{fontSize:12,color:'#B3261E'},
+  });
+};

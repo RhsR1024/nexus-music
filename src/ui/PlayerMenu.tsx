@@ -1,13 +1,14 @@
 import {useSongShare} from './useSongShare.ts';
 import {useSyncExternalStore} from 'react';
 import {Alert, Pressable, StyleSheet, View} from 'react-native';
+import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme, type Theme} from './theme.tsx';
-import {radius, space, typography} from './tokens.ts';
+import {radius, sollinTokens, space, typography} from './tokens.ts';
 
 const platformName:Record<string,string>={wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水'};
 
@@ -15,7 +16,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
   onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
 }){
-  const theme=useTheme(),styles=makeStyles(theme),{share,sharing,error:shareError}=useSongShare(track);
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),styles=makeStyles(theme),{share,sharing,error:shareError}=useSongShare(track);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
@@ -26,20 +27,21 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
   const toggleFavorite=()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
   const card=(icon:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,active=false)=>(
     <Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={active?{text:'已收藏'}:undefined} onPress={action} style={styles.card}>
-      <View style={[styles.tile,{width:40,height:40,borderRadius:12}]}><Ionicons name={icon} size={22} color={theme.palette.accent}/></View>
+      <View style={styles.tile}><Ionicons name={icon} size={22} color={s.accent}/></View>
       <Text style={styles.cardLabel}>{label}</Text>
     </Pressable>);
   const row=(icon:React.ComponentProps<typeof Ionicons>['name'],label:string,value:string,action:()=>void,last=false)=>(
     <Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{text:value}} onPress={action} style={[styles.row,last?null:styles.rowBorder]}>
-      <View style={styles.rowIcon}><Ionicons name={icon} size={19} color={theme.palette.accent}/></View>
+      <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={s.accent}/></View>
       <Text style={styles.rowTitle}>{label}</Text>
       <Text numberOfLines={1} style={styles.rowValue}>{value}</Text>
-      <Ionicons name="chevron-forward" size={16} color={theme.palette.secondary}/>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
     </Pressable>);
   return <View style={styles.root}>
-    <View style={styles.topBar}><Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel="收起播放选项" onPress={onClose} style={styles.close}><Text style={styles.closeText}>收起</Text></Pressable></View>
+    <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+    <View style={styles.topBar}><Pressable disabled={sharing} accessibilityRole="button" accessibilityLabel="收起播放选项" onPress={onClose} style={styles.close}><View style={styles.grabber}/></Pressable></View>
     <View style={styles.header}>
-      <Cover services={services} track={track} size={56}/>
+      <Cover services={services} track={track} size={56} radius={12}/>
       <View style={{flex:1,minWidth:0}}>
         <Text numberOfLines={1} style={styles.title}>{track.title}</Text>
         <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>
@@ -48,8 +50,8 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
     <View style={styles.cards}>
       {card(favorite?'heart':'heart-outline','收藏',toggleFavorite,favorite)}
       {card('play-skip-forward-outline','下一首',()=>services.playback.next())}
-      {card('add','歌单',onPlaylist)}
-      {onDownload?card('download-outline',downloadLabel,onDownload):card('share-outline','分享',()=>{void share();})}
+      {card('albums-outline','歌单',onPlaylist)}
+      {onDownload?card('cloud-download-outline',downloadLabel,onDownload):card('share-outline','分享',()=>{void share();})}
     </View>
     <Text style={styles.section}>播放设置</Text>
     <View style={styles.group}>
@@ -57,7 +59,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       {row('text-outline','歌词显示设置','字体与颜色',onLyricsSettings)}
       {row('speedometer-outline','播放倍速',`${preferences.rate}x`,onRate)}
       {row('moon-outline','睡眠定时器',sleepLabel,onSleep)}
-      {row('pulse-outline','播放链路诊断','匹配、选源、降档、解码',onDiagnostics)}
+      {row('pulse-outline','播放链路诊断','查看过程',onDiagnostics)}
       {row('list-outline','队列与播放选项',`${queueCount} 首`,onQueue,true)}
     </View>
     <Text style={styles.section}>歌曲操作</Text>
@@ -66,28 +68,31 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       {row('add-circle-outline','添加到歌单','选择歌单',onPlaylist,true)}
     </View>
     {track.origin.kind==='online'&&<><Text style={styles.section}>发现</Text>
-    <View style={styles.group}>{onSimilar&&row('radio-outline','相似歌曲','公开推荐',onSimilar)}{row('chatbubble-outline','热门评论','查看',onComments,true)}</View></>}
-    {!!shareError&&<Text accessibilityRole="alert" style={{color:theme.palette.accent}}>{shareError}</Text>}
+    <View style={styles.group}>{onSimilar&&row('pulse','相似歌曲','',onSimilar)}{row('chatbubbles-outline','热门评论','',onComments,true)}</View></>}
+    {!!shareError&&<Text accessibilityRole="alert" style={{color:s.accent}}>{shareError}</Text>}
   </View>;
 }
 
-const makeStyles=(theme:Theme)=>StyleSheet.create({
-  root:{flexGrow:1,backgroundColor:theme.palette.background[0],paddingHorizontal:space.lg,paddingBottom:space.xxl,gap:space.lg},
-  topBar:{flexDirection:'row',justifyContent:'flex-end',marginTop:space.sm},
-  close:{minWidth:44,minHeight:44,alignItems:'flex-end',justifyContent:'center'},
-  closeText:{...typography.caption,color:theme.palette.secondary},
-  header:{flexDirection:'row',alignItems:'center',gap:space.md},
-  title:{...typography.title,fontSize:20,lineHeight:26,color:theme.palette.text},
-  subtitle:{...typography.micro,fontSize:12,color:theme.palette.secondary,marginTop:space.xxs},
-  cards:{flexDirection:'row',alignItems:'stretch',justifyContent:'space-between',backgroundColor:theme.palette.surface,borderRadius:radius.lg,paddingHorizontal:space.sm,paddingVertical:space.md},
-  card:{flex:1,alignItems:'center',gap:space.sm,minHeight:68,justifyContent:'center'},
-  tile:{alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.background[0]},
-  cardLabel:{...typography.micro,fontSize:12,color:theme.palette.text},
-  section:{...typography.micro,fontSize:12,color:theme.palette.secondary,marginBottom:-space.sm,paddingLeft:space.xs},
-  group:{backgroundColor:theme.palette.surface,borderRadius:radius.lg,overflow:'hidden'},
-  row:{minHeight:56,flexDirection:'row',alignItems:'center',gap:space.md,paddingHorizontal:space.md},
-  rowBorder:{borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:theme.palette.border},
-  rowIcon:{width:32,height:32,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.background[0]},
-  rowTitle:{...typography.body,fontSize:15,color:theme.palette.text,flex:1},
-  rowValue:{...typography.micro,fontSize:12,color:theme.palette.secondary,maxWidth:'40%'},
-});
+const makeStyles=(theme:Theme)=>{
+  const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
+  return StyleSheet.create({
+  root:{flexGrow:1,backgroundColor:s.sheetGradient[0],paddingHorizontal:18,paddingBottom:space.xxl,gap:14},
+  topBar:{alignItems:'center',paddingTop:6},
+  close:{minWidth:80,minHeight:28,alignItems:'center',justifyContent:'center'},
+  grabber:{width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66'},
+  header:{flexDirection:'row',alignItems:'center',gap:12,paddingVertical:2},
+  title:{...typography.title,fontSize:20,lineHeight:26,color:s.ink},
+  subtitle:{...typography.micro,fontSize:13,color:s.muted,marginTop:2},
+  cards:{flexDirection:'row',alignItems:'stretch',justifyContent:'space-between',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,borderRadius:20,paddingHorizontal:8,paddingVertical:14},
+  card:{flex:1,alignItems:'center',gap:7,minHeight:64,justifyContent:'center'},
+  tile:{width:44,height:44,borderRadius:13,alignItems:'center',justifyContent:'center',backgroundColor:s.accentSoft},
+  cardLabel:{fontSize:12,fontWeight:'500',color:s.ink},
+  section:{fontSize:12,fontWeight:'500',color:s.muted,marginBottom:-6,paddingLeft:6},
+  group:{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,borderRadius:20,overflow:'hidden'},
+  row:{minHeight:56,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:14},
+  rowBorder:{borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline},
+  rowIcon:{width:34,height:34,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:s.accentSoft},
+  rowTitle:{fontSize:15,fontWeight:'500',color:s.ink,flex:1},
+  rowValue:{fontSize:13,color:s.muted,maxWidth:'38%'},
+  });
+};

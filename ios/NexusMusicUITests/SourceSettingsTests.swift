@@ -5941,7 +5941,7 @@ final class SourceSettingsTests: XCTestCase {
     if gradient.exists && !gradient.isSelected {gradient.tap()}
     // Use the shipping theme for colour evidence, including settings captures.
     let backgroundScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
-    func reveal(_ element:XCUIElement){for _ in 0..<40 {if element.exists && element.isHittable{break};let above=element.exists && element.frame.midY<backgroundScroll.frame.midY;backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:backgroundScroll.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.exists && element.isHittable)}
+    func reveal(_ element:XCUIElement){let scroller=backgroundScroll.exists ? backgroundScroll : app;for _ in 0..<40 {if element.exists && element.isHittable{break};let above=element.exists && element.frame.midY<scroller.frame.midY;scroller.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:scroller.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.exists && element.isHittable)}
     func reachValue(_ identifier:String,_ target:String,_ up:Bool){
       let label=app.staticTexts["visual-value-"+identifier]
       for _ in 0..<18 {

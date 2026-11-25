@@ -24,9 +24,10 @@ function PaperBackdrop({services,track}:{services:Services;track:Track}){
   // The paper surface always mixes toward white, so the fixed dark text color
   // stays readable even when the cover is dark. The default blush wash follows
   // IMG_4851's vertical ramp: near-white top, peach through the deck, pink foot.
-  const gradient=preferences.coverColor?coverThemeGradient(tint,'light'):['#FAF6F3','#F6EEE9','#F3DED4','#F0CFC3','#F4D6CB','#F5D7CD','#FBE5E3','#FDEAEA'] as const;
+  const useDefaultBlush=!preferences.coverColor||preferences.visualTheme==='blush';
+  const gradient=useDefaultBlush?(['#FAF6F3','#F6EEE9','#F3DED4','#F0CFC3','#F4D6CB','#F5D7CD','#FBE5E3','#FDEAEA'] as const):coverThemeGradient(tint,'light');
   return <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:paper.background}]}>
-    <LinearGradient colors={gradient} locations={preferences.coverColor?undefined:[0,.06,.17,.35,.55,.74,.96,1]} start={{x:0,y:0}} end={{x:0,y:1}} style={StyleSheet.absoluteFill}/>
+    <LinearGradient colors={gradient} locations={useDefaultBlush?[0,.06,.17,.35,.55,.74,.96,1]:undefined} start={{x:0,y:0}} end={{x:0,y:1}} style={StyleSheet.absoluteFill}/>
   </View>;
 }
 
@@ -118,10 +119,16 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
       <Text numberOfLines={1} style={styles.caption}>{state.media?.quality?`${state.media.quality.toUpperCase()} 音源`:'等待音源'}</Text>
     </View>
     <SheetModal visible={lyricsOpen} onRequestClose={()=>setLyricsOpen(false)}>
-      <ScrollView style={{backgroundColor:paper.background}} contentContainerStyle={{padding:space.xxl,gap:space.lg}}>
-        <Pressable accessibilityRole="button" accessibilityLabel="收起黑胶歌词" onPress={()=>setLyricsOpen(false)} style={{minHeight:48,justifyContent:'center'}}><Text style={{color:paper.secondary}}>收起歌词</Text></Pressable>
-        {lyricsOpen&&<Lyrics services={services} track={lyricTrack} font={font}/>}
-      </ScrollView>
+      <View style={{flex:1}}>
+        <LinearGradient colors={['#FBF5F5','#F7E7EB','#F8EFF1']} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
+        <ScrollView contentContainerStyle={{padding:space.xl,gap:space.lg}}>
+          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+            <Text style={{fontSize:22,fontWeight:'700',color:paper.titleInk}}>歌词与来源</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="收起黑胶歌词" onPress={()=>setLyricsOpen(false)} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:'rgba(255,255,255,0.65)',borderWidth:1,borderColor:'rgba(255,255,255,0.85)'}}><Text style={{color:paper.titleInk,fontSize:13,fontWeight:'600'}}>收起歌词</Text></Pressable>
+          </View>
+          {lyricsOpen&&<Lyrics services={services} track={lyricTrack} font={font}/>}
+        </ScrollView>
+      </View>
     </SheetModal>
   </View>;
 }

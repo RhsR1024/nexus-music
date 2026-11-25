@@ -1,13 +1,14 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useRef,useState} from 'react';
-import {FlatList, Pressable, View} from 'react-native';
+import {FlatList, Pressable, StyleSheet, View} from 'react-native';
+import {LinearGradient} from 'expo-linear-gradient';
 import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {QishuiPlaylist} from '../providers/qishui.ts';
 import {useTheme} from './theme.tsx';
-import {controls} from './tokens.ts';
+import {controls,sollinTokens} from './tokens.ts';
 export function QishuiImport({services}:{services:Services}){
-  const theme=useTheme(),pending=useRef(new AbortController()),generation=useRef(0),saving=useRef(false);
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),pending=useRef(new AbortController()),generation=useRef(0),saving=useRef(false);
   const [open,setOpen]=useState(false),[input,setInput]=useState(''),[title,setTitle]=useState(''),[preview,setPreview]=useState<QishuiPlaylist>(),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
   useEffect(()=>()=>{generation.current++;pending.current.abort();},[]);
   function close(){if(saving.current)return;generation.current++;pending.current.abort();setLoading(false);setOpen(false);}
@@ -19,17 +20,16 @@ export function QishuiImport({services}:{services:Services}){
   async function save(){if(!preview||!title.trim()||saving.current)return;saving.current=true;setBusy(true);setMessage('');
     try{await services.library.createPlaylist(title,preview.tracks);setMessage(`已追加导入 ${preview.tracks.length} 条，原始歌曲保留；播放时匹配其他平台。`);setPreview(undefined);}catch{setMessage('保存失败，原音乐库保留，请重试。');}finally{saving.current=false;setBusy(false);}
   }
-  const button=(label:string,action:()=>void,disabled=false,testID?:string)=><Pressable testID={testID} accessibilityRole="button" disabled={disabled} onPress={action} style={{padding:12,minHeight:controls.hit,justifyContent:'center',borderRadius:10,backgroundColor:theme.color('#303A32'),opacity:disabled?.4:1}}><Text style={{color:theme.color('#D9F49B')}}>{label}</Text></Pressable>;
-  const field={color:theme.color('#ECEBF3'),padding:14,borderWidth:1,borderColor:theme.color('#414754'),borderRadius:12};
-  return <>{button('导入汽水公开歌单',()=>setOpen(true),false,'qishui-import-open')}<Modal visible={open} animationType="slide" onRequestClose={close}><View style={{flex:1,paddingTop:60,paddingHorizontal:24,backgroundColor:theme.color('#111318')}}>
+  const button=(label:string,action:()=>void,disabled=false,testID?:string,primary=false)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={action} style={{paddingHorizontal:16,paddingVertical:11,minHeight:controls.hit,justifyContent:'center',alignItems:'center',borderRadius:22,backgroundColor:primary?s.control:s.chip,borderWidth:primary?0:1,borderColor:s.cardBorder,opacity:disabled?.42:1}}><Text style={{color:primary?'#FFFFFF':s.ink,fontSize:14,fontWeight:'600'}}>{label}</Text></Pressable>;
+  const field={color:s.ink,backgroundColor:s.inputBg,paddingHorizontal:14,paddingVertical:12,borderWidth:1,borderColor:s.cardBorder,borderRadius:14,fontSize:14};
+  return <>{button('导入汽水公开歌单',()=>setOpen(true),false,'qishui-import-open')}<Modal visible={open} animationType="slide" onRequestClose={close}><View style={{flex:1}}><LinearGradient colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/><View style={{flex:1,paddingTop:56,paddingHorizontal:20}}>
     <FlatList data={preview?.tracks??[]} keyExtractor={(track,index)=>`${index}-${track.origin.id}`} initialNumToRender={12} windowSize={5} keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingBottom:50}} ListHeaderComponent={<View style={{gap:12,paddingBottom:20}}>
-      {button('收起汽水导入',close,busy,'qishui-import-close')}<Text style={{fontSize:25,color:theme.color('#ECEBF3')}}>汽水歌单导入</Text>
-      <Text style={{color:theme.color('#959EAC'),lineHeight:22}}>保留原始歌曲和曲序，通过其他平台匹配播放；不会登录汽水或使用汽水直接播放。</Text>
-      <TextInput testID="qishui-import-input" accessibilityLabel="汽水公开歌单链接或ID" placeholder="粘贴汽水分享文本、完整链接或ID" placeholderTextColor="#768191" value={input} editable={!loading&&!busy} onChangeText={value=>{setInput(value);setPreview(undefined);setMessage('');}} autoCapitalize="none" autoCorrect={false} style={field}/>
-      {button(loading?'正在完整读取…':'读取并预览汽水歌单',()=>{void read();},loading||busy||!input.trim(),'qishui-import-read')}
-      {loading&&button('取消汽水读取',()=>{generation.current++;pending.current.abort();setLoading(false);},false,'qishui-import-cancel')}
-      {!!message&&<Text testID="qishui-import-message" accessibilityLiveRegion="polite" style={{color:theme.color('#D6B69A'),lineHeight:22}}>{message}</Text>}
-      {preview&&<><TextInput testID="qishui-import-title" accessibilityLabel="汽水导入歌单名称" value={title} onChangeText={setTitle} style={field}/><Text testID="qishui-import-summary" style={{color:theme.color('#959EAC')}}>完整读取 {preview.tracks.length} 条 · 保留重复项 · 作为新歌单追加</Text>{button('确认追加汽水歌单',()=>{void save();},busy||!title.trim(),'qishui-import-confirm')}</>}
-    </View>} renderItem={({item,index})=><View testID={`qishui-preview-${index}`} style={{paddingVertical:14,borderTopWidth:1,borderColor:theme.color('#303744')}}><Text style={{color:theme.color('#E1E6F0'),fontSize:16}}>{item.title}</Text><Text style={{color:theme.color('#959CAC'),marginTop:6}}>{item.artist} · 待匹配</Text></View>}/>
-  </View></Modal></>;
+      <View style={{alignSelf:'flex-start'}}>{button('收起汽水导入',close,busy,'qishui-import-close')}</View><Text style={{fontSize:26,fontWeight:'700',color:s.ink}}>汽水歌单导入</Text>
+      <Text style={{color:s.muted,fontSize:13,lineHeight:20}}>保留原始歌曲和曲序，通过其他平台匹配播放；不会登录汽水或使用汽水直接播放。</Text>
+      <TextInput testID="qishui-import-input" accessibilityLabel="汽水公开歌单链接或ID" placeholder="粘贴汽水分享文本、完整链接或ID" placeholderTextColor={s.subtle} value={input} editable={!loading&&!busy} onChangeText={value=>{setInput(value);setPreview(undefined);setMessage('');}} autoCapitalize="none" autoCorrect={false} style={field}/>
+      <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{button(loading?'正在完整读取…':'读取并预览汽水歌单',()=>{void read();},loading||busy||!input.trim(),'qishui-import-read',true)}{loading&&button('取消汽水读取',()=>{generation.current++;pending.current.abort();setLoading(false);},false,'qishui-import-cancel')}</View>
+      {!!message&&<Text testID="qishui-import-message" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13,lineHeight:20}}>{message}</Text>}
+      {preview&&<><TextInput testID="qishui-import-title" accessibilityLabel="汽水导入歌单名称" value={title} onChangeText={setTitle} style={field}/><Text testID="qishui-import-summary" style={{color:s.muted,fontSize:13}}>完整读取 {preview.tracks.length} 条 · 保留重复项 · 作为新歌单追加</Text>{button('确认追加汽水歌单',()=>{void save();},busy||!title.trim(),'qishui-import-confirm',true)}</>}
+    </View>} renderItem={({item,index})=><View testID={`qishui-preview-${index}`} style={{paddingVertical:12,borderTopWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}><Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.title}</Text><Text style={{color:s.muted,fontSize:12,marginTop:3}}>{item.artist} · 待匹配</Text></View>}/>
+  </View></View></Modal></>;
 }

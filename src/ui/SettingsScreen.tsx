@@ -1,12 +1,12 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,BackHandler,findNodeHandle,Image,Keyboard,Pressable,ScrollView,UIManager,View,useWindowDimensions,type Text as NativeText} from 'react-native';
+import {AccessibilityInfo,BackHandler,findNodeHandle,Image,Keyboard,Pressable,ScrollView,StyleSheet,UIManager,View,useWindowDimensions,type Text as NativeText} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {AppearanceSheetHandle,AppearanceSheetModal,SheetModal} from './AdaptiveModal.tsx';
-import {appearanceSheetLayout,settingsInk,settingsSheet} from './tokens.ts';
+import {appearanceSheetLayout,settingsInk,settingsSheet,sollinTokens} from './tokens.ts';
 import {AppearanceSettings,BackgroundThemeActions,type AppearanceSection} from './AppearanceSettings.tsx';
 import {AppearanceOverview} from './AppearanceOverview.tsx';
 import {AppIconSettings} from './AppIconSettings.tsx';
@@ -29,7 +29,7 @@ const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-backgrou
 const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色',icons:'软件图标'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;onExit:()=>void}){
-  const theme=useTheme(),p=theme.palette,sheetDark=theme.mode==='dark';
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),sheetDark=theme.mode==='dark';
   const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const firstPage=isAppearanceSheet(initialPage)?initialPage==='typography'?'playback':'appearance':initialPage;
@@ -60,29 +60,31 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
   const open=(next:SettingsPage)=>{Keyboard.dismiss();if(isAppearanceSheet(next)){setAppearanceSheet(value=>({section:next,visible:true,session:value.session+1}));return;}setVisited(value=>value.includes(next)?value:[...value,next]);setHistory(value=>[...value,next]);};
   useEffect(()=>{let active=true;void AccessibilityInfo.isScreenReaderEnabled().then(enabled=>{if(active&&enabled){const node=findNodeHandle(heading.current);if(node)AccessibilityInfo.setAccessibilityFocus(node);}});return()=>{active=false;};},[page]);
   useEffect(()=>{const listener=BackHandler.addEventListener('hardwareBackPress',()=>{if(page==='home')return false;back();return true;});return()=>listener.remove();},[page,history.length]);
-  const row=(next:SettingsPage,subtitle:string,icon:React.ComponentProps<typeof Ionicons>['name'],value?:string,grouped=false)=><Pressable testID={`settings-open-${next}`} accessibilityRole="button" accessibilityLabel={titles[next]} accessibilityHint={subtitle} accessibilityValue={value?{text:value}:undefined} onPress={()=>open(next)} style={{padding:18,minHeight:82,flexDirection:'row',alignItems:'center',gap:14,borderRadius:grouped?0:22,backgroundColor:grouped?'transparent':p.surface,borderWidth:grouped?0:1,borderColor:p.border}}>
-    <View style={{width:grouped?28:44,height:44,borderRadius:14,backgroundColor:grouped?'transparent':p.selected,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={24} color={p.accent}/></View>
-    <View style={{flex:1,gap:6}}><Text style={{color:p.text,fontSize:18,fontWeight:'600'}}>{titles[next]}</Text><Text style={{color:p.secondary,fontSize:13,lineHeight:20}}>{subtitle}</Text></View>
-    {value&&fontScale<=1.4&&<Text accessible={false} style={{color:p.secondary,fontSize:13,maxWidth:72,textAlign:'right'}}>{value}</Text>}
-    <Ionicons name="chevron-forward" size={20} color={p.secondary}/>
+  const row=(next:SettingsPage,subtitle:string,icon:React.ComponentProps<typeof Ionicons>['name'],value?:string,grouped=false)=><Pressable testID={`settings-open-${next}`} accessibilityRole="button" accessibilityLabel={titles[next]} accessibilityHint={subtitle} accessibilityValue={value?{text:value}:undefined} onPress={()=>open(next)} style={{paddingHorizontal:16,paddingVertical:15,minHeight:64,flexDirection:'row',alignItems:'center',gap:14,borderRadius:grouped?0:20,backgroundColor:grouped?'transparent':s.card,borderWidth:grouped?0:1,borderColor:s.cardBorder}}>
+    <View style={{width:28,height:28,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={22} color={s.ink}/></View>
+    <View style={{flex:1,gap:2}}><Text style={{color:s.ink,fontSize:16,fontWeight:'500'}}>{titles[next]}</Text><Text style={{color:s.muted,fontSize:12,lineHeight:17}}>{subtitle}</Text></View>
+    {value&&fontScale<=1.4&&<Text accessible={false} style={{color:s.muted,fontSize:13,maxWidth:84,textAlign:'right'}}>{value}</Text>}
+    <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
   </Pressable>;
   const content=(key:SettingsPage)=>{
     switch(key){
       case 'home':return <View style={{gap:14}}>
-        <Text style={{color:p.secondary,lineHeight:23,marginBottom:8}}>让每一次聆听，更像你。</Text>
-        <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13}}>设置分类</Text>
-        <View testID="settings-category-group" style={{borderRadius:22,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,overflow:'hidden'}}>
-          {row('playback','音质、睡眠、歌词与均衡器','musical-notes-outline',preferences.quality.toUpperCase(),true)}
-          <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
-          {row('appearance','主题、字体、播放界面与迷你播放器','color-palette-outline',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台',am2:'AM2'}as const)[preferences.playerLayout],true)}
-          <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
-          {row('downloads','下载偏好、任务与已保存文件','cloud-download-outline','下载设置',true)}
-          <View accessible={false} style={{height:1,marginLeft:60,backgroundColor:p.border}}/>
-          {row('storage','缓存、备份、同步与歌单迁移','folder-outline','本地数据',true)}
+        <Text style={{color:s.muted,fontSize:14,lineHeight:21,marginBottom:2}}>让每一次聆听，更像你。</Text>
+        <View testID="settings-category-group" style={{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'}}>
+          {row('playback','音质、睡眠、歌词与均衡器','musical-notes',preferences.quality.toUpperCase(),true)}
+          <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:58,backgroundColor:s.hairline}}/>
+          {row('appearance','主题、字体、播放界面与迷你播放器','color-palette',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台',am2:'AM2'}as const)[preferences.playerLayout],true)}
+          <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:58,backgroundColor:s.hairline}}/>
+          {row('downloads','下载偏好、任务与已保存文件','cloud-download','下载管理',true)}
+          <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:58,backgroundColor:s.hairline}}/>
+          {row('storage','缓存、备份、同步与歌单迁移','folder','本地数据',true)}
         </View>
-        <Text accessibilityRole="header" style={{color:p.secondary,fontSize:13,marginTop:12}}>曲库与播放来源</Text>
-        {row('sources','LX 音源与 Navidrome 私人曲库','server-outline')}
-        {row('accounts','网易云等平台登录与本机会话','person-circle-outline')}
+        <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,marginLeft:6,marginTop:4}}>曲库与播放来源</Text>
+        <View style={{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'}}>
+          {row('sources','LX 音源与 Navidrome 私人曲库','server',undefined,true)}
+          <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:58,backgroundColor:s.hairline}}/>
+          {row('accounts','网易云等平台登录与本机会话','person-circle',undefined,true)}
+        </View>
       </View>;
       case 'sources':return <><NavidromeSettings services={services}/><SourceSettings catalog={services.catalog} health={services.sourceHealth}/></>;
       case 'accounts':return <MusicAccountSettings services={services} active={page==='accounts'&&!appearanceSheet.visible} onRevealQr={({top,height})=>{
@@ -138,10 +140,13 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,onExit
       {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:32}}>{content(key)}</ScrollView>}
     </View>)}
     <Sheet visible={appearanceSheet.visible} animationType="slide" allowSwipeDismissal onRequestClose={closeSheet}>
-      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:sheetDark?p.background[0]:settingsSheet.lightGradient[0],paddingHorizontal:appearanceSheet.section==='background'?16:22,paddingTop:appearanceSheet.section==='background'?appearanceSheetLayout.topPadding:18}}>
-        {appearanceSheet.section==='background'&&<>
+      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:appearanceSheet.section==='background'?(sheetDark?p.background[0]:settingsSheet.lightGradient[0]):s.sheetGradient[0],paddingHorizontal:appearanceSheet.section==='background'?16:20,paddingTop:appearanceSheet.section==='background'?appearanceSheetLayout.topPadding:12}}>
+        {appearanceSheet.section==='background'?<>
           {sheetDark?<LinearGradient testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" colors={[p.background[0],p.background[1],p.background[2]]} start={{x:0,y:0}} end={{x:0.55,y:1}} style={{position:'absolute',top:0,right:0,bottom:0,left:0}}/>:<View testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" style={{position:'absolute',top:0,right:0,bottom:0,left:0}}><Image source={require('../../assets/appearance-sheet-light.png')} resizeMode="stretch" style={{width:'100%',height:'100%'}}/></View>}
           <AppearanceSheetHandle><Pressable testID="background-sheet-close" accessibilityRole="button" accessibilityLabel={titles.background} onPress={closeSheet} style={{width:44,height:44,alignSelf:'center',alignItems:'center',justifyContent:'center'}}><View style={{width:32,height:4,borderRadius:2,backgroundColor:p.secondary+'66'}}/></Pressable></AppearanceSheetHandle>
+        </>:<>
+          <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+          <View style={{alignSelf:'center',width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66',marginBottom:8}}/>
         </>}
         {appearanceSheet.section!=='background'&&sheetHeader}
         <ScrollView ref={node=>{if(appearanceSheet.section==='background')appearanceScroll.current=node;}} key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={appearanceSheet.section==='background'?event=>{appearanceOffset.current=event.nativeEvent.contentOffset.y;}:undefined} scrollEventThrottle={appearanceSheet.section==='background'?32:undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='background'&&sheetHeader}{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):appearanceSheet.section==='icons'?<AppIconSettings/>:<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} accentFieldRef={appearanceSheet.section==='background'?accentField:undefined} onStyleSaved={()=>{

@@ -22,6 +22,7 @@ interface NativePlayback extends SystemMediaNative {
   sleepSnapshot():Promise<Record<string,unknown>>;
   configureVolume(value:number):Promise<void>;
   configureRate(value:number):Promise<void>;
+  configureMixWithOthers?(enabled:boolean):Promise<void>;
   configureEQ(enabled: boolean, gains: readonly number[], preampDB: number): Promise<void>;
   addListener(event: string, callback: (event: Record<string, unknown>) => void): { remove(): void };
 }
@@ -41,9 +42,14 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
   const spectrum = new SpectrumStore(),sleepStore=new SleepStore();
   // Keep the native player's rate in sync with the persisted preference so a
   // relaunch or a change from the settings page applies immediately.
-  let appliedRate=preferences.getSnapshot().rate;
+  let appliedRate=preferences.getSnapshot().rate,appliedMix=preferences.getSnapshot().mixWithOtherAudio;
   void native.configureRate(appliedRate).catch(()=>{});
-  preferences.subscribe(()=>{const rate=preferences.getSnapshot().rate;if(rate===appliedRate)return;appliedRate=rate;void native.configureRate(rate).catch(()=>{});});
+  void native.configureMixWithOthers?.(appliedMix)?.catch(()=>{});
+  preferences.subscribe(()=>{
+    const snapshot=preferences.getSnapshot();
+    if(snapshot.rate!==appliedRate){appliedRate=snapshot.rate;void native.configureRate(appliedRate).catch(()=>{});}
+    if(snapshot.mixWithOtherAudio!==appliedMix){appliedMix=snapshot.mixWithOtherAudio;void native.configureMixWithOthers?.(appliedMix)?.catch(()=>{});}
+  });
   native.addListener('sleep',sleepStore.update);
   void native.sleepSnapshot().then(sleepStore.update).catch(()=>{});
   const playedListeners=new Set<(track:Track)=>void>();let lastPlayedGeneration=-1;

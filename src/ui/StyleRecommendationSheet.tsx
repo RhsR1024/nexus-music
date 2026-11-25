@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
-import {Pressable,ScrollView,View,useWindowDimensions} from 'react-native';
+import {Pressable,ScrollView,StyleSheet,View,useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
 import type {Services} from '../app/services.ts';
 import type {BrowseItem} from '../providers/discovery.ts';
 import {
@@ -18,7 +19,7 @@ import {SheetModal} from './AdaptiveModal.tsx';
 import {Cover} from './Cover.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {controls,radius,space} from './tokens.ts';
+import {controls,radius,sollinTokens,space} from './tokens.ts';
 
 export function StyleRecommendationSheet({
   services,
@@ -31,7 +32,7 @@ export function StyleRecommendationSheet({
   onClose:()=>void;
   onOpenPlaylist:(playlist:BrowseItem)=>void;
 }){
-  const theme=useTheme(),{width}=useWindowDimensions();
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),{width}=useWindowDimensions();
   const [dimension,setDimension]=useState<StyleDimensionId>('genre');
   const [tags,setTags]=useState<readonly StyleTag[]>([]);
   const [selected,setSelected]=useState<readonly StyleTag[]>([]);
@@ -139,21 +140,23 @@ export function StyleRecommendationSheet({
     accessibilityRole="button"
     disabled={disabled}
     onPress={onPress}
-    style={{...hit,paddingHorizontal:18,borderRadius:radius.md,backgroundColor:destructive?theme.palette.surface:theme.palette.selected,opacity:disabled?.42:1}}
-  ><Text style={{color:destructive?theme.palette.secondary:theme.palette.accent,fontWeight:'600'}}>{label}</Text></Pressable>;
+    style={{...hit,paddingHorizontal:18,borderRadius:22,backgroundColor:destructive?s.chip:s.control,borderWidth:destructive?1:0,borderColor:s.chipBorder,opacity:disabled?.42:1}}
+  ><Text style={{color:destructive?s.muted:'#FFFFFF',fontSize:14,fontWeight:'600'}}>{label}</Text></Pressable>;
 
   return <SheetModal visible={visible} animationType="slide" onRequestClose={close}>
-    <View testID="style-recommendation-sheet" style={{flex:1,backgroundColor:theme.palette.background[0]}}>
-      <View style={{paddingHorizontal:space.lg,paddingTop:space.md,paddingBottom:space.sm,borderBottomWidth:1,borderColor:theme.palette.border,gap:space.sm}}>
+    <View testID="style-recommendation-sheet" style={{flex:1,backgroundColor:s.sheetGradient[0]}}>
+      <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+      <View style={{alignSelf:'center',width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66',marginTop:10}}/>
+      <View style={{paddingHorizontal:space.lg,paddingTop:space.sm,paddingBottom:space.sm,borderBottomWidth:StyleSheet.hairlineWidth,borderColor:s.hairline,gap:space.sm}}>
         <View style={{flexDirection:'row',alignItems:'center',gap:space.md}}>
           <View style={{flex:1,gap:4}}>
-            <Text accessibilityRole="header" style={{fontSize:24,fontWeight:'800',color:theme.palette.text}}>定制风格化推荐</Text>
-            <Text style={{color:theme.palette.secondary,lineHeight:20}}>基于网易云公开歌单分类，最多选择 {styleSelectionLimit} 个标签。音枢按公开目录去重并保留命中理由。</Text>
+            <Text accessibilityRole="header" style={{fontSize:22,fontWeight:'800',color:s.ink}}>定制风格化推荐</Text>
+            <Text style={{color:s.muted,fontSize:13,lineHeight:19}}>基于网易云公开歌单分类，最多选择 {styleSelectionLimit} 个标签。</Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="关闭风格化推荐" onPress={close} style={{width:controls.hit,height:controls.hit,borderRadius:controls.hit/2,alignItems:'center',justifyContent:'center',backgroundColor:theme.palette.surface}}><Ionicons name="close" size={24} color={theme.palette.accent}/></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="关闭风格化推荐" onPress={close} style={{width:38,height:38,borderRadius:19,alignItems:'center',justifyContent:'center',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}><Ionicons name="close" size={20} color={s.ink}/></Pressable>
         </View>
         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-          <Text testID="style-selected-count" accessibilityLiveRegion="polite" style={{color:atLimit?theme.palette.accent:theme.palette.text,fontWeight:'700'}}>已选 {selected.length}/{styleSelectionLimit}</Text>
+          <Text testID="style-selected-count" accessibilityLiveRegion="polite" style={{color:atLimit?s.accent:s.ink,fontSize:13,fontWeight:'600'}}>已选 {selected.length}/{styleSelectionLimit}</Text>
           {button('清空',()=>{setSelected([]);setResults([]);setFailedTags([]);setMessage('');},!selected.length,'style-clear',true)}
         </View>
       </View>
@@ -167,16 +170,16 @@ export function StyleRecommendationSheet({
             accessibilityState={{selected:dimension===item.id,disabled:groups[item.id].length===0}}
             disabled={groups[item.id].length===0}
             onPress={()=>setDimension(item.id)}
-            style={{...hit,paddingHorizontal:Math.max(12,width>420?16:12),borderRadius:20,backgroundColor:dimension===item.id?theme.palette.selected:theme.palette.surface,opacity:groups[item.id].length===0?.42:1}}
-          ><Text style={{color:dimension===item.id?theme.palette.accent:theme.palette.secondary,fontWeight:dimension===item.id?'700':'500'}}>{item.label}{groups[item.id].length?` ${groups[item.id].length}`:''}</Text></Pressable>)}
+            style={{...hit,minHeight:38,paddingHorizontal:Math.max(12,width>420?16:12),borderRadius:19,backgroundColor:dimension===item.id?s.ink:s.chip,borderWidth:1,borderColor:dimension===item.id?s.ink:s.chipBorder,opacity:groups[item.id].length===0?.42:1}}
+          ><Text style={{color:dimension===item.id?(s.dark?'#171717':'#FFFFFF'):s.muted,fontSize:13,fontWeight:dimension===item.id?'600':'500'}}>{item.label}{groups[item.id].length?` ${groups[item.id].length}`:''}</Text></Pressable>)}
         </View>
 
-        {loading?<View style={{gap:space.md,padding:20,borderRadius:radius.lg,backgroundColor:theme.palette.surface}}><Text accessibilityLiveRegion="polite" style={{color:theme.palette.text}}>正在读取公开分类…</Text>{button('取消读取',()=>cancelCategories(),false,'style-category-cancel',true)}</View>:null}
-        {!!error?<View style={{gap:space.md,padding:20,borderRadius:radius.lg,backgroundColor:theme.palette.surface}}><Text testID="style-category-error" accessibilityLiveRegion="polite" style={{color:theme.palette.accent,lineHeight:21}}>{error}</Text>{button('重试分类',()=>{void loadCategories();},false,'style-category-retry')}</View>:null}
+        {loading?<View style={{gap:space.md,padding:18,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}><Text accessibilityLiveRegion="polite" style={{color:s.ink}}>正在读取公开分类…</Text>{button('取消读取',()=>cancelCategories(),false,'style-category-cancel',true)}</View>:null}
+        {!!error?<View style={{gap:space.md,padding:18,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}><Text testID="style-category-error" accessibilityLiveRegion="polite" style={{color:s.accent,lineHeight:21}}>{error}</Text>{button('重试分类',()=>{void loadCategories();},false,'style-category-retry')}</View>:null}
 
-        {!loading&&!error?<View style={{gap:space.md}}>
-          <Text style={{fontSize:19,fontWeight:'700',color:theme.palette.text}}>推荐维度</Text>
-          <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>
+        {!loading&&!error?<View style={{gap:space.sm}}>
+          <Text style={{fontSize:15,fontWeight:'700',color:s.ink}}>推荐维度</Text>
+          <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
             {active.map(tag=>{
               const checked=selected.some(value=>styleTagKey(value)===styleTagKey(tag)),disabled=!checked&&atLimit;
               return <Pressable
@@ -190,17 +193,17 @@ export function StyleRecommendationSheet({
                   try{setSelected(current=>toggleStyleSelection(current,tag));setMessage('');}
                   catch(failure){setMessage(failure instanceof Error?failure.message:'无法更新风格标签');}
                 }}
-                style={{...hit,flexDirection:'row',gap:7,paddingHorizontal:14,paddingVertical:10,borderRadius:18,borderWidth:1,borderColor:checked?theme.palette.accent:theme.palette.border,backgroundColor:checked?theme.palette.selected:theme.palette.surface,opacity:disabled?.42:1}}
-              >{checked?<Ionicons name="checkmark" size={16} color={theme.palette.accent}/>:null}<Text style={{color:checked?theme.palette.accent:theme.palette.text}}>{tag.name}</Text></Pressable>;
+                style={{minHeight:38,justifyContent:'center',alignItems:'center',flexDirection:'row',gap:6,paddingHorizontal:14,paddingVertical:8,borderRadius:19,borderWidth:1,borderColor:checked?s.control:s.chipBorder,backgroundColor:checked?s.accentSoft:s.card,opacity:disabled?.42:1}}
+              >{checked?<Ionicons name="checkmark" size={15} color={s.control}/>:null}<Text style={{color:checked?s.control:s.ink,fontSize:13,fontWeight:checked?'600':'500'}}>{tag.name}</Text></Pressable>;
             })}
           </View>
-          {active.length===0?<Text style={{color:theme.palette.secondary}}>此维度暂无公开标签。</Text>:null}
+          {active.length===0?<Text style={{color:s.muted}}>此维度暂无公开标签。</Text>:null}
         </View>:null}
 
         {!!selected.length?<View style={{gap:space.sm}}>
-          <Text style={{color:theme.palette.secondary,fontWeight:'600'}}>本次选择</Text>
+          <Text style={{color:s.muted,fontSize:13,fontWeight:'600'}}>本次选择</Text>
           <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-            {selected.map(tag=><Pressable key={styleTagKey(tag)} testID={`style-selected-${tag.dimension}-${tag.id}`} accessibilityRole="button" accessibilityLabel={`移除${tag.name}`} onPress={()=>setSelected(current=>current.filter(value=>styleTagKey(value)!==styleTagKey(tag)))} style={{...hit,flexDirection:'row',gap:7,paddingHorizontal:13,borderRadius:17,backgroundColor:theme.palette.selected}}><Text style={{color:theme.palette.accent}}>{tag.name}</Text><Ionicons name="close" size={15} color={theme.palette.accent}/></Pressable>)}
+            {selected.map(tag=><Pressable key={styleTagKey(tag)} testID={`style-selected-${tag.dimension}-${tag.id}`} accessibilityRole="button" accessibilityLabel={`移除${tag.name}`} onPress={()=>setSelected(current=>current.filter(value=>styleTagKey(value)!==styleTagKey(tag)))} style={{minHeight:36,justifyContent:'center',alignItems:'center',flexDirection:'row',gap:6,paddingHorizontal:12,borderRadius:18,backgroundColor:s.accentSoft,borderWidth:1,borderColor:s.control}}><Text style={{color:s.control,fontSize:13,fontWeight:'600'}}>{tag.name}</Text><Ionicons name="close" size={14} color={s.control}/></Pressable>)}
           </View>
         </View>:null}
 
@@ -208,26 +211,26 @@ export function StyleRecommendationSheet({
           {button(generating?'正在生成…':'生成推荐',()=>{void generate();},!selected.length||generating,'style-generate-button')}
           {generating?button('取消生成',cancelRecommendations,false,'style-generate-cancel',true):null}
         </View>
-        {!!message?<Text testID="style-recommendation-message" accessibilityLiveRegion="polite" style={{color:failedTags.length?theme.palette.accent:theme.palette.secondary,lineHeight:21}}>{message}</Text>:null}
-        {!!failedTags.length?<Text testID="style-failed-tags" style={{color:theme.palette.secondary}}>未完成：{failedTags.map(tag=>tag.name).join('、')}</Text>:null}
+        {!!message?<Text testID="style-recommendation-message" accessibilityLiveRegion="polite" style={{color:failedTags.length?s.accent:s.muted,fontSize:13,lineHeight:20}}>{message}</Text>:null}
+        {!!failedTags.length?<Text testID="style-failed-tags" style={{color:s.muted,fontSize:12}}>未完成：{failedTags.map(tag=>tag.name).join('、')}</Text>:null}
 
         {!!results.length?<View style={{gap:space.md}}>
-          <View style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between'}}><Text style={{fontSize:21,fontWeight:'800',color:theme.palette.text}}>风格化推荐</Text><Text style={{color:theme.palette.secondary}}>{results.length} 个公开歌单</Text></View>
+          <View style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between'}}><Text style={{fontSize:19,fontWeight:'800',color:s.ink}}>风格化推荐</Text><Text style={{color:s.muted,fontSize:13}}>{results.length} 个公开歌单</Text></View>
           {results.map((item,index)=><Pressable
             key={`${item.platform}:${item.playlist.id}`}
             testID={`style-result-${index}`}
             accessibilityRole="button"
             accessibilityLabel={`打开歌单：${item.playlist.title}；命中${item.matchedTags.map(tag=>tag.name).join('、')}`}
             onPress={()=>onOpenPlaylist(item.playlist)}
-            style={{flexDirection:'row',gap:space.md,padding:space.md,borderRadius:radius.lg,backgroundColor:theme.palette.surface}}
+            style={{flexDirection:'row',alignItems:'center',gap:space.md,padding:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}
           >
-            <Cover services={services} url={item.playlist.artwork} size={82}/>
-            <View style={{flex:1,gap:7}}>
-              <Text numberOfLines={2} style={{fontSize:16,fontWeight:'700',color:theme.palette.text}}>{item.playlist.title}</Text>
-              <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{item.matchedTags.map(tag=><View key={styleTagKey(tag)} style={{paddingHorizontal:8,paddingVertical:4,borderRadius:12,backgroundColor:theme.palette.selected}}><Text style={{color:theme.palette.accent,fontSize:12}}>{tag.name}</Text></View>)}</View>
-              <Text numberOfLines={1} style={{color:theme.palette.secondary,fontSize:12}}>{`命中 ${item.matchedTags.length} 个标签${item.playlist.count!==undefined?` · ${item.playlist.count} 首`:''}`}</Text>
+            <Cover services={services} url={item.playlist.artwork} size={74} radius={12}/>
+            <View style={{flex:1,gap:6}}>
+              <Text numberOfLines={2} style={{fontSize:15,fontWeight:'700',color:s.ink}}>{item.playlist.title}</Text>
+              <View style={{flexDirection:'row',flexWrap:'wrap',gap:5}}>{item.matchedTags.map(tag=><View key={styleTagKey(tag)} style={{paddingHorizontal:8,paddingVertical:3,borderRadius:10,backgroundColor:s.accentSoft}}><Text style={{color:s.control,fontSize:11,fontWeight:'600'}}>{tag.name}</Text></View>)}</View>
+              <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{`命中 ${item.matchedTags.length} 个标签${item.playlist.count!==undefined?` · ${item.playlist.count} 首`:''}`}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.palette.secondary}/>
+            <Ionicons name="chevron-forward" size={17} color={s.subtle}/>
           </Pressable>)}
         </View>:null}
       </ScrollView>
