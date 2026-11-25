@@ -1,3 +1,7 @@
+## 2026-11-25 Sollin 客户端补齐功能与全站 UI 对齐验收
+
+补齐剩余可离线验证的 Sollin 客户端能力（独立「本地」Tab 与显隐开关、三套底栏样式、原生屏幕常亮 `isIdleTimerDisabled`、全屏模式、启动自动播放/打开播放页、原生与其他音频混合播放 `.mixWithOthers`、预加载下一首、原生 CoreFoundation `CFStringTransform` 简繁歌词转换、歌单末尾/开头添加位置及 AM 内联评论面板），并完成全站毛玻璃视觉体系与 8 套播放器皮肤精修。`npm run check` 1163/1163、完整 `npm run test:native` 与多组正式 Release 模拟器 UI 测试通过；`4854` 经典播放页（控件 SSIM 93.09%/ΔE00 0.95）与 `4851` 黑胶播放页（控件 SSIM 91.49%/ΔE00 3.25）正式通过 `visual-lab.mjs` 门禁且 `provenanceReady: true`，`4855`/`4856` 可比区 93.24%/93.41% 零回退，`4861` 未达 90% 的封面取色亮度与底栏差异已如实记录；全站导出 1290×2796 截图逐张亲看。真实平台个人账号、私人服务、实体机签名/后台长测/动效录屏及云端 iOS 27 终态仍保持开放。见[阶段回执](2026-11-25-sollin-ui-alignment-and-features-report.md)。
+
 ## 2026-11-18 音乐库歌单弹层封面
 
 音乐库歌单封面此前已验证列表和详情，但 `track-list-cover` 弹层因目标歌单为空未做实际视觉验收。现以模拟器夹具创建含单曲歌单：歌单封面为可用公开 PNG，首曲 `artwork` 指向不存在的地址；正式 `TrackListModal` 仍调用 `playlistCoverSource`，XCTest 从歌单详情打开“全部歌曲与批量管理”并等待 `track-list-cover-image`，若错误使用首曲封面则图片不会出现。产品逻辑未改；`npm run check`1156/1156、typecheck、完整native、Swift/Node/diff通过；正式Release`1794986935325`为1/0/0、29.309秒、sourceUnchanged，源码digest`8df9aa8f…0085`、安装bundle`3d86f254…9a7d`、resultInfo`b272d53c…f2a6`，1张1290×2796图亲看，索引`47937fc8…eeed`，`verifyCaptureEvidence`为`ready:true`。真实大歌单、真实封面CDN、实体机、VoiceOver/字号/小屏、签名和iOS27仍开放；不增加Sollin页面完成量，J24与完整F11/F23不关闭，整体active。见[回执](2026-11-18-library-track-list-cover-modal-report.md)与[UI规格](ui-spec/library-track-list-cover-modal-2026-11-18.md)。
