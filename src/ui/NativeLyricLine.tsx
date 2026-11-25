@@ -1,6 +1,6 @@
 import {memo} from 'react';
 import {requireNativeView} from 'expo';
-import {StyleSheet,Text,View,useWindowDimensions,type ViewProps} from 'react-native';
+import {StyleSheet,Text,View,useWindowDimensions,type TextStyle,type ViewProps} from 'react-native';
 import type {StageStyle} from '../app/preferences.ts';
 import type {LyricLine} from '../lyrics/parser.ts';
 const NativeLine=requireNativeView<ViewProps&{configuration:string}>('NexusLyrics');
@@ -17,7 +17,17 @@ export const NativeLyricLine=memo(function NativeLyricLine({line,position,playin
   const rubyInset=line.words?.some(word=>word.ruby?.trim())?rubyHeight:0;
   const rubyAfterInset=line.words?.some(word=>word.rubyAfter?.trim())?rubyHeight:0;
   const rubyLineSpacing=fontScale>1.8||line.words?.some(word=>word.rubyAlign==='withBase')?rubyInset+rubyAfterInset:0;
-  return <View pointerEvents="none" style={rubyInset||rubyAfterInset?{...(rubyInset?{paddingTop:rubyInset}:{}),...(rubyAfterInset?{paddingBottom:rubyAfterInset}:{})}:undefined}><Text accessible={false} allowFontScaling={false} numberOfLines={maxLines} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight)+rubyLineSpacing,fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{line.text}</Text>
+  const measured=line.words?.some(word=>word.style);
+  return <View pointerEvents="none" style={rubyInset||rubyAfterInset?{...(rubyInset?{paddingTop:rubyInset}:{}),...(rubyAfterInset?{paddingBottom:rubyAfterInset}:{})}:undefined}><Text accessible={false} allowFontScaling={false} numberOfLines={maxLines} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight)+rubyLineSpacing,fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{measured&&line.words?line.words.map((word,index)=><Text key={index} style={measurementStyle(word.style)}>{word.text}</Text>):line.text}</Text>
     <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden,maxLines,rubyInset,rubyAfterInset,rubyLineSpacing})}/>
   </View>;
 });
+function measurementStyle(style:NonNullable<NonNullable<LyricLine['words']>[number]['style']>|undefined):TextStyle|undefined {
+  if(!style)return;
+  const decoration=(style.textDecoration??[]).map(value=>value==='lineThrough'?'line-through':value);
+  return{
+    ...(style.fontStyle?{fontStyle:style.fontStyle==='oblique'?'italic':style.fontStyle}:{}),
+    ...(style.fontWeight?{fontWeight:style.fontWeight}:{}),
+    ...(style.textDecoration?{textDecorationLine:decoration.length?decoration.join(' ') as TextStyle['textDecorationLine']:'none'}:{}),
+  };
+}

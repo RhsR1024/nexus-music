@@ -1,10 +1,28 @@
 import {createLyricBudget} from './budget.ts';
 import type {LyricDocument,LyricLine,LyricWord,RubyAlign} from './parser.ts';
+import {applyStyle,documentedStyle,emptyStyle,parseColor,parseFontStyle,parseFontWeight,parseTextDecoration,type LyricStyleSpec,type LyricStyleState} from './style.ts';
 // Original bounded TTML lyric subset. No DOM, entity expansion, DTD or networking.
 import {parseBoundedXML,type XMLElement as Element} from '../formats/xml.ts';
 const local=(name:string)=>name.split(':').at(-1)!;
 const maxTime=86400000;
 function attr(node:Element,name:string):string|undefined {return Object.entries(node.attrs).find(([key])=>local(key)===name)?.[1];}
+function directStyle(node:Element):LyricStyleSpec {
+  const fontStyle=attr(node,'fontStyle'),fontWeight=attr(node,'fontWeight'),textDecoration=attr(node,'textDecoration'),color=attr(node,'color'),backgroundColor=attr(node,'backgroundColor');
+  return{
+    ...(fontStyle!==undefined?{fontStyle:parseFontStyle(fontStyle)}:{}),
+    ...(fontWeight!==undefined?{fontWeight:parseFontWeight(fontWeight)}:{}),
+    ...(textDecoration!==undefined?{textDecoration:parseTextDecoration(textDecoration)}:{}),
+    ...(color!==undefined?{color:parseColor(color)}:{}),
+    ...(backgroundColor!==undefined?{backgroundColor:parseColor(backgroundColor)}:{}),
+  };
+}
+function mergeStyle(target:LyricStyleSpec,source:LyricStyleSpec):LyricStyleSpec {
+  return{
+    ...target,...source,
+    ...(source.textDecoration?{textDecoration:{...target.textDecoration,...source.textDecoration}}:{}),
+  };
+}
+const inlineStyleNode=(node:Element)=>['span','ruby','rbc','rtc','rb','rt'].includes(local(node.name));
 function plainText(node:Element):string {
   return node.children.map(child=>typeof child==='string'?child:local(child.name)==='br'?'\n':plainText(child)).join('');
 }
@@ -30,6 +48,34 @@ function rubyAlign(node:Element):RubyAlign {
 }
 export function parseTTML(input:string):LyricDocument {
   const root=parseBoundedXML(input);if(local(root.name)!=='tt')throw new Error('TTML 根节点无效');
+  const styleElements=new Map<string,Element>();
+  const findStyles=(node:Element)=>{
+    if(local(node.name)==='styling'){
+      for(const child of node.children){
+        if(typeof child==='string'){if(child.trim())throw new Error('TTML 样式容器包含游离文字');continue;}
+        if(local(child.name)!=='style')continue;
+        const id=attr(child,'id');if(!id||styleElements.has(id))throw new Error('TTML 样式标识无效');
+        styleElements.set(id,child);
+      }
+      return;
+    }
+    for(const child of node.children)if(typeof child!=='string')findStyles(child);
+  };
+  for(const child of root.children)if(typeof child!=='string'&&local(child.name)==='head')findStyles(child);
+  const resolvedStyles=new Map<string,LyricStyleSpec>();
+  const styleElement=(id:string,stack:string[]):LyricStyleSpec=>{
+    const cached=resolvedStyles.get(id);if(cached)return cached;
+    if(stack.includes(id))throw new Error('TTML 样式引用循环');
+    const node=styleElements.get(id);if(!node)throw new Error('TTML 样式引用无效');
+    let result:LyricStyleSpec={};
+    for(const reference of (attr(node,'style')??'').trim().split(/\s+/).filter(Boolean))result=mergeStyle(result,styleElement(reference,[...stack,id]));
+    result=mergeStyle(result,directStyle(node));resolvedStyles.set(id,result);return result;
+  };
+  const styleFor=(node:Element):LyricStyleSpec=>{
+    let result:LyricStyleSpec={};
+    for(const reference of (attr(node,'style')??'').trim().split(/\s+/).filter(Boolean))result=mergeStyle(result,styleElement(reference,[]));
+    return mergeStyle(result,directStyle(node));
+  };
   // AMLL's explicitly namespaced lyric profile uses media-absolute timestamps,
   // including shortened clocks. Standard TTML keeps its relative time model.
   const amll=Object.entries(root.attrs).some(([name,value])=>name.startsWith('xmlns:')&&value==='http://www.example.com/ns/amll');
@@ -49,7 +95,7 @@ export function parseTTML(input:string):LyricDocument {
   };
   if((attr(root,'timeBase')??'media')!=='media'||(attr(root,'subFrameRate')??'1')!=='1')throw new Error('TTML 时间基准暂不支持');
   const lines:LyricLine[]=[],charge=createLyricBudget();
-  interface Timing {start:number;end:number;agent?:string;preserve:boolean}
+  interface Timing {start:number;end:number;agent?:string;preserve:boolean;style:LyricStyleState}
   type Container='par'|'seq';
   const container=(node:Element):Container=>{
     const value=attr(node,'timeContainer');if(value===undefined||value==='par')return'par';if(value==='seq'&&!amll)return'seq';throw new Error('TTML 时间容器不支持');
@@ -77,7 +123,7 @@ export function parseTTML(input:string):LyricDocument {
     const start=begin?(amll?0:syncBase)+time(begin):syncBase;
     const knownEnd=Math.min(parent.end,endValue?(amll?0:syncBase)+time(endValue):maxTime,duration?start+time(duration):maxTime);
     if(start>knownEnd||start>maxTime||amll&&start<parent.start)throw new Error('TTML 时间范围无效');
-    const provisional:Timing={start,end:knownEnd,agent:attr(node,'agent')??parent.agent,preserve:attr(node,'space')?attr(node,'space')==='preserve':parent.preserve};
+    const provisional:Timing={start,end:knownEnd,agent:attr(node,'agent')??parent.agent,preserve:attr(node,'space')?attr(node,'space')==='preserve':parent.preserve,style:applyStyle(parent.style,styleFor(node),inlineStyleNode(node))};
     const end=endValue||duration?knownEnd:implicitEnd(node,provisional,parentContainer);
     if(start>end)throw new Error('TTML 时间范围无效');return{...provisional,end};
   }
@@ -85,11 +131,12 @@ export function parseTTML(input:string):LyricDocument {
     const context=timing(node,parent,syncBase,parentContainer);
     if(local(node.name)==='p'){
       const main:LyricWord[]=[],bg:LyricWord[]=[],translation:string[]=[],romanization:string[]=[],bgTranslation:string[]=[],bgRomanization:string[]=[];
-      const addText=(child:string,leaf:Timing,role:string,background:boolean,ruby?:string,rubyAfter?:string,alignment:RubyAlign='center')=>{
+      const addText=(child:string,leaf:Timing,role:string,background:boolean,ruby?:string,rubyAfter?:string,alignment:RubyAlign='center',textStyle:LyricStyleState=leaf.style)=>{
         const text=leaf.preserve?child:child.replace(/\s+/g,' ');if(!text)return;
         if(!leaf.preserve&&!text.trim()&&role!=='x-translation'&&role!=='x-roman'){const words=background?bg:main;if(words.length&&!words.at(-1)!.text.endsWith(' '))words[words.length-1]={...words.at(-1)!,text:words.at(-1)!.text+' '};return;}
         if(role==='x-translation'){(background?bgTranslation:translation).push(text);return;}if(role==='x-roman'){(background?bgRomanization:romanization).push(text);return;}
-        (background?bg:main).push({text,startMs:leaf.start,endMs:leaf.end,...(ruby?{ruby}:{}),...(rubyAfter?{rubyAfter}:{}),...((ruby||rubyAfter)?{rubyAlign:alignment}:{})});
+        const style=documentedStyle(textStyle);
+        (background?bg:main).push({text,startMs:leaf.start,endMs:leaf.end,...(ruby?{ruby}:{}),...(rubyAfter?{rubyAfter}:{}),...((ruby||rubyAfter)?{rubyAlign:alignment}:{}),...(style?{style}:{})});
       };
       const collect=(containerNode:Element,context:Timing,role:string,background:boolean,containerKind:Container)=>{
         // AMLL encodes ruby with tts:ruby roles on spans. The annotation is
@@ -124,7 +171,7 @@ export function parseTTML(input:string):LyricDocument {
           const ordered=[...records].sort((a,b)=>Number(a.position==='after')-Number(b.position==='after'));
           const leaf=hasTiming(baseNode)?baseTiming:ordered.find(record=>record.nodeTimed)?.annotationTiming??ordered.find(record=>record.containerTimed)?.annotationTiming??ordered[0]!.annotationTiming;
           const before=ordered.find(record=>record.position==='before'),after=ordered.find(record=>record.position==='after');
-          addText(base,leaf,role,background,before?.ruby,after?.ruby,alignment);return;
+          addText(base,leaf,role,background,before?.ruby,after?.ruby,alignment,baseTiming.style);return;
         }
         if(local(containerNode.name)==='ruby'){
           // Standard TTML ruby: ruby contains base text/rb plus one or more rt
@@ -174,19 +221,19 @@ export function parseTTML(input:string):LyricDocument {
               const leaf=hasTiming(baseNode)?timing(baseNode,baseContext,baseContext.start,'par'):
                 ordered.find(track=>track.nodeTimed[index])?.timings[index]??ordered.find(track=>track.containerTimed)?.timings[index]??ordered[0]!.timings[index]!;
               const base=plainText(baseNode);if(!base.trim())throw new Error('TTML 注音缺少基础文字');
-              addText(base,leaf,role,background,before?.rubies[index]!,after?.rubies[index]!,alignment);
+              addText(base,leaf,role,background,before?.rubies[index]!,after?.rubies[index]!,alignment,leaf.style);
             });
             return;
           }
-          let pending='';let count=0,baseElements=0,baseText=false,sawRtc=false;
+          let pending='',pendingStyle=context.style,pendingTiming:Timing|undefined;let count=0,baseElements=0,baseText=false,sawRtc=false;
           const alignment=rubyAlign(containerNode);
           const addRuby=(annotationNode:Element)=>{
-            const base=pending;pending='';if(!base.trim())throw new Error('TTML 注音缺少基础文字');
-            const leaf=timing(annotationNode,context,context.start,'par');
+            const base=pending,baseTiming=pendingTiming;pending='';pendingTiming=undefined;if(!base.trim())throw new Error('TTML 注音缺少基础文字');
+            const annotationTiming=timing(annotationNode,context,context.start,'par'),leaf=baseTiming??annotationTiming;
             const inheritedPosition=rubyPosition(containerNode),declaredPosition=rubyPosition(annotationNode);
             if(inheritedPosition&&declaredPosition&&resolveRubyPosition(inheritedPosition)!==resolveRubyPosition(declaredPosition))throw new Error('TTML 注音位置冲突');
             const position=declaredPosition??inheritedPosition??'before',resolved=resolveRubyPosition(position),ruby=rubyValue(plainText(annotationNode),leaf.preserve);
-            addText(base,leaf,role,background,resolved==='before'?ruby:undefined,resolved==='after'?ruby:undefined,alignment);count++;
+            addText(base,leaf,role,background,resolved==='before'?ruby:undefined,resolved==='after'?ruby:undefined,alignment,pendingStyle);pendingStyle=context.style;count++;
           };
           for(const child of containerNode.children){
             if(typeof child==='string'){
@@ -196,24 +243,24 @@ export function parseTTML(input:string):LyricDocument {
             const kind=local(child.name);
             if(kind==='rt'){if(sawRtc)throw new Error('TTML 注音分组混用');addRuby(child);}
             else if(kind==='rp')continue;
-            else if(kind==='rb'){if(sawRtc)throw new Error('TTML 注音分组混用');baseElements++;pending+=plainText(child);}
+            else if(kind==='rb'){if(sawRtc)throw new Error('TTML 注音分组混用');baseElements++;pending+=plainText(child);pendingStyle=applyStyle(context.style,styleFor(child),true);pendingTiming=hasTiming(child)?timing(child,context,context.start,'par'):undefined;}
             else if(kind==='rtc'){
               if(sawRtc||count||baseElements>1||baseElements&&baseText)throw new Error('TTML 注音分组结构不支持');
-              const base=pending;pending='';if(!base.trim())throw new Error('TTML 注音缺少基础文字');
+              const base=pending,baseTiming=pendingTiming;pending='';pendingTiming=undefined;if(!base.trim())throw new Error('TTML 注音缺少基础文字');
               const rtcContext=hasTiming(child)?timing(child,context,context.start,'par'):context;
               const children=child.children.filter((item):item is Element=>typeof item!=='string');
               if(child.children.some(item=>typeof item==='string'&&!!item.trim()))throw new Error('TTML 注音分组包含游离文字');
               const annotations=children.filter(item=>local(item.name)==='rt');
               if(children.some(item=>local(item.name)!=='rt'&&local(item.name)!=='rp')||annotations.length!==1)throw new Error('TTML 注音分组结构不支持');
-              const annotationNode=annotations[0]!,leaf=hasTiming(annotationNode)?timing(annotationNode,rtcContext,rtcContext.start,'par'):rtcContext;
+              const annotationNode=annotations[0]!,annotationTiming=hasTiming(annotationNode)?timing(annotationNode,rtcContext,rtcContext.start,'par'):rtcContext,leaf=baseTiming??annotationTiming;
               const inheritedPosition=rubyPosition(containerNode),containerPosition=rubyPosition(child),leafPosition=rubyPosition(annotationNode);
               if(new Set([inheritedPosition,containerPosition,leafPosition].filter((value):value is RubyPosition=>value!==undefined).map(resolveRubyPosition)).size>1)throw new Error('TTML 注音位置冲突');
               const position=leafPosition??containerPosition??inheritedPosition??'before',resolved=resolveRubyPosition(position),ruby=rubyValue(plainText(annotationNode),leaf.preserve);
-              addText(base,leaf,role,background,resolved==='before'?ruby:undefined,resolved==='after'?ruby:undefined,alignment);count++;sawRtc=true;
+              addText(base,leaf,role,background,resolved==='before'?ruby:undefined,resolved==='after'?ruby:undefined,alignment,pendingStyle);pendingStyle=context.style;count++;sawRtc=true;
             }
             else {
               if(sawRtc)throw new Error('TTML 注音分组混用');
-              baseElements++;pending+=plainText(child);
+              baseElements++;pending+=plainText(child);pendingStyle=applyStyle(context.style,styleFor(child),true);pendingTiming=hasTiming(child)?timing(child,context,context.start,'par'):undefined;
             }
           }
           if(pending.trim())throw new Error('TTML 注音缺少注解文字');
@@ -259,7 +306,7 @@ export function parseTTML(input:string):LyricDocument {
     }
     return context;
   };
-  visit(root,{start:0,end:maxTime,preserve:false},0,'par');
+  visit(root,{start:0,end:maxTime,preserve:false,style:emptyStyle()},0,'par');
   lines.sort((a,b)=>a.startMs-b.startMs||Number(!!a.background)-Number(!!b.background));
   return{lines,plain:[],synced:lines.length>0};
 }

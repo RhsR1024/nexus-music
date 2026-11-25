@@ -832,7 +832,6 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons["Synthetic rich lyric"].firstMatch.waitForExistence(timeout:10))
     let fullLyrics=app.buttons["全部歌词 · 双击行定位，长按打开设置"]
     let seekProgress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
-    let beforeFullSeek=sequentialTTML ? (seekProgress.value as? String):nil
     reach(fullLyrics,up:false,viewportID:"classic-player-scroll",fullyVisible:true);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10))
     if absoluteTTML {
       let lyricList=app.descendants(matching:.any).matching(identifier:"full-lyrics-list").firstMatch
@@ -902,13 +901,23 @@ final class SourceSettingsTests: XCTestCase {
         XCTAssertTrue(revealFullyInLyricList(wrappedRow),"The complete wrapped with-base ruby row must enter the reader viewport")
       }
       let wrappedImage=XCTAttachment(screenshot:app.screenshot());wrappedImage.name=largeText ? "Wrapped with-base ruby at accessibility XXXL":"Wrapped with-base ruby across multiple base lines";wrappedImage.lifetime = .keepAlways;add(wrappedImage)
+      let styledRow=lyricList.buttons.matching(NSPredicate(format:"label CONTAINS %@","粗体 斜体 下划 底色")).firstMatch
+      reach(styledRow,viewportID:"full-lyrics-list")
+      XCTAssertTrue(waitForHittable(styledRow,timeout:10),"Inline and referenced TTML styles must remain reachable")
+      XCTAssertTrue(revealFullyInLyricList(styledRow),"The complete styled lyric row must enter the reader viewport")
       let rubyImage=XCTAttachment(screenshot:app.screenshot());rubyImage.name=largeText ? "AMLL, double-sided and aligned ruby at accessibility XXXL":"AMLL, rtc, rbc, double-sided and aligned annotations rendered around base text";rubyImage.lifetime = .keepAlways;add(rubyImage)
+      styledRow.doubleTap()
+      expectation(for:NSPredicate(format:"value == %@","1:20 / 2:00"),evaluatedWith:seekProgress);waitForExpectations(timeout:10)
+      XCTAssertTrue(app.buttons["播放"].firstMatch.exists,"Seeking to the styled row must preserve paused intent")
+      let styledImage=XCTAttachment(screenshot:app.screenshot());styledImage.name=largeText ? "Active TTML inherited inline style at accessibility XXXL":"Active TTML bold, italic, color, decoration and inline background";styledImage.lifetime = .keepAlways;add(styledImage)
       if largeText {return}
     }
     if sequentialTTML {
       let second=app.buttons["定位歌词：Second rich line"].firstMatch
-      XCTAssertTrue(second.waitForExistence(timeout:10));reach(second);second.tap()
-      app.buttons["收起全部歌词"].tap();XCTAssertEqual(seekProgress.value as? String,beforeFullSeek,"One expanded-lyric tap must not seek")
+      XCTAssertTrue(second.waitForExistence(timeout:10));reach(second)
+      let beforeSecondTap=seekProgress.value as? String
+      second.tap()
+      app.buttons["收起全部歌词"].tap();XCTAssertEqual(seekProgress.value as? String,beforeSecondTap,"One expanded-lyric tap must not seek")
       reach(fullLyrics,up:false);fullLyrics.tap();XCTAssertTrue(app.buttons["收起全部歌词"].waitForExistence(timeout:10))
       reach(second);second.doubleTap()
       XCTAssertFalse(app.buttons["定位歌词：Sequential TTML fallback must not be selected"].exists,"Valid sequential TTML must win over the readable LRC fallback")

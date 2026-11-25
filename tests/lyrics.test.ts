@@ -251,3 +251,50 @@ test('TTML rubyAlign preserves all six TTML2 values and safely falls back to cen
     ['東','とう',undefined,'end'],
   ]);
 });
+test('TTML inline styles inherit independently and support explicit resets',()=>{
+  const parsed=parseTTML('<tt xmlns:tts="http://www.w3.org/ns/ttml#styling"><body tts:color="red" tts:fontStyle="italic" tts:fontWeight="bold" tts:textDecoration="underline"><div><p begin="1s" end="3s"><span begin="0s" end="1s" tts:textDecoration="noUnderline lineThrough">A</span><span begin="1s" end="2s" tts:fontStyle="normal" tts:fontWeight="normal">B</span></p></div></body></tt>');
+  assert.equal(parsed.lines[0]!.text,'AB');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>word.style),[
+    {fontStyle:'italic',fontWeight:'bold',textDecoration:['lineThrough'],color:'#ff0000ff'},
+    {fontStyle:'normal',fontWeight:'normal',textDecoration:['underline'],color:'#ff0000ff'},
+  ]);
+});
+test('TTML referenced and chained styles merge in order with inline priority',()=>{
+  const parsed=parseTTML('<tt xmlns:tts="http://www.w3.org/ns/ttml#styling"><head><styling><style xml:id="base" tts:color="yellow" tts:fontWeight="bold"/><style xml:id="specific" style="base" tts:color="#123456" tts:textDecoration="underline"/></styling></head><body><p begin="1s" end="3s" style="specific" tts:color="lime"><span begin="0s" end="1s">A</span><span begin="1s" end="2s" style="base" tts:fontWeight="normal" tts:backgroundColor="#11223344">B</span><ruby><rb begin="2s" end="3s" tts:color="aqua">漢</rb><rtc><rt>kan</rt></rtc></ruby></p></body></tt>');
+  assert.equal(parsed.lines[0]!.text,'AB漢');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>word.style),[
+    {fontWeight:'bold',textDecoration:['underline'],color:'#00ff00ff'},
+    {fontWeight:'normal',textDecoration:['underline'],color:'#ffff00ff',backgroundColor:'#11223344'},
+    {fontWeight:'bold',textDecoration:['underline'],color:'#00ffffff'},
+  ]);
+  assert.equal(parsed.lines[0]!.words?.[2]!.ruby,'kan');
+});
+test('TTML color syntaxes and decoration tuples stay bounded',()=>{
+  const parsed=parseTTML('<tt xmlns:tts="http://www.w3.org/ns/ttml#styling"><body><p begin="1s" end="4s"><span begin="0s" end="1s" tts:color="rgb(1, 2, 3)" tts:textDecoration="none">A</span><span begin="1s" end="2s" tts:color="rgba(4,5,6,128)" tts:textDecoration="noLineThrough overline">B</span><span begin="2s" end="3s" tts:fontStyle="oblique" tts:fontWeight="unsupported">C</span></p></body></tt>');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>word.style),[
+    {textDecoration:[],color:'#010203ff'},
+    {textDecoration:['overline'],color:'#04050680'},
+    {fontStyle:'oblique',fontWeight:'normal'},
+  ]);
+  for(const input of [
+    '<tt xmlns:tts="urn:test"><body><p tts:color="#fff">bad</p></body></tt>',
+    '<tt xmlns:tts="urn:test"><body><p tts:textDecoration="underline noUnderline">bad</p></body></tt>',
+    '<tt xmlns:tts="urn:test"><body><p style="missing">bad</p></body></tt>',
+    '<tt><head><styling><style xml:id="s1" style="s2"/><style xml:id="s2" style="s1"/></styling></head><body><p style="s1">bad</p></body></tt>',
+    '<tt><head><styling><style xml:id="same"/><style xml:id="same"/></styling></head><body><p>bad</p></body></tt>',
+  ])assert.throws(()=>parseTTML(input),/样式|颜色|装饰/);
+});
+test('TTML background paints only inline spans and does not become inherited block state',()=>{
+  const parsed=parseTTML('<tt xmlns:tts="http://www.w3.org/ns/ttml#styling"><body><p begin="1s" end="6s" tts:backgroundColor="blue"><span begin="0s" end="1s" tts:backgroundColor="#11223344"><span begin="0s" end="1s">A</span></span><span begin="1s" end="2s">B</span><span begin="2s" end="3s" tts:backgroundColor="#44556677"><span begin="0s" end="1s" tts:backgroundColor="transparent" tts:color="yellow">C</span></span></p></body></tt>');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>word.style),[
+    {backgroundColor:'#11223344'},
+    undefined,
+    {color:'#ffff00ff'},
+  ]);
+});
+test('TTML direct ruby uses an explicitly timed rb as the base interval',()=>{
+  const parsed=parseTTML('<tt><body><p begin="1s" end="4s"><ruby begin="1s" end="3s"><rb begin="0.5s" end="1s">漢</rb><rtc><rt>kan</rt></rtc></ruby></p></body></tt>');
+  assert.deepEqual(parsed.lines[0]!.words?.map(word=>[word.text,word.startMs,word.endMs,word.ruby]),[
+    ['漢',2500,3000,'kan'],
+  ]);
+});

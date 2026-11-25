@@ -26,6 +26,7 @@ final class NexusLyricLineView: ExpoView {
   private var clock: CADisplayLink?
   private var words: [(range: NSRange, start: Double, end: Double)] = []
   private var rubyAnnotations: [(range: NSRange, text: String, position: RubyPosition, alignment: LyricRubyAlignment)] = []
+  private var styledRanges: [(range: NSRange, style: LyricInlineStyle)] = []
   private var untimedRanges: [NSRange] = []
   private var sparseCues: [LyricCueRange]?
   private var position = 0.0, anchor = 0.0, playing = false
@@ -39,6 +40,7 @@ final class NexusLyricLineView: ExpoView {
   private var rubyAfterInset = CGFloat.zero
   private var rubyLineSpacing = CGFloat.zero
   private var textFont = UIFont.systemFont(ofSize: 24, weight: .semibold)
+  private var usesCustomFont = false
   private static let imageContext = CIContext(options: [.cacheIntermediates: false])
   private static func color(_ raw: String) -> UIColor {
     let text = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -124,16 +126,18 @@ final class NexusLyricLineView: ExpoView {
       container.lineBreakMode = maxLines > 0 ? .byTruncatingTail : .byWordWrapping
       color = Self.color(hex)
       var font = UIFont.systemFont(ofSize: size, weight: weight == "900" ? .black : weight == "800" ? .heavy : weight == "700" ? .bold : weight == "600" ? .semibold : .medium)
+      usesCustomFont = false
       if let url = URL(string: fontURI), url.isFileURL,
          url.standardizedFileURL.path.hasPrefix(NSHomeDirectory() + "/Documents/lyric-fonts/"),
          let provider = CGDataProvider(url: url as CFURL), let cgFont = CGFont(provider), let name = cgFont.postScriptName,
-         let custom = UIFont(name: name as String, size: size) { font = custom }
+         let custom = UIFont(name: name as String, size: size) { font = custom; usesCustomFont = true }
       textFont = font
       let paragraph = NSMutableParagraphStyle(); paragraph.alignment = center ? .center : .left
       paragraph.minimumLineHeight = ceil(size * height); paragraph.maximumLineHeight = ceil(size * height)
       paragraph.lineSpacing = rubyLineSpacing
       var nextWords: [(range: NSRange, start: Double, end: Double)] = []
       var nextRuby: [(range: NSRange, text: String, position: RubyPosition, alignment: LyricRubyAlignment)] = []
+      var nextStyles: [(range: NSRange, style: LyricInlineStyle)] = []
       var nextSparseCues: [LyricCueRange]?
       var wordsValid = rawWords.count <= 2000
       var offset = 0
@@ -149,6 +153,7 @@ final class NexusLyricLineView: ExpoView {
           let alignment = LyricRubyAlignment(raw: word["rubyAlign"] as? String)
           if let ruby = Self.validRuby(word["ruby"]) { nextRuby.append((range, ruby, .before, alignment)) }
           if let ruby = Self.validRuby(word["rubyAfter"]) { nextRuby.append((range, ruby, .after, alignment)) }
+          if let style = LyricInlineStyle.decode(word["style"]) { nextStyles.append((range, style)) }
           offset += part.utf16.count
         }
       }
@@ -158,6 +163,7 @@ final class NexusLyricLineView: ExpoView {
       if !wordsValid {
         nextWords.removeAll()
         nextRuby.removeAll()
+        nextStyles.removeAll()
       }
       if nextWords.isEmpty {
         nextSparseCues = LyricCueRanges.decode(text: text, cues: rawCues)
@@ -188,6 +194,16 @@ final class NexusLyricLineView: ExpoView {
           if value != LyricRubyLayout.wordJoiner { index += 1 }
         }
       }
+      let mappedStyles = nextStyles.compactMap { item in
+        protected.range(item.range).map { (range: $0, style: item.style) }
+      }
+      styledRanges = mappedStyles.count == nextStyles.count ? mappedStyles : []
+      for item in styledRanges {
+        var attributes: [NSAttributedString.Key: Any] = [:]
+        if let font = styledFont(item.style) { attributes[.font] = font }
+        if let value = item.style.color { attributes[.foregroundColor] = Self.color(value) }
+        if !attributes.isEmpty { storage.addAttributes(attributes, range: item.range) }
+      }
       words = nextWords.compactMap { item in
         protected.range(item.range).map {
           (range: $0, start: item.start, end: item.end)
@@ -196,6 +212,7 @@ final class NexusLyricLineView: ExpoView {
       if words.count != nextWords.count {
         words.removeAll()
         rubyAnnotations.removeAll()
+        styledRanges.removeAll()
       } else {
         rubyAnnotations = nextRuby.compactMap { item in
           protected.range(item.range).map {
@@ -205,6 +222,7 @@ final class NexusLyricLineView: ExpoView {
         if rubyAnnotations.count != nextRuby.count {
           words.removeAll()
           rubyAnnotations.removeAll()
+          styledRanges.removeAll()
         }
       }
       untimedRanges.removeAll(keepingCapacity: true)
@@ -212,6 +230,38 @@ final class NexusLyricLineView: ExpoView {
       if sparseCues != nil { updateSparseRanges() }
     }
     updateClock(); setNeedsDisplay()
+  }
+  private func styledFont(_ style: LyricInlineStyle) -> UIFont? {
+    guard style.fontStyle != nil || style.fontWeight != nil else { return nil }
+    let base: UIFont
+    if !usesCustomFont, let weight = style.fontWeight {
+      base = UIFont.systemFont(ofSize: textFont.pointSize, weight: weight == .bold ? .bold : .regular)
+    } else {
+      base = textFont
+    }
+    var traits = base.fontDescriptor.symbolicTraits
+    if style.fontWeight != nil {
+      if style.fontWeight == .bold { traits.insert(.traitBold) } else { traits.remove(.traitBold) }
+    }
+    var descriptor = base.fontDescriptor.withSymbolicTraits(traits) ?? base.fontDescriptor
+    // CJK and uploaded lyric fonts commonly ship no italic face. A descriptor
+    // matrix gives a deterministic oblique while the reported glyph advance
+    // stays close to the selected family.
+    if style.fontStyle == .italic || style.fontStyle == .oblique {
+      let slant: CGFloat = style.fontStyle == .oblique ? 0.2 : 0.24
+      descriptor = descriptor.addingAttributes([
+        .matrix: NSValue(cgAffineTransform: CGAffineTransform(a: 1, b: 0, c: slant, d: 1, tx: 0, ty: 0)),
+      ])
+    }
+    return UIFont(descriptor: descriptor, size: base.pointSize)
+  }
+  private static func color(_ value: LyricInlineStyle.Color) -> UIColor {
+    UIColor(
+      red: CGFloat(value.red),
+      green: CGFloat(value.green),
+      blue: CGFloat(value.blue),
+      alpha: CGFloat(value.alpha)
+    )
   }
   fileprivate func tick() {
     if position + (CACurrentMediaTime() - anchor) * 1000 >= (words.map { $0.end }.max() ?? 0) { position = words.map { $0.end }.max() ?? position; anchor = CACurrentMediaTime(); clock?.invalidate(); clock = nil }
@@ -247,7 +297,67 @@ final class NexusLyricLineView: ExpoView {
     } else {
       manager.drawGlyphs(forGlyphRange: glyphs, at: .zero)
     }
+    drawSyntheticBold(for: glyphs, in: context)
+    drawDecorations(for: glyphs, in: context)
     context.restoreGState()
+  }
+  private func drawSyntheticBold(for glyphs: NSRange, in context: CGContext) {
+    for item in styledRanges where item.style.fontWeight == .bold {
+      let styledGlyphs = manager.glyphRange(forCharacterRange: item.range, actualCharacterRange: nil)
+      let intersection = NSIntersectionRange(glyphs, styledGlyphs)
+      guard intersection.length > 0 else { continue }
+      for offset in [-0.45, 0.45] as [CGFloat] {
+        context.saveGState()
+        context.translateBy(x: offset, y: 0)
+        manager.drawGlyphs(forGlyphRange: intersection, at: .zero)
+        context.restoreGState()
+      }
+    }
+  }
+  private func drawBackgrounds(in context: CGContext) {
+    for item in styledRanges {
+      guard let background = item.style.backgroundColor, background.alpha > 0 else { continue }
+      let glyphs = manager.glyphRange(forCharacterRange: item.range, actualCharacterRange: nil)
+      guard glyphs.length > 0 else { continue }
+      context.setFillColor(Self.color(background).cgColor)
+      manager.enumerateEnclosingRects(
+        forGlyphRange: glyphs,
+        withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0),
+        in: container
+      ) { region, _ in
+        context.fill(region)
+      }
+    }
+  }
+  private func drawDecorations(for glyphs: NSRange, in context: CGContext) {
+    for item in styledRanges {
+      guard let decorations = item.style.decorations, !decorations.isEmpty else { continue }
+      let styledGlyphs = manager.glyphRange(forCharacterRange: item.range, actualCharacterRange: nil)
+      let intersection = NSIntersectionRange(glyphs, styledGlyphs)
+      guard intersection.length > 0 else { continue }
+      let ink = item.style.color.map(Self.color) ?? color
+      let width = max(1, ceil(textFont.pointSize / 16))
+      context.saveGState()
+      context.setStrokeColor(ink.cgColor)
+      context.setLineWidth(width)
+      let path = CGMutablePath()
+      manager.enumerateEnclosingRects(
+        forGlyphRange: intersection,
+        withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0),
+        in: container
+      ) { region, _ in
+        func line(_ y: CGFloat) {
+          path.move(to: CGPoint(x: region.minX, y: y))
+          path.addLine(to: CGPoint(x: region.maxX, y: y))
+        }
+        if decorations.contains(.overline) { line(region.minY + width) }
+        if decorations.contains(.lineThrough) { line(region.midY) }
+        if decorations.contains(.underline) { line(region.maxY - width) }
+      }
+      context.addPath(path)
+      context.strokePath()
+      context.restoreGState()
+    }
   }
   private static func validRuby(_ value: Any?) -> String? {
     guard let text = value as? String, !text.isEmpty, text.utf16.count <= 512,
@@ -376,6 +486,7 @@ final class NexusLyricLineView: ExpoView {
     guard let context = UIGraphicsGetCurrentContext() else { return }
     context.saveGState()
     context.translateBy(x: 0, y: rubyInset)
+    drawBackgrounds(in: context)
     let all = manager.glyphRange(for: container)
     if blur > 0 && words.isEmpty && !UIAccessibility.isReduceTransparencyEnabled && bounds.width > 0 && bounds.height > 0 && bounds.width * bounds.height <= 500000 {
       if blurred == nil || blurredSize != bounds.size {

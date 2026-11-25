@@ -11,6 +11,8 @@ xcrun swiftc -swift-version 5 modules/nexus-native/ios/LyricCueRanges.swift test
 build/tests/native-lyric-cues
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/LyricRubyLayout.swift tests/native/LyricRubyLayoutTests.swift -framework AppKit -framework CoreGraphics -o build/tests/native-ruby-layout
 build/tests/native-ruby-layout
+xcrun swiftc -swift-version 5 modules/nexus-native/ios/LyricInlineStyle.swift tests/native/LyricInlineStyleTests.swift -o build/tests/native-inline-style
+build/tests/native-inline-style
 xcrun swiftc -O -swift-version 5 modules/nexus-native/ios/ScriptUtilities.swift tests/native/UtilitiesCLI.swift -lz -o build/tests/native-utilities
 node scripts/test-native-utilities.mjs
 xcrun swiftc -swift-version 5 modules/nexus-native/ios/ScriptUtilities.swift modules/nexus-native/ios/ScriptHTTP.swift modules/nexus-native/ios/ScriptRuntime.swift tests/native/RuntimeCLI.swift -framework JavaScriptCore -lz -o build/tests/native-runtime
