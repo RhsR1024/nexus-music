@@ -140,7 +140,7 @@ export function Player({ services, fused=false, barVariant='liquid' }: { service
         ['stage','歌词舞台','全屏逐字大字舞台，支持经典/霓虹/赛博/炫彩','text-outline'],
       ] as const).map(([id,title,desc,icon],idx)=>{
         const active=preferences.playerLayout===id;
-        return <Pressable key={id} testID={`play-skin-${id}`} accessibilityRole="radio" accessibilityState={{selected:active}} onPress={()=>selectSkin(id)} style={{minHeight:68,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:14,borderBottomWidth:idx===7?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,backgroundColor:active?s.accentSoft:'transparent'}}>
+        return <Pressable key={id} testID={`play-skin-${id}`} accessibilityRole="radio" accessibilityLabel={title} accessibilityState={{selected:active}} onPress={()=>selectSkin(id)} style={{minHeight:68,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:14,borderBottomWidth:idx===7?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,backgroundColor:active?s.accentSoft:'transparent'}}>
           <View style={{width:34,height:34,borderRadius:10,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={22} color={active?s.accent:s.ink}/></View>
           <View style={{flex:1,minWidth:0,gap:3}}><Text style={{color:active?s.accent:s.ink,fontWeight:active?'700':'600',fontSize:16}}>{title}</Text><Text numberOfLines={2} style={{color:s.muted,fontSize:12.5,lineHeight:17}}>{desc}</Text></View>
           {active&&<Ionicons name="checkmark" size={20} color={s.accent}/>}

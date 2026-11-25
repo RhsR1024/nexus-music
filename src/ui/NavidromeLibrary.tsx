@@ -2,6 +2,7 @@ import {Text,TextInput} from './Typography.tsx';
 import {Cover} from './Cover.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {useThemedStyles,type Theme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {NavidromeBrowser} from '../app/navidromeBrowser.ts';
 import {Alert, Pressable, StyleSheet, View} from 'react-native';
@@ -85,4 +86,4 @@ export function NavidromeLibrary({services,openSettings}:{services:Services;open
     <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
   </View>;
 }
-const makeStyles=(theme:Theme)=>StyleSheet.create({title:{color:theme.color('#F1EDE7'),fontSize:27,fontWeight:'600'},heading:{color:theme.color('#D5DCE7'),fontSize:19,marginVertical:16},caption:{color:theme.color('#929CAB'),fontSize:11,lineHeight:20,marginTop:5},track:{color:theme.color('#DFE4EE'),fontSize:15,lineHeight:23},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{backgroundColor:theme.color('#303A32'),borderRadius:10,padding:12,marginVertical:5},buttonText:{color:theme.color('#D9F49B'),fontSize:12},input:{color:theme.color('#EEECE7'),borderColor:theme.color('#414754'),borderWidth:1,borderRadius:11,padding:12,fontSize:13},item:{paddingVertical:16,borderBottomWidth:1,borderColor:theme.color('#303744')},error:{color:theme.color('#D3AB94'),fontSize:12,marginVertical:14}});
+const makeStyles=(theme:Theme)=>{const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);return StyleSheet.create({title:{color:s.ink,fontSize:28,fontWeight:'700',letterSpacing:-.4},heading:{color:s.ink,fontSize:18,fontWeight:'700',marginVertical:14},caption:{color:s.muted,fontSize:12,lineHeight:19,marginTop:4},track:{color:s.ink,fontSize:15,fontWeight:'600',lineHeight:22},row:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},button:{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,borderRadius:16,paddingHorizontal:14,paddingVertical:10,marginVertical:3},buttonText:{color:s.ink,fontSize:13,fontWeight:'600'},input:{color:s.ink,backgroundColor:s.inputBg,borderColor:s.cardBorder,borderWidth:1,borderRadius:14,paddingHorizontal:14,paddingVertical:11,fontSize:14},item:{paddingVertical:14,borderBottomWidth:StyleSheet.hairlineWidth,borderColor:s.hairline},error:{color:s.accent,fontSize:13,marginVertical:12}});};

@@ -31,8 +31,8 @@ export class PlaylistSearchProvider{
     if(signal.aborted)throw Error('搜索已取消');
     const http=this.deps.http??requestJSON;let values:unknown,total:unknown;
     if(platform==='wy'){
-      const r=row(await http('https://music.163.com/api/search/get/web',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/x-www-form-urlencoded',Referer:'https://music.163.com/'},body:Object.entries({s:query,type:1000,offset:(page-1)*limit,limit}).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&')},signal));
-      if(r.code!==200)throw Error('歌单搜索暂不可用');const data=row(r.result);values=data.playlists;total=data.playlistCount;
+      const r=row(await http('https://music.163.com/api/cloudsearch/pc',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/x-www-form-urlencoded',Referer:'https://music.163.com/'},body:Object.entries({s:query,type:1000,offset:(page-1)*limit,limit}).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&')},signal));
+      if(r.code!==200||typeof r.result==='string')throw Error('歌单搜索暂不可用');const data=row(r.result);values=data.playlists;total=data.playlistCount;
     }else if(platform==='tx'){
       const r=row(await http(queryURL('https://c.y.qq.com/soso/fcgi-bin/client_music_search_songlist',{page_no:page-1,num_per_page:limit,format:'json',query,remoteplace:'txt.yqq.playlist',inCharset:'utf8',outCharset:'utf-8'}),{credentials:'omit',headers:{Referer:'https://y.qq.com/portal/search.html','User-Agent':'Mozilla/5.0'}},signal));
       if(r.code!==0)throw Error('歌单搜索暂不可用');const data=row(r.data);values=data.list;total=data.sum;

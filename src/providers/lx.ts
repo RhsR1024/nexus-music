@@ -86,6 +86,7 @@ export function makeLXActionRequest(track: Track, action: LXAction, source: LXSo
     _qualitys: track.metadata._qualitys ?? track.metadata._types ?? {},
     ...(track.artwork ? { picUrl: track.artwork } : {}),
   };
+  const songmid = typeof meta.songmid === 'string' && meta.songmid ? meta.songmid : meta.songId;
   return {
     source: track.origin.platform,
     action,
@@ -93,6 +94,9 @@ export function makeLXActionRequest(track: Track, action: LXAction, source: LXSo
       type: quality,
       musicInfo: {
         id: track.origin.platform === 'kg' ? track.origin.id : `${track.origin.platform}_${track.origin.id}`,
+        songmid,
+        ...(typeof meta.hash === 'string' && meta.hash ? { hash: meta.hash } : {}),
+        ...(typeof meta.copyrightId === 'string' && meta.copyrightId ? { copyrightId: meta.copyrightId } : {}),
         name: track.title,
         singer: track.artist,
         source: track.origin.platform,

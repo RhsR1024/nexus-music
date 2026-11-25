@@ -46,8 +46,10 @@ export const settingsSheet = {
   card: '#F7F7F4',
   themeChip: 'rgba(229,234,240,0.58)',
   // Backdrops behind the floating outlined-field labels, sampled at the
-  // reference's 216pt/299pt border positions so the border gap stays seamless.
+  // reference's 216pt/299pt border positions and IMG_4856's mask-colour field
+  // so the border gap stays seamless without translucent strikethrough.
   fieldBackdrop: ['#E3E9F2', '#EAEBF2'] as const,
+  maskBackdrop: '#D8E5F0',
 } as const;
 
 // Vinyl page paper surface, sampled from IMG_4851. Text/icon colors are fixed

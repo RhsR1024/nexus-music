@@ -165,7 +165,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const sourcesReady = catalog.restoreEnabled();
   const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal,size)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size},signal),(track,signal)=>track.origin.kind==='webdav'?davMedia.cover(track,signal):track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track),(track,signal)=>online.artwork(track,signal));
-  const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality);
+  const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality, 15000);
   const matching=new CrossPlatformMatcher(online);
   const comments=new PublicComments(options.onlineHTTP,{md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
   const sourceHealth=new SourceHealth({registry,open:createSourceDiagnostics(catalog,loadNativeDiagnosticLX(),Crypto.randomUUID),online,probe:loadAudioProbe(Crypto.randomUUID)});

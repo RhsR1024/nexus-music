@@ -84,9 +84,9 @@ export class OnlineProvider {
     if (!query.trim() || !Number.isInteger(page) || page < 1) throw new Error('搜索参数无效');
     let raw: unknown, rows: unknown[] = [], total: number | undefined;
     if (platform === 'wy') {
-      raw = await this.http('https://music.163.com/api/search/get/web', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: 'https://music.163.com/' },
+      raw = await this.http('https://music.163.com/api/cloudsearch/pc', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: 'https://music.163.com/' },
         body: Object.entries({ s: query, type: 1, offset: (page-1)*limit, limit }).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&') }, signal);
-      if (row(raw).code !== 200) throw new Error('搜索服务暂时不可用');
+      if (row(raw).code !== 200 || typeof row(raw).result === 'string') throw new Error('搜索服务暂时不可用');
       const result = row(row(raw).result); rows = list(result.songs); total = number(result.songCount);
     } else if (platform === 'tx') {
       const guid = this.deviceId().replaceAll('-', '').toUpperCase();

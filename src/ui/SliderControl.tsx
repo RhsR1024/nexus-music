@@ -67,12 +67,12 @@ export function SliderControl({testID,label,value,min,max,step,format,onChange,d
         accessibilityState={{disabled:!!disabled}}
         onAccessibilityAction={event=>{if(!disabled)step_(event.nativeEvent.actionName==='increment'?1:-1);}}
         onLayout={event=>{widthRef.current=event.nativeEvent.layout.width;setWidth(event.nativeEvent.layout.width);}}
-        style={{flex:stacked?undefined:1,height:32,justifyContent:'center',marginLeft:stacked?0:-1,marginRight:stacked?0:1}}
+        style={{flex:stacked?undefined:1,height:32,justifyContent:'center',marginLeft:stacked?0:1,marginRight:stacked?0:1}}
         {...responder.panHandlers}>
-        {/* IMG_4856 centers the rail, dots and thumb on one line; as an in-flow
-            child the rail centred 1.3pt below the absolute fill/thumb layer. */}
-        <View style={{position:'absolute',left:0,right:0,top:11.7,height:6,borderRadius:3,backgroundColor:rail}}/>
-        <View style={{position:'absolute',left:0,top:11.7,height:6,borderRadius:3,width:Math.max(0,position*width),backgroundColor:control}}/>
+        {/* IMG_4856 draws a 4pt inactive rail and a 6pt active fill centered on
+            the same axis, with thumb travel inset 2pt from the left rail edge. */}
+        <View style={{position:'absolute',left:-2,right:-2,top:12.7,height:4,borderRadius:2,backgroundColor:rail}}/>
+        <View style={{position:'absolute',left:-2,top:11.7,height:6,borderRadius:3,width:position>0?Math.max(0,position*width+2):0,backgroundColor:control}}/>
         {ticks.map(tick=><View key={tick} pointerEvents="none" style={{position:'absolute',top:13.7,left:`${tick*100}%`,width:2,height:2,borderRadius:1,marginLeft:-1,backgroundColor:tick<=position+0.001?tickFilled:tickEmpty}}/>)}
         <View style={{position:'absolute',top:7.7,left:position*width-7,width:14,height:14,borderRadius:7,backgroundColor:control,transform:[{scale:dragging?1.15:1}]}}/>
       </View>

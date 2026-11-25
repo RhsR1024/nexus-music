@@ -1,5 +1,6 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 import {useState,useSyncExternalStore} from 'react';
 import { Pressable, ScrollView, StyleSheet} from 'react-native';
 import type {Services} from '../app/services.ts';
@@ -34,4 +35,4 @@ export function LocalPlaylistPicker({services,tracks,visible,onClose,onAdded}:{s
       {!!error&&<Text style={styles.caption}>{error}</Text>}
     </ScrollView>;
 }
-const makeStyles=(theme:Theme)=>StyleSheet.create({root:{flex:1,backgroundColor:theme.color('#111318')},content:{padding:24,paddingTop:24,gap:16},title:{color:theme.color('#EEECE7'),fontSize:24},caption:{color:theme.color('#929CAB'),fontSize:12,lineHeight:22},action:{color:theme.color('#D9F49B'),fontSize:14},text:{color:theme.color('#E5E8EE'),fontSize:14},button:{padding:16,borderRadius:12,backgroundColor:theme.color('#263329')},disabled:{opacity:.5},input:{color:theme.color('#EEECE7'),borderWidth:1,borderColor:theme.color('#414754'),padding:14,borderRadius:12}});
+const makeStyles=(theme:Theme)=>{const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);return StyleSheet.create({root:{flex:1,backgroundColor:theme.palette.background[0]},content:{padding:24,paddingTop:24,gap:16},title:{color:s.ink,fontSize:24,fontWeight:'700'},caption:{color:s.muted,fontSize:13,lineHeight:20},action:{color:s.accent,fontSize:15,fontWeight:'600'},text:{color:s.ink,fontSize:15,fontWeight:'500'},button:{padding:16,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder},disabled:{opacity:.5},input:{color:s.ink,backgroundColor:s.inputBg,borderWidth:1,borderColor:s.cardBorder,padding:14,borderRadius:14,fontSize:15}});};

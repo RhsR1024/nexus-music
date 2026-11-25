@@ -43,7 +43,7 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
   };
   const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const section=(title:string,children:React.ReactNode)=><View style={{gap:12,paddingVertical:10}}><Text style={{fontSize:13,fontWeight:'500',color:s.muted,marginLeft:4}}>{title}</Text>{children}</View>;
-  const choice=(id:string,label:string,selected:boolean,onPress:()=>void,disabled=false,last=false)=><Pressable key={id} testID={id} accessibilityRole="radio" accessibilityState={{selected,disabled}} disabled={disabled} onPress={onPress} style={{minHeight:54,paddingHorizontal:16,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:last?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,opacity:disabled?.5:1}}><Text style={{color:selected?s.accent:s.ink,fontWeight:selected?'600':'500',fontSize:16}}>{label}</Text>{selected&&<Ionicons name="checkmark" size={20} color={s.accent}/>}</Pressable>;
+  const choice=(id:string,label:string,selected:boolean,onPress:()=>void,disabled=false,last=false)=><Pressable key={id} testID={id} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{selected,disabled}} disabled={disabled} onPress={onPress} style={{minHeight:54,paddingHorizontal:16,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:last?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline,opacity:disabled?.5:1}}><Text style={{color:selected?s.accent:s.ink,fontWeight:selected?'600':'500',fontSize:16}}>{label}</Text>{selected&&<Ionicons name="checkmark" size={20} color={s.accent}/>}</Pressable>;
   // IMG_4855 keeps the sections on the sheet's own tinted surface; only the
   // summary card and control rows carry a fill.
   const flat=page==='background';
@@ -51,10 +51,10 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
   // gradient through the theme grid and type capsule rather than white panels.
   // IMG_4855 fields outline at #857373 over the sheet wash, warmer than the
   // neutral #7D7F87 the cool chrome first rendered.
-  const darkMode=theme.mode==='dark',ink=settingsInk[theme.mode],muted=settingsMuted[theme.mode],legend=settingsLegend[theme.mode],outline=darkMode?'rgba(255,255,255,0.35)':'rgba(78,44,38,0.62)',glassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.45,value.cardOpacity*0.45)),glass=`rgba(255,255,255,${glassAlpha})`,themeGlassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.2,value.cardOpacity*0.47)),themeGlass=`rgba(204,254,254,${themeGlassAlpha})`;
-  // The selected segment is a 20%-accent tint on white (#FEDADA for rose), not
-  // the accent at 18% alpha, which reads lavender over the blue sheet wash.
-  const accentRgb=parseInt(theme.palette.accent.slice(1),16),segmentTint=darkMode?`${theme.palette.accent}2E`:`rgb(${[accentRgb>>16,(accentRgb>>8)&255,accentRgb&255].map(channel=>Math.round(channel*0.2+204)).join(',')})`;
+  const darkMode=theme.mode==='dark',ink=settingsInk[theme.mode],muted=settingsMuted[theme.mode],legend=settingsLegend[theme.mode],outline=darkMode?'rgba(255,255,255,0.35)':'rgba(78,44,38,0.62)',glassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.45,value.cardOpacity*0.45)),glass=`rgba(255,255,255,${glassAlpha})`,colorCardAlpha=darkMode?0.07:Math.max(0.04,Math.min(0.3,value.cardOpacity*0.3)),colorCard=`rgba(255,255,255,${colorCardAlpha})`,themeGlassAlpha=darkMode?0.07:Math.max(0.08,Math.min(0.2,value.cardOpacity*0.47)),themeGlass=`rgba(204,254,254,${themeGlassAlpha})`;
+  // The selected segment is #FEDADA for rose in IMG_4855; other accents mix
+  // toward warm white so the pill never reads lavender over the cool sheet wash.
+  const accentRgb=parseInt(theme.palette.accent.slice(1),16),segmentTint=darkMode?`${theme.palette.accent}2E`:theme.palette.accent.toUpperCase()==='#E83D56'?'#FEDADA':`rgb(${[accentRgb>>16,(accentRgb>>8)&255,accentRgb&255].map(channel=>Math.round(channel*0.2+204)).join(',')})`;
   // IMG_4855: the selected segment reads warm brown #5D3F40 (dot and label,
   // 900+ solid pixels), the unselected glyphs near-black #221919. A single
   // near-black ink for all three states was measured against the wrong state.
@@ -75,8 +75,8 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
   // the colour-filter glyph at 365.0..382.7pt. Before this the swatch was 20pt,
   // the value ink sat at 79.3pt (5pt left) and the glyph at 351.3..370.3pt
   // (14pt left), which is why the colour-field grid cells scored lowest.
-  const outlined=(key:'accent'|'background',label:string,color:string,hex:string,action:()=>void,backdrop:string)=><View key={key} ref={key==='accent'?accentFieldRef:undefined} onLayout={key==='accent'?onAccentFieldLayout:undefined} testID={`${key}-color-field`} style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,backgroundColor:glass,paddingLeft:14,paddingRight:0,flexDirection:'row',alignItems:'center',gap:17.3}}>
-    <View style={{position:'absolute',top:-8,left:9.3,paddingHorizontal:6,backgroundColor:backdrop}}><Text style={{color:legend,fontSize:13}}>{label}</Text></View>
+  const outlined=(key:'accent'|'background',label:string,color:string,hex:string,action:()=>void,backdrop:string)=><View key={key} ref={key==='accent'?accentFieldRef:undefined} onLayout={key==='accent'?onAccentFieldLayout:undefined} testID={`${key}-color-field`} style={{height:56,borderWidth:1,borderColor:outline,borderRadius:7,backgroundColor:'transparent',paddingLeft:14,paddingRight:0,flexDirection:'row',alignItems:'center',gap:17.3}}>
+    <View style={{position:'absolute',top:-8,left:11,paddingHorizontal:4,backgroundColor:backdrop}}><Text style={{color:legend,fontSize:13}}>{label}</Text></View>
     {/* IMG_4856 measures the swatch outline at 20pt with an 18pt fill inside it. */}
     <View style={{width:20,height:20,borderRadius:10,backgroundColor:color,borderWidth:1,borderColor:'rgba(0,0,0,0.22)'}}/>
     <Text testID={`${key}-hex`} style={{flex:1,color:ink,fontSize:17,fontVariant:['tabular-nums']}}>{hex.toUpperCase()}</Text>
@@ -84,7 +84,7 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
   </View>;
   return <View style={{gap:8,marginVertical:flat?14.5:10,padding:flat?0:0,borderRadius:flat?0:20,backgroundColor:'transparent'}}>
     {page==='theme'&&<View style={{gap:12}}><View style={{borderRadius:18,overflow:'hidden',backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}>{(['system','light','dark']as const).map((mode,index)=>choice(`theme-${mode}`,['跟随系统','浅色','深色'][index]!,value.theme===mode,()=>update({theme:mode}),false,index===2))}</View><Text style={{color:s.muted,fontSize:13,lineHeight:20,paddingHorizontal:6}}>选择后立即保存。</Text></View>}
-    {page==='background'&&<View style={{gap:0,paddingBottom:16}}>
+    {page==='background'&&<View style={{gap:0,paddingBottom:3}}>
       {/* IMG_4855 card: 114pt tall, a shadowed summary pill pinned to the lower-left. */}
       <View testID="theme-preview-card" style={{borderRadius:16,backgroundColor:darkMode?theme.palette.surface:settingsSheet.card,paddingHorizontal:14,paddingBottom:16,minHeight:120,justifyContent:'flex-end'}}>
         <View style={{alignSelf:'flex-start',maxWidth:'100%',minHeight:40,paddingLeft:16.7,paddingRight:13.3,flexDirection:'row',alignItems:'center',gap:11.5,borderRadius:12,backgroundColor:darkMode?theme.palette.selected:'#FFFFFF',shadowColor:'#000000',shadowOpacity:.09,shadowRadius:10,shadowOffset:{width:0,height:3},elevation:2}}>
@@ -115,15 +115,13 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
       </View>
       {/* IMG_4855 fields sit 3.3pt above the first render; 4856's scrolled
           capture differs by only 1pt, so the cut is half the 4855 offset. */}
-      <Text style={{color:muted,fontSize:13,marginLeft:4,marginTop:32.1,marginBottom:20.8}}>颜色</Text>
-      {/* IMG_4856 puts both outlined fields 32pt from the screen edge (16pt inside
-          the sheet gutter) while the section label stays on the gutter. Its first
-          border sits at 216.0pt; the 3pt offset below lands the same edge. */}
-      <View style={{marginHorizontal:16,marginTop:2.6}}>
+      <Text style={{color:muted,fontSize:13,marginLeft:4,marginTop:32.1,marginBottom:9.8}}>颜色</Text>
+      {/* IMG_4855/4856 wrap both outlined fields inside a shared rounded frosted
+          card with a hairline divider between them while keeping the 32pt field
+          inset (16pt sheet gutter + 16pt card padding) and 83.0pt field pitch. */}
+      <View style={{marginTop:2,borderRadius:18,backgroundColor:colorCard,paddingHorizontal:16,paddingTop:11.3,paddingBottom:14}}>
         {outlined('accent','强调色',theme.palette.accent,theme.palette.accent,()=>Alert.alert('强调色','选择主题强调色。',[...(Object.keys(accentColors) as Accent[]).map((id,index)=>({text:['玫瑰','珊瑚','紫色','蓝色','橙色'][index]!,onPress:()=>update({accent:id})})),{text:'取消',style:'cancel' as const}]),darkMode?theme.palette.background[1]:settingsSheet.fieldBackdrop[0])}
-        {/* IMG_4856 border pitch is 83.0pt (field 55 + 28 gap); the 28pt spacer
-            rendered a 84.0pt pitch and pushed the second field's borders 1pt low. */}
-        <View style={{height:27}}/>
+        <View style={{height:27,justifyContent:'center'}}><View style={{height:StyleSheet.hairlineWidth,backgroundColor:darkMode?'rgba(255,255,255,0.10)':'rgba(60,60,67,0.14)'}}/></View>
         {outlined('background','背景颜色',theme.palette.background[0],theme.palette.background[0],()=>Alert.alert('背景颜色','背景颜色随当前主题渐变生成，可在一键主题中切换。'),darkMode?theme.palette.background[1]:settingsSheet.fieldBackdrop[1])}
       </View>
     </View>}

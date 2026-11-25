@@ -9,7 +9,7 @@ import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {useVisualAssets,useVisualImage,VisualPreview} from './VisualBackground.tsx';
 import {SliderControl} from './SliderControl.tsx';
-import {settingsInk,settingsLegend,settingsMuted} from './tokens.ts';
+import {settingsInk,settingsLegend,settingsMuted,settingsSheet} from './tokens.ts';
 import {appearanceCaptureFixture} from './captureFixtures.ts';
 export function VisualSettings({services}:{services:Services}){
   const {width,fontScale}=useWindowDimensions(),stacked=width<390||fontScale>1.4;
@@ -25,7 +25,8 @@ export function VisualSettings({services}:{services:Services}){
   const button=(id:string,label:string,action:()=>void,selected?:boolean)=><Pressable key={id} testID={id} accessibilityRole={selected===undefined?'button':'radio'} accessibilityLabel={label} accessibilityState={selected===undefined?undefined:{selected}} disabled={busy} onPress={action} style={{minHeight:44,padding:12,borderRadius:14,backgroundColor:selected?p.selected:p.surface,borderWidth:1,borderColor:p.border,opacity:busy?.5:1}}><Text style={{color:p.accent,fontSize:13}}>{label}</Text></Pressable>;
   const control=(id:string,label:string,on:boolean,action:(value:boolean)=>void)=><View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:16}}><Text style={{color:p.text,flex:1}}>{label}</Text><Switch testID={id} accessibilityLabel={label} value={on} disabled={busy} onValueChange={action}/></View>;
   const percent=(next:number)=>`${Math.round(next*100)}%`;
-  const adjust=(field:'backgroundOpacity'|'cardOpacity'|'backgroundMask'|'playerBlur'|'playerDarkness'|'coverRadius',label:string,step:number,min:number,max:number)=><SliderControl testID={field} label={label} value={value[field]} min={min} max={max} step={step} disabled={busy} stacked={stacked} format={field==='playerBlur'||field==='coverRadius'?undefined:percent} onChange={next=>update({[field]:next})}/>;
+  const sliderTicks:Partial<Record<'backgroundOpacity'|'cardOpacity'|'backgroundMask'|'playerBlur'|'playerDarkness'|'coverRadius',number>>={backgroundOpacity:17,cardOpacity:41,backgroundMask:18,playerBlur:41};
+  const adjust=(field:'backgroundOpacity'|'cardOpacity'|'backgroundMask'|'playerBlur'|'playerDarkness'|'coverRadius',label:string,step:number,min:number,max:number)=><SliderControl testID={field} label={label} value={value[field]} min={min} max={max} step={step} tickCount={sliderTicks[field]??41} disabled={busy} stacked={stacked} format={field==='playerBlur'||field==='coverRadius'?undefined:percent} onChange={next=>update({[field]:next})}/>;
   const remove=(slot:VisualSlot)=>Alert.alert('移除此图片？','仅删除音枢保存的副本，系统文件中的原图保留。',[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void perform(()=>services.visualAssets.remove(slot));}}]);
   // IMG_4856's 30% card opacity leaves these cards almost invisible over the
   // blue-grey sheet, while a fixed 50% white washed them out to near-paper.
@@ -35,8 +36,8 @@ export function VisualSettings({services}:{services:Services}){
   // IMG_4856 draws a 20pt white circle with a 1pt border at x 46.0..66.0
   // (18pt white fill) with '#RRGGBB' ink from 84.67pt; the colour-filter
   // glyph sits at 365.0..382.7pt.
-  const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:14,paddingLeft:13,paddingRight:0,flexDirection:'row',alignItems:'center',gap:19}}>
-    <View style={{position:'absolute',top:-8,left:9.3,paddingHorizontal:6,backgroundColor:card}}><Text style={{color:legend,fontSize:12}}>遮罩颜色</Text></View>
+  const maskField=<View style={{height:56,borderWidth:1,borderColor:outline,borderRadius:7,paddingLeft:13,paddingRight:0,flexDirection:'row',alignItems:'center',gap:19}}>
+    <View style={{position:'absolute',top:-8,left:11,paddingHorizontal:4,backgroundColor:darkMode?theme.palette.background[1]:settingsSheet.maskBackdrop}}><Text style={{color:legend,fontSize:12}}>遮罩颜色</Text></View>
     <View style={{width:20,height:20,borderRadius:10,backgroundColor:value.maskColor,borderWidth:1,borderColor:'rgba(0,0,0,0.22)'}}/>
     <Text testID="visual-value-maskColor" style={{flex:1,color:ink,fontSize:16,letterSpacing:0.9,fontVariant:['tabular-nums']}}>{value.maskColor.toUpperCase()}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel="选择遮罩颜色" disabled={busy} onPress={()=>Alert.alert('遮罩颜色','选择播放背景遮罩颜色。',[...maskColors.map(([color,label])=>({text:label,onPress:()=>update({maskColor:color})})),{text:'取消',style:'cancel' as const}])} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="color-filter-outline" size={21} color={legend}/></Pressable>
@@ -57,7 +58,7 @@ export function VisualSettings({services}:{services:Services}){
         {row('maskColor',3,maskField,{paddingTop:14.5,paddingBottom:17.5})}
         {/* IMG_4856 leaves 31.1pt from the mask field bottom to the 背景模糊 label,
             while the standard 16+16 row padding measures 35.7pt. */}
-        <View style={{paddingTop:11,paddingBottom:16}}>{adjust('playerBlur','背景模糊',10,0,80)}</View>
+        <View style={{paddingTop:10.7,paddingBottom:16}}>{adjust('playerBlur','背景模糊',10,0,80)}</View>
       </View>
     </View>
     {/* IMG_4856 shows an empty sheet band below 背景模糊 (last ink at 814.7pt, screen
