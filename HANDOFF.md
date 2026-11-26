@@ -1,3 +1,15 @@
+## 2026-11-26 云端 GitHub Actions iOS 27 全绿通过与无签名 IPA 最终交付（Run #345）
+
+- **云端 iOS 27 5/5 全绿终态**：提交 `85fc5e93abd6a5d4460835231116c4e9be7ebcb7`（完整包含 `84ca6d0` → `9b3695c` → `d8cfe41` → `670a520` → `69e0c93` → `ba5c1b1` 全部 Sollin 功能/UI/原生修复、并行流水线拆分与 iOS 27 测试稳定性修复）在 GitHub Actions **Run #345**（[45758198827](https://github.com/RhsR1024/nexus-music/actions/runs/45758198827)）实现 **全 5 项 Job 零失败、零告警全绿通过**（总墙钟时长 `2h 3m 55s`）：
+  - `checks`（`ubuntu-24.04`，1170/1170 单测 + TypeScript 校验）：**成功**（`42s`）；
+  - `ios-core`（`xcode-27` ARM64，14 项核心皮肤/外观/动态背景/源管理 UI 用例）：**成功**（`1h 14m`）；
+  - `ios-playback`（`xcode-27` ARM64，11 项 EQ/字体歌词/歌单/云同步/备份/WebDAV/本地音频/Navidrome 用例）：**成功**（`1h 28m`）；
+  - `ios-features`（`xcode-27` ARM64，20 项睡眠定时/音乐库动作/网易云歌单/跨平台歌词与匹配/源健康/漫途导入/搜索/TTML/断网离线下载用例）：**成功**（`1h 47m`）；
+  - `ios`（`xcode-27` ARM64，`npm run test:native` + `npm run ios:archive` + 上传产物）：**成功**（`7m 5s`）。
+- **云端 iOS 27 无签名 IPA 产物**：`NexusMusic-iOS27-unsigned-85fc5e93abd6a5d4460835231116c4e9be7ebcb7`（`16.5 MB`，GitHub 产物摘要 `sha256:8ec3f4058384be3ce15470b6c0d99175229768294ead926caafbabdacc3eb416`），连同 7 份全部分片日志/诊断包均已成功上传，队列复核 `0` 运行 / `0` 排队。
+- **本地清洁无签名 IPA 与 T7 归档**：`d8cfe41` 本地清洁归档 `build/distribution-20261126-d8cfe41/NexusMusic-unsigned.ipa`（`17,998,273` 字节，SHA-256 `c2555b548af35ea2beeab26a365aa2455770de9579e832cf6302c9ea04764f13`，`dirty: false`、`iphoneos26.2`、`arm64`、`signed: false`）已通过 `verify-archive.mjs` 校验并逐字节镜像至 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-26-sollin-final-d8cfe41/`（`T7_SHA_MATCH_OK`，历史 `build/distribution` T7 符号链接完好）。
+- **持续开放的外部/真机边界**：真实个人网易云/QQ/酷狗账号与私人服务实测、Apple 开发者签名与实体 iPhone 安装/锁屏后台长测/连续动效录屏（G8）、以及 `4861-am-lyrics` 因合成封面取色暗度与皮肤入口差异未过严框的原因均如实保留。
+
 ## 2026-11-26 Android Phase 1–4 完整落地、模拟器全链路实测与双架构 Release APK 归档
 
 依据用户批准的[决策 0083](docs/decisions/0083-android-multiplatform-architecture.md)，在 `main` 单分支完成 Android 端 Phase 1–4 全功能原生实现、跨端共享适配、Android 15（API 35 `x86_64`）模拟器真实端到端验证、视觉逐图修复及双架构（`arm64-v8a` 真机 + `x86_64` 模拟器）Release APK 归档（全过程保持零界面定制、与 iOS 逻辑和 UI 完全一致，零干扰 iOS 线）：

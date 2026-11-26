@@ -1,3 +1,14 @@
+## 2026-11-26 并行分片方案云端 iOS 27 全绿实证（Run #345）
+
+[Run #345](https://github.com/RhsR1024/nexus-music/actions/runs/45758198827)（`85fc5e93abd6a5d4460835231116c4e9be7ebcb7`）验证了三路并行 `xcode-27` 测试 + 汇总门禁 `ios` 归档架构实际可行且全量通过（总墙钟 `2h 3m 55s`，0 条错误标注）：
+- `checks`：`42s`（`success`）；
+- `ios-core`：`1h 14m`（`success`）；
+- `ios-playback`：`1h 28m`（`success`）；
+- `ios-features`：`1h 47m`（`success`，位于 `165m` 预算内且余量充足）；
+- `ios`：`7m 5s`（`success`，完成 `npm run test:native`、`npm run ios:archive` 并上传 `NexusMusic-iOS27-unsigned-85fc5e93abd6a5d4460835231116c4e9be7ebcb7`，`16.5 MB`，`sha256:8ec3f4058384be3ce15470b6c0d99175229768294ead926caafbabdacc3eb416`）。
+
+此前演进记录如实保留：Run #341（`670a520`）`ios-core` 与 `ios-features` 通过、`ios-playback` 3 项 iOS 27 测试稳定性修复于 `69e0c93`；Run #342（`69e0c93`）`checks`/`ios-core`/`ios-playback` 全通、`ios-features` 冷启 `selectLocalFixture` 就绪判定补齐于 `ba5c1b1`；Run #344（`ba5c1b1`）在排队阶段由 `queue: single` 自动由含累计提交的 Run #345 取代。复核当前队列 `0` 运行 / `0` 排队，无手动取消运行中任务或重复派发。
+
 ## 2026-11-26 单 Job 180 分钟超时定位与 iOS 27 并行分片（零删测）
 
 Run #340（`45690622785` / `d8cfe41`）中 `checks` 通过，`ios` 的 **Steps 1–13 零失败全部通过**（Step 10 核心 25 项 133m41s、Step 11 睡眠 5 项 16m17s、Step 12 音乐库动作 9m36s、Step 13 网易云歌单创建 4m05s），仅在 Step 14 因单 Job 达到 3 小时执行上限（`timeout-minutes: 180`）被系统取消（官方 Annotation：`The job has exceeded the maximum execution time of 3h0m0s`，零测试失败）。

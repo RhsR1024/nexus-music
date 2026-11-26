@@ -1,3 +1,16 @@
+## 2026-11-26 云端 GitHub Actions iOS 27 Run #345 全 5 项 Job 全绿与无签名 IPA 上传闭环
+
+- **云端 iOS 27 完整全绿**：[Run #345](https://github.com/RhsR1024/nexus-music/actions/runs/45758198827)（提交 `85fc5e93abd6a5d4460835231116c4e9be7ebcb7`，完整覆盖 `84ca6d0..ba5c1b1` 全部 Sollin 功能/UI/原生改动与 45 项 UI 测试）以 `Status · Success`、`2h 3m 55s`、0 条错误标注通过：
+  - `checks`：`42s`（成功）
+  - `ios-core`（14 项）：`1h 14m`（成功）
+  - `ios-playback`（11 项）：`1h 28m`（成功）
+  - `ios-features`（20 项）：`1h 47m`（成功）
+  - `ios`（`npm run test:native` + `npm run ios:archive` + 产物上传）：`7m 5s`（成功）
+- **云端已上传产物（8 份）**：
+  - `NexusMusic-iOS27-unsigned-85fc5e93abd6a5d4460835231116c4e9be7ebcb7`（`16.5 MB`，`sha256:8ec3f4058384be3ce15470b6c0d99175229768294ead926caafbabdacc3eb416`）
+  - `ios-test-logs-{core,playback,features,archive}-85fc5e9...` 与 `ios-build-diagnostics-{core,playback,features}-85fc5e9...` 全部就绪。
+- **收敛历程回执**：Run #341 暴露 `ios-playback` 3 处 iOS 27 测试稳定性缺陷（`typeText` 漏字、恢复目录缺 `Browse` 键、黑胶阶段 `0.7` 定位余量不足），于 `69e0c93` 修复后在 Run #342 实现 `ios-playback` 全绿；Run #342 暴露 `ios-features` 首次冷启 Files 选择器位于「最近」页仅呈现 `Browse` 键，于 `ba5c1b1` 在 `selectLocalFixture` 补齐 `browse.exists` 就绪判断后在 Run #345 实现全部 5 项 Job 100% 全绿。未删减任何断言，不伪造真机签名与个人线上服务验收。
+
 ## 2026-11-26 iOS 27 Run #340 Steps 1–13 零失败与并行分片交付
 
 - **提交 `d8cfe41` 清洁本地无签名 IPA**：`build/distribution-20261126-d8cfe41/NexusMusic-unsigned.ipa`（`17,998,273` 字节，SHA-256 `c2555b548af35ea2beeab26a365aa2455770de9579e832cf6302c9ea04764f13`），`dirty: false` / `workingTreeChanges: []`、`arm64` / `iphoneos26.2` / `minimumOS 15.1` / `deviceFamilies [1,2]`、`signed: false`，`verify-archive.mjs`、ZIP CRC、零私源/零测试标记/未签名检查全通过，且已镜像校验归档至 `/Volumes/T7 Touch/NexusMusic/BuildArchive/2026-11-26-sollin-final-d8cfe41/`（`T7_SHA_MATCH_OK`，历史 `build/distribution` 符号链接保持完整）。

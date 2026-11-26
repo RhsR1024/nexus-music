@@ -87,11 +87,11 @@
 | `4855-appearance` 回归 | **通过（零回退）** | `r20261125-4855-regression`：控件 SSIM **90.80%**、ΔE00 **1.12**、可比区 **93.89%**、估算 **96.08%** |
 | `4856-appearance-scrolled` 回归 | **通过（零回退）** | `r20261125-4856-regression`：控件 SSIM **94.13%**、ΔE00 **0.51**、可比区 **93.93%** |
 | 真实 7 音源实测 | **通过** | `testLiveSourceCatalog`（`SourceUITests-1795599556700`，369.2s）导入 7 个脱敏真实 LX 音源、真搜/真流/真频谱解码通过 |
-| 全量 CI 本地预演（20 项 UI 用例） | **20 / 20 全部通过** | 批次 1（5 项：AM/Photo/Stage/歌单排序去重/实源 Mesh）、批次 2（8 项：AM2 横竖屏/外观持久化/EQ/分组设置/字体+完整 8 皮肤 Navidrome/本地音频导入/纯净音源管理）、批次 3（7 项：睡眠自定义定时/音乐库单曲与批量/公开评论/发现页动作/搜索历史与状态/离线下载与批量任务）全部 0 失败通过 |
+| 全量 CI 本地预演（45 项 UI 用例） | **45 / 45 全部通过** | 本地 100% 覆盖 `.github/workflows/ios.yml` 全部测试组；`d8cfe41` 清洁本地无签名 IPA（`17,998,273` 字节，SHA-256 `c2555b54…64f13`，`dirty: false`）通过 `verify-archive.mjs` 并镜像归档至 T7 Touch（`T7_SHA_MATCH_OK`） |
+| GitHub 云端 iOS 27（Run #345） | **5 / 5 Job 全绿通过** | [Run #345](https://github.com/RhsR1024/nexus-music/actions/runs/45758198827)（`85fc5e9`，`2h 3m 55s`，0 条报错标注）：`checks`（42s）、`ios-core`（1h 14m）、`ios-playback`（1h 28m）、`ios-features`（1h 47m）、`ios`（7m 5s，`npm run test:native` + 归档），成功上传 `NexusMusic-iOS27-unsigned-85fc5e93abd6a5d4460835231116c4e9be7ebcb7`（`16.5 MB`，`sha256:8ec3f405…eb416`） |
 
 ## 六、仍保持开放的外部/环境边界（无法在无真机/账号环境下伪造）
 
-- 听歌识曲（用户决定本期不实现）、漫途双向同步、Sollin 自有账号/赞助/付费/遥测、正式 App Store 发布、Android 正式版；
+- 听歌识曲（用户决定本期不实现）、漫途双向同步、Sollin 自有账号/赞助/付费/遥测、正式 App Store 发布；
 - 真实网易云/QQ/酷狗个人账号在线写操作、真实私人 WebDAV/Navidrome 大曲库与弱网限流矩阵；
-- Apple Developer 个人签名、实体 iPhone 安装/续签/真机锁屏后台长时播放/耳机蓝牙路由与真机连续动效录屏（G8）；
-- 云端 GitHub Actions iOS 27 终态（本次提交推送后立即全程跟进至全绿）。
+- Apple Developer 个人签名、实体 iPhone 安装/续签/真机锁屏后台长时播放/耳机蓝牙路由与真机连续动效录屏（G8）。
