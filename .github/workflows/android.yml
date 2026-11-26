@@ -48,11 +48,21 @@ jobs:
         with:
           node-version: 24.14.0
           cache: npm
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Configure JDK 17 and Android SDK/NDK/CMake
+        run: |
+          JDK17="${JAVA_HOME_17_X64:-/usr/lib/jvm/temurin-17-jdk-amd64}"
+          if [ ! -d "$JDK17" ]; then
+            JDK17="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
+          fi
+          echo "JAVA_HOME=$JDK17" >> "$GITHUB_ENV"
+          echo "$JDK17/bin" >> "$GITHUB_PATH"
+          "$JDK17/bin/java" -version
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" "cmake;3.22.1"
       - run: npm ci
       - name: Verify Android Expo autolinking includes nexus-native
         run: |
@@ -61,9 +71,10 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew :nexus-native:testDebugUnitTest :app:assembleDebug --no-daemon --stacktrace
+          ./gradlew :nexus-native:testDebugUnitTest :app:assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon --stacktrace
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E "lib/arm64-v8a/libnexus_audio_dsp.so|lib/arm64-v8a/libnexus_quickjs.so|assets/bootstrap.js"
       - name: Upload Android Debug APK
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d2296645e52f3646cd9 # v7.0.2 (Node 24)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 (Node 24)
         with:
           name: nexus-music-android-debug-${{ github.sha }}
           path: android/app/build/outputs/apk/debug/*.apk
