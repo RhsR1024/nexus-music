@@ -207,10 +207,11 @@ final class SourceSettingsTests: XCTestCase {
     let locations=NSPredicate(format:"label IN %@",["我的iPhone","我的 iPhone","在我的 iPhone","On My iPhone"])
     func settle(){RunLoop.current.run(until:Date().addingTimeInterval(2))}
     let cancel=app.buttons.matching(NSPredicate(format:"label IN %@",["取消","Cancel","取消選取"])).firstMatch
-    // iOS 27 can present the full document manager without a Cancel button.
-    // Readiness still requires the actual Files subtree or the target file row.
+    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
+    // iOS 27 can present the full document manager on Recents without a Cancel
+    // button or FileProvider browsing root until Browse is tapped.
     let filesRoot=app.descendants(matching:.any).matching(NSPredicate(format:"identifier BEGINSWITH %@","DOC.browsingRoot Source: com.apple.FileProvider")).firstMatch
-    let presented=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in cancel.exists || filesRoot.exists || fileCell.exists || fileRow.exists},object:nil)
+    let presented=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in browse.exists || cancel.exists || filesRoot.exists || fileCell.exists || fileRow.exists || folderCell.exists},object:nil)
     guard XCTWaiter.wait(for:[presented],timeout:30) == .completed else{
       let image=XCTAttachment(screenshot:XCUIScreen.main.screenshot());image.name="Files presentation unavailable";image.lifetime = .keepAlways;add(image)
       let hierarchy=XCTAttachment(string:app.debugDescription);hierarchy.name="Files presentation hierarchy";hierarchy.lifetime = .keepAlways;add(hierarchy)
@@ -236,8 +237,7 @@ final class SourceSettingsTests: XCTestCase {
       if folderRow.exists{folderRow.tap();settle();continue}
       // Files labels its back button with the previous location. Never accept
       // a Button here or navigation moves backwards instead of to On My iPhone.
-      let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
-      if browse.exists && browse.isHittable{browse.tap()}
+      if browse.exists{browse.tap()}
       settle()
     }
     // The local FileProvider can take tens of seconds to enumerate a directory
