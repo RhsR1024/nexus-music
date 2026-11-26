@@ -23,6 +23,32 @@ preserve_current_distribution() {
 }
 preserve_current_distribution
 
+# Pre-sync prebuilt Hermes / React-Core / ReactNativeDependencies to Release
+# BEFORE xcodebuild archive starts. This avoids both the stale
+# Pods/.last_build_configuration marker bug after pod install and any race
+# between Xcode ProcessXCFramework and :before_compile script phases.
+repo_root="$PWD"
+rn_version=$(node -p "require('./node_modules/react-native/package.json').version")
+pods_root="$repo_root/ios/Pods"
+if [ -d "$pods_root/hermes-engine-artifacts" ]; then
+  rm -f "$pods_root/.last_build_configuration" \
+        "$pods_root/React-Core-prebuilt/.last_build_configuration" \
+        "$pods_root/ReactNativeDependencies/.last_build_configuration"
+  (
+    cd "$pods_root"
+    node "$repo_root/node_modules/react-native/sdks/hermes-engine/utils/replace_hermes_version.js" -c Release -r "$rn_version" -p "$pods_root"
+    if [ -d "$pods_root/ReactNativeCore-artifacts" ]; then
+      node "$repo_root/node_modules/react-native/scripts/replace-rncore-version.js" -c Release -r "$rn_version" -p "$pods_root"
+    fi
+    if [ -d "$pods_root/ReactNativeDependencies-artifacts" ]; then
+      node "$repo_root/node_modules/react-native/third-party-podspecs/replace_dependencies_version.js" -c Release -r "$rn_version" -p "$pods_root"
+    fi
+  )
+  rm -rf build/DeviceDerivedData/Build/Intermediates.noindex/ArchiveIntermediates/app/BuildProductsPath/Release-iphoneos/XCFrameworkIntermediates/hermes-engine \
+         build/DeviceDerivedData/Build/Intermediates.noindex/ArchiveIntermediates/app/BuildProductsPath/Release-iphoneos/XCFrameworkIntermediates/React-Core-prebuilt \
+         build/DeviceDerivedData/Build/Intermediates.noindex/ArchiveIntermediates/app/BuildProductsPath/Release-iphoneos/XCFrameworkIntermediates/ReactNativeDependencies
+fi
+
 node scripts/build-manifest.mjs
 xcodebuild -workspace ios/app.xcworkspace -scheme app -configuration Release \
   -sdk iphoneos -destination 'generic/platform=iOS' \

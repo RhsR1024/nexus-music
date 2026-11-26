@@ -11,3 +11,7 @@ if [ "${CI:-}" = "true" ]; then
 else
   pod install
 fi
+# pod install restores default Debug prebuilt pods, while hermes-engine's swap
+# marker lives outside hermes-engine/ at Pods/.last_build_configuration. Clear
+# stale markers so subsequent Release builds always swap Hermes to Release.
+rm -f Pods/.last_build_configuration Pods/React-Core-prebuilt/.last_build_configuration Pods/ReactNativeDependencies/.last_build_configuration
