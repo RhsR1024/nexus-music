@@ -1,6 +1,7 @@
 import {Text} from './Typography.tsx';
 import {useState} from 'react';
-import {Alert,Pressable,Share,View} from 'react-native';
+import {Alert,Pressable,View} from 'react-native';
+import {shareLocalFile} from '../storage/shareLocalFiles.ts';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
 import type {Services} from '../app/services.ts';
@@ -26,7 +27,7 @@ export function LibraryDataTools({services}:{services:Services}){
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('操作未确认完成，请核对本机数据与文件后重试');}finally{setBusy(false);}}
   const button=(label:string,action:()=>void,primary=false,testID?:string)=><Pressable testID={testID} accessibilityRole="button" disabled={busy} accessibilityState={{disabled:busy}} onPress={action} style={{paddingHorizontal:14,paddingVertical:10,minHeight:42,borderRadius:21,backgroundColor:primary?s.accent:chipBg,justifyContent:'center',alignItems:'center',opacity:busy?.4:1}}><Text style={{color:primary?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{label}</Text></Pressable>;
 
-  async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(await services.snapshotBackup());await Share.share({url:file.uri,title:'音枢音乐库备份'});}finally{if(file.exists)file.delete();}}
+  async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(await services.snapshotBackup());await shareLocalFile(file.uri,'音枢音乐库备份');}finally{if(file.exists)file.delete();}}
   async function exportLX(){
     const snapshot=services.library.getSnapshot();
     const collections:PlaylistCollection[]=[];
@@ -43,7 +44,7 @@ export function LibraryDataTools({services}:{services:Services}){
     const file=new File(Paths.cache,`nexus-lx-playlists-${Date.now()}.json`);
     try{
       file.write(payload);
-      await Share.share({url:file.uri,title:'导出 LX 歌单 JSON'});
+      await shareLocalFile(file.uri,'导出 LX 歌单 JSON');
       setMessage(`已导出 ${parsed.data.length} 个 LX v2 歌单 JSON`);
     }finally{if(file.exists)file.delete();}
   }

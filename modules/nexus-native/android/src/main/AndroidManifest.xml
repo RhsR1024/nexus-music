@@ -1,0 +1,37 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <service
+      android:name="com.nexusmusic.nexusnative.NexusMediaPlaybackService"
+      android:exported="true"
+      android:foregroundServiceType="mediaPlayback">
+      <intent-filter>
+        <action android:name="androidx.media3.session.MediaSessionService" />
+      </intent-filter>
+    </service>
+
+    <service
+      android:name="com.nexusmusic.nexusnative.NexusDownloadService"
+      android:exported="false"
+      android:foregroundServiceType="dataSync" />
+
+    <activity
+      android:name="com.nexusmusic.nexusnative.NexusAuthWebActivity"
+      android:exported="false"
+      android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+    <activity
+      android:name="com.nexusmusic.nexusnative.NexusQrScannerActivity"
+      android:exported="false"
+      android:theme="@android:style/Theme.Material.NoActionBar" />
+
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="${applicationId}.nexusfileprovider"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/nexus_file_paths" />
+    </provider>
+  </application>
+</manifest>

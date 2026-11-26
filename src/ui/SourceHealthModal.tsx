@@ -1,6 +1,7 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {FlatList, Keyboard, Pressable, Share, View} from 'react-native';
+import {FlatList, Keyboard, Pressable, View} from 'react-native';
+import {shareLocalFile} from '../storage/shareLocalFiles.ts';
 import {Modal} from './AdaptiveModal.tsx';
 import {File,Paths} from 'expo-file-system';
 import type {SourceHealth,HealthStatus} from '../providers/sourceHealth.ts';
@@ -16,7 +17,7 @@ export function SourceHealthModal({health,ids,visible,onClose}:{health:SourceHea
   const button=(title:string,action:()=>void,disabled=false,id?:string)=><Pressable testID={id} accessibilityRole="button" disabled={disabled} onPress={action} style={{padding:13,borderRadius:14,backgroundColor:p.selected,opacity:disabled?.4:1}}><Text style={{color:p.accent}}>{title}</Text></Pressable>;
   const close=()=>{health.cancel();onClose();};
   const run=(query:string)=>{if(state.running)return;Keyboard.dismiss();setError('');const qualities:readonly Quality[]|undefined=mode==='basic'?['128k']:mode==='common'?['flac','320k','128k']:undefined;void health.run(ids,query,qualities).catch(()=>setError('无法开始检查，请重新选择音源并输入关键词。'));};
-  async function exportReport(){const file=new File(Paths.cache,`nexus-source-health-${Date.now()}.json`);try{file.write(health.report());await Share.share({url:file.uri,title:'音枢音源检查报告'});}catch{setError('报告未导出，请重试。');}finally{if(file.exists)file.delete();}}
+  async function exportReport(){const file=new File(Paths.cache,`nexus-source-health-${Date.now()}.json`);try{file.write(health.report());await shareLocalFile(file.uri,'音枢音源检查报告');}catch{setError('报告未导出，请重试。');}finally{if(file.exists)file.delete();}}
   const done=state.rows.filter(row=>!busy.has(row.status)&&row.status!=='cancelled').length;
   return <Modal visible={visible} animationType="slide" onRequestClose={close}><View style={{flex:1,backgroundColor:p.background[0],paddingTop:60,paddingHorizontal:22}}>
     <FlatList keyboardShouldPersistTaps="handled" data={state.rows} keyExtractor={row=>row.id} initialNumToRender={12} windowSize={5} contentContainerStyle={{paddingBottom:60}} ListHeaderComponent={<View style={{gap:13,paddingBottom:20}}>

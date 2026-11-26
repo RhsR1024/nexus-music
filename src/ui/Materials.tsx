@@ -4,7 +4,7 @@ import type {Services} from '../app/services.ts';
 import {AmbientSoftLights,MotionImage,useVisualAssets,useVisualImage} from './VisualBackground.tsx';
 import type {PropsWithChildren} from 'react';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,Image,StyleSheet,View,type StyleProp,type ViewStyle,type ViewProps} from 'react-native';
+import {AccessibilityInfo,Image,Platform,StyleSheet,View,type StyleProp,type ViewStyle,type ViewProps} from 'react-native';
 import {requireNativeView} from 'expo';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useTheme} from './theme.tsx';
@@ -43,8 +43,8 @@ export function AmbientBackground({services,visible=true,gradient}:{services?:Se
   </View>;
 }
 export function GlassSurface({children,style,variant='liquid',radius=30}:PropsWithChildren<{style?:StyleProp<ViewStyle>;variant?:'liquid'|'frosted'|'acrylic';radius?:number}>){
-  const theme=useTheme(),[reduce,setReduce]=useState(true);
-  useEffect(()=>{let active=true;void AccessibilityInfo.isReduceTransparencyEnabled().then(value=>{if(active)setReduce(value);});const subscription=AccessibilityInfo.addEventListener('reduceTransparencyChanged',setReduce);return()=>{active=false;subscription.remove();};},[]);
+  const theme=useTheme(),[reduce,setReduce]=useState(Platform.OS==='ios');
+  useEffect(()=>{if(Platform.OS!=='ios')return;let active=true;void AccessibilityInfo.isReduceTransparencyEnabled().then(value=>{if(active)setReduce(value);});const subscription=AccessibilityInfo.addEventListener('reduceTransparencyChanged',setReduce);return()=>{active=false;subscription.remove();};},[]);
   const dark=theme.mode==='dark';
   const useBlur=theme.appearance.glassNavigation&&!reduce;
   const fill=useBlur
@@ -53,7 +53,7 @@ export function GlassSurface({children,style,variant='liquid',radius=30}:PropsWi
       :(dark?'rgba(40,32,46,0.64)':'rgba(255,252,252,0.52)'))
     :(dark?'rgba(42,34,48,0.96)':'rgba(255,251,249,0.96)');
   const borderColor=dark?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.88)';
-  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.07,shadowRadius:18,shadowOffset:{width:0,height:4}},style]}>
+  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.07,shadowRadius:18,shadowOffset:{width:0,height:4},elevation:Platform.OS==='android'?4:0},style]}>
     <View style={{flexGrow:1,borderRadius:radius,overflow:'hidden',borderWidth:1,borderColor}}>
       {useBlur&&<NativeMaterial pointerEvents="none" dark={dark} style={StyleSheet.absoluteFill}/>}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:fill}]}/>

@@ -12,3 +12,5 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
+# Preserve NexusMusic JNI bridges and Expo modules when R8 minification is enabled.
+-keep class com.nexusmusic.nexusnative.** { *; }

@@ -66,9 +66,9 @@ export function FontSettings({services,section,onOpen}:{services:Services;sectio
     {mode==='display'&&<>
       <View style={[{padding:16,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:6},s.cardShadow]}>
         <Text style={{color:s.muted,fontSize:12}}>实时歌词效果预览</Text>
-        <Text style={{fontSize:Math.round(22*preferences.fontScale),color:preferences.lyricStyle.activeColor==='auto'?s.accent:preferences.lyricStyle.activeColor,fontFamily:effectiveLyricFont(fonts)??'System',fontWeight:'700',lineHeight:Math.ceil(22*preferences.fontScale*preferences.lyricStyle.lineHeight),textAlign:preferences.lyricAlignment==='center'?'center':'left'}}>Aa 音乐让此刻更动听</Text>
-        {showTranslation&&<Text style={{fontSize:Math.round(14*secondaryScale),color:preferences.lyricStyle.inactiveColor==='auto'?s.muted:preferences.lyricStyle.inactiveColor,fontFamily:effectiveLyricFont(fonts)??'System',textAlign:preferences.lyricAlignment==='center'?'center':'left'}}>Music makes this moment resonate</Text>}
-        {showRomanization&&<Text style={{fontSize:Math.round(12.5*secondaryScale),color:s.subtle,fontFamily:effectiveLyricFont(fonts)??'System',textAlign:preferences.lyricAlignment==='center'?'center':'left'}}>yīn yuè ràng cǐ kè gèng dòng tīng</Text>}
+        <Text style={{fontSize:Math.round(22*preferences.fontScale),color:preferences.lyricStyle.activeColor==='auto'?s.accent:preferences.lyricStyle.activeColor,fontFamily:effectiveLyricFont(fonts)??undefined,fontWeight:'700',lineHeight:Math.ceil(22*preferences.fontScale*preferences.lyricStyle.lineHeight),textAlign:preferences.lyricAlignment==='center'?'center':'left'}}>Aa 音乐让此刻更动听</Text>
+        {showTranslation&&<Text style={{fontSize:Math.round(14*secondaryScale),color:preferences.lyricStyle.inactiveColor==='auto'?s.muted:preferences.lyricStyle.inactiveColor,fontFamily:effectiveLyricFont(fonts)??undefined,textAlign:preferences.lyricAlignment==='center'?'center':'left'}}>Music makes this moment resonate</Text>}
+        {showRomanization&&<Text style={{fontSize:Math.round(12.5*secondaryScale),color:s.subtle,fontFamily:effectiveLyricFont(fonts)??undefined,textAlign:preferences.lyricAlignment==='center'?'center':'left'}}>yīn yuè ràng cǐ kè gèng dòng tīng</Text>}
       </View>
       <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,paddingHorizontal:16,paddingVertical:13}}>

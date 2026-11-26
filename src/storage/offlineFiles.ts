@@ -19,5 +19,5 @@ export function createOfflineDownloadFiles():OfflineDownloadFiles{
     digest:name=>{const value=file(name).md5;return value??undefined;},
     uri:name=>file(name).uri,
   };
-  return Platform.OS==='ios'?createBackgroundDownload(requireNativeModule<BackgroundDownloadNative>('NexusDownloads'),files):files;
+  return Platform.OS==='ios'||Platform.OS==='android'?createBackgroundDownload(requireNativeModule<BackgroundDownloadNative>('NexusDownloads'),files):files;
 }

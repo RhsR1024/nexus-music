@@ -85,3 +85,9 @@ The reference repository includes the Apache License 2.0, reproduced at `license
 `src/providers/neteaseFavorite.ts` uses the `/api/song/like/check` and `/api/song/like` parameter contracts from Binaryify's NeteaseCloudMusicApi observed at commit `984cc021b8598cf94c22134f32a8426887fb2de7`, cross-checked against Sollin-Music-Desktop `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` `src/services/neteaseAuth.ts` under the MIT license above. NexusMusic independently implements strict account/session binding, opaque identifier handling, one write, read-back confirmation, cancellation and race isolation. No reference server, runtime, UI, dependency, cookie transport or private service logic is imported. Anonymous endpoint checks do not constitute authenticated account acceptance.
 
 `src/providers/neteasePlaylistCreate.ts` uses the `/api/playlist/create` name/privacy/type and response-field contract from Sollin-Music-Desktop `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` `src/services/neteaseAuth.ts` under the MIT license reproduced at `licenses/sollin-mit.txt`. NexusMusic independently implements account/session binding, one create request, bounded catalog read-back, privacy-field checking, cancellation and state handling. The reference's platform track-add path is not imported. No reference server, UI, dependency or private service logic is used.
+
+## quickjs-ng (v0.18.0)
+
+- **Upstream**: <https://github.com/quickjs-ng/quickjs> (`v0.18.0`)
+- **License**: MIT (full license text archived in `licenses/quickjs-ng-MIT.txt`)
+- **Usage**: Vendored core C engine sources in `modules/nexus-native/android/src/main/cpp/quickjs/` to provide isolated per-source JavaScript execution contexts for Android LX script sources, paralleling Apple `JavaScriptCore` on iOS.

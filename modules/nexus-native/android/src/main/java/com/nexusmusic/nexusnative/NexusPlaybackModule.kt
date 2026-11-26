@@ -1,109 +1,108 @@
 package com.nexusmusic.nexusnative
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.io.File
 
-/**
- * Android playback module exposing the exact same 18 functions and 4 events as iOS NexusPlaybackModule.
- * Already wired to the shared C++20 [NexusAudioDSP] JNI engine; Media3 ExoPlayer + MediaSessionService
- * audio pipeline lands in Phase 1.
- */
+@OptIn(UnstableApi::class)
 class NexusPlaybackModule : Module() {
-  private val dsp = NexusAudioDSP()
-  private var cacheLimitBytes: Long = 512L * 1024L * 1024L
-  private var sleepMode: String = "off"
-  private var sleepRemainingSeconds: Double = 0.0
+  private fun engine(): NativePlaybackEngine {
+    val ctx = appContext.reactContext ?: throw IllegalStateException("ReactContext unavailable")
+    return NativePlaybackEngine.getInstance(ctx).also { eng ->
+      eng.attachEmitter { name, body ->
+        try {
+          sendEvent(name, body)
+        } catch (_: Throwable) {
+        }
+      }
+    }
+  }
 
   override fun definition() = ModuleDefinition {
     Name("NexusPlayback")
     Events("playback", "spectrum", "remote", "sleep")
 
-    AsyncFunction("cacheStatistics") {
-      val dir = audioCacheDir()
-      val files = dir.listFiles().orEmpty()
-      mapOf(
-        "bytes" to files.sumOf { it.length() },
-        "files" to files.size,
-        "limitBytes" to cacheLimitBytes
-      )
+    OnCreate {
+      appContext.reactContext?.let { ctx ->
+        NativePlaybackEngine.getInstance(ctx).attachEmitter { name, body ->
+          try {
+            sendEvent(name, body)
+          } catch (_: Throwable) {
+          }
+        }
+      }
     }
 
-    AsyncFunction("clearCache") {
-      audioCacheDir().listFiles()?.forEach { it.delete() }
-    }
+    AsyncFunction("cacheStatistics") { engine().audioCache.statistics() }
+    AsyncFunction("clearCache") { engine().audioCache.clear() }
+    AsyncFunction("configureCache") { megabytes: Int -> engine().audioCache.configure(megabytes) }
 
-    AsyncFunction("configureCache") { megabytes: Int ->
-      cacheLimitBytes = megabytes.coerceAtLeast(32).toLong() * 1024L * 1024L
-    }
-
-    AsyncFunction("load") { _: String, entryID: String, generation: Int ->
-      sendEvent(
-        "playback",
-        mapOf(
-          "kind" to "error",
-          "entryId" to entryID,
-          "generation" to generation,
-          "position" to 0.0,
-          "duration" to 0.0,
-          "playing" to false,
-          "buffering" to false
-        )
-      )
+    AsyncFunction("load") { json: String, entryID: String, generation: Int ->
+      engine().load(json, entryID, generation)
     }.runOnQueue(Queues.MAIN)
 
-    AsyncFunction("setSystemArtwork") { _: String, _: String -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("setSystemFavorite") { _: Boolean, _: String -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("setSystemLyricLine") { _: String?, _: String, _: String -> }.runOnQueue(Queues.MAIN)
+    AsyncFunction("setSystemArtwork") { file: String, itemID: String ->
+      engine().setSystemArtwork(file, itemID)
+    }.runOnQueue(Queues.MAIN)
 
-    AsyncFunction("play") { _: String, _: Int -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("pause") { _: Int -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("stop") { _: Int -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("seek") { _: Double, _: String, _: Int -> }.runOnQueue(Queues.MAIN)
+    AsyncFunction("setSystemFavorite") { favorite: Boolean, itemID: String ->
+      engine().setSystemFavorite(favorite, itemID)
+    }.runOnQueue(Queues.MAIN)
 
-    AsyncFunction("configureVolume") { _: Double -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("configureRate") { _: Double -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("configureMixWithOthers") { _: Boolean -> }.runOnQueue(Queues.MAIN)
-    AsyncFunction("configureFade") { _: Boolean, _: Int -> }.runOnQueue(Queues.MAIN)
+    AsyncFunction("setSystemLyricLine") { line: String?, position: String, itemID: String ->
+      engine().setSystemLyricLine(line, position, itemID)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("play") { entryID: String, generation: Int ->
+      engine().play(entryID, generation)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("pause") { generation: Int ->
+      engine().pause(generation)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("stop") { generation: Int ->
+      engine().stop(generation)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("seek") { seconds: Double, entryID: String, generation: Int ->
+      engine().seek(seconds, entryID, generation)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("configureVolume") { value: Double ->
+      engine().configureVolume(value)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("configureRate") { value: Double ->
+      engine().configureRate(value)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("configureMixWithOthers") { enabled: Boolean ->
+      engine().configureMixWithOthers(enabled)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("configureFade") { enabled: Boolean, durationMs: Int ->
+      engine().configureFade(enabled, durationMs)
+    }.runOnQueue(Queues.MAIN)
 
     AsyncFunction("configureSleep") { seconds: Double, finishCurrent: Boolean ->
-      if (seconds <= 0.0 && !finishCurrent) {
-        sleepMode = "off"
-        sleepRemainingSeconds = 0.0
-      } else if (finishCurrent) {
-        sleepMode = "off"
-        sleepRemainingSeconds = 0.0
-      } else {
-        sleepMode = "duration"
-        sleepRemainingSeconds = seconds
-      }
-      val snap = sleepState()
-      sendEvent("sleep", snap)
-      snap
+      engine().configureSleep(seconds, finishCurrent)
     }.runOnQueue(Queues.MAIN)
 
     AsyncFunction("sleepSnapshot") {
-      sleepState()
+      engine().sleepSnapshot()
     }.runOnQueue(Queues.MAIN)
 
     AsyncFunction("configureEQ") { enabled: Boolean, gains: List<Double>, preampDB: Double ->
-      dsp.configure(enabled, gains, preampDB)
+      engine().configureEQ(enabled, gains, preampDB)
     }.runOnQueue(Queues.MAIN)
 
     OnDestroy {
-      dsp.close()
+      appContext.reactContext?.let { ctx ->
+        NativePlaybackEngine.getInstance(ctx).attachEmitter(null)
+      }
     }
   }
-
-  private fun audioCacheDir(): File {
-    val base = appContext.reactContext?.cacheDir ?: File("/tmp")
-    return File(base, "NexusAudioCache").apply { mkdirs() }
-  }
-
-  private fun sleepState(): Map<String, Any> = mapOf(
-    "mode" to sleepMode,
-    "remainingSeconds" to sleepRemainingSeconds,
-    "finishCurrent" to (sleepMode == "track")
-  )
 }

@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
-import {Alert,Pressable,Share} from 'react-native';
+import {Alert,Pressable} from 'react-native';
+import {shareLocalFile} from '../storage/shareLocalFiles.ts';
 import {File,Paths} from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import {Ionicons} from '@expo/vector-icons';
@@ -15,7 +16,7 @@ export function ThemeConfigActions({services}:{services:Services}){
   const begin=()=>{if(locked.current)return false;locked.current=true;setBusy(true);return true;};
   const exportTheme=async()=>{
     if(!begin())return;let file:File|undefined;
-    try{const text=encodeThemeConfig(services.preferences.getSnapshot());file=new File(Paths.cache,`nexus-theme-${Date.now()}.json`);file.write(text);await Share.share({url:file.uri,title:'音枢主题配置'});}
+    try{const text=encodeThemeConfig(services.preferences.getSnapshot());file=new File(Paths.cache,`nexus-theme-${Date.now()}.json`);file.write(text);await shareLocalFile(file.uri,'音枢主题配置');}
     catch{if(active.current)Alert.alert('主题配置导出失败','请重试。');}
     finally{try{if(file?.exists)file.delete();}catch{}finish();}
   };

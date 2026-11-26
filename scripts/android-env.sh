@@ -37,10 +37,11 @@ fi
 
 export ANDROID_HOME="$nexus_android_vol/sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export ANDROID_AVD_HOME="$nexus_android_vol/avd"
 export GRADLE_USER_HOME="$nexus_android_vol/gradle-home"
 export NEXUS_ANDROID_BUILD_ROOT="$nexus_android_vol/build-root"
 export NEXUS_ANDROID_ARCHIVE_DIR="$nexus_t7_mount/NexusMusic/BuildArchive/android"
 
-mkdir -p "$GRADLE_USER_HOME" "$NEXUS_ANDROID_BUILD_ROOT" "$NEXUS_ANDROID_ARCHIVE_DIR"
+mkdir -p "$ANDROID_AVD_HOME" "$GRADLE_USER_HOME" "$NEXUS_ANDROID_BUILD_ROOT" "$NEXUS_ANDROID_ARCHIVE_DIR"
 
-export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"

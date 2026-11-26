@@ -1,3 +1,23 @@
+## 2026-11-26 Android Phase 1–4 完整落地、模拟器全链路实测与双架构 Release APK 归档
+
+依据用户批准的[决策 0083](docs/decisions/0083-android-multiplatform-architecture.md)，在 `main` 单分支完成 Android 端 Phase 1–4 全功能原生实现、跨端共享适配、Android 15（API 35 `x86_64`）模拟器真实端到端验证、视觉逐图修复及双架构（`arm64-v8a` 真机 + `x86_64` 模拟器）Release APK 归档（全过程保持零界面定制、与 iOS 逻辑和 UI 完全一致，零干扰 iOS 线）：
+- **Phase 1（核心听歌闭环：QuickJS-ng + Media3 + 共享 C++ DSP）**：
+  - 引入 MIT 许可的 `quickjs-ng v0.18.0` 核心源码（登记至 `THIRD_PARTY_NOTICES.md` 与 `licenses/quickjs-ng-MIT.txt`），通过 CMake/NDK 27 编译 16KB 页对齐的 `libnexus_quickjs.so` 与复用共享 `modules/nexus-native/common/AudioDSP.hpp` 的 `libnexus_audio_dsp.so`；
+  - 实现 `ScriptRuntime.kt`、`ScriptHTTP.kt`、`ScriptUtilities.kt`（12 项 LX 加解密/压缩/KRC/QRC 能力）、`AudioURLProbe.kt`、`CoverCache.kt`、`AudioCache.kt`、`PlaybackSleepTimer.kt`、`NexusDspAudioProcessor.kt`、`NexusMediaPlaybackService.kt` 与 `NativePlaybackEngine.kt`（Media3 ExoPlayer 1.5.1 + `OkHttpDataSource` 自定义头 + 后台音频预缓存 + 音频焦点/混音 + 20ms 渐入渐出 + 倍速/音量 + 睡眠定时 + 100ms 32 频段 FFT 推送 + 锁屏元数据/专辑图/系统歌词）；
+- **Phase 2（原生歌词/视图与跨端共享适配）**：
+  - 实现 `NexusLyricsModule.kt`（完整消费 iOS 同构 JSON 契约、`Choreographer` 逐词推进、Ruby 注音、模糊、`stageStyle` 四态与精确匹配 RN 行高的 `ExactLineHeightSpan`）；
+  - 完善 `PublicMVPolicy.kt`、`NexusNativeViews.kt`（5 平台 MV 白名单与追踪拦截、`NexusRoutePickerView`、AGSL 3×3 `NexusMeshView`、`NexusAmbientView`、`NexusMaterialView`、`NexusPhotoMaskView`、`NexusVinylPivotView`、`NexusVinylReflectionView`、`NexusLyricGestureView`、`NexusDeviceVolumeView` 与 Android 弹窗状态栏亮暗同步 `NexusSystemBarSyncView`）；
+  - 补齐跨端共享适配：`src/storage/shareLocalFiles.ts`（Android 走 `FileProvider` 系统分享、iOS 保持 `Share.share`）、`AdaptiveModal.tsx`（启用 `statusBarTranslucent` 与竖屏 `AppearanceSheetModal`）、`Materials.tsx`（Android 启用毛玻璃与轻阴影）、`offlineFiles.ts`（开放 `NexusDownloads`）、`deviceMedia.ts`（支持 `content:` URI）、`FontSettings.tsx`（移除 `'System'` 硬编码）、`App.tsx`（系统返回键路由）及 `Player.tsx`（仅限 `Platform.OS === 'android'` 的安全区避让与 `statusBarTranslucent`，零改动 iOS 像素）；
+- **Phase 3（离线下载、文件/本地曲库、WebDAV、平台登录与多图标）**：
+  - 补齐 `NexusDownloadService.kt` + `NexusDownloadsModule.kt`（`dataSync` 前台服务、断点续传、1–3 并发、`journal.json` 与 `filesDir/offline-audio` 对齐）；
+  - 完整实现 24 接口 `NexusFilesModule.kt`（SAF 持久化目录授权扫描、下载目录保存、MediaStore 二维码保存、`FileProvider` 导出、`VisualAssets` + 24 桶 HSV `VisualPaletteMath`、`LocalAudioFiles` 导入/去重/元数据/封面/事务删除）、`NexusMediaLibraryModule.kt`（`MediaStore.Audio` + `ContentObserver`）、`NexusDAVModule.kt`（5 接口全量含远端 Range 探测）、`NexusAuthWebActivity.kt` / `NexusQrScannerActivity.kt` / `NexusMusicAuthModule.kt`（隔离 WebView 登录 + 局域网配对 HMAC/AES-256-GCM 线协议）及 5 组 `<activity-alias>` 动态图标 `NexusAppIconModule.kt`；
+  - 补齐 Release 混淆 JNI 保活（`proguard-rules.pro`）、明文局域网 HTTP 支持（`usesCleartextTraffic="true"`，对齐 iOS ATS）及全版本透明状态栏/导航栏（`styles.xml` + `MainActivity.kt`）。
+- **Phase 4（模拟器全链路实测、真实缺陷闭环与验收）**：
+  - 在 `emulator-5554`（`nexus_api35`, `1080x2400 @ 420dpi`, `x86_64`）上安装独立打包的 Hermes Release APK，搭建本地合成 E2E 服务（`adb reverse tcp:19876`）实测并通过：冷启动、发现页实时拉取网易推荐歌单、音乐库、本地、搜索实时网易/QQ 热搜、设置全二级页面、外观悬浮主题面板、6 款应用图标、10 段 EQ 曲线面板、缓存统计（封面 73 张 4.8 MB + 临时音频 32 首 161.5 MB）、合成 LX 音源脚本导入与 QuickJS-ng 沙箱初始化（`1/1 已启用`）、真实音频解码播放与连续自动切歌（`dumpsys media_session` 实证 `state=PLAYING(3)` 进度持续推进、锁屏标题/歌手元数据正常、零崩溃零报错）、全部 8 套播放器皮肤（经典/黑胶/AM/AM2/沉浸/声波核实时 32 频段 FFT 环/写真/舞台）及全屏歌词逐行同步；
+  - 实测期间直接捕获并彻底修复 7 项 Android 真实缺陷：① quickjs-ng v0.18.0 `JSInterruptHandler` 签名差异；② `NexusDspAudioProcessor` 输出 `PCM_FLOAT` 与 Media3 `SilenceSkippingAudioProcessor` 不兼容（改为内部 32-bit 浮点 C++ DSP 处理 + `PCM_16BIT` 输出）；③ `NexusMediaPlaybackService` 手动 `startForegroundService` 触发 `ForegroundServiceDidNotStartInTimeException`；④ `CoverCache`/`NexusFilesModule` 单斜杠 `file:/` 规范化为标准 `file:///`；⑤ `NexusPhotoMaskView` 继承 `LinearLayout` 导致写真 `<Image>` 测为 `1×1`；⑥ `NexusLyricLineView` 在 84pt 舞台大字下的行高裁切（改用 `ExactLineHeightSpan`）；⑦ 暗色全屏播放页 `Modal Dialog` 状态栏图标发黑与黑胶/声波核顶栏避让；⑧ `NexusDownloadsModule`/`NexusDownloadService` 极速下载前台服务竞态；
+  - **测试与产物回执**：`npm run check` **1170/1170** 通过、`npm run test:native` iOS 全套原生零回归通过、Android `:nexus-native:testDebugUnitTest`（6 组测试）与 `:app:lintVitalRelease` 通过；最终双架构（`arm64-v8a` + `x86_64`）Release APK 已归档至 `/Volumes/T7 Touch/NexusMusic/BuildArchive/android/nexus-music-release-20261126-124927-ba5c1b1.apk`（60 MB，SHA-256 `9d967048c4c5c61934f140abb9d94c384b4df187fd843db798e1b31d920f4a91`，内含双架构 `libnexus_audio_dsp.so`/`libnexus_quickjs.so`、`assets/bootstrap.js` 与 `assets/index.android.bundle`）。
+- **待真机补充项**：待用户连接实体 Android 手机后，可直接使用上述 `arm64-v8a` APK 实测真机物理扬声器/蓝牙路由切出、摄像头扫码配对、桌面多图标切换与长时息屏后台播放。
+
 ## 2026-11-26 Android Phase 0 底座落地：双端同构目录、T7 Touch 外置工具链与首个 Debug APK 编通
 
 依据用户明确批准的[决策 0083](docs/decisions/0083-android-multiplatform-architecture.md)，在 `main` 单分支完成 Android Phase 0 工程底座落地（零干扰 iOS 线，不拉长期 Android 分支）：

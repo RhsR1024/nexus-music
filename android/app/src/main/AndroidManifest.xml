@@ -19,7 +19,7 @@
       <data android:scheme="https"/>
     </intent>
   </queries>
-  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">
+  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:usesCleartextTraffic="true" android:enableOnBackInvokedCallback="false">
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
@@ -35,5 +35,20 @@
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
     </activity>
+    <activity-alias android:name=".NexusAltOrange" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_launcher_alt_orange" android:roundIcon="@mipmap/ic_launcher_alt_orange" android:label="@string/app_name" android:targetActivity=".MainActivity">
+      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+    </activity-alias>
+    <activity-alias android:name=".NexusAltGreen" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_launcher_alt_green" android:roundIcon="@mipmap/ic_launcher_alt_green" android:label="@string/app_name" android:targetActivity=".MainActivity">
+      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+    </activity-alias>
+    <activity-alias android:name=".NexusAltBlue" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_launcher_alt_blue" android:roundIcon="@mipmap/ic_launcher_alt_blue" android:label="@string/app_name" android:targetActivity=".MainActivity">
+      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+    </activity-alias>
+    <activity-alias android:name=".NexusAltPurple" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_launcher_alt_purple" android:roundIcon="@mipmap/ic_launcher_alt_purple" android:label="@string/app_name" android:targetActivity=".MainActivity">
+      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+    </activity-alias>
+    <activity-alias android:name=".NexusAltGraphite" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_launcher_alt_graphite" android:roundIcon="@mipmap/ic_launcher_alt_graphite" android:label="@string/app_name" android:targetActivity=".MainActivity">
+      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+    </activity-alias>
   </application>
 </manifest>

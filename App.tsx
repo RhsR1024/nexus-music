@@ -19,7 +19,7 @@ import {LibraryHome} from './src/ui/LibraryHome';
 import {StatusBar} from 'expo-status-bar';
 import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaProvider,useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Linking, Pressable, ScrollView, View, useWindowDimensions} from 'react-native';
+import {BackHandler, Linking, Pressable, ScrollView, View, useWindowDimensions} from 'react-native';
 type Tab='discover'|'library'|'local'|'search'|'settings';
 const emptySubscribe=()=>()=>{};
 const defaultPrefs=()=>defaults;
@@ -58,6 +58,7 @@ function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
   const startup=()=>{setStartupError(undefined);void initialize().then(setServices,error=>setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。'));};
   useEffect(()=>{let active=true;void initialize().then(value=>{if(active)setServices(value);},error=>{if(active)setStartupError(error instanceof FutureRecordError?error.message:'无法打开本地数据或原生模块，原始数据已保留，请重试。');});return()=>{active=false;};},[initialize]);
   useEffect(()=>{const open=(url:string|null)=>{if(url?.startsWith('com.nexusmusic.app://settings')){setSettingsEntry('home');setTab('settings');}};void Linking.getInitialURL().then(open);const subscription=Linking.addEventListener('url',event=>open(event.url));return()=>subscription.remove();},[]);
+  useEffect(()=>{const sub=BackHandler.addEventListener('hardwareBackPress',()=>{if(effectiveTab==='library'&&privateLibrary){setPrivateLibrary(false);return true;}if(effectiveTab!=='discover'){setTab('discover');return true;}return false;});return()=>sub.remove();},[effectiveTab,privateLibrary]);
   const autoPlayApplied=useRef(false);
   useEffect(()=>{
     if(!services||autoPlayApplied.current)return;

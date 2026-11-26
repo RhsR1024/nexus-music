@@ -90,6 +90,7 @@ class NexusMaterialView(context: Context, appContext: AppContext) : ExpoView(con
 
 /** 4-stop vertical alpha fade mask matching iOS NexusPhotoMaskView (0 / 0.5 / 0.76 / 1.0). */
 class NexusPhotoMaskView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+  override val shouldUseAndroidLayout: Boolean = true
   private val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
   }
@@ -101,7 +102,35 @@ class NexusPhotoMaskView(context: Context, appContext: AppContext) : ExpoView(co
   }
 
   fun applyMask() {
+    if (width > 0 && height > 0) {
+      layoutChildrenFull(width, height)
+    }
     invalidate()
+  }
+
+  override fun onViewAdded(child: android.view.View?) {
+    super.onViewAdded(child)
+    if (width > 0 && height > 0) {
+      post { layoutChildrenFull(width, height) }
+    }
+  }
+
+  override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+    val w = r - l
+    val h = b - t
+    if (w > 0 && h > 0) {
+      layoutChildrenFull(w, h)
+    }
+  }
+
+  private fun layoutChildrenFull(w: Int, h: Int) {
+    val wSpec = MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY)
+    val hSpec = MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY)
+    for (i in 0 until childCount) {
+      val child = getChildAt(i)
+      child.measure(wSpec, hSpec)
+      child.layout(0, 0, w, h)
+    }
   }
 
   override fun dispatchDraw(canvas: Canvas) {
@@ -125,6 +154,53 @@ class NexusPhotoMaskView(context: Context, appContext: AppContext) : ExpoView(co
     super.dispatchDraw(canvas)
     canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), maskPaint)
     canvas.restoreToCount(save)
+  }
+}
+
+/**
+ * Zero-size Android helper syncing the enclosing window (including React Native Modal Dialogs)
+ * status-bar icon contrast via official WindowInsetsController on API 30+ and systemUiVisibility on API 29.
+ */
+class NexusSystemBarSyncView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+  private var darkIcons: Boolean = true
+
+  init {
+    isClickable = false
+    isFocusable = false
+  }
+
+  fun setDarkIcons(value: Boolean) {
+    darkIcons = value
+    applyAppearance()
+  }
+
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    post { applyAppearance() }
+  }
+
+  override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+    super.onWindowFocusChanged(hasWindowFocus)
+    if (hasWindowFocus) applyAppearance()
+  }
+
+  private fun applyAppearance() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      val ctrl = windowInsetsController ?: rootView?.windowInsetsController ?: return
+      val mask = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+      ctrl.setSystemBarsAppearance(if (darkIcons) mask else 0, mask)
+    } else {
+      @Suppress("DEPRECATION")
+      val decor = rootView ?: return
+      @Suppress("DEPRECATION")
+      val flags = decor.systemUiVisibility
+      @Suppress("DEPRECATION")
+      decor.systemUiVisibility = if (darkIcons) {
+        flags or android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+      } else {
+        flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+      }
+    }
   }
 }
 
@@ -221,17 +297,26 @@ class NexusLyricGestureView(context: Context, appContext: AppContext) : ExpoView
   }
 }
 
-/** System audio output route picker button. */
+/** System audio output route picker button (attempts Android SystemUI media output switcher, falls back to Bluetooth settings). */
 class NexusRoutePickerView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
   private val button = ImageButton(context).apply {
     setBackgroundColor(Color.TRANSPARENT)
     contentDescription = "选择音频输出"
     setImageResource(android.R.drawable.stat_sys_headset)
     setOnClickListener {
-      val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      try {
-        context.startActivity(intent)
-      } catch (_: Throwable) {
+      val intents = listOf(
+        Intent("com.android.systemui.action.LAUNCH_MEDIA_OUTPUT_DIALOG")
+          .setPackage("com.android.systemui")
+          .putExtra("package_name", context.packageName)
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      )
+      for (intent in intents) {
+        try {
+          context.startActivity(intent)
+          break
+        } catch (_: Throwable) {
+        }
       }
     }
   }
@@ -503,13 +588,14 @@ class NexusMeshView(context: Context, appContext: AppContext) : NexusAmbientView
   }
 }
 
-/** Isolated non-persistent WebView for public MV share pages. */
+/** Isolated non-persistent WebView for public MV share pages enforcing PublicMVPolicy. */
 class NexusPublicMVView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
   val onState by EventDispatcher()
 
   var source: String = ""
   var active: Boolean = true
   private var appliedSource: String? = null
+  private var rootUri: android.net.Uri? = null
 
   private val webView = WebView(context).apply {
     settings.javaScriptEnabled = true
@@ -519,9 +605,22 @@ class NexusPublicMVView(context: Context, appContext: AppContext) : ExpoView(con
     settings.mediaPlaybackRequiresUserGesture = true
     CookieManager.getInstance().setAcceptCookie(false)
     webViewClient = object : WebViewClient() {
+      override fun shouldInterceptRequest(
+        view: WebView?,
+        request: WebResourceRequest?
+      ): android.webkit.WebResourceResponse? {
+        if (PublicMVPolicy.isBlockedTracker(request?.url)) {
+          return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
+        }
+        return super.shouldInterceptRequest(view, request)
+      }
+
       override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-        val url = request?.url?.toString() ?: return true
-        return !(url.startsWith("https://") || url.startsWith("http://"))
+        val target = request?.url ?: return true
+        val root = rootUri ?: return true
+        if (PublicMVPolicy.allowsNavigation(target, root)) return false
+        onState(mapOf("notice" to "已拦截非官方公开页面跳转"))
+        return true
       }
 
       override fun onPageFinished(view: WebView?, url: String?) {
@@ -542,8 +641,15 @@ class NexusPublicMVView(context: Context, appContext: AppContext) : ExpoView(con
     webView.onResume()
     if (source.isNotBlank() && source != appliedSource) {
       appliedSource = source
+      val validRoot = PublicMVPolicy.initialURL(source)
+      if (validRoot == null) {
+        rootUri = null
+        onState(mapOf("phase" to "error", "notice" to "仅支持打开受支持的官方公开 MV 页面"))
+        return
+      }
+      rootUri = validRoot
       onState(mapOf("phase" to "loading"))
-      webView.loadUrl(source)
+      webView.loadUrl(validRoot.toString())
     }
   }
 

@@ -34,7 +34,7 @@ export function Modal(props:ModalProps){
   },[parent?.registry,parent?.id,id,covers,visible,release]);
   const scope=useMemo(()=>parent&&covers?{registry:parent.registry,id}:parent,[parent,id,covers]);
   const dismiss=()=>{if(!latestVisible.current)release();props.onDismiss?.();};
-  return <NativeModal supportedOrientations={orientations} {...props} onDismiss={dismiss}><PresentationContext.Provider value={scope}>{props.children}</PresentationContext.Provider></NativeModal>;
+  return <NativeModal statusBarTranslucent supportedOrientations={orientations} {...props} onDismiss={dismiss}><PresentationContext.Provider value={scope}>{props.children}</PresentationContext.Provider></NativeModal>;
 }
 export function SheetModal(props:ModalProps){return <Modal presentationStyle="pageSheet" {...props}/>;}
 
@@ -59,7 +59,7 @@ export function AppearanceSheetModal(props:ModalProps){
     },
     onPanResponderTerminate:()=>Animated.spring(offset,{toValue:0,useNativeDriver:true,damping:24,stiffness:260,mass:1}).start(),
   }),[offset]);
-  if(Platform.OS!=='ios'||width>=600||width>height)return <SheetModal {...props}/>;
+  if((Platform.OS!=='ios'&&Platform.OS!=='android')||width>=600||width>height)return <SheetModal {...props}/>;
   return <Modal {...props} transparent presentationStyle="overFullScreen">
     <View style={{flex:1}}>
       <Pressable accessibilityRole="button" accessibilityLabel="关闭主题与背景" onPress={props.onRequestClose} style={{position:'absolute',top:0,right:0,bottom:0,left:0,backgroundColor:'rgba(0,0,0,0.34)'}}/>
