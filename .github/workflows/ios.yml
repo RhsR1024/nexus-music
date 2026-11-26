@@ -189,7 +189,7 @@ jobs:
   ios-features:
     needs: checks
     runs-on: xcode-27
-    timeout-minutes: 150
+    timeout-minutes: 165
     env:
       CI: 'true'
       DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer

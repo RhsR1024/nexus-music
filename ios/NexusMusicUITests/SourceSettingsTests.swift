@@ -128,7 +128,7 @@ final class SourceSettingsTests: XCTestCase {
     app.buttons["收起播放选项"].firstMatch.tap()
   }
   private func replaceText(_ field:XCUIElement,with value:String){
-    for _ in 0..<2 {
+    for attempt in 0..<4 {
       // A tap can place the caret inside the URL. Backspace alone then leaves
       // its suffix intact, so move to the end before the bounded clear.
       let existing=field.value as? String ?? ""
@@ -149,7 +149,12 @@ final class SourceSettingsTests: XCTestCase {
       guard cleared.isEmpty || cleared==field.placeholderValue else {
         XCTFail("Text replacement must observe an empty field before retrying");return
       }
-      field.typeText(value);field.typeText("\n")
+      if attempt >= 2 {
+        for character in value {field.typeText(String(character))}
+      } else {
+        field.typeText(value)
+      }
+      field.typeText("\n")
       if field.value as? String == value {break}
     }
     XCTAssertEqual(field.value as? String,value)
@@ -159,13 +164,14 @@ final class SourceSettingsTests: XCTestCase {
     // Stage/window tests persist their layout, including across app launches.
     openSettings(app,page:"skins")
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
-    XCTAssertTrue(classic.waitForExistence(timeout:5))
-    let viewport=app.descendants(matching:.any).matching(identifier:"settings-viewport-skins").firstMatch
+    XCTAssertTrue(classic.waitForExistence(timeout:5),"Classic layout option must exist in skins sheet")
+    let sheetScroll=app.descendants(matching:.any).matching(identifier:"skins-sheet-scroll").firstMatch
+    let viewport=sheetScroll.exists ? sheetScroll : app
     for _ in 0..<12 {
       if classic.isHittable{break}
       viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.25)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.75)))
     }
-    XCTAssertTrue(classic.isHittable);classic.tap()
+    XCTAssertTrue(classic.isHittable,"Classic layout option must be hittable in skins sheet");classic.tap()
     let dismissed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.buttons["skins-sheet-close"].exists},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[dismissed],timeout:10),.completed,"Persist the source test's classic layout before playback")
   }
@@ -3773,9 +3779,9 @@ final class SourceSettingsTests: XCTestCase {
     // Each typeText waits for system animation idleness. Submit whole values
     // so a slow keyboard cannot multiply that wait by every fixture character.
     replaceText(address,with:"http://127.0.0.1:18439/sync-dav/")
-    let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
+    let user=app.textFields["WebDAV用户名"];replaceText(user,with:"fixture-user")
     let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
-    let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Sync fixture");label.typeText("\n");XCTAssertEqual(label.value as? String,"Sync fixture");app.buttons["验证并保存WebDAV"].tap()
+    let label=app.textFields["WebDAV连接名称"];replaceText(label,with:"Sync fixture");app.buttons["验证并保存WebDAV"].tap()
     XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
     let suffix=String(Int(Date().timeIntervalSince1970)),original="Sync original "+suffix,local="Sync local "+suffix,cloud="Sync cloud "+suffix,folder="nexus-sync-"+suffix+"/"
     let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();input.typeText(original);input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
@@ -3853,9 +3859,9 @@ final class SourceSettingsTests: XCTestCase {
     let address=app.textFields["WebDAV服务器根目录"];if !address.waitForExistence(timeout:2){app.buttons["管理WebDAV连接"].tap()}
     let prior=app.buttons["移除WebDAV连接：Commit fixture"];if prior.exists{prior.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
     replaceText(address,with:"http://127.0.0.1:18439/sync-dav/")
-    let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n")
+    let user=app.textFields["WebDAV用户名"];replaceText(user,with:"fixture-user")
     let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
-    let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Commit fixture");label.typeText("\n");app.buttons["验证并保存WebDAV"].tap()
+    let label=app.textFields["WebDAV连接名称"];replaceText(label,with:"Commit fixture");app.buttons["验证并保存WebDAV"].tap()
     XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
     let suffix=String(Int(Date().timeIntervalSince1970)),name="Commit original "+suffix,folder="nexus-sync-commit-"+suffix+"/"
     let playlists=app.buttons["我的歌单"];reveal(playlists);playlists.tap();let input=app.textFields["创建音枢歌单名称"];reveal(input);input.tap();input.typeText(name);input.typeText("\n");app.buttons["library-create-playlist-submit"].tap();XCTAssertTrue(app.buttons["返回歌单列表"].waitForExistence(timeout:5));app.buttons["返回歌单列表"].tap()
@@ -3899,9 +3905,9 @@ final class SourceSettingsTests: XCTestCase {
     let priorConnection=app.buttons["移除WebDAV连接：Backup fixture"]
     if priorConnection.exists {XCTAssertTrue(app.staticTexts["http://127.0.0.1:18439/backup-dav/"].exists);priorConnection.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["WebDAV连接与凭据已移除"].waitForExistence(timeout:10))}
     XCTAssertTrue(address.waitForExistence(timeout:5));replaceText(address,with:"http://127.0.0.1:18439/backup-dav/")
-    let user=app.textFields["WebDAV用户名"];user.tap();user.typeText("fixture-user");user.typeText("\n");XCTAssertEqual(user.value as? String,"fixture-user")
+    let user=app.textFields["WebDAV用户名"];replaceText(user,with:"fixture-user")
     let password=app.secureTextFields["WebDAV密码"];password.tap();password.typeText("fixture-password");password.typeText("\n")
-    let label=app.textFields["WebDAV连接名称"];label.tap();label.typeText("Backup fixture");label.typeText("\n");XCTAssertEqual(label.value as? String,"Backup fixture");app.buttons["验证并保存WebDAV"].tap()
+    let label=app.textFields["WebDAV连接名称"];replaceText(label,with:"Backup fixture");app.buttons["验证并保存WebDAV"].tap()
     XCTAssertTrue(app.buttons["刷新WebDAV目录"].waitForExistence(timeout:20));app.buttons["收起WebDAV"].tap();_=dismissPasswordSuggestion(in:app)
     let suffix=String(Int(Date().timeIntervalSince1970)),kept="Cloud kept "+suffix,later="Cloud later "+suffix,backupPath="nexus-backup-"+suffix+"/"
     makePlaylist(kept);cloud()
@@ -3953,8 +3959,8 @@ final class SourceSettingsTests: XCTestCase {
       }
     }
     XCTAssertTrue(address.waitForExistence(timeout:10))
-    address.tap();for character in "http://127.0.0.1:18439/dav/"{address.typeText(String(character))};address.typeText("\n")
-    let user=app.textFields["WebDAV用户名"];user.tap();for character in "fixture-user"{user.typeText(String(character))};user.typeText("\n")
+    replaceText(address,with:"http://127.0.0.1:18439/dav/")
+    let user=app.textFields["WebDAV用户名"];replaceText(user,with:"fixture-user")
     let password=app.secureTextFields["WebDAV密码"];password.tap();for character in "fixture-password"{password.typeText(String(character))};password.typeText("\n")
     app.buttons["验证并保存WebDAV"].tap()
     if later.waitForExistence(timeout:3){later.tap()}
@@ -4069,19 +4075,19 @@ final class SourceSettingsTests: XCTestCase {
     let prior=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch
     while prior.exists {reach(prior);prior.tap();let delete=app.buttons["删除歌单"];reach(delete);delete.tap();app.alerts.buttons["删除"].tap()}
     let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
-    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
-    XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
+    // The picker may restore the previous directory without a Browse button.
+    // Use the same real-row navigation as the image/font/local-audio import paths.
     selectLocalFixture("Nexus Playlist Fixture",in:app)
-    XCTAssertTrue(app.alerts["导入LX歌单"].waitForExistence(timeout:15));app.alerts.buttons["追加导入"].tap()
-    XCTAssertTrue(app.staticTexts["已导入 1 个歌单、1000 首歌曲"].waitForExistence(timeout:15))
+    XCTAssertTrue(app.alerts["导入LX歌单"].waitForExistence(timeout:15),"Import LX playlist alert must appear");app.alerts.buttons["追加导入"].tap()
+    XCTAssertTrue(app.staticTexts["已导入 1 个歌单、1000 首歌曲"].waitForExistence(timeout:15),"Imported 1000-track playlist notice must appear")
     let playlists=app.buttons["我的歌单"];reach(playlists);playlists.tap()
     let playlist=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus list fixture")).firstMatch;reach(playlist);playlist.tap()
     let playAll=app.buttons["播放全部"];reach(playAll);playAll.tap()
-    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap()
+    let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15),"Mini player must open after play all");player.tap()
     // This thousand-row fixture checks queue modes and entry identity. A source
     // enabled by an earlier test may fail these synthetic IDs and auto-advance;
     // pause that intent before navigating controls whose geometry can change.
-    func pauseFixturePlayback(){let pause=app.buttons["暂停"].firstMatch;if pause.waitForExistence(timeout:5){pause.tap()};XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10))}
+    func pauseFixturePlayback(){let pause=app.buttons["暂停"].firstMatch;if waitForHittable(pause,timeout:5){pause.tap()};XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10),"Player must reach paused state")}
     pauseFixturePlayback()
     var queueEntry=app.buttons["查看播放队列"];reach(queueEntry);queueEntry.tap()
     var fullQueue=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","完整队列与拖动排序")).firstMatch;reach(fullQueue);fullQueue.tap()
@@ -4112,7 +4118,7 @@ final class SourceSettingsTests: XCTestCase {
     let search=app.textFields["搜索列表歌曲歌手专辑"];XCTAssertTrue(search.waitForExistence(timeout:10))
     // Cloud recording showed "dplicate" after a single bulk typeText call.
     // Verify actual input before attributing a count failure to filtering.
-    func filterDuplicates(){search.tap();for character in "duplicate"{search.typeText(String(character))};XCTAssertEqual(search.value as? String,"duplicate");search.typeText("\n")}
+    func filterDuplicates(){replaceText(search,with:"duplicate")}
     filterDuplicates()
     let count=app.staticTexts["track-list-count"]
     func expectCount(_ label:String){expectation(for:NSPredicate(format:"label == %@",label),evaluatedWith:count);waitForExpectations(timeout:10)}
@@ -4166,7 +4172,6 @@ final class SourceSettingsTests: XCTestCase {
     let playlist=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus library actions fixture")).firstMatch
     for _ in 0..<10{if !playlist.exists{break};reach(playlist);playlist.tap();let remove=app.buttons["删除歌单"];reach(remove);remove.tap();app.alerts.buttons["删除"].tap()}
     let importer=app.buttons["导入LX v2歌单 JSON / LXMC"];reach(importer);importer.tap()
-    let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch;XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
     selectLocalFixture("Nexus Library Actions Fixture",in:app)
     XCTAssertTrue(app.alerts["导入LX歌单"].waitForExistence(timeout:15));app.alerts.buttons["追加导入"].tap()
     XCTAssertTrue(app.staticTexts["已导入 1 个歌单、3 首歌曲"].waitForExistence(timeout:15))
@@ -6038,10 +6043,8 @@ final class SourceSettingsTests: XCTestCase {
     let address=app.textFields["Navidrome服务器地址"]
     XCTAssertTrue(address.waitForExistence(timeout:15))
     reveal(address)
-    address.tap();for character in "http://127.0.0.1:18439" {address.typeText(String(character))};address.typeText("\n")
-    XCTAssertEqual(address.value as? String,"http://127.0.0.1:18439")
-    let username=app.textFields["Navidrome用户名"];username.tap();for character in "fixture-user" {username.typeText(String(character))};username.typeText("\n")
-    XCTAssertEqual(username.value as? String,"fixture-user")
+    replaceText(address,with:"http://127.0.0.1:18439")
+    let username=app.textFields["Navidrome用户名"];replaceText(username,with:"fixture-user")
     let password=app.secureTextFields["Navidrome密码"];password.tap();for character in "fixture-password" {password.typeText(String(character))};password.typeText("\n")
     XCTAssertTrue(app.buttons["验证并保存连接"].isEnabled)
     app.buttons["验证并保存连接"].tap()
@@ -6154,12 +6157,14 @@ final class SourceSettingsTests: XCTestCase {
     let progress=app.descendants(matching:.any).matching(identifier:"播放进度").firstMatch
     XCTAssertTrue((progress.value as? String)?.hasSuffix(" / 2:00")==true,"Fixture duration must come from the decoded 120-second stream; actual progress: \(String(describing: progress.value))")
     let beforeSeek=progress.value as? String
-    // Seek far from the current position in the 120-second fixture while the
-    // second lyric remains active, and retain the paused playback intent.
+    // Seek far from the current position in the 120-second fixture while keeping
+    // the second lyric (>= 6s) active and leaving >95s of headroom before EOF so
+    // slower cloud runners do not advance to Synthetic tone 2 during Vinyl spin.
     let clock=beforeSeek?.components(separatedBy:" / ").first?.components(separatedBy:":").compactMap(Int.init) ?? []
     let currentSeconds=clock.count==2 ? clock[0]*60+clock[1] : 0
-    let target:CGFloat=currentSeconds>=70 && currentSeconds<=95 ? 0.35 : 0.7
-    progress.coordinate(withNormalizedOffset:CGVector(dx:0.25,dy:0.5)).press(forDuration:0.1,thenDragTo:progress.coordinate(withNormalizedOffset:CGVector(dx:target,dy:0.5)))
+    let origin:CGFloat=currentSeconds>=30 ? 0.45 : 0.15
+    let target:CGFloat=currentSeconds>=30 ? 0.15 : 0.45
+    progress.coordinate(withNormalizedOffset:CGVector(dx:origin,dy:0.5)).press(forDuration:0.1,thenDragTo:progress.coordinate(withNormalizedOffset:CGVector(dx:target,dy:0.5)))
     XCTAssertTrue(app.buttons["播放"].exists, "Seeking must preserve paused intent")
     expectation(for:NSPredicate(format:"value != %@",beforeSeek ?? ""),evaluatedWith:progress);waitForExpectations(timeout:5)
     let amImage=XCTAttachment(screenshot:app.screenshot());amImage.lifetime = .keepAlways;add(amImage)
@@ -7264,8 +7269,6 @@ final class SourceSettingsTests: XCTestCase {
     }
     func selectBackup(){
       let importer=app.buttons["导入漫途版本1备份"];XCTAssertTrue(importer.waitForExistence(timeout:15));reveal(importer);importer.tap()
-      let browse=app.buttons.matching(NSPredicate(format:"label IN %@",["浏览","Browse","瀏覽"])).firstMatch
-      XCTAssertTrue(browse.waitForExistence(timeout:30));browse.tap()
       selectLocalFixture("Nexus Wayfarer Fixture",in:app)
     }
     func verifyPlaylist(_ title:String,_ expected:[String]){

@@ -1431,8 +1431,12 @@ try {
     writeFileSync(resolve(runDirectory,'ui-summary.json'),summaryJSON);
     const summary=JSON.parse(summaryJSON);
     console.log(`UI results: ${summary.passedTests} passed, ${summary.failedTests} failed, ${summary.skippedTests} skipped; ${resultPath}`);
+    const catalogText=existsSync(logPath)?readFileSync(logPath,'utf8'):'';
+    const swiftErrorLines=[...catalogText.matchAll(/[^\n]*SourceSettingsTests\.swift:\d+: error:[^\n]*/g)].map(m=>m[0].trim());
     for(const failure of summary.testFailures??[]){
-      const line=`${failure.testIdentifierString}: ${failure.failureText}`;
+      const testShort=String(failure.testIdentifierString??'').split('/').pop()?.replace(/\(\)$/,'')??'';
+      const matchingLocation=swiftErrorLines.find(item=>testShort&&item.includes(testShort));
+      const line=`${failure.testIdentifierString}: ${failure.failureText}${matchingLocation?` [${matchingLocation}]`:''}`;
       console.error(line);
       if(process.env.GITHUB_ACTIONS==='true'){
         const clean=line.replace(/[\r\n]+/g,' ').slice(0,500);
