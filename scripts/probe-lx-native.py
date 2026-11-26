@@ -12,7 +12,7 @@ def probe(path):
     try:
         run = subprocess.run([
             str(root / 'build/tests/native-runtime'),
-            str(root / 'modules/nexus-native/ios/bootstrap.js'), str(path), '--init'
+            str(root / 'modules/nexus-native/common/bootstrap.js'), str(path), '--init'
         ], capture_output=True, text=True, timeout=25)
         result = json.loads(run.stdout) if run.returncode == 0 else {'nativeProcessFailed': True}
     except subprocess.TimeoutExpired:

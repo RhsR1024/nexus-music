@@ -1,0 +1,50 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.nexusmusic'
+version = '0.1.0'
+
+def syncSharedAssets = tasks.register('syncNexusSharedAssets', Copy) {
+  from(file('../common/bootstrap.js'))
+  into(layout.buildDirectory.dir('generated/nexus-assets'))
+}
+
+android {
+  namespace 'com.nexusmusic.nexusnative'
+
+  defaultConfig {
+    minSdkVersion 29
+    versionCode 1
+    versionName '0.1.0'
+
+    externalNativeBuild {
+      cmake {
+        cppFlags '-std=c++20 -O2'
+      }
+    }
+  }
+
+  sourceSets {
+    main {
+      assets.srcDirs += [layout.buildDirectory.dir('generated/nexus-assets')]
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path file('src/main/cpp/CMakeLists.txt')
+      version '3.22.1'
+    }
+  }
+}
+
+tasks.matching { it.name == 'preBuild' }.configureEach {
+  dependsOn(syncSharedAssets)
+}
+
+dependencies {
+  implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+  testImplementation 'junit:junit:4.13.2'
+}

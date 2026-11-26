@@ -1,8 +1,10 @@
 {
   "platforms": [
-    "apple"
+    "apple",
+    "android"
   ],
   "apple": {
+    "podspecPath": "NexusNative.podspec",
     "modules": [
       "NexusNativeModule",
       "NexusAppIconModule",
@@ -14,6 +16,21 @@
       "NexusDAVModule",
       "NexusDownloadsModule"
     ],
-    "appDelegateSubscribers": ["NexusDownloadsAppDelegateSubscriber"]
+    "appDelegateSubscribers": [
+      "NexusDownloadsAppDelegateSubscriber"
+    ]
+  },
+  "android": {
+    "modules": [
+      "com.nexusmusic.nexusnative.NexusNativeModule",
+      "com.nexusmusic.nexusnative.NexusAppIconModule",
+      "com.nexusmusic.nexusnative.NexusPlaybackModule",
+      "com.nexusmusic.nexusnative.NexusLyricsModule",
+      "com.nexusmusic.nexusnative.NexusMusicAuthModule",
+      "com.nexusmusic.nexusnative.NexusFilesModule",
+      "com.nexusmusic.nexusnative.NexusMediaLibraryModule",
+      "com.nexusmusic.nexusnative.NexusDAVModule",
+      "com.nexusmusic.nexusnative.NexusDownloadsModule"
+    ]
   }
 }

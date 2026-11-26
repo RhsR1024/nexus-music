@@ -1,3 +1,7 @@
+## 2026-11-26 Android 纳入主干双端同构范围（决策 0083）
+
+按用户明确批准与[决策0083](decisions/0083-android-multiplatform-architecture.md)，覆盖此前“Android 不在本期交付范围”的历史边界：在 `main` 分支采用同构目录（`android/` + `modules/nexus-native/android/` + `modules/nexus-native/common/`）实现 Android 10（API 29）及以上支持。Android 不做定制化功能或界面分叉，与 iOS 共用全部 JS/TS 业务与界面层并同步演进；原生层 9 个模块与 11 个视图 1:1 保持同名同契约，按 Phase 0–4 分阶段验收并保留 4 处系统客观差异边界（毛玻璃降级、系统音频路由与 MediaStore 映射、`activity-alias` 换图标桌面特性、标准 MediaSession 锁屏通知）。本机 Android 工具链与中间产物外置至 T7 Touch 稀疏映像，避免占用 Mac 内盘空间。
+
 ## 2026-11-25 前端 UI 恢复 ≥90% Sollin 高保真目标（决策 0082）
 
 按用户最新明确要求与[决策0082](decisions/0082-sollin-ui-90-fidelity-restoration.md)，覆盖 0079 中取消全局 90% UI 对齐门槛的放宽：持续推进剩余功能与全站前端 UI 与 Sollin 对齐，力争 ≥90% 复刻参考，做不到须逐项说明理由。同步收口 2026-11-18 TTML 内联与引用样式（`bf0606f`），见[回执](2026-11-25-ttml-inline-style-report.md)。

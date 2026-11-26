@@ -5,6 +5,11 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
+      - 'android/**'
+      - 'modules/nexus-native/android/**'
+      - '.github/workflows/android.yml'
+      - 'scripts/android-env.sh'
+      - 'scripts/build-android.sh'
   pull_request:
   workflow_dispatch:
 permissions:

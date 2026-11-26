@@ -19,7 +19,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const url = `http://127.0.0.1:${server.address().port}`;
 function run(payload) {
   return new Promise((resolve, reject) => {
-    const child = spawn('build/tests/native-runtime', ['modules/nexus-native/ios/bootstrap.js', 'tests/native/runtime-fixture.js', JSON.stringify(payload)]);
+    const child = spawn('build/tests/native-runtime', ['modules/nexus-native/common/bootstrap.js', 'tests/native/runtime-fixture.js', JSON.stringify(payload)]);
     let stdout = '', stderr = '';
     child.stdout.on('data', chunk => { stdout += chunk; });
     child.stderr.on('data', chunk => { stderr += chunk; });

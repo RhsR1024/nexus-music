@@ -2,7 +2,7 @@ import Foundation
 
 @main enum LifecycleTests {
   static func main() throws {
-    let bootstrap = try String(contentsOfFile: "modules/nexus-native/ios/bootstrap.js", encoding: .utf8)
+    let bootstrap = try String(contentsOfFile: "modules/nexus-native/common/bootstrap.js", encoding: .utf8)
     let script = """
     let counter = 0;
     let delayed;

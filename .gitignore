@@ -39,6 +39,18 @@ resource/
 # Local Xcode Node location
 .xcode.env.local
 
+# Android build caches, local SDK pointer, and APK/AAB outputs
+# Omit trailing slashes so both real directories and T7 external symlinks are ignored.
+android/.gradle
+android/build
+android/app/build
+android/local.properties
+modules/nexus-native/android/build
+modules/nexus-native/android/.cxx
+*.apk
+*.aab
+*.hprof
+
 # Local user-provided Sollin reference screenshots (not product assets)
 /resources/sollin-reference/
 

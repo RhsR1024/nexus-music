@@ -1,3 +1,10 @@
+## 2026-11-26 Android 双端同构开发与外置缓存规则（用户明确批准）
+
+- 见[决策0083](docs/decisions/0083-android-multiplatform-architecture.md)：在 `main` 单分支采用同构目录推进 Android 支持（`android/` 与 `ios/` 平级、`modules/nexus-native/android/` 与 `ios/` 平级、`common/` 放双端共用 `AudioDSP.hpp` 与 `bootstrap.js`），**不拉长期 Android 分支**。
+- Android 不做功能与界面定制，逻辑和 UI 与 iOS 保持一致；改动共享 `src/` 或 `App.tsx` 时同步兼顾双端，变更任何自定义原生模块接口/事件/视图属性时须同步对齐 Swift 与 Kotlin 契约。
+- 禁止对已入库的 `ios/` 或 `android/` 执行覆盖性 `expo prebuild --clean`。
+- 本机 Android 工具链（JDK 17、Android SDK/NDK/CMake）、`GRADLE_USER_HOME` 及中间构建产物统一存放于 T7 Touch 外置盘的 APFS 稀疏映像（`/Volumes/T7 Touch/NexusMusic/AndroidWorkspace/nexus-android-dev.sparsebundle` → `/Volumes/NexusAndroid`），完成验证的 APK 归档至 `/Volumes/T7 Touch/NexusMusic/BuildArchive/android/`；写入前必须核验 T7 真实挂载，严禁在 `/Volumes` 下创建假目录回退到内盘。
+
 ## 2026-11-25 回复语言硬规则（用户明确要求）
 
 - 所有对用户的回复、进度汇报、总结、提问与文档说明**必须始终使用简体中文**，除非用户明确指定其他语言。

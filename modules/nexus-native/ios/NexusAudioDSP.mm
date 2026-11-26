@@ -1,6 +1,6 @@
 #import "NexusAudioDSP.h"
 #import <MediaToolbox/MediaToolbox.h>
-#include "AudioDSP.hpp"
+#include "../common/AudioDSP.hpp"
 #include <memory>
 
 struct NexusTapStorage { std::shared_ptr<nexus::AudioDSP> core; };

@@ -1,0 +1,70 @@
+name: Android checks and APK build
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'ios/**'
+      - 'modules/nexus-native/ios/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'ios/**'
+      - 'modules/nexus-native/ios/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+  # Keep the running validation; replace obsolete pending commits with the latest.
+  queue: single
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  android-build:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - name: Verify Android Expo autolinking includes nexus-native
+        run: |
+          node -e "const cp = require('child_process'); const out = cp.execFileSync(process.execPath, ['--no-warnings', '--eval', \"require('expo/bin/autolinking')\", 'expo-modules-autolinking', 'resolve', '--platform', 'android', '--json'], { encoding: 'utf8' }); const data = JSON.parse(out); const mod = data.modules.find(m => m.packageName === 'nexus-native'); if (!mod) throw new Error('nexus-native missing from Android autolinking'); console.log('Autolinked nexus-native modules:', mod.projects[0].modules.length);"
+      - name: Run Android native unit tests and build Debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew :nexus-native:testDebugUnitTest :app:assembleDebug --no-daemon --stacktrace
+      - name: Upload Android Debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d2296645e52f3646cd9 # v7.0.2 (Node 24)
+        with:
+          name: nexus-music-android-debug-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7

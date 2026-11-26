@@ -23,7 +23,7 @@ def probe(filename):
     started = time.monotonic()
     result = {'file': filename, 'platform': 'wy', 'requestedQuality': '128k'}
     try:
-        run = subprocess.run([str(root / 'build/tests/native-runtime'), str(root / 'modules/nexus-native/ios/bootstrap.js'),
+        run = subprocess.run([str(root / 'build/tests/native-runtime'), str(root / 'modules/nexus-native/common/bootstrap.js'),
                               str(root / 'resource/V261008' / filename), json.dumps(payload)],
                              capture_output=True, text=True, timeout=40)
         value = json.loads(run.stdout) if run.returncode == 0 else None

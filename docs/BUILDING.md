@@ -1,3 +1,16 @@
+## 2026-11-26 Android 双端同构与 T7 Touch 外置工具链（决策 0083）
+
+- 见[决策0083](decisions/0083-android-multiplatform-architecture.md)：在 `main` 同分支维护 `android/`（与 `ios/` 平级，仅初次 `expo prebuild --platform android` 生成后入库，禁止覆盖性 `clean prebuild`）以及 `modules/nexus-native/android/` 与 `modules/nexus-native/common/`（共享 `AudioDSP.hpp` 与 `bootstrap.js`）。
+- 最低系统基线为 **Android 10（API 29）**，编译基线对齐 Expo 54 / RN 0.81.5（`compileSdk 36`、`targetSdk 36`、`buildTools 36.0.0`、`NDK 27.1.12297006`、`CMake 3.22.1`、JDK 17）。
+- **外置存储策略（保护 Mac 内盘空间）**：因 T7 Touch 物理文件系统为 ExFAT（不支持 JDK/NDK 符号链接与 Gradle 文件锁），本机在 `/Volumes/T7 Touch/NexusMusic/AndroidWorkspace/nexus-android-dev.sparsebundle` 建立按需扩容的 APFS 稀疏映像（挂载点 `/Volumes/NexusAndroid`），集中存放 JDK 17、Android SDK/NDK/CMake、`GRADLE_USER_HOME` 缓存与软链重定向后的 Gradle 中间构建产物；验证通过的 APK 自动归档至 `/Volumes/T7 Touch/NexusMusic/BuildArchive/android/`。
+- 本机命令：
+  ```sh
+  source scripts/android-env.sh
+  npm run android:build           # 编译并跑 :nexus-native:testDebugUnitTest + Debug APK（自动归档到 T7）
+  bash scripts/build-android.sh Release
+  ```
+- 写入前脚本自动核验 `/Volumes/T7 Touch` 真实挂载与可写性，未挂载则立即中止，不在 `/Volumes` 下回退内盘。云端 CI 由独立 `.github/workflows/android.yml`（Ubuntu runner、`queue: single`、`cancel-in-progress: false`）执行，与 `.github/workflows/ios.yml` 通过 `paths-ignore` 实现原生层互不阻塞、共享层双端联动。
+
 ## 2026-11-03 本机模拟器缓存位置恢复
 
 发现历史`build/DerivedData`仍通过符号链接指向T7。咪咕艺术家歌曲阶段全部构建/测试结束后，确认无活动构建，保留该链接为`build/DerivedData-external-preserved-20261103`及完整外置目标，在原路径建立本机SSD真实目录。没有删除或搬移源缓存；后续UI构建重新在本机生成。旧精确测试的bundle已随阶段归档保留，旧缓存恢复路径见本机`build/logs/migu-artist-songs-cache-location.json`。DeviceDerivedData、node_modules和Pods仍在本机；不因空间整理重新外置活动缓存。

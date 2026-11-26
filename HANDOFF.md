@@ -1,3 +1,13 @@
+## 2026-11-26 Android Phase 0 底座落地：双端同构目录、T7 Touch 外置工具链与首个 Debug APK 编通
+
+依据用户明确批准的[决策 0083](docs/decisions/0083-android-multiplatform-architecture.md)，在 `main` 单分支完成 Android Phase 0 工程底座落地（零干扰 iOS 线，不拉长期 Android 分支）：
+- **双端同构与共享原生资产**：将 `AudioDSP.hpp` 与 `bootstrap.js` 抽离至 `modules/nexus-native/common/`，`NexusNative.podspec` 上移至 `modules/nexus-native/` 并更新 `ios/Podfile.lock`（仅 `NexusNative` 路径与校验和 3 行变化）；验证 `npm run ios:pods`、`npm run check`（1170/1170）与 `npm run test:native` 全通，iOS 零回归。
+- **Android 工程壳与 9 模块 / 11 视图底座**：补齐 `app.json` Android 配置，仅针对 Android 执行一次 `expo prebuild --platform android --no-install` 生成并入库 `android/`，锁定 `android.minSdkVersion=29`（Android 10+）；在 `modules/nexus-native/android/` 完整注册同名同契约的 9 个 Kotlin 模块（`com.nexusmusic.nexusnative.*`）与 11 个原生视图（含 AGSL 3×3 Mesh、流光背景、PhotoMask、手势识别、硬件音量条、ICU 简繁转换、低电量监听与常亮等即用实现），并通过 CMake/NDK 27 直接 JNI 编译复用共享 C++20 `AudioDSP.hpp`（`libnexus_audio_dsp.so`）与打包共享 `bootstrap.js`。
+- **T7 Touch 外置工具链与零内盘负担**：在 `/Volumes/T7 Touch/NexusMusic/AndroidWorkspace/nexus-android-dev.sparsebundle`（挂载点 `/Volumes/NexusAndroid`，APFS）集中放置精简 JDK 17（293M）、Android SDK 36 / Build-Tools 36.0.0 / NDK 27.1.12297006 / CMake 3.22.1（5.7G）、`GRADLE_USER_HOME`（2.8G）及软链重定向的 Gradle 中间构建产物（674M）；通过 `scripts/android-env.sh` 与 `scripts/build-android.sh` 自动校验 T7 挂载，不回退内盘。
+- **验证与产物归档**：`:nexus-native:testDebugUnitTest` 与 `:app:assembleDebug`（`arm64-v8a`）一次性编通（193 任务全部成功）；产出 49 MB Debug APK 已归档至 `/Volumes/T7 Touch/NexusMusic/BuildArchive/android/nexus-music-debug-20261126-103724-69e0c93.apk`（SHA-256 `624ade431f2c607b7d8fe2045c05e58bad1cf472edd574bd4cc3889fbe8a92be`），核验内含 `classes.dex`、`lib/arm64-v8a/libnexus_audio_dsp.so`（312 KB）与 `assets/bootstrap.js`（5.7 KB）。
+- **双端 CI 隔离与联动**：新增 `.github/workflows/android.yml`（Ubuntu runner、`queue: single`、`cancel-in-progress: false`），并与 `.github/workflows/ios.yml` 双向配置 `paths-ignore` 实现原生层互不阻塞、共享层双端联动。
+- **下一步（Phase 1）**：实现 Android 核心听歌闭环——QuickJS 隔离 LX 音源宿主（复用 `assets/bootstrap.js`）+ Media3 ExoPlayer/`MediaSessionService` 后台播放与 JNI 实时 10 段 EQ/32 段 FFT 频谱。
+
 ## 2026-11-26 iOS 27 云端 Step 10 全通 + Step 11/14 两处精准收口（全套 CI 本地 100% 覆盖）
 
 - `84ca6d0` 完成本地干净无签名 IPA 归档（`17,998,058` 字节，SHA-256 `c52e6e22fc1c1f2a90d775f32baa0f72de2147347109a91711e3499ee65e9025`，`dirty: false`）并推送触发云端 iOS 27 Run #338（`45631641755`）：`checks` 与 `ios` **Steps 1–10（含 25 项核心套件）全部通过**，仅在 Step 11 睡眠到期用例失败。
