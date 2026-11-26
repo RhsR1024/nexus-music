@@ -9,7 +9,7 @@ import {requireNativeView} from 'expo';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useTheme} from './theme.tsx';
 import {usePresentationVisible} from './AdaptiveModal.tsx';
-const NativeMaterial=requireNativeView<ViewProps&{dark:boolean}>('NexusNative');
+const NativeMaterial=requireNativeView<ViewProps&{dark:boolean;variant?:string;radius?:number}>('NexusNative');
 const noSubscribe=()=>()=>{},noCover:CoverTheme={},noCoverSnapshot=()=>noCover;
 export function AmbientBackground({services,visible=true,gradient}:{services?:Services;visible?:boolean;gradient?:{colors:readonly [string,string,...string[]];locations:readonly [number,number,...number[]]}}){
   const presented=usePresentationVisible(),shown=visible&&presented;
@@ -42,20 +42,25 @@ export function AmbientBackground({services,visible=true,gradient}:{services?:Se
     {shown&&theme.appearance.globalBackgroundMotion&&<View testID={flowColors?'ambient-three-color':undefined} pointerEvents="none" style={StyleSheet.absoluteFill}><AmbientSoftLights colors={flowColors??[]} identity={cover.uri??''} moving={moving} pending={!!cover.pending} dark={theme.mode==='dark'}/></View>}
   </View>;
 }
+let cachedReduceTransparency:boolean|undefined;
 export function GlassSurface({children,style,variant='liquid',radius=30}:PropsWithChildren<{style?:StyleProp<ViewStyle>;variant?:'liquid'|'frosted'|'acrylic';radius?:number}>){
-  const theme=useTheme(),[reduce,setReduce]=useState(Platform.OS==='ios');
-  useEffect(()=>{if(Platform.OS!=='ios')return;let active=true;void AccessibilityInfo.isReduceTransparencyEnabled().then(value=>{if(active)setReduce(value);});const subscription=AccessibilityInfo.addEventListener('reduceTransparencyChanged',setReduce);return()=>{active=false;subscription.remove();};},[]);
+  const theme=useTheme(),[reduce,setReduce]=useState(cachedReduceTransparency??(Platform.OS==='ios'));
+  useEffect(()=>{if(Platform.OS!=='ios')return;let active=true;void AccessibilityInfo.isReduceTransparencyEnabled().then(value=>{cachedReduceTransparency=value;if(active)setReduce(value);});const subscription=AccessibilityInfo.addEventListener('reduceTransparencyChanged',value=>{cachedReduceTransparency=value;setReduce(value);});return()=>{active=false;subscription.remove();};},[]);
   const dark=theme.mode==='dark';
   const useBlur=theme.appearance.glassNavigation&&!reduce;
   const fill=useBlur
-    ?(variant==='acrylic'?(dark?'rgba(32,26,38,0.52)':'rgba(255,253,253,0.44)')
-      :variant==='frosted'?(dark?'rgba(36,29,42,0.80)':'rgba(255,250,250,0.78)')
-      :(dark?'rgba(40,32,46,0.64)':'rgba(255,252,252,0.52)'))
+    ?(Platform.OS==='ios'
+      ?(variant==='acrylic'?(dark?'rgba(28,22,34,0.20)':'rgba(255,253,253,0.22)')
+        :variant==='frosted'?(dark?'rgba(32,26,38,0.34)':'rgba(255,250,251,0.36)')
+        :(dark?'rgba(30,24,36,0.12)':'rgba(255,252,253,0.14)'))
+      :(variant==='acrylic'?(dark?'rgba(32,26,38,0.48)':'rgba(255,253,253,0.42)')
+        :variant==='frosted'?(dark?'rgba(36,29,42,0.74)':'rgba(255,250,250,0.74)')
+        :(dark?'rgba(40,32,46,0.56)':'rgba(255,252,252,0.48)')))
     :(dark?'rgba(42,34,48,0.96)':'rgba(255,251,249,0.96)');
-  const borderColor=dark?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.88)';
-  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.34:0.07,shadowRadius:18,shadowOffset:{width:0,height:4},elevation:Platform.OS==='android'?4:0},style]}>
-    <View style={{flexGrow:1,borderRadius:radius,overflow:'hidden',borderWidth:1,borderColor}}>
-      {useBlur&&<NativeMaterial pointerEvents="none" dark={dark} style={StyleSheet.absoluteFill}/>}
+  const borderColor=dark?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.78)';
+  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.30:0.08,shadowRadius:18,shadowOffset:{width:0,height:4},elevation:Platform.OS==='android'?4:0},style]}>
+    <View style={{flexGrow:1,borderRadius:radius,overflow:'hidden',borderWidth:StyleSheet.hairlineWidth*1.5,borderColor}}>
+      {useBlur&&<NativeMaterial pointerEvents="none" dark={dark} variant={variant} radius={radius} style={StyleSheet.absoluteFill}/>}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:fill}]}/>
       {children}
     </View>

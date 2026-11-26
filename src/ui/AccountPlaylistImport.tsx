@@ -1,15 +1,17 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {ActivityIndicator,Alert,Pressable,ScrollView,StyleSheet,TextInput,View} from 'react-native';
+import {LinearGradient} from 'expo-linear-gradient';
+import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import type {Services} from '../app/services.ts';
 import {AccountPlaylistError,type AccountPlaylist,type AccountPlaylistPreview} from '../providers/accountPlaylists.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {space,radius,typography,controls} from './tokens.ts';
+import {space,radius,typography,controls,sollinTokens} from './tokens.ts';
 import {SheetModal} from './AdaptiveModal.tsx';
 
 export function AccountPlaylistImport({services,active,disabled,onLogin,platform='wy'}:{services:Services;active:boolean;disabled:boolean;onLogin:()=>void;platform?:'wy'|'tx'|'kg'}){
-  const {palette:p}=useTheme();
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const available=accounts.filter(item=>item.platform===platform);
   const [selected,setSelected]=useState(''),[lists,setLists]=useState<readonly AccountPlaylist[]|null>(null);
@@ -33,7 +35,7 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
   const platformName=platform==='tx'?'QQ 音乐':platform==='kg'?'酷狗音乐':'网易云';
   const testID=(id:string)=>platform==='wy'?id:`${id}-${platform}`;
   const pending=!!busy,blocked=disabled||pending;
-  const button=(id:string,title:string,onPress:()=>void,locked=blocked)=><Pressable testID={testID(id)} accessibilityRole="button" disabled={locked} onPress={onPress} style={[styles.button,{backgroundColor:p.selected},locked&&styles.disabled]}><Text style={[styles.body,{color:p.accent}]}>{title}</Text></Pressable>;
+  const button=(id:string,title:string,onPress:()=>void,locked=blocked)=><Pressable testID={testID(id)} accessibilityRole="button" disabled={locked} onPress={onPress} style={[styles.button,{backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder},locked&&styles.disabled]}><Text style={[styles.body,{color:s.ink,fontWeight:'600',fontSize:13.5}]}>{title}</Text></Pressable>;
   const closeDetail=()=>{if(controller.current){closeWhenSettled.current=true;controller.current.abort();setMessage('正在取消操作');}else{setDetail(null);setPreview(null);setMessage('');}};
   const readDetail=(item:AccountPlaylist)=>{if(!account||pending)return;setDetail(item);setCopied(false);setPreview(null);void execute('正在读取完整歌单',signal=>services.accountPlaylists.preview(account,item,signal),setPreview);};
   const progress=<View style={styles.progress}><ActivityIndicator color={p.accent}/><Text testID={testID("account-playlists-busy")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{busy}</Text>{button('account-playlists-cancel','取消操作',()=>{if(detail)closeDetail();else{controller.current?.abort();setMessage('正在取消操作');}},false)}</View>;
@@ -86,44 +88,48 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
       }},
     ]);
   };
-  return <View testID={testID("account-playlists-card")} style={[styles.card,{borderColor:p.border,backgroundColor:p.surface}]}>
-    <Text accessibilityRole="header" style={[styles.heading,{color:p.text}]}>{platformName}账号歌单</Text>
-    <Text style={[styles.caption,{color:p.secondary}]}>{platform==='wy'?'按需读取创建和收藏的歌单，确认后复制到音枢歌单。新建与删除会直接修改平台数据；导入不会，也不会自动同步。':'按需读取创建和收藏的歌单，确认后复制到音枢歌单。导入不会修改平台歌单，也不会自动同步。'}</Text>
+  return <View testID={testID("account-playlists-card")} style={[styles.card,{borderColor:s.cardBorder,backgroundColor:s.card,borderWidth:1},s.cardShadow]}>
+    <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
+      <View style={{width:32,height:32,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="albums-outline" size={17} color={s.control}/></View>
+      <Text accessibilityRole="header" style={[styles.heading,{color:s.ink,fontSize:16,fontWeight:'700'}]}>{platformName}账号歌单</Text>
+    </View>
+    <Text style={[styles.caption,{color:s.muted}]}>{platform==='wy'?'按需读取创建和收藏的歌单，确认后复制到音枢歌单。新建与删除会直接修改平台数据；导入不会，也不会自动同步。':'按需读取创建和收藏的歌单，确认后复制到音枢歌单。导入不会修改平台歌单，也不会自动同步。'}</Text>
     {!account?<>
-      <Text testID={testID("account-playlists-login-required")} style={[styles.body,{color:p.secondary}]}>登录{platformName}后，可读取并导入账号歌单。</Text>
+      <Text testID={testID("account-playlists-login-required")} style={[styles.caption,{color:s.muted}]}>登录{platformName}后，可读取并导入账号歌单。</Text>
       {button('account-playlists-login',`登录${platformName}`,onLogin,disabled)}
     </>:<>
-      {available.map(item=><Pressable key={item.id} testID={testID(`account-playlists-owner-${item.id}`)} accessibilityRole="radio" accessibilityState={{selected:item===account}} disabled={blocked} onPress={()=>setSelected(item.id)} style={[styles.owner,{backgroundColor:item===account?p.selected:p.surface}]}><Text style={[styles.body,{color:p.text}]}>{item.displayName??item.label}</Text></Pressable>)}
-      {platform==='wy'&&<View testID="account-playlist-create" style={[styles.create,{borderColor:p.border,backgroundColor:p.selected}]}>
-        <Text accessibilityRole="header" style={[styles.body,{color:p.text}]}>新建网易云歌单</Text>
-        <TextInput testID="account-playlist-create-name" accessibilityLabel="新建网易云歌单名称" placeholder="歌单名称（1–40字）" placeholderTextColor={p.secondary} value={createName} editable={!pending} onChangeText={value=>{setCreateName(value);setCreateMessage('');}} maxLength={80} style={[styles.input,{color:p.text,borderColor:p.border,backgroundColor:p.surface}]}/>
-        <Pressable testID="account-playlist-create-privacy" accessibilityRole="switch" accessibilityLabel="公开新歌单" accessibilityState={{checked:createPublic}} disabled={blocked} onPress={()=>setCreatePublic(value=>!value)} style={styles.privacy}><Text style={[styles.caption,{color:p.text}]}>{createPublic?'公开歌单':'私密歌单'}</Text><Text style={[styles.caption,{color:p.secondary}]}>{createPublic?'公开后可被他人看到':'默认仅自己可见'}</Text></Pressable>
-        <Pressable testID="account-playlist-create-submit" accessibilityRole="button" disabled={blocked||!createName.trim()} onPress={createPlaylist} style={[styles.button,{backgroundColor:p.surface},(blocked||!createName.trim())&&styles.disabled]}><Text style={[styles.body,{color:p.accent}]}>创建到网易云音乐</Text></Pressable>
-        {!!createMessage&&<Text testID="account-playlist-create-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{createMessage}</Text>}
-        <Text testID="account-playlist-management-note" style={[styles.caption,{color:p.secondary}]}>重命名暂未开放：现有协议需要同时写入描述和标签，音枢不会用猜测值覆盖平台资料。</Text>
+      {available.map(item=><Pressable key={item.id} testID={testID(`account-playlists-owner-${item.id}`)} accessibilityRole="radio" accessibilityState={{selected:item===account}} disabled={blocked} onPress={()=>setSelected(item.id)} style={[styles.owner,{backgroundColor:item===account?s.accentSoft:s.chip,borderWidth:1,borderColor:item===account?s.control+'44':s.chipBorder}]}><Text style={[styles.body,{color:item===account?s.control:s.ink,fontWeight:'600'}]}>{item.displayName??item.label}</Text></Pressable>)}
+      {platform==='wy'&&<View testID="account-playlist-create" style={[styles.create,{borderColor:s.cardBorder,backgroundColor:s.dark?'rgba(255,255,255,0.035)':'rgba(42,36,31,0.03)'}]}>
+        <Text accessibilityRole="header" style={[styles.body,{color:s.ink,fontWeight:'700',fontSize:14}]}>新建网易云歌单</Text>
+        <TextInput testID="account-playlist-create-name" accessibilityLabel="新建网易云歌单名称" placeholder="歌单名称（1–40字）" placeholderTextColor={s.subtle} value={createName} editable={!pending} onChangeText={value=>{setCreateName(value);setCreateMessage('');}} maxLength={80} style={[styles.input,{color:s.ink,borderColor:s.cardBorder,backgroundColor:s.inputBg}]}/>
+        <Pressable testID="account-playlist-create-privacy" accessibilityRole="switch" accessibilityLabel="公开新歌单" accessibilityState={{checked:createPublic}} disabled={blocked} onPress={()=>setCreatePublic(value=>!value)} style={styles.privacy}><Text style={[styles.caption,{color:s.ink,fontWeight:'600'}]}>{createPublic?'公开歌单':'私密歌单'}</Text><Text style={[styles.caption,{color:s.muted}]}>{createPublic?'公开后可被他人看到':'默认仅自己可见'}</Text></Pressable>
+        <Pressable testID="account-playlist-create-submit" accessibilityRole="button" disabled={blocked||!createName.trim()} onPress={createPlaylist} style={[styles.button,{backgroundColor:s.control,alignItems:'center'},(blocked||!createName.trim())&&styles.disabled]}><Text style={[styles.body,{color:'#FFFFFF',fontWeight:'700',fontSize:14}]}>创建到网易云音乐</Text></Pressable>
+        {!!createMessage&&<Text testID="account-playlist-create-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:s.muted}]}>{createMessage}</Text>}
+        <Text testID="account-playlist-management-note" style={[styles.caption,{color:s.subtle}]}>重命名暂未开放：现有协议需要同时写入描述和标签，音枢不会用猜测值覆盖平台资料。</Text>
       </View>}
       {button('account-playlists-load',lists?'重新读取歌单':'读取账号歌单',()=>{setLists(null);setPreview(null);void execute('正在读取歌单',signal=>services.accountPlaylists.list(account,signal),value=>{setLists(value);setVisibleCount(100);setPreview(null);});})}
       {pending&&!detail&&progress}
-      {!!message&&!detail&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{message}</Text>}
-      {!!deleteMessage&&!detail&&<Text testID="account-playlist-delete-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{deleteMessage}</Text>}
-      {lists?.length===0&&<Text testID={testID("account-playlists-empty")} style={[styles.body,{color:p.secondary}]}>平台当前没有可导入的歌单。</Text>}
-      {lists?.slice(0,visibleCount).map(item=><View key={item.id} style={[styles.row,{borderTopColor:p.border},blocked&&styles.disabled]}>
-        <Pressable testID={testID(`account-playlist-${item.id}`)} accessibilityRole="button" accessibilityLabel={`${item.kind==='created'?'创建':'收藏'}的歌单：${item.title}，${item.count}首，预览导入`} disabled={blocked} onPress={()=>readDetail(item)} style={styles.rowMain}><Text style={[styles.body,{color:p.text}]}>{item.title}</Text><Text style={[styles.caption,{color:p.secondary}]}>{item.kind==='created'?'创建':'收藏'} · {item.count} 首 · 预览导入</Text></Pressable>
-        {platform==='wy'&&item.kind==='created'&&<Pressable testID={`account-playlist-delete-${item.id}`} accessibilityRole="button" accessibilityLabel={`删除网易云歌单：${item.title}`} disabled={blocked} onPress={()=>deletePlaylist(item)} style={[styles.delete,{borderColor:p.border}]}><Text style={[styles.caption,{color:p.accent}]}>删除</Text></Pressable>}
+      {!!message&&!detail&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:s.muted}]}>{message}</Text>}
+      {!!deleteMessage&&!detail&&<Text testID="account-playlist-delete-status" accessibilityLiveRegion="polite" style={[styles.caption,{color:s.muted}]}>{deleteMessage}</Text>}
+      {lists?.length===0&&<Text testID={testID("account-playlists-empty")} style={[styles.body,{color:s.muted}]}>平台当前没有可导入的歌单。</Text>}
+      {lists?.slice(0,visibleCount).map(item=><View key={item.id} style={[styles.row,{borderTopColor:s.hairline},blocked&&styles.disabled]}>
+        <Pressable testID={testID(`account-playlist-${item.id}`)} accessibilityRole="button" accessibilityLabel={`${item.kind==='created'?'创建':'收藏'}的歌单：${item.title}，${item.count}首，预览导入`} disabled={blocked} onPress={()=>readDetail(item)} style={styles.rowMain}><Text style={[styles.body,{color:s.ink,fontWeight:'600'}]}>{item.title}</Text><Text style={[styles.caption,{color:s.muted}]}>{item.kind==='created'?'创建':'收藏'} · {item.count} 首 · 预览导入</Text></Pressable>
+        {platform==='wy'&&item.kind==='created'&&<Pressable testID={`account-playlist-delete-${item.id}`} accessibilityRole="button" accessibilityLabel={`删除网易云歌单：${item.title}`} disabled={blocked} onPress={()=>deletePlaylist(item)} style={[styles.delete,{borderColor:s.cardBorder}]}><Text style={[styles.caption,{color:s.accent,fontWeight:'600'}]}>删除</Text></Pressable>}
       </View>)}
       {lists&&lists.length>visibleCount&&button('account-playlists-more','显示更多歌单',()=>setVisibleCount(value=>value+100))}
     </>}
-    <SheetModal visible={active&&!!detail} animationType="slide" onRequestClose={closeDetail}>
-      <SafeAreaView style={[styles.modal,{backgroundColor:p.surface}]} edges={['top','bottom']}>
-        <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.heading,{color:p.text}]}>账号歌单预览</Text>{button('account-playlist-preview-close',pending?'取消操作':'返回歌单列表',closeDetail,false)}</View>
+    <SheetModal allowSwipeDismissal visible={active&&!!detail} animationType="slide" onRequestClose={closeDetail}>
+      <SafeAreaView style={[styles.modal,{backgroundColor:s.sheetGradient[0]}]} edges={['top','bottom']}>
+        <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
+        <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.heading,{color:s.ink}]}>账号歌单预览</Text>{button('account-playlist-preview-close',pending?'取消操作':'返回歌单列表',closeDetail,false)}</View>
         <ScrollView contentContainerStyle={styles.modalContent}>
-          {detail&&<Text style={[styles.heading,{color:p.text}]}>{detail.title}</Text>}
+          {detail&&<Text style={[styles.heading,{color:s.ink}]}>{detail.title}</Text>}
           {pending&&progress}
-          {!!message&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{message}</Text>}
-          {preview&&<View testID={testID("account-playlist-preview")} style={[styles.preview,{backgroundColor:p.selected}]}>
-        <Text style={[styles.caption,{color:p.secondary}]}>已读取完整歌单，共 {preview.tracks.length} 首</Text>
-        {preview.tracks.slice(0,5).map((track,index)=><Text key={`${track.origin.id}:${index}`} numberOfLines={2} style={[styles.caption,{color:p.text}]}>{track.title} · {track.artist}</Text>)}
-        {preview.tracks.length>5&&<Text style={[styles.caption,{color:p.secondary}]}>导入后可在音枢歌单查看全部歌曲。</Text>}
+          {!!message&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:s.muted}]}>{message}</Text>}
+          {preview&&<View testID={testID("account-playlist-preview")} style={[styles.preview,{backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}]}>
+        <Text style={[styles.caption,{color:s.muted}]}>已读取完整歌单，共 {preview.tracks.length} 首</Text>
+        {preview.tracks.slice(0,5).map((track,index)=><Text key={`${track.origin.id}:${index}`} numberOfLines={2} style={[styles.caption,{color:s.ink}]}>{track.title} · {track.artist}</Text>)}
+        {preview.tracks.length>5&&<Text style={[styles.caption,{color:s.muted}]}>导入后可在音枢歌单查看全部歌曲。</Text>}
         {button('account-playlist-copy','复制到音枢歌单',copy)}
           </View>}
           {!pending&&!preview&&!copied&&detail&&button('account-playlist-retry','重新读取完整歌单',()=>readDetail(detail))}

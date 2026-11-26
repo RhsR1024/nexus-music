@@ -33,13 +33,18 @@ internal object MusicWebLoginPolicy {
     else -> null
   }
 
-  fun allows(uri: Uri, provider: String): Boolean {
-    if (uri.toString() == "about:blank") return true
-    val host = uri.host?.lowercase() ?: return false
-    if (uri.scheme?.lowercase() != "https" || uri.userInfo != null || (uri.port != -1 && uri.port != 443)) return false
+  fun allows(uri: Uri, provider: String): Boolean = allowsUrl(uri.toString(), provider)
+
+  fun allowsUrl(raw: String, provider: String): Boolean {
+    if (raw == "about:blank") return true
+    val parsed = try { java.net.URI(raw) } catch (_: Exception) { return false }
+    val host = parsed.host?.lowercase() ?: return false
+    if (parsed.scheme?.lowercase() != "https" || parsed.userInfo != null || (parsed.port != -1 && parsed.port != 443)) return false
     return when (provider) {
       "tx" -> host == "qq.com" || host.endsWith(".qq.com")
-      "wy" -> host == "music.163.com" || host.endsWith(".music.163.com")
+      "wy" -> listOf("163.com", "163yun.com", "127.net", "126.net", "netease.com").any {
+        host == it || host.endsWith(".$it")
+      }
       else -> false
     }
   }
@@ -196,7 +201,7 @@ class NexusAuthWebActivity : Activity() {
     val urls = if (provider == "tx") {
       listOf("https://y.qq.com/", "https://graph.qq.com/", "https://qq.com/")
     } else {
-      listOf("https://music.163.com/", "https://interface.music.163.com/")
+      listOf("https://music.163.com/", "https://interface.music.163.com/", "https://163.com/")
     }
     val merged = mutableMapOf<String, String>()
     for (u in urls) {

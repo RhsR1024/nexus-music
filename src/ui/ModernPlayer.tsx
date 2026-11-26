@@ -22,6 +22,7 @@ import type {PlayerLayout} from '../app/preferences.ts';
 import {Cover} from './Cover.tsx';
 import {PlayerCover} from './TapeCover.tsx';
 import {Lyrics} from './Lyrics.tsx';
+import {useStablePlaybackStatus} from './usePlaybackStatus.ts';
 const PhotoMask=requireNativeView<ViewProps>('NexusNative','PhotoMask');
 const clock=(seconds:number)=>`${Math.floor(Math.max(0,seconds)/60)}:${String(Math.floor(Math.max(0,seconds)%60)).padStart(2,'0')}`;
 
@@ -50,6 +51,7 @@ export function ArtworkBackdrop({services,track,photo=false}:{services:Services;
 
 export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layout,onMore,onStyle,onLyricsSettings,onLyricSource,onQueue,onComments,onSleep,onPlaylist,onArtistPress,visible=true}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;layout:Exclude<PlayerLayout,'classic'>;onMore:()=>void;onStyle:()=>void;onLyricsSettings?:()=>void;onLyricSource?:()=>void;onQueue?:()=>void;onComments?:()=>void;onSleep?:()=>void;onPlaylist?:()=>void;onArtistPress?:(artist:string)=>void;visible?:boolean}){
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
+  const status=useStablePlaybackStatus(state,{resolving:'正在选择可用音源…',buffering:'正在缓冲…'});
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const {width,height}=useWindowDimensions(),controller=services.playback.controller;
@@ -63,14 +65,14 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
   if(layout==='stage')return <StagePlayer services={services} track={track} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onLyricSource={onLyricSource} controls={<><PlaybackProgress services={services} adaptive variant="stage"/><View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:34,marginTop:6}}><Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={{minWidth:44,minHeight:56,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="back" width={20} height={26} gap={3.5} color="#FFFFFF"/></Pressable><Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={()=>{if(state.intent==='playing')controller.pause();else void controller.play();}} style={{width:72,height:72,borderRadius:36,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'}}>{state.intent==='playing'?<View style={{flexDirection:'row',gap:6}}><View style={{width:6.5,height:22,borderRadius:3.25,backgroundColor:'#101010'}}/><View style={{width:6.5,height:22,borderRadius:3.25,backgroundColor:'#101010'}}/></View>:<Ionicons name="play" size={32} color="#101010" style={{marginLeft:3}}/>}</Pressable><Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={{minWidth:44,minHeight:56,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="forward" width={20} height={26} gap={3.5} color="#FFFFFF"/></Pressable></View></>}/>;
   if(layout==='photo')return <PhotoPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} visible={visible} onMore={onMore} onStyle={onStyle} onQueue={onQueue} onArtistPress={onArtistPress}/>;
   if(layout==='am')return <AMPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onComments={onComments} onArtistPress={onArtistPress} controls={<>
-    {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.small}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
+    {!!status.text&&<Text accessibilityLiveRegion="polite" style={styles.small}>{status.text}</Text>}
     <PlaybackProgress services={services} adaptive variant="am"/>
     {/* IMG_4861: pill-capped pause bars (14x48.7pt, 7pt caps) sit 2pt higher than
         the first render, so the whole row lifts with a 46.6pt top margin. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',marginTop:46.6}}><Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="back" width={22.3} height={29.3} gap={4} color="#FFFFFF"/></Pressable><Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={()=>{if(state.intent==='playing')controller.pause();else void controller.play();}} style={{width:68,height:68,alignItems:'center',justifyContent:'center'}}>{state.intent==='playing'?<View style={{flexDirection:'row',gap:14.4}}><View style={{width:14,height:48.7,borderRadius:7,backgroundColor:'#FFFFFF'}}/><View style={{width:14,height:48.7,borderRadius:7,backgroundColor:'#FFFFFF'}}/></View>:<Ionicons name="play" size={68} color="#FFFFFF" style={{marginLeft:4}}/>}</Pressable><Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="forward" width={22.3} height={29.3} gap={4} color="#FFFFFF"/></Pressable></View>
   </>}/>;
   if(layout==='am2')return <AM2Player services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} identity={JSON.stringify([state.queue.currentId,lyricTrack.origin])} visible={visible} onMore={onMore} onStyle={onStyle} onLyricSource={onLyricSource} onArtistPress={onArtistPress} controls={<>
-    {(state.error||state.buffering)&&<Text style={styles.small}>{state.error??'正在缓冲…'}</Text>}
+    {!!status.text&&status.kind!=='resolving'&&<Text style={styles.small}>{status.text}</Text>}
     <PlaybackProgress services={services} adaptive variant="am2"/>
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingVertical:4}}>
       <Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="back" width={21} height={27} gap={3.5} color="#FFFFFF"/></Pressable>
@@ -99,7 +101,7 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
           {favoriteButton}{icon('ellipsis-horizontal','更多播放控制',onMore,23)}
         </View>
         <View testID="player-lyric-viewport" collapsable={false} style={{flex:1,minHeight:92,overflow:'hidden',justifyContent:'center',marginVertical:4}}><Lyrics services={services} track={lyricTrack} font={font} visibleLines={5} presentation="immersive" chrome={false}/></View>
-        {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.small}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
+        <View style={{minHeight:19,justifyContent:'center'}}>{!!status.text&&<Text accessibilityLiveRegion="polite" style={styles.small}>{status.text}</Text>}</View>
         <PlaybackProgress services={services} adaptive variant="immersive"/>
         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingVertical:4}}>
           <Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="back" width={20} height={26} gap={3.5} color="#FFFFFF"/></Pressable>
@@ -127,7 +129,7 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
       <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)}><Text numberOfLines={1} style={styles.small}>{track.artist}{track.album?` · ${track.album}`:''}</Text></Pressable>
     </View>
     <View testID="player-lyric-viewport" collapsable={false} style={{height:106,overflow:'hidden',justifyContent:'center'}}><Lyrics services={services} track={lyricTrack} font={font} visibleLines={3} presentation="wave" chrome={false}/></View>
-    {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={[styles.small,{textAlign:'center'}]}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
+    <View style={{minHeight:19,justifyContent:'center'}}>{!!status.text&&<Text accessibilityLiveRegion="polite" style={[styles.small,{textAlign:'center'}]}>{status.text}</Text>}</View>
     <View accessible accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityState={{disabled:!timeline.seekable}} accessibilityValue={{min:0,max:Math.floor(timeline.duration),now:Math.floor(timeline.position),text:`${clock(timeline.position)} / ${clock(timeline.duration)}`}} accessibilityActions={[{name:'increment'},{name:'decrement'}]} onAccessibilityAction={event=>{if(timeline.seekable)controller.seek(state.position+(event.nativeEvent.actionName==='increment'?10:-10));}} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:2}}>
       <Text style={styles.waveTime}>{clock(timeline.position)}</Text>
       <View style={{flexDirection:'row',alignItems:'center',gap:4,borderWidth:1,borderColor:'rgba(255,255,255,0.32)',borderRadius:10,paddingHorizontal:10,paddingVertical:1.5}}><Ionicons name="pulse" size={12} color="rgba(255,255,255,0.82)"/><Text style={[styles.waveTime,{color:'rgba(255,255,255,0.84)',fontWeight:'600'}]}>{state.media?.quality?state.media.quality.toUpperCase():'等待音源'}</Text></View>

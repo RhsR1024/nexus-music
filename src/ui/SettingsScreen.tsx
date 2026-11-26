@@ -133,7 +133,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
     {appearanceSheet.section==='background'?<BackgroundThemeActions services={services}/>:<Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{width:48,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>}
   </View>;
   return <View style={{flex:1}} onAccessibilityEscape={page==='home'?undefined:back}>
-    <View style={{paddingHorizontal:22,paddingVertical:0,minHeight:54,flexDirection:'row',alignItems:'center',justifyContent:'center'}}>
+    <View style={{paddingHorizontal:22,paddingVertical:0,minHeight:54,flexDirection:'row',alignItems:'center',justifyContent:'center',borderBottomWidth:page==='home'?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
       {page!=='home'&&<Pressable testID="settings-back" accessibilityRole="button" accessibilityLabel={history.length>1?`返回${titles[history[history.length-2]!]}`:'返回音乐库'} onPress={back} style={{position:'absolute',left:6,top:3,bottom:3,width:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-back" size={27} color={p.text}/></Pressable>}
       <Text ref={heading} testID={`settings-title-${page}`} accessibilityRole="header" style={{fontSize:page==='home'?36:20,fontWeight:'700',letterSpacing:page==='home'?undefined:-1,color:p.text,flex:1,textAlign:page==='home'?'left':'center',marginHorizontal:page==='home'?0:36}}>{titles[page]}</Text>
     </View>

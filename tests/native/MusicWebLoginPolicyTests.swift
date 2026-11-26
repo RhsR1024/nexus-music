@@ -17,8 +17,12 @@ import Foundation
     for url in ["http://y.qq.com/", "https://qq.com.evil.test/", "https://evil.test/?next=https://qq.com/", "https://user@y.qq.com/", "https://y.qq.com:8443/", "wtloginmqq://ptlogin/qlogin", "https://music.163.com/"] {
       expect(!MusicWebLoginPolicy.allows(URL(string: url)!, provider: "tx"), "QQ navigation boundary")
     }
-    expect(MusicWebLoginPolicy.allows(URL(string: "https://music.163.com/m/login")!, provider: "wy"), "Existing NetEase entry")
-    expect(!MusicWebLoginPolicy.allows(URL(string: "https://y.qq.com/")!, provider: "wy"), "Platform isolation")
+    for url in ["https://music.163.com/m/login", "https://dl.reg.163.com/dl/yd/phone", "https://reg.163.com/login", "https://c.dun.163.com/api/v3/get", "https://urswebzj.nosdn.127.net/webzj_cdn101/message.js", "https://static.126.net/auth.js", "https://id.netease.com/login"] {
+      expect(MusicWebLoginPolicy.allows(URL(string: url)!, provider: "wy"), "Official NetEase auth/captcha domains")
+    }
+    for url in ["https://y.qq.com/", "http://reg.163.com/", "https://163.com.evil.test/", "https://user@music.163.com/", "https://music.163.com:8443/"] {
+      expect(!MusicWebLoginPolicy.allows(URL(string: url)!, provider: "wy"), "NetEase navigation boundary & platform isolation")
+    }
     expect(!MusicWebLoginPolicy.ready(["uin": "42", "skey": "generic"], provider: "tx"), "Generic QQ login is insufficient")
     expect(MusicWebLoginPolicy.ready(["qqmusic_uin": "o000042", "qqmusic_key": "synthetic-qq"], provider: "tx"), "Music QQ identity")
     expect(!MusicWebLoginPolicy.ready(["qqmusic_uin": "0", "qqmusic_key": "synthetic-qq"], provider: "tx"), "No zero principal")

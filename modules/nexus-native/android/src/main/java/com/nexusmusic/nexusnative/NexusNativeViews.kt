@@ -67,6 +67,8 @@ internal object NexusColorParser {
 /** Static translucent frosted material layer matching iOS NexusMaterialView. */
 class NexusMaterialView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
   private var dark: Boolean = false
+  private var variant: String = "liquid"
+  private var radiusDp: Double = 30.0
 
   init {
     isClickable = false
@@ -81,9 +83,26 @@ class NexusMaterialView(context: Context, appContext: AppContext) : ExpoView(con
     }
   }
 
+  fun setVariant(value: String) {
+    val next = if (value.isEmpty()) "liquid" else value
+    if (variant != next) {
+      variant = next
+      updateSurface()
+    }
+  }
+
+  fun setRadius(value: Double) {
+    radiusDp = value.coerceAtLeast(0.0)
+  }
+
   private fun updateSurface() {
+    val alpha = when (variant) {
+      "frosted" -> if (dark) 185 else 198
+      "acrylic" -> if (dark) 130 else 148
+      else -> if (dark) 145 else 165
+    }
     setBackgroundColor(
-      if (dark) Color.argb(145, 28, 22, 34) else Color.argb(165, 255, 250, 250)
+      if (dark) Color.argb(alpha, 28, 22, 34) else Color.argb(alpha, 255, 250, 250)
     )
   }
 }

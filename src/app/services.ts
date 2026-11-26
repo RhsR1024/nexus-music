@@ -244,7 +244,10 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     resolve:(track,signal)=>resolveTrack(track,signal),
   });
   let lastPreloadRev=preloadRevision(),lastPreloadEnabled=preferences.getSnapshot().preloadNextTrack,lastPreloadCount=preferences.getSnapshot().preloadCount;
-  registry.subscribe(()=>{lastPreloadRev=preloadRevision();preloader.invalidate();});
+  registry.subscribe(()=>{
+    const rev=preloadRevision();
+    if(rev!==lastPreloadRev){lastPreloadRev=rev;preloader.invalidate();}
+  });
   preferences.subscribe(()=>{
     const rev=preloadRevision(),snap=preferences.getSnapshot();
     if(rev!==lastPreloadRev||snap.preloadCount!==lastPreloadCount){lastPreloadRev=rev;lastPreloadCount=snap.preloadCount;preloader.invalidate();}
@@ -258,7 +261,18 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     if(saved){playback.controller.setQueue(decodeQueue(saved));const cursor=await repository.get<SavedCursor>('queue.cursor.v1');if(cursor)playback.controller.restoreCursor(cursor.entryId,cursor.seconds);}
   }catch{recoveryWarnings.push('上次播放队列无法恢复，已从暂停状态开始；音乐库仍保留。');}
   const coverTheme=new CoverThemeStore(playback.controller,preferences,covers,visualColors);
-  accounts.subscribe(coverTheme.invalidate);davAccounts.subscribe(coverTheme.invalidate);registry.subscribe(coverTheme.invalidate);deviceMedia.subscribe(coverTheme.invalidate);localAudio.subscribe(coverTheme.invalidate);
+  const picSourceSignature=()=>JSON.stringify(registry.getSnapshot().filter(source=>registry.isCurrent(source)&&source.capabilities.some(item=>item.actions.includes('pic'))).map(source=>[source.id,source.revision]));
+  let lastPicSources=picSourceSignature();
+  accounts.subscribe(coverTheme.invalidate);davAccounts.subscribe(coverTheme.invalidate);
+  registry.subscribe(()=>{
+    const next=picSourceSignature();
+    if(next===lastPicSources)return;
+    lastPicSources=next;
+    // Already-resolved cover art does not depend on newly initialized LX sources.
+    // Skipping redundant invalidations prevents full-screen theme flashes on launch and batch import.
+    if(!coverTheme.getSnapshot().uri)coverTheme.invalidate();
+  });
+  deviceMedia.subscribe(coverTheme.invalidate);localAudio.subscribe(coverTheme.invalidate);
   deviceMedia.subscribe(()=>{const current=playback.controller.getSnapshot(),entry=current.queue.entries.find(entry=>entry.id===current.queue.currentId);if(entry?.track.origin.kind==='device'&&deviceMedia.getSnapshot().authorization!=='authorized')playback.controller.setQueue({...current.queue,currentId:null,priorityIds:[]});});
   AppState.addEventListener('change',state=>{
     if(state!=='active')return;

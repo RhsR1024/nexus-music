@@ -27,7 +27,7 @@ export class QQDailyAuthorization{
           const cookies=parseQQCookiePayload(JSON.stringify(payload.cookies));
           const {uin}=qqWebIdentity(cookies),username=`qq:2:${uin}`;
           bound=target??initial.find(item=>item.platform==='tx'&&item.username===username);current();
-          const identities=new Set(['uin','qqmusic_uin','musicid'].flatMap(name=>{const value=cookies[name];return value&&/^o?\d{1,20}$/i.test(value)?[value.replace(/^o/i,'').replace(/^0+/,'')]:[];}));
+          const identities=new Set(['uin','qqmusic_uin','musicid'].flatMap(name=>{const value=cookies[name];const normalized=value&&/^o?\d{1,20}$/i.test(value)?value.replace(/^o/i,'').replace(/^0+/,''):'';return normalized?[normalized]:[];}));
           if(identities.size!==1||target&&target.username!==username)throw new Error('账号身份不符');
           const profile=await this.options.profile.fetch({platform:'tx',userId:uin,cookies},controller.signal);current();
           if(profile.userId!==uin)throw new Error('账号身份不符');
@@ -35,7 +35,8 @@ export class QQDailyAuthorization{
           const session={version:1,platform:'tx',accountId,userId:uin,cookies,qqDailyKey:payload.key,qqDailyKeyOwner:accountId};
           const existing=bound??this.options.accounts.getSnapshot().find(item=>item.id===accountId);
           await this.options.daily.validateKey({id:accountId,platform:'tx',username,label:'QQ 音乐',capabilities:[],updatedAt:0},session,payload.key,controller.signal);current();
-          await this.options.accounts.save({platform:'tx',username,label:'QQ 音乐',displayName:profile.nickname,...(existing?.avatar?{avatar:existing.avatar}:{}),capabilities:[...new Set([...(existing?.capabilities??[]),'daily' as const])]},session,controller.signal,existing??null);
+          const avatar=('avatar' in profile&&typeof profile.avatar==='string'&&profile.avatar)||existing?.avatar;
+          await this.options.accounts.save({platform:'tx',username,label:'QQ 音乐',displayName:profile.nickname,...(avatar?{avatar}:{}),capabilities:[...new Set([...(existing?.capabilities??[]),'daily' as const])]},session,controller.signal,existing??null);
           if(!active||controller.signal.aborted)throw new MusicAuthError('cancelled','授权已取消');
           if(active)emit({type:'success',value:undefined});
         }catch(error){if(active){const code=(error as {code?:unknown})?.code;if(code==='AUTH_CANCELLED')emit({type:'cancel'});else if(code==='AUTH_EXPIRED')emit({type:'expired'});else emit({type:'error',error});}}

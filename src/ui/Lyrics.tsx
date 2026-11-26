@@ -88,8 +88,8 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     </View>}
     {!!result?.warning&&<Pressable accessibilityRole="button" accessibilityLabel="重试歌词" onPress={()=>retryLoad()}><Text style={{color:presentation?'#FFFFFF':theme.palette.accent}}>{result.warning} · 重试</Text></Pressable>}
     {!expanded&&chooser}
-    {!presentation&&!expanded&&settings}
-    {chromeOnly&&!!document&&(document.synced||document.plain.length>0)&&<Pressable accessibilityRole="button" onPress={()=>setExpanded(true)}><Text style={{color:theme.palette.accent}}>全部歌词 · 双击行定位，长按打开设置</Text></Pressable>}
+    {!presentation&&!expanded&&chrome&&settings}
+    {chromeOnly&&chrome&&!!document&&(document.synced||document.plain.length>0)&&<Pressable accessibilityRole="button" onPress={()=>setExpanded(true)}><Text style={{color:theme.palette.accent}}>全部歌词 · 双击行定位，长按打开设置</Text></Pressable>}
     {!chromeOnly&&<View style={{gap:12,...(presentation?{flex:1,overflow:'hidden',justifyContent:'center'}:{})}}>
     {error?<Pressable onPress={()=>retryLoad()}><Text style={{color:theme.color('#D6B69A')}}>{error}</Text></Pressable>:!result?<Text style={{color:theme.color('#959EAC')}}>正在获取歌词…</Text>:!document?.lines.length&&!document?.plain.length?<Text style={{color:theme.color('#959EAC')}}>暂无歌词</Text>:null}
     {(result?.variants.length??0)>1&&<View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)}><Text style={{color:variant===index?theme.color('#D9F49B'):theme.color('#959EAC')}}>{item.label}</Text></Pressable>)}</View>}
@@ -115,14 +115,17 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     {!document?.synced&&(fullPage||presentation==='stage')&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
     {!document?.synced&&!fullPage&&presentation!=='stage'&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
     </View>}
-    <SheetModal visible={expanded} onRequestClose={()=>setExpanded(false)} animationType="slide">
+    <SheetModal allowSwipeDismissal visible={expanded} onRequestClose={()=>{setChoosing(false);setExpanded(false);}} animationType="slide">
       <View style={{flex:1}}>
         <LinearGradient colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
-        <View style={{flex:1,paddingHorizontal:20,paddingTop:14,paddingBottom:24,gap:12}}>
+        {choosing?<LyricChoiceModal services={services} track={track} inline onClose={()=>setChoosing(false)}/>:<View style={{flex:1,paddingHorizontal:20,paddingTop:14,paddingBottom:24,gap:12}}>
           <View style={{alignSelf:'center',width:38,height:4.5,borderRadius:2.25,backgroundColor:s.dark?'rgba(255,255,255,0.28)':'rgba(60,48,50,0.26)'}}/>
           <ScrollView testID="full-lyrics-header" style={systemFontScale>1.8?{flexGrow:0,flexShrink:1,maxHeight:'46%'}:{flexGrow:0,flexShrink:1}} contentContainerStyle={{gap:10,paddingBottom:8}}>
             <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
-              <Text style={{color:s.ink,fontSize:22,fontWeight:'700'}}>全部歌词</Text>
+              <View style={{flex:1,minWidth:0}}>
+                <Text style={{color:s.ink,fontSize:22,fontWeight:'700'}}>全部歌词</Text>
+                {result&&<Text testID="lyric-source" numberOfLines={2} style={{color:s.muted,fontSize:12,marginTop:2}}>{result.mode==='original'?'歌词来源：原歌词':`歌词来源：${result.mode==='automatic'?'自动优选':'手动指定'} · ${lyricPlatformLabel(result.source)} · ${result.source.title}`}</Text>}
+              </View>
               <Pressable accessibilityRole="button" onPress={()=>setExpanded(false)} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>收起全部歌词</Text></Pressable>
             </View>
             {settings}
@@ -132,7 +135,6 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
               <Pressable accessibilityRole="switch" accessibilityLabel="音译歌词" accessibilityState={{checked:showRoma}} onPress={()=>{void services.preferences.updateLyricStyle({showRomanization:!showRoma}).catch(()=>{});}} style={{paddingHorizontal:12,paddingVertical:8,borderRadius:999,backgroundColor:showRoma?s.accentSoft:s.chip,borderWidth:1,borderColor:showRoma?s.accent:s.cardBorder}}><Text style={{color:showRoma?s.accent:s.muted,fontSize:13,fontWeight:'700'}}>音</Text></Pressable>
               {(result?.variants.length??0)>1&&result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)} style={{paddingHorizontal:12,paddingVertical:8,borderRadius:999,backgroundColor:variant===index?s.accentSoft:s.chip,borderWidth:1,borderColor:variant===index?s.accent:s.cardBorder}}><Text style={{color:variant===index?s.accent:s.ink,fontSize:13,fontWeight:'600'}}>{item.label}</Text></Pressable>)}
             </View>
-            {expanded&&chooser}
           </ScrollView>
           {!document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:18*preferences.fontScale,color:s.ink,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
           {document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision,preferences.lyricChineseMode,showTrans,showRoma,secScale]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
@@ -140,7 +142,7 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
             renderItem={({item,index})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>seek(item.startMs,index,time)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
               <View><NativeLyricLine line={index===active?item:inactiveLyric(item)} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={18*preferences.fontScale} font={font} fontURI={services.fonts.selectedURI()} color={index===active?s.accent:s.muted} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{showTrans&&item.translation&&<LyricText style={{...auxiliaryFont,color:s.muted}}>{item.translation}</LyricText>}{showRoma&&item.romanization&&<LyricText style={{...auxiliaryFont,color:s.subtle}}>{item.romanization}</LyricText>}
             </LyricGesture>}/>}
-        </View>
+        </View>}
       </View>
     </SheetModal>
   </View>;
@@ -259,12 +261,12 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
   </View>;
 }
 
-// Everything the reference page keeps out of sight: source selection, offset
-// controls and the full-lyric sheet. Rendered after the transport so the
-// measured composition matches IMG_4854 while the existing entries stay
-// reachable (tests scroll to them).
-export function ClassicLyricChrome({services,track,font,openRequest}:{services:Services;track:Track;font?:string;openRequest?:number}){
+// Full-lyric sheet host for the classic player. When chrome is false (default),
+// nothing renders below the classic player transport—keeping classic a clean
+// single-screen player while preserving double-tap/long-press/menu access to
+// the full-lyric reader, offset controls and lyric source chooser.
+export function ClassicLyricChrome({services,track,font,openRequest,chrome=false}:{services:Services;track:Track;font?:string;openRequest?:number;chrome?:boolean}){
   // Reuse the existing complete reader: variant selection, translation,
   // romanization, double-tap/VoiceOver seeking and offset handling stay shared.
-  return <Lyrics services={services} track={track} font={font} chromeOnly openRequest={openRequest}/>;
+  return <Lyrics services={services} track={track} font={font} chrome={chrome} chromeOnly openRequest={openRequest}/>;
 }

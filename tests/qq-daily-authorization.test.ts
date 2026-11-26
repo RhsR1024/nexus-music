@@ -33,6 +33,14 @@ test('daily authorization verifies identity, commits a bound key and clears it w
   assert.equal((await t.accounts.session(next.id)).qqDailyKey,undefined);assert.deepEqual((await t.accounts.session(next.id)).cookies,cookies);assert.ok(!next.capabilities.includes('daily'));
 });
 
+test('daily authorization ignores zero-only secondary UIN cookies matching native policy',async()=>{
+  const t=setup();
+  t.config.native.openQQDaily=async()=>JSON.stringify({key,cookies:{...cookies,qqmusic_uin:'0',musicid:'o000'}});
+  await t.coordinator.authorize();
+  assert.equal(t.coordinator.getSnapshot().status,'succeeded');
+  assert.equal(t.accounts.getSnapshot().length,1);
+});
+
 test('daily authorization rejects mismatched target, profile or mixed QQ identities before persistence',async()=>{
   for(const mode of ['target','profile','mixed','malformed'] as const){
     const t=setup();let target;

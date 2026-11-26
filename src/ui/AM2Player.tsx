@@ -63,7 +63,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
     {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>setError('收藏未保存，之前的数据保留。'));},favorite?'已收藏':'未收藏')}
     {circle('ellipsis-horizontal','更多播放控制',onMore)}
   </View>;
-  const compactHeader=<View style={{flexDirection:'row',alignItems:'center',gap:12,paddingLeft:2,marginTop:14}}>
+  const compactHeader=<View style={{flexDirection:'row',alignItems:'center',gap:12,paddingLeft:2,marginTop:54}}>
     <Pressable testID="am2-return-cover" accessibilityRole="button" accessibilityLabel="返回封面" onPress={()=>model.select('cover')} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={52} radius={10}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:2}}>
       <Text numberOfLines={1} style={{fontSize:17,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>

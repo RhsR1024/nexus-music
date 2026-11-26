@@ -4,12 +4,12 @@ import {controls,sollinTokens} from './tokens.ts';
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
-import {Alert, FlatList, Pressable, ScrollView, StyleSheet, View, useWindowDimensions} from 'react-native';
+import {Alert, FlatList, Image, Linking, Pressable, ScrollView, StyleSheet, View, useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {OnlinePlatform,Track} from '../domain/track.ts';
-import type {BrowseItem} from '../providers/discovery.ts';
+import type {BrowseItem,NeteaseBanner} from '../providers/discovery.ts';
 import {classifyDiscoveryFailure,playlistLinkFailure} from '../providers/discoveryFailure.ts';
 import {Cover} from './Cover.tsx';
 import {QualityBadge} from './QualityBadge.tsx';
@@ -73,6 +73,8 @@ export function Discovery({
   const [open,setOpen]=useState(!!initialCollection);
   const [platform,setPlatform]=useState<OnlinePlatform>(initialCollection?.platform??preferences.homePlatform??'wy');
   const [view,setView]=useState<PageView>(initialCollection?{kind:'detail',id:initialCollection.collection.id,title:initialCollection.collection.title,rank:false,artwork:initialCollection.collection.artwork,description:initialCollection.collection.description}:{kind:'playlists'});
+  const [banners,setBanners]=useState<readonly NeteaseBanner[]>([]),[bannerIndex,setBannerIndex]=useState(0);
+  const bannerScroll=useRef<ScrollView|null>(null),bannerDragging=useRef(false);
   const [category,setCategory]=useState<string>();
   const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[linkLoading,setLinkLoading]=useState(false),[importing,setImporting]=useState(false),[menuTrack,setMenuTrack]=useState<Track|null>(null);
   // Batch selection (Sollin §4): scoped to the loaded detail rows, with the
@@ -128,6 +130,44 @@ export function Discovery({
     finally{if(version===generation.current)setLoading(false);}
   }
   useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);setRetryAppend(false);setImporting(false);setMessage('');page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();linkGeneration.current++;linkAbort.current.abort();};},[open,embedded,platform,view,category,artistAlbums]);
+
+  useEffect(()=>{
+    if(!embedded||platform!=='wy'||view.kind==='detail'){setBanners([]);setBannerIndex(0);return;}
+    const controller=new AbortController();
+    void services.discovery.banners('wy',controller.signal).then(result=>{
+      if(!controller.signal.aborted){setBanners(result);setBannerIndex(0);}
+    }).catch(()=>{if(!controller.signal.aborted)setBanners([]);});
+    return()=>controller.abort();
+  },[embedded,platform,view.kind,services]);
+
+  useEffect(()=>{
+    if(!embedded||platform!=='wy'||view.kind==='detail'||banners.length<2)return;
+    const widthStep=contentWidth??Math.max(1,width-40);
+    const timer=setInterval(()=>{
+      if(bannerDragging.current)return;
+      setBannerIndex(previous=>{
+        const next=(previous+1)%banners.length;
+        bannerScroll.current?.scrollTo({x:next*widthStep,animated:true});
+        return next;
+      });
+    },5000);
+    return()=>clearInterval(timer);
+  },[embedded,platform,view.kind,banners.length,contentWidth,width]);
+
+  function openBanner(banner:NeteaseBanner){
+    if(banner.targetType===1&&banner.song){services.playTracks([banner.song],0);return;}
+    if(banner.targetType===10&&banner.targetId&&/^\d+$/.test(banner.targetId)){
+      setNestedCollection({platform:'wy',kind:'album',collection:{id:banner.targetId,title:banner.typeTitle||'推荐专辑',artwork:banner.imageUrl},returnLabel:'返回发现'});
+      return;
+    }
+    if(banner.targetType===1000&&banner.targetId&&/^\d+$/.test(banner.targetId)){
+      openCollection({id:banner.targetId,title:banner.typeTitle||'推荐歌单',artwork:banner.imageUrl},false);
+      return;
+    }
+    if(banner.url&&banner.url.startsWith('https://')){
+      void Linking.openURL(banner.url).catch(()=>{});
+    }
+  }
 
   function close(){importAbort.current.abort();linkGeneration.current++;linkAbort.current.abort();setLinkLoading(false);setImporting(false);setMenuTrack(null);setOpen(false);onClose?.();}
   async function previewPlaylistLink(){
@@ -287,16 +327,13 @@ export function Discovery({
         onAction={action=>{void runBatch(action);}}/>}
       {selection.active&&picking&&<PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,shownRows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>toast.show(`已添加 ${selectionCount(selection)} 首到 ${title}`)}/>}
     </>:<>
-      {/* Sollin 01-discover.png: clean display header + lightweight circular avatar */}
+      {/* Sollin 01-discover.png: clean display header without private account avatar */}
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:4}}>
         <Text accessibilityRole="header" style={{fontSize:30,fontWeight:'700',lineHeight:36,color:s.ink,letterSpacing:-0.5}}>发现</Text>
         <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
-          {openSources&&<Pressable accessibilityRole="button" accessibilityLabel="音乐来源设置" onPress={openSources} style={{height:32,paddingHorizontal:10,borderRadius:16,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:5,maxWidth:146}}>
-            <Ionicons name="radio-outline" size={13} color={s.muted}/>
-            <Text numberOfLines={1} style={{color:s.muted,fontSize:12,fontWeight:'500'}}>{activeSource??'无 LX 音源'}</Text>
-          </Pressable>}
-          {openAccounts&&<Pressable accessibilityRole="button" accessibilityLabel="音乐账号" onPress={openAccounts} style={{width:38,height:38,borderRadius:19,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
-            <Ionicons name="person" size={18} color={s.accent}/>
+          {openSources&&<Pressable accessibilityRole="button" accessibilityLabel="音乐来源设置" onPress={openSources} style={{height:34,paddingHorizontal:12,borderRadius:17,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:5,maxWidth:164}}>
+            <Ionicons name="radio-outline" size={14} color={s.muted}/>
+            <Text numberOfLines={1} style={{color:s.muted,fontSize:12,fontWeight:'600'}}>{activeSource??'无 LX 音源'}</Text>
           </Pressable>}
         </View>
       </View>
@@ -311,6 +348,30 @@ export function Discovery({
           </Pressable>;
         })}
       </View>
+
+      {/* Sollin NetEase horizontal rotating banner carousel */}
+      {embedded&&platform==='wy'&&banners.length>0&&<View testID="netease-banner-carousel" style={{gap:8}}>
+        <View style={[{borderRadius:18,overflow:'hidden',backgroundColor:softSurface},s.cardShadow]}>
+          <ScrollView ref={bannerScroll} horizontal pagingEnabled showsHorizontalScrollIndicator={false} scrollEventThrottle={32}
+            onScrollBeginDrag={()=>{bannerDragging.current=true;}}
+            onScrollEndDrag={()=>{bannerDragging.current=false;}}
+            onMomentumScrollEnd={event=>{
+              bannerDragging.current=false;
+              const idx=Math.round(event.nativeEvent.contentOffset.x/Math.max(1,usableWidth));
+              setBannerIndex(Math.max(0,Math.min(banners.length-1,idx)));
+            }}>
+            {banners.map((banner,idx)=><Pressable key={`${banner.id}-${idx}`} testID={`netease-banner-${idx}`} accessibilityRole="button" accessibilityLabel={banner.typeTitle?`网易云推荐横幅：${banner.typeTitle}`:'网易云推荐横幅'} onPress={()=>openBanner(banner)} style={{width:usableWidth,height:Math.round(Math.min(200,Math.max(132,usableWidth/2.55)))}}>
+              <Image source={{uri:banner.imageUrl}} resizeMode="cover" style={StyleSheet.absoluteFill}/>
+              {!!banner.typeTitle&&<View style={{position:'absolute',right:10,bottom:10,paddingHorizontal:9,paddingVertical:3.5,borderRadius:999,backgroundColor:banner.titleColor==='blue'?'rgba(43,140,255,0.88)':'rgba(230,57,70,0.88)'}}>
+                <Text style={{color:'#FFFFFF',fontSize:11,fontWeight:'700'}}>{banner.typeTitle}</Text>
+              </View>}
+            </Pressable>)}
+          </ScrollView>
+        </View>
+        {banners.length>1&&<View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:5}}>
+          {banners.map((banner,idx)=><View key={`${banner.id}-dot-${idx}`} style={{width:idx===bannerIndex?16:5,height:5,borderRadius:2.5,backgroundColor:idx===bannerIndex?s.accent:s.subtle+'66'}}/>)}
+        </View>}
+      </View>}
 
       {/* Sollin borderless translucent 3-segment control */}
       <View style={{flexDirection:'row',padding:3,borderRadius:24,backgroundColor:segmentTrack}}>

@@ -86,21 +86,24 @@ function MusicApp({initialize,initialSettingsPage}:ApplicationProps){
   };
   return <ThemeContext.Provider value={theme}><TypographyProvider store={services?.fonts}><View style={{flex:1,backgroundColor:p.background[0]}}>
     <AmbientBackground services={services}/><StatusBar hidden={preferences.fullScreenMode} style={theme.mode==='dark'?'light':'dark'}/>
-    <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+(effectiveTab==='settings'?0:6),paddingLeft:insets.left,paddingRight:insets.right,paddingBottom:chromeHeight+Math.max(insets.bottom,10)+8}}>
+    <View testID={expanded?'app-layout-expanded':'app-layout-compact'} style={{flex:1,flexDirection:'row',paddingTop:insets.top+(effectiveTab==='settings'?0:6),paddingLeft:insets.left,paddingRight:insets.right}}>
       <View style={{width:railWidth,display:expanded?'flex':'none',paddingHorizontal:16}}>
         <Text accessibilityRole="header" style={[text,{fontSize:24,fontWeight:'700',padding:12,marginBottom:20}]}>音枢</Text>
         <View style={{gap:10}}>{navigation.map(([key,outline,filled,title])=><Pressable key={key} testID={`rail-tab-${key}`} accessibilityLabel={title} accessibilityRole="tab" accessibilityState={{selected:effectiveTab===key}} onPress={()=>navigateTab(key)} style={{minHeight:50,paddingHorizontal:14,paddingVertical:10,borderRadius:16,backgroundColor:effectiveTab===key?s.accentSoft:s.card,borderWidth:1,borderColor:effectiveTab===key?s.accentPill:s.cardBorder,flexDirection:'row',alignItems:'center',gap:12}}><Ionicons name={effectiveTab===key?filled:outline} size={22} color={effectiveTab===key?s.accent:s.muted}/><Text style={{color:effectiveTab===key?s.accent:s.ink,fontSize:15,fontWeight:effectiveTab===key?'600':'500',flexShrink:1}}>{title}</Text></Pressable>)}</View>
       </View>
       <View style={{flex:1,minWidth:0,maxWidth:1120,alignSelf:'stretch',marginHorizontal:expanded?'auto':0}}>
-      {effectiveTab==='discover'&&services&&!startupError?<Discovery services={services} embedded openAccounts={openAccounts} openSources={openSources} catalogShortcuts={<SavedCatalogs services={services} compact/>}/>
-        :effectiveTab==='settings'&&services&&!startupError?<SettingsScreen key={settingsEntry} services={services} initialPage={settingsEntry} homeRequest={settingsRevision} onExit={()=>setTab(settingsEntry==='sources'?'library':'discover')}/>
-        :effectiveTab==='local'&&services&&!startupError?<LocalAudioLibrary services={services} embedded/>
-        :<ScrollView testID={effectiveTab==='search'?'search-viewport':undefined} automaticallyAdjustKeyboardInsets keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:20,paddingTop:8,paddingBottom:28}}>
+      {(()=>{
+        const overlayInset=chromeHeight+Math.max(insets.bottom,10)+14;
+        return effectiveTab==='discover'&&services&&!startupError?<Discovery services={services} embedded openAccounts={openAccounts} openSources={openSources} bottomInset={overlayInset} catalogShortcuts={<SavedCatalogs services={services} compact/>}/>
+        :effectiveTab==='settings'&&services&&!startupError?<SettingsScreen key={settingsEntry} services={services} initialPage={settingsEntry} homeRequest={settingsRevision} bottomInset={overlayInset} onExit={()=>setTab(settingsEntry==='sources'?'library':'discover')}/>
+        :effectiveTab==='local'&&services&&!startupError?<LocalAudioLibrary services={services} embedded bottomInset={overlayInset}/>
+        :<ScrollView testID={effectiveTab==='search'?'search-viewport':undefined} automaticallyAdjustKeyboardInsets keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:20,paddingTop:8,paddingBottom:overlayInset}}>
           {startupError?<View style={{paddingVertical:32,gap:12}}><Text style={caption}>{startupError}</Text><Pressable accessibilityRole="button" onPress={startup} style={{alignSelf:'flex-start',paddingHorizontal:18,paddingVertical:12,borderRadius:20,backgroundColor:s.accentSoft}}><Text style={{color:s.accent,fontWeight:'600'}}>重试打开</Text></Pressable></View>:!services?<Text style={[caption,{paddingVertical:24}]}>正在打开音乐数据…</Text>:effectiveTab==='library'?<>
             <View style={{flexDirection:'row',gap:8,marginBottom:14}}>{([false,true]as const).map(value=><Pressable key={String(value)} testID={value?'tab-private':'library-local'} accessibilityRole="tab" accessibilityState={{selected:privateLibrary===value}} onPress={()=>setPrivateLibrary(value)} style={{paddingHorizontal:16,paddingVertical:9,borderRadius:20,backgroundColor:privateLibrary===value?s.control:s.chip,borderWidth:1,borderColor:privateLibrary===value?s.control:s.chipBorder}}><Text style={{color:privateLibrary===value?'#FFFFFF':s.muted,fontSize:13,fontWeight:'600'}}>{value?'私人曲库':'我的音乐'}</Text></Pressable>)}</View>
             {privateLibrary?<NavidromeLibrary services={services} openSettings={openSources}/>:<LibraryHome services={services} openSearch={()=>setTab('search')} openSettings={openSources} openAccounts={openAccounts}/>}
           </>:<Search services={services} session={searchSession} initialQuery={artistQuery} onSessionChange={update=>setSearchSession(previous=>({...previous,...update}))}/>}
-        </ScrollView>}
+        </ScrollView>;
+      })()}
       </View>
     </View>
     <View pointerEvents="box-none" onLayout={event=>{const height=event.nativeEvent.layout.height;setChromeHeight(previous=>Math.abs(previous-height)<.5?previous:height);}} style={{position:'absolute',bottom:Math.max(insets.bottom,10),left:expanded?insets.left+railWidth+16:14,right:insets.right+14,gap:8}}>

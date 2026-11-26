@@ -20,10 +20,10 @@ import {SkipGlyph} from './SkipGlyph.tsx';
 import {MatchModal} from './MatchModal.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import type {Track} from '../domain/track.ts';
-import {QueueView} from './QueueView.tsx';
+import {QueuePanel,QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {classicArtworkLayout,classicBlushBackground,classicInk,classicLyricLayout,classicMetadataLayout,classicSkipIcon,paper,sollinTokens} from './tokens.ts';
-import { Lyrics,ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
+import { ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
 import { EqualizerSettings } from './EqualizerSettings.tsx';
@@ -31,6 +31,7 @@ import { PlayerMenu } from './PlayerMenu.tsx';
 import { PlaybackDiagnostics } from './PlaybackDiagnostics.tsx';
 import { LyricOffsetPanel, RatePanel, SleepPanel } from './PlaybackSheets.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
+import { useStablePlaybackStatus } from './usePlaybackStatus.ts';
 import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type PropsWithChildren } from 'react';
 import {Alert, Platform, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent, type ViewProps, useWindowDimensions} from 'react-native';
 const NativeRoutePicker=requireNativeView<ViewProps&{tint:string;activeTint:string}>('NexusNative','RoutePicker');
@@ -45,28 +46,39 @@ import {SafeAreaProvider,SafeAreaView,useSafeAreaInsets} from 'react-native-safe
 import type { Services } from '../app/services.ts';
 import type { PlayerLayout } from '../app/preferences.ts';
 import { currentEntry, remove, move } from '../domain/queue.ts';
-function PlayerScroll({classic,children}:PropsWithChildren<{classic:boolean}>){
+
+function PlayerScroll({classic,scrollable=false,children}:PropsWithChildren<{classic:boolean;scrollable?:boolean}>){
   const styles=useThemedStyles(makeStyles);
-  const scroll=<ScrollView testID={classic?'classic-player-scroll':undefined} style={{flex:1}} contentContainerStyle={[styles.content,classic&&{paddingTop:12}]}>{children}</ScrollView>;
+  const body=classic&&!scrollable
+    ?<View testID="classic-player-scroll" style={[styles.content,{flex:1,paddingTop:12,paddingBottom:12}]}>{children}</View>
+    :<ScrollView testID={classic?'classic-player-scroll':undefined} style={{flex:1}} contentContainerStyle={[styles.content,classic&&{paddingTop:12,paddingBottom:20}]}>{children}</ScrollView>;
   // A full-screen Modal can rotate without rotating its presenting root.
   // Read the native safe area of this window instead of the root's stale insets.
-  return classic?<SafeAreaProvider style={{flex:1}}><SafeAreaView style={{flex:1}}>{scroll}</SafeAreaView></SafeAreaProvider>:scroll;
+  return classic?<SafeAreaProvider style={{flex:1}}><SafeAreaView style={{flex:1}}>{body}</SafeAreaView></SafeAreaProvider>:body;
 }
+
 function time(seconds: number) { return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2, '0')}`; }
+
 function Spectrum({ services }: { services: Services }) {
-  const theme=useTheme();const styles=useThemedStyles(makeStyles);
+  const theme=useTheme();const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const state = useSyncExternalStore(services.playback.spectrum.subscribe, services.playback.spectrum.getSnapshot);
   const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
-  return <View>
-    <View accessible={false} style={styles.spectrum}>{state.bands.map((value, index) => <View key={index} style={[styles.bar, { height: Math.max(2, value*72) }]} />)}</View>
-    <Text style={styles.caption}>{playback.intent==='paused'?'频谱已暂停':state.supported ? '实时音频频谱' : '等待可处理的PCM；此媒体尚未提供频谱/EQ处理能力。'}</Text>
+  return <View style={{borderRadius:18,padding:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:10}}>
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+      <Text style={{color:s.ink,fontSize:14,fontWeight:'700'}}>实时频谱</Text>
+      <Text style={{color:s.muted,fontSize:12}}>{playback.intent==='paused'?'频谱已暂停':state.supported ? '实时音频频谱' : '等待可处理的PCM；此媒体尚未提供频谱/EQ处理能力。'}</Text>
+    </View>
+    <View accessible={false} style={{height:48,flexDirection:'row',alignItems:'flex-end',gap:3,paddingTop:4}}>{state.bands.map((value, index) => <View key={index} style={{flex:1,borderRadius:2,backgroundColor:s.accent,opacity:playback.intent==='paused'?0.3:0.86,height:Math.max(3, value*44)}} />)}</View>
   </View>;
 }
+
 export function Player({ services, fused=false, barVariant='liquid', onSearchArtist }: { services: Services; fused?: boolean; barVariant?: 'liquid'|'frosted'|'acrylic'; onSearchArtist?: (artist: string) => void }) {
   const theme=useTheme();const styles=useThemedStyles(makeStyles);const s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const {width,height,fontScale}=useWindowDimensions(),landscape=width>height,insets=useSafeAreaInsets();
   const { controller } = services.playback;
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const status = useStablePlaybackStatus(state,{resolving:'正在选择音源…',buffering:'缓冲中…'});
+  const detailStatus = useStablePlaybackStatus(state,{resolving:'正在跨源解析播放地址…',buffering:'正在缓冲…'});
   const timeline=playbackTimeline(state);
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   // Multi-source fallback may land below the preferred quality; say so instead
@@ -92,20 +104,37 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
     void mod?.setKeepScreenOn?.(active)?.catch(()=>{});
     return()=>{if(active)void mod?.setKeepScreenOn?.(false)?.catch(()=>{});};
   },[open,preferences.keepScreenOn]);
-  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<'menu'|'content'|'style'|'lyrics'|'offset'|'eq'|'output'|'globalFont'|'lyricFont'|'download'|'similar'|'diagnostics'>('menu');
+  type DetailPanel='menu'|'queue'|'content'|'style'|'lyrics'|'offset'|'eq'|'output'|'globalFont'|'lyricFont'|'download'|'similar'|'diagnostics'|'comments'|'playlist'|'lyricChoice'|'match';
+  const [details,setDetails]=useState(false),[detailPanel,setDetailPanel]=useState<DetailPanel>('menu');
+  const [returnPanel,setReturnPanel]=useState<DetailPanel|null>(null);
   const [panel,setPanel]=useState<'rate'|'sleep'|null>(null),[panelReturnsToMenu,setPanelReturnsToMenu]=useState(false);
   const closePanel=()=>{setPanel(null);if(panelReturnsToMenu){setPanelReturnsToMenu(false);setDetailPanel('menu');setTimeout(()=>setDetails(true),320);}};
   const [download,setDownload]=useState<{track:Track;returnPanel:'menu'|'content'|null;submitting:boolean;report?:DownloadSubmission;error?:string}|null>(null),downloadSerial=useRef(0);
-  useEffect(()=>{downloadSerial.current++;setDownload(null);if(detailPanel==='download'||detailPanel==='similar')setDetails(false);},[open,state.queue.currentId]);
+  useEffect(()=>{
+    downloadSerial.current++;setDownload(null);
+    if(!open){setDetails(false);setPanel(null);setCommenting(null);setAdding([]);setMatching(null);setChoosingLyric(false);setReturnPanel(null);}
+    else if(detailPanel==='download'||detailPanel==='similar')setDetails(false);
+  },[open,state.queue.currentId]);
   useEffect(()=>()=>{downloadSerial.current++;},[]);
   const styleReturnsToMenu=useRef(true);
   const miniTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
   const dismissTouchStart=useRef<{x:number;y:number}|undefined>(undefined);
+  const playerGestureStart=useRef<{x:number;y:number}|undefined>(undefined);
   const startTouch=(ref:MutableRefObject<{x:number;y:number}|undefined>)=>(event:GestureResponderEvent)=>{ref.current={x:event.nativeEvent.pageX,y:event.nativeEvent.pageY};};
   const finishTouch=(ref:MutableRefObject<{x:number;y:number}|undefined>,direction:'up'|'down',action:()=>void)=>(event:GestureResponderEvent)=>{
     const start=ref.current;ref.current=undefined;if(!start)return;
     const dx=event.nativeEvent.pageX-start.x,dy=event.nativeEvent.pageY-start.y;
     if(Math.abs(dy)>36&&Math.abs(dy)>Math.abs(dx)*1.2&&((direction==='up'&&dy<0)||(direction==='down'&&dy>0)))action();
+  };
+  const finishPlayerGesture=(event:GestureResponderEvent)=>{
+    const start=playerGestureStart.current;playerGestureStart.current=undefined;
+    if(!start||details||panel)return;
+    const dx=event.nativeEvent.pageX-start.x,dy=event.nativeEvent.pageY-start.y;
+    // Left-edge swipe right dismisses any player layout without conflicting with track swipe or lyrics scroll.
+    if(start.x<=32&&dx>68&&dx>Math.abs(dy)*1.4){setOpen(false);return;}
+    // Top-band swipe down dismisses the full-screen player cleanly without stealing ScrollView/FlatList scrolls.
+    const topZone=preferences.playerLayout==='classic'?Math.max(insets.top+88,128):Math.max(insets.top+136,184);
+    if(start.y<=topZone&&dy>64&&dy>Math.abs(dx)*1.35){setOpen(false);}
   };
   const entry = currentEntry(state.queue);
   if (!entry) return null;
@@ -125,8 +154,22 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
     if(track.origin.kind==='online'&&!services.offlineDownloads.find(track))setDownload({track,returnPanel,submitting:false});else void submitDownload(track,returnPanel);
   };
   const returnFromDownload=()=>{const panel=download?.returnPanel;downloadSerial.current++;if(panel){setDownload(null);setDetailPanel(panel);}else setDetails(false);};
-  const closeDetails=()=>{downloadSerial.current++;setDetails(false);};
-  const button = (label: string, action: () => void) => <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.button}><Text style={styles.buttonText}>{label}</Text></Pressable>;
+  const closeDetails=()=>{downloadSerial.current++;setDetails(false);setCommenting(null);setAdding([]);setMatching(null);setChoosingLyric(false);setReturnPanel(null);};
+  const openInSheet=(next:DetailPanel,backTo:DetailPanel|null=details?detailPanel:null)=>{setReturnPanel(backTo);setDetailPanel(next);setDetails(true);};
+  const closeSubSheet=()=>{
+    const back=returnPanel;setReturnPanel(null);setCommenting(null);setAdding([]);setMatching(null);setChoosingLyric(false);
+    if(back)setDetailPanel(back);else setDetails(false);
+  };
+  const openComments=(target:Track,fromSheet=false)=>{setCommenting(target);openInSheet('comments',fromSheet?detailPanel:null);};
+  const openPlaylist=(targets:readonly Track[],fromSheet=false)=>{setAdding(targets);openInSheet('playlist',fromSheet?detailPanel:null);};
+  const openMatch=(target:Track,fromSheet=false)=>{setMatching(target);openInSheet('match',fromSheet?detailPanel:null);};
+  const openLyricChoice=(fromSheet=false)=>{setChoosingLyric(true);openInSheet('lyricChoice',fromSheet?detailPanel:null);};
+  const openQueueSheet=(backTo:DetailPanel|null=null)=>{openInSheet('queue',backTo);};
+  const button = (label: string, action: () => void, primary=false) => (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={[styles.button,primary&&{backgroundColor:s.control,borderColor:s.control}]}>
+      <Text style={[styles.buttonText,primary&&{color:'#FFFFFF'}]}>{label}</Text>
+    </Pressable>
+  );
   // Start the pageSheet dismissal before the player tree changes shape. iOS can
   // leave an empty sheet intercepting touches when the presented content is
   // replaced on the same frame the modal begins to close.
@@ -155,39 +198,83 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
       })}
     </View>
   </View>);
-  const detailContent=(<>
-        <PlayerCover services={services} track={entry.track} size={240}/>
-        <Text style={styles.title}>{entry.track.title}</Text><Text style={styles.artist}>{entry.track.artist}</Text><Text style={styles.caption}>{entry.track.album}</Text>
-        <Text style={styles.caption}>{localQuality??`偏好 ${preferences.quality} · 成功请求档位 ${state.media?.quality??'待解析'}${qualityNotice}（非实际文件格式证明）`}</Text>
-        <Spectrum services={services} />
-        {(entry.track.origin.kind==='imported'||entry.track.origin.kind==='online')&&<View style={styles.row}><Text style={styles.caption}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>{button('匹配歌曲',()=>setMatching(entry.track))}</View>}
-        {open&&preferences.playerLayout==='classic'&&<Lyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)}/>}
-        <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{button('歌曲评论',()=>setCommenting(entry.track))}{downloadableTrack(entry.track)&&button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
-        <View style={styles.row}>{button(`播放倍速 ${preferences.rate}x`,()=>setPanel('rate'))}{button('睡眠定时器',()=>setPanel('sleep'))}</View>
-        <Text style={styles.error}>{state.error ?? (state.phase === 'resolving' ? '正在跨源解析播放地址…' : state.buffering ? '正在缓冲…' : '')}</Text>
-        <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityState={{disabled:!timeline.seekable}} accessibilityValue={{ min: 0, max: Math.floor(timeline.duration), now: Math.floor(timeline.position) }}
-          accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => {if(timeline.seekable)controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10));}}
-          onPress={event => { if (timeline.seekable) controller.seek(event.nativeEvent.locationX / 300 * state.duration); }} style={styles.progress}>
-          <View style={[styles.fill, { width: `${timeline.duration ? Math.min(100, timeline.position/timeline.duration*100) : 0}%` }]} />
-        </Pressable>
-        <Text style={styles.caption}>{time(timeline.position)} / {time(timeline.duration)}</Text>
-        <View style={styles.row}>{button('上一首', () => services.playback.next(-1))}{button(state.intent === 'playing' ? '暂停' : '播放', toggle)}{button('下一首', () => services.playback.next())}</View>
-        <View style={styles.row}>{button('−15秒', () => controller.seek(state.position-15))}{button('＋15秒', () => controller.seek(state.position+15))}</View>
-        <View style={styles.row}>
-          {button(`循环：${preferences.repeat}`, () => { void services.preferences.update({ repeat: preferences.repeat === 'off' ? 'all' : preferences.repeat === 'all' ? 'one' : 'off' }); })}
-          {button(`随机：${preferences.shuffle ? '开' : '关'}`, () => { void services.preferences.update({ shuffle: !preferences.shuffle }); })}
+  const isFav=services.songFavorites.isFavorite(entry.track);
+  const canMatch=entry.track.origin.kind==='imported'||entry.track.origin.kind==='online';
+  const detailContent=(<View style={{gap:14}}>
+    <View style={[{borderRadius:20,padding:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:12},s.cardShadow]}>
+      <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
+        <Cover services={services} track={entry.track} size={58} radius={13}/>
+        <View style={{flex:1,minWidth:0,gap:3}}>
+          <Text numberOfLines={1} style={{color:s.ink,fontSize:17,fontWeight:'700'}}>{entry.track.title}</Text>
+          <Text numberOfLines={1} style={{color:s.muted,fontSize:13}}>{entry.track.artist}{entry.track.album?` · ${entry.track.album}`:''}</Text>
+          <Text style={{color:s.subtle,fontSize:11.5}}>{localQuality??`偏好 ${preferences.quality} · 成功请求档位 ${state.media?.quality??'待解析'}${qualityNotice}（非实际文件格式证明）`}</Text>
         </View>
-        <Text style={styles.artist}>播放队列 · {state.queue.entries.length}</Text>
-        <QueueView services={services}/>
-        {state.queue.entries.slice(0,5).map((item, index) => <View key={item.id} style={styles.queueRow}>
-          <Pressable onPress={() => { void controller.play({ ...state.queue, currentId: item.id, priorityIds: [] }); }} style={{ flex: 1 }}><Text style={[styles.track, item.id === state.queue.currentId && styles.current]}>{index+1}. {item.track.title}</Text><Text style={styles.caption}>{item.track.artist}</Text></Pressable>
-          {index > 0 && button('上移', () => controller.setQueue(move(state.queue, item.id, index-1)))}
-          {button('移除', () => {
-            const queue = remove(state.queue, item.id);
-            if (item.id === state.queue.currentId && state.intent === 'playing') void controller.play(queue); else controller.setQueue(queue);
-          })}
-        </View>)}
-  </>);
+      </View>
+      {canMatch&&<View style={{paddingTop:10,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:s.hairline,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
+        <Text style={{flex:1,color:s.muted,fontSize:12,lineHeight:17}}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>
+        {button('匹配歌曲',()=>openMatch(entry.track,true))}
+      </View>}
+      {!!detailStatus.text&&<Text style={{color:s.accent,fontSize:12.5}}>{detailStatus.text}</Text>}
+    </View>
+
+    <Spectrum services={services}/>
+
+    <View style={[{borderRadius:20,padding:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:12},s.cardShadow]}>
+      <Text style={{color:s.ink,fontSize:14,fontWeight:'700'}}>歌曲与歌词操作</Text>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+        {button(isFav?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}
+        {button('加入歌单',()=>openPlaylist([entry.track],true))}
+        {button('歌曲评论',()=>openComments(entry.track,true))}
+        {downloadableTrack(entry.track)&&button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}
+        {button('选择歌词来源',()=>openLyricChoice(true))}
+        {button('歌词时间偏移',()=>openInSheet('offset','content'))}
+      </View>
+    </View>
+
+    <View style={[{borderRadius:20,padding:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:12},s.cardShadow]}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+        <Text style={{color:s.ink,fontSize:14,fontWeight:'700'}}>播放控制</Text>
+        <Text style={{color:s.muted,fontSize:12,fontVariant:['tabular-nums']}}>{time(timeline.position)} / {time(timeline.duration)}</Text>
+      </View>
+      <Pressable accessibilityRole="adjustable" accessibilityLabel="播放进度" accessibilityState={{disabled:!timeline.seekable}} accessibilityValue={{ min: 0, max: Math.floor(timeline.duration), now: Math.floor(timeline.position) }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} onAccessibilityAction={event => {if(timeline.seekable)controller.seek(state.position+(event.nativeEvent.actionName === 'increment' ? 10 : -10));}}
+        onPress={event => { if (timeline.seekable) controller.seek(event.nativeEvent.locationX / 300 * state.duration); }} style={{height:10,borderRadius:5,backgroundColor:s.chip,overflow:'hidden'}}>
+        <View style={{height:10,borderRadius:5,backgroundColor:s.accent,width:`${timeline.duration ? Math.min(100, timeline.position/timeline.duration*100) : 0}%`}} />
+      </Pressable>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+        {button('上一首', () => services.playback.next(-1))}
+        {button(state.intent === 'playing' ? '暂停' : '播放', toggle, true)}
+        {button('下一首', () => services.playback.next())}
+        {button('−15秒', () => controller.seek(state.position-15))}
+        {button('＋15秒', () => controller.seek(state.position+15))}
+      </View>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+        {button(`播放倍速 ${preferences.rate}x`,()=>{setPanelReturnsToMenu(false);closeDetails();setTimeout(()=>setPanel('rate'),260);})}
+        {button('睡眠定时器',()=>{setPanelReturnsToMenu(false);closeDetails();setTimeout(()=>setPanel('sleep'),260);})}
+        {button(`循环：${preferences.repeat}`, () => { void services.preferences.update({ repeat: preferences.repeat === 'off' ? 'all' : preferences.repeat === 'all' ? 'one' : 'off' }); })}
+        {button(`随机：${preferences.shuffle ? '开' : '关'}`, () => { void services.preferences.update({ shuffle: !preferences.shuffle }); })}
+      </View>
+    </View>
+
+    <View style={[{borderRadius:20,padding:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:10},s.cardShadow]}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+        <Text style={{color:s.ink,fontSize:15,fontWeight:'700'}}>播放队列 · {state.queue.entries.length} 首</Text>
+      </View>
+      <QueueView services={services} onOpen={()=>openQueueSheet('content')}/>
+      {state.queue.entries.slice(0,5).map((item, index) => <View key={item.id} style={{borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:s.hairline,paddingTop:10,flexDirection:'row',gap:8,alignItems:'center'}}>
+        <Pressable onPress={() => { void controller.play({ ...state.queue, currentId: item.id, priorityIds: [] }); }} style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={1} style={{fontSize:14,fontWeight:item.id===state.queue.currentId?'700':'500',color:item.id === state.queue.currentId ? s.accent : s.ink}}>{index+1}. {item.track.title}</Text>
+          <Text numberOfLines={1} style={{fontSize:12,color:s.muted,marginTop:2}}>{item.track.artist}</Text>
+        </Pressable>
+        {index > 0 && button('上移', () => controller.setQueue(move(state.queue, item.id, index-1)))}
+        {button('移除', () => {
+          const queue = remove(state.queue, item.id);
+          if (item.id === state.queue.currentId && state.intent === 'playing') void controller.play(queue); else controller.setQueue(queue);
+        })}
+      </View>)}
+    </View>
+  </View>);
+
   const iconButton=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,size=24,color:string=theme.palette.text,style?:React.ComponentProps<typeof Ionicons>['style'])=>(
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name={name} size={size} color={color} style={style}/></Pressable>);
   const glyphButton=(glyph:React.ReactNode,label:string,action:()=>void,value?:string)=>(
@@ -196,8 +283,8 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
   // still at #5E514F; dark layouts keep the theme text ink.
   const classicHeaderInk=theme.mode==='dark'?theme.palette.text:paper.iconStrong;
   const classicToolInk=theme.mode==='dark'?theme.palette.text:paper.toolInk;
-  // IMG_4854 queue jar: 17.33x23.33pt, two lid rules (9.5/12.9) over a 17.5pt body.
-  const queueJar=(
+  // IMG_4854 playlist jar icon: 17.33x23.33pt, two lid rules over a 17.5pt body -> opens PlaylistPicker.
+  const playlistJar=(
     <View style={{width:17.5,height:23.4,alignItems:'center'}}>
       <View style={{width:9.5,height:1.2,backgroundColor:classicToolInk}}/>
       <View style={{width:12.9,height:1.2,backgroundColor:classicToolInk,marginTop:1.4}}/>
@@ -213,7 +300,7 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
         the shared 24pt inset; the 35pt row preserves the menu anchor. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:35}}>
       <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
-      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicHeaderInk,{transform:[{translateY:-1.83}]})}</View>
+      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setReturnPanel(null);setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicHeaderInk,{transform:[{translateY:-1.83}]})}</View>
     </View>
     <View testID="classic-artwork" collapsable={false} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><PlayerCover services={services} track={entry.track} size={artworkSide}/></View>
     <View style={{marginTop:classicArtworkLayout.titleBefore,alignItems:'center',gap:2}}>
@@ -231,36 +318,30 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
       <Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={toggle} style={{width:70,height:70,borderRadius:35,backgroundColor:theme.mode==='dark'?theme.palette.accent:paper.accent,alignItems:'center',justifyContent:'center'}}>{state.intent==='playing'?<View style={{flexDirection:'row',gap:6.6}}><View style={{width:6.3,height:22.55,borderRadius:3.15,backgroundColor:'#FFFFFF'}}/><View style={{width:6.3,height:22.55,borderRadius:3.15,backgroundColor:'#FFFFFF'}}/></View>:<Ionicons name="play" size={30} color="#FFFFFF" style={{marginLeft:4}}/>}</Pressable>
       {glyphButton(skipGlyph('forward'),'下一首',()=>services.playback.next())}
     </View>
-    {/* IMG_4854 tool centres run 71.5..358.2pt, narrower than the 24pt page inset. */}
+    {/* IMG_4854 tool centres run 71.5..358.2pt; 4th icon adds to playlist, 5th opens dedicated queue. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:0,marginHorizontal:25.5}}>
       {glyphButton(<Ionicons name="repeat" size={26} color={classicToolInk} style={{transform:[{scaleX:1.047},{scaleY:1.171}]}}/>,`循环：${preferences.repeat}`,cycleRepeat)}
-      {glyphButton(<Ionicons name="chatbubbles-outline" size={20} color={classicToolInk} style={{transform:[{scaleX:-1.164},{scaleY:.957}]}}/>,'歌曲评论',()=>setCommenting(entry.track))}
-      {glyphButton(<MaterialIcons name={services.songFavorites.isFavorite(entry.track)?'favorite':'favorite-border'} size={24} color={classicToolInk}/>,'收藏歌曲',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},services.songFavorites.isFavorite(entry.track)?'已收藏':'未收藏')}
-      <Pressable accessibilityRole="button" accessibilityLabel="查看播放队列" onPress={()=>{setDetailPanel('content');setDetails(true);}} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{queueJar}</Pressable>
-      {glyphButton(<MaterialIcons name="format-list-bulleted" size={24} color={classicToolInk} style={{transform:[{scaleX:1.091}]}}/>,'播放队列',()=>{setDetailPanel('content');setDetails(true);})}
+      {glyphButton(<Ionicons name="chatbubbles-outline" size={20} color={classicToolInk} style={{transform:[{scaleX:-1.164},{scaleY:.957}]}}/>,'歌曲评论',()=>openComments(entry.track,false))}
+      {glyphButton(<MaterialIcons name={isFav?'favorite':'favorite-border'} size={24} color={classicToolInk}/>,'收藏歌曲',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},isFav?'已收藏':'未收藏')}
+      <Pressable accessibilityRole="button" accessibilityLabel="加入歌单" onPress={()=>openPlaylist([entry.track],false)} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{playlistJar}</Pressable>
+      {glyphButton(<MaterialIcons name="format-list-bulleted" size={24} color={classicToolInk} style={{transform:[{scaleX:1.091}]}}/>,'查看播放队列',()=>openQueueSheet(null))}
     </View>
     {/* Kept above the safe-area fold (932pt screen, ~898pt viewport) so the
-        reference's last line is not clipped by the scroll viewport. */}
-    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{localQuality??`${preferences.quality} 档位 · ${state.media?.quality??'待解析'}${qualityNotice} 实际请求`}</Text>
-    <ClassicLyricChrome services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
+        reference's last line stays crisp on a single clean non-scrolling screen. */}
+    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{status.text?status.text:(localQuality??`${preferences.quality} 档位 · ${state.media?.quality??'待解析'}${qualityNotice} 实际请求`)}</Text>
+    <ClassicLyricChrome chrome={false} services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
   </>;
-  const classicTools=<View style={{gap:12,marginTop:12}}>
-    <View style={styles.row}>{button(services.songFavorites.isFavorite(entry.track)?'取消本地收藏':'本地收藏',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));})}{button('加入歌单',()=>setAdding([entry.track]))}{downloadableTrack(entry.track)&&button(offline?.status==='completed'?'已保存离线':offline?.status==='downloading'?'正在保存离线':'保存离线',saveOffline)}</View>
-    <Text style={styles.caption}>{localQuality??`偏好 ${preferences.quality} · 成功请求档位 ${state.media?.quality??'待解析'}${qualityNotice}（非实际文件格式证明）`}</Text>
-    <Spectrum services={services}/>
-    <View style={styles.row}>{button('−15秒',()=>controller.seek(state.position-15))}{button('＋15秒',()=>controller.seek(state.position+15))}{button(`随机：${preferences.shuffle?'开':'关'}`,()=>{void services.preferences.update({shuffle:!preferences.shuffle});})}{button('匹配歌曲',()=>setMatching(entry.track))}</View>
-  </View>;
   const miniInner=<View style={[styles.mini,fontScale>1.45&&{flexWrap:'wrap'}]}>
       <View style={{width:40,height:40,borderRadius:10,overflow:'hidden',borderWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
         <Cover services={services} track={entry.track} size={40} radius={10}/>
       </View>
       <View style={{flex:1,minWidth:80}}><Pressable accessibilityRole="button" accessibilityLabel="打开播放页" onPress={()=>setOpen(true)} style={{minHeight:40,justifyContent:'center'}}>
         <Text numberOfLines={1} style={[styles.track,{color:s.ink,fontSize:14,fontWeight:'600',lineHeight:19}]}>{entry.track.title}{preferences.miniLyrics&&!open&&entry.track.artist?<Text style={{color:s.muted,fontWeight:'400',fontSize:12.5}}> · {entry.track.artist}</Text>:null}</Text>
-        {(!preferences.miniLyrics||open)&&<Text numberOfLines={1} style={[styles.caption,{color:s.muted,fontSize:12,lineHeight:16}]}>{entry.track.artist}{state.phase==='resolving'?' · 正在选择音源…':state.error?` · ${state.error}`:state.buffering?' · 缓冲中…':''}</Text>}
-      </Pressable>{preferences.miniLyrics&&!open&&<MiniLyric key={JSON.stringify(lyricTrack.origin)} services={services} track={lyricTrack}/>}</View>
+        {(!preferences.miniLyrics||open)&&<Text numberOfLines={1} style={[styles.caption,{color:s.muted,fontSize:12,lineHeight:16}]}>{entry.track.artist}{status.text?` · ${status.text}`:''}</Text>}
+      </Pressable>{preferences.miniLyrics&&!open&&<MiniLyric key={entry.id} services={services} track={lyricTrack}/>}</View>
       <View style={{flexDirection:'row',flexShrink:0,alignItems:'center',gap:2}}>{preferences.miniActions.map(action=>{
         if(action==='queue')return <QueueView key={action} services={services} compact/>;
-        const favorite=services.songFavorites.isFavorite(entry.track),label=action==='toggle'?(state.intent==='playing'?'暂停':'播放'):miniActionLabels[action];
+        const favorite=isFav,label=action==='toggle'?(state.intent==='playing'?'暂停':'播放'):miniActionLabels[action];
         const icon=action==='toggle'?(state.intent==='playing'?'pause':'play'):favorite?'heart':'heart-outline';
         return <Pressable key={action} testID={`mini-action-${action}`} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={action==='favorite'?{text:favorite?'已收藏':'未收藏'}:undefined} onPress={()=>{
           if(action==='toggle')toggle();else if(action==='previous')services.playback.next(-1);else if(action==='next')services.playback.next();else void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('收藏未保存','原有数据保留，请重试。'));
@@ -273,26 +354,28 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
     <Modal visible={open} animationType="slide" statusBarTranslucent onRequestClose={() => setOpen(false)}>
       {open&&<StatusBar hidden={preferences.fullScreenMode} style={preferences.playerLayout==='vinyl'?'dark':preferences.playerLayout!=='classic'?'light':theme.mode==='dark'?'light':'dark'}/>}
       {open&&AndroidSystemBarSync&&<AndroidSystemBarSync pointerEvents="none" darkIcons={preferences.playerLayout==='vinyl'?true:preferences.playerLayout!=='classic'?false:theme.mode!=='dark'} style={{position:'absolute',width:0,height:0}}/>}
-      <View style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:preferences.playerLayout==='vinyl'?paper.background:preferences.playerLayout==='stage'?'#060607':'#183647'}}>
+      <View onTouchStart={startTouch(playerGestureStart)} onTouchEnd={finishPlayerGesture} style={{flex:1,backgroundColor:preferences.playerLayout==='classic'?theme.palette.background[0]:preferences.playerLayout==='vinyl'?paper.background:preferences.playerLayout==='stage'?'#060607':'#183647'}}>
       {open&&(preferences.playerLayout==='classic'?<AmbientBackground services={services} gradient={theme.mode==='light'&&theme.appearance.visualTheme==='blush'?classicBlushBackground:undefined}/>:preferences.playerLayout==='vinyl'||preferences.playerLayout==='stage'?null:<ArtworkBackdrop services={services} track={actualMatch??entry.track} photo={preferences.playerLayout==='photo'}/>)}
       {preferences.playerLayout!=='classic'?<View style={{flex:1,paddingHorizontal:(preferences.playerLayout==='vinyl'||preferences.playerLayout==='immersive')?0:landscape?60:24,paddingTop:(preferences.playerLayout==='vinyl'||preferences.playerLayout==='immersive')?0:landscape?12:Platform.OS==='android'&&preferences.playerLayout==='wave'?Math.max(insets.top+48,76):55,paddingBottom:(preferences.playerLayout==='vinyl'||preferences.playerLayout==='immersive')?0:20}}>
-        {preferences.playerLayout==='am2'?<Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{position:'absolute',top:landscape?6:48,left:64,right:64,height:36,alignItems:'center',justifyContent:'center',zIndex:3}}><View style={{width:38,height:4.5,borderRadius:2.25,backgroundColor:'rgba(255,255,255,0.42)'}}/></Pressable>:<Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{position:'absolute',top:preferences.playerLayout==='vinyl'?(Platform.OS==='android'?Math.max(insets.top+6,38):4):Platform.OS==='android'&&preferences.playerLayout==='wave'?Math.max(insets.top+2,30):52,left:preferences.playerLayout==='immersive'?14:6,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:3}}>{preferences.playerLayout==='immersive'?<View style={{width:36,height:36,borderRadius:18,backgroundColor:'rgba(0,0,0,0.28)',alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-down" color="#FFFFFF" size={22}/></View>:preferences.playerLayout!=='am'?<Ionicons name="chevron-down" color={preferences.playerLayout==='vinyl'?paper.icon:preferences.playerLayout==='photo'?'rgba(255,255,255,0.78)':'#FFFFFF'} size={28}/>:null}</Pressable>}
-        {(preferences.playerLayout==='wave'||preferences.playerLayout==='immersive'||preferences.playerLayout==='am2')&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosingLyric(true)} style={{position:'absolute',top:landscape?6:Platform.OS==='android'&&preferences.playerLayout==='wave'?Math.max(insets.top+2,30):50,right:14,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:3}}>{preferences.playerLayout==='immersive'?<View style={{width:36,height:36,borderRadius:18,backgroundColor:'rgba(0,0,0,0.28)',alignItems:'center',justifyContent:'center'}}><Ionicons name="language-outline" size={19} color="rgba(255,255,255,0.82)"/></View>:<Ionicons name="language-outline" size={20} color="rgba(255,255,255,0.56)"/>}</Pressable>}
-        {open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setDetailPanel('lyrics');setDetails(true);}} onLyricSource={()=>setChoosingLyric(true)} onQueue={()=>{setDetailPanel('content');setDetails(true);}} onComments={()=>setCommenting(actualMatch??entry.track)} onSleep={()=>{setPanelReturnsToMenu(false);setPanel('sleep');}} onPlaylist={()=>setAdding([entry.track])} onArtistPress={handleArtistPress}/>}
-      </View>:<PlayerScroll classic>
+        {preferences.playerLayout==='am2'&&<View pointerEvents="none" style={{position:'absolute',top:landscape?10:Math.max(insets.top+10,54),left:0,right:0,alignItems:'center',zIndex:2}}><View style={{width:38,height:4.5,borderRadius:2.25,backgroundColor:'rgba(255,255,255,0.36)'}}/></View>}
+        <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{position:'absolute',top:landscape?8:preferences.playerLayout==='vinyl'?Math.max(insets.top+6,58):Platform.OS==='android'&&preferences.playerLayout==='wave'?Math.max(insets.top+2,30):Math.max(insets.top+4,52),left:preferences.playerLayout==='vinyl'||preferences.playerLayout==='immersive'||preferences.playerLayout==='am'||preferences.playerLayout==='am2'?16:10,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:4}}>
+          {preferences.playerLayout==='immersive'||preferences.playerLayout==='am'||preferences.playerLayout==='am2'?<View style={{width:36,height:36,borderRadius:18,backgroundColor:preferences.playerLayout==='immersive'?'rgba(0,0,0,0.28)':'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-down" color="#FFFFFF" size={22}/></View>:preferences.playerLayout==='vinyl'?<View style={{width:36,height:36,borderRadius:18,backgroundColor:'rgba(66,62,60,0.07)',alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-down" color={paper.icon} size={22}/></View>:<Ionicons name="chevron-down" color={preferences.playerLayout==='photo'?'rgba(255,255,255,0.82)':'#FFFFFF'} size={26}/>}
+        </Pressable>
+        {(preferences.playerLayout==='wave'||preferences.playerLayout==='immersive'||preferences.playerLayout==='am2')&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>openLyricChoice(false)} style={{position:'absolute',top:landscape?8:Platform.OS==='android'&&preferences.playerLayout==='wave'?Math.max(insets.top+2,30):Math.max(insets.top+4,52),right:16,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:4}}>{preferences.playerLayout==='immersive'||preferences.playerLayout==='am2'?<View style={{width:36,height:36,borderRadius:18,backgroundColor:preferences.playerLayout==='immersive'?'rgba(0,0,0,0.28)':'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}><Ionicons name="language-outline" size={19} color="rgba(255,255,255,0.86)"/></View>:<Ionicons name="language-outline" size={20} color="rgba(255,255,255,0.68)"/>}</Pressable>}
+        {open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setReturnPanel(null);setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setReturnPanel(null);setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setReturnPanel(null);setDetailPanel('lyrics');setDetails(true);}} onLyricSource={()=>openLyricChoice(false)} onQueue={()=>openQueueSheet(null)} onComments={()=>openComments(actualMatch??entry.track,false)} onSleep={()=>{setPanelReturnsToMenu(false);setPanel('sleep');}} onPlaylist={()=>openPlaylist([entry.track],false)} onArtistPress={handleArtistPress}/>}
+      </View>:<PlayerScroll classic scrollable={landscape||fontScale>1.35}>
         {classicHero}
-        {classicTools}
       </PlayerScroll>}</View>
-      <SheetModal visible={details&&open} animationType="slide" onRequestClose={closeDetails} onDismiss={()=>{if(detailPanel==='download')setDownload(null);}}>
+      <SheetModal allowSwipeDismissal={detailPanel==='comments'||detailPanel==='queue'} visible={details&&open} animationType="slide" onRequestClose={closeDetails} onDismiss={()=>{if(detailPanel==='download')setDownload(null);}}>
         {details&&<StatusBar style={theme.mode==='dark'?'light':'dark'}/>}
         {details&&AndroidSystemBarSync&&<AndroidSystemBarSync pointerEvents="none" darkIcons={theme.mode!=='dark'} style={{position:'absolute',width:0,height:0}}/>}
         <View style={{flex:1}}>
           <LinearGradient colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
-        {detailPanel==='similar'&&similarTrack?<SimilarSongs services={services} track={similarTrack} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close} onSearchArtist={handleArtistPress}/>} backLabel="返回播放选项" onBack={()=>setDetailPanel('menu')} onSelect={(tracks,index)=>{closeDetails();services.playTracks(tracks,index);}}/>:detailPanel==='download'&&download?(download.report?<DownloadSubmissionView services={services} report={download.report} backLabel={download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页'} onClose={returnFromDownload}/>:download.track.origin.kind==='online'&&!download.submitting&&!download.error?<DownloadQualityChoice services={services} track={download.track} busy={false} backLabel={download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页'} onBack={returnFromDownload} onConfirm={q=>{void submitDownload(download.track,download.returnPanel,q);}}/>:<View style={{flex:1,padding:24,gap:16}}>{button(download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页',returnFromDownload)}<Text style={styles.title}>{download.track.title}</Text><Text accessibilityRole={download.error?'alert':undefined} style={styles.caption}>{download.error??'正在提交下载任务…'}</Text></View>):<ScrollView testID="player-details-scroll" key={detailPanel} style={{flex:1}} contentContainerStyle={detailPanel==='menu'||detailPanel==='offset'?{flexGrow:1}:{paddingHorizontal:18,paddingTop:14,paddingBottom:36,gap:16}}>
+        {detailPanel==='queue'?<QueuePanel services={services} inSheet onClose={closeSubSheet}/>:detailPanel==='comments'?<SafeAreaProvider><SafeAreaView style={{flex:1}} edges={['bottom']}><View style={{alignSelf:'center',width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66',marginTop:10}}/><CommentsModal services={services} track={commenting} embedded onClose={closeSubSheet}/></SafeAreaView></SafeAreaProvider>:detailPanel==='playlist'?<PlaylistPicker services={services} tracks={adding} visible={adding.length>0} inline onClose={closeSubSheet}/>:detailPanel==='lyricChoice'?<LyricChoiceModal services={services} track={choosingLyric?lyricTrack:null} inline onClose={closeSubSheet}/>:detailPanel==='match'?<MatchModal services={services} track={matching} inline onClose={closeSubSheet}/>:detailPanel==='similar'&&similarTrack?<SimilarSongs services={services} track={similarTrack} renderSongActions={(song,close)=><TrackActions services={services} track={song} prefix="similar" extras onClose={close} onSearchArtist={handleArtistPress}/>} backLabel="返回播放选项" onBack={()=>setDetailPanel('menu')} onSelect={(tracks,index)=>{closeDetails();services.playTracks(tracks,index);}}/>:detailPanel==='download'&&download?(download.report?<DownloadSubmissionView services={services} report={download.report} backLabel={download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页'} onClose={returnFromDownload}/>:download.track.origin.kind==='online'&&!download.submitting&&!download.error?<DownloadQualityChoice services={services} track={download.track} busy={false} backLabel={download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页'} onBack={returnFromDownload} onConfirm={q=>{void submitDownload(download.track,download.returnPanel,q);}}/>:<View style={{flex:1,padding:24,gap:16}}>{button(download.returnPanel==='menu'?'返回播放选项':download.returnPanel==='content'?'返回队列与播放选项':'返回播放页',returnFromDownload)}<Text style={styles.title}>{download.track.title}</Text><Text accessibilityRole={download.error?'alert':undefined} style={styles.caption}>{download.error??'正在提交下载任务…'}</Text></View>):<ScrollView testID="player-details-scroll" key={detailPanel} style={{flex:1}} contentContainerStyle={detailPanel==='menu'||detailPanel==='offset'?{flexGrow:1}:{paddingHorizontal:18,paddingTop:14,paddingBottom:36,gap:16}}>
           {detailPanel==='style'?<>
             <Pressable accessibilityRole="button" accessibilityLabel="收起播放界面样式" onPress={()=>{if(styleReturnsToMenu.current)setDetailPanel('menu');else closeDetails();}} style={{alignSelf:'center',paddingVertical:8,paddingHorizontal:28}}><View style={{width:38,height:4.5,borderRadius:2.25,backgroundColor:s.dark?'rgba(255,255,255,0.28)':'rgba(60,48,50,0.26)'}}/></Pressable>
             <Text style={{color:s.ink,fontSize:26,fontWeight:'700',letterSpacing:-0.3}}>播放界面样式</Text>{skinSelector}
-          </>:detailPanel==='offset'?<LyricOffsetPanel services={services} track={lyricTrack} onBack={()=>setDetailPanel('menu')}/>:detailPanel==='eq'?<>
+          </>:detailPanel==='offset'?<LyricOffsetPanel services={services} track={lyricTrack} onBack={()=>setDetailPanel(returnPanel??'menu')}/>:detailPanel==='eq'?<>
             <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={()=>setDetailPanel('menu')} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>返回播放选项</Text></Pressable>
             <EqualizerSettings services={services}/>
           </>:detailPanel==='output'?<>
@@ -316,8 +399,8 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
             <PlaybackDiagnostics services={services}/>
           </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
             <Pressable accessibilityRole="button" accessibilityLabel={detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置'} onPress={()=>setDetailPanel(detailPanel==='lyrics'?'menu':'lyrics')} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{detailPanel==='lyrics'?'收起歌词显示设置':'返回歌词设置'}</Text></Pressable>
-            <Text style={{color:s.ink,fontSize:24,fontWeight:'700'}}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text>{detailPanel==='lyrics'&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>{closeDetails();setTimeout(()=>setChoosingLyric(true),320);}} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:16,paddingVertical:11,borderRadius:999,backgroundColor:s.control}}><Ionicons name="search-outline" size={16} color="#FFFFFF"/><Text style={{color:'#FFFFFF',fontSize:14,fontWeight:'600'}}>选择歌词来源</Text></Pressable>}<FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
-          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onLyricOffset={()=>setDetailPanel('offset')} onEQ={()=>setDetailPanel('eq')} onAudioOutput={()=>setDetailPanel('output')} onQueue={()=>setDetailPanel('content')} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onSimilar={supportsSimilarSongs(actualMatch??entry.track)?()=>{setSimilarTrack(actualMatch??entry.track);setDetailPanel('similar');}:undefined} onComments={()=>setCommenting(actualMatch??entry.track)} onPlaylist={()=>setAdding([entry.track])} onDownload={downloadableTrack(entry.track)?saveOffline:undefined} onDiagnostics={()=>setDetailPanel('diagnostics')} downloadLabel={offline?.status==='completed'?'已下载':offline?.status==='downloading'?'下载中':'下载'}/>:<>
+            <Text style={{color:s.ink,fontSize:24,fontWeight:'700'}}>{detailPanel==='lyrics'?'歌词显示设置':detailPanel==='globalFont'?'全局字体':'歌词字体'}</Text>{detailPanel==='lyrics'&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>openLyricChoice(true)} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:16,paddingVertical:11,borderRadius:999,backgroundColor:s.control}}><Ionicons name="search-outline" size={16} color="#FFFFFF"/><Text style={{color:'#FFFFFF',fontSize:14,fontWeight:'600'}}>选择歌词来源</Text></Pressable>}<FontSettings services={services} section={detailPanel==='lyrics'?'display':detailPanel==='globalFont'?'global':'lyric'} onOpen={section=>setDetailPanel(section==='display'?'lyrics':section==='global'?'globalFont':'lyricFont')}/>
+          </>:detailPanel==='menu'?<PlayerMenu services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} layoutLabel={layoutLabels[preferences.playerLayout]??'经典'} queueCount={state.queue.entries.length} onClose={closeDetails} onStyle={()=>{styleReturnsToMenu.current=true;setDetailPanel('style');}} onLyricsSettings={()=>setDetailPanel('lyrics')} onLyricSource={()=>openLyricChoice(true)} onAllLyrics={preferences.playerLayout==='classic'?()=>{closeDetails();setTimeout(()=>setClassicLyricRequest(v=>v+1),320);}:undefined} onLyricOffset={()=>openInSheet('offset','menu')} onEQ={()=>setDetailPanel('eq')} onAudioOutput={()=>setDetailPanel('output')} onQueue={()=>setDetailPanel('content')} onMatch={canMatch?()=>openMatch(entry.track,true):undefined} onRate={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('rate'),320);}} onSleep={()=>{setPanelReturnsToMenu(true);closeDetails();setTimeout(()=>setPanel('sleep'),320);}} onSimilar={supportsSimilarSongs(actualMatch??entry.track)?()=>{setSimilarTrack(actualMatch??entry.track);setDetailPanel('similar');}:undefined} onComments={()=>openComments(actualMatch??entry.track,true)} onPlaylist={()=>openPlaylist([entry.track],true)} onDownload={downloadableTrack(entry.track)?saveOffline:undefined} onDiagnostics={()=>setDetailPanel('diagnostics')} downloadLabel={offline?.status==='completed'?'已下载':offline?.status==='downloading'?'下载中':'下载'}/>:<>
             <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
               <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={()=>setDetailPanel('menu')} style={{flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>返回播放选项</Text></Pressable>
               <Pressable accessibilityRole="button" accessibilityLabel="收起播放选项" onPress={closeDetails} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>收起播放选项</Text></Pressable>
@@ -337,10 +420,6 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
           </ScrollView>
         </SafeAreaView>
       </View>}
-      <CommentsModal services={services} track={commenting} onClose={()=>setCommenting(null)}/>
-      <LyricChoiceModal services={services} track={choosingLyric?lyricTrack:null} onClose={()=>setChoosingLyric(false)}/>
-      <MatchModal services={services} track={matching} onClose={()=>setMatching(null)}/>
-      <PlaylistPicker services={services} tracks={adding} visible={adding.length>0} onClose={()=>setAdding([])}/>
     </Modal>
   </>;
 }
@@ -348,11 +427,7 @@ const makeStyles=(theme:Theme)=>StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color('#111318') }, content: { padding: 24, paddingTop: 65, gap: 18 },
   mini: { paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
   track: { color: theme.color('#E8E9E4'), fontSize: 14, lineHeight: 21 }, caption: { color: theme.color('#959EAC'), fontSize: 11, lineHeight: 20 },
-  title: { color: theme.color('#F1EDE7'), fontSize: 30, fontWeight: '600' }, artist: { color: theme.color('#BFC8D9'), fontSize: 18 },
-  button: { backgroundColor: theme.mode==='dark'?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.68)', borderWidth: 1, borderColor: theme.mode==='dark'?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.82)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 }, buttonText: { color: theme.palette.text, fontSize: 13, fontWeight: '600' },
-  row: { flexDirection: 'row', gap: 14, flexWrap: 'wrap' }, error: { color: theme.color('#D6B69A'), fontSize: 12 },
-  progress: { width: 300, height: 24, borderRadius: 12, backgroundColor: theme.color('#303745'), overflow: 'hidden' }, fill: { height: 24, backgroundColor: theme.color('#A0BE79') },
-  spectrum: { height: 80, flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginVertical: 15 }, bar: { flex: 1, backgroundColor: theme.color('#BCD994'), borderRadius: 2 },
-  queueRow: { borderTopWidth: 1, borderTopColor: theme.color('#333946'), paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center' }, current: { color: theme.color('#D9F49B') },
-  optionRow: { minHeight: 72, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: theme.color('#333946'), backgroundColor: theme.color('#202630'), flexDirection: 'row', alignItems: 'center', gap: 12 }, optionTitle: { color: theme.color('#F1EDE7'), fontSize: 16, fontWeight: '600' },
+  title: { color: theme.color('#F1EDE7'), fontSize: 24, fontWeight: '700' }, artist: { color: theme.color('#BFC8D9'), fontSize: 16 },
+  button: { backgroundColor: theme.mode==='dark'?'rgba(255,255,255,0.09)':'rgba(255,255,255,0.72)', borderWidth: 1, borderColor: theme.mode==='dark'?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.88)', paddingHorizontal: 13, paddingVertical: 9, borderRadius: 999 }, buttonText: { color: theme.palette.text, fontSize: 13, fontWeight: '600' },
+  row: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' }, error: { color: theme.color('#D6B69A'), fontSize: 12 },
 });

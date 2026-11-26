@@ -16,6 +16,7 @@ const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
 const text=(value:unknown)=>typeof value==='string'?value:typeof value==='number'&&Number.isSafeInteger(value)?String(value):'';
 const count=(value:unknown)=>value!==undefined&&value!==null&&Number.isFinite(Number(value))&&Number(value)>=0?Number(value):undefined;
 export interface BrowseItem {id:string;title:string;artwork?:string;description?:string;count?:number;author?:string;released?:string}
+export interface NeteaseBanner {id:string;imageUrl:string;typeTitle:string;titleColor:string;targetType:number;targetId:string;url?:string;song?:Track}
 export interface BrowsePage {items:readonly BrowseItem[];hasMore:boolean;page:number}
 export interface PlaylistPage {title:string;items:readonly Track[];total?:number;hasMore:boolean;page:number;info?:Partial<BrowseItem>;scope?:'popular'|'public'}
 export interface BrowseCategory {id:string;title:string;group?:string}
@@ -30,6 +31,34 @@ export class DiscoveryProvider {
     const body=JSON.stringify({comm:{ct:24,cv:0,format:'json',uin:0},req:{module,method,param}});
     const raw=row(await this.http(queryURL('https://u.y.qq.com/cgi-bin/musics.fcg',{sign:await qqSignature(body,this.sha1)}),{method:'POST',headers:{'Content-Type':'application/json',Referer:'https://y.qq.com/'},body},signal));
     const response=row(raw.req);if(raw.code!==0||response.code!==0)throw new Error('QQ服务暂时不可用');return row(response.data);
+  }
+  async banners(platform:OnlinePlatform,signal:AbortSignal):Promise<readonly NeteaseBanner[]>{
+    if(platform!=='wy')return [];
+    // Public NetEase mobile banner endpoint matching Sollin IPA NeteaseCloudApi::fetchBanners (/api/v2/banner/get).
+    const raw=row(await this.http('https://music.163.com/api/v2/banner/get?clientType=iphone',{headers:{Referer:'https://music.163.com/'}},signal));
+    if(raw.code!==200||!Array.isArray(raw.banners))throw new Error('轮播图响应无效');
+    const parsed:NeteaseBanner[]=[];
+    for(const entry of list(raw.banners).slice(0,10)){
+      const v=row(entry),pic=text(v.pic??v.imageUrl).trim();
+      if(!pic)continue;
+      let imageUrl='';
+      try{
+        const u=new URL(pic);
+        if(!['http:','https:'].includes(u.protocol)||u.username||u.password)continue;
+        if(u.protocol==='http:'&&/\.music\.126\.net$/i.test(u.hostname))u.protocol='https:';
+        imageUrl=u.toString();
+      }catch{continue;}
+      const id=text(v.bannerId??v.encodeId)||`${parsed.length}`;
+      const targetType=Number.isFinite(Number(v.targetType))?Number(v.targetType):0;
+      const targetId=text(v.targetId??v.encodeId);
+      const rawUrl=text(v.url).trim();
+      let safeUrl:string|undefined;
+      if(rawUrl){try{const u=new URL(rawUrl);if(u.protocol==='https:'&&!u.username&&!u.password)safeUrl=u.toString();}catch{}}
+      let song:Track|undefined;
+      if(v.song&&typeof v.song==='object'){try{song=onlineTrack('wy',v.song);}catch{}}
+      parsed.push({id,imageUrl,typeTitle:text(v.typeTitle),titleColor:text(v.titleColor)||'red',targetType,targetId,...(safeUrl?{url:safeUrl}:{}),...(song?{song}:{})});
+    }
+    return parsed;
   }
   async categories(platform:OnlinePlatform,signal:AbortSignal):Promise<readonly BrowseCategory[]>{
     if(platform==='wy'){const raw=row(await this.http('https://music.163.com/api/playlist/catalogue',{},signal));if(raw.code!==200||!Array.isArray(raw.sub))throw new Error('分类响应无效');return list(raw.sub).map(value=>{const v=row(value);return{id:required(v.name),title:text(v.name),group:text(row(raw.categories)[text(v.category)])};});}

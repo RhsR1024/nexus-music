@@ -114,6 +114,26 @@ test('quarantine preserves exact malformed JSON atomically before removing the a
   await repository.put('broken',{version:1});assert.deepEqual(await repository.get('broken'),{version:1});db.close();
 });
 
+test('batch source import and restore publish once without repeated store churn',async()=>{
+  const {db,repository}=store();await repository.migrate();const runtime=registry();const catalog=new SourceCatalog(runtime,repository,hash);
+  let notifications=0;catalog.subscribe(()=>{notifications++;});
+  const result=await catalog.importMany([
+    {script:script('alpha','1'),filename:'alpha.js'},
+    {script:script('beta','1'),filename:'beta.js'},
+    {script:script('alpha','1'),filename:'alpha-dup.js'},
+    {script:'<html>bad</html>',filename:'bad.js'},
+  ]);
+  assert.deepEqual(result,{added:2,duplicates:1,failed:1});
+  assert.equal(notifications,1,'importMany must publish once for the whole batch');
+  assert.equal(catalog.getSnapshot().length,2);
+  let restoreNotifications=0;const nextRuntime=registry();const nextCatalog=new SourceCatalog(nextRuntime,repository,hash);
+  nextCatalog.subscribe(()=>{restoreNotifications++;});
+  await nextCatalog.restore();
+  assert.equal(restoreNotifications,1,'restore must register all stored sources in one publish');
+  assert.equal(nextCatalog.getSnapshot().length,2);
+  db.close();
+});
+
 test('source version fingerprints change on update while an older routing snapshot retains its digest',async()=>{
   const {db,repository}=store();await repository.migrate();const runtime=registry();const catalog=new SourceCatalog(runtime,repository,hash);
   const imported=await catalog.import(script('fixture','1'),'fixture.js');await catalog.batch([imported.id],'enable');const old=runtime.getSnapshot()[0]!;

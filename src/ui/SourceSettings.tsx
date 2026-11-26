@@ -41,17 +41,18 @@ export function SourceSettings({ catalog,health }: { catalog: SourceCatalog;heal
   async function importFiles() {
     const result = await DocumentPicker.getDocumentAsync({ type: '*/*', multiple: true, copyToCacheDirectory: true });
     if (result.canceled) return;
-    let added = 0, duplicates = 0, failed = 0;
+    const batchEntries: { script: string; filename: string }[] = [];
+    let preFailed = 0;
     for (const asset of result.assets) {
       const file = new File(asset.uri);
       try {
-        if (!/\.js$/i.test(asset.name) || file.size > 8 * 1024 * 1024) { failed++; continue; }
-        const imported = await catalog.import(await file.text(), asset.name);
-        if (imported.duplicate) duplicates++; else added++;
-      } catch { failed++; }
+        if (!/\.js$/i.test(asset.name) || file.size > 8 * 1024 * 1024) { preFailed++; continue; }
+        batchEntries.push({ script: await file.text(), filename: asset.name });
+      } catch { preFailed++; }
       finally { if (file.exists) file.delete(); }
     }
-    setMessage(`导入 ${added} 个 · 已存在 ${duplicates} 个 · 失败 ${failed} 个。新音源默认停用。`);
+    const imported = batchEntries.length ? await catalog.importMany(batchEntries) : { added: 0, duplicates: 0, failed: 0 };
+    setMessage(`导入 ${imported.added} 个 · 已存在 ${imported.duplicates} 个 · 失败 ${preFailed + imported.failed} 个。新音源默认停用。`);
   }
   const button = (label: string, onPress: () => void, disabled = busy, accessibilityLabel = label, primary = false, compact = false) => <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} disabled={disabled}
     onPress={onPress} style={[styles.button, primary && styles.primaryButton, compact && styles.compactButton, disabled && styles.disabled]}><Text style={[styles.buttonText, primary && styles.primaryButtonText, compact && styles.compactButtonText]}>{label}</Text></Pressable>;

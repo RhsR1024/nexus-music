@@ -1,5 +1,7 @@
 import {useEffect,useMemo,useState} from 'react';
-import {FlatList,Pressable,View} from 'react-native';
+import {FlatList,Pressable,StyleSheet,View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {Services} from '../app/services.ts';
 import type {DownloadSubmission} from '../app/downloadSubmission.ts';
@@ -12,6 +14,7 @@ import {DownloadSubmissionModal} from './DownloadSubmission.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
+import {sollinTokens} from './tokens.ts';
 
 /** Read-only platform list. Playback always replaces the authoritative queue
  * with the exact platform order visible here; no local collection is mutated. */
@@ -26,7 +29,7 @@ export function AccountTrackListModal({services,tracks,title,subtitle,note,visib
   prefix:string;
   selectionEnabled?:boolean;
 }){
-  const {palette:p}=useTheme(),insets=useSafeAreaInsets(),[message,setMessage]=useState('');
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),insets=useSafeAreaInsets(),[message,setMessage]=useState('');
   const [selection,setSelection]=useState<SelectionModel>(selectionNone),[picking,setPicking]=useState(false),[busy,setBusy]=useState(false),[downloadReport,setDownloadReport]=useState<DownloadSubmission|null>(null);
   const rowKeys=useMemo(()=>tracks.map((track,index)=>`${trackKey(track.origin)}-${index}`),[tracks]);
   const rows=useMemo(()=>tracks.map((track,index)=>({track,key:rowKeys[index]!})),[rowKeys,tracks]);
@@ -54,45 +57,53 @@ export function AccountTrackListModal({services,tracks,title,subtitle,note,visib
       finally{setBusy(false);}
     }else if(action==='playlist')setPicking(true);
   }
-  const button=(label:string,onPress:()=>void,testID:string)=><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:p.selected,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13,fontWeight:'600',color:p.accent}}>{label}</Text></Pressable>;
+  const pill=(label:string,onPress:()=>void,testID:string,primary=false)=>(
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{minHeight:40,paddingHorizontal:15,borderRadius:20,backgroundColor:primary?s.control:s.chip,borderWidth:primary?0:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center'}}>
+      <Text style={{fontSize:13.5,fontWeight:'600',color:primary?'#FFFFFF':s.ink}}>{label}</Text>
+    </Pressable>
+  );
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-    <View testID={`${prefix}-full`} style={{flex:1,backgroundColor:p.background[0],paddingTop:insets.top+14,paddingHorizontal:20}}>
-      <View style={{gap:12,paddingBottom:14,borderBottomWidth:1,borderColor:p.border}}>
-        <View style={{flexDirection:'row',alignItems:'flex-start',gap:12}}>
-          <View style={{flex:1}}>
-            <Text accessibilityRole="header" style={{fontSize:24,fontWeight:'600',color:p.text}}>{title}</Text>
-            <Text testID={`${prefix}-full-count`} style={{fontSize:12,lineHeight:20,color:p.secondary,marginTop:5}}>共 {tracks.length} 首 · {subtitle}</Text>
-          </View>
-          {button('收起完整列表',onClose,`${prefix}-full-close`)}
-        </View>
-        {!!note&&<Text accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:20,color:p.secondary}}>{note}</Text>}
-        <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-          {button(`播放全部 ${tracks.length} 首`,()=>services.playTracks(tracks,0),`${prefix}-full-play`)}
-          {button('全部加入队列',()=>{services.addTracksToQueue(tracks);setMessage(`已按平台顺序加入 ${tracks.length} 首`);},`${prefix}-full-queue`)}
-        </View>
-        {!!message&&<Text accessibilityLiveRegion="polite" style={{fontSize:12,color:p.accent}}>{message}</Text>}
-      </View>
-      {selectionEnabled&&selection.active&&!picking&&<View style={{paddingTop:12}}><BatchSelectionBar count={selectionCount(selection)} total={rows.length} allSelected={rows.length>0&&selectionCount(selection)===rows.length} actions={['favorite','playlist','next','download']} busy={busy} testPrefix={prefix}
-        onSelectAll={()=>setSelection(current=>selectionToggleAll(current,rowKeys))}
-        onCancel={clearSelection}
-        onAction={action=>{void runBatch(action);}}/></View>}
-      {selectionEnabled&&selection.active&&picking?<View style={{flex:1}}><PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,rows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>{setMessage(`已添加 ${selectionCount(selection)} 首到 ${title}`);clearSelection();}}/></View>:<FlatList data={rows} keyExtractor={row=>row.key} initialNumToRender={12} maxToRenderPerBatch={12} windowSize={7}
-        contentContainerStyle={{paddingTop:6,paddingBottom:insets.bottom+30}}
-        ListEmptyComponent={<Text style={{fontSize:12,color:p.secondary,paddingVertical:24}}>平台暂未返回歌曲</Text>}
-        renderItem={({item:{track,key},index})=>{const checked=selectionHas(selection,key);return <View testID={`${prefix}-full-track-${index}`} style={{minHeight:66,paddingVertical:8,borderBottomWidth:1,borderColor:p.border,flexDirection:'row',alignItems:'center',gap:10}}>
-          <Pressable testID={`${prefix}-full-play-${index}`} accessibilityRole="button" accessibilityState={{selected:checked}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放第'} ${selection.active?'':`${index+1} 首：`}${track.title}`} onLongPress={selectionEnabled?()=>{setPicking(false);setSelection(selectionEnter(key));}:undefined} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else services.playTracks(tracks,index);}} style={{flex:1,minHeight:50,flexDirection:'row',alignItems:'center',gap:12}}>
-            {selection.active&&<SelectionMark selected={checked}/>}
-            <Cover services={services} track={track} size={44}/>
-            <View style={{flex:1}}>
-              <Text numberOfLines={1} style={{fontSize:15,color:p.text}}>{index+1}. {track.title}</Text>
-              <Text numberOfLines={1} style={{fontSize:12,color:p.secondary,marginTop:4}}>{track.artist}{track.album?` · ${track.album}`:''}</Text>
+    <View testID={`${prefix}-full`} style={{flex:1}}>
+      <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
+      <View style={{flex:1,paddingTop:Math.max(insets.top+12,50),paddingHorizontal:18}}>
+        <View style={[{gap:12,padding:16,borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,marginBottom:12},s.cardShadow]}>
+          <View style={{flexDirection:'row',alignItems:'flex-start',gap:12}}>
+            <View style={{flex:1,minWidth:0}}>
+              <Text accessibilityRole="header" style={{fontSize:22,fontWeight:'700',color:s.ink}}>{title}</Text>
+              <Text testID={`${prefix}-full-count`} style={{fontSize:12.5,lineHeight:18,color:s.muted,marginTop:4}}>共 {tracks.length} 首 · {subtitle}</Text>
             </View>
-          </Pressable>
-          {!selection.active&&<Pressable testID={`${prefix}-full-next-${index}`} accessibilityRole="button" accessibilityLabel={`下一首播放：${track.title}`} onPress={()=>{services.addToQueue(track,true);setMessage(`已将「${track.title}」加入下一首播放`);}} style={{minHeight:44,paddingHorizontal:8,alignItems:'center',justifyContent:'center'}}>
-            <Text style={{fontSize:12,color:p.accent}}>下一首</Text>
-          </Pressable>}
-        </View>;}}/>}
-      <DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/>
+            {pill('收起完整列表',onClose,`${prefix}-full-close`)}
+          </View>
+          {!!note&&<Text accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:18,color:s.muted}}>{note}</Text>}
+          <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+            {pill(`播放全部 ${tracks.length} 首`,()=>services.playTracks(tracks,0),`${prefix}-full-play`,true)}
+            {pill('全部加入队列',()=>{services.addTracksToQueue(tracks);setMessage(`已按平台顺序加入 ${tracks.length} 首`);},`${prefix}-full-queue`)}
+          </View>
+          {!!message&&<Text accessibilityLiveRegion="polite" style={{fontSize:12.5,color:s.accent,fontWeight:'600'}}>{message}</Text>}
+        </View>
+        {selectionEnabled&&selection.active&&!picking&&<View style={{marginBottom:10}}><BatchSelectionBar count={selectionCount(selection)} total={rows.length} allSelected={rows.length>0&&selectionCount(selection)===rows.length} actions={['favorite','playlist','next','download']} busy={busy} testPrefix={prefix}
+          onSelectAll={()=>setSelection(current=>selectionToggleAll(current,rowKeys))}
+          onCancel={clearSelection}
+          onAction={action=>{void runBatch(action);}}/></View>}
+        {selectionEnabled&&selection.active&&picking?<View style={{flex:1}}><PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,rows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>{setMessage(`已添加 ${selectionCount(selection)} 首到 ${title}`);clearSelection();}}/></View>:<FlatList data={rows} keyExtractor={row=>row.key} initialNumToRender={12} maxToRenderPerBatch={12} windowSize={7}
+          contentContainerStyle={{gap:8,paddingBottom:insets.bottom+30}}
+          ListEmptyComponent={<View style={{padding:22,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center'}}><Text style={{fontSize:13.5,color:s.muted}}>平台暂未返回歌曲</Text></View>}
+          renderItem={({item:{track,key},index})=>{const checked=selectionHas(selection,key);return <View testID={`${prefix}-full-track-${index}`} style={[{minHeight:64,paddingHorizontal:12,paddingVertical:9,borderRadius:16,backgroundColor:checked?s.accentSoft:s.card,borderWidth:1,borderColor:checked?s.accent+'44':s.cardBorder,flexDirection:'row',alignItems:'center',gap:10},s.cardShadow]}>
+            <Pressable testID={`${prefix}-full-play-${index}`} accessibilityRole="button" accessibilityState={{selected:checked}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放第'} ${selection.active?'':`${index+1} 首：`}${track.title}`} onLongPress={selectionEnabled?()=>{setPicking(false);setSelection(selectionEnter(key));}:undefined} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else services.playTracks(tracks,index);}} style={{flex:1,minHeight:46,flexDirection:'row',alignItems:'center',gap:11}}>
+              {selection.active&&<SelectionMark selected={checked}/>}
+              <Cover services={services} track={track} size={44} radius={10}/>
+              <View style={{flex:1,minWidth:0}}>
+                <Text numberOfLines={1} style={{fontSize:14.5,fontWeight:'600',color:s.ink}}>{index+1}. {track.title}</Text>
+                <Text numberOfLines={1} style={{fontSize:12,color:s.muted,marginTop:3}}>{track.artist}{track.album?` · ${track.album}`:''}</Text>
+              </View>
+            </Pressable>
+            {!selection.active&&<Pressable testID={`${prefix}-full-next-${index}`} accessibilityRole="button" accessibilityLabel={`下一首播放：${track.title}`} onPress={()=>{services.addToQueue(track,true);setMessage(`已将「${track.title}」加入下一首播放`);}} style={{minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:4}}>
+              <Ionicons name="play-skip-forward-outline" size={13} color={s.accent}/>
+              <Text style={{fontSize:12,fontWeight:'600',color:s.ink}}>下一首</Text>
+            </Pressable>}
+          </View>;}}/>}
+        <DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/>
+      </View>
     </View>
   </Modal>;
 }

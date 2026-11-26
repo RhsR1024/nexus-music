@@ -10,21 +10,22 @@ import {Cover} from './Cover.tsx';
 import {Discovery} from './Discovery.tsx';
 import {MVDetail,videoDuration} from './MVDetail.tsx';
 import {Text} from './Typography.tsx';
-import {catalogArtwork,controls,radius,space,typography} from './tokens.ts';
+import {Ionicons} from '@expo/vector-icons';
+import {catalogArtwork,controls,radius,sollinTokens,space,typography} from './tokens.ts';
 import {useTheme} from './theme.tsx';
 type Props={services:Services;active:boolean;disabled:boolean;onLogin:()=>void};
 type Entry=AccountAlbum|AccountMV;
 export function AccountAlbumCatalog(props:Props){return <AccountCatalog {...props} kind="album"/>;}
 export function AccountMVCatalog(props:Props){return <AccountCatalog {...props} kind="mv"/>;}
 function AccountCatalog({services,active,disabled,onLogin,kind}:Props&{kind:'album'|'mv'}){
- const {palette:p}=useTheme(),insets=useSafeAreaInsets(),accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot),available=accounts.filter(item=>item.platform==='wy');
+ const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),insets=useSafeAreaInsets(),accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot),available=accounts.filter(item=>item.platform==='wy');
  const noun=kind==='album'?'专辑':'MV',prefix=kind==='album'?'account-albums':'account-mvs',tid=(suffix:string)=>`${prefix}-${suffix}`;
  const [selected,setSelected]=useState(''),account=available.find(item=>item.id===selected)??available[0];
  const [visible,setVisible]=useState(false),[items,setItems]=useState<readonly Entry[]|null>(null),[detail,setDetail]=useState<Entry|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[loginNeeded,setLoginNeeded]=useState(false);
  const controller=useRef<AbortController|null>(null),latest=useRef({active,account});latest.current={active,account};
  const close=()=>{controller.current?.abort();controller.current=null;setVisible(false);setDetail(null);setItems(null);setMessage('');setBusy(false);setLoginNeeded(false);};
  useLayoutEffect(()=>{close();},[account,active,kind]);useEffect(()=>()=>{controller.current?.abort();controller.current=null;},[]);
- const button=(id:string,title:string,press:()=>void,blocked=disabled||busy)=><Pressable testID={tid(id)} accessibilityRole="button" disabled={blocked} onPress={press} style={{minHeight:controls.hit,paddingHorizontal:space.md,paddingVertical:space.sm,borderRadius:radius.md,backgroundColor:p.selected,justifyContent:'center',opacity:blocked?0.55:1}}><Text style={{color:p.accent}}>{title}</Text></Pressable>;
+ const button=(id:string,title:string,press:()=>void,blocked=disabled||busy)=><Pressable testID={tid(id)} accessibilityRole="button" disabled={blocked} onPress={press} style={{minHeight:42,paddingHorizontal:14,paddingVertical:8,borderRadius:21,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,justifyContent:'center',alignSelf:'flex-start',opacity:blocked?0.55:1}}><Text style={{color:s.ink,fontSize:13.5,fontWeight:'600'}}>{title}</Text></Pressable>;
  const load=async()=>{
   const owner=account;if(!active||!owner||disabled||controller.current)return;
   const next=new AbortController();controller.current=next;setVisible(true);setItems(null);setDetail(null);setMessage('');setLoginNeeded(false);setBusy(true);
@@ -33,11 +34,14 @@ function AccountCatalog({services,active,disabled,onLogin,kind}:Props&{kind:'alb
   finally{if(controller.current===next){controller.current=null;setBusy(false);}}
  };
  const open=(item:Entry)=>{if(!account||busy||disabled)return;try{if(item.kind==='album')services.accountAlbums.assertMember(account,item);else{services.accountMVs.assertMember(account,item);if(!item.canOpen){setMessage('此条目为平台视频，暂不支持在应用内打开；未加入音乐队列。');return;}}setDetail(item);}catch{setMessage(`账号或目录已更改，请重新读取收藏${noun}`);}};
- return <View testID={tid('card')} style={{padding:space.lg,gap:space.md,borderRadius:radius.xl,borderWidth:1,borderColor:p.border,backgroundColor:p.surface}}>
-  <Text accessibilityRole="header" style={{...typography.heading,color:p.text}}>网易云收藏{noun} · 远端</Text>
-  <Text style={{color:p.secondary}}>按需读取平台账号的收藏目录，可刷新并打开{noun}；不修改平台收藏，与音枢本机目录分开管理。{kind==='mv'?'平台视频保留元信息并说明打开限制，不作为音乐播放。':''}</Text>
-  {!account?<><Text testID={tid('login-required')} style={{color:p.secondary}}>登录网易云后可读取平台收藏{noun}。</Text>{button('login',`登录网易云读取收藏${noun}`,onLogin,disabled)}</>:<>
-   {available.map(item=><Pressable key={item.id} accessibilityRole="radio" accessibilityState={{selected:item===account}} disabled={disabled||busy} onPress={()=>setSelected(item.id)} style={{minHeight:controls.hit,justifyContent:'center'}}><Text style={{color:p.text}}>{item.displayName??item.label}</Text></Pressable>)}
+ return <View testID={tid('card')} style={[{padding:16,gap:10,borderRadius:20,borderWidth:1,borderColor:s.cardBorder,backgroundColor:s.card},s.cardShadow]}>
+  <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
+   <View style={{width:32,height:32,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name={kind==='album'?'disc-outline':'videocam-outline'} size={17} color={s.control}/></View>
+   <Text accessibilityRole="header" style={{fontSize:16,fontWeight:'700',color:s.ink}}>网易云收藏{noun} · 远端</Text>
+  </View>
+  <Text style={{fontSize:12,lineHeight:18,color:s.muted}}>按需读取平台账号的收藏目录，可刷新并打开{noun}；不修改平台收藏，与音枢本机目录分开管理。{kind==='mv'?'平台视频保留元信息并说明打开限制，不作为音乐播放。':''}</Text>
+  {!account?<><Text testID={tid('login-required')} style={{fontSize:12,color:s.muted}}>登录网易云后可读取平台收藏{noun}。</Text>{button('login',`登录网易云读取收藏${noun}`,onLogin,disabled)}</>:<>
+   {available.map(item=><Pressable key={item.id} accessibilityRole="radio" accessibilityState={{selected:item===account}} disabled={disabled||busy} onPress={()=>setSelected(item.id)} style={{minHeight:controls.hit,justifyContent:'center'}}><Text style={{color:s.ink,fontWeight:'600'}}>{item.displayName??item.label}</Text></Pressable>)}
    {button('load',`读取平台收藏${noun}`,()=>{void load();})}
   </>}
   <Modal visible={active&&visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}><View style={{flex:1,paddingTop:insets.top+space.sm,paddingBottom:insets.bottom,paddingLeft:insets.left+space.lg,paddingRight:insets.right+space.lg,gap:space.md,backgroundColor:p.background[0]}}>

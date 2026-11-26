@@ -1,14 +1,15 @@
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator,AppState,Image,Pressable,View} from 'react-native';
+import {ActivityIndicator,AppState,Image,Pressable,StyleSheet,View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {controls,space,radius,typography} from './tokens.ts';
+import {sollinTokens} from './tokens.ts';
 import {Cover} from './Cover.tsx';
 
 export function KugouAccountCard({services,disabled,onRevealQr}:{services:Services;disabled:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
-  const {palette:p}=useTheme();
+  const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const state=useSyncExternalStore(services.kugouLogin.subscribe,services.kugouLogin.getSnapshot);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const [error,setError]=useState('');
@@ -20,33 +21,73 @@ export function KugouAccountCard({services,disabled,onRevealQr}:{services:Servic
     return()=>{subscription.remove();services.kugouLogin.cancel();};
   },[services]);
   const message=state.status==='loading'?'正在获取官方二维码':state.status==='waiting'?'等待酷狗扫码':state.status==='scanned'?'已扫码，请在酷狗中确认':state.status==='saving'?'正在保存登录':state.status==='succeeded'?'酷狗登录已保存':state.status==='expired'?'二维码已过期，请重新获取':state.status==='cancelled'?'酷狗登录已取消':state.status==='failed'?'酷狗登录服务暂时不可用，请重试':'';
-  return <View style={{borderRadius:radius.lg,backgroundColor:p.surface,borderWidth:1,borderColor:p.border,padding:space.lg,gap:space.md}}>
-    <Text style={{...typography.heading,color:p.text}}>酷狗音乐</Text>
-    <Text style={{...typography.caption,color:p.secondary}}>使用另一台设备中的酷狗音乐扫描官方二维码，并在酷狗中确认。登录凭据仅存本机，不参与备份或同步。</Text>
-    {accounts.filter(account=>account.platform==='kg').map(account=><View key={account.id} style={{flexDirection:'row',alignItems:'center',gap:space.md}}>
-      <Cover services={services} url={account.avatar} size={40} radius={20} fallbackText={account.displayName??account.label} testID="music-account-avatar-kg"/>
-      <Text style={{...typography.body,color:p.text,flex:1}}>{account.displayName??account.label}</Text>
-      <Pressable testID="remove-music-account-kg" accessibilityRole="button" accessibilityLabel="退出酷狗账号" disabled={busy} onPress={()=>{setError('');void services.musicAccounts.remove(account.id).catch(()=>setError('账号未移除，原有会话仍保留'));}} style={{minHeight:controls.hit,minWidth:64,justifyContent:'center',alignItems:'center',opacity:busy?.5:1}}><Text style={{...typography.caption,color:p.accent}}>退出</Text></Pressable>
-    </View>)}
-    <View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:space.md}}>
-      <Pressable testID="login-music-account-kg" accessibilityRole="button" accessibilityLabel="获取酷狗登录二维码" disabled={disabled||busy} onPress={()=>{setError('');void services.kugouLogin.login();}} style={{minHeight:48,paddingHorizontal:space.lg,borderRadius:radius.md,backgroundColor:p.accent,flexDirection:'row',alignItems:'center',gap:space.sm,opacity:disabled||busy?.65:1}}>
-        {busy&&<ActivityIndicator color="#FFFFFF"/>}<Text style={{...typography.body,fontWeight:'600',color:'#FFFFFF'}}>{busy?'登录进行中':state.status==='idle'||state.status==='succeeded'?'获取登录二维码':'重新获取二维码'}</Text>
-      </Pressable>
-      {busy&&<Pressable testID="cancel-music-login-kg" accessibilityRole="button" accessibilityLabel="取消酷狗登录" onPress={()=>services.kugouLogin.cancel()} style={{minHeight:controls.hit,minWidth:64,alignItems:'center',justifyContent:'center'}}><Text style={{...typography.body,color:p.secondary}}>取消</Text></Pressable>}
+  const kgAccounts=accounts.filter(account=>account.platform==='kg');
+  const signedIn=kgAccounts.length>0;
+  const kgTint=s.dark?'rgba(45,140,255,0.18)':'rgba(24,119,242,0.11)';
+  const kgInk=s.dark?'#68B0FF':'#1677E8';
+  const okColor=s.dark?'#5EE0A0':'#1D8A56';
+  const okBg=s.dark?'rgba(94,224,160,0.14)':'rgba(29,138,86,0.11)';
+  const warnBg=s.dark?'rgba(255,107,129,0.13)':'rgba(217,67,85,0.09)';
+
+  return <View style={[{borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+    <View style={{padding:16,gap:8}}>
+      <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
+        <View style={{width:42,height:42,borderRadius:14,backgroundColor:kgTint,alignItems:'center',justifyContent:'center'}}>
+          <Ionicons name="qr-code-outline" size={20} color={kgInk}/>
+        </View>
+        <View style={{flex:1,minWidth:0,gap:3}}>
+          <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+            <Text style={{fontSize:17,fontWeight:'700',color:s.ink}}>酷狗音乐</Text>
+            <View style={{paddingHorizontal:8,paddingVertical:2,borderRadius:10,backgroundColor:signedIn?okBg:s.chip,borderWidth:1,borderColor:signedIn?okColor+'33':s.chipBorder}}>
+              <Text style={{fontSize:11,fontWeight:'700',color:signedIn?okColor:s.muted}}>{signedIn?`已登录 ${kgAccounts.length}`:'未登录'}</Text>
+            </View>
+          </View>
+          <Text style={{fontSize:12,lineHeight:17,color:s.muted}}>扫描官方二维码完成登录，凭据仅存本机，不参与备份或同步。</Text>
+        </View>
+      </View>
     </View>
-    {!!state.image&&<View style={{alignItems:'center',gap:space.sm}}>
-      <Image key={state.generation} ref={qrImage} testID="kugou-login-qr" accessibilityLabel="酷狗官方登录二维码" accessible source={{uri:state.image}} resizeMode="contain" onError={()=>services.kugouLogin.imageFailed(state.generation)} onLayout={()=>requestAnimationFrame(()=>{
-        const current=services.kugouLogin.getSnapshot();
-        if(current.generation!==state.generation||!current.image)return;
-        qrImage.current?.measureInWindow((_x,top,_width,height)=>onRevealQr({top,height}));
-      })} style={{width:240,height:240,maxWidth:'100%',backgroundColor:'#FFFFFF'}}/>
-      <Pressable testID="kugou-login-save-photo" accessibilityRole="button" disabled={photo.status==='saving'} onPress={()=>{void services.kugouQrPhoto.save();}} style={{minHeight:controls.hit,paddingHorizontal:space.lg,borderRadius:radius.md,backgroundColor:p.selected,justifyContent:'center',opacity:photo.status==='saving'?.5:1}}><Text style={{...typography.body,color:p.accent}}>{photo.status==='saving'?'正在保存二维码…':'保存二维码到照片'}</Text></Pressable>
-      {photo.generation===state.generation&&photo.status!=='idle'&&photo.status!=='saving'&&<Text testID={`kugou-qr-photo-${photo.status}`} accessibilityLiveRegion="polite" style={{...typography.caption,color:p.secondary}}>{photo.status==='saved'?'已保存到照片。请在本机酷狗扫一扫中选择该图。':photo.status==='saved_stale'?'已保存到照片，但二维码已变化，请重新获取。':photo.status==='denied'?'未保存。需要允许添加照片权限；仍可用另一台设备扫码。':photo.status==='expired'?'二维码已失效，请重新获取。':photo.status==='cancelled'?'二维码保存已取消。':'未能保存二维码，请重试。'}</Text>}
-      <Text style={{...typography.caption,color:p.secondary}}>同机操作可保存后在酷狗扫一扫的相册中识别。只请求添加照片权限，不读取相册；二维码失效后请重新获取。</Text>
-      <Text style={{...typography.caption,color:p.secondary}}>{state.sameDevice?'保存后可切换到酷狗扫码，请在原二维码有效期内返回音枢继续验证；离开此账号页仍会取消。':'二维码约两分钟有效。未保存时离开账号页或切到后台会取消本次登录。'}</Text>
-    </View>}
-    {!!message&&<Text testID={`kugou-login-${state.status}`} accessibilityLiveRegion="polite" accessibilityRole={state.status==='failed'?'alert':undefined} style={{...typography.caption,color:state.status==='failed'?p.accent:p.secondary}}>{message}</Text>}
-    {!!error&&<Text accessibilityRole="alert" style={{...typography.caption,color:p.accent}}>{error}</Text>}
-    <Text style={{...typography.caption,color:p.secondary}}>登录后可在音乐库获取每日推荐。账号歌单可在下方手动复制到音枢歌单，账号播放暂未开放。</Text>
+
+    {kgAccounts.map((account,index)=><View key={account.id}>
+      <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:index===0?0:68,backgroundColor:s.hairline}}/>
+      <View style={{minHeight:64,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12}}>
+        <Cover services={services} url={account.avatar} size={42} radius={21} fallbackText={account.displayName??account.label} testID="music-account-avatar-kg"/>
+        <View style={{flex:1,minWidth:0,gap:2}}>
+          <Text numberOfLines={1} style={{fontSize:15,fontWeight:'600',color:s.ink}}>{account.displayName??account.label}</Text>
+          <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>会话凭据已保存到本机</Text>
+        </View>
+        <Pressable testID="remove-music-account-kg" accessibilityRole="button" accessibilityLabel="退出酷狗账号" disabled={busy} onPress={()=>{setError('');void services.musicAccounts.remove(account.id).catch(()=>setError('账号未移除，原有会话仍保留'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,justifyContent:'center',alignItems:'center',opacity:busy?.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text></Pressable>
+      </View>
+    </View>)}
+
+    <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>
+    <View style={{padding:14,gap:12}}>
+      <View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:10}}>
+        <Pressable testID="login-music-account-kg" accessibilityRole="button" accessibilityLabel="获取酷狗登录二维码" disabled={disabled||busy} onPress={()=>{setError('');void services.kugouLogin.login();}} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',gap:8,opacity:disabled||busy?.6:1}}>
+          {busy?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="qr-code-outline" size={17} color="#FFFFFF"/>}
+          <Text style={{fontSize:14.5,fontWeight:'700',color:'#FFFFFF'}}>{busy?'登录进行中':state.status==='idle'||state.status==='succeeded'?'获取登录二维码':'重新获取二维码'}</Text>
+        </Pressable>
+        {busy&&<Pressable testID="cancel-music-login-kg" accessibilityRole="button" accessibilityLabel="取消酷狗登录" onPress={()=>services.kugouLogin.cancel()} style={{minWidth:60,minHeight:40,paddingHorizontal:14,borderRadius:20,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>取消</Text></Pressable>}
+      </View>
+
+      {!!state.image&&<View style={{alignItems:'center',gap:10,padding:14,borderRadius:16,backgroundColor:s.dark?'rgba(255,255,255,0.04)':'rgba(42,36,31,0.03)'}}>
+        <View style={{padding:10,borderRadius:16,backgroundColor:'#FFFFFF'}}>
+          <Image key={state.generation} ref={qrImage} testID="kugou-login-qr" accessibilityLabel="酷狗官方登录二维码" accessible source={{uri:state.image}} resizeMode="contain" onError={()=>services.kugouLogin.imageFailed(state.generation)} onLayout={()=>requestAnimationFrame(()=>{
+            const current=services.kugouLogin.getSnapshot();
+            if(current.generation!==state.generation||!current.image)return;
+            qrImage.current?.measureInWindow((_x,top,_width,height)=>onRevealQr({top,height}));
+          })} style={{width:220,height:220,maxWidth:'100%',backgroundColor:'#FFFFFF'}}/>
+        </View>
+        <Pressable testID="kugou-login-save-photo" accessibilityRole="button" disabled={photo.status==='saving'} onPress={()=>{void services.kugouQrPhoto.save();}} style={{minHeight:40,paddingHorizontal:16,borderRadius:20,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,flexDirection:'row',alignItems:'center',gap:6,opacity:photo.status==='saving'?.5:1}}>
+          <Ionicons name="download-outline" size={15} color={s.control}/>
+          <Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>{photo.status==='saving'?'正在保存二维码…':'保存二维码到照片'}</Text>
+        </Pressable>
+        {photo.generation===state.generation&&photo.status!=='idle'&&photo.status!=='saving'&&<Text testID={`kugou-qr-photo-${photo.status}`} accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:17,color:s.muted,textAlign:'center'}}>{photo.status==='saved'?'已保存到照片。请在本机酷狗扫一扫中选择该图。':photo.status==='saved_stale'?'已保存到照片，但二维码已变化，请重新获取。':photo.status==='denied'?'未保存。需要允许添加照片权限；仍可用另一台设备扫码。':photo.status==='expired'?'二维码已失效，请重新获取。':photo.status==='cancelled'?'二维码保存已取消。':'未能保存二维码，请重试。'}</Text>}
+        <Text style={{fontSize:11.5,lineHeight:17,color:s.muted,textAlign:'center'}}>{state.sameDevice?'保存后可切换到酷狗扫码，请在原二维码有效期内返回音枢继续验证；离开此账号页仍会取消。':'二维码约两分钟有效。未保存时离开账号页或切到后台会取消本次登录。'}</Text>
+      </View>}
+
+      {!!message&&<Text testID={`kugou-login-${state.status}`} accessibilityLiveRegion="polite" accessibilityRole={state.status==='failed'?'alert':undefined} style={{fontSize:12.5,color:state.status==='failed'?s.accent:s.muted}}>{message}</Text>}
+      {!!error&&<Text accessibilityRole="alert" style={{fontSize:12.5,color:s.accent}}>{error}</Text>}
+      <Text style={{fontSize:12,lineHeight:17,color:s.muted}}>登录后可在音乐库获取每日推荐，账号歌单可在下方手动复制。</Text>
+    </View>
   </View>;
 }

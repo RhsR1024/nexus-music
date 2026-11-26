@@ -9,10 +9,12 @@ import {Lyrics} from './Lyrics.tsx';
 import {PlaybackProgress} from './PlaybackProgress.tsx';
 import {SkipGlyph} from './SkipGlyph.tsx';
 import {Text} from './Typography.tsx';
+import {useStablePlaybackStatus} from './usePlaybackStatus.ts';
 
 export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visible,onMore,onStyle,onQueue,onArtistPress}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;visible:boolean;onMore:()=>void;onStyle:()=>void;onQueue?:()=>void;onArtistPress?:(artist:string)=>void}){
   const {width,height,fontScale}=useWindowDimensions(),columns=width>height&&width>=600&&fontScale<1.8;
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot),controller=services.playback.controller;
+  const status=useStablePlaybackStatus(state,{resolving:'正在选择可用音源…',buffering:'正在缓冲…'});
   const prefs=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [presentation]=useState(()=>new PhotoActions()),shown=useSyncExternalStore(presentation.subscribe,presentation.getSnapshot);
@@ -48,7 +50,7 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
           </Pressable>
           {favoriteButton}{tool('ellipsis-horizontal','更多播放控制',onMore,23)}
         </View>
-        {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={{color:'#FFFFFF'}}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
+        {!!status.text&&<Text accessibilityLiveRegion="polite" style={{color:'rgba(255,255,255,0.82)',fontSize:13}}>{status.text}</Text>}
         <View testID="photo-lyric-viewport" collapsable={false} style={{flex:1,minHeight:0,overflow:'hidden'}}><Lyrics services={services} track={lyricTrack} font={font} presentation="photo" chrome={columns}/></View>
       </View>
     </View>

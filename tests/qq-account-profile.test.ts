@@ -83,6 +83,23 @@ test('imported WX identity never falls back to a residual QQ uin or QQ web crede
   assert.equal(qqMusicIdentity(cookies).tmeLoginType,2);
 });
 
+test('QQ c6 anti-bot challenge (1306) falls back to musicu userInfo while still enforcing music authorization',async()=>{
+  let calls=0;
+  const client=new QQAccountProfileClient({http:async(url,request)=>{
+    calls++;
+    if(calls===1){assert.ok(url.includes('c6.y.qq.com'));return{code:1306,subcode:1306,msg:'需前往验证，即将跳转'};}
+    assert.equal(url,'https://u.y.qq.com/cgi-bin/musicu.fcg');
+    const body=JSON.parse(request.body??'{}');
+    assert.deepEqual(body.userInfo,{module:'userInfo.BaseUserInfoServer',method:'get_user_baseinfo_v2',param:{vec_uin:['42']}});
+    return{code:0,status:{code:0,data:{total:1}},userInfo:{code:0,data:{map_userinfo:{'42':{nick:'MusicU User',headurl:'http://thirdqq.qlogo.cn/avatar.png'}}}}};
+  }});
+  assert.deepEqual(await client.fetch(session,new AbortController().signal),{userId:'42',nickname:'MusicU User',avatar:'https://thirdqq.qlogo.cn/avatar.png'});
+  assert.equal(calls,2);
+  // Unauthorized sessions must still be rejected even when c6 returns 1306.
+  const denied=new QQAccountProfileClient({http:async(url)=>url.includes('c6.y.qq.com')?{code:1306}:{code:0,status:{code:1000,data:{}}}});
+  await assert.rejects(denied.fetch(session,new AbortController().signal),error=>error instanceof QQAccountProfileError&&error.kind==='login_required');
+});
+
 test('WX official profile and music authorization use its own ID and tmeLoginType',async()=>{
   const wx={login_type:'2',wxuin:'99',qqmusic_uin:'99',uin:'42',qqmusic_key:'W_X-unit-only'};let calls=0;
   const client=new QQAccountProfileClient({http:async(url,request)=>{

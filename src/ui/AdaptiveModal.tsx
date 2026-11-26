@@ -33,7 +33,11 @@ export function Modal(props:ModalProps){
     else if(!covers||Platform.OS!=='ios')release();
   },[parent?.registry,parent?.id,id,covers,visible,release]);
   const scope=useMemo(()=>parent&&covers?{registry:parent.registry,id}:parent,[parent,id,covers]);
-  const dismiss=()=>{if(!latestVisible.current)release();props.onDismiss?.();};
+  const dismiss=()=>{
+    release();
+    if(latestVisible.current&&props.allowSwipeDismissal)props.onRequestClose?.({} as never);
+    props.onDismiss?.();
+  };
   return <NativeModal statusBarTranslucent supportedOrientations={orientations} {...props} onDismiss={dismiss}><PresentationContext.Provider value={scope}>{props.children}</PresentationContext.Provider></NativeModal>;
 }
 export function SheetModal(props:ModalProps){return <Modal presentationStyle="pageSheet" {...props}/>;}

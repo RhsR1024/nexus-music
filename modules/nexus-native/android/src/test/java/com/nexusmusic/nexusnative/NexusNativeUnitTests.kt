@@ -126,6 +126,11 @@ class NexusNativeUnitTests {
     assertEquals("https://music.163.com/m/login", MusicWebLoginPolicy.initialURL("wy", "abc"))
     assertTrue(MusicWebLoginPolicy.ready(mapOf("MUSIC_U" to "token"), "wy"))
     assertFalse(MusicWebLoginPolicy.ready(emptyMap(), "wy"))
+    assertTrue(MusicWebLoginPolicy.allowsUrl("https://dl.reg.163.com/dl/yd/phone", "wy"))
+    assertTrue(MusicWebLoginPolicy.allowsUrl("https://c.dun.163yun.com/api/v3/get", "wy"))
+    assertTrue(MusicWebLoginPolicy.allowsUrl("https://urswebzj.nosdn.127.net/webzj.js", "wy"))
+    assertFalse(MusicWebLoginPolicy.allowsUrl("https://y.qq.com/", "wy"))
+    assertFalse(MusicWebLoginPolicy.allowsUrl("https://163.com.evil.test/", "wy"))
     assertTrue(
       MusicWebLoginPolicy.ready(
         mapOf("qqmusic_key" to "Q_H_L_123", "uin" to "o123456", "login_type" to "1"),

@@ -13,6 +13,7 @@ import {SkipGlyph} from './SkipGlyph.tsx';
 import {Vinyl} from './PlayerVisuals.tsx';
 import {Text} from './Typography.tsx';
 import {paper,space,typography} from './tokens.ts';
+import {useStablePlaybackStatus} from './usePlaybackStatus.ts';
 
 function PaperBackdrop({services,track}:{services:Services;track:Track}){
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -37,6 +38,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
 }){
   const {width,height}=useWindowDimensions();
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
+  const status=useStablePlaybackStatus(state,{resolving:'正在选择可用音源…',buffering:'正在缓冲…'});
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [lyricsOpen,setLyricsOpen]=useState(false);
@@ -66,7 +68,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
         </Pressable>
       </View>
       <View style={{flex:1,minHeight:space.lg}}/>
-      {(state.error||state.phase==='resolving'||state.buffering)&&<Text accessibilityLiveRegion="polite" style={styles.status}>{state.error??(state.phase==='resolving'?'正在选择可用音源…':'正在缓冲…')}</Text>}
+      <View style={{minHeight:22,justifyContent:'center'}}>{!!status.text&&<Text accessibilityLiveRegion="polite" style={styles.status}>{status.text}</Text>}</View>
       <View style={styles.progress}><PlaybackProgress services={services} variant="paper"/></View>
       {/* IMG_4851 transport: 64pt play at screen centre, outer tools 68pt from
           the screen edges, 9.5x12.7pt triangles with a 2pt gap. */}
@@ -118,7 +120,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
       </View>
       <Text numberOfLines={1} style={styles.caption}>{state.media?.quality?`${state.media.quality.toUpperCase()} 音源`:'等待音源'}</Text>
     </View>
-    <SheetModal visible={lyricsOpen} onRequestClose={()=>setLyricsOpen(false)}>
+    <SheetModal allowSwipeDismissal visible={lyricsOpen} onRequestClose={()=>setLyricsOpen(false)}>
       <View style={{flex:1}}>
         <LinearGradient colors={['#FBF5F5','#F7E7EB','#F8EFF1']} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
         <ScrollView contentContainerStyle={{padding:space.xl,gap:space.lg}}>

@@ -13,9 +13,9 @@ import {sollinTokens, space, typography} from './tokens.ts';
 
 const platformName:Record<string,string>={wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水'};
 
-export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onLyricOffset,onEQ,onAudioOutput,onQueue,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,onDiagnostics,downloadLabel='下载'}:{
+export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onLyricSource,onAllLyrics,onLyricOffset,onEQ,onAudioOutput,onQueue,onMatch,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,onDiagnostics,downloadLabel='下载'}:{
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
-  onStyle:()=>void;onLyricsSettings:()=>void;onLyricOffset?:()=>void;onEQ?:()=>void;onAudioOutput?:()=>void;onQueue:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
+  onStyle:()=>void;onLyricsSettings:()=>void;onLyricSource?:()=>void;onAllLyrics?:()=>void;onLyricOffset?:()=>void;onEQ?:()=>void;onAudioOutput?:()=>void;onQueue:()=>void;onMatch?:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
 }){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),styles=makeStyles(theme),{share,sharing,error:shareError}=useSongShare(track);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -59,6 +59,8 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
     <View style={styles.group}>
       {row('options-outline','播放界面样式',layoutLabel,onStyle)}
       {row('text-outline','歌词显示设置','字体与颜色',onLyricsSettings)}
+      {onLyricSource&&row('language-outline','选择歌词来源','切换或搜索',onLyricSource)}
+      {onAllLyrics&&row('document-text-outline','全部歌词','定位与偏移',onAllLyrics)}
       {onLyricOffset&&row('time-outline','歌词时间偏移',effectiveOffset===0?'默认':`${effectiveOffset>0?'+':''}${effectiveOffset}ms`,onLyricOffset)}
       {row('speedometer-outline','播放倍速',`${preferences.rate}x`,onRate)}
       {row('moon-outline','睡眠定时器',sleepLabel,onSleep)}
@@ -69,6 +71,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
     </View>
     <Text style={styles.section}>歌曲操作</Text>
     <View style={styles.group}>
+      {onMatch&&row('git-compare-outline','匹配歌曲','切换音源版本',onMatch)}
       {row('share-outline','分享歌曲',sharing?'正在打开':'分享',()=>{void share();})}
       {row('add-circle-outline','添加到歌单','选择歌单',onPlaylist,true)}
     </View>

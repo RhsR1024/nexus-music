@@ -1,25 +1,72 @@
 import ExpoModulesCore
 import UIKit
 
-// A static system material. Intensity is controlled by the RN surface tint,
-// rather than keeping a UIViewPropertyAnimator paused for the view's lifetime.
+// Native iOS frosted / Liquid Glass surface. On iOS 26+, the "liquid" variant
+// uses Apple's native UIGlassEffect so scrolling artwork refracts behind the
+// floating tab bar and mini player; frosted/acrylic and older OS versions use
+// translucent ultra-thin system materials rather than opaque fills.
 final class NexusMaterialView: ExpoView {
-  private let material = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
+  private let material = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialLight))
+  private var dark = false
+  private var variant = "liquid"
+  private var cornerRadius: CGFloat = 30
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     material.isUserInteractionEnabled = false
+    material.clipsToBounds = true
     addSubview(material)
     clipsToBounds = true
+    applyEffect()
   }
 
   func setDark(_ dark: Bool) {
-    material.effect = UIBlurEffect(style: dark ? .systemMaterialDark : .systemMaterialLight)
+    guard self.dark != dark else { return }
+    self.dark = dark
+    applyEffect()
+  }
+
+  func setVariant(_ value: String) {
+    let next = value.isEmpty ? "liquid" : value
+    guard self.variant != next else { return }
+    self.variant = next
+    applyEffect()
+  }
+
+  func setRadius(_ value: Double) {
+    let next = CGFloat(max(0, value))
+    guard abs(self.cornerRadius - next) > 0.1 else { return }
+    self.cornerRadius = next
+    applyCornerRadius()
+  }
+
+  private func applyEffect() {
+    if #available(iOS 26.0, *), variant == "liquid" {
+      let glass = UIGlassEffect(style: .regular)
+      glass.tintColor = dark
+        ? UIColor(red: 0.14, green: 0.11, blue: 0.17, alpha: 0.24)
+        : UIColor(red: 1.0, green: 0.985, blue: 0.99, alpha: 0.28)
+      material.effect = glass
+    } else if variant == "frosted" {
+      material.effect = UIBlurEffect(style: dark ? .systemThinMaterialDark : .systemThinMaterialLight)
+    } else {
+      material.effect = UIBlurEffect(style: dark ? .systemUltraThinMaterialDark : .systemUltraThinMaterialLight)
+    }
+    applyCornerRadius()
+  }
+
+  private func applyCornerRadius() {
+    let clamped = bounds.height > 0 ? min(cornerRadius, bounds.height / 2) : cornerRadius
+    material.layer.cornerRadius = clamped
+    material.layer.cornerCurve = .continuous
+    layer.cornerRadius = clamped
+    layer.cornerCurve = .continuous
   }
 
   override func layoutSubviews() {
     super.layoutSubviews()
     material.frame = bounds
+    applyCornerRadius()
   }
 }
 

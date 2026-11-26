@@ -36,8 +36,13 @@ enum MusicWebLoginPolicy {
     if url.absoluteString == "about:blank" { return true }
     guard url.scheme == "https", url.user == nil, url.password == nil,
       url.port == nil || url.port == 443, let host = url.host?.lowercased() else { return false }
-    return provider == "tx" ? host == "qq.com" || host.hasSuffix(".qq.com") :
-      provider == "wy" && (host == "music.163.com" || host.hasSuffix(".music.163.com"))
+    if provider == "tx" { return host == "qq.com" || host.hasSuffix(".qq.com") }
+    if provider == "wy" {
+      return ["163.com", "163yun.com", "127.net", "126.net", "netease.com"].contains {
+        host == $0 || host.hasSuffix(".\($0)")
+      }
+    }
+    return false
   }
   static func cookieNames(_ provider: String) -> Set<String> {
     provider == "tx" ? ["qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin"] :
@@ -196,6 +201,8 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     self.dataStore = dataStore
     let configuration = WKWebViewConfiguration()
     configuration.websiteDataStore = dataStore
+    configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+    configuration.allowsInlineMediaPlayback = true
     let webView = WKWebView(frame: .zero, configuration: configuration)
     webView.accessibilityIdentifier = daily ? "qq-daily-authorization-web" : "music-web-login-\(provider)"
     if provider == "tx" {
@@ -281,6 +288,10 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
 
   func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
     guard let url = navigationAction.request.url else { decisionHandler(.cancel); finish(.failed); return }
+    if url.absoluteString == "about:srcdoc", navigationAction.targetFrame?.isMainFrame == false {
+      decisionHandler(.allow)
+      return
+    }
     guard MusicWebLoginPolicy.allows(url, provider: provider) else {
       decisionHandler(.cancel)
       return
@@ -312,7 +323,7 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
       for cookie in cookies {
         let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
         let allowed = self.provider == "tx" ? domain == "qq.com" || domain.hasSuffix(".qq.com") :
-          domain == "music.163.com" || domain.hasSuffix(".music.163.com")
+          domain == "163.com" || domain.hasSuffix(".163.com")
         if allowed, MusicWebLoginPolicy.cookieNames(self.provider).contains(cookie.name),
           cookie.expiresDate == nil || cookie.expiresDate! > Date() { values[cookie.name] = cookie.value }
       }

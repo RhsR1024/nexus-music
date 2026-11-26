@@ -32,13 +32,21 @@ export class SourceRegistry {
     if (state) this.lifecycle.destroy(id, state.revision);
   }
   register(source: SourceDefinition): void {
+    this.registerOne(source);
+    this.publish();
+  }
+  registerMany(sources: readonly SourceDefinition[]): void {
+    if (!sources.length) return;
+    for (const source of sources) this.registerOne(source);
+    this.publish();
+  }
+  private registerOne(source: SourceDefinition): void {
     if (!source.id || !source.name || !source.script.trim()) throw new Error('音源信息不完整');
     this.invalidate(source.id);
     const revision = (this.revisions.get(source.id) ?? 0) + 1;
     this.revisions.set(source.id, revision); this.definitions.set(source.id, { ...source });
     // Replacing a script requires initialization again; never keep stale capabilities.
     this.states.set(source.id, { id: source.id, name: source.name, revision, fingerprint: source.fingerprint, enabled: false, status: 'disabled', capabilities: [] });
-    this.publish();
   }
   isCurrent(source: SourceState): boolean {
     const current = this.states.get(source.id);

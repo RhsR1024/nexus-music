@@ -40,7 +40,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
       {circle('ellipsis-horizontal','更多播放控制',onMore)}
     </View>
   </View>;
-  const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:12,minHeight:58}}>
+  const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:12,minHeight:58,marginTop:columns?0:54}}>
     <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={58} radius={10}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:3}}>
       <Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:16,fontWeight:'600'}}>{track.title}</Text>

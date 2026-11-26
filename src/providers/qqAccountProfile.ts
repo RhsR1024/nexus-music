@@ -58,7 +58,7 @@ export class QQAccountProfileError extends Error{
 export class QQAccountProfileClient{
   private readonly options:{http:HTTPClient};
   constructor(options:{http:HTTPClient}){this.options=options;}
-  async fetch(session:MusicSession,signal:AbortSignal):Promise<{userId:string;nickname:string;encryptedUin?:string}>{
+  async fetch(session:MusicSession,signal:AbortSignal):Promise<{userId:string;nickname:string;avatar?:string;encryptedUin?:string}>{
     const check=()=>{if(signal.aborted)throw new QQAccountProfileError('cancelled');};
     check();
     try{
@@ -69,20 +69,39 @@ export class QQAccountProfileClient{
       const headers={Cookie:Object.entries(cookies).map(([name,value])=>`${name}=${value}`).join('; '),Referer:'https://y.qq.com/',Origin:'https://y.qq.com',Accept:'application/json'};
       const profile=object(await this.options.http(`https://c6.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg?ct=20&cv=4747474&cid=205360838&userid=${uin}`,{method:'GET',headers,credentials:'omit'},signal));
       check();
-      if(profile.code!==0)throw new QQAccountProfileError(profile.code===401||profile.code===403?'login_required':'unavailable');
-      const creator=object(object(profile.data).creator);
-      const nickname=typeof creator.nick==='string'?creator.nick:typeof creator.nickname==='string'?creator.nickname:'';
-      if(!nickname.trim()||nickname.length>120||/[\u0000-\u001f\u007f]/.test(nickname))throw new QQAccountProfileError('unavailable');
+      const c6Challenged=profile.code===1306;
+      let nickname='',encryptedUin:unknown;
+      if(!c6Challenged){
+        if(profile.code!==0)throw new QQAccountProfileError(profile.code===401||profile.code===403?'login_required':'unavailable');
+        const creator=object(object(profile.data).creator);
+        nickname=typeof creator.nick==='string'?creator.nick:typeof creator.nickname==='string'?creator.nickname:'';
+        if(!nickname.trim()||nickname.length>120||/[\u0000-\u001f\u007f]/.test(nickname))throw new QQAccountProfileError('unavailable');
+        encryptedUin=creator.encrypt_uin;
+      }
+      const payload:Record<string,unknown>={
+        comm:{uin,authst,ct:24,cv:0,format:'json',tmeAppID:'qqmusic',tmeLoginType},
+        status:{module:'music.musicasset.PlaylistBaseRead',method:'GetPlaylistByUin',param:{uin}},
+        ...(c6Challenged?{userInfo:{module:'userInfo.BaseUserInfoServer',method:'get_user_baseinfo_v2',param:{vec_uin:[uin]}}}:{}),
+      };
       const raw=object(await this.options.http('https://u.y.qq.com/cgi-bin/musicu.fcg',{
         method:'POST',credentials:'omit',headers:{...headers,'Content-Type':'application/json;charset=UTF-8'},
-        body:JSON.stringify({comm:{uin,authst,ct:24,cv:0,format:'json',tmeAppID:'qqmusic',tmeLoginType},status:{module:'music.musicasset.PlaylistBaseRead',method:'GetPlaylistByUin',param:{uin}}}),
+        body:JSON.stringify(payload),
       },signal));
       check();
       const status=object(raw.status);
       if(raw.code!==0||status.code!==0||!status.data||typeof status.data!=='object'||Array.isArray(status.data))throw new QQAccountProfileError('login_required');
+      let avatar:string|undefined;
+      if(c6Challenged){
+        const map=object(object(object(raw.userInfo).data).map_userinfo);
+        const info=object(map[uin]);
+        const candidate=typeof info.nick==='string'?info.nick.trim():'';
+        nickname=candidate&&candidate.length<=120&&!/[\u0000-\u001f\u007f]/.test(candidate)?candidate:`QQ 音乐 (${uin})`;
+        if(typeof info.headurl==='string'&&/^https?:\/\/[a-z0-9.-]+/i.test(info.headurl)&&info.headurl.length<=1024&&!/[\u0000-\u001f\u007f]/.test(info.headurl)){
+          avatar=info.headurl.replace(/^http:\/\//i,'https://');
+        }
+      }
       // Only the authorization result is consumed. Never save or expose lists.
-      const encryptedUin=creator.encrypt_uin;
-      return{userId:uin,nickname:nickname.trim(),...(typeof encryptedUin==='string'&&encryptedUin.length>0&&encryptedUin.length<=1024&&!/[\u0000-\u001f\u007f]/.test(encryptedUin)?{encryptedUin}:{})};
+      return{userId:uin,nickname:nickname.trim(),...(avatar?{avatar}:{}),...(typeof encryptedUin==='string'&&encryptedUin.length>0&&encryptedUin.length<=1024&&!/[\u0000-\u001f\u007f]/.test(encryptedUin)?{encryptedUin}:{})};
     }catch(error){
       check();
       if(error instanceof QQAccountProfileError)throw error;

@@ -106,3 +106,20 @@ test('style recommendation rejects duplicate-beyond-limit or pre-cancelled selec
   await assert.rejects(p.styleRecommendations('wy',[{id:'one',name:'one',dimension:'genre'}],controller.signal),{name:'AbortError'});
   assert.equal(calls,0);
 });
+test('NetEase banners parse Sollin /api/v2/banner/get response, upgrade 126 image URLs, and ignore non-wy platforms',async()=>{
+  const p=new DiscoveryProvider(sha,async url=>{
+    assert.ok(url.includes('/api/v2/banner/get'));
+    return{code:200,banners:[
+      {bannerId:'b1',pic:'http://p1.music.126.net/a.jpg',typeTitle:'新歌首发',titleColor:'red',targetType:1,targetId:12345,song:{id:12345,name:'Banner Song',ar:[{name:'Artist A'}],al:{name:'Album A',picUrl:'http://p1.music.126.net/cover.jpg'},dt:200000}},
+      {bannerId:'b2',imageUrl:'https://p2.music.126.net/b.jpg',typeTitle:'独家策划',titleColor:'blue',targetType:3000,targetId:0,url:'https://music.163.com/activity'},
+      {bannerId:'bad',pic:'javascript:alert(1)',targetType:1,targetId:1},
+    ]};
+  });
+  assert.deepEqual(await p.banners('tx',new AbortController().signal),[]);
+  const banners=await p.banners('wy',new AbortController().signal);
+  assert.equal(banners.length,2);
+  assert.equal(banners[0]?.imageUrl,'https://p1.music.126.net/a.jpg');
+  assert.equal(banners[0]?.targetType,1);
+  assert.equal(banners[0]?.song?.title,'Banner Song');
+  assert.equal(banners[1]?.url,'https://music.163.com/activity');
+});
