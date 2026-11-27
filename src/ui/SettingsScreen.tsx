@@ -61,7 +61,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
   const content=(key:SettingsPage)=>{
     switch(key){
       case 'home':return <View style={{gap:14}}>
-        <Text style={{color:s.muted,fontSize:13.5,lineHeight:20,marginLeft:4,marginBottom:0}}>让每一次聆听，更像你。</Text>
+        <Text style={{color:s.ink,opacity:0.78,fontSize:18,fontWeight:'600',lineHeight:25,letterSpacing:-0.2,marginLeft:4,marginTop:2,marginBottom:4}}>让每一次聆听，更像你。</Text>
         <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginBottom:-6}}>设置分类</Text>
         <View testID="settings-category-group" style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
           {row('playback','播放偏好、歌词、在线音源与音效','musical-notes',preferences.quality.toUpperCase(),true)}

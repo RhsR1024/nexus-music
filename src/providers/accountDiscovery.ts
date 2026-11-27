@@ -8,6 +8,7 @@ import type { MusicAccount, MusicAccounts } from './musicAccounts.ts';
 import { neteaseSessionAuth, neteaseWeapiRequest } from './neteaseSession.ts';
 import type { NeteaseAccountProfileClient } from './neteaseAccountProfile.ts';
 import { onlineTrack } from './online.ts';
+import { enrichKugouTrackArtworks } from './kugouTrackDetails.ts';
 import { qqSignature } from './qqSignature.ts';
 import { safePublicURL } from '../storage/cleanTrack.ts';
 
@@ -331,11 +332,35 @@ export class AccountDiscoveryClient {
   }
 
   async kugouNewSongs(signal: AbortSignal): Promise<readonly Track[]> {
-    const raw = await this.http(
-      'https://m.kugou.com/?json=true',
-      { method: 'GET', credentials: 'omit', headers: { Referer: 'https://m.kugou.com/' } },
-      signal,
-    );
-    return parseKugouNewSongs(raw);
+    let tracks: readonly Track[] = [];
+    try {
+      const raw = await this.http(
+        'https://m.kugou.com/?json=true',
+        { method: 'GET', credentials: 'omit', headers: { Referer: 'https://m.kugou.com/' } },
+        signal,
+      );
+      tracks = parseKugouNewSongs(raw);
+    } catch {}
+    if (!tracks.length) {
+      // Fallback to Kugou mobile API new-song rank when m.kugou.com returns an anti-bot redirect stub.
+      const fbRaw = row(
+        await this.http(
+          queryURL('https://mobilecdnbj.kugou.com/api/v3/rank/song', {
+            version: 9108,
+            ranktype: 1,
+            plat: 0,
+            pagesize: 50,
+            area_code: 1,
+            page: 1,
+            rankid: 31308,
+            with_res_tag: 0,
+          }),
+          { method: 'GET', credentials: 'omit' },
+          signal,
+        ),
+      );
+      tracks = parseKugouNewSongs({ data: row(fbRaw.data).info });
+    }
+    return enrichKugouTrackArtworks(this.http, tracks, signal);
   }
 }

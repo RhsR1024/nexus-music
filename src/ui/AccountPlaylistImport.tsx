@@ -38,7 +38,7 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
   const pending=!!busy,blocked=disabled||pending;
   const button=(id:string,title:string,onPress:()=>void,locked=blocked)=><Pressable testID={testID(id)} accessibilityRole="button" disabled={locked} onPress={onPress} style={[styles.button,{backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder},locked&&styles.disabled]}><Text style={[styles.body,{color:s.ink,fontWeight:'600',fontSize:13.5}]}>{title}</Text></Pressable>;
   const closeDetail=()=>{if(controller.current){closeWhenSettled.current=true;controller.current.abort();setMessage('正在取消操作');}else{setDetail(null);setPreview(null);setMessage('');}};
-  const readDetail=(item:AccountPlaylist)=>{if(!account||pending)return;setDetail(item);setCopied(false);setPreview(null);void execute('正在读取完整歌单',signal=>services.accountPlaylists.preview(account,item,signal),setPreview);};
+  const readDetail=(item:AccountPlaylist)=>{if(!account||pending)return;setDetail(item);setCopied(false);setPreview(null);void execute('正在读取完整歌单',signal=>services.accountPlaylists.preview(account,item,signal,platform==='tx'?{lenient:true}:undefined),setPreview);};
   const progress=<View style={styles.progress}><ActivityIndicator color={p.accent}/><Text testID={testID("account-playlists-busy")} accessibilityLiveRegion="polite" style={[styles.caption,{color:p.secondary}]}>{busy}</Text>{button('account-playlists-cancel','取消操作',()=>{if(detail)closeDetail();else{controller.current?.abort();setMessage('正在取消操作');}},false)}</View>;
   const copy=()=>{
     const value=preview,owner=account;if(!value||!owner)return;

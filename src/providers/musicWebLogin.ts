@@ -3,13 +3,14 @@ import {MusicAuthError,type MusicAuthEvent,type MusicAuthFlow} from './musicAuth
 import type {NeteaseAccountProfileClient} from './neteaseAccountProfile.ts';
 import {parseQQCookiePayload,type QQAccountProfileClient} from './qqAccountProfile.ts';
 
-export type MusicWebLoginProvider='wy'|'tx';
+export type MusicWebLoginProvider='wy'|'tx'|'qishui';
 // Official QQ Connect entry from Q-music-android 5db858f/login.ts. Use its
 // default web presentation instead of the app-only mobile one-key screen.
 const qqRedirect='https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F';
 export const MUSIC_WEB_LOGIN_URLS:{readonly [P in MusicWebLoginProvider]:string}={
   wy:'https://music.163.com/m/login',
   tx:`https://graph.qq.com/oauth2.0/authorize?client_id=100497308&redirect_uri=${encodeURIComponent(qqRedirect)}&response_type=code&scope=all`,
+  qishui:'https://music.douyin.com/qishui',
 };
 
 export interface MusicWebAuthNative {
@@ -30,6 +31,7 @@ export interface MusicWebLoginResult {
 }
 
 const allowedCookies=new Set(['MUSIC_U','MUSIC_A_T','MUSIC_R_T','MUSIC_SNS','__csrf','NMTID','_ntes_nuid']);
+const qishuiAllowedCookies=new Set(['sessionid','sessionid_ss','sid_tt','uid_tt','uid_tt_ss','passport_csrf_token','ttwid','odin_tt','sid_guard']);
 const cookieName=/^[A-Za-z_][A-Za-z0-9_]*$/;
 const invalidCookieValue=/[\u0000-\u001f\u007f;]/;
 
@@ -50,6 +52,23 @@ export function parseNeteaseCookiePayload(raw:string):Readonly<Record<string,str
     cookies[name]=cookie;
   }
   if(!cookies.MUSIC_U)throw new MusicAuthError('failed','网易云登录未完成');
+  return Object.freeze(cookies);
+}
+
+export function parseQishuiCookiePayload(raw:string):Readonly<Record<string,string>>{
+  let value:unknown;
+  try{value=JSON.parse(raw);}catch{throw new MusicAuthError('failed','汽水登录结果格式无效');}
+  if(!value||typeof value!=='object'||Array.isArray(value))throw new MusicAuthError('failed','汽水登录结果格式无效');
+  const source=value as Record<string,unknown>,cookies:Record<string,string>={};
+  for(const name of qishuiAllowedCookies){
+    const cookie=source[name];
+    if(cookie===undefined)continue;
+    if(typeof cookie!=='string'||!cookie||cookie.length>4096||!cookieName.test(name)||invalidCookieValue.test(cookie))throw new MusicAuthError('failed','汽水登录凭据格式无效');
+    cookies[name]=cookie;
+  }
+  const hasSession=Boolean(cookies.sessionid||cookies.sessionid_ss||cookies.sid_tt);
+  const hasIdentity=Boolean(cookies.uid_tt||cookies.uid_tt_ss||cookies.sid_guard);
+  if(!hasSession||!hasIdentity)throw new MusicAuthError('failed','汽水音乐登录未完成，请扫码确认登录');
   return Object.freeze(cookies);
 }
 

@@ -164,7 +164,7 @@ export class WebDAVSync {
     const plan=planSync(local,remote,baseline);
     const delta=computePlanDelta(baseline,plan);
     const deltaSummary=summarizeLibraryDelta(delta);
-    return{preview:{plan,etag,localSignature:canonical(syncRecords(snapshot)),delta,deltaSummary},message:plan.conflicts.length?`发现 ${plan.conflicts.length} 项冲突，请逐项选择后确认`:`合并预览已就绪（${deltaSummary}），确认后同步两端音乐库`};
+    return{preview:{plan,etag,localSignature:canonical(syncRecords(snapshot)),delta,deltaSummary},message:plan.conflicts.length?`发现 ${plan.conflicts.length} 项冲突，请逐项选择后确认`:'合并预览已就绪，确认后同步两端音乐库'};
   });}
   /** Refresh a configured sync preview when the app returns to the foreground.
    * Conflicts remain explicit and require the existing user confirmation path;

@@ -14,6 +14,58 @@ const number = (value: unknown) => { if(value===undefined||value===null||value==
 function names(value: unknown, key = 'name') { return list(value).map(item => text(row(item)[key])).filter(Boolean).join(' / '); }
 function decoded(value: unknown) { return text(value).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }
 function qualities(values: Readonly<Record<string, unknown>>) { return Object.entries(values).filter(([,size]) => (number(size) ?? 0) > 0).map(([id,size]) => ({ id, sizeBytes: number(size)! })); }
+function normalizePublicArtwork(raw: unknown, relativeBase?: string): string | undefined {
+  let s = text(raw).trim();
+  if (!s) return undefined;
+  s = s.replace(/\{size\}/gi, '400');
+  if (s.startsWith('//')) s = `https:${s}`;
+  else if (s.startsWith('/') && relativeBase) s = `${relativeBase}${s}`;
+  else if (s.startsWith('http://')) s = `https://${s.slice(7)}`;
+  return /^https?:\/\//i.test(s) ? s : undefined;
+}
+function extractKugouArtwork(value: Row): string | undefined {
+  const trans = row(value.trans_param);
+  const albumInfo = row(value.album_info);
+  const firstAuthor = row(list(value.authors)[0]);
+  for (const candidate of [
+    value.sizable_cover,
+    value.union_cover,
+    value.album_sizable_cover,
+    albumInfo.sizable_cover,
+    trans.union_cover,
+    value.img,
+    value.pic,
+    value.imgurl,
+    value.Image,
+    firstAuthor.sizable_avatar,
+  ]) {
+    const url = normalizePublicArtwork(candidate);
+    if (url) return url;
+  }
+  return undefined;
+}
+function extractMiguArtwork(value: Row): string | undefined {
+  const pickFromArray = (arr: unknown): string | undefined => {
+    const entries = list(arr).map(row);
+    for (const pref of ['02', '01', '03']) {
+      const hit = entries.find(e => text(e.imgSizeType) === pref && text(e.img || e.webpImg));
+      if (hit) {
+        const url = normalizePublicArtwork(hit.img || hit.webpImg, 'https://d.musicapp.migu.cn');
+        if (url) return url;
+      }
+    }
+    for (const e of entries) {
+      const url = normalizePublicArtwork(e.img || e.webpImg, 'https://d.musicapp.migu.cn');
+      if (url) return url;
+    }
+    return undefined;
+  };
+  for (const candidate of [value.img3, value.img2, value.img1, value.picL, value.picM, value.picS, value.largePic, value.mediumPic, value.smallPic, value.cover]) {
+    const url = normalizePublicArtwork(candidate, 'https://d.musicapp.migu.cn');
+    if (url) return url;
+  }
+  return pickFromArray(value.albumImgs) ?? pickFromArray(value.imgItems) ?? normalizePublicArtwork(row(list(value.singerImg ? Object.values(row(value.singerImg)) : [])[0]).miguImgUrl, 'https://d.musicapp.migu.cn');
+}
 export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
   const value = row(raw);
   let track: Track;
@@ -41,8 +93,9 @@ export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
   } else if (platform === 'kg') {
     const hash = id(value.FileHash ?? value.hash), duration = number(value.Duration ?? value.duration), audioId = text(value.Audioid ?? value.audio_id);
     const types = { '128k': { hash, size: value.FileSize }, '320k': { hash: text(value.HQFileHash), size: value.HQFileSize }, flac: { hash: text(value.SQFileHash), size: value.SQFileSize }, flac24bit: { hash: text(value.ResFileHash), size: value.ResFileSize } };
+    const kgArtwork = extractKugouArtwork(value);
     track = { origin: { kind: 'online', platform, id: audioId ? `${audioId}_${hash}` : hash }, title: decoded(value.OriSongName ?? value.SongName ?? value.FileName), artist: names(value.Singers) || decoded(value.SingerName), album: decoded(value.AlbumName),
-      ...(duration !== undefined ? { durationMs: duration*1000 } : {}),
+      ...(duration !== undefined ? { durationMs: duration*1000 } : {}), ...(kgArtwork ? { artwork: kgArtwork } : {}),
       metadata: { hash, songId: audioId || hash, songmid: audioId, albumId: text(value.AlbumID ?? value.album_id), _types: types },
       qualities: qualities(Object.fromEntries(Object.entries(types).map(([key, value]) => [key, value.size]))) };
   } else {
@@ -50,8 +103,9 @@ export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
     const formats = list(value.audioFormats ?? value.newRateFormats).map(row), types: Row = {};
     const mapping: Record<string, string> = { PQ: '128k', HQ: '320k', SQ: 'flac', ZQ24: 'flac24bit', ZQ: 'flac24bit' };
     for (const format of formats) { const key = mapping[text(format.formatType)]; if (key) types[key] = format.asize ?? format.isize ?? format.size; }
+    const mgArtwork = extractMiguArtwork(value);
     track = { origin: { kind: 'online', platform, id: songId }, title: text(value.name ?? value.songName), artist: names(value.singerList ?? value.singers ?? value.artists) || text(value.singer), album: text(value.album),
-      ...(duration !== undefined ? { durationMs: duration*1000 } : {}), artwork: text(value.img3 ?? value.img2 ?? value.img1) || undefined,
+      ...(duration !== undefined ? { durationMs: duration*1000 } : {}), ...(mgArtwork ? { artwork: mgArtwork } : {}),
       metadata: { copyrightId, albumId: text(value.albumId), lrcUrl: text(value.lrcUrl), mrcUrl: text(value.mrcUrl ?? value.mrcurl), trcUrl: text(value.trcUrl), _types: types }, qualities: qualities(types) };
   }
   if (!track.title) throw new Error('歌曲缺少名称'); return track;

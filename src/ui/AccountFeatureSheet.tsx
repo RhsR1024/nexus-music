@@ -238,7 +238,12 @@ export function AccountFeatureSheet({
             if (!ctrl.signal.aborted) setError('未在账号中找到「我喜欢」歌单');
             break;
           }
-          const preview = await services.accountPlaylists.preview(acct!, fav, ctrl.signal);
+          const preview = await services.accountPlaylists.preview(
+            acct!,
+            fav,
+            ctrl.signal,
+            acct!.platform === 'tx' ? { lenient: true } : undefined,
+          );
           if (!ctrl.signal.aborted) setTracks(preview.tracks);
           break;
         }
@@ -335,7 +340,12 @@ export function AccountFeatureSheet({
     setPlaylistError('');
     setPlaylistLoading(true);
     try {
-      const preview = await services.accountPlaylists.preview(activeAccount, pl, ctrl.signal);
+      const preview = await services.accountPlaylists.preview(
+        activeAccount,
+        pl,
+        ctrl.signal,
+        activeAccount.platform === 'tx' ? { lenient: true } : undefined,
+      );
       if (!ctrl.signal.aborted) setPlaylistTracks(preview.tracks);
     } catch (e) {
       if (!ctrl.signal.aborted) {

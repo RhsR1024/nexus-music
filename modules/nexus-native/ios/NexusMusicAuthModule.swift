@@ -14,6 +14,7 @@ enum MusicWebLoginPolicy {
       (url.port == nil || url.port == 443) && ["y.qq.com", "a.qq.com", "a.y.qq.com", "i2.y.qq.com"].contains(url.host?.lowercased() ?? "")
   }
   static let qqURL = "https://graph.qq.com/oauth2.0/authorize?client_id=100497308&redirect_uri=https%3A%2F%2Fy.qq.com%2Fportal%2Fwx_redirect.html%3Flogin_type%3D1%26surl%3Dhttps%253A%252F%252Fy.qq.com%252F&response_type=code&scope=all"
+  static let qishuiURL = "https://music.douyin.com/qishui"
   static func initialURL(_ provider: String, state: String? = nil) -> String? {
     switch provider {
     case "wy": return "https://music.163.com/m/login"
@@ -21,6 +22,7 @@ enum MusicWebLoginPolicy {
       guard let state else { return qqURL }
       guard state.range(of: "^[A-Za-z0-9-]{1,128}$", options: .regularExpression) != nil else { return nil }
       return qqURL + "&state=" + state
+    case "qishui": return qishuiURL
     default: return nil
     }
   }
@@ -42,11 +44,21 @@ enum MusicWebLoginPolicy {
         host == $0 || host.hasSuffix(".\($0)")
       }
     }
+    if provider == "qishui" {
+      return ["douyin.com", "qishui.com", "bytedance.com", "snssdk.com", "iesdouyin.com", "toutiao.com", "zijieapi.com", "bytegoofy.com", "douyinpic.com", "douyincdn.com", "byteimg.com"].contains {
+        host == $0 || host.hasSuffix(".\($0)")
+      }
+    }
     return false
   }
   static func cookieNames(_ provider: String) -> Set<String> {
-    provider == "tx" ? ["qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin", "euin"] :
-      ["MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid"]
+    if provider == "tx" {
+      return ["qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin", "euin"]
+    }
+    if provider == "qishui" {
+      return ["sessionid", "sessionid_ss", "sid_tt", "uid_tt", "uid_tt_ss", "passport_csrf_token", "ttwid", "odin_tt", "sid_guard"]
+    }
+    return ["MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid"]
   }
   static func documentReady(_ value: Any?, observedEpoch: Int, currentEpoch: Int, committedEpoch: Int?) -> Bool {
     guard observedEpoch == currentEpoch, committedEpoch == currentEpoch,
@@ -56,6 +68,11 @@ enum MusicWebLoginPolicy {
   }
   static func ready(_ values: [String: String], provider: String) -> Bool {
     if provider == "wy" { return !(values["MUSIC_U"] ?? "").isEmpty }
+    if provider == "qishui" {
+      let hasSession = !(values["sessionid"] ?? "").isEmpty || !(values["sessionid_ss"] ?? "").isEmpty || !(values["sid_tt"] ?? "").isEmpty
+      let hasIdentity = !(values["uid_tt"] ?? "").isEmpty || !(values["uid_tt_ss"] ?? "").isEmpty || !(values["sid_guard"] ?? "").isEmpty
+      return hasSession && hasIdentity
+    }
     guard provider == "tx", values["login_type"] == nil || values["login_type"] == "1" else { return false }
     let keys = ["qqmusic_key", "qm_keyst", "musickey"].compactMap { values[$0] }.filter { !$0.isEmpty }
     if values["login_type"] == nil && (values["wxuin"] != nil || keys.contains(where: { $0.hasPrefix("W_X") })) { return false }
@@ -269,6 +286,9 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     } else if provider == "wy" {
       // Align with Sollin: Chrome mobile UA keeps NetEase on /m/login and avoids iOS app-handoff dead ends.
       webView.customUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    } else if provider == "qishui" {
+      // Desktop UA keeps music.douyin.com/qishui on the official Douyin QR-code login experience.
+      webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
     }
     webView.navigationDelegate = self
     webView.uiDelegate = self
@@ -277,7 +297,7 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
 
     let controller = UIViewController()
     loginController = controller
-    controller.title = daily ? "QQ 每日推荐授权" : provider == "tx" ? "QQ 音乐登录" : "网易云登录"
+    controller.title = daily ? "QQ 每日推荐授权" : provider == "tx" ? "QQ 音乐登录" : provider == "qishui" ? "汽水音乐登录" : "网易云登录"
     controller.view.backgroundColor = .systemBackground
     controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "关闭", style: .plain, target: self, action: #selector(cancelPressed))
     let loading = UIActivityIndicatorView(style: .medium)
@@ -289,9 +309,11 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     loadingIndicator = loading
     controller.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: loading)
     webView.translatesAutoresizingMaskIntoConstraints = false
-    if daily {
+    if daily || provider == "qishui" {
       let banner = UILabel()
-      banner.text = "登录后请点击「快速配置」生成或复制 qmk- 密钥，将自动识别并保存"
+      banner.text = daily
+        ? "登录后请点击「快速配置」生成或复制 qmk- 密钥，将自动识别并保存"
+        : "点击页面「登录」，用抖音/汽水 App 扫码或手机号登录后将自动保存会话"
       banner.font = .systemFont(ofSize: 12.5, weight: .medium)
       banner.textColor = .secondaryLabel
       banner.textAlignment = .center
@@ -417,8 +439,14 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
       }
       for cookie in orderedCookies {
         let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
-        let allowed = self.provider == "tx" ? domain == "qq.com" || domain.hasSuffix(".qq.com") :
-          domain == "163.com" || domain.hasSuffix(".163.com")
+        let allowed: Bool
+        if self.provider == "tx" {
+          allowed = domain == "qq.com" || domain.hasSuffix(".qq.com")
+        } else if self.provider == "qishui" {
+          allowed = domain == "douyin.com" || domain.hasSuffix(".douyin.com") || domain == "qishui.com" || domain.hasSuffix(".qishui.com")
+        } else {
+          allowed = domain == "163.com" || domain.hasSuffix(".163.com")
+        }
         if allowed, MusicWebLoginPolicy.cookieNames(self.provider).contains(cookie.name),
           !cookie.value.isEmpty,
           cookie.expiresDate == nil || cookie.expiresDate! > Date() { values[cookie.name] = cookie.value }

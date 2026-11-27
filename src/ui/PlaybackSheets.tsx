@@ -28,7 +28,7 @@ export function RatePanel({services,onBack}:{services:Services;onBack:()=>void})
   const apply=(rate:number)=>{void services.playback.setRate(rate).then(()=>setError('')).catch(()=>setError('倍速未保存，请重试'));};
   return <View style={styles.root}>
     <View style={styles.topRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={onBack} style={styles.back}><Ionicons name="chevron-back" size={18} color={s.muted}/><Text style={styles.backText}>返回</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={onBack} style={styles.back}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={styles.backText}>返回播放选项</Text></Pressable>
       <Text style={styles.badgeText}>{Number.isInteger(preferences.rate)?`${preferences.rate}.0x`:`${preferences.rate}x`}</Text>
     </View>
     <Text accessibilityRole="header" style={styles.title}>播放倍速</Text>
@@ -70,7 +70,7 @@ export function SleepPanel({services,onBack}:{services:Services;onBack:()=>void}
   const status=sleep.mode==='off'?'未开启':sleep.mode==='track'?'本曲播放结束后停止':`剩余 ${sleepCountdown(sleep.deadline,now)}`;
   return <View style={styles.root}>
     <View style={styles.topRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={onBack} style={styles.back}><Ionicons name="chevron-back" size={18} color={s.muted}/><Text style={styles.backText}>返回</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={onBack} style={styles.back}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={styles.backText}>返回播放选项</Text></Pressable>
       <Text testID="sleep-status" style={styles.statusPill}>{status}</Text>
     </View>
     <Text accessibilityRole="header" style={styles.title}>睡眠定时器</Text>
@@ -111,7 +111,7 @@ export function LyricOffsetPanel({services,track,onBack}:{services:Services;trac
   };
   return <View style={styles.root}>
     <View style={styles.topRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={onBack} style={styles.back}><Ionicons name="chevron-back" size={18} color={s.muted}/><Text style={styles.backText}>返回</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={onBack} style={styles.back}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={styles.backText}>返回播放选项</Text></Pressable>
       <Text style={styles.statusPill}>生效 {effective>=0?`+${effective}`:effective} ms</Text>
     </View>
     <Text accessibilityRole="header" style={styles.title}>歌词时间偏移</Text>
@@ -135,8 +135,8 @@ const makeStyles=(theme:Theme)=>{
   return StyleSheet.create({
   root:{flexGrow:1,backgroundColor:'transparent',paddingHorizontal:20,paddingBottom:space.xxl,gap:12},
   topRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:12},
-  back:{flexDirection:'row',alignItems:'center',gap:2,minHeight:40},
-  backText:{fontSize:14,color:s.muted},
+  back:{flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder},
+  backText:{fontSize:14,fontWeight:'600',color:s.ink},
   badgeText:{fontSize:14,fontWeight:'700',color:s.accent,fontVariant:['tabular-nums']},
   statusPill:{fontSize:12,fontWeight:'600',color:s.accent,backgroundColor:s.accentSoft,paddingHorizontal:10,paddingVertical:4,borderRadius:999,overflow:'hidden',fontVariant:['tabular-nums']},
   title:{fontSize:22,fontWeight:'800',color:s.ink},

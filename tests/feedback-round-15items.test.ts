@@ -39,12 +39,13 @@ test('NetEase banners retain up to 12 items matching Sollin carousel count', asy
   assert.equal(parsed[11]?.id, 'b-11');
 });
 
-test('Photorealistic Global Radio 3D globe HTML includes WebGL shader, high-detail landmasses, clouds, and pinch zoom', () => {
+test('Photorealistic Global Radio 3D globe HTML includes WebGL shader, NASA Blue Marble imagery, clouds, and pinch zoom', () => {
   assert.ok(RADIO_GLOBE_HTML.includes('uEarth'));
-  assert.ok(RADIO_GLOBE_HTML.includes('uClouds'));
-  assert.ok(RADIO_GLOBE_HTML.includes('buildEarthTexture'));
+  assert.ok(RADIO_GLOBE_HTML.includes('data:image/jpeg;base64,'));
+  assert.ok(RADIO_GLOBE_HTML.includes('cloud'));
   assert.ok(RADIO_GLOBE_HTML.includes('pinchDist'));
   assert.ok(RADIO_GLOBE_HTML.includes('window.nexusGlobe'));
+  assert.ok(RADIO_GLOBE_HTML.includes('RadioGlobe'));
 });
 
 test('AccountDiscovery parsers handle NetEase recent/record/cloud/artists and QQ/Kugou new songs', () => {

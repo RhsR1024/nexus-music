@@ -1,0 +1,12 @@
+NASA Earth Blue Marble Imagery Notice
+=====================================
+
+The embedded equirectangular Earth texture (`src/providers/earthTexture.ts`) is
+derived from NASA Visible Earth / Blue Marble imagery, distributed via the
+three-globe example dataset:
+- Source: https://github.com/vasturiano/three-globe/blob/master/example/img/earth-blue-marble.jpg
+- NASA Media Usage Guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/
+
+NASA imagery is generally in the public domain and not subject to copyright in
+the United States. The image is resized to 1024x512 JPEG to keep app binary size
+and decoded GPU texture memory bounded on mobile devices.

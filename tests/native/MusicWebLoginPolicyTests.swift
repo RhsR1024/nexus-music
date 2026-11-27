@@ -43,6 +43,15 @@ import Foundation
     }
     expect(!MusicWebLoginPolicy.documentReady(["state":"complete","body":true],observedEpoch:1,currentEpoch:2,committedEpoch:2), "Reject old document callback")
     expect(!MusicWebLoginPolicy.documentReady(["state":"complete","body":true],observedEpoch:2,currentEpoch:2,committedEpoch:nil), "Provisional navigation cannot use the previous DOM")
+    expect(MusicWebLoginPolicy.initialURL("qishui") == "https://music.douyin.com/qishui", "Official Qishui entry")
+    for url in ["https://music.douyin.com/qishui", "https://sso.douyin.com/login", "https://beta-luna.douyin.com/luna/pc/me", "https://www.qishui.com/"] {
+      expect(MusicWebLoginPolicy.allows(URL(string: url)!, provider: "qishui"), "Official Qishui / Douyin auth domains")
+    }
+    for url in ["http://music.douyin.com/", "https://douyin.com.evil.test/", "https://y.qq.com/", "https://music.163.com/"] {
+      expect(!MusicWebLoginPolicy.allows(URL(string: url)!, provider: "qishui"), "Qishui navigation boundary & isolation")
+    }
+    expect(MusicWebLoginPolicy.ready(["sessionid": "qs-sess", "uid_tt": "qs-uid"], provider: "qishui"), "Qishui authenticated cookies")
+    expect(!MusicWebLoginPolicy.ready(["sessionid": "qs-sess"], provider: "qishui"), "Qishui requires identity cookie")
     print("Music web login native policy passed")
   }
 }

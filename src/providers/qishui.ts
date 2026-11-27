@@ -1,9 +1,11 @@
 import type {Track} from '../domain/track.ts';
 import {trackKey} from '../domain/track.ts';
 import type {Repository} from '../storage/repository.ts';
-import {cleanTrack} from '../storage/backup.ts';
+import {cleanTrack,safePublicURL} from '../storage/cleanTrack.ts';
 import {bounded,throwIfAborted} from './async.ts';
 import {requestJSON,type HTTPClient} from './http.ts';
+import type {MusicSecretStore} from './musicAccounts.ts';
+import {MUSIC_WEB_LOGIN_URLS,musicCookieHeader,parseQishuiCookiePayload,type MusicWebAuthNative} from './musicWebLogin.ts';
 type Row=Record<string,unknown>;
 const row=(value:unknown):Row=>value&&typeof value==='object'&&!Array.isArray(value)?value as Row:{};
 const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
@@ -56,6 +58,10 @@ export interface QishuiBoundPlaylist {
   readonly tracks: readonly Track[];
 }
 export interface QishuiAccountSnapshot {
+  readonly loggedIn: boolean;
+  readonly userId?: string;
+  readonly avatar?: string;
+  readonly loggedInAt?: number;
   readonly nickname: string;
   readonly activeModeId: string;
   readonly playlists: readonly QishuiBoundPlaylist[];
@@ -101,9 +107,13 @@ export function asQishuiMatchedTrack(source: Track): Track {
   });
 }
 
+const QISHUI_SECRET_KEY = 'nexus.music.qishui.v1';
+
 export class QishuiAccountStore {
   private readonly repository: Pick<Repository, 'get' | 'put'>;
+  private readonly secrets?: MusicSecretStore;
   private snapshot: QishuiAccountSnapshot = {
+    loggedIn: false,
     nickname: '',
     activeModeId: 'for_you',
     playlists: [],
@@ -112,8 +122,9 @@ export class QishuiAccountStore {
   };
   private readonly listeners = new Set<() => void>();
 
-  constructor(repository: Pick<Repository, 'get' | 'put'>) {
+  constructor(repository: Pick<Repository, 'get' | 'put'>, secrets?: MusicSecretStore) {
     this.repository = repository;
+    this.secrets = secrets;
   }
 
   getSnapshot = () => this.snapshot;
@@ -143,12 +154,103 @@ export class QishuiAccountStore {
       : [];
     const liked = Array.isArray(saved.liked) ? saved.liked.filter(t => t && typeof t.title === 'string').slice(0, 300) : [];
     const recent = Array.isArray(saved.recent) ? saved.recent.filter(t => t && typeof t.title === 'string').slice(0, 120) : [];
+    const hasSecret = this.secrets ? Boolean(await this.secrets.get(QISHUI_SECRET_KEY).catch(() => null)) : Boolean(saved.loggedIn);
+    const safeAvatar = typeof saved.avatar === 'string' && safePublicURL(saved.avatar) ? saved.avatar : undefined;
     this.publish({
+      loggedIn: Boolean(saved.loggedIn) && hasSecret,
+      ...(typeof saved.userId === 'string' && saved.userId ? { userId: saved.userId.slice(0, 64) } : {}),
+      ...(safeAvatar ? { avatar: safeAvatar } : {}),
+      ...(typeof saved.loggedInAt === 'number' && Number.isFinite(saved.loggedInAt) ? { loggedInAt: saved.loggedInAt } : {}),
       nickname: typeof saved.nickname === 'string' ? saved.nickname.trim().slice(0, 40) : '',
       activeModeId: validMode,
       playlists,
       liked,
       recent,
+    });
+  }
+
+  async sessionCookieHeader(): Promise<string | undefined> {
+    if (!this.secrets) return undefined;
+    const raw = await this.secrets.get(QISHUI_SECRET_KEY).catch(() => null);
+    if (!raw) return undefined;
+    try {
+      const cookies = parseQishuiCookiePayload(raw);
+      return musicCookieHeader(cookies);
+    } catch {
+      return undefined;
+    }
+  }
+
+  async loginWithWebView(deps: {
+    native: MusicWebAuthNative;
+    uuid: () => string;
+    http?: HTTPClient;
+  }): Promise<QishuiAccountSnapshot> {
+    const attempt = deps.uuid();
+    const raw = await deps.native.open(attempt, 'qishui', MUSIC_WEB_LOGIN_URLS.qishui);
+    const cookies = parseQishuiCookiePayload(raw);
+    if (this.secrets) {
+      await this.secrets.set(QISHUI_SECRET_KEY, JSON.stringify(cookies));
+    }
+    let nickname = this.snapshot.nickname || '汽水音乐用户';
+    let userId = cookies.uid_tt?.slice(0, 32) || cookies.uid_tt_ss?.slice(0, 32) || 'qishui';
+    let avatar = this.snapshot.avatar;
+    const http = deps.http ?? requestJSON;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = row(
+          await http(
+            'https://beta-luna.douyin.com/luna/pc/me',
+            {
+              method: 'GET',
+              headers: {
+                Cookie: musicCookieHeader(cookies),
+                Referer: 'https://music.douyin.com/qishui',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+              },
+            },
+            ctrl.signal,
+          ),
+        );
+        const user = row(res.user_info ?? res.user ?? row(res.data).user_info ?? res.data);
+        const nick = text(user.nickname ?? user.nick_name ?? user.name).trim();
+        if (nick) nickname = nick.slice(0, 40);
+        const uid = text(user.id ?? user.user_id ?? user.uid).trim();
+        if (uid) userId = uid.slice(0, 64);
+        const av = cover(user.medium_avatar_url ?? user.avatar_url ?? user.avatar) || text(user.avatar_url ?? user.avatar);
+        if (av && safePublicURL(av.replace(/^http:\/\//i, 'https://'))) {
+          avatar = av.replace(/^http:\/\//i, 'https://');
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch {
+      // Best-effort profile enrichment; keep authenticated session cookies intact.
+    }
+    const next: QishuiAccountSnapshot = {
+      ...this.snapshot,
+      loggedIn: true,
+      userId,
+      nickname,
+      ...(avatar ? { avatar } : {}),
+      loggedInAt: Date.now(),
+    };
+    await this.commit(next);
+    return next;
+  }
+
+  async logout() {
+    if (this.secrets) {
+      await this.secrets.remove(QISHUI_SECRET_KEY).catch(() => {});
+    }
+    await this.commit({
+      ...this.snapshot,
+      loggedIn: false,
+      userId: undefined,
+      avatar: undefined,
+      loggedInAt: undefined,
     });
   }
 
@@ -200,21 +302,24 @@ export class QishuiAccountStore {
   }
 
   async clearProfile() {
-    await this.commit({ nickname: '', activeModeId: 'for_you', playlists: [], liked: [], recent: [] });
+    if (this.secrets) {
+      await this.secrets.remove(QISHUI_SECRET_KEY).catch(() => {});
+    }
+    await this.commit({ loggedIn: false, nickname: '', activeModeId: 'for_you', playlists: [], liked: [], recent: [] });
   }
 }
 
 export class QishuiProvider {
   private http:HTTPClient;private expand:(url:string,signal:AbortSignal)=>Promise<string>;
   constructor(http:HTTPClient=requestJSON,expand=(url:string,signal:AbortSignal)=>bounded(async child=>{const result=await fetch(url,{signal:child});if(!result.ok)throw new Error('短链接展开失败');const expanded=result.url;try{await result.body?.cancel();}catch{/* RN may not expose a readable body. */}return expanded;},signal,12000)){this.http=http;this.expand=expand;}
-  async complete(input:string,signal:AbortSignal):Promise<QishuiPlaylist>{
+  async complete(input:string,signal:AbortSignal,cookieHeader?:string):Promise<QishuiPlaylist>{
     throwIfAborted(signal);let id=qishuiID(input);
     if(!id)id=urlID(shareURL(await this.expand(shareURL(input).toString(),signal)));
     if(!id)throw new Error('无法识别汽水短链接，请粘贴完整歌单地址或ID');
     let cursor='0',title='',total:number|undefined;const visited=new Set<string>(),tracks:Track[]=[];
     for(let page=0;page<100;page++){
       throwIfAborted(signal);if(visited.has(cursor))throw new Error('汽水歌单分页未推进，未导入不完整数据');visited.add(cursor);
-      const raw=row(await this.http('https://beta-luna.douyin.com/luna/playlist/detail',{method:'POST',headers:{'Content-Type':'application/json','User-Agent':'Luna/19.1.0 Android'},body:JSON.stringify({playlist_id:id,cursor,count:200})},signal));
+      const raw=row(await this.http('https://beta-luna.douyin.com/luna/playlist/detail',{method:'POST',headers:{'Content-Type':'application/json','User-Agent':'Luna/19.1.0 Android',...(cookieHeader?{Cookie:cookieHeader}:{})},body:JSON.stringify({playlist_id:id,cursor,count:200})},signal));
       throwIfAborted(signal);const playlist=row(raw.playlist),count=Number(playlist.count_tracks);
       if(identifier(playlist.id)!==id||!Number.isInteger(count)||count<0||count>20000||!Array.isArray(raw.media_resources)||typeof raw.has_more!=='boolean')throw new Error('无法完整读取此汽水公开歌单');
       if(total===undefined){total=count;title=text(playlist.title??playlist.name)||'汽水公开歌单';}else if(total!==count)throw new Error('汽水歌单在读取中改变，请重试');

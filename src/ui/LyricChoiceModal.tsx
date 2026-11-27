@@ -44,20 +44,18 @@ export function LyricChoiceModal({services,track,onClose,inline=false}:{services
 
   const body=<View style={{flex:1}}>
     {!inline&&<LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>}
-    <View style={{alignSelf:'center',width:38,height:4.5,borderRadius:2.25,backgroundColor:s.subtle+'66',marginTop:10,marginBottom:4}}/>
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:20,paddingTop:6,paddingBottom:12,gap:12}}>
-      <View style={{flex:1,minWidth:0,gap:3}}>
+    <View style={{paddingHorizontal:20,paddingTop:14,paddingBottom:12,gap:10}}>
+      <Pressable accessibilityRole="button" accessibilityLabel="收起歌词选择" disabled={saving} onPress={onClose} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder,opacity:saving?.4:1}}>
+        <Ionicons name="chevron-back" size={16} color={s.ink}/>
+        <Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{inline?'返回播放选项':'返回'}</Text>
+      </Pressable>
+      <View style={{gap:3}}>
         <Text accessibilityRole="header" style={{fontSize:22,color:s.ink,fontWeight:'700',letterSpacing:-0.3}}>歌词来源与候选</Text>
         {!!track&&<View style={{flexDirection:'row',alignItems:'center',gap:5}}>
           <Ionicons name="musical-notes-outline" size={13} color={s.control}/>
           <Text numberOfLines={1} style={{flex:1,color:s.muted,fontSize:13}}>{track.title} · {track.artist}</Text>
         </View>}
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="收起歌词选择" disabled={saving} onPress={onClose} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',opacity:saving?.4:1}}>
-        <View style={{width:34,height:34,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center'}}>
-          <Ionicons name="close" size={19} color={s.ink}/>
-        </View>
-      </Pressable>
     </View>
 
     <FlatList ref={list} keyboardShouldPersistTaps="handled" data={items} keyExtractor={item=>trackKey(item.track.origin)} initialNumToRender={8} windowSize={5} contentContainerStyle={{paddingHorizontal:20,paddingBottom:48,gap:10}}

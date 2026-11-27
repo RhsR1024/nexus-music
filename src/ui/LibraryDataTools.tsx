@@ -112,7 +112,7 @@ export function LibraryDataTools({services,showStatistics=true}:{services:Servic
     </>}
     <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'600',marginLeft:6,marginTop:showStatistics?4:0}}>备份与云同步</Text>
     <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
-      {actionRow('导出音乐库备份','导出收藏、歌单、统计与偏好为 JSON','share-outline',()=>{void perform(exportBackup);},{highlight:true})}
+      {actionRow('导出音乐库备份','导出收藏、歌单、统计与偏好为 JSON','share-outline',()=>{void perform(exportBackup);})}
       {divider}
       {actionRow('恢复音枢备份','从本机备份文件还原音乐库与设置','refresh-outline',()=>{void perform(importBackup);})}
       {divider}

@@ -15,6 +15,7 @@ import {FeaturedDiscoverFeed} from './FeaturedDiscoverFeed.tsx';
 import {GlobalRadioModal} from './GlobalRadioModal.tsx';
 import {AudioMatchModal} from './AudioMatchModal.tsx';
 import {MVDetail} from './MVDetail.tsx';
+import {MVPlazaModal,type MVPlazaTab} from './MVPlazaModal.tsx';
 import {NeteasePodcastsModal} from './NeteasePodcastsModal.tsx';
 import {QishuiDiscoverSection} from './QishuiDiscoverSection.tsx';
 import {AccountFeatureSheet,type AccountFeatureKind} from './AccountFeatureSheet.tsx';
@@ -89,6 +90,7 @@ export function Discovery({
   const [banners,setBanners]=useState<readonly NeteaseBanner[]>([]),[bannerIndex,setBannerIndex]=useState(0);
   const [featuredData,setFeaturedData]=useState<FeaturedHomeData|null>(null),[featuredLoading,setFeaturedLoading]=useState(false),[featuredError,setFeaturedError]=useState('');
   const [activeMV,setActiveMV]=useState<VideoItem|null>(null);
+  const [mvPlazaTab,setMvPlazaTab]=useState<MVPlazaTab|null>(null);
   const [podcastsOpen,setPodcastsOpen]=useState(false);
   const [radioOpen,setRadioOpen]=useState(false);
   const [audioMatchOpen,setAudioMatchOpen]=useState(false);
@@ -96,6 +98,8 @@ export function Discovery({
   const [qishuiTab,setQishuiTab]=useState(false);
   const [showBackTop,setShowBackTop]=useState(false);
   const listRef=useRef<FlatList<Item>|null>(null);
+  const scrollOffsets=useRef<Record<string,number>>({});
+  const activeScrollKey=qishuiTab?'qishui':`${platform}:${view.kind}`;
   const bannerScroll=useRef<ScrollView|null>(null),bannerDragging=useRef(false);
   const [category,setCategory]=useState<string>();
   const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[linkLoading,setLinkLoading]=useState(false),[importing,setImporting]=useState(false),[menuTrack,setMenuTrack]=useState<Track|null>(null);
@@ -107,13 +111,27 @@ export function Discovery({
   useEffect(()=>()=>{downloadOwner.current=null;},[]);
   const toast=useToast();
   const page=useRef(0),generation=useRef(0),pending=useRef(new AbortController()),importAbort=useRef(new AbortController()),linkAbort=useRef(new AbortController()),linkGeneration=useRef(0);
+  const lastHomePlatform=useRef(preferences.homePlatform);
 
-  // Sync homePlatform preference when updated externally on the main discovery tab.
+  // Sync homePlatform preference ONLY when explicitly changed externally (never override active Qishui or current platform selection).
   useEffect(()=>{
-    if(!initialCollection&&preferences.homePlatform&&preferences.homePlatform!==platform&&view.kind!=='detail'){
-      setPlatform(preferences.homePlatform);
+    if(!initialCollection&&preferences.homePlatform&&preferences.homePlatform!==lastHomePlatform.current){
+      lastHomePlatform.current=preferences.homePlatform;
+      if(!qishuiTab&&preferences.homePlatform!==platform&&view.kind!=='detail'){
+        setPlatform(preferences.homePlatform);
+      }
     }
   },[preferences.homePlatform]);
+
+  // Restore saved scroll offset when returning to a previously scrolled platform/view.
+  useEffect(()=>{
+    const saved=scrollOffsets.current[activeScrollKey]??0;
+    const id=requestAnimationFrame(()=>{
+      listRef.current?.scrollToOffset({offset:saved,animated:false});
+      setShowBackTop(saved>520);
+    });
+    return()=>cancelAnimationFrame(id);
+  },[activeScrollKey]);
 
   function selectPlatform(next:OnlinePlatform){
     setQishuiTab(false);
@@ -121,6 +139,7 @@ export function Discovery({
     setCategory(undefined);
     setFeaturedData(null);
     setView({kind:'featured'});
+    lastHomePlatform.current=next;
     if(!initialCollection){
       void services.preferences.update({homePlatform:next}).catch(()=>{});
     }
@@ -638,6 +657,7 @@ export function Discovery({
         onOpenMoreRankings={()=>setView({kind:'rankings'})}
         onOpenMoreAlbums={platform==='wy'?()=>{setView({kind:'albums'});}:()=>{setView({kind:'playlists'});}}
         onOpenMoreArtists={platform==='wy'?()=>{setView({kind:'artists'});}:()=>{setView({kind:'playlists'});}}
+        onOpenMoreMVs={platform==='wy'?tab=>setMvPlazaTab(tab):undefined}
         onOpenSongShelf={(title,shelfTracks)=>{setDescriptionOpen(false);setTotal(shelfTracks.length);setView({kind:'bannerSongs',id:`shelf-${title}`,title,artwork:shelfTracks[0]?.artwork,tracks:shelfTracks});}}
       />}
       </>}
@@ -646,7 +666,7 @@ export function Discovery({
   </View>;
 
   const content=<View testID="discovery-content" onLayout={event=>{const next=Math.max(1,event.nativeEvent.layout.width-40);setContentWidth(previous=>previous!==undefined&&Math.abs(previous-next)<.5?previous:next);}} style={{flex:1,backgroundColor:embedded?'transparent':theme.palette.background[0],paddingHorizontal:20,paddingTop:embedded?0:54}}>
-    <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'||qishuiTab?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=e.nativeEvent.contentOffset.y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
+    <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'||qishuiTab?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=Math.max(0,e.nativeEvent.contentOffset.y);scrollOffsets.current[activeScrollKey]=y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
       renderItem={({item,index})=>item.kind==='track'?<View testID={`discovery-track-${index}`} style={{flexDirection:'row',alignItems:'center',gap:8,paddingVertical:9}}>
         {(()=>{const key=item.key??`${index}-track`,checked=selectionHas(selection,key);return <>
         <Pressable accessibilityRole="button" onLongPress={()=>{setPicking(false);setSelection(selectionEnter(key));}} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else services.playTracks(tracks,index);}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放'}${item.track.title}`} accessibilityState={{selected:checked}} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',gap:12}}>
@@ -685,7 +705,7 @@ export function Discovery({
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 
-  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/><AccountFeatureSheet services={services} feature={accountFeature} onClose={()=>setAccountFeature(null)} onOpenAccounts={openAccounts} onOpenPlaylist={(plat,pl)=>{setPlatform(plat);openCollection(pl,false);}} onOpenArtist={(plat,ar)=>setNestedCollection({platform:plat,kind:'artist',collection:ar,returnLabel:'返回发现'})} onOpenAlbum={(plat,al)=>setNestedCollection({platform:plat,kind:'album',collection:al,returnLabel:'返回发现'})} onOpenMV={mv=>setActiveMV(mv)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
+  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{mvPlazaTab&&<MVPlazaModal services={services} visible initialTab={mvPlazaTab} onClose={()=>setMvPlazaTab(null)} onSelectMV={mv=>{setMvPlazaTab(null);setActiveMV(mv);}}/>}{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/><AccountFeatureSheet services={services} feature={accountFeature} onClose={()=>setAccountFeature(null)} onOpenAccounts={openAccounts} onOpenPlaylist={(plat,pl)=>{setPlatform(plat);openCollection(pl,false);}} onOpenArtist={(plat,ar)=>setNestedCollection({platform:plat,kind:'artist',collection:ar,returnLabel:'返回发现'})} onOpenAlbum={(plat,al)=>setNestedCollection({platform:plat,kind:'album',collection:al,returnLabel:'返回发现'})} onOpenMV={mv=>setActiveMV(mv)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

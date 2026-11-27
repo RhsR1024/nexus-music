@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
 internal object MusicWebLoginPolicy {
   const val DAILY_URL = "https://y.qq.com/n/ryqq_v2/qqmusic_skills"
   const val QQ_URL = "https://graph.qq.com/oauth2.0/authorize?client_id=100497308&redirect_uri=https%3A%2F%2Fy.qq.com%2Fportal%2Fwx_redirect.html%3Flogin_type%3D1%26surl%3Dhttps%253A%252F%252Fy.qq.com%252F&response_type=code&scope=all"
+  const val QISHUI_URL = "https://music.douyin.com/qishui"
 
   fun initialURL(provider: String, state: String? = null): String? = when (provider) {
     "wy" -> "https://music.163.com/m/login"
@@ -30,6 +31,7 @@ internal object MusicWebLoginPolicy {
       if (state == null) QQ_URL
       else if (Regex("^[A-Za-z0-9-]{1,128}$").matches(state)) "$QQ_URL&state=$state" else null
     }
+    "qishui" -> QISHUI_URL
     else -> null
   }
 
@@ -45,12 +47,17 @@ internal object MusicWebLoginPolicy {
       "wy" -> listOf("163.com", "163yun.com", "127.net", "126.net", "netease.com").any {
         host == it || host.endsWith(".$it")
       }
+      "qishui" -> listOf(
+        "douyin.com", "qishui.com", "bytedance.com", "snssdk.com", "iesdouyin.com",
+        "toutiao.com", "zijieapi.com", "bytegoofy.com", "douyinpic.com", "douyincdn.com", "byteimg.com"
+      ).any { host == it || host.endsWith(".$it") }
       else -> false
     }
   }
 
   fun cookieNames(provider: String): Set<String> = when (provider) {
     "tx" -> setOf("qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin", "euin")
+    "qishui" -> setOf("sessionid", "sessionid_ss", "sid_tt", "uid_tt", "uid_tt_ss", "passport_csrf_token", "ttwid", "odin_tt", "sid_guard")
     else -> setOf("MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid")
   }
 
@@ -65,6 +72,11 @@ internal object MusicWebLoginPolicy {
 
   fun ready(values: Map<String, String>, provider: String): Boolean {
     if (provider == "wy") return !values["MUSIC_U"].isNullOrEmpty()
+    if (provider == "qishui") {
+      val hasSession = !values["sessionid"].isNullOrEmpty() || !values["sessionid_ss"].isNullOrEmpty() || !values["sid_tt"].isNullOrEmpty()
+      val hasIdentity = !values["uid_tt"].isNullOrEmpty() || !values["uid_tt_ss"].isNullOrEmpty() || !values["sid_guard"].isNullOrEmpty()
+      return hasSession && hasIdentity
+    }
     if (provider != "tx") return false
     val loginType = values["login_type"]
     if (loginType != null && loginType != "1") return false
@@ -164,7 +176,7 @@ class NexusAuthWebActivity : Activity() {
       setOnClickListener { finishWith(Result.failure(RuntimeException("AUTH_CANCELLED"))) }
     }
     val titleView = TextView(this).apply {
-      text = if (dailyMode) "QQ 日推授权" else if (provider == "tx") "QQ 音乐登录" else "网易云音乐登录"
+      text = if (dailyMode) "QQ 日推授权" else if (provider == "tx") "QQ 音乐登录" else if (provider == "qishui") "汽水音乐登录" else "网易云音乐登录"
       textSize = 16f
       setTextColor(Color.BLACK)
       setPadding(24, 0, 0, 0)
@@ -190,6 +202,8 @@ class NexusAuthWebActivity : Activity() {
         } else {
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
         }
+      } else if (provider == "qishui") {
+        settings.userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
       }
       cm.setAcceptThirdPartyCookies(this, true)
       webViewClient = object : WebViewClient() {
@@ -224,10 +238,10 @@ class NexusAuthWebActivity : Activity() {
     if (finished) return
     val cm = CookieManager.getInstance()
     val allowed = MusicWebLoginPolicy.cookieNames(provider)
-    val urls = if (provider == "tx") {
-      listOf("https://qq.com/", "https://graph.qq.com/", "https://y.qq.com/")
-    } else {
-      listOf("https://163.com/", "https://interface.music.163.com/", "https://music.163.com/")
+    val urls = when (provider) {
+      "tx" -> listOf("https://qq.com/", "https://graph.qq.com/", "https://y.qq.com/")
+      "qishui" -> listOf("https://music.douyin.com/", "https://douyin.com/", "https://sso.douyin.com/", "https://qishui.com/", "https://beta-luna.douyin.com/")
+      else -> listOf("https://163.com/", "https://interface.music.163.com/", "https://music.163.com/")
     }
     val merged = mutableMapOf<String, String>()
     for (u in urls) {

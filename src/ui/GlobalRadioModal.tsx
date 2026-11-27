@@ -45,6 +45,7 @@ export function GlobalRadioModal({
 }) {
   const insets = useSafeAreaInsets();
   const radioState = useSyncExternalStore(services.radioStore.subscribe, services.radioStore.getSnapshot);
+  const playback = useSyncExternalStore(services.playback.controller.subscribe, services.playback.controller.getSnapshot);
 
   const [tab, setTab] = useState<DrawerTab>('discover');
   const [listOnly, setListOnly] = useState(false);
@@ -54,6 +55,8 @@ export function GlobalRadioModal({
   const [selected, setSelected] = useState<RadioStation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [playError, setPlayError] = useState('');
+  const [connectingUuid, setConnectingUuid] = useState<string | null>(null);
   const [commandJson, setCommandJson] = useState('');
 
   const [pickerKind, setPickerKind] = useState<FacetKind | null>(null);
@@ -61,6 +64,30 @@ export function GlobalRadioModal({
   const [facetLoading, setFacetLoading] = useState(false);
   const cmdSeq = useRef(0);
   const searchAbort = useRef<AbortController | null>(null);
+  const connectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const currentEntry = playback.queue.entries.find(e => e.id === playback.queue.currentId);
+  const activeRadioUuid = currentEntry?.track.origin.kind === 'radio' ? currentEntry.track.origin.id : null;
+  const activeRadioPlaying = !!activeRadioUuid && playback.intent === 'playing' && !playback.buffering && playback.phase === 'ready';
+  const activeRadioBuffering = !!activeRadioUuid && playback.intent === 'playing' && (playback.buffering || playback.phase === 'resolving');
+
+  // Clear optimistic connecting spinner once playback starts, fails, pauses, or switches track
+  useEffect(() => {
+    if (!connectingUuid) return;
+    if (activeRadioUuid === connectingUuid && activeRadioPlaying) {
+      if (connectTimer.current) { clearTimeout(connectTimer.current); connectTimer.current = null; }
+      setConnectingUuid(null);
+      setPlayError('');
+    } else if (activeRadioUuid === connectingUuid && playback.phase === 'error') {
+      if (connectTimer.current) { clearTimeout(connectTimer.current); connectTimer.current = null; }
+      setConnectingUuid(null);
+      setPlayError(playback.error || '该电台音频流暂时无法连接或已失效，请切换其他电台重试');
+    } else if (activeRadioUuid && activeRadioUuid !== connectingUuid) {
+      setConnectingUuid(null);
+    }
+  }, [connectingUuid, activeRadioUuid, activeRadioPlaying, playback.phase, playback.error]);
+
+  useEffect(() => () => { if (connectTimer.current) clearTimeout(connectTimer.current); }, []);
 
   const sendCommand = (cmd: Record<string, unknown>) => {
     cmdSeq.current += 1;
@@ -126,12 +153,37 @@ export function GlobalRadioModal({
 
   function playStation(station: RadioStation) {
     setSelected(station);
+    setPlayError('');
     if (station.lat !== undefined && station.lng !== undefined) {
       sendCommand({ type: 'focus', lat: station.lat, lng: station.lng, zoom: 1.45 });
     }
+    // Toggle pause if tapping the already-playing station
+    if (activeRadioUuid === station.uuid && activeRadioPlaying) {
+      services.playback.controller.pause();
+      setConnectingUuid(null);
+      return;
+    }
+    if (connectTimer.current) clearTimeout(connectTimer.current);
+    setConnectingUuid(station.uuid);
+    connectTimer.current = setTimeout(() => {
+      setConnectingUuid(prev => {
+        if (prev === station.uuid) {
+          setPlayError(`「${station.name}」连接超时，可能该电台源暂时离线，请尝试其他电台`);
+          return null;
+        }
+        return prev;
+      });
+    }, 15000);
     void services.radioStore.recordRecent(station).catch(() => {});
     void services.radioApi.reportClick(station.uuid, new AbortController().signal).catch(() => {});
     services.playTracks([stationToTrack(station)], 0);
+  }
+
+  function isStationConnecting(uuid: string) {
+    return connectingUuid === uuid || (activeRadioUuid === uuid && activeRadioBuffering);
+  }
+  function isStationPlaying(uuid: string) {
+    return activeRadioUuid === uuid && activeRadioPlaying;
   }
 
   function roamRandom() {
@@ -296,14 +348,26 @@ export function GlobalRadioModal({
             ListHeaderComponent={
               <>
                 {!!error && <Text style={{ color: '#FF8A80', fontSize: 12.5, marginBottom: 6 }}>{error}</Text>}
-                {tab === 'discover' && featuredStation && (
+                {!!playError && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,107,129,0.16)', borderWidth: 1, borderColor: 'rgba(255,107,129,0.35)', marginBottom: 8 }}>
+                    <Ionicons name="alert-circle-outline" size={16} color="#FF8A80" />
+                    <Text style={{ flex: 1, color: '#FFD6D6', fontSize: 12, lineHeight: 17 }}>{playError}</Text>
+                    <Pressable onPress={() => setPlayError('')} style={{ padding: 2 }}><Ionicons name="close" size={14} color="#FFD6D6" /></Pressable>
+                  </View>
+                )}
+                {tab === 'discover' && featuredStation && (() => {
+                  const busy = isStationConnecting(featuredStation.uuid);
+                  const playing = isStationPlaying(featuredStation.uuid);
+                  return (
                   <View style={styles.tunedCard}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       <View style={styles.tunedIcon}>
                         <Ionicons name="radio" size={22} color="#5CE5CF" />
                       </View>
                       <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={{ color: '#5CE5CF', fontSize: 11, fontWeight: '700' }}>为你调频</Text>
+                        <Text style={{ color: '#5CE5CF', fontSize: 11, fontWeight: '700' }}>
+                          {busy ? '正在连接电台音频流…' : playing ? '正在收听' : '为你调频'}
+                        </Text>
                         <Text numberOfLines={1} style={{ color: '#F2F9FA', fontSize: 16, fontWeight: '700' }}>{featuredStation.name}</Text>
                         <Text numberOfLines={1} style={{ color: '#9BB4BF', fontSize: 12 }}>
                           {[featuredStation.country, featuredStation.state].filter(Boolean).join(' · ') || '全球广播'}
@@ -337,35 +401,47 @@ export function GlobalRadioModal({
                           <Ionicons name={services.radioStore.isFavorite(featuredStation.uuid) ? 'heart' : 'heart-outline'} size={19} color={services.radioStore.isFavorite(featuredStation.uuid) ? '#FF6B81' : '#C3DCE4'} />
                         </Pressable>
                         <Pressable
+                          testID="radio-featured-play"
                           accessibilityRole="button"
-                          accessibilityLabel={`播放电台 ${featuredStation.name}`}
+                          accessibilityLabel={busy ? `正在加载电台 ${featuredStation.name}` : playing ? `暂停电台 ${featuredStation.name}` : `播放电台 ${featuredStation.name}`}
                           onPress={() => playStation(featuredStation)}
-                          style={styles.playCircle}
+                          style={[styles.playCircle, { paddingLeft: busy || playing ? 0 : 2 }]}
                         >
-                          <Ionicons name="play" size={18} color="#082028" />
+                          {busy ? <ActivityIndicator size="small" color="#082028" /> : <Ionicons name={playing ? 'pause' : 'play'} size={18} color="#082028" />}
                         </Pressable>
                       </View>
                     </View>
                   </View>
-                )}
+                  );
+                })()}
               </>
             }
             renderItem={({ item }) => {
               const fav = services.radioStore.isFavorite(item.uuid);
               const isSelected = selected?.uuid === item.uuid;
+              const busy = isStationConnecting(item.uuid);
+              const playing = isStationPlaying(item.uuid);
               return (
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => playStation(item)}
-                  style={[styles.stationRow, isSelected && { borderColor: '#5CE5CF66', backgroundColor: '#132D3B' }]}
+                  style={[styles.stationRow, (isSelected || playing) && { borderColor: '#5CE5CF66', backgroundColor: '#132D3B' }]}
                 >
-                  <View style={styles.stationBadge}>
-                    <Ionicons name="radio-outline" size={17} color="#5CE5CF" />
+                  <View style={[styles.stationBadge, playing && { backgroundColor: 'rgba(92,229,207,0.22)' }]}>
+                    {busy ? (
+                      <ActivityIndicator size="small" color="#5CE5CF" />
+                    ) : (
+                      <Ionicons name={playing ? 'pause' : 'radio-outline'} size={17} color="#5CE5CF" />
+                    )}
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text numberOfLines={1} style={{ color: '#EDF6F8', fontSize: 14.5, fontWeight: '600' }}>{item.name}</Text>
-                    <Text numberOfLines={1} style={{ color: '#8CA7B4', fontSize: 12 }}>
-                      {[item.country, item.codec, item.bitrate > 0 ? `${item.bitrate}kbps` : ''].filter(Boolean).join(' · ')}
+                    <Text numberOfLines={1} style={{ color: busy || playing ? '#5CE5CF' : '#8CA7B4', fontSize: 12 }}>
+                      {busy
+                        ? '正在连接音频流…'
+                        : playing
+                          ? '正在播放 · 点击暂停'
+                          : [item.country, item.codec, item.bitrate > 0 ? `${item.bitrate}kbps` : ''].filter(Boolean).join(' · ')}
                     </Text>
                   </View>
                   <Pressable accessibilityRole="button" onPress={() => void services.radioStore.toggleFavorite(item)} style={{ padding: 6 }}>

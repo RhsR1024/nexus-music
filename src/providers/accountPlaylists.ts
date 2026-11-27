@@ -97,14 +97,14 @@ export class AccountPlaylists {
       throw new AccountPlaylistError('incomplete');
     }catch(error){return this.failure(error,check);}
   }
-  async preview(account:MusicAccount,playlist:AccountPlaylist,signal:AbortSignal):Promise<AccountPlaylistPreview>{
+  async preview(account:MusicAccount,playlist:AccountPlaylist,signal:AbortSignal,options?:{lenient?:boolean}):Promise<AccountPlaylistPreview>{
     const {operation,check}=this.begin(account,signal);
     try{
       if(!this.catalogs.get(account)?.includes(playlist))throw new AccountPlaylistError('account_changed');
       const reader=account.platform==='tx'?this.deps.qq:account.platform==='kg'?this.deps.kugou:undefined;
       if(reader){
         const session=await this.deps.accounts.session(account.id);check();
-        const tracks=Object.freeze(await reader.tracks(account,session,playlist,signal,check));check();
+        const tracks=Object.freeze(account.platform==='tx'&&this.deps.qq?await this.deps.qq.tracks(account,session,playlist,signal,check,options):await reader.tracks(account,session,playlist,signal,check));check();
         const result=Object.freeze({playlist,tracks});this.previews.set(result,{account,operation});return result;
       }
       const {auth}=await this.open(account,signal,check);

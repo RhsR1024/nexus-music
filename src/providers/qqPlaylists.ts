@@ -123,24 +123,48 @@ export class QQPlaylists{
     }
     return fail();
   }
-  async tracks(account:MusicAccount,session:MusicSession,playlist:AccountPlaylist,signal:AbortSignal,check:()=>void):Promise<Track[]>{
+  async tracks(account:MusicAccount,session:MusicSession,playlist:AccountPlaylist,signal:AbortSignal,check:()=>void,options?:{lenient?:boolean}):Promise<Track[]>{
+    const lenient=options?.lenient===true;
+    const maxTracks=lenient?50000:10000;
+    const maxPages=lenient?500:100;
     const {request,detail}=await this.open(account,session,signal,check),tracks:Track[]=[],seen=new Set<string>();let offset=0,expected:number|undefined;
-    for(let page=0;page<100;page++){
+    for(let page=0;page<maxPages;page++){
       const data=(await request({detail:detail(playlist.id,offset)})).detail!,rows=data.songlist??data.songList??data.track_list;
-      if(!Array.isArray(rows)||rows.length>100)fail();
+      if(!Array.isArray(rows)||(!lenient&&rows.length>100))fail();
       const rawTotal=data.total_song_num??data.songnum??data.totalnum;
-      if(rawTotal!=null){const n=total(rawTotal);if(expected!==undefined&&n!==expected)fail();expected=n;}
-      else if(expected!==undefined)fail();
-      for(const value of rows){
-        const song=row(row(value).track_info??value);if(!mid(song.mid)||!mid(row(song.file).media_mid)||!song.album||typeof song.album!=='object'||Array.isArray(song.album)||seen.has(song.mid))fail();
-        seen.add(song.mid);try{tracks.push(cleanTrack(onlineTrack('tx',song)));}catch{return fail();}
+      if(rawTotal!=null){
+        const n=lenient?(Number.isSafeInteger(Number(rawTotal))&&Number(rawTotal)>=0&&Number(rawTotal)<=maxTracks?Number(rawTotal):undefined):total(rawTotal);
+        if(!lenient&&expected!==undefined&&n!==expected)fail();
+        if(n!==undefined&&expected===undefined)expected=n;
       }
-      offset+=rows.length;if(offset>10000)fail();
-      const hasMore=data.hasmore==null?undefined:more(data.hasmore);
+      else if(!lenient&&expected!==undefined)fail();
+      let addedThisPage=0;
+      for(const value of rows){
+        const song=row(row(value).track_info??value);
+        if(lenient){
+          if(!mid(song.mid)||seen.has(song.mid))continue;
+          const fileObj=row(song.file);
+          const safeFile=mid(fileObj.media_mid)?fileObj:{...fileObj,media_mid:song.mid};
+          const safeAlbum=song.album&&typeof song.album==='object'&&!Array.isArray(song.album)?song.album:{mid:'',name:''};
+          seen.add(song.mid);
+          try{tracks.push(cleanTrack(onlineTrack('tx',{...song,file:safeFile,album:safeAlbum})));addedThisPage++;}catch{}
+          continue;
+        }
+        if(!mid(song.mid)||!mid(row(song.file).media_mid)||!song.album||typeof song.album!=='object'||Array.isArray(song.album)||seen.has(song.mid))fail();
+        seen.add(song.mid);try{tracks.push(cleanTrack(onlineTrack('tx',song)));addedThisPage++;}catch{return fail();}
+      }
+      offset+=rows.length;if(offset>maxTracks)fail();
+      const hasMore=data.hasmore==null?undefined:(lenient?(data.hasmore===true||data.hasmore===1||data.hasmore==='1'):more(data.hasmore));
+      if(lenient){
+        if(!rows.length||hasMore===false)return tracks;
+        if(expected!==undefined&&offset>=expected)return tracks;
+        if(addedThisPage===0&&rows.length<100)return tracks;
+        continue;
+      }
       if(expected!==undefined&&offset>=expected){if(offset!==expected||hasMore===true)fail();return tracks;}
       if(hasMore===false){if(expected!==undefined&&offset!==expected)fail();return tracks;}
       if(!rows.length)fail();
     }
-    return fail();
+    return lenient&&tracks.length>0?tracks:fail();
   }
 }

@@ -48,7 +48,7 @@ export function LibraryHome({
   const [tab,setTab]=useState<'favorites'|'history'|'playlists'|'albums'>('favorites');
   const [selected,setSelected]=useState<string|null>(null);
   const [composerOpen,setComposerOpen]=useState(true);
-  const [dailyExpanded,setDailyExpanded]=useState(false);
+  const [dailyExpanded,setDailyExpanded]=useState(true);
   const [playlistQuery,setPlaylistQuery]=useState('');
   const [playlistSort,setPlaylistSort]=useState<PlaylistSort>('default');
   const [name,setName]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[visibleCount,setVisibleCount]=useState(20);

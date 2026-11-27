@@ -38,6 +38,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const [qishuiNick,setQishuiNick]=useState(qishuiAccount.nickname);
   const [qishuiLink,setQishuiLink]=useState('');
   const [qishuiBusy,setQishuiBusy]=useState(false);
+  const [qishuiLoggingIn,setQishuiLoggingIn]=useState(false);
   const [qishuiMsg,setQishuiMsg]=useState('');
   const [error,setError]=useState('');
   const [verifying,setVerifying]=useState('');
@@ -91,12 +92,26 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
       if(verifyController.current===controller){verifyController.current=null;setVerifying('');}
     });
   };
+  const loginQishuiAccount=async()=>{
+    if(qishuiLoggingIn||waiting)return;
+    setQishuiLoggingIn(true);setQishuiMsg('');setError('');
+    try{
+      const next=await services.loginQishui();
+      setQishuiMsg(`汽水音乐已登录（${next.nickname||'汽水音乐用户'}），会话凭据已安全保存至本机钥匙串。`);
+    }catch(e){
+      const code=typeof e==='object'&&e?String((e as {code?:unknown}).code??''):'';
+      if(code==='AUTH_CANCELLED'){setQishuiMsg('已取消汽水音乐扫码登录');}
+      else if(code==='AUTH_EXPIRED'){setQishuiMsg('登录页面已超时，请重新打开扫码登录');}
+      else{setQishuiMsg(e instanceof Error?e.message:'汽水音乐登录未完成，请重试');}
+    }finally{setQishuiLoggingIn(false);}
+  };
   const bindQishuiPlaylist=async()=>{
     const raw=qishuiLink.trim();
     if(!raw||qishuiBusy)return;
     setQishuiBusy(true);setQishuiMsg('');
     try{
-      const pl=await services.qishui.complete(raw,new AbortController().signal);
+      const cookieHeader=await services.qishuiAccount.sessionCookieHeader();
+      const pl=await services.qishui.complete(raw,new AbortController().signal,cookieHeader);
       await services.qishuiAccount.bindPlaylist(pl);
       setQishuiLink('');
       setQishuiMsg(`已绑定汽水歌单「${pl.title}」（${pl.tracks.length} 首），可直接在发现页「汽水」中点击播放。`);
@@ -196,7 +211,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     <View testID="music-accounts-platform-tabs" style={[{flexDirection:'row',padding:4,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:4},s.cardShadow]}>
       {tabs.map(tab=>{
         const selected=selectedPlatform===tab.id;
-        const count=tab.id==='qishui'?qishuiAccount.playlists.length:accounts.filter(a=>a.platform===tab.id).length;
+        const count=tab.id==='qishui'?(qishuiAccount.loggedIn?1:0)+qishuiAccount.playlists.length:accounts.filter(a=>a.platform===tab.id).length;
         return <Pressable key={tab.id} testID={`accounts-tab-${tab.id}`} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{selected}} onPress={()=>switchPlatform(tab.id)} style={{flex:1,minHeight:40,borderRadius:14,backgroundColor:selected?s.accentSoft:'transparent',borderWidth:selected?1:0,borderColor:selected?s.accent+'44':'transparent',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6}}>
           <Ionicons name={tab.icon} size={14} color={selected?s.accent:s.muted}/>
           <Text numberOfLines={1} style={{fontSize:13,fontWeight:selected?'700':'500',color:selected?s.accent:s.ink}}>{tab.label}</Text>
@@ -236,56 +251,82 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     {selectedPlatform==='tx'&&renderWebProviderCard(txTab)}
     {selectedPlatform==='kg'&&<KugouAccountCard services={services} disabled={webWaiting||wyQrWaiting||dailyWaiting||transferWaiting} onRevealQr={onRevealQr}/>}
 
-    {selectedPlatform==='qishui'&&<View style={[{borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,padding:16,gap:12},s.cardShadow]}>
-      <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
-        <View style={{width:42,height:42,borderRadius:14,backgroundColor:qsTab.tint,alignItems:'center',justifyContent:'center'}}>
-          <Ionicons name="sparkles-outline" size={21} color={qsTab.ink}/>
+    {selectedPlatform==='qishui'&&<View style={[{borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+      <View style={{padding:16,gap:12}}>
+        <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
+          <View style={{width:42,height:42,borderRadius:14,backgroundColor:qsTab.tint,alignItems:'center',justifyContent:'center'}}>
+            <Ionicons name="sparkles-outline" size={21} color={qsTab.ink}/>
+          </View>
+          <View style={{flex:1,minWidth:0,gap:3}}>
+            <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+              <Text style={{fontSize:17,fontWeight:'700',color:s.ink}}>汽水音乐账号</Text>
+              <View style={{paddingHorizontal:8,paddingVertical:2,borderRadius:10,backgroundColor:qishuiAccount.loggedIn?okBg:s.chip,borderWidth:1,borderColor:qishuiAccount.loggedIn?okColor+'33':s.chipBorder}}>
+                <Text style={{fontSize:11,fontWeight:'700',color:qishuiAccount.loggedIn?okColor:s.muted}}>{qishuiAccount.loggedIn?'已扫码登录':'未登录'}</Text>
+              </View>
+            </View>
+            <Text style={{fontSize:12,color:s.muted}}>已绑定 {qishuiAccount.playlists.length} 个歌单 · {qishuiAccount.liked.length} 首喜欢 · 支持抖音扫码登录</Text>
+          </View>
         </View>
-        <View style={{flex:1,gap:2}}>
-          <Text style={{fontSize:17,fontWeight:'700',color:s.ink}}>汽水音乐 · 漫游与歌单绑定</Text>
-          <Text style={{fontSize:12,color:s.muted}}>已绑定 {qishuiAccount.playlists.length} 个公开歌单 · {qishuiAccount.liked.length} 首喜欢</Text>
+        {qishuiAccount.loggedIn&&<View style={{flexDirection:'row',alignItems:'center',gap:12,padding:12,borderRadius:16,backgroundColor:s.dark?'rgba(255,255,255,0.05)':'rgba(42,36,31,0.035)'}}>
+          <Cover services={services} url={qishuiAccount.avatar} size={42} radius={21} fallbackText={qishuiAccount.nickname||'汽水'} testID="music-account-avatar-qishui"/>
+          <View style={{flex:1,minWidth:0,gap:2}}>
+            <Text numberOfLines={1} style={{fontSize:15,fontWeight:'700',color:s.ink}}>{qishuiAccount.nickname||'汽水音乐用户'}</Text>
+            <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>抖音 / 汽水网页会话已安全保存在本机钥匙串</Text>
+          </View>
+          <Pressable testID="remove-music-account-qishui" accessibilityRole="button" accessibilityLabel="退出汽水音乐账号" onPress={()=>{void services.qishuiAccount.logout().then(()=>setQishuiMsg('已退出汽水音乐登录'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}>
+            <Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text>
+          </Pressable>
+        </View>}
+        <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>
+          <Pressable testID="login-music-account-qishui" accessibilityRole="button" accessibilityLabel="汽水音乐抖音扫码登录" disabled={qishuiLoggingIn||waiting} onPress={()=>{void loginQishuiAccount();}} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:qishuiLoggingIn||waiting?.6:1}}>
+            {qishuiLoggingIn?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="qr-code-outline" size={17} color="#FFFFFF"/>}
+            <Text style={{fontSize:14.5,fontWeight:'700',color:'#FFFFFF'}}>{qishuiLoggingIn?'等待抖音扫码登录…':qishuiAccount.loggedIn?'重新扫码登录':'抖音扫码 / 网页登录汽水'}</Text>
+          </Pressable>
         </View>
+        <Text style={{fontSize:12,lineHeight:18,color:s.muted}}>
+          点击上方按钮将打开汽水音乐官方网页登录页（桌面模式直接展示抖音扫码二维码，也支持手机验证码），确认后自动保存本机会话；亦可直接粘贴任意汽水歌单链接绑定到发现页畅听。
+        </Text>
       </View>
-      <Text style={{fontSize:12,lineHeight:18,color:s.muted}}>
-        汽水官方 OAuth 登录接口需要闭源商业合作 SDK 与私有密钥；音枢支持免登录直接畅享 12 种场景漫游、绑定任意汽水公开歌单直达播放，并由 LX 多音源跨平台自动解析高音质流。
-      </Text>
-      <View style={{flexDirection:'row',gap:8}}>
-        <TextInput
-          accessibilityLabel="汽水展示昵称"
-          placeholder="可选：设置本机展示昵称"
-          placeholderTextColor={s.subtle}
-          value={qishuiNick}
-          onChangeText={setQishuiNick}
-          style={{flex:1,color:s.ink,backgroundColor:s.inputBg,paddingHorizontal:12,paddingVertical:9,borderRadius:12,borderWidth:1,borderColor:s.cardBorder,fontSize:13.5}}
-        />
-        <Pressable accessibilityRole="button" onPress={()=>{void services.qishuiAccount.setNickname(qishuiNick).then(()=>setQishuiMsg('汽水昵称已保存'));}} style={{paddingHorizontal:14,borderRadius:12,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,justifyContent:'center'}}>
-          <Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>保存</Text>
-        </Pressable>
+      <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>
+      <View style={{padding:16,gap:12}}>
+        <View style={{flexDirection:'row',gap:8}}>
+          <TextInput
+            accessibilityLabel="汽水展示昵称"
+            placeholder="可选：自定义展示昵称"
+            placeholderTextColor={s.subtle}
+            value={qishuiNick}
+            onChangeText={setQishuiNick}
+            style={{flex:1,color:s.ink,backgroundColor:s.inputBg,paddingHorizontal:12,paddingVertical:9,borderRadius:12,borderWidth:1,borderColor:s.cardBorder,fontSize:13.5}}
+          />
+          <Pressable accessibilityRole="button" onPress={()=>{void services.qishuiAccount.setNickname(qishuiNick).then(()=>setQishuiMsg('汽水昵称已保存'));}} style={{paddingHorizontal:14,borderRadius:12,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,justifyContent:'center'}}>
+            <Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>保存</Text>
+          </Pressable>
+        </View>
+        <View style={{flexDirection:'row',gap:8}}>
+          <TextInput
+            testID="qishui-account-bind-input"
+            accessibilityLabel="绑定汽水公开歌单链接或ID"
+            placeholder="粘贴汽水歌单分享链接或 ID"
+            placeholderTextColor={s.subtle}
+            value={qishuiLink}
+            onChangeText={setQishuiLink}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={{flex:1,color:s.ink,backgroundColor:s.inputBg,paddingHorizontal:12,paddingVertical:9,borderRadius:12,borderWidth:1,borderColor:s.cardBorder,fontSize:13.5}}
+          />
+          <Pressable accessibilityRole="button" disabled={qishuiBusy||!qishuiLink.trim()} onPress={()=>{void bindQishuiPlaylist();}} style={{paddingHorizontal:15,borderRadius:12,backgroundColor:s.control,justifyContent:'center',opacity:qishuiBusy||!qishuiLink.trim()?.45:1}}>
+            <Text style={{color:'#FFFFFF',fontSize:13,fontWeight:'700'}}>{qishuiBusy?'读取中…':'绑定'}</Text>
+          </Pressable>
+        </View>
+        {!!qishuiMsg&&<Text testID="qishui-account-status" style={{color:s.accent,fontSize:12.5,lineHeight:18}}>{qishuiMsg}</Text>}
+        {qishuiAccount.playlists.length>0&&<View style={{gap:6}}>
+          {qishuiAccount.playlists.map(pl=><View key={pl.id} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:6,borderTopWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
+            <Cover services={services} url={pl.artwork} size={38} radius={8} fallbackText={pl.title}/>
+            <View style={{flex:1}}><Text numberOfLines={1} style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{pl.title}</Text><Text style={{color:s.muted,fontSize:11.5}}>{pl.trackCount} 首</Text></View>
+            <Pressable accessibilityRole="button" onPress={()=>Alert.alert('解除绑定？',`从汽水列表移除「${pl.title}」？`,[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void services.qishuiAccount.removePlaylist(pl.id);}}])} style={{padding:6}}><Ionicons name="trash-outline" size={16} color={s.muted}/></Pressable>
+          </View>)}
+        </View>}
       </View>
-      <View style={{flexDirection:'row',gap:8}}>
-        <TextInput
-          testID="qishui-account-bind-input"
-          accessibilityLabel="绑定汽水公开歌单链接或ID"
-          placeholder="粘贴汽水公开歌单分享链接或 ID"
-          placeholderTextColor={s.subtle}
-          value={qishuiLink}
-          onChangeText={setQishuiLink}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={{flex:1,color:s.ink,backgroundColor:s.inputBg,paddingHorizontal:12,paddingVertical:9,borderRadius:12,borderWidth:1,borderColor:s.cardBorder,fontSize:13.5}}
-        />
-        <Pressable accessibilityRole="button" disabled={qishuiBusy||!qishuiLink.trim()} onPress={()=>{void bindQishuiPlaylist();}} style={{paddingHorizontal:15,borderRadius:12,backgroundColor:s.control,justifyContent:'center',opacity:qishuiBusy||!qishuiLink.trim()?.45:1}}>
-          <Text style={{color:'#FFFFFF',fontSize:13,fontWeight:'700'}}>{qishuiBusy?'读取中…':'绑定'}</Text>
-        </Pressable>
-      </View>
-      {!!qishuiMsg&&<Text style={{color:s.accent,fontSize:12.5,lineHeight:18}}>{qishuiMsg}</Text>}
-      {qishuiAccount.playlists.length>0&&<View style={{gap:6}}>
-        {qishuiAccount.playlists.map(pl=><View key={pl.id} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:6,borderTopWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
-          <Cover services={services} url={pl.artwork} size={38} radius={8} fallbackText={pl.title}/>
-          <View style={{flex:1}}><Text numberOfLines={1} style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{pl.title}</Text><Text style={{color:s.muted,fontSize:11.5}}>{pl.trackCount} 首</Text></View>
-          <Pressable accessibilityRole="button" onPress={()=>Alert.alert('解除绑定？',`从汽水列表移除「${pl.title}」？`,[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{void services.qishuiAccount.removePlaylist(pl.id);}}])} style={{padding:6}}><Ionicons name="trash-outline" size={16} color={s.muted}/></Pressable>
-        </View>)}
-      </View>}
     </View>}
 
     {/* Streamlined direct-in-Discovery guidance (Item 8) + optional collapsed manual offline import */}

@@ -80,6 +80,20 @@ export class VideoProvider{
   if(r.code!==200)throw Error('MV排行暂不可用');
   return this.mapNeteaseMVs(r.data);
  }
+ async allNetease(options:{area?:string;type?:string;order?:string;page?:number;limit?:number},signal:AbortSignal):Promise<VideoSearchPage>{
+  if(signal.aborted)throw Error('已取消');
+  const page=Math.max(1,Math.floor(options.page??1));
+  const limit=Math.min(50,Math.max(1,Math.floor(options.limit??20)));
+  const area=options.area||'全部';
+  const type=options.type||'全部';
+  const order=options.order||'最热';
+  const r=row(await this.http(queryURL('https://music.163.com/api/mv/all',{area,type,order,limit,offset:(page-1)*limit}),{headers:{Referer:'https://music.163.com/','User-Agent':DESKTOP_UA}},signal));
+  if(r.code!==200)throw Error('全部MV暂不可用');
+  const items=this.mapNeteaseMVs(r.data);
+  const total=typeof r.count==='number'&&Number.isSafeInteger(r.count)&&r.count>=0?r.count:undefined;
+  const hasMore=r.hasMore===true||(total!==undefined?page*limit<total:items.length>=limit);
+  return{items,page,total,hasMore};
+ }
  async resolveStream(platform:OnlinePlatform,item:VideoItem,resolution:VideoResolution,signal:AbortSignal,cookieHeader?:string):Promise<VideoStreamResolution>{
   if(signal.aborted)throw Error('已取消');
   if(platform!=='wy'||item.platform!=='wy')return{resolution,availableResolutions:[],reason:'该平台支持官方MV页面播放'};

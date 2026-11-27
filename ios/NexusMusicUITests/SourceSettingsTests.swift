@@ -116,6 +116,25 @@ final class SourceSettingsTests: XCTestCase {
     enter(page=="typography" || page=="equalizer" ? "playback" : appearancePages.contains(page) ? "appearance" : page)
     if page=="typography" || page=="equalizer"{enter(page)}else if appearancePages.contains(page){enter(page)}
   }
+  private func openNavidromeSources(_ app:XCUIApplication){
+    openSettings(app,page:"sources")
+    let navTab=app.descendants(matching:.any).matching(identifier:"sources-tab-navidrome").firstMatch
+    if navTab.waitForExistence(timeout:5) && !navTab.isSelected {
+      if navTab.isHittable { navTab.tap() } else { navTab.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).tap() }
+    }
+  }
+  private func openLocalAudioFromLibrary(_ app:XCUIApplication){
+    let tab=app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch
+    XCTAssertTrue(tab.waitForExistence(timeout:15));tab.tap()
+    let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
+    XCTAssertTrue(local.waitForExistence(timeout:15))
+    for _ in 0..<14 {
+      if local.isHittable && local.frame.maxY < app.frame.height - 150 { break }
+      app.swipeUp()
+    }
+    XCTAssertTrue(local.isHittable,"Local audio entry must scroll clear of the floating tab bar")
+    local.tap()
+  }
   private func openPhotoLyricSource(_ app:XCUIApplication){
     // IMG_4868 has no inline diagnostic row; the source entry lives in the
     // shared lyric settings panel, which the ellipsis menu opens.
@@ -585,7 +604,7 @@ final class SourceSettingsTests: XCTestCase {
       return (appVolume,deviceVolume)
     }
 
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let existing=app.buttons["移除连接：fixture-user"]
     if existing.exists {
       for _ in 0..<24 {if existing.isHittable{break};app.swipeUp()}
@@ -643,7 +662,7 @@ final class SourceSettingsTests: XCTestCase {
     reveal(appVolume,in:viewport)
     appVolume.coordinate(withNormalizedOffset:CGVector(dx:0.3,dy:0.5)).press(forDuration:0.05,thenDragTo:appVolume.coordinate(withNormalizedOffset:CGVector(dx:0.995,dy:0.5)))
     XCTAssertEqual(app.staticTexts["app-volume-value"].label,"100%")
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let cleanup=app.buttons["移除连接：fixture-user"];XCTAssertTrue(cleanup.waitForExistence(timeout:10))
     for _ in 0..<24 {if cleanup.isHittable{break};app.swipeUp()}
     XCTAssertTrue(cleanup.isHittable);cleanup.tap();app.alerts.buttons["移除"].tap()
@@ -682,7 +701,7 @@ final class SourceSettingsTests: XCTestCase {
       reveal(fixtureRemoval);fixtureRemoval.tap();app.alerts.buttons["删除"].tap()
       let removed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:fixtureRemoval);XCTAssertEqual(XCTWaiter.wait(for:[removed],timeout:10),.completed)
     }
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439");type(app.textFields["Navidrome用户名"],"fixture-user");type(app.secureTextFields["Navidrome密码"],"fixture-password")
     app.buttons["验证并保存连接"].tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
@@ -752,7 +771,7 @@ final class SourceSettingsTests: XCTestCase {
     remove.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(app.staticTexts["暂无已下载音频"].waitForExistence(timeout:10))
     let empty=XCTAttachment(screenshot:app.screenshot());empty.name="Download tasks and completed files empty after confirmed removal";empty.lifetime = .keepAlways;add(empty)
     app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-downloads"].exists);XCTAssertFalse(app.staticTexts["offline-section-pending"].exists,"Hidden task page must leave accessibility tree")
-    openSettings(app,page:"sources");let removeAccount=app.buttons["移除连接：fixture-user"];reveal(removeAccount);removeAccount.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
+    openNavidromeSources(app);let removeAccount=app.buttons["移除连接：fixture-user"];reveal(removeAccount);removeAccount.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
   }
   func testCrossPlatformLyrics() throws {
     try verifyCrossPlatformLyrics(sequentialTTML:false)
@@ -2380,7 +2399,7 @@ final class SourceSettingsTests: XCTestCase {
       let predicate=alternate.map{NSPredicate(format:"value CONTAINS %@ OR value CONTAINS %@",expected,$0)} ?? NSPredicate(format:"value CONTAINS %@",expected),expectation=XCTNSPredicateExpectation(predicate:predicate,object:status)
       let result=XCTWaiter.wait(for:[expectation],timeout:timeout);if result != .completed{image("Unexpected real MV media state for \(expected)")};XCTAssertEqual(result,.completed,"Actual MV media state: \(String(describing:status.value))")
     }
-    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;XCTAssertTrue(local.waitForExistence(timeout:15));local.tap()
+    openLocalAudioFromLibrary(app)
     let importer=app.buttons["导入音频文件"];XCTAssertTrue(importer.waitForExistence(timeout:10));importer.tap();selectLocalFixture("Synthetic Tagged Tone",in:app);XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
     let localField=app.textFields["搜索本地歌曲艺术家专辑"];XCTAssertTrue(localField.waitForExistence(timeout:10));localField.tap();for character in "Synthetic Tagged Tone"{localField.typeText(String(character))};localField.typeText("\n");let localTrack=app.buttons["local-track-0"];XCTAssertTrue(localTrack.waitForExistence(timeout:10));localTrack.tap();app.buttons["收起本地音频"].tap()
     let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:15));player.tap();XCTAssertTrue(app.staticTexts["Synthetic tagged tone"].firstMatch.waitForExistence(timeout:10))
@@ -4985,7 +5004,7 @@ final class SourceSettingsTests: XCTestCase {
       let previous=app.buttons.matching(NSPredicate(format:"label == %@ OR label == %@","删除离线文件"+suffix,"移除记录"+suffix)).firstMatch
       if previous.exists{reveal(previous);previous.tap();app.alerts.buttons["删除"].tap();XCTAssertTrue(waitForGone(previous,timeout:10))}
     }
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439");type(app.textFields["Navidrome用户名"],"fixture-user");type(app.secureTextFields["Navidrome密码"],"fixture-password")
     app.buttons["验证并保存连接"].tap();XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","连接成功")).firstMatch.waitForExistence(timeout:15))
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
@@ -5076,7 +5095,7 @@ final class SourceSettingsTests: XCTestCase {
     }
     XCTAssertTrue(app.staticTexts["暂无已下载音频"].waitForExistence(timeout:10))
     openSettings(app,page:"downloads");policy(1)
-    openSettings(app,page:"sources");let removeAccount=app.buttons["移除连接：fixture-user"];reveal(removeAccount);removeAccount.tap();app.alerts.buttons["移除"].tap()
+    openNavidromeSources(app);let removeAccount=app.buttons["移除连接：fixture-user"];reveal(removeAccount);removeAccount.tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
   }
 
@@ -5637,9 +5656,8 @@ final class SourceSettingsTests: XCTestCase {
   func testYLocalAudioFileImport() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)
-    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
-    let entry=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
-    XCTAssertTrue(entry.waitForExistence(timeout:15));entry.tap();app.buttons["导入音频文件"].tap()
+    openLocalAudioFromLibrary(app)
+    app.buttons["导入音频文件"].tap()
     // The picker may restore the previous directory without a Browse button.
     // Use the same real-row navigation as the image/font import paths.
     selectLocalFixture("Synthetic Tagged Tone",in:app)
@@ -5743,8 +5761,8 @@ final class SourceSettingsTests: XCTestCase {
     }
     let fixtureUser=artwork ? "fixture-photo":"fixture-user"
     openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":stage ? "player-layout-stage":photo ? "player-layout-photo":am ? "player-layout-am":"player-layout-am2");reveal(am2);am2.tap()
-    expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:am2);waitForExpectations(timeout:10)
-    openSettings(app,page:"sources")
+    XCTAssertTrue(waitForGone(app.staticTexts["settings-title-skins"],timeout:10),"Player layout selection must finish dismissing skins page")
+    openNavidromeSources(app)
     for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名",fixtureUser),("Navidrome密码","fixture-password")]{
       let field=label=="Navidrome密码" ? app.secureTextFields[label] : app.textFields[label]
       reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
@@ -5798,7 +5816,7 @@ final class SourceSettingsTests: XCTestCase {
       if shuffled{let button=app.buttons["随机：关"];reveal(button);button.tap()}
       reveal(close);close.tap()
       XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !close.exists && app.buttons["播放"].isHittable},object:nil)],timeout:8),.completed)
-      app.buttons["收起播放页"].tap();openSettings(app,page:"sources")
+      app.buttons["收起播放页"].tap();openNavidromeSources(app)
       let remove=app.buttons["移除连接：fixture-photo"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10));return
     }
     if stage {
@@ -5849,7 +5867,7 @@ final class SourceSettingsTests: XCTestCase {
       }
       selector.tap();if !beforeBackdrop{reveal(backdrop);backdrop.tap()};let original=element("stage-style-"+beforeStyle);reveal(original);original.tap();let cleanupClose=app.buttons["收起舞台样式"];reveal(cleanupClose);cleanupClose.tap()
       XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.buttons["收起播放页"].isHittable && !app.buttons["收起舞台样式"].exists},object:nil)],timeout:8),.completed)
-      app.buttons["收起播放页"].tap();openSettings(app,page:"sources")
+      app.buttons["收起播放页"].tap();openNavidromeSources(app)
       let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap();XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10));return
     }
     if photo {
@@ -5873,7 +5891,7 @@ final class SourceSettingsTests: XCTestCase {
       let restored=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.buttons["收起播放选项"].exists && element("photo-player").exists && app.buttons["播放"].isHittable},object:nil)
       XCTAssertEqual(XCTWaiter.wait(for:[restored],timeout:8),.completed,"The native options sheet must finish dismissing and restore the actual photo transport")
       XCTAssertTrue(app.buttons["播放"].isHittable);app.buttons["收起播放页"].tap()
-      openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+      openNavidromeSources(app);let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
       XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10));return
     }
     if classic {
@@ -5901,7 +5919,7 @@ final class SourceSettingsTests: XCTestCase {
       let restored=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.frame.height>app.frame.width && viewport.frame.minY>=app.frame.minY+20 && viewport.frame.maxY<=app.frame.maxY-10},object:app)
       XCTAssertEqual(XCTWaiter.wait(for:[restored],timeout:15),.completed)
       let close=app.buttons["收起播放页"];reveal(close);close.tap()
-      openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+      openNavidromeSources(app);let remove=app.buttons["移除连接：fixture-user"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
       XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
       return
     }
@@ -5946,7 +5964,7 @@ final class SourceSettingsTests: XCTestCase {
       XCUIDevice.shared.orientation = .portrait
       XCTAssertEqual(XCTWaiter.wait(for:[XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in app.frame.height>app.frame.width},object:nil)],timeout:10),.completed)
     }
-    app.buttons["收起播放页"].tap();openSettings(app,page:"sources")
+    app.buttons["收起播放页"].tap();openNavidromeSources(app)
     app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
     openSettings(app,page:"skins");let classic=element("player-layout-classic");reveal(classic);classic.tap()
@@ -5965,7 +5983,7 @@ final class SourceSettingsTests: XCTestCase {
     func image(_ name:String){let shot=XCTAttachment(screenshot:app.screenshot());shot.name=name;shot.lifetime = .keepAlways;add(shot)}
     func type(_ e:XCUIElement,_ value:String){reach(e);e.tap();if let old=e.value as? String,!old.isEmpty && !old.contains("服务器") && !old.contains("用户名"){e.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:old.count))};for c in value{e.typeText(String(c))};e.typeText("\n")}
     func connect(_ username:String){
-      openSettings(app,page:"sources")
+      openNavidromeSources(app)
       let prior=app.buttons["移除连接：\(username)"]
       if prior.exists{reach(prior);prior.tap();app.alerts.buttons["移除"].tap()}
       type(app.textFields["Navidrome服务器地址"],"http://127.0.0.1:18439")
@@ -6000,7 +6018,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertTrue(app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Browser song 50")).firstMatch.exists);image("Navidrome search and loaded song page restored after playlist browsing")
     connect("fixture-browser-two");XCTAssertTrue(item("album","browser-album-0").waitForExistence(timeout:10));XCTAssertFalse(app.buttons["返回歌手"].exists);XCTAssertFalse(app.buttons["返回Browser artist detail"].exists)
     tap("歌曲");let cleared=search.value as? String;XCTAssertTrue(cleared==""||cleared=="搜索自己的歌曲、歌手","An empty iOS field may expose its placeholder as the AX value; it must never retain the old query");image("Navidrome account switch clears saved navigation and search")
-    for username in ["fixture-browser","fixture-browser-two"] {openSettings(app,page:"sources");let remove=app.buttons["移除连接：\(username)"];reach(remove);remove.tap();app.alerts.buttons["移除"].tap()}
+    for username in ["fixture-browser","fixture-browser-two"] {openNavidromeSources(app);let remove=app.buttons["移除连接：\(username)"];reach(remove);remove.tap();app.alerts.buttons["移除"].tap()}
   }
   func testZNavidromePlaybackAndCredentials() throws {
     let app=XCUIApplication();app.launch()
@@ -6097,7 +6115,7 @@ final class SourceSettingsTests: XCTestCase {
     reveal(classic);classic.tap()
     let skinDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.staticTexts["settings-title-skins"])
     XCTAssertEqual(XCTWaiter.wait(for:[skinDismissed],timeout:10),.completed,"Skin selection must finish dismissing before navigating to sources")
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let address=app.textFields["Navidrome服务器地址"]
     XCTAssertTrue(address.waitForExistence(timeout:15))
     reveal(address)
@@ -6576,7 +6594,7 @@ final class SourceSettingsTests: XCTestCase {
     miniQueue.tap();XCTAssertTrue(app.buttons["收起队列"].waitForExistence(timeout:10));app.buttons["收起队列"].tap();XCTAssertEqual(miniToggle.label,"播放")
     let miniImage=XCTAttachment(screenshot:app.screenshot());miniImage.name="Four persisted mini controls and actual recording lyric";miniImage.lifetime = .keepAlways;add(miniImage)
     openSettings(app,page:"mini");miniChoose("mini-reset");app.buttons["settings-back"].tap();expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     for _ in 0..<45 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
     app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))
@@ -6685,7 +6703,7 @@ final class SourceSettingsTests: XCTestCase {
     for id in ["visual-global-motion","visual-motion"] {setSwitch(app.switches[id],false)}
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
     openSettings(app,page:"appearance");let follow=app.switches["appearance-cover-color"];reveal(follow);if follow.value as? String != "1"{follow.tap()}
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名","fixture-theme"),("Navidrome密码","fixture-password")] {
       let field=label=="Navidrome密码" ? app.secureTextFields[label] : app.textFields[label];reveal(field);field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
     }
@@ -6943,7 +6961,7 @@ final class SourceSettingsTests: XCTestCase {
     let restoredBase=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[restoredBase],timeout:10),.completed)
     openSettings(app,page:"background");reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"1","Global switch must preserve playback animation choice")
     setSwitch(persistedPlayer,false)
-    openSettings(app,page:"sources");let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
+    openNavidromeSources(app);let remove=app.buttons["移除连接：fixture-theme"];reveal(remove);remove.tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:15),"Wait for Keychain and repository removal to finish")
     let cleared=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["打开播放页"])
     XCTAssertEqual(XCTWaiter.wait(for:[cleared],timeout:10),.completed,"Removing the active account must clear its mini entry")
@@ -7580,13 +7598,12 @@ final class SourceSettingsTests: XCTestCase {
   func testSleepCustomWheelsPreserveActiveTimer() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)
-    app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
-    let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch
-    XCTAssertTrue(local.waitForExistence(timeout:15));local.tap();app.buttons["导入音频文件"].tap()
+    openLocalAudioFromLibrary(app)
+    app.buttons["导入音频文件"].tap()
     selectLocalFixture("Synthetic Tagged Tone",in:app)
     XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
     let search=app.textFields["搜索本地歌曲艺术家专辑"];XCTAssertTrue(search.waitForExistence(timeout:10));replaceText(search,with:"Synthetic Tagged Tone")
-    let track=app.buttons["local-track-0"];XCTAssertTrue(track.waitForExistence(timeout:10));track.tap();app.buttons["收起本地音频"].tap()
+    let track=app.buttons["local-track-0"];XCTAssertTrue(track.waitForExistence(timeout:10));track.tap();if app.buttons["收起本地音频"].waitForExistence(timeout:3){app.buttons["收起本地音频"].tap()}
     let player=app.buttons["打开播放页"].firstMatch;XCTAssertTrue(player.waitForExistence(timeout:10));player.tap()
     let pause=app.buttons["暂停"].firstMatch;XCTAssertTrue(pause.waitForExistence(timeout:15));pause.tap()
     app.buttons["更多播放控制"].tap();XCTAssertTrue(app.buttons["睡眠定时器"].waitForExistence(timeout:5));app.buttons["睡眠定时器"].tap()
@@ -7723,7 +7740,7 @@ final class SourceSettingsTests: XCTestCase {
       reveal(field,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
       field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
     }
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let remove=app.buttons["移除连接：fixture-user"]
     if remove.exists {
       reveal(remove,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
@@ -7790,7 +7807,7 @@ final class SourceSettingsTests: XCTestCase {
     let resumedClock=progress.value as? String
     XCTAssertNotEqual(resumedClock,stoppedClock,"Resuming after expiry must advance the same recording")
     app.buttons["收起播放页"].tap()
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let cleanup=app.buttons["移除连接：fixture-user"];reveal(cleanup,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
     cleanup.tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(cleanup.waitForNonExistence(timeout:10))
@@ -7811,7 +7828,7 @@ final class SourceSettingsTests: XCTestCase {
       reveal(field,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
       field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
     }
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let remove=app.buttons["移除连接：fixture-user"]
     if remove.exists {
       reveal(remove,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
@@ -7856,7 +7873,7 @@ final class SourceSettingsTests: XCTestCase {
     _ = try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=0")!)
     let close=app.buttons["返回播放选项"];close.tap();XCTAssertTrue(app.buttons["收起播放选项"].waitForExistence(timeout:5));app.buttons["收起播放选项"].tap()
     app.buttons["收起播放页"].tap()
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let cleanup=app.buttons["移除连接：fixture-user"];reveal(cleanup,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
     cleanup.tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(cleanup.waitForNonExistence(timeout:10))
@@ -7877,7 +7894,7 @@ final class SourceSettingsTests: XCTestCase {
       reveal(field,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
       field.tap();for character in value{field.typeText(String(character))};field.typeText("\n")
     }
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let remove=app.buttons["移除连接：fixture-user"]
     if remove.exists {
       reveal(remove,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
@@ -7933,7 +7950,7 @@ final class SourceSettingsTests: XCTestCase {
     _ = try? Data(contentsOf:URL(string:"http://127.0.0.1:18439/am-fixture-control?longQueue=0")!)
     app.buttons["返回播放选项"].tap();app.buttons["收起播放选项"].tap()
     app.buttons["收起播放页"].tap()
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let cleanup=app.buttons["移除连接：fixture-user"];reveal(cleanup,in:app.descendants(matching:.any).matching(identifier:"settings-viewport-sources").firstMatch)
     cleanup.tap();app.alerts.buttons["移除"].tap()
     XCTAssertTrue(cleanup.waitForNonExistence(timeout:10))
@@ -8152,7 +8169,7 @@ final class SourceSettingsTests: XCTestCase {
   func testTapeCoverPersistenceAndMainCoverScope() throws {
     let app=XCUIApplication();app.launch()
     selectClassicSourcePlayback(in:app)
-    openSettings(app,page:"sources")
+    openNavidromeSources(app)
     let existingFixtureAccount=app.buttons["移除连接：fixture-user"]
     let createdFixtureAccount = !existingFixtureAccount.exists
     if createdFixtureAccount {
@@ -8238,7 +8255,7 @@ final class SourceSettingsTests: XCTestCase {
     let off=XCTAttachment(screenshot:XCUIScreen.main.screenshot());off.name="Tape cover disabled returns ordinary cover";off.lifetime = .keepAlways;add(off)
     app.buttons["收起播放页"].firstMatch.tap()
     if createdFixtureAccount {
-      openSettings(app,page:"sources")
+      openNavidromeSources(app)
       let remove=app.buttons["移除连接：fixture-user"]
       XCTAssertTrue(remove.waitForExistence(timeout:10));remove.tap();app.alerts.buttons["移除"].tap()
       XCTAssertTrue(app.staticTexts["连接与凭据已移除"].waitForExistence(timeout:10))

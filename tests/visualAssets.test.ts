@@ -60,7 +60,7 @@ test('cleared in-flight palettes cannot block or remove a replacement request fo
 });
 test('visual preferences migrate old settings and reject out of range updates atomically',async()=>{
   let value:unknown={quality:'128k'};const repository={get:async<T>()=>value as T,put:async(_:string,next:unknown)=>{value=structuredClone(next);}} as unknown as Repository;
-  const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().coverRadius,defaults.coverRadius);assert.equal(preferences.getSnapshot().dynamicBackground,false);assert.equal(preferences.getSnapshot().tapeStyle,false);
+  const preferences=new PreferenceStore(repository);await preferences.restore();assert.equal(preferences.getSnapshot().coverRadius,defaults.coverRadius);assert.equal(preferences.getSnapshot().dynamicBackground,defaults.dynamicBackground);assert.equal(preferences.getSnapshot().tapeStyle,false);
   await preferences.update({backgroundStyle:'image',backgroundOpacity:.6,playerBackground:'photo',coverRadius:48,tapeStyle:true,coverColor:true,dynamicBackground:true});const saved=preferences.getSnapshot();
   for(const patch of [{playerBlur:81},{playerBlur:NaN},{backgroundOpacity:-1},{coverRadius:49},{tapeStyle:'true'},{playerDarkness:.1},{playerBackground:'unknown'}])await assert.rejects(preferences.update(patch as never));
   assert.equal(preferences.getSnapshot(),saved);const restored=new PreferenceStore(repository);await restored.restore();assert.equal(restored.getSnapshot().backgroundStyle,'image');assert.equal(restored.getSnapshot().tapeStyle,true);assert.equal(restored.getSnapshot().coverColor,true);

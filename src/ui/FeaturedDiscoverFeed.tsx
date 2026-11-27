@@ -160,6 +160,7 @@ function MvShelf({
   title,
   items,
   onOpenMV,
+  onMore,
   ink,
   muted,
   accent,
@@ -169,6 +170,7 @@ function MvShelf({
   title: string;
   items: readonly VideoItem[];
   onOpenMV: (item: VideoItem) => void;
+  onMore?: () => void;
   ink: string;
   muted: string;
   accent: string;
@@ -177,7 +179,7 @@ function MvShelf({
   if (!items.length) return null;
   return (
     <View testID={`featured-mv-shelf-${title}`} style={{ gap: 10 }}>
-      <ShelfHeader title={title} ink={ink} accent={accent} />
+      <ShelfHeader title={title} actionLabel={onMore ? '更多' : undefined} onAction={onMore} ink={ink} accent={accent} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 2 }}>
         {items.slice(0, 12).map(mv => (
           <Pressable
@@ -221,6 +223,7 @@ export function FeaturedDiscoverFeed({
   onOpenMoreRankings,
   onOpenMoreAlbums,
   onOpenMoreArtists,
+  onOpenMoreMVs,
   onOpenSongShelf,
 }: {
   services: Services;
@@ -239,6 +242,7 @@ export function FeaturedDiscoverFeed({
   onOpenMoreRankings: () => void;
   onOpenMoreAlbums: () => void;
   onOpenMoreArtists: () => void;
+  onOpenMoreMVs?: (tab: 'all' | 'latest' | 'top') => void;
   onOpenSongShelf: (title: string, tracks: readonly Track[]) => void;
 }) {
   const theme = useTheme();
@@ -514,12 +518,13 @@ export function FeaturedDiscoverFeed({
         </View>
       )}
 
-      {/* 14. 最新 MV & MV 排行（16:9 封面 + 播放角标） */}
+      {/* 14. 最新 MV & MV 排行（16:9 封面 + 播放角标 + 更多 MV 广场入口） */}
       <MvShelf
         services={services}
         title="最新 MV"
         items={data.latestMVs}
         onOpenMV={onOpenMV}
+        onMore={onOpenMoreMVs ? () => onOpenMoreMVs('latest') : undefined}
         ink={s.ink}
         muted={s.muted}
         accent={s.accent}
@@ -530,6 +535,7 @@ export function FeaturedDiscoverFeed({
         title="MV 排行"
         items={data.topMVs}
         onOpenMV={onOpenMV}
+        onMore={onOpenMoreMVs ? () => onOpenMoreMVs('top') : undefined}
         ink={s.ink}
         muted={s.muted}
         accent={s.accent}

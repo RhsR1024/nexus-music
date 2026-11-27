@@ -318,6 +318,30 @@ export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:So
     {!!message&&<Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>}
     {busy&&<Text accessibilityLiveRegion="polite" style={styles.caption}>正在处理，其他音源会继续工作…</Text>}
 
+    {/* Compact inline quick-import card (preserves URL drafts & direct 1-tap access) */}
+    <View style={[styles.sheetCard,s.cardShadow]}>
+      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
+        <Text style={{color:s.ink,fontSize:14.5,fontWeight:'700'}}>快速导入音源</Text>
+        <Pressable testID="sources-import-local" accessibilityRole="button" accessibilityLabel="导入本地 JS（可多选）" disabled={busy} onPress={()=>{void perform(importFiles);}} style={[styles.ghostBtn,{flexDirection:'row',alignItems:'center',gap:5},busy&&styles.disabled]}>
+          <Ionicons name="folder-open-outline" size={14} color={s.ink}/>
+          <Text style={styles.ghostBtnText}>导入本地 JS</Text>
+        </Pressable>
+      </View>
+      <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+        <TextInput testID="sources-import-url-input" accessibilityLabel="音源订阅地址" placeholder="输入 HTTP(S) 音源脚本或订阅地址" placeholderTextColor={s.subtle} autoCapitalize="none" autoCorrect={false} spellCheck={false} keyboardType="url" textContentType="URL" value={importUrl} onChangeText={setImportUrl} editable={!busy} style={[styles.input,{flex:1}]}/>
+        <Pressable testID="sources-import-url-submit" accessibilityRole="button" accessibilityLabel="从地址导入" disabled={busy||!importUrl.trim()} onPress={()=>{
+          void perform(async()=>{
+            const cleanUrl=importUrl.trim();
+            const result=await catalog.import(await downloadScript(cleanUrl),'网络音源',cleanUrl);
+            setImportUrl('');
+            setMessage(result.duplicate?'此音源已存在':'已导入网络音源，点击该行即可启用');
+          });
+        }} style={[styles.primaryPill,(busy||!importUrl.trim())&&styles.disabled]}>
+          {busy?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.primaryPillText}>导入</Text>}
+        </Pressable>
+      </View>
+    </View>
+
     {/* Import Modal (+ 导入) */}
     <SheetModal allowSwipeDismissal visible={importOpen} animationType="slide" onRequestClose={()=>{if(!busy)setImportOpen(false);}}>
       <SafeAreaView style={{flex:1,backgroundColor:s.sheetGradient[0]}} edges={['bottom']}>
