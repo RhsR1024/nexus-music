@@ -33,7 +33,7 @@ export function DownloadQualityChoice({services,track,busy,onBack,onConfirm,back
 
   return <View style={{flex:1}}>
     <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
-    <ScrollView contentContainerStyle={{paddingHorizontal:18,paddingTop:12,paddingBottom:36,gap:14}}>
+    <ScrollView contentContainerStyle={{paddingHorizontal:18,paddingTop:12,paddingBottom:36,gap:14}} showsVerticalScrollIndicator={false}>
       <View style={{alignSelf:'center',width:38,height:4.5,borderRadius:2.25,backgroundColor:s.dark?'rgba(255,255,255,0.28)':'rgba(60,48,50,0.26)'}}/>
       <Pressable testID="download-choice-back" accessibilityRole="button" accessibilityLabel={backLabel} onPress={onBack} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:5,minHeight:38,paddingHorizontal:13,borderRadius:19,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}>
         <Ionicons name="chevron-back" size={16} color={s.ink}/>

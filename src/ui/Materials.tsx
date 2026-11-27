@@ -38,7 +38,7 @@ export function AmbientBackground({services,visible=true,gradient}:{services?:Se
   return <View testID={hasCover?'ambient-cover-background':undefined} pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.palette.background[0]}]}>
     {base}
     {maskOpacity>0&&<View testID="ambient-mask" style={[StyleSheet.absoluteFill,{backgroundColor:theme.appearance.maskColor,opacity:maskOpacity}]}/>}
-    {shown&&hasCover&&!useExplicitGradient&&cover.uri&&!flowColors&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
+    {shown&&hasCover&&!useExplicitGradient&&cover.uri&&!flowColors&&!(theme.appearance.globalBackgroundMotion&&cover.pending)&&<MotionImage testID="ambient-motion" uri={cover.uri} blur={55} opacity={theme.mode==='dark'?.08:.045} moving={moving} onError={()=>services?.coverTheme.rejectImage(cover.uri!)} />}
     {shown&&theme.appearance.globalBackgroundMotion&&<View testID={flowColors?'ambient-three-color':undefined} pointerEvents="none" style={StyleSheet.absoluteFill}><AmbientSoftLights colors={flowColors??[]} identity={cover.uri??''} moving={moving} pending={!!cover.pending} dark={theme.mode==='dark'}/></View>}
   </View>;
 }

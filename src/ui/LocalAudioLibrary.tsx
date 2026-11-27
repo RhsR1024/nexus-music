@@ -250,7 +250,7 @@ export function LocalAudioLibrary({
             <Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.addToQueue(item.track,true)} style={{width:34,height:34,borderRadius:17,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}><Ionicons name="play-skip-forward-outline" size={16} color={s.ink}/></Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel={selectedLocal.id===defaultDevicePlaylistId?'取消收藏':'移除'} onPress={()=>{const action=selectedLocal.id===defaultDevicePlaylistId?services.localAudio.setFavorites([item.id],false):services.devicePlaylists.removeEntry(selectedLocal.id,item.id);void action.then(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'已取消收藏（仅本机）':'已从歌单移除')).catch(()=>setMessage(selectedLocal.id===defaultDevicePlaylistId?'取消收藏未保存，请重试':'移除未保存，请重试'));}} style={{width:34,height:34,borderRadius:17,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}><Ionicons name={selectedLocal.id===defaultDevicePlaylistId?'heart-dislike-outline':'remove-circle-outline'} size={16} color={s.muted}/></Pressable>
           </View>}
-        </View>}/>
+        </View>} showsVerticalScrollIndicator={false}/>
       </View>:<View style={{gap:10,flex:1}}>
         <Text style={{color:s.muted,fontSize:12,lineHeight:18}}>本地歌单只保存在当前设备，与音乐库自建歌单隔离。</Text>
         <View style={{flexDirection:'row',gap:8,alignItems:'center'}}>
@@ -261,7 +261,7 @@ export function LocalAudioLibrary({
           <Cover services={services} track={entries[0]?.track} size={50} radius={10}/>
           <View style={{flex:1}}><Text style={{color:s.ink,fontSize:15,fontWeight:'600'}} numberOfLines={1}>{item.title}{item.id===defaultDevicePlaylistId?'（仅本机）':''}</Text><Text style={{color:s.muted,fontSize:12}}>{entries.length} 首 · 仅本机</Text></View>
           <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
-        </Pressable>;}}/>
+        </Pressable>;}} showsVerticalScrollIndicator={false}/>
       </View>):files.length===0?<View style={{flex:1,alignItems:'center',justifyContent:'center',paddingVertical:36,paddingBottom:listBottomPadding,gap:14}}>
         <Ionicons name="musical-notes-outline" size={56} color={s.subtle}/>
         <Text style={{color:s.ink,fontSize:18,fontWeight:'700'}}>还没有本地歌曲</Text>
@@ -305,9 +305,9 @@ export function LocalAudioLibrary({
               </Pressable>
             </View>}
           </View>}
-        />
+         showsVerticalScrollIndicator={false}/>
         {showAlphabet&&<AlphabetIndexBar available={availableLetters} activeLetter={activeLetter} onSelect={jumpToLetter}/>}
-      </View>:<FlatList key={`groups-${mode}`} data={groups} numColumns={mode==='albums'?2:1} columnWrapperStyle={mode==='albums'?{justifyContent:'space-between'}:undefined} contentContainerStyle={{paddingBottom:listBottomPadding}} keyExtractor={group=>group.key} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`${item.name} · ${item.files.length}首`} onPress={()=>setGroup(item.key)} style={{width:mode==='albums'?'48%':'100%',marginVertical:6,padding:12,borderRadius:18,backgroundColor:softSurface,gap:10,flexDirection:mode==='albums'?'column':'row',alignItems:mode==='albums'?'flex-start':'center'}}><Cover services={services} track={item.files[0]!.track} size={mode==='albums'?Math.min(180,Math.max(80,(width-76)/2-24)):48} radius={12}/><View style={{gap:4,flexShrink:1}}><Text numberOfLines={2} style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.name}</Text><Text style={{color:s.muted,fontSize:12}}>{item.files.length} 首</Text></View></Pressable>}/>}</>}
+      </View>:<FlatList key={`groups-${mode}`} data={groups} numColumns={mode==='albums'?2:1} columnWrapperStyle={mode==='albums'?{justifyContent:'space-between'}:undefined} contentContainerStyle={{paddingBottom:listBottomPadding}} keyExtractor={group=>group.key} renderItem={({item})=><Pressable accessibilityRole="button" accessibilityLabel={`${item.name} · ${item.files.length}首`} onPress={()=>setGroup(item.key)} style={{width:mode==='albums'?'48%':'100%',marginVertical:6,padding:12,borderRadius:18,backgroundColor:softSurface,gap:10,flexDirection:mode==='albums'?'column':'row',alignItems:mode==='albums'?'flex-start':'center'}}><Cover services={services} track={item.files[0]!.track} size={mode==='albums'?Math.min(180,Math.max(80,(width-76)/2-24)):48} radius={12}/><View style={{gap:4,flexShrink:1}}><Text numberOfLines={2} style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.name}</Text><Text style={{color:s.muted,fontSize:12}}>{item.files.length} 首</Text></View></Pressable>} showsVerticalScrollIndicator={false}/>}</>}
     </View>
     <LocalScanSettings store={services.localAudio} visible={scanOpen} onClose={()=>setScanOpen(false)}/>
     {retainedOpen&&<RetainedAudio services={services} onClose={()=>setRetainedOpen(false)}/>}

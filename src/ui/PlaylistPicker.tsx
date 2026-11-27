@@ -48,7 +48,7 @@ export function PlaylistPicker({
 
   const content=<View style={[styles.root,{backgroundColor:s.sheetGradient[0]}]}>
     <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,inline?styles.inlineContent:{paddingTop:Math.max(insets.top+16,28),paddingBottom:insets.bottom+36}]}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,inline?styles.inlineContent:{paddingTop:Math.max(insets.top+16,28),paddingBottom:insets.bottom+36}]} showsVerticalScrollIndicator={false}>
       <View style={styles.handleWrap}><View style={styles.handle}/></View>
       <View style={styles.header}>
         <View style={{flex:1,gap:2}}>

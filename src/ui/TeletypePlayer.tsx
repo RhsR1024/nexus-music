@@ -195,7 +195,7 @@ export function TeletypePlayer({
         </View>
 
         {/* Scrolling Telegraph Lyrics */}
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 10 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 10 }} showsVerticalScrollIndicator={false}>
           {historyLines.map(line => (
             <View key={line.idx} style={{ flexDirection: 'row', gap: 10 }}>
               <Text style={{ fontFamily: MONO_FONT, fontSize: 11, color: pal.muted, opacity: 0.72, marginTop: 3 }}>{line.time}</Text>

@@ -379,7 +379,7 @@ export function GlobalRadioModal({
                 {loading ? <ActivityIndicator color="#5CE5CF" /> : <Text style={{ color: '#7D9AA7', fontSize: 13 }}>{tab === 'favorites' ? '暂无收藏电台' : tab === 'recent' ? '暂无最近收听记录' : '暂无匹配电台'}</Text>}
               </View>
             }
-          />
+           showsVerticalScrollIndicator={false}/>
         </View>
 
         {/* Facet Picker Sheet */}
@@ -412,7 +412,7 @@ export function GlobalRadioModal({
                       <Text style={{ color: '#7E9CA9', fontSize: 12 }}>{item.stationCount}</Text>
                     </Pressable>
                   )}
-                />
+                 showsVerticalScrollIndicator={false}/>
               )}
             </View>
           </View>

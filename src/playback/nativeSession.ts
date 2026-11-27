@@ -139,7 +139,14 @@ export function createPlaybackSession(resolver: MediaResolver, preferences: Pref
     else if (event.action === 'next') next(); else if (event.action === 'previous') next(-1);
     else if (event.action === 'seek') controller.seek(Number(event.seconds));
   });
-  const configure = () => { const value = preferences.getSnapshot(); safe(native.configureVolume(value.volume)); safe(native.configureEQ(value.eqEnabled, value.gains, value.preampDB));safe(native.configureCache(value.cacheLimitMB)); };
+  let appliedVolume:number|undefined,appliedEQSignature='',appliedCacheLimit:number|undefined;
+  const configure = () => {
+    const value = preferences.getSnapshot();
+    if(value.volume!==appliedVolume){appliedVolume=value.volume;safe(native.configureVolume(value.volume));}
+    const eqSig=`${value.eqEnabled}:${value.preampDB}:${value.gains.join(',')}`;
+    if(eqSig!==appliedEQSignature){appliedEQSignature=eqSig;safe(native.configureEQ(value.eqEnabled, value.gains, value.preampDB));}
+    if(value.cacheLimitMB!==appliedCacheLimit){appliedCacheLimit=value.cacheLimitMB;safe(native.configureCache(value.cacheLimitMB));}
+  };
   preferences.subscribe(configure); configure();
   return { controller, spectrum, next, setSystemLyricLine:(line:string|null,position:'artist'|'title')=>systemMedia.setLyricLine(line,position), sleep:{subscribe:sleepStore.subscribe,getSnapshot:sleepStore.getSnapshot,set:async(seconds:number,finishCurrent=false)=>{const value=await native.configureSleep(seconds,finishCurrent);sleepStore.update(value);if(finishCurrent&&value.mode!=='track')throw new Error('当前曲目尚未就绪');},stopNow:async()=>{const value=await native.configureSleep(0,false);sleepStore.update(value);controller.pause();}}, cache:{statistics:()=>native.cacheStatistics(),clear:()=>native.clearCache()}, onListening:(listener:(sample:ListeningSample)=>void)=>{listeningListeners.add(listener);return()=>{listeningListeners.delete(listener);};}, onPlayed:(listener:(track:Track)=>void)=>{playedListeners.add(listener);return()=>{playedListeners.delete(listener);};}, setRate:async(value:number)=>{if(!Number.isFinite(value)||value<.5||value>3)throw new Error('播放倍速无效');await preferences.update({rate:value});await native.configureRate(value);} };
 }

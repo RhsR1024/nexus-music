@@ -113,7 +113,7 @@ export function QueuePanel({services,onClose,tone='auto',inSheet=false}:{service
           <Text style={{color:colors.secondary,fontSize:12}}>清除当前之后（{afterCount} 首）</Text>
         </Pressable>
       </View>}
-      <FlatList ref={list} data={state.queue.entries} extraData={state.queue.currentId} keyExtractor={entry=>entry.id} initialNumToRender={10} windowSize={5} contentContainerStyle={{paddingBottom:onClose?Math.max(insets.bottom+18,28):16}} onScrollToIndexFailed={parameters=>list.current?.scrollToOffset({offset:Math.max(0,parameters.index*rowHeight-120),animated:false})} getItemLayout={onClose?(_,index)=>({length:rowHeight,offset:rowHeight*index,index}):undefined} renderItem={({item,index})=><QueueRow entry={item} index={index} services={services} tone={tone} locked={state.queueLocked}/>}/>
+      <FlatList ref={list} data={state.queue.entries} extraData={state.queue.currentId} keyExtractor={entry=>entry.id} initialNumToRender={10} windowSize={5} contentContainerStyle={{paddingBottom:onClose?Math.max(insets.bottom+18,28):16}} onScrollToIndexFailed={parameters=>list.current?.scrollToOffset({offset:Math.max(0,parameters.index*rowHeight-120),animated:false})} getItemLayout={onClose?(_,index)=>({length:rowHeight,offset:rowHeight*index,index}):undefined} renderItem={({item,index})=><QueueRow entry={item} index={index} services={services} tone={tone} locked={state.queueLocked}/>} showsVerticalScrollIndicator={false}/>
       </View>
     </View>;
 }

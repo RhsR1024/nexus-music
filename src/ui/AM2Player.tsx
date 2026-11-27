@@ -84,7 +84,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
   </View>;
   return <View testID={columns?'am2-horizontal':'am2-vertical'} style={{flex:1,gap:columns?4:10}} onTouchStart={()=>model.setTouching(true)} onTouchEnd={event=>model.setTouching(event.nativeEvent.touches.length>0)} onTouchCancel={()=>model.setTouching(false)}>
     {!columns&&(view.content!=='cover'||settings)&&compactHeader}
-    {settings?<ScrollView style={{flex:1}} contentContainerStyle={{gap:12,paddingVertical:8}}>
+    {settings?<ScrollView style={{flex:1}} contentContainerStyle={{gap:12,paddingVertical:8}} showsVerticalScrollIndicator={false}>
       {button(`自动展开歌词：${preferences.am2AutoLyrics?'开':'关'}`,()=>update({am2AutoLyrics:!preferences.am2AutoLyrics}),'am2-auto')}
       <Text style={{color:'rgba(255,255,255,0.68)',fontSize:13}}>在歌词页停止操作后，自动展开歌词区域。</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:8}}>{button('缩短等待',()=>update({am2DelaySeconds:Math.max(1,preferences.am2DelaySeconds-1)}),'am2-delay-minus')}<Text testID="am2-delay" style={{color:'#FFFFFF',fontSize:15,fontWeight:'600',paddingHorizontal:6}}>等待 {preferences.am2DelaySeconds} 秒</Text>{button('延长等待',()=>update({am2DelaySeconds:Math.min(60,preferences.am2DelaySeconds+1)}),'am2-delay-plus')}</View>
@@ -94,7 +94,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
         {onStyle&&button('调整播放界面',onStyle)}
       </View>
     </ScrollView>:<View style={{flex:1,minHeight:0,flexDirection:columns?'row':'column',gap:columns?18:0}}>
-      {columns?<ScrollView style={{flex:.85}} contentContainerStyle={{gap:6}}>{!view.fullscreen&&<View style={{alignItems:'center'}}>{artwork}</View>}{coverMeta}{transport}</ScrollView>:view.content==='cover'?<View style={{flex:1,justifyContent:'space-between',paddingTop:fontScale>1.4?8:28}}>
+      {columns?<ScrollView style={{flex:.85}} contentContainerStyle={{gap:6}} showsVerticalScrollIndicator={false}>{!view.fullscreen&&<View style={{alignItems:'center'}}>{artwork}</View>}{coverMeta}{transport}</ScrollView>:view.content==='cover'?<View style={{flex:1,justifyContent:'space-between',paddingTop:fontScale>1.4?8:28}}>
         <View style={{alignItems:'center'}}>{artwork}</View>
         {coverMeta}
       </View>:null}

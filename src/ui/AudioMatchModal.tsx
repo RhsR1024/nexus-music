@@ -68,7 +68,7 @@ export function AudioMatchModal({
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom + 28, 40), gap: 18 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom + 28, 40), gap: 18 }} showsVerticalScrollIndicator={false}>
           {/* Pulsing Microphone Orb */}
           <View style={{ alignItems: 'center', paddingVertical: 18, gap: 16 }}>
             <View style={{ width: 176, height: 176, alignItems: 'center', justifyContent: 'center' }}>

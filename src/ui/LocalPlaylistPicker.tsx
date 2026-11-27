@@ -24,7 +24,7 @@ export function LocalPlaylistPicker({services,tracks,visible,onClose,onAdded}:{s
     finally{setBusy(false);}
   }
   if(!visible)return null;
-  return <ScrollView keyboardShouldPersistTaps="handled" style={styles.root} contentContainerStyle={styles.content}>
+  return <ScrollView keyboardShouldPersistTaps="handled" style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Pressable accessibilityRole="button" accessibilityLabel="取消添加到本地歌单" onPress={onClose}><Text style={styles.action}>取消添加</Text></Pressable>
       <Text style={styles.title}>批量添加到本地歌单</Text>
       <Text style={styles.caption}>已选 {tracks.length} 首；只保存在当前设备，不参与云同步。</Text>

@@ -112,7 +112,7 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
         {!isWave&&!isImmersive&&showTrans&&item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{!isWave&&!isImmersive&&showRoma&&item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:Math.round(13*secScale),color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
       </LyricGesture>;
     })}
-    {!document?.synced&&(fullPage||presentation==='stage')&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
+    {!document?.synced&&(fullPage||presentation==='stage')&&<FlatList data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5} renderItem={({item})=><LyricText style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>} showsVerticalScrollIndicator={false}/>}
     {!document?.synced&&!fullPage&&presentation!=='stage'&&document?.plain.slice(0,300).map((line,index)=><LyricText key={index} style={{fontSize:size,lineHeight:Math.ceil(size*style.lineHeight),color:activeColor,fontFamily:font,marginVertical:style.spacing}}>{line}</LyricText>)}
     </View>}
     <SheetModal allowSwipeDismissal visible={expanded} onRequestClose={()=>{setChoosing(false);setExpanded(false);}} animationType="slide">
@@ -120,7 +120,7 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
         <LinearGradient colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
         {choosing?<LyricChoiceModal services={services} track={track} inline onClose={()=>setChoosing(false)}/>:<View style={{flex:1,paddingHorizontal:20,paddingTop:14,paddingBottom:24,gap:12}}>
           <View style={{alignSelf:'center',width:38,height:4.5,borderRadius:2.25,backgroundColor:s.dark?'rgba(255,255,255,0.28)':'rgba(60,48,50,0.26)'}}/>
-          <ScrollView testID="full-lyrics-header" style={systemFontScale>1.8?{flexGrow:0,flexShrink:1,maxHeight:'46%'}:{flexGrow:0,flexShrink:1}} contentContainerStyle={{gap:10,paddingBottom:8}}>
+          <ScrollView testID="full-lyrics-header" style={systemFontScale>1.8?{flexGrow:0,flexShrink:1,maxHeight:'46%'}:{flexGrow:0,flexShrink:1}} contentContainerStyle={{gap:10,paddingBottom:8}} showsVerticalScrollIndicator={false}>
             <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
               <View style={{flex:1,minWidth:0}}>
                 <Text style={{color:s.ink,fontSize:22,fontWeight:'700'}}>全部歌词</Text>
@@ -136,12 +136,12 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
               {(result?.variants.length??0)>1&&result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)} style={{paddingHorizontal:12,paddingVertical:8,borderRadius:999,backgroundColor:variant===index?s.accentSoft:s.chip,borderWidth:1,borderColor:variant===index?s.accent:s.cardBorder}}><Text style={{color:variant===index?s.accent:s.ink,fontSize:13,fontWeight:'600'}}>{item.label}</Text></Pressable>)}
             </View>
           </ScrollView>
-          {!document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:18*preferences.fontScale,color:s.ink,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>}/>}
+          {!document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:18*preferences.fontScale,color:s.ink,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>} showsVerticalScrollIndicator={false}/>}
           {document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision,preferences.lyricChineseMode,showTrans,showRoma,secScale]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
             onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
             renderItem={({item,index})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>seek(item.startMs,index,time)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
               <View><NativeLyricLine line={index===active?item:inactiveLyric(item)} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={18*preferences.fontScale} font={font} fontURI={services.fonts.selectedURI()} color={index===active?s.accent:s.muted} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{showTrans&&item.translation&&<LyricText style={{...auxiliaryFont,color:s.muted}}>{item.translation}</LyricText>}{showRoma&&item.romanization&&<LyricText style={{...auxiliaryFont,color:s.subtle}}>{item.romanization}</LyricText>}
-            </LyricGesture>}/>}
+            </LyricGesture>} showsVerticalScrollIndicator={false}/>}
         </View>}
       </View>
     </SheetModal>
@@ -161,7 +161,7 @@ const AM2LyricRows=memo(function AM2LyricRows({alignStart,testID,services,lines,
   </LyricGesture>,[services,active,center,font,size,offset,style,activeColor,inactiveColor,showTrans,showRoma,secSize]);
   const failed=useCallback((info:{averageItemLength:number;index:number})=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false}),[]);
   const footerNode=useMemo(()=><Pressable accessibilityRole="button" accessibilityLabel="打开全部歌词与偏移设置" onPress={openSettings} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:'#D5D5DA'}}>全部歌词与偏移设置</Text></Pressable>,[openSettings]);
-  return <FlatList testID={testID} ref={list} data={lines} extraData={extra} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={failed} ListFooterComponent={footer?footerNode:null} contentContainerStyle={{paddingTop:30+bias,paddingBottom:30}}/>;
+  return <FlatList testID={testID} ref={list} data={lines} extraData={extra} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={failed} ListFooterComponent={footer?footerNode:null} contentContainerStyle={{paddingTop:30+bias,paddingBottom:30}} showsVerticalScrollIndicator={false}/>;
 });
 const lyricRowKey=(_:LyricLine,index:number)=>String(index);
 // IMG_4872 keeps three to four 80pt lines on screen with the active line white
@@ -179,7 +179,7 @@ const StageLyricRows=memo(function StageLyricRows({services,lines,group,font,off
       <NativeLyricLine line={item} position={position} playing={playing} size={size} font={font} fontURI={services.fonts.selectedURI()} color={activeColor} center lineHeight={1.14} emphasis stageStyle={stageStyle}/>
     </LyricGesture>
     :<NativeLyricLine key={index} line={inactiveLyric(item)} position={0} playing={false} size={size} font={font} fontURI={services.fonts.selectedURI()} color={inactiveColor} center lineHeight={1.14} blur={0} emphasis={false}/>;
-  return <FlatList testID="lyric-stage-list" ref={list} data={lines} extraData={[active,group?.line.text,size,font,position,playing,activeColor,stageStyle]} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})} contentContainerStyle={{paddingTop:largeText?24:206,paddingBottom:24}}/>;
+  return <FlatList testID="lyric-stage-list" ref={list} data={lines} extraData={[active,group?.line.text,size,font,position,playing,activeColor,stageStyle]} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})} contentContainerStyle={{paddingTop:largeText?24:206,paddingBottom:24}} showsVerticalScrollIndicator={false}/>;
 });
 function AM2ActiveLyric({services,line,center,offset,size,font,color,style}:{services:Services;line:LyricLine;center:boolean;offset:number;size:number;font?:string;color:string;style:LyricStyle}){
   const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);

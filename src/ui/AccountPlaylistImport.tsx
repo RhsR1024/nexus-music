@@ -126,7 +126,7 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
       <SafeAreaView style={[styles.modal,{backgroundColor:s.sheetGradient[0]}]} edges={['top','bottom']}>
         <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
         <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.heading,{color:s.ink}]}>账号歌单预览</Text>{button('account-playlist-preview-close',pending?'取消操作':'返回歌单列表',closeDetail,false)}</View>
-        <ScrollView contentContainerStyle={styles.modalContent}>
+        <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
           {detail&&<Text style={[styles.heading,{color:s.ink}]}>{detail.title}</Text>}
           {pending&&progress}
           {!!message&&<Text testID={testID("account-playlists-status")} accessibilityLiveRegion="polite" style={[styles.caption,{color:s.muted}]}>{message}</Text>}

@@ -161,7 +161,7 @@ export function StyleRecommendationSheet({
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{padding:space.lg,paddingBottom:space.xl*2,gap:space.lg}} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{padding:space.lg,paddingBottom:space.xl*2,gap:space.lg}} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View accessibilityRole="tablist" style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>
           {styleDimensions.map(item=><Pressable
             key={item.id}

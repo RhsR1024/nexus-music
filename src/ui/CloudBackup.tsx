@@ -49,7 +49,7 @@ export function CloudBackup({services,grouped=false}:{services:Services;grouped?
             <Text style={{color:s.ink,fontSize:24,fontWeight:'700'}}>云端音乐库备份</Text>
             {pill('收起云备份',close,committing)}
           </View>
-          <ScrollView ref={settingsScroll} testID="cloud-backup-settings" style={{flexGrow:0,maxHeight:'52%'}} keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,paddingBottom:8}}>
+          <ScrollView ref={settingsScroll} testID="cloud-backup-settings" style={{flexGrow:0,maxHeight:'52%'}} keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,paddingBottom:8}} showsVerticalScrollIndicator={false}>
             <Text style={{color:s.muted,fontSize:12.5,lineHeight:19}}>保存独立版本，上传后回读校验。恢复前先预览；备份包含收藏、歌单、历史、匹配、播放统计和播放/歌词/EQ/外观设置；图片/字体文件和凭据仍留本机。请保护服务端目录的访问权限。</Text>
             <View style={[{borderRadius:20,padding:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:10},s.cardShadow]}>
               {!accounts.length?<Text style={{color:s.ink,fontSize:13.5}}>请先收起此页，在音乐库的WebDAV入口验证并保存连接。</Text>:accounts.map(account=><Pressable key={account.id} accessibilityRole="button" disabled={busy} onPress={()=>{store.cancel();setAccountId(account.id);}} style={{minHeight:42,paddingHorizontal:14,borderRadius:14,backgroundColor:accountId===account.id?s.accentSoft:s.chip,borderWidth:1,borderColor:accountId===account.id?s.accent+'44':s.chipBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',opacity:busy?.45:1}}>
@@ -83,7 +83,7 @@ export function CloudBackup({services,grouped=false}:{services:Services;grouped?
             <Text numberOfLines={2} style={{color:s.ink,fontSize:13.5,fontWeight:'600'}}>{item.name}</Text>
             <Text style={{color:s.muted,fontSize:11.5}}>{item.bytes===undefined?'大小未知':`${Math.ceil(item.bytes/1024)} KiB`} · {item.digest?'含内容摘要':'旧命名，需验证格式'}</Text>
             <View style={{alignSelf:'flex-start'}}>{pill('下载并预览此备份',()=>{void perform(()=>store.preview(item));},busy||!saved,`cloud-backup-preview-${index}`)}</View>
-          </View>}/>
+          </View>} showsVerticalScrollIndicator={false}/>
           {state.files.length>visible&&pill('显示更多云备份',()=>setVisible(count=>count+20),busy)}
         </View>
       </View>

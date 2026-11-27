@@ -24,6 +24,6 @@ export function RetainedAudio({services,onClose}:{services:Services;onClose:()=>
     <FlatList data={files} keyExtractor={file=>file.id} initialNumToRender={10} windowSize={5} ListEmptyComponent={<Text style={{color:p.secondary}}>没有保留副本</Text>} renderItem={({item})=><View testID={`retained-row-${item.id}`} style={{gap:space.sm,paddingVertical:space.md,borderBottomWidth:1,borderBottomColor:p.border}}>
       <Text style={{...typography.heading,color:p.text}}>{item.track.title}</Text><Text style={{color:p.secondary}}>{item.track.artist} · {(item.bytes/1048576).toFixed(2)} MiB · {item.scanExcluded?'已移出扫描范围':'已从列表移除'}</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:space.sm}}>{button(`恢复到列表：${item.track.title}`,()=>restore([item.id]),`retained-restore-${item.id}`)}{button(`删除副本：${item.track.title}`,()=>remove(item),`retained-delete-${item.id}`)}</View>
-    </View>}/>
+    </View>} showsVerticalScrollIndicator={false}/>
   </View></Modal>;
 }

@@ -64,7 +64,7 @@ export function PlatformPlaylistUpdate({services,track,account,operation,onBack,
       controller.current=null;setBusy(false);
     });
   };
-  return <ScrollView testID="platform-playlist-update" style={{backgroundColor:p.background[0]}} contentContainerStyle={styles.content}>
+  return <ScrollView testID="platform-playlist-update" style={{backgroundColor:p.background[0]}} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <View style={styles.heading}>
       <View style={{flex:1,gap:space.xs}}>
         <Text accessibilityRole="header" style={[typography.title,{color:p.text}]}>{verb}网易云歌单</Text>

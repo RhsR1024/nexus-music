@@ -78,6 +78,8 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
   private var fadeDurationMs = 500
   private var fadeGeneration = 0
   private var fadeRunnable: Runnable? = null
+  private var isFadingOutStop = false
+  private var fadingOutCacheKey: String? = null
 
   private var systemLyricLine: String? = null
   private var systemLyricPosition = "artist"
@@ -361,9 +363,49 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     val dataSourceFactory = DefaultDataSource.Factory(appContext, okFactory)
     val mediaSource = DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
 
-    player.setMediaSource(mediaSource)
-    player.prepare()
-    player.playWhenReady = wantsPlay
+    val installSource = {
+      if (generation == newGeneration && entryId == id) {
+        cancelFade()
+        releaseFadingOutResources()
+        player.volume = if (fadeEnabled && fadeDurationMs >= 100 && targetVolume > 0f) 0f else targetVolume
+        player.setMediaSource(mediaSource)
+        player.prepare()
+        if (fadeEnabled && fadeDurationMs >= 100 && targetVolume > 0f) {
+          player.playWhenReady = false
+        } else {
+          player.playWhenReady = wantsPlay
+        }
+      }
+    }
+    if (isFadingOutStop && player.isPlaying && player.volume > 0.03f) {
+      val startVol = player.volume
+      fadeRunnable?.let { mainHandler.removeCallbacks(it) }
+      fadeRunnable = null
+      fadeGeneration += 1
+      val token = fadeGeneration
+      val steps = 7
+      var step = 0
+      val tail = object : Runnable {
+        override fun run() {
+          if (fadeGeneration != token || generation != newGeneration || entryId != id) return
+          step++
+          val rem = max(0f, 1f - step.toFloat() / steps.toFloat())
+          player.volume = startVol * rem * rem
+          if (step >= steps) {
+            fadeRunnable = null
+            isFadingOutStop = false
+            player.pause()
+            installSource()
+          } else {
+            mainHandler.postDelayed(this, 20L)
+          }
+        }
+      }
+      fadeRunnable = tail
+      mainHandler.postDelayed(tail, 20L)
+    } else {
+      installSource()
+    }
 
     // Opportunistically cache remote non-HLS tracks into AudioCache in background for offline/repeat hits.
     if (cachedFile == null && reqCacheKey != null && (scheme == "http" || scheme == "https") && !rawUrl.contains(".m3u8", true)) {
@@ -422,7 +464,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     val player = getOrCreatePlayer()
     if (player.playbackState == Player.STATE_READY && !initialSeekPending) {
       startPlaybackWithFade()
-    } else {
+    } else if (!(fadeEnabled && fadeDurationMs >= 100 && targetVolume > 0f)) {
       player.playWhenReady = true
     }
     report("status")
@@ -444,7 +486,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
           if (fadeGeneration != token || wantsPlay) return
           currentStep++
           val ratio = max(0f, 1f - currentStep.toFloat() / steps.toFloat())
-          player.volume = startVol * ratio
+          player.volume = startVol * ratio * ratio
           if (currentStep >= steps) {
             fadeRunnable = null
             player.pause()
@@ -471,17 +513,62 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     emit("remote", mapOf("action" to "pause", "generation" to generation, "entryId" to id, "itemID" to itemID))
   }
 
+  private fun releaseFadingOutResources() {
+    isFadingOutStop = false
+    fadingOutCacheKey?.let { audioCache.release(it) }
+    fadingOutCacheKey = null
+  }
+
   fun stop(newGeneration: Int, preservingSleep: Boolean = false) {
     if (newGeneration < generation) return
     if (entryId.isNotEmpty()) report("stopped")
     if (!preservingSleep) sleepTimer.trackChanged("")
     generation = newGeneration
     wantsPlay = false
-    cancelFade(restoreVolume = true)
-    exoPlayer?.stop()
-    exoPlayer?.clearMediaItems()
-    cacheKey?.let { audioCache.release(it) }
-    cacheKey = null
+    val player = exoPlayer
+    val shouldSmoothFadeOut = !preservingSleep && fadeEnabled && fadeDurationMs >= 100 && player != null && player.isPlaying && player.volume > 0.01f
+    if (shouldSmoothFadeOut) {
+      fadeRunnable?.let { mainHandler.removeCallbacks(it) }
+      fadeRunnable = null
+      fadeGeneration += 1
+      releaseFadingOutResources()
+      fadingOutCacheKey = cacheKey
+      cacheKey = null
+      isFadingOutStop = true
+      val startVol = player!!.volume
+      val outMs = min(fadeDurationMs, 600)
+      val steps = max(1, outMs / 20)
+      var currentStep = 0
+      val token = fadeGeneration
+      val runnable = object : Runnable {
+        override fun run() {
+          if (fadeGeneration != token) return
+          currentStep++
+          val rem = max(0f, 1f - currentStep.toFloat() / steps.toFloat())
+          player.volume = startVol * rem * rem
+          if (currentStep >= steps) {
+            fadeRunnable = null
+            player.stop()
+            player.clearMediaItems()
+            releaseFadingOutResources()
+            player.volume = targetVolume
+          } else {
+            mainHandler.postDelayed(this, 20L)
+          }
+        }
+      }
+      fadeRunnable = runnable
+      mainHandler.postDelayed(runnable, 20L)
+    } else if (preservingSleep && isFadingOutStop) {
+      cacheKey?.let { audioCache.release(it) }
+      cacheKey = null
+    } else {
+      cancelFade(restoreVolume = true)
+      exoPlayer?.stop()
+      exoPlayer?.clearMediaItems()
+      cacheKey?.let { audioCache.release(it) }
+      cacheKey = null
+    }
     cachedPlayback = false
     originalPayloadJson = null
     originalPayloadObj = null
@@ -509,7 +596,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
   fun configureVolume(value: Double) {
     if (!value.isFinite()) return
     targetVolume = value.coerceIn(0.0, 1.0).toFloat()
-    cancelFade(restoreVolume = true)
+    if (fadeRunnable == null) exoPlayer?.volume = targetVolume
   }
 
   fun configureRate(value: Double) {
@@ -617,6 +704,11 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     fadeRunnable?.let { mainHandler.removeCallbacks(it) }
     fadeRunnable = null
     fadeGeneration += 1
+    if (isFadingOutStop) {
+      isFadingOutStop = false
+      exoPlayer?.pause()
+      releaseFadingOutResources()
+    }
     if (restoreVolume) exoPlayer?.volume = targetVolume
   }
 
@@ -635,7 +727,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
           if (fadeGeneration != token || !wantsPlay) return
           currentStep++
           val ratio = min(1f, currentStep.toFloat() / steps.toFloat())
-          player.volume = targetVolume * ratio
+          player.volume = targetVolume * ratio * ratio
           if (currentStep >= steps) {
             fadeRunnable = null
             player.volume = targetVolume

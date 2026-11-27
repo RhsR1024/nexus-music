@@ -34,7 +34,7 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
   },[]);
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{setError('');void services.preferences.update(patch).catch(()=>setError('设置未保存，请重试；之前的设置已保留。'));};
   const fontName=(id:string|null|undefined)=>fonts.fonts.find(font=>font.id===id)?.name??'系统默认';
-  const themes=visualThemeLabels,styles={gradient:'渐变',solid:'纯色',image:'图片'},layouts={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2',groove:'螺旋槽',teletype:'打字机'};
+  const themes=visualThemeLabels,styles={gradient:'渐变',solid:'纯色',image:'图片'},layouts={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2',groove:'螺旋槽',groove2:'螺旋槽 2',teletype:'打字机',teletype2:'打字机 2'};
   const navLabels={liquid:'液态玻璃',frosted:'磨砂融合',acrylic:'亚克力中置'} as const;
   type Row={id:string;title:string;icon:React.ComponentProps<typeof Ionicons>['name'];detail?:string;subtitle?:string;page?:AppearanceSection|'globalFont'|'lyricFont';toggle?:{value:boolean;change:(next:boolean)=>void}};
   const displayRows:Row[]=[

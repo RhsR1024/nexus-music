@@ -1,43 +1,109 @@
 # 音枢 NexusMusic
 
-在线音乐与 Navidrome 私有曲库的统一播放器。iOS 优先，架构保留后续 Android 实现的可能。
+跨平台在线音乐、私有曲库与多端本地音频统一播放器（**iOS + Android 同构双端**），基于 React Native 新架构（Fabric）+ TypeScript + Swift / Kotlin / C++ 共享原生 DSP 引擎打造。
 
 仓库：<https://github.com/RhsR1024/nexus-music>
 
-**当前状态：已有单一播放器、LX/私人曲库、歌词/PCM/EQ及分批本地/云端unsigned IPA证据；UI按同态样板方法收敛，平台登录/日推/FM、真机/签名等继续验收。最新状态以HANDOFF为准。**
+---
 
-接手UI工作先读[实施与验收规范](docs/UI_ALIGNMENT_WORKFLOW.md)：4855/4856样板→4854经典→功能与对应UI分批推进。截图负责视觉度量、IPA/APK负责实现证据、录屏负责连续交互；控件区高分不等于整页完成。Phase 0工具说明见[视觉实验室](docs/ui-spec/README.md)。
+## 核心已实现功能总览
 
-云端构建同工作流/分支**保留运行中，只保留最新一个排队提交**（`queue: single`、`cancel-in-progress: false`）；push后核对队列，不再保留每个中间提交的独立构建。详细规则见[双构建与队列](docs/GITHUB_ACTIONS.md)。
+### 1. 多平台发现页与实时账号直达播放
+- **六大平台频道**：支持 **网易云、QQ 音乐、酷我、酷狗、咪咕、汽水音乐** 独立频道切换（精选 / 榜单 / 歌单），按各平台真实能力动态展示快捷入口，不跨平台混串。
+- **网易云音乐**（登录直达 15 项完整能力）：
+  - 12 张横向自动轮播 Banner（智能区分新歌 / 专辑 / 歌单 / 活动，歌单与单曲应用内直达查看播放，仅外部活动跳转浏览器）。
+  - 登录后顶部快捷入口依次提供：**每日推荐、推荐歌单、心动模式、收藏的歌单、创建的歌单、我喜欢、私人 FM、播客专区、最近播放、最近歌单、听歌排行（周榜/总榜）、我的云盘、收藏歌手、收藏专辑、收藏 MV**，全部应用内实时加载并直接播放，无需手动导入。
+  - 精选页集成推荐歌单、新歌新碟、雷达/场景歌单、精品歌单、官方排行榜、热门歌手、最新/排行 MV（原生直连播放器）。
+- **QQ 音乐**：支持官方网页登录、局域网电脑配对微信登录、官方每日推荐授权（`qmk-` 密钥）；发现页提供 **我喜欢、个人歌单、雷达推荐、新歌推荐、推荐歌单、个性首页** 实时查看与直达播放。
+- **酷狗音乐**：支持扫码登录与手机号验证码登录；发现页提供 **每日推荐、我喜欢、个人歌单、新歌速递** 实时直达播放。
+- **酷我 / 咪咕**：纯净公开精选、排行榜、歌单广场、分类筛选与分享链接预览导入。
+- **汽水音乐**：独立 **精选 / 漫游 / 歌单** 分栏，内置 **喜欢的歌 / 我的歌单 / 最近播放** 个人中心、**12 种场景漫游模式**（为你推荐、新鲜发现、Chill 放松、熟悉的歌、动感健身、快乐时光等，切换模式不重置浏览状态与缓存）、精选主题歌单与汽水公开歌单链接绑定导入，播放由 LX 多音源跨平台自动解析。
 
-## 从这里继续
+### 2. 全球电台、听歌识曲与原生 MV
+- **全球电台（发现页右上角地球入口）**：内置 100% 离线自渲染 **WebGL 仿真 3D 地球**（高精度大陆与岛屿海岸线、海洋浅滩地形、沙漠/雨林/雪山植被地貌、太阳光照与海面高光、动态云层、瑞利蓝色大气辉光、星空背景、脉冲电台信标、惯性滑动旋转与双指捏合缩放）；对接开放 Radio Browser 社区目录，支持按国家/省州/语言/标签/编码多维筛选、随机调频、收藏与收听历史。
+- **听歌识曲（发现页右上角识曲入口）**：iOS/Android 原生麦克风实时电平采集 + Shazam / 跨平台指纹与曲库检索匹配，识别后一键播放或加入队列。
+- **原生高清 MV 播放**：网易云/QQ/酷狗等公开 MV 原生 `AVPlayer` / `VideoView` 播放与清晰度切换。
 
-先完整阅读 [HANDOFF.md](HANDOFF.md)，再按以下文档开展工作：
+### 3. 12 套沉浸式播放界面皮肤
+全部内置于「外观与界面 → 播放界面样式」，切换时无缝保持播放进度与队列：
+1. **经典**（Classic）：封面与歌词双栏布局
+2. **黑胶唱机**（Vinyl）：模拟旋转黑胶唱片与动态金属唱针
+3. **AM 风格**（AM）：大幅动态歌词与三态队列
+4. **AM2**：流动封面网格背景与逐词歌词动效
+5. **封面沉浸**（Immersive）：顶部全宽无边距大封面羽化融合
+6. **声波核**（Wave）：实时原生音频频谱律动光环
+7. **写真歌词**（Photo）：自定义高清写真主图与轻触快捷栏
+8. **歌词舞台**（Stage）：全屏无边距纯黑/霓虹/赛博/炫彩单句巨幕舞台，支持全歌词平滑逐字扫光高亮、上句模糊退出动效、点击切换译文/罗马音与沉浸隐藏控制栏
+9. **黑胶螺旋槽**（Groove）：同心音槽与频谱律动光环
+10. **黑胶螺旋槽 2**（Groove 2）：高帧率 Canvas 真实阿基米德螺旋全曲刻字黑胶、可调倍率光学放大镜、彩虹衍射光扇、副歌彩胶、唱针跳拍、尘埃与指纹质感、歌词驱动/恒速双模式及完整刻槽参数面板
+11. **电报打字机**（Teletype）：复古纸带与磷光终端打字机
+12. **电报打字机 2**（Teletype 2）：Model 33 机械电传打字机机身、链式双排打孔计算机纸带、移动打印头与副歌红色双色色带、实时指针式 `SIGNAL` VU 表、立体机械按键（含倍速切换 `0.5x/1x/1.5x` 与 `从头`）、完整打字机参数与打孔纸带队列
+
+### 4. 统一原生音频引擎、LX 多音源与私有曲库
+- **双端统一原生播放器**（iOS `AVPlayer` + Android Media3 `ExoPlayer`）：
+  - **C++ 双端共用 10 段参量均衡器 DSP (`AudioDSP.hpp`)**：实时前级增益、10 段曲线、预设保存与实时频谱分析。
+  - **平滑淡入淡出**：采用人耳对数感知二次曲线，播放、暂停及切歌均支持平滑渐出/渐入过渡（支持 300ms–2500ms 多档时长配置）。
+  - **下一首播放链接预加载**：支持提前解析后续 1–3 首在线歌曲链接，切歌即点即播。
+  - **智能换源与音质降级**：按平台独立偏好音质，支持渐进降级 / 直降 128k、跨脚本协同解析、解析失败自动跳过与诊断日志。
+- **LX 音源生态**：独立原生沙箱脚本运行时（iOS JSC / Android QuickJS），支持本地多选导入 JS 音源、URL/订阅导入、批量启停/优先级调整、一键音源健康批测、以及**启动后后台静默检查全部音源更新并红点提示**。
+- **多来源统一曲库**：
+  - **Navidrome 私有曲库**：原生子索尼克 API 浏览（专辑/歌手/歌单/星标）、服务端歌单编辑与凭据钥匙串隔离存储。
+  - **WebDAV 网盘曲库**：目录浏览、内嵌标签与封面读取、直接流式播放。
+  - **本机文件与系统媒体库**：支持导入本地音频（FLAC/ALAC/MP3/M4A/WAV 等）、标签元数据解析与排序。
+- **离线下载管理**：并发队列（1–3 路）、断点续传、按平台独立下载音质与封面尺寸、可选同步下载歌词与封面附件、导出至指定目录。
+
+### 5. 投屏、车载、歌词推送与数据同步
+- **DLNA 局域网投屏**：SSDP 自动发现局域网音箱/电视，内置本地 HTTP 中继代理支持带自定义请求头的加密/防盗链音源投屏。
+- **车载与语音控制**：
+  - iOS 内置 **Apple CarPlay** (`CPTabBarTemplate` 收藏/歌单/最近播放目录桥接，自签/LiveContainer 下自动弱链接保护) 与 **Siri 快捷指令**（AppIntents）。
+  - Android 内置 **Android Auto** `MediaBrowserService` 车载曲库浏览服务。
+- **多形态歌词**：支持 LRC / YRC / QRC / KRC / TTML 逐字歌词、简繁自动转换、自定义歌词字体/行距/模糊/对齐、**蓝牙车载与系统锁屏/灵动岛实时歌词推送**，以及 Android **桌面悬浮歌词**。
+- **外观定制与独立设置体验**：多款一键主题、自定义背景/写真图片、5 档毛玻璃通透度调节（自动持久化）、3 种底部栏形态（液态玻璃/磨砂融合/亚克力中置）、软件图标切换（兼容 LiveContainer 环境提示）、全局自定义字体；所有设置子项统一为左上角返回独立页面，操作路径一致。
+- **统计、备份与多设备同步**：真实聆听时长统计与趋势图表、JSON 完整歌单/收藏/设置导入导出、WebDAV 云备份与多设备增量冲突合并同步。
+
+---
+
+## 技术栈与双端同构目录
+
+- **共享层**：TypeScript + React Native（Fabric）— `App.tsx`, `src/domain/`, `src/providers/`, `src/playback/`, `src/lyrics/`, `src/storage/`, `src/ui/`
+- **原生桥接与共享 DSP**：`modules/nexus-native/`
+  - `common/`：双端共用 `AudioDSP.hpp`（10 段 EQ 与 FFT 频谱）与 LX 沙箱 `bootstrap.js`
+  - `ios/`：Swift 原生模块（`AVPlayer`、`WKWebView`、`CarPlayBridge`、`SiriShortcutsBridge`、`NativeDlnaService`、`NativeAudioMatch` 等）
+  - `android/`：Kotlin 原生模块（Media3 `ExoPlayer`、JNI C++ DSP、QuickJS 沙箱、`NexusAutoMediaService`、`NativeDlnaService` 等）
+- **原生工程**：`ios/` 与 `android/` 平级维护（禁止执行覆盖性 `expo prebuild --clean`）
+
+---
+
+## 本地验证与构建
+
+```bash
+# 1. TypeScript 类型检查 + 全部 JS/TS 单元测试
+npm run check
+
+# 2. iOS 原生契约与 DSP 单元测试
+npm run test:native
+
+# 3. Android 原生单元测试与 APK 构建（需挂载外置工具链卷）
+source scripts/android-env.sh
+cd android && ./gradlew :nexus-native:testDebugUnitTest --no-daemon
+
+# 4. 构建本地 Release 无签名 iOS IPA
+npm run ios:archive
+```
+
+云端 CI 工作流：
+- iOS 27 全量检查、UI 回归与无签名 IPA 归档：[`.github/workflows/ios.yml`](.github/workflows/ios.yml)（采用 `queue: single`、`cancel-in-progress: false`，保留运行中任务、仅排队最新提交）。
+- Android 单元测试与 APK 构建：[`.github/workflows/android.yml`](.github/workflows/android.yml)。
+
+---
+
+## 更多文档
 
 | 文档 | 内容 |
 | --- | --- |
-| [产品范围](docs/PRODUCT_SCOPE.md) | 已确认功能、排除项、待确认项和验收口径 |
-| [技术决策](docs/TECH_DECISION.md) | SwiftUI/UIKit、Flutter、RN 对比及建议架构 |
-| [数据与展示能力](docs/DATA_CAPABILITIES.md) | LX、漫途及 Navidrome 接口支持的信息与限制 |
-| [Mac 开发环境](docs/MAC_ENVIRONMENT.md) | Intel MBP、Xcode、iOS 27 与远程构建路径 |
-| [详细任务](docs/TASK_PLAN.md) | 当前优先级、阶段依赖与验收 |
-| [参考比较](docs/REFERENCE_COMPARISON.md) | 功能移植前的实现、维护与Android成本比较 |
-| [GitHub配置](docs/GITHUB_SETUP.md) | 本机SSH与阶段提交约定 |
-| [构建指南](docs/BUILDING.md) | 本地启动、测试和iOS构建 |
-| [双构建与队列](docs/GITHUB_ACTIONS.md) | iOS27验证、仅最新排队策略及实际耗时 |
-| [工作量进度](docs/PROGRESS_ESTIMATE.md) | 按工作包权重估算代码和整体交付 |
-| [LX进度](docs/LX_HOST_PROGRESS.md) | 原生JSC离线探针与完整宿主待办 |
-| [实现计划](docs/IMPLEMENTATION_PLAN.md) | 验证关卡、分阶段交付和未完成清单 |
-| [参考与证据](docs/REFERENCES.md) | 固定提交、关键文件和官方资料 |
-
-## 当前约束
-
-- 目标设备：iPhone 15 Pro Max，用户报告 iOS 27.0。
-- 已核实开发设备：Intel MacBookPro15,1、16GB，macOS15.8.1、Xcode26.3；候选工程Release模拟器构建通过。
-- 私有云以 Navidrome 为主，计划已扩展本地/设备曲库、WebDAV、备份和音枢多设备同步，具体边界见PRODUCT_SCOPE。
-- 汽水公开歌单导入及跨平台匹配已纳入；汽水账号/直接播放、ECARX、CarPlay、车机扫码上传仍排除，Android不在本轮交付范围。
-- 从漫途导出歌单后一次导入音枢；普通收藏与歌单管理保留。
-- 推荐 React Native 新架构 + TypeScript，原生音频和脚本宿主；框架版本、播放器和构建环境仍须验证。
-- 免费自签、尽量自动续签是使用目标，不是永久签名或零维护承诺。
-
-本仓库未导入三个参考应用的源码或依赖，未决定本项目整体许可证。后续引用第三方实现时必须记录来源与适用许可。
+| [HANDOFF.md](HANDOFF.md) | 项目交接状态与近期里程碑记录 |
+| [产品范围](docs/PRODUCT_SCOPE.md) | 功能边界、音枢特有能力与隐私安全红线 |
+| [Android 双端架构决策](docs/decisions/0083-android-multiplatform-architecture.md) | 同构目录规范与双端契约对齐规则 |
+| [构建指南](docs/BUILDING.md) | 本地启动、测试、iOS/Android 构建与缓存维护 |
+| [云端构建与队列策略](docs/GITHUB_ACTIONS.md) | iOS 27 云端验证队列与归档说明 |
+| [参考与证据](docs/REFERENCES.md) | 第三方协议参考来源与许可边界 |

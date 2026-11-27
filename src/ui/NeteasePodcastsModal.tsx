@@ -185,7 +185,7 @@ export function NeteasePodcastsModal({
                 )}
               </View>
             }
-          />
+           showsVerticalScrollIndicator={false}/>
         ) : (
           <View style={{ flex: 1 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 12, gap: 8 }}>
@@ -239,7 +239,7 @@ export function NeteasePodcastsModal({
                   {radiosLoading ? <ActivityIndicator color={s.accent} /> : <Text style={{ color: s.muted, fontSize: 13 }}>{radiosError || '暂无播客内容'}</Text>}
                 </View>
               }
-            />
+             showsVerticalScrollIndicator={false}/>
           </View>
         )}
       </View>

@@ -329,7 +329,7 @@ export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:So
             <Ionicons name="close" size={20} color={s.ink}/>
           </Pressable>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:20,paddingBottom:36,gap:14}}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:20,paddingBottom:36,gap:14}} showsVerticalScrollIndicator={false}>
           <View style={[styles.sheetCard,s.cardShadow]}>
             <Text style={{color:s.ink,fontSize:15,fontWeight:'700'}}>从本地文件导入</Text>
             <Text style={styles.caption}>支持一次多选多个 `.js` 音源脚本文件（单文件最大 8 MiB），导入后默认停用。</Text>
@@ -379,7 +379,7 @@ export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:So
             </Pressable>
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:20,paddingBottom:36,gap:12}}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:20,paddingBottom:36,gap:12}} showsVerticalScrollIndicator={false}>
             {actionMode==='menu'&&<>
               {actionSource.updateInfo&&<Pressable onPress={()=>setActionMode('updateDetail')} style={{padding:13,borderRadius:16,backgroundColor:updateBadgeBg,borderWidth:1,borderColor:updateAlertColor+'33',flexDirection:'row',alignItems:'center',gap:10}}>
                 <Ionicons name="arrow-up-circle" size={20} color={updateAlertColor}/>

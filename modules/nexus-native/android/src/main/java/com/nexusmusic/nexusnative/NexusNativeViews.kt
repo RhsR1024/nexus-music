@@ -875,3 +875,81 @@ class NexusRadioGlobeView(context: Context, appContext: AppContext) : ExpoView(c
     super.onDetachedFromWindow()
   }
 }
+
+/** Offline-safe local HTML5 Canvas host for high-DPI interactive player skins (Groove 2 / Teletype 2 Android parity). */
+class NexusLocalCanvasView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+  val onAction by EventDispatcher()
+
+  var html: String = ""
+  var stateJson: String = "{}"
+
+  private var loaded = false
+  private var appliedHtmlHash = 0
+  private var appliedState = ""
+
+  private inner class CanvasBridge {
+    @android.webkit.JavascriptInterface
+    fun postMessage(raw: String) {
+      try {
+        val obj = org.json.JSONObject(raw)
+        val out = mutableMapOf<String, Any>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+          val k = keys.next()
+          val v = obj.opt(k)
+          if (v != null && v != org.json.JSONObject.NULL) out[k] = v
+        }
+        post { onAction(out) }
+      } catch (_: Throwable) {}
+    }
+  }
+
+  private val webView = WebView(context).apply {
+    setBackgroundColor(Color.TRANSPARENT)
+    settings.javaScriptEnabled = true
+    settings.domStorageEnabled = false
+    settings.allowFileAccess = false
+    settings.allowContentAccess = false
+    settings.cacheMode = WebSettings.LOAD_NO_CACHE
+    addJavascriptInterface(CanvasBridge(), "NexusCanvasBridge")
+    webViewClient = object : WebViewClient() {
+      override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = true
+      override fun onPageFinished(view: WebView?, url: String?) {
+        loaded = true
+        appliedState = ""
+        pushStateIfNeeded()
+      }
+    }
+  }
+
+  init {
+    setBackgroundColor(Color.TRANSPARENT)
+    addView(webView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+  }
+
+  fun applyProps() {
+    val h = html.hashCode()
+    if (html.isNotEmpty() && h != appliedHtmlHash) {
+      appliedHtmlHash = h
+      loaded = false
+      webView.loadDataWithBaseURL("about:blank", html, "text/html", "UTF-8", null)
+      return
+    }
+    if (loaded) {
+      pushStateIfNeeded()
+    }
+  }
+
+  private fun pushStateIfNeeded() {
+    if (stateJson == appliedState || stateJson.isEmpty()) return
+    appliedState = stateJson
+    webView.evaluateJavascript("window.nexusCanvas && window.nexusCanvas.setState($stateJson);", null)
+  }
+
+  override fun onDetachedFromWindow() {
+    webView.removeJavascriptInterface("NexusCanvasBridge")
+    webView.stopLoading()
+    webView.destroy()
+    super.onDetachedFromWindow()
+  }
+}

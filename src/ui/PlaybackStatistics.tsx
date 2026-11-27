@@ -312,7 +312,7 @@ export function PlaybackStatistics({
 
             <Text style={{color:s.subtle,fontSize:11.5,lineHeight:17}}>分时按设备本地时间记录；播放次数按起播计。旧记录及超出明细保留上限的数据只计累计，不补造分布。专辑按名称与艺术家分组。</Text>
             {(summary.undatedMs>0||summary.undatedPlays>0)&&<Text testID="statistics-undated" style={{color:s.muted,fontSize:12}}>未分时累计 {listeningDuration(summary.undatedMs)} · {summary.undatedPlays} 次</Text>}
-          </View>} ListEmptyComponent={<Text style={{paddingVertical:space.xxl,color:s.muted,textAlign:'center',fontSize:13.5}}>暂无此范围的听歌统计，实际播放后会出现在这里。</Text>}/>
+          </View>} ListEmptyComponent={<Text style={{paddingVertical:space.xxl,color:s.muted,textAlign:'center',fontSize:13.5}}>暂无此范围的听歌统计，实际播放后会出现在这里。</Text>} showsVerticalScrollIndicator={false}/>
 
           {!!message&&<Text accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{message}</Text>}
           <Pressable accessibilityRole="button" disabled={busy} onPress={clear} style={{minHeight:42,borderRadius:21,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}>
@@ -331,7 +331,7 @@ export function PlaybackStatistics({
                 </View>
                 <View style={{flex:1,padding:space.xl,paddingLeft:Math.max(space.xl,insets.left+space.md),paddingRight:Math.max(space.xl,insets.right+space.md),gap:10}}>
                   {pill('全部日期',()=>{setDay(undefined);setSelected(undefined);setDates(false);},!day)}
-                  <FlatList data={fullSummary.days} keyExtractor={item=>item.date} contentContainerStyle={{gap:8,paddingTop:4}} renderItem={({item})=>pill(`${item.date} · ${listeningDuration(item.listenedMs)}`,()=>{setDay(item.date);setRange('all');setSelected(undefined);setDates(false);},day===item.date)}/>
+                  <FlatList data={fullSummary.days} keyExtractor={item=>item.date} contentContainerStyle={{gap:8,paddingTop:4}} renderItem={({item})=>pill(`${item.date} · ${listeningDuration(item.listenedMs)}`,()=>{setDay(item.date);setRange('all');setSelected(undefined);setDates(false);},day===item.date)} showsVerticalScrollIndicator={false}/>
                 </View>
               </View>
             </View>

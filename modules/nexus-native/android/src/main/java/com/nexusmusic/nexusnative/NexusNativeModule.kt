@@ -145,6 +145,14 @@ class NexusNativeModule : Module() {
       OnViewDidUpdateProps { view: NexusRadioGlobeView -> view.applyProps() }
     }
 
+    View(NexusLocalCanvasView::class) {
+      Name("LocalCanvas")
+      Events("onAction")
+      Prop("html") { view: NexusLocalCanvasView, value: String -> view.html = value }
+      Prop("stateJson") { view: NexusLocalCanvasView, value: String -> view.stateJson = value }
+      OnViewDidUpdateProps { view: NexusLocalCanvasView -> view.applyProps() }
+    }
+
     View(NexusVinylPivotView::class) { Name("VinylPivot") }
     View(NexusVinylReflectionView::class) { Name("VinylReflection") }
     View(NexusPhotoMaskView::class) {
@@ -510,6 +518,19 @@ class NexusNativeModule : Module() {
     )
   }
 
+  private fun resizedNeteaseCoverUrl(raw: String, maximum: Int): String? {
+    return try {
+      val uri = java.net.URI(raw)
+      val host = uri.host?.lowercase() ?: return null
+      if (!host.endsWith(".music.126.net") || !uri.rawQuery.isNullOrEmpty()) return null
+      val path = uri.rawPath?.lowercase() ?: return null
+      if (!path.endsWith(".jpg") && !path.endsWith(".jpeg") && !path.endsWith(".png") && !path.endsWith(".webp")) return null
+      "$raw?param=${maximum}y${maximum}"
+    } catch (_: Throwable) {
+      null
+    }
+  }
+
   private fun fetchCoverInternal(key: String, url: String, maximum: Int, exporting: Boolean, promise: Promise) {
     val allowed = if (exporting) setOf(256, 500, 512, 1000, 1024, 1200, 2048) else setOf(512, 1024)
     if (maximum !in allowed) {
@@ -530,34 +551,56 @@ class NexusNativeModule : Module() {
       promise.reject("COVER_BUSY", "封面加载繁忙", null)
       return
     }
-    val client = ScriptHTTP()
+    val client = ScriptHTTP(24 * 1024 * 1024)
     val epoch = cache.epoch
     coverRequests[requestKey] = client to mutableListOf(promise)
-    client.start(1, url, "{\"binary\":true,\"timeout\":10000}") { error, respJson ->
-      coverExecutor.execute {
-        val pending = coverRequests.remove(requestKey) ?: return@execute
-        pending.first.destroy()
-        val parsed = try {
-          if (error == null && respJson != null) JSONObject(respJson) else null
+    val resized = if (exporting) null else resizedNeteaseCoverUrl(url, maximum)
+    val initialUrl = resized ?: url
+    fun finish(stored: String?) {
+      val pending = coverRequests.remove(requestKey) ?: return
+      pending.first.destroy()
+      pending.second.forEach { p ->
+        if (stored != null) p.resolve(stored)
+        else p.reject("COVER_FAILED", "封面暂不可用", null)
+      }
+    }
+    fun storeResponse(error: String?, respJson: String?): String? {
+      val parsed = try {
+        if (error == null && respJson != null) JSONObject(respJson) else null
+      } catch (_: Throwable) {
+        null
+      }
+      val status = parsed?.optInt("statusCode", 0) ?: 0
+      val b64 = parsed?.optString("body", "")
+      return if (epoch == cache.epoch && status in 200..299 && !b64.isNullOrEmpty()) {
+        try {
+          val bytes = Base64.decode(b64, Base64.DEFAULT)
+          cache.store(bytes, key, maximum, exporting)
         } catch (_: Throwable) {
           null
         }
-        val status = parsed?.optInt("statusCode", 0) ?: 0
-        val b64 = parsed?.optString("body", "")
-        val stored = if (epoch == cache.epoch && status in 200..299 && !b64.isNullOrEmpty()) {
-          try {
-            val bytes = Base64.decode(b64, Base64.DEFAULT)
-            cache.store(bytes, key, maximum, exporting)
-          } catch (_: Throwable) {
-            null
+      } else {
+        null
+      }
+    }
+    client.start(1, initialUrl, "{\"binary\":true,\"timeout\":15000}") { error, respJson ->
+      coverExecutor.execute {
+        if (coverRequests[requestKey] == null) return@execute
+        val stored = storeResponse(error, respJson)
+        if (stored != null) {
+          finish(stored)
+          return@execute
+        }
+        if (resized != null && initialUrl != url) {
+          client.start(2, url, "{\"binary\":true,\"timeout\":15000}") { retryErr, retryJson ->
+            coverExecutor.execute {
+              if (coverRequests[requestKey] == null) return@execute
+              finish(storeResponse(retryErr, retryJson))
+            }
           }
-        } else {
-          null
+          return@execute
         }
-        pending.second.forEach { p ->
-          if (stored != null) p.resolve(stored)
-          else p.reject("COVER_FAILED", "封面暂不可用", null)
-        }
+        finish(null)
       }
     }
   }

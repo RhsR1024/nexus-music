@@ -129,7 +129,7 @@ export function LyricChoiceModal({services,track,onClose,inline=false}:{services
         <Ionicons name="chevron-forward" size={18} color={s.subtle}/>
       </Pressable>}
       ListFooterComponent={items.length>0&&page<10?<Pressable accessibilityRole="button" disabled={busy||saving} onPress={()=>startSearch(page+1)} style={{minHeight:44,borderRadius:22,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',marginTop:4,opacity:busy||saving?.45:1}}><Text style={{color:s.control,fontSize:14,fontWeight:'600'}}>更多歌词候选</Text></Pressable>:null}
-    />
+     showsVerticalScrollIndicator={false}/>
   </View>;
 
   if(inline)return track?body:null;

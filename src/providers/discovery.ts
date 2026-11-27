@@ -129,7 +129,7 @@ export class DiscoveryProvider {
     const raw=row(await this.http('https://music.163.com/api/v2/banner/get?clientType=pc',{credentials:'omit',headers:{'User-Agent':DESKTOP_UA,Referer:'https://music.163.com/'}},signal));
     if(raw.code!==200||!Array.isArray(raw.banners))throw new Error('轮播图响应无效');
     const parsed:NeteaseBanner[]=[];
-    for(const entry of list(raw.banners).slice(0,10)){
+    for(const entry of list(raw.banners).slice(0,12)){
       const v=row(entry),pic=text(v.pic??v.imageUrl).trim();
       if(!pic)continue;
       let imageUrl='';

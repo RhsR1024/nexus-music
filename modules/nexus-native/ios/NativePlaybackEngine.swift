@@ -21,6 +21,12 @@ final class NativePlaybackEngine {
   private var fadeDurationMs = 500
   private var fadeTimer: Timer?
   private var fadeGeneration = 0
+  private var isFadingOutStop = false
+  private var fadingOutLoader: AudioResourceLoader?
+  private var fadingOutAlias: URL?
+  private var fadingOutLocalURL: URL?
+  private var fadingOutCacheKey: String?
+  private var fadingOutDSP: NexusAudioDSP?
   private var systemLyricLine: String?
   private var systemLyricPosition = "artist"
   private var loading: Task<Void, Never>?
@@ -231,8 +237,36 @@ final class NativePlaybackEngine {
             guard let self, self.player.currentItem === item, self.entryID == id else { return }
             if !self.sleepTimer.ended(id) { self.report("ended") }
           }
-          self.player.replaceCurrentItem(with: item)
-          self.updateNowPlaying()
+          let installItem: () -> Void = { [weak self] in
+            guard let self, self.generation == newGeneration, self.entryID == id else { return }
+            self.cancelFade()
+            self.releaseFadingOutResources()
+            self.player.volume = (self.fadeEnabled && self.fadeDurationMs >= 100 && self.targetVolume > 0) ? 0 : self.targetVolume
+            self.player.replaceCurrentItem(with: item)
+            self.updateNowPlaying()
+          }
+          if self.isFadingOutStop && self.player.rate > 0 && self.player.volume > 0.03 {
+            // Finish a crisp residual fade-out tail before swapping local/cached tracks.
+            let startVol = self.player.volume
+            self.cancelFade()
+            self.isFadingOutStop = true
+            let token = self.fadeGeneration
+            let steps = 7
+            var step = 0
+            self.fadeTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { [weak self] timer in
+              guard let self, self.fadeGeneration == token, self.generation == newGeneration, self.entryID == id else { timer.invalidate(); return }
+              step += 1
+              let rem = max(0.0, 1.0 - Float(step) / Float(steps))
+              self.player.volume = startVol * rem * rem
+              if step >= steps {
+                timer.invalidate(); self.fadeTimer = nil; self.isFadingOutStop = false
+                self.player.pause()
+                installItem()
+              }
+            }
+          } else {
+            installItem()
+          }
         }
       } catch {
         await MainActor.run { [weak self] in
@@ -250,8 +284,21 @@ final class NativePlaybackEngine {
     try? session.setCategory(.playback, mode: .default, options: enabled ? [.mixWithOthers] : [])
     #endif
   }
+  private func releaseFadingOutResources() {
+    isFadingOutStop = false
+    fadingOutLoader?.destroy(); fadingOutLoader = nil
+    fadingOutDSP = nil
+    if let alias = fadingOutAlias { try? FileManager.default.removeItem(at: alias) }; fadingOutAlias = nil
+    if let local = fadingOutLocalURL { LocalAudioFiles.shared.release(local) }; fadingOutLocalURL = nil
+    if let key = fadingOutCacheKey { AudioCache.shared.release(key) }; fadingOutCacheKey = nil
+  }
   private func cancelFade(restoreVolume: Bool = false) {
     fadeTimer?.invalidate(); fadeTimer = nil; fadeGeneration += 1
+    if isFadingOutStop {
+      isFadingOutStop = false
+      player.pause()
+      releaseFadingOutResources()
+    }
     if restoreVolume { player.volume = targetVolume }
   }
   private func startPlaybackWithFade() {
@@ -267,7 +314,7 @@ final class NativePlaybackEngine {
         guard let self, self.fadeGeneration == token, self.wantsPlay else { timer.invalidate(); return }
         currentStep += 1
         let ratio = min(1.0, Float(currentStep) / Float(steps))
-        self.player.volume = self.targetVolume * ratio
+        self.player.volume = self.targetVolume * ratio * ratio
         if currentStep >= steps { timer.invalidate(); self.fadeTimer = nil; self.player.volume = self.targetVolume }
       }
     } else {
@@ -311,7 +358,7 @@ final class NativePlaybackEngine {
         guard let self, self.fadeGeneration == token, !self.wantsPlay else { timer.invalidate(); return }
         currentStep += 1
         let ratio = max(0.0, 1.0 - Float(currentStep) / Float(steps))
-        self.player.volume = startVolume * ratio
+        self.player.volume = startVolume * ratio * ratio
         if currentStep >= steps {
           timer.invalidate(); self.fadeTimer = nil
           self.player.pause(); self.player.volume = self.targetVolume; self.report("paused")
@@ -333,11 +380,47 @@ final class NativePlaybackEngine {
     if !preservingSleep { sleepTimer.trackChanged(to: "") }
     generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
     observation = nil; durationObservation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
-    cancelFade(restoreVolume: true)
-    player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
-    if let offlinePlaybackAlias { try? FileManager.default.removeItem(at: offlinePlaybackAlias) }; offlinePlaybackAlias = nil
-    if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
-    if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
+    let shouldSmoothFadeOut = !preservingSleep && fadeEnabled && fadeDurationMs >= 100 && player.rate > 0 && player.volume > 0.01
+    if shouldSmoothFadeOut {
+      fadeTimer?.invalidate(); fadeTimer = nil; fadeGeneration += 1
+      releaseFadingOutResources()
+      fadingOutLoader = loader; loader = nil
+      fadingOutDSP = dsp; dsp = nil
+      fadingOutAlias = offlinePlaybackAlias; offlinePlaybackAlias = nil
+      fadingOutLocalURL = retainedLocalURL; retainedLocalURL = nil
+      fadingOutCacheKey = cacheKey; cacheKey = nil
+      cachedPlayback = false; originalPayload = nil
+      isFadingOutStop = true
+      let startVol = player.volume
+      let outMs = min(fadeDurationMs, 600)
+      let steps = max(1, Int(Double(outMs) / 20.0))
+      var currentStep = 0
+      let token = fadeGeneration
+      fadeTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { [weak self] timer in
+        guard let self, self.fadeGeneration == token else { timer.invalidate(); return }
+        currentStep += 1
+        let rem = max(0.0, 1.0 - Float(currentStep) / Float(steps))
+        self.player.volume = startVol * rem * rem
+        if currentStep >= steps {
+          timer.invalidate(); self.fadeTimer = nil
+          self.player.pause(); self.player.replaceCurrentItem(with: nil)
+          self.releaseFadingOutResources()
+          self.player.volume = self.targetVolume
+        }
+      }
+    } else if preservingSleep && isFadingOutStop {
+      // Keep the outgoing track fading smoothly while the new asset prepares asynchronously.
+      loader?.destroy(); loader = nil; dsp = nil
+      if let offlinePlaybackAlias { try? FileManager.default.removeItem(at: offlinePlaybackAlias) }; offlinePlaybackAlias = nil
+      if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
+      if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
+    } else {
+      cancelFade(restoreVolume: true)
+      player.pause(); player.replaceCurrentItem(with: nil); loader?.destroy(); loader = nil; dsp = nil
+      if let offlinePlaybackAlias { try? FileManager.default.removeItem(at: offlinePlaybackAlias) }; offlinePlaybackAlias = nil
+      if let retainedLocalURL { LocalAudioFiles.shared.release(retainedLocalURL) }; retainedLocalURL = nil
+      if let cacheKey { AudioCache.shared.release(cacheKey) }; cacheKey = nil; cachedPlayback = false; originalPayload = nil
+    }
     entryID = ""; metadata = [:]; knownDuration = 0; systemItemID = ""; systemFavorite = false; systemArtwork = nil; systemLyricLine = nil; artworkRevision += 1
     updateSystemCommands()
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -372,7 +455,7 @@ final class NativePlaybackEngine {
   func configureVolume(_ value: Double) {
     guard value.isFinite else { return }
     targetVolume = Float(min(1, max(0, value)))
-    cancelFade(restoreVolume: true)
+    if fadeTimer == nil { player.volume = targetVolume }
   }
   func configureSleep(_ seconds: Double, _ finishCurrent: Bool) -> [String: Any] {
     if finishCurrent && entryID.isEmpty { return sleepTimer.snapshot() }
@@ -420,7 +503,7 @@ final class NativePlaybackEngine {
     MPNowPlayingInfoCenter.default().playbackState = wantsPlay && player.rate > 0 ? .playing : .paused
   }
   func dispose() {
-    sleepTimer.dispose(); stop(generation + 1); spectrumTimer?.invalidate(); spectrumTimer = nil;listeningTimer?.invalidate();listeningTimer=nil
+    sleepTimer.dispose(); fadeEnabled = false; stop(generation + 1); releaseFadingOutResources(); spectrumTimer?.invalidate(); spectrumTimer = nil;listeningTimer?.invalidate();listeningTimer=nil
     if let progress { player.removeTimeObserver(progress) }; progress = nil
     playerObservation = nil
     for observer in [interruption, routeObserver].compactMap({ $0 }) { NotificationCenter.default.removeObserver(observer) }

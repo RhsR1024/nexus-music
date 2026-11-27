@@ -192,14 +192,14 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"skins")
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
     XCTAssertTrue(classic.waitForExistence(timeout:5),"Classic layout option must exist in skins sheet")
-    let sheetScroll=app.descendants(matching:.any).matching(identifier:"skins-sheet-scroll").firstMatch
+    let sheetScroll=app.descendants(matching:.any).matching(identifier:"settings-scroll-skins").firstMatch
     let viewport=sheetScroll.exists ? sheetScroll : app
     for _ in 0..<12 {
       if classic.isHittable{break}
       viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.25)).press(forDuration:0.05,thenDragTo:viewport.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.75)))
     }
-    XCTAssertTrue(classic.isHittable,"Classic layout option must be hittable in skins sheet");classic.tap()
-    let dismissed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.buttons["skins-sheet-close"].exists},object:nil)
+    XCTAssertTrue(classic.isHittable,"Classic layout option must be hittable in skins page");classic.tap()
+    let dismissed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !app.staticTexts["settings-title-skins"].exists},object:nil)
     XCTAssertEqual(XCTWaiter.wait(for:[dismissed],timeout:10),.completed,"Persist the source test's classic layout before playback")
   }
   private func dismissPasswordSuggestion(in container:XCUIElement) -> Bool {
@@ -344,7 +344,7 @@ final class SourceSettingsTests: XCTestCase {
     let app=XCUIApplication(),home=XCUIApplication(bundleIdentifier:"com.apple.springboard")
     func icon(_ id:String)->XCUIElement{app.descendants(matching:.any).matching(identifier:"app-icon-"+id).firstMatch}
     app.launch();openSettings(app,page:"icons")
-    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"app-icon-sheet").firstMatch.waitForExistence(timeout:10))
+    XCTAssertTrue(app.staticTexts["settings-title-icons"].waitForExistence(timeout:10))
     let ids=["primary","orange","green","blue","purple","graphite"]
     let icons=ids.map(icon)
     for icon in icons{
@@ -486,17 +486,16 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"appearance");XCTAssertFalse(name.exists)
     let fontEntry=app.buttons["settings-open-globalFont"];reveal(fontEntry);fontEntry.tap()
     XCTAssertTrue(app.staticTexts["settings-title-globalFont"].exists);XCTAssertTrue(app.buttons["font-import"].isHittable)
-    app.buttons["globalFont-sheet-close"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
+    app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
     openSettings(app,page:"equalizer");XCTAssertEqual(name.value as? String,"Retained draft");XCTAssertTrue(name.isHittable);evidence("Settings draft and scroll retained")
     XCTAssertEqual(app.buttons["settings-back"].label,"返回播放与歌词")
     app.buttons["settings-back"].tap();XCTAssertTrue(app.staticTexts["settings-title-playback"].exists)
     openSettings(app,page:"theme")
-    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"theme-mode-sheet").firstMatch.exists)
-    XCTAssertFalse(app.buttons["settings-open-background"].exists,"The underlying category must leave the accessibility tree while its sheet is open")
-    evidence("Theme mode native sheet")
-    app.buttons["theme-sheet-close"].tap()
-    XCTAssertTrue(waitForGone(app.buttons["theme-sheet-close"],timeout:5),"Closing the picker must dismiss the sheet")
-    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists,"Closing the picker must preserve its category")
+    XCTAssertTrue(app.staticTexts["settings-title-theme"].exists)
+    XCTAssertFalse(app.buttons["settings-open-background"].exists,"The underlying category must leave the accessibility tree while its subpage is open")
+    evidence("Theme mode independent page")
+    app.buttons["settings-back"].tap()
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].waitForExistence(timeout:5),"Returning from theme must preserve its category")
     openSettings(app,page:"appearance");app.descendants(matching:.any).matching(identifier:"tab-settings").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["settings-title-home"].waitForExistence(timeout:5),"Selecting the active settings tab must return to the settings root")
     openSettings(app,page:"downloads");XCTAssertFalse(name.exists)
@@ -672,7 +671,7 @@ final class SourceSettingsTests: XCTestCase {
     _=try control(false)
     defer{_=try? control(false)}
     openSettings(app,page:"skins");let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch;reveal(classic);classic.tap()
-    let skinDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["skins-sheet-close"]);XCTAssertEqual(XCTWaiter.wait(for:[skinDismissed],timeout:10),.completed,"Skin selection must finish dismissing its sheet before navigating to downloads")
+    let skinDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.staticTexts["settings-title-skins"]);XCTAssertEqual(XCTWaiter.wait(for:[skinDismissed],timeout:10),.completed,"Skin selection must finish dismissing its page before navigating to downloads")
     // A failed prior run can leave this synthetic fixture saved. Remove only
     // that record through the actual UI so retries cannot reuse its bytes.
     openSettings(app,page:"downloads");let initialTasks=app.buttons["settings-open-downloadTasks"];reveal(initialTasks);initialTasks.tap()
@@ -796,7 +795,7 @@ final class SourceSettingsTests: XCTestCase {
     reach(waveSkin)
     XCTAssertTrue((waveSkin.value as? String)?.contains("实时音频频谱环") == true)
     waveSkin.tap()
-    XCTAssertTrue(waitForGone(app.buttons["skins-sheet-close"],timeout:10),"Wave selection must finish dismissing before source navigation")
+    XCTAssertTrue(waitForGone(app.staticTexts["settings-title-skins"],timeout:10),"Wave selection must finish dismissing before source navigation")
     openSettings(app,page:"sources")
     let source=app.textFields["音源订阅地址"];reach(source);source.tap();for character in "http://127.0.0.1:18439/matching-source.js"{source.typeText(String(character))};source.typeText("\n");app.buttons["从地址导入"].tap()
     let enable=app.buttons["启用音源：Nexus Matching Fixture"],enabled=app.buttons["停用音源：Nexus Matching Fixture"]
@@ -5245,7 +5244,7 @@ final class SourceSettingsTests: XCTestCase {
     func reach(_ element:XCUIElement){XCTAssertTrue(element.waitForExistence(timeout:10));for _ in 0..<18{if element.isHittable{return};let above=element.frame.midY<app.frame.midY;app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.3:0.7)).press(forDuration:0.05,thenDragTo:app.coordinate(withNormalizedOffset:CGVector(dx:0.96,dy:above ? 0.7:0.3)))};XCTAssertTrue(element.isHittable)}
     func progress()->XCUIElement{app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","播放进度")).firstMatch}
     func checkCold(_ name:String){XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:15));let item=progress();reach(item);XCTAssertTrue((item.value as? String ?? "").contains("/ 3:53"));XCTAssertFalse(item.isEnabled,"Metadata must never enable native seeking before prepare");XCTAssertFalse(app.buttons["暂停"].firstMatch.exists);image(name)}
-    func layout(_ id:String){let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap();openSettings(app,page:"skins");let item=app.descendants(matching:.any).matching(identifier:"player-layout-"+id).firstMatch;reach(item);item.tap();XCTAssertTrue(app.buttons["skins-sheet-close"].waitForNonExistence(timeout:10));app.buttons["打开播放页"].firstMatch.tap()}
+    func layout(_ id:String){let close=app.buttons["收起播放页"].firstMatch;reach(close);close.tap();openSettings(app,page:"skins");let item=app.descendants(matching:.any).matching(identifier:"player-layout-"+id).firstMatch;reach(item);item.tap();XCTAssertTrue(app.staticTexts["settings-title-skins"].waitForNonExistence(timeout:10));app.buttons["打开播放页"].firstMatch.tap()}
     selectClassicSourcePlayback(in:app);openSettings(app,page:"storage");let entry=app.buttons["open-listening-statistics"];reach(entry);entry.tap();app.buttons["清空本机听歌统计"].tap();app.alerts.buttons["清空"].tap();XCTAssertTrue(app.staticTexts["播放统计已清空"].waitForExistence(timeout:10));app.buttons["收起听歌统计"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap();let local=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","本地音频 ·")).firstMatch;reach(local);local.tap();app.buttons["导入音频文件"].tap();selectLocalFixture("Shape of You - Ed Sheeran",in:app);XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","已导入")).firstMatch.waitForExistence(timeout:20))
     let field=app.textFields["搜索本地歌曲艺术家专辑"];field.tap();for c in "Shape of You"{field.typeText(String(c))};XCTAssertEqual(field.value as? String,"Shape of You");field.typeText("\n");app.buttons["local-track-0"].tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(6));app.buttons["暂停"].firstMatch.tap();let nativeValue=progress().value as? String ?? "";XCTAssertTrue(nativeValue.contains("/ 3:53"));let savedPosition=nativeValue.components(separatedBy:" / ").first
@@ -5270,14 +5269,14 @@ final class SourceSettingsTests: XCTestCase {
     tap("appearance-export-theme");let saveActivity=app.descendants(matching:.any).matching(NSPredicate(format:"label IN %@",["Save to Files","存储到文件","儲存到檔案","保存到“文件”"])).firstMatch;for _ in 0..<5{if saveActivity.exists&&saveActivity.isHittable{break};app.swipeUp()};guard saveActivity.waitForExistence(timeout:15) else{let tree=XCTAttachment(string:app.debugDescription);tree.name="Actual theme export share hierarchy";tree.lifetime = .keepAlways;add(tree);XCTFail("Actual OS Save to Files must be available");return};saveActivity.tap()
     let phone=app.cells.matching(NSPredicate(format:"label IN %@",["On My iPhone","我的iPhone","我的 iPhone","在我的 iPhone"])).firstMatch;if phone.waitForExistence(timeout:3){phone.tap()};let folder=app.cells.matching(NSPredicate(format:"label BEGINSWITH %@","Nexus UITest Fixtures")).firstMatch;if folder.waitForExistence(timeout:3){folder.tap()}
     let filename=app.textFields.firstMatch;XCTAssertTrue(filename.waitForExistence(timeout:10));let actualName=filename.value as? String ?? "";XCTAssertTrue(actualName.hasPrefix("nexus-theme-"));image("Real theme OS save actual exported file");let save=app.buttons.matching(NSPredicate(format:"label IN %@",["Save","保存","儲存","存储"])).firstMatch;XCTAssertTrue(save.waitForExistence(timeout:10));XCTAssertTrue(save.isEnabled);save.tap();XCTAssertTrue(item("appearance-export-theme").waitForExistence(timeout:15))
-    tap("background-sheet-close");openSettings(app,page:"appearance");reach(cover);cover.tap();XCTAssertEqual(cover.value as? String,"1");openSettings(app,page:"background");tap("visual-mint");tap("background-gradient");XCTAssertTrue(item("visual-mint").isSelected)
+    tap("settings-back");openSettings(app,page:"appearance");reach(cover);cover.tap();XCTAssertEqual(cover.value as? String,"1");openSettings(app,page:"background");tap("visual-mint");tap("background-gradient");XCTAssertTrue(item("visual-mint").isSelected)
     func chooseActualExport(){tap("appearance-import-theme");selectLocalFixture(actualName.components(separatedBy:".json").first!,in:app);XCTAssertTrue(app.alerts["导入主题配置"].waitForExistence(timeout:15))}
     chooseActualExport();image("Real theme import preview cancel");app.alerts.buttons["取消"].tap();XCTAssertTrue(item("visual-mint").isSelected);XCTAssertTrue(item("background-gradient").isSelected)
     chooseActualExport();app.alerts.buttons["应用主题"].tap();let success=app.alerts["主题已导入"];XCTAssertTrue(success.waitForExistence(timeout:15));XCTAssertEqual(success.buttons.count,1);success.buttons.firstMatch.tap();XCTAssertTrue(item("visual-blush").isSelected);XCTAssertTrue(item("background-solid").isSelected);image("Real theme restored actual configuration")
-    tap("background-sheet-close");app.terminate();app.launch();openSettings(app,page:"appearance");reach(cover);XCTAssertEqual(cover.value as? String,"0");openSettings(app,page:"background");XCTAssertTrue(item("visual-blush").waitForExistence(timeout:10));XCTAssertTrue(item("visual-blush").isSelected);XCTAssertTrue(item("background-solid").isSelected);image("Real theme restored after restart")
+    tap("settings-back");app.terminate();app.launch();openSettings(app,page:"appearance");reach(cover);XCTAssertEqual(cover.value as? String,"0");openSettings(app,page:"background");XCTAssertTrue(item("visual-blush").waitForExistence(timeout:10));XCTAssertTrue(item("visual-blush").isSelected);XCTAssertTrue(item("background-solid").isSelected);image("Real theme restored after restart")
     XCUIDevice.shared.orientation = .landscapeLeft
     reach(item("appearance-import-theme"));XCTAssertTrue(app.frame.contains(item("appearance-export-theme").frame));image("Real theme landscape action reachability");XCUIDevice.shared.orientation = .portrait
-    tap("background-sheet-close");app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));app.buttons["播放"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));app.buttons["暂停"].firstMatch.tap();image("Real theme actual playback after restore")
+    tap("settings-back");app.buttons["打开播放页"].firstMatch.tap();XCTAssertTrue(app.buttons["播放"].firstMatch.waitForExistence(timeout:10));app.buttons["播放"].firstMatch.tap();XCTAssertTrue(app.staticTexts["实时音频频谱"].waitForExistence(timeout:60));RunLoop.current.run(until:Date().addingTimeInterval(4));app.buttons["暂停"].firstMatch.tap();image("Real theme actual playback after restore")
   }
 
   func testLiveDownloadQuality() throws {
@@ -5744,7 +5743,7 @@ final class SourceSettingsTests: XCTestCase {
     }
     let fixtureUser=artwork ? "fixture-photo":"fixture-user"
     openSettings(app,page:"skins");let am2=element(classic ? "player-layout-classic":stage ? "player-layout-stage":photo ? "player-layout-photo":am ? "player-layout-am":"player-layout-am2");reveal(am2);am2.tap()
-    expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:app.buttons["skins-sheet-close"]);waitForExpectations(timeout:10)
+    expectation(for:NSPredicate(format:"selected == true"),evaluatedWith:am2);waitForExpectations(timeout:10)
     openSettings(app,page:"sources")
     for (label,value) in [("Navidrome服务器地址","http://127.0.0.1:18439"),("Navidrome用户名",fixtureUser),("Navidrome密码","fixture-password")]{
       let field=label=="Navidrome密码" ? app.secureTextFields[label] : app.textFields[label]
@@ -6015,7 +6014,7 @@ final class SourceSettingsTests: XCTestCase {
     let gradient=app.descendants(matching:.any).matching(identifier:"background-gradient").firstMatch
     if gradient.exists && !gradient.isSelected {gradient.tap()}
     // Use the shipping theme for colour evidence, including settings captures.
-    let backgroundScroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    let backgroundScroll=app.descendants(matching:.any).matching(identifier:"settings-scroll-background").firstMatch
     func reveal(_ element:XCUIElement){let scroller=backgroundScroll.exists ? backgroundScroll : app;for _ in 0..<40 {if element.exists && element.isHittable{break};let above=element.exists && element.frame.midY<scroller.frame.midY;scroller.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.35 : 0.65)).press(forDuration:0.05,thenDragTo:scroller.coordinate(withNormalizedOffset:CGVector(dx:0.03,dy:above ? 0.65 : 0.35)))};XCTAssertTrue(element.exists && element.isHittable)}
     func reachValue(_ identifier:String,_ target:String,_ up:Bool){
       let label=app.staticTexts["visual-value-"+identifier]
@@ -6096,7 +6095,7 @@ final class SourceSettingsTests: XCTestCase {
     let classic=app.descendants(matching:.any).matching(identifier:"player-layout-classic").firstMatch
     XCTAssertTrue((app.descendants(matching:.any).matching(identifier:"player-layout-wave").firstMatch.value as? String)?.contains("实时音频频谱环") == true,"Style choices should expose a concise behavior description")
     reveal(classic);classic.tap()
-    let skinDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.buttons["skins-sheet-close"])
+    let skinDismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:app.staticTexts["settings-title-skins"])
     XCTAssertEqual(XCTWaiter.wait(for:[skinDismissed],timeout:10),.completed,"Skin selection must finish dismissing before navigating to sources")
     openSettings(app,page:"sources")
     let address=app.textFields["Navidrome服务器地址"]
@@ -6576,7 +6575,7 @@ final class SourceSettingsTests: XCTestCase {
     miniFavorite.tap();expectation(for:NSPredicate(format:"value == %@",favoriteBefore ?? ""),evaluatedWith:miniFavorite);waitForExpectations(timeout:10)
     miniQueue.tap();XCTAssertTrue(app.buttons["收起队列"].waitForExistence(timeout:10));app.buttons["收起队列"].tap();XCTAssertEqual(miniToggle.label,"播放")
     let miniImage=XCTAttachment(screenshot:app.screenshot());miniImage.name="Four persisted mini controls and actual recording lyric";miniImage.lifetime = .keepAlways;add(miniImage)
-    openSettings(app,page:"mini");miniChoose("mini-reset");app.buttons["mini-sheet-close"].tap();expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
+    openSettings(app,page:"mini");miniChoose("mini-reset");app.buttons["settings-back"].tap();expectation(for:NSPredicate(format:"exists == false"),evaluatedWith:miniQueue);waitForExpectations(timeout:10)
     openSettings(app,page:"sources")
     for _ in 0..<45 {if app.buttons["移除连接：fixture-user"].isHittable{break};app.swipeDown()}
     app.buttons["移除连接：fixture-user"].tap();app.alerts.buttons["移除"].tap()
@@ -6729,18 +6728,18 @@ final class SourceSettingsTests: XCTestCase {
     // Assert actual pixels, not merely the presence of the background view.
     openSettings(app,page:"background")
     let tint=app.switches["visual-cover-color"];reveal(tint);if tint.value as? String != "0"{tint.tap()}
-    app.buttons["background-sheet-close"].tap()
+    app.buttons["settings-back"].tap()
     let noCover=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[noCover],timeout:10),.completed)
     openSettings(app,page:"background")
     let global=app.switches["visual-global-motion"];reveal(global);global.tap();XCTAssertEqual(global.value as? String,"1")
     let playerMotion=app.switches["visual-motion"];reveal(playerMotion);XCTAssertEqual(playerMotion.value as? String,"0")
-    app.buttons["background-sheet-close"].tap();expectTint(false,"Global flow without cover tint")
+    app.buttons["settings-back"].tap();expectTint(false,"Global flow without cover tint")
     app.descendants(matching:.any).matching(identifier:"tab-discover").firstMatch.tap();expectTint(false,"Global flow discovery independent of player motion")
     app.terminate();launch();openSettings(app,page:"background")
     let persistedGlobal=app.switches["visual-global-motion"];reveal(persistedGlobal);XCTAssertEqual(persistedGlobal.value as? String,"1")
     let persistedTint=app.switches["visual-cover-color"];reveal(persistedTint);XCTAssertEqual(persistedTint.value as? String,"0")
     let persistedPlayer=app.switches["visual-motion"];reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"0")
-    app.buttons["background-sheet-close"].tap();expectTint(false,"Global flow restored paused")
+    app.buttons["settings-back"].tap();expectTint(false,"Global flow restored paused")
     // Exercise the real native scene gate through playback, presentation,
     // foreground restoration and pause; pixel checks above remain independent.
     func motion(_ active:Bool){
@@ -6909,7 +6908,7 @@ final class SourceSettingsTests: XCTestCase {
     let lightBrightness=marginBrightness()
     app.buttons["mini-action-toggle"].tap();motion(true)
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-dark").firstMatch.tap()
-    app.buttons["theme-sheet-close"].tap()
+    app.buttons["settings-back"].tap()
     expectThreeColors("Softened dark flow actual appearance pixels")
     XCTAssertLessThan(marginBrightness(),lightBrightness-60,"The same raw cover must rebuild a substantially darker native scene")
     app.buttons["mini-action-toggle"].tap()
@@ -6932,7 +6931,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertLessThan(marginBrightness(),lightBrightness-60,"Dark scene must survive restart")
     let darkStopped=backgroundPixels();XCTAssertEqual(darkStopped,backgroundPixels(),"Paused dark scene must remain stable")
     openSettings(app,page:"theme");app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
-    app.buttons["theme-sheet-close"].tap()
+    app.buttons["settings-back"].tap()
     let restoredLight=pausedScene("Softened light flow restored paused")
     let paletteAfterLight=try observePalette("Actual applied light palette after rebuild",dark:false)
     XCTAssertEqual(beforeStore,paletteAfterLight["store"] as? NSDictionary,"Theme changes must preserve the actual ordered cover palette and identity")
@@ -6940,7 +6939,7 @@ final class SourceSettingsTests: XCTestCase {
     XCTAssertGreaterThan(marginBrightness(),lightBrightness-30,"Light theme must rebuild even with unchanged identity and palette")
     openSettings(app,page:"background");setSwitch(persistedPlayer,true)
     setSwitch(persistedGlobal,false)
-    app.buttons["background-sheet-close"].tap()
+    app.buttons["settings-back"].tap()
     let restoredBase=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in abs(redMinusBlue())<12},object:app);XCTAssertEqual(XCTWaiter.wait(for:[restoredBase],timeout:10),.completed)
     openSettings(app,page:"background");reveal(persistedPlayer);XCTAssertEqual(persistedPlayer.value as? String,"1","Global switch must preserve playback animation choice")
     setSwitch(persistedPlayer,false)
@@ -6952,7 +6951,7 @@ final class SourceSettingsTests: XCTestCase {
   }
   func testBackgroundMotionSwitchRoundTrip() throws {
     let app=XCUIApplication();app.launch();openSettings(app,page:"background")
-    let control=app.switches["visual-motion"],scroll=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    let control=app.switches["visual-motion"],scroll=app.descendants(matching:.any).matching(identifier:"settings-scroll-background").firstMatch
     for _ in 0..<16 {if control.isHittable{break};scroll.swipeUp()}
     XCTAssertTrue(control.isHittable)
     let initial=control.value as? String
@@ -7251,7 +7250,7 @@ final class SourceSettingsTests: XCTestCase {
     let darkImage=XCTAttachment(screenshot:app.screenshot());darkImage.lifetime = .keepAlways;add(darkImage)
     app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.tap()
     let lightImage=XCTAttachment(screenshot:app.screenshot());lightImage.lifetime = .keepAlways;add(lightImage)
-    app.buttons["theme-sheet-close"].tap()
+    app.buttons["settings-back"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-search").firstMatch.tap()
     let discover=app.buttons["发现 · 分类 · 排行榜 · 歌单导入"]
     XCTAssertTrue(discover.waitForExistence(timeout:10));discover.tap()
@@ -8260,12 +8259,12 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"theme")
     let light=app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch
     for _ in 0..<3 {if light.isHittable{break};app.swipeDown()};light.tap()
-    app.buttons["theme-sheet-close"].tap()
+    app.buttons["settings-back"].tap()
     let settingsImage=XCTAttachment(screenshot:app.screenshot());settingsImage.lifetime = .keepAlways;add(settingsImage)
     app.terminate();app.launch()
     openSettings(app,page:"theme")
-    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.isSelected,"Theme choice must persist after sheet close and relaunch")
-    app.buttons["theme-sheet-close"].tap()
+    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"theme-light").firstMatch.isSelected,"Theme choice must persist after leaving page and relaunch")
+    app.buttons["settings-back"].tap()
     openSettings(app,page:"accent")
     let restored=app.descendants(matching:.any).matching(identifier:"accent-blue").firstMatch
     for _ in 0..<14 {if restored.isHittable{break};app.swipeUp()}
@@ -8273,7 +8272,7 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"background")
     let pink=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
     for _ in 0..<3 {if pink.isHittable{break};app.swipeDown()};pink.tap()
-    app.buttons["background-sheet-close"].tap()
+    app.buttons["settings-back"].tap()
     app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
     app.descendants(matching:.any).matching(identifier:"tab-private").firstMatch.tap()
     XCTAssertTrue(app.staticTexts["私人曲库"].firstMatch.exists)
@@ -8297,27 +8296,22 @@ final class SourceSettingsTests: XCTestCase {
   }
   private func exerciseVisualImagesAndPlayerBackgroundPersistence(imageName:String) throws {
     let app=XCUIApplication();app.launch()
-    let viewport=app.descendants(matching:.any).matching(identifier:"background-sheet-scroll").firstMatch
+    let viewport=app.descendants(matching:.any).matching(identifier:"settings-scroll-background").firstMatch
     func reveal(_ element:XCUIElement,companion:XCUIElement?=nil,expectAbove:Bool?=nil){
-      let handle=app.buttons["background-sheet-close"]
+      let backButton=app.buttons["settings-back"]
       func visibleRect()->CGRect {
         var rect=viewport.frame.intersection(app.frame)
-        // RN can expose the scroll content's unclipped AX frame. Absolute
-        // screen points must stay below the sheet's real dismissal handle.
-        if handle.exists {let top=max(rect.minY,handle.frame.maxY+8);rect=CGRect(x:rect.minX,y:top,width:rect.width,height:max(0,rect.maxY-top))}
+        if backButton.exists {let top=max(rect.minY,backButton.frame.maxY+8);rect=CGRect(x:rect.minX,y:top,width:rect.width,height:max(0,rect.maxY-top))}
         return rect
       }
       func visible()->Bool {
         guard element.exists,viewport.exists,companion == nil || companion!.exists else{return false}
         let frame=companion.map{element.frame.union($0.frame)} ?? element.frame,rect=visibleRect()
-        // A value label is read, not tapped. iOS can expose its geometry
-        // while reporting it as non-hittable; scrolling again at the top
-        // would hand the downward gesture to the dismissible sheet.
         return frame.width>0 && frame.height>0 && rect.contains(CGPoint(x:frame.midX,y:frame.midY)) && frame.minY>=rect.minY+6 && frame.maxY<=rect.maxY-6 && (element.elementType == .staticText || element.isHittable || !element.isEnabled)
       }
       for _ in 0..<45 {
         if visible(){break}
-        guard viewport.waitForExistence(timeout:10),waitForHittable(handle,timeout:10) else{XCTFail("Background sheet must remain open during reveal: \(element.identifier)");return}
+        guard viewport.waitForExistence(timeout:10),waitForHittable(backButton,timeout:10) else{XCTFail("Background page must remain open during reveal: \(element.identifier)");return}
         let rect=visibleRect();guard !rect.isNull,rect.width>16,rect.height>80 else{XCTFail("Background scroll viewport must have visible geometry");return}
         let above=expectAbove ?? (element.exists && element.frame.midY<rect.midY),x=rect.minX+8,high=rect.minY+rect.height*0.3,low=rect.minY+rect.height*0.7
         let origin=app.coordinate(withNormalizedOffset:.zero)
@@ -8387,14 +8381,10 @@ final class SourceSettingsTests: XCTestCase {
     let removePhoto=app.buttons["visual-remove-photo"];reveal(removePhoto);removePhoto.tap();app.alerts.buttons["移除"].tap();expectation(for:NSPredicate(format:"label CONTAINS %@","尚未导入"),evaluatedWith:app.staticTexts["visual-photo-name"]);waitForExpectations(timeout:10)
     app.terminate();app.launch();openSettings(app,page:"background");reveal(app.staticTexts["visual-background-name"]);XCTAssertTrue(app.staticTexts["visual-background-name"].label.contains("尚未导入"));XCTAssertTrue(app.staticTexts["visual-photo-name"].label.contains("尚未导入"))
     let screenshot=XCTAttachment(screenshot:app.screenshot());screenshot.name="Persisted visual image settings and fallback";screenshot.lifetime = .keepAlways;add(screenshot)
-    // Content scrolling above must never dismiss this surface; the real
-    // handle must still own its separate downward dismissal gesture.
-    let handle=app.buttons["background-sheet-close"]
-    XCTAssertTrue(waitForHittable(handle,timeout:10))
-    let start=handle.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5))
-    start.press(forDuration:0.05,thenDragTo:start.withOffset(CGVector(dx:0,dy:150)))
-    XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"theme-background-sheet").firstMatch.waitForNonExistence(timeout:10),"Only the handle drag should dismiss the background sheet")
-    XCTAssertTrue(app.staticTexts["settings-title-appearance"].exists)
+    let backButton=app.buttons["settings-back"]
+    XCTAssertTrue(waitForHittable(backButton,timeout:10))
+    backButton.tap()
+    XCTAssertTrue(app.staticTexts["settings-title-appearance"].waitForExistence(timeout:10))
   }
   // Explicitly selected local-only live validation. Keep all imported sources.
   func testLiveSourceCatalog() throws {
@@ -9059,13 +9049,13 @@ final class SourceSettingsTests: XCTestCase {
     openSettings(app,page:"theme")
     let lightTheme=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","浅色")).firstMatch
     if lightTheme.waitForExistence(timeout:5) && lightTheme.isHittable { lightTheme.tap() }
-    let themeClose=app.buttons["theme-sheet-close"].firstMatch
-    if themeClose.waitForExistence(timeout:3) && themeClose.isHittable { themeClose.tap(); _ = waitForGone(themeClose,timeout:5) }
+    let themeClose=app.buttons["settings-back"].firstMatch
+    if themeClose.waitForExistence(timeout:3) && themeClose.isHittable { themeClose.tap() }
     openSettings(app,page:"background")
     let blush=app.descendants(matching:.any).matching(identifier:"visual-blush").firstMatch
     if blush.waitForExistence(timeout:5) { reach(blush); if blush.isHittable { blush.tap() } }
-    let bgClose=app.buttons["background-sheet-close"].firstMatch
-    if bgClose.waitForExistence(timeout:3) && bgClose.isHittable { bgClose.tap(); _ = waitForGone(bgClose,timeout:5) }
+    let bgClose=app.buttons["settings-back"].firstMatch
+    if bgClose.waitForExistence(timeout:3) && bgClose.isHittable { bgClose.tap() }
 
     // 1. Discover Home & Playlist Detail
     tapTab("tab-discover")

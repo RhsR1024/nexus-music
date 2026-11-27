@@ -45,7 +45,7 @@ internal class CoverCache(
 
   fun store(data: ByteArray, key: String, maxPixelSize: Int = 512, exporting: Boolean = false): String? = synchronized(lock) {
     val allowed = if (exporting) setOf(256, 500, 512, 1000, 1024, 1200, 2048) else setOf(512, 1024)
-    if (maxPixelSize !in allowed || !valid(key) || data.isEmpty() || data.size > 8 * 1024 * 1024) return null
+    if (maxPixelSize !in allowed || !valid(key) || data.isEmpty() || data.size > 24 * 1024 * 1024) return null
 
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(data, 0, data.size, bounds)

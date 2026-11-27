@@ -14,7 +14,7 @@ const NativeDeviceVolume=requireNativeView<ViewProps&{tint:string}>('NexusNative
 const chineseModes:readonly [LyricChineseMode,string][]=[['original','保持原文'],['simplified','转为简体'],['traditional','转为繁体']];
 const autoPlaySources:readonly [AutoPlaySource,string][]=[['last','上次播放'],['favorites','收藏列表']];
 const preloadCounts=[1,2,3] as const;
-const fadeDurations=[200,500,1000,1500] as const;
+const fadeDurations=[300,500,1000,1500,2500] as const;
 const systemLyricPositions:readonly [SystemLyricsPosition,string][]=[['artist','歌手栏'],['title','标题栏']];
 const bluetoothLyricOrders:readonly [BluetoothLyricsOrder,string][]=[['lyric-first','仅歌词'],['artist-first','原信息 · 歌词']];
 export function PlaybackSettings({services}:{services:Services}) {

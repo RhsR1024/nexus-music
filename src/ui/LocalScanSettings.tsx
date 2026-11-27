@@ -19,7 +19,7 @@ export function LocalScanSettings({store,visible,onClose}:{store:LocalAudioStore
   return <View accessibilityViewIsModal style={{position:'absolute',top:0,bottom:0,left:0,right:0,padding:space.xl,paddingTop:insets.top+space.md,paddingBottom:insets.bottom+space.md,backgroundColor:p.background[0],gap:space.md}}>
     {button('返回本地音频',onClose,'local-scan-close')}
     <Text style={{...typography.title,color:p.text}}>文件夹与扫描</Text>
-    <ScrollView testID="local-scan-viewport" style={{flex:1}} keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:space.md,paddingBottom:space.xxl}}>
+    <ScrollView testID="local-scan-viewport" style={{flex:1}} keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:space.md,paddingBottom:space.xxl}} showsVerticalScrollIndicator={false}>
       <Text style={{...typography.caption,color:p.secondary}}>只读取你授权的目录，音频复制到此设备。移除目录或屏蔽文件夹后需重新扫描；不会删除原文件或正在播放的副本。</Text>
       {!!message&&<Text testID="local-scan-message" accessibilityLiveRegion="polite" style={{color:p.accent}}>{message}</Text>}
       {busy&&<ActivityIndicator accessibilityLabel="正在扫描本地目录" color={p.accent}/>}

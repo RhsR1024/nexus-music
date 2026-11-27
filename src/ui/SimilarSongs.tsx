@@ -99,7 +99,7 @@ export function SimilarSongs({services,track,onBack,onSelect,renderSongActions,b
             <Ionicons name="ellipsis-horizontal" size={19} color={s.muted}/>
           </Pressable>
         </View>;
-      }}/>
+      }} showsVerticalScrollIndicator={false}/>
     {renderSongActions(menu,()=>setMenu(null))}
   </View>;
 }

@@ -51,7 +51,7 @@ export function StatisticsCloud({services,grouped=false}:{services:Services;grou
             <Text accessibilityRole="header" style={{color:s.ink,fontSize:24,fontWeight:'700'}}>听歌统计手动同步</Text>
             {pill('收起统计同步',close,committing)}
           </View>
-          <ScrollView testID="statistics-cloud-scroll" keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:14,paddingBottom:32}}>
+          <ScrollView testID="statistics-cloud-scroll" keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:14,paddingBottom:32}} showsVerticalScrollIndicator={false}>
             <Text style={{color:s.muted,fontSize:12.5,lineHeight:19}}>统计与收藏/歌单实时同步分开。上传须确认覆盖；下载合并不重复累加同一副本，新副本可累加。旧无身份记录按累计最大值保守合并，冲突分时不叠加。</Text>
             <View style={[{borderRadius:20,padding:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:10},s.cardShadow]}>
               {!accounts.length&&<Text style={{color:s.ink,fontSize:13.5}}>请先在音乐库的WebDAV入口验证并保存连接。</Text>}

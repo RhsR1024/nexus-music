@@ -15,7 +15,7 @@ import {miniPlayerDefaults,normalizeMiniActions,toggleMiniAction,moveMiniAction,
 export type StageStyle='classic'|'neon'|'cyberpunk'|'aurora';
 export type GrooveSpinSpeed='slow'|'normal'|'fast';
 export type TeletypeTheme='paper'|'terminal'|'amber';
-export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage'|'am2'|'groove'|'teletype';
+export type PlayerLayout='classic'|'am'|'immersive'|'photo'|'vinyl'|'wave'|'stage'|'am2'|'groove'|'groove2'|'teletype'|'teletype2';
 export type NavigationStyle='liquid'|'frosted'|'acrylic';
 export type PlaylistAddPosition='end'|'start';
 export type LyricChineseMode='original'|'simplified'|'traditional';
@@ -40,7 +40,7 @@ export function validatePreferences(value: Preferences): Preferences {
     if(typeof value.miniLyrics!=='boolean')throw new Error('迷你歌词设置无效');
     if(typeof value.autoMatch!=='boolean')throw new Error('自动匹配设置无效');
     if(!['auto','left','center'].includes(value.lyricAlignment))throw new Error('歌词对齐方式无效');
-    if(!['classic','am','immersive','photo','vinyl','wave','stage','am2','groove','teletype'].includes(value.playerLayout))throw new Error('播放界面无效');
+    if(!['classic','am','immersive','photo','vinyl','wave','stage','am2','groove','groove2','teletype','teletype2'].includes(value.playerLayout))throw new Error('播放界面无效');
     if(!visualThemes.includes(value.visualTheme as VisualTheme)||(value.favoriteVisualTheme!==null&&!visualThemes.includes(value.favoriteVisualTheme as VisualTheme))||!['rose','coral','purple','blue','orange'].includes(value.accent)||!['gradient','solid','image'].includes(value.backgroundStyle)||typeof value.glassNavigation!=='boolean'||!glassLevels.includes(value.glassLevel as GlassLevel))throw new Error('外观设置无效');
     if(typeof value.cardOpacity!=='number'||!Number.isFinite(value.cardOpacity)||value.cardOpacity<0||value.cardOpacity>1||typeof value.backgroundMask!=='number'||!Number.isFinite(value.backgroundMask)||value.backgroundMask<0||value.backgroundMask>1||typeof value.maskColor!=='string'||!/^#[0-9a-f]{6}$/i.test(value.maskColor))throw new Error('卡片与遮罩设置无效');
     if(!['artwork','solid','photo'].includes(value.playerBackground)||typeof value.tapeStyle!=='boolean'||typeof value.coverColor!=='boolean'||typeof value.globalBackgroundMotion!=='boolean'||typeof value.dynamicBackground!=='boolean'||!Number.isFinite(value.backgroundOpacity)||value.backgroundOpacity<0||value.backgroundOpacity>1||!Number.isFinite(value.playerBlur)||value.playerBlur<0||value.playerBlur>80||!Number.isFinite(value.playerDarkness)||value.playerDarkness<.35||value.playerDarkness>.9||!Number.isFinite(value.coverRadius)||value.coverRadius<0||value.coverRadius>48)throw new Error('图片外观设置无效');

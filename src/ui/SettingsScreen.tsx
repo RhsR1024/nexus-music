@@ -1,12 +1,10 @@
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {AccessibilityInfo,BackHandler,findNodeHandle,Image,Keyboard,Pressable,ScrollView,StyleSheet,UIManager,View,useWindowDimensions,type Text as NativeText} from 'react-native';
+import {AccessibilityInfo,BackHandler,findNodeHandle,Keyboard,Pressable,ScrollView,StyleSheet,View,useWindowDimensions,type Text as NativeText} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {LinearGradient} from 'expo-linear-gradient';
 import type {Services} from '../app/services.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
-import {AppearanceSheetHandle,AppearanceSheetModal,SheetModal} from './AdaptiveModal.tsx';
-import {appearanceSheetLayout,settingsInk,settingsSheet,sollinTokens} from './tokens.ts';
+import {sollinTokens} from './tokens.ts';
 import {AppearanceSettings,BackgroundThemeActions,type AppearanceSection} from './AppearanceSettings.tsx';
 import {AppearanceOverview} from './AppearanceOverview.tsx';
 import {AppIconSettings} from './AppIconSettings.tsx';
@@ -18,28 +16,21 @@ import {CacheSettings} from './CacheSettings.tsx';
 import {DownloadSettings,DownloadTasks} from './DownloadSettings.tsx';
 import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {MusicSourcesScreen} from './MusicSourcesScreen.tsx';
-import {appearanceCaptureFixture} from './captureFixtures.ts';
 import {MusicAccountSettings} from './MusicAccountSettings.tsx';
 import {CarPlaySiriSettings} from './CarPlaySiriSettings.tsx';
 
 export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|'accounts'|'car'|AppearanceSection;
-type AppearanceSheetSection='background'|'theme'|'skins'|'mini'|'navigation'|'icons';
-const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='background'||page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='icons';
-const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-background-sheet',theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',icons:'app-icon-sheet'};
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',car:'车载与语音控制',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色',icons:'软件图标'};
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',car:'车载与语音控制',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式与毛玻璃',accent:'强调色',icons:'软件图标'};
+const layoutSummaryLabels:Record<string,string>={classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台',am2:'AM2',groove:'螺旋槽',groove2:'螺旋槽 2',teletype:'打字机',teletype2:'打字机 2'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,bottomInset=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;bottomInset?:number;onExit:()=>void}){
-  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),sheetDark=theme.mode==='dark';
+  const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
   const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const sources=useSyncExternalStore(services.catalog.subscribe,services.catalog.getSnapshot);
   const sourceUpdateCount=sources.filter(item=>item.hasUpdate&&item.allowUpdateAlert).length;
-  const firstPage=isAppearanceSheet(initialPage)?'appearance':initialPage;
-  const [history,setHistory]=useState<SettingsPage[]>([firstPage]);
-  const [visited,setVisited]=useState<SettingsPage[]>([firstPage]);
-  const [appearanceSheet,setAppearanceSheet]=useState<{section:AppearanceSheetSection;visible:boolean;session:number}>({section:isAppearanceSheet(initialPage)?initialPage:'theme',visible:isAppearanceSheet(initialPage),session:0});
-  const appearanceScroll=useRef<ScrollView|null>(null),appearanceOffset=useRef(0),appearanceOffsetSession=useRef(-1),appearanceAnchorUses=useRef(0),accentField=useRef<View|null>(null),accentAnchorSession=useRef(-1);
-  const closeSheet=()=>setAppearanceSheet(value=>({...value,visible:false,session:value.session+1}));
+  const [history,setHistory]=useState<SettingsPage[]>([initialPage]);
+  const [visited,setVisited]=useState<SettingsPage[]>([initialPage]);
   const heading=useRef<NativeText>(null),page=history[history.length-1]!;
   const currentPage=useRef(page);currentPage.current=page;
   const scrolls=useRef<Partial<Record<SettingsPage,ScrollView|null>>>({}),offsets=useRef<Partial<Record<SettingsPage,number>>>({});
@@ -49,7 +40,6 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
     if(previousHomeRequest.current===homeRequest)return;
     previousHomeRequest.current=homeRequest;
     Keyboard.dismiss();
-    closeSheet();
     setVisited(value=>value.includes('home')?value:[...value,'home']);
     setHistory(['home']);
   },[homeRequest]);
@@ -59,13 +49,13 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
     return()=>{cancelAnimationFrame(frame);if(settle!==undefined)cancelAnimationFrame(settle);};
   },[page]);
   const back=()=>{Keyboard.dismiss();if(history.length>1)setHistory(value=>value.slice(0,-1));else if(page!=='home')onExit();};
-  const open=(next:SettingsPage)=>{Keyboard.dismiss();if(isAppearanceSheet(next)){setAppearanceSheet(value=>({section:next,visible:true,session:value.session+1}));return;}setVisited(value=>value.includes(next)?value:[...value,next]);setHistory(value=>[...value,next]);};
+  const open=(next:SettingsPage)=>{Keyboard.dismiss();setVisited(value=>value.includes(next)?value:[...value,next]);setHistory(value=>[...value,next]);};
   useEffect(()=>{let active=true;void AccessibilityInfo.isScreenReaderEnabled().then(enabled=>{if(active&&enabled){const node=findNodeHandle(heading.current);if(node)AccessibilityInfo.setAccessibilityFocus(node);}});return()=>{active=false;};},[page]);
   useEffect(()=>{const listener=BackHandler.addEventListener('hardwareBackPress',()=>{if(page==='home')return false;back();return true;});return()=>listener.remove();},[page,history.length]);
   const row=(next:SettingsPage,subtitle:string,icon:React.ComponentProps<typeof Ionicons>['name'],value?:string,grouped=false)=><Pressable testID={`settings-open-${next}`} accessibilityRole="button" accessibilityLabel={titles[next]} accessibilityHint={subtitle} accessibilityValue={value?{text:value}:undefined} onPress={()=>open(next)} style={{paddingHorizontal:16,paddingVertical:14,minHeight:64,flexDirection:'row',alignItems:'center',gap:13,borderRadius:grouped?0:20,backgroundColor:grouped?'transparent':s.card,borderWidth:grouped?0:1,borderColor:s.cardBorder}}>
     <View style={{width:32,height:32,borderRadius:10,backgroundColor:s.dark?'rgba(255,255,255,0.08)':'rgba(42,36,31,0.045)',alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} size={19} color={s.ink}/></View>
     <View style={{flex:1,gap:2}}><Text style={{color:s.ink,fontSize:15.5,fontWeight:'700'}}>{titles[next]}</Text><Text style={{color:s.muted,fontSize:12,lineHeight:17}}>{subtitle}</Text></View>
-    {value&&fontScale<=1.4&&<Text accessible={false} style={{color:s.muted,fontSize:13,maxWidth:90,textAlign:'right'}}>{value}</Text>}
+    {value&&fontScale<=1.4&&<Text accessible={false} style={{color:s.muted,fontSize:13,maxWidth:96,textAlign:'right'}}>{value}</Text>}
     <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
   </Pressable>;
   const content=(key:SettingsPage)=>{
@@ -76,7 +66,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
         <View testID="settings-category-group" style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
           {row('playback','播放偏好、歌词、在线音源与音效','musical-notes',preferences.quality.toUpperCase(),true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
-          {row('appearance','主题、字体、界面布局与播放器外观','color-palette',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台',am2:'AM2',groove:'螺旋槽',teletype:'打字机'}as const)[preferences.playerLayout],true)}
+          {row('appearance','主题、字体、界面布局与播放器外观','color-palette',layoutSummaryLabels[preferences.playerLayout]??'经典',true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
           {row('car','CarPlay、Siri 快捷指令与 Android Auto','car-sport',undefined,true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
@@ -88,12 +78,12 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
         <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
           {row('sources','LX 音源与 Navidrome 私人曲库','server',sourceUpdateCount>0?`${sourceUpdateCount} 个更新`:undefined,true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
-          {row('accounts','网易云、QQ、酷狗平台登录与本机会话','person-circle',undefined,true)}
+          {row('accounts','网易云、QQ、酷狗、汽水账号与本机会话','person-circle',undefined,true)}
         </View>
       </View>;
       case 'sources':return <MusicSourcesScreen services={services}/>;
       case 'car':return <CarPlaySiriSettings services={services}/>;
-      case 'accounts':return <MusicAccountSettings services={services} active={page==='accounts'&&!appearanceSheet.visible} onRevealQr={({top,height})=>{
+      case 'accounts':return <MusicAccountSettings services={services} active={page==='accounts'} onRevealQr={({top,height})=>{
         const scroller=scrolls.current.accounts;
         if(currentPage.current!=='accounts'||!scroller||!Number.isFinite(top)||height<=0)return;
         scroller.getNativeScrollRef()?.measureInWindow((_x,viewportTop,_width,viewportHeight)=>{
@@ -106,61 +96,21 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
       case 'equalizer':return <EqualizerSettings services={services}/>;
       case 'appearance':return <AppearanceOverview services={services} open={open}/>;
       case 'icons':return <AppIconSettings/>;
-      case 'theme':case 'background':case 'skins':case 'mini':case 'navigation':case 'accent':return <AppearanceSettings services={services} section={key}/>;
+      case 'background':return <View style={{gap:4}}><View style={{flexDirection:'row',justifyContent:'flex-end',marginBottom:-8}}><BackgroundThemeActions services={services}/></View><AppearanceSettings services={services} section="background"/></View>;
+      case 'theme':case 'skins':case 'mini':case 'navigation':case 'accent':return <AppearanceSettings services={services} section={key} onStyleSaved={key==='skins'?back:undefined}/>;
       case 'typography':case 'globalFont':case 'lyricFont':return <FontSettings services={services} section={key==='typography'?'display':key==='globalFont'?'global':'lyric'} onOpen={section=>open(section==='display'?'typography':section==='global'?'globalFont':'lyricFont')}/>;
       case 'downloads':return <DownloadSettings services={services} openTasks={()=>open('downloadTasks')}/>;
       case 'downloadTasks':return <DownloadTasks services={services}/>;
       case 'storage':return <><CacheSettings services={services}/><LibraryDataTools services={services}/></>;
     }
   };
-  const Sheet=appearanceSheet.section==='background'?AppearanceSheetModal:SheetModal;
-  const anchorAccentField=()=>{
-    if(!appearanceCaptureFixture()||appearanceSheet.section!=='background'||accentAnchorSession.current===appearanceSheet.session)return;
-    const field=accentField.current,scroller=appearanceScroll.current,fieldNode=field?findNodeHandle(field):null;
-    if(!field||!scroller||!fieldNode)return;
-    if(appearanceOffsetSession.current!==appearanceSheet.session){appearanceOffset.current=0;appearanceOffsetSession.current=appearanceSheet.session;}
-    accentAnchorSession.current=appearanceSheet.session;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      UIManager.measureInWindow(fieldNode,(_x,top)=>{
-        scroller.scrollTo({y:Math.max(0,appearanceOffset.current+top-216),animated:false});
-      });
-    }));
-  };
-  useEffect(()=>{
-    if(!appearanceSheet.visible||appearanceSheet.section!=='background'||!appearanceCaptureFixture())return;
-    if(appearanceAnchorUses.current>=3)return;
-    appearanceAnchorUses.current+=1;
-    const timer=setTimeout(()=>{appearanceOffset.current=0;accentAnchorSession.current=-1;anchorAccentField();},250);
-    return()=>clearTimeout(timer);
-  },[appearanceSheet.visible,appearanceSheet.section,appearanceSheet.session]);
-  const sheetHeader=<View style={{flexDirection:'row',alignItems:'center',flexWrap:'wrap',rowGap:8,gap:appearanceSheet.section==='background'?0:12,marginTop:appearanceSheet.section==='background'?appearanceSheetLayout.titleGap:0}}>
-    <Text testID={`settings-title-${appearanceSheet.section}`} accessibilityRole="header" style={{flex:1,minWidth:appearanceSheet.section==='background'?120:undefined,fontSize:23.6,fontWeight:'800',color:settingsInk[sheetDark?'dark':'light'],transform:[{translateY:1.1}]}}>{titles[appearanceSheet.section]}</Text>
-    {appearanceSheet.section==='background'?<BackgroundThemeActions services={services}/>:<Pressable testID={`${appearanceSheet.section}-sheet-close`} accessibilityRole="button" accessibilityLabel={`关闭${titles[appearanceSheet.section]}`} onPress={closeSheet} style={{width:48,minHeight:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={26} color={p.text}/></Pressable>}
-  </View>;
   return <View style={{flex:1}} onAccessibilityEscape={page==='home'?undefined:back}>
     <View style={{paddingHorizontal:22,paddingVertical:0,minHeight:54,flexDirection:'row',alignItems:'center',justifyContent:'center',borderBottomWidth:page==='home'?0:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
       {page!=='home'&&<Pressable testID="settings-back" accessibilityRole="button" accessibilityLabel={history.length>1?`返回${titles[history[history.length-2]!]}`:'返回音乐库'} onPress={back} style={{position:'absolute',left:6,top:3,bottom:3,width:44,alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-back" size={27} color={p.text}/></Pressable>}
-      <Text ref={heading} testID={`settings-title-${page}`} accessibilityRole="header" style={{fontSize:page==='home'?36:20,fontWeight:'700',letterSpacing:page==='home'?undefined:-1,color:p.text,flex:1,textAlign:page==='home'?'left':'center',marginHorizontal:page==='home'?0:36}}>{titles[page]}</Text>
+      <Text ref={heading} testID={`settings-title-${page}`} accessibilityRole="header" style={{fontSize:page==='home'?36:20,fontWeight:'700',letterSpacing:page==='home'?undefined:-1,color:p.text,flex:1,textAlign:page==='home'?'left':'center',marginHorizontal:page==='home'?0:44}}>{titles[page]}</Text>
     </View>
-    {visited.map(key=><View key={key} testID={`settings-viewport-${key}`} style={{flex:1,display:key===page?'flex':'none'}} accessibilityElementsHidden={key!==page||appearanceSheet.visible} importantForAccessibility={key===page&&!appearanceSheet.visible?'auto':'no-hide-descendants'} pointerEvents={key===page&&!appearanceSheet.visible?'auto':'none'}>
-      {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:22,paddingTop:10,paddingBottom:Math.max(32,bottomInset+24)}}>{content(key)}</ScrollView>}
+    {visited.map(key=><View key={key} testID={`settings-viewport-${key}`} style={{flex:1,display:key===page?'flex':'none'}} accessibilityElementsHidden={key!==page} importantForAccessibility={key===page?'auto':'no-hide-descendants'} pointerEvents={key===page?'auto':'none'}>
+      {key==='downloadTasks'?content(key):<ScrollView ref={node=>{scrolls.current[key]=node;}} testID={`settings-scroll-${key}`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={32} onScroll={event=>{if(key===page&&restoring.current===null)offsets.current[key]=Math.max(0,event.nativeEvent.contentOffset.y);}} contentContainerStyle={{paddingHorizontal:20,paddingTop:10,paddingBottom:Math.max(40,bottomInset+34)}} showsVerticalScrollIndicator={false}>{content(key)}</ScrollView>}
     </View>)}
-    <Sheet visible={appearanceSheet.visible} animationType="slide" allowSwipeDismissal onRequestClose={closeSheet}>
-      <View testID={sheetIDs[appearanceSheet.section]} accessibilityViewIsModal onAccessibilityEscape={closeSheet} style={{flex:1,backgroundColor:appearanceSheet.section==='background'?(sheetDark?p.background[0]:settingsSheet.lightGradient[0]):s.sheetGradient[0],paddingHorizontal:appearanceSheet.section==='background'?16:20,paddingTop:appearanceSheet.section==='background'?appearanceSheetLayout.topPadding:12}}>
-        {appearanceSheet.section==='background'?<>
-          {sheetDark?<LinearGradient testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" colors={[p.background[0],p.background[1],p.background[2]]} start={{x:0,y:0}} end={{x:0.55,y:1}} style={{position:'absolute',top:0,right:0,bottom:0,left:0}}/>:<View testID={appearanceCaptureFixture()?'theme-sheet-gradient-fixture':'theme-sheet-gradient'} pointerEvents="none" style={{position:'absolute',top:0,right:0,bottom:0,left:0}}><Image source={require('../../assets/appearance-sheet-light.png')} resizeMode="stretch" style={{width:'100%',height:'100%'}}/></View>}
-          <AppearanceSheetHandle><Pressable testID="background-sheet-close" accessibilityRole="button" accessibilityLabel={titles.background} onPress={closeSheet} style={{width:44,height:44,alignSelf:'center',alignItems:'center',justifyContent:'center'}}><View style={{width:32,height:4,borderRadius:2,backgroundColor:p.secondary+'66'}}/></Pressable></AppearanceSheetHandle>
-        </>:<>
-          <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
-          <View style={{alignSelf:'center',width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66',marginBottom:8}}/>
-        </>}
-        {appearanceSheet.section!=='background'&&sheetHeader}
-        <ScrollView ref={node=>{if(appearanceSheet.section==='background')appearanceScroll.current=node;}} key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={appearanceSheet.section==='background'?event=>{appearanceOffset.current=event.nativeEvent.contentOffset.y;}:undefined} scrollEventThrottle={appearanceSheet.section==='background'?32:undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='background'&&sheetHeader}{appearanceSheet.section==='icons'?<AppIconSettings/>:<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} accentFieldRef={appearanceSheet.section==='background'?accentField:undefined} onStyleSaved={()=>{
-          // A completed write from an earlier presentation must not close a newly opened sheet.
-          const session=appearanceSheet.session;
-          setAppearanceSheet(value=>value.session===session?{...value,visible:false,session:value.session+1}:value);
-        }}/>}</ScrollView>
-      </View>
-    </Sheet>
   </View>;
 }

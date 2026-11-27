@@ -77,6 +77,13 @@ public final class NexusNativeModule: Module {
       Prop("commandJson") { (view: NexusRadioGlobeView, value: String) in view.commandJson = value }
       OnViewDidUpdateProps { (view: NexusRadioGlobeView) in view.applyProps() }
     }
+    View(NexusLocalCanvasView.self) {
+      ViewName("LocalCanvas")
+      Events("onAction")
+      Prop("html") { (view: NexusLocalCanvasView, value: String) in view.html = value }
+      Prop("stateJson") { (view: NexusLocalCanvasView, value: String) in view.stateJson = value }
+      OnViewDidUpdateProps { (view: NexusLocalCanvasView) in view.applyProps() }
+    }
     View(NexusVinylPivotView.self) {
       ViewName("VinylPivot")
     }
@@ -329,22 +336,53 @@ public final class NexusNativeModule: Module {
     NotificationCenter.default.removeObserver(powerObserver)
     self.powerObserver = nil
   }
+  private func resizedNeteaseCoverURL(_ raw: String, maximum: Int) -> String? {
+    guard let comps = URLComponents(string: raw),
+          let host = comps.host?.lowercased(),
+          host.hasSuffix(".music.126.net"),
+          comps.query == nil || comps.query?.isEmpty == true else { return nil }
+    let ext = (comps.path as NSString).pathExtension.lowercased()
+    guard ["jpg", "jpeg", "png", "webp"].contains(ext) else { return nil }
+    var updated = comps
+    updated.query = "param=\(maximum)y\(maximum)"
+    return updated.string
+  }
   private func fetchCover(_ key: String, url: String, maximum: Int, exporting: Bool, promise: Promise) {
     guard (exporting ? [256,500,512,1000,1024,1200,2048] : [512,1024]).contains(maximum) else { promise.reject("COVER_SIZE", "封面尺寸无效"); return }
     let cache = exporting ? exportCovers : covers, requestKey = (exporting ? "export:" : "display:") + key
     if let hit = cache.hit(key) { promise.resolve(hit); return }
     if var pending = coverRequests[requestKey] { pending.promises.append(promise); coverRequests[requestKey] = pending; return }
     guard coverRequests.count < 12 else { promise.reject("COVER_BUSY", "封面加载繁忙"); return }
-    let client = ScriptHTTP(queue: coverQueue), epoch = cache.epoch
+    let client = ScriptHTTP(queue: coverQueue, maxBytes: 24 * 1024 * 1024), epoch = cache.epoch
     coverRequests[requestKey] = (client, [promise])
-    client.start(id: 1, url: url, optionsJSON: "{\"binary\":true,\"timeout\":10000}") { [weak self] error, response in
+    let resized = exporting ? nil : resizedNeteaseCoverURL(url, maximum: maximum)
+    let initialURL = resized ?? url
+    let finish: (String?) -> Void = { [weak self] result in
       guard let self, let pending = self.coverRequests.removeValue(forKey: requestKey) else { return }
       pending.client.destroy()
-      let status = response?["statusCode"] as? Int ?? 0
-      let data = (response?["body"] as? String).flatMap { Data(base64Encoded: $0) }
-      let result = error == nil && epoch == cache.epoch && (200..<300).contains(status) ? data.flatMap { cache.store($0, key: key, maxPixelSize: maximum, exporting: exporting) } : nil
-      for promise in pending.promises { if let result { promise.resolve(result) } else { promise.reject("COVER_FAILED", "封面暂不可用") } }
+      for p in pending.promises { if let result { p.resolve(result) } else { p.reject("COVER_FAILED", "封面暂不可用") } }
     }
+    let attempt: (String, Bool) -> Void = { targetURL, canFallback in
+      client.start(id: canFallback ? 1 : 2, url: targetURL, optionsJSON: "{\"binary\":true,\"timeout\":15000}") { [weak self] error, response in
+        guard let self, self.coverRequests[requestKey] != nil else { return }
+        let status = response?["statusCode"] as? Int ?? 0
+        let data = (response?["body"] as? String).flatMap { Data(base64Encoded: $0) }
+        let result = error == nil && epoch == cache.epoch && (200..<300).contains(status) ? data.flatMap { cache.store($0, key: key, maxPixelSize: maximum, exporting: exporting) } : nil
+        if let result { finish(result); return }
+        if canFallback && targetURL != url {
+          client.start(id: 2, url: url, optionsJSON: "{\"binary\":true,\"timeout\":15000}") { [weak self] retryErr, retryResp in
+            guard let self, self.coverRequests[requestKey] != nil else { return }
+            let retryStatus = retryResp?["statusCode"] as? Int ?? 0
+            let retryData = (retryResp?["body"] as? String).flatMap { Data(base64Encoded: $0) }
+            let retryResult = retryErr == nil && epoch == cache.epoch && (200..<300).contains(retryStatus) ? retryData.flatMap { cache.store($0, key: key, maxPixelSize: maximum, exporting: exporting) } : nil
+            finish(retryResult)
+          }
+          return
+        }
+        finish(nil)
+      }
+    }
+    attempt(initialURL, resized != nil)
   }
   private func bootstrapText() -> String? {
     guard let bundleURL = Bundle(for: NexusNativeModule.self).url(forResource: "NexusNative", withExtension: "bundle"),

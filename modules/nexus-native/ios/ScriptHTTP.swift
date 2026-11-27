@@ -16,9 +16,10 @@ final class ScriptHTTP: NSObject, URLSessionDataDelegate {
   private var session: URLSession!
   private var jobs: [Int: Job] = [:]
   private var taskIDs: [Int: URLSessionDataTask] = [:]
-  private let maxBytes = 8 * 1024 * 1024
+  private let maxBytes: Int
 
-  init(queue: DispatchQueue) {
+  init(queue: DispatchQueue, maxBytes: Int = 8 * 1024 * 1024) {
+    self.maxBytes = maxBytes
     super.init()
     let configuration = URLSessionConfiguration.ephemeral
     configuration.httpCookieStorage = nil

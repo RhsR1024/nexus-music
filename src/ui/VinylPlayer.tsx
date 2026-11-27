@@ -123,7 +123,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
     <SheetModal allowSwipeDismissal visible={lyricsOpen} onRequestClose={()=>setLyricsOpen(false)}>
       <View style={{flex:1}}>
         <LinearGradient colors={['#FBF5F5','#F7E7EB','#F8EFF1']} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
-        <ScrollView contentContainerStyle={{padding:space.xl,gap:space.lg}}>
+        <ScrollView contentContainerStyle={{padding:space.xl,gap:space.lg}} showsVerticalScrollIndicator={false}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
             <Text style={{fontSize:22,fontWeight:'700',color:paper.titleInk}}>歌词与来源</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="收起黑胶歌词" onPress={()=>setLyricsOpen(false)} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:'rgba(255,255,255,0.65)',borderWidth:1,borderColor:'rgba(255,255,255,0.85)'}}><Text style={{color:paper.titleInk,fontSize:13,fontWeight:'600'}}>收起歌词</Text></Pressable>

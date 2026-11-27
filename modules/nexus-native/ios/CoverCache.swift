@@ -32,7 +32,7 @@ final class CoverCache {
     return file.absoluteString
   }
   func store(_ data: Data, key: String, maxPixelSize: Int = 512, exporting: Bool = false) -> String? {
-    guard (exporting ? [256,500,512,1000,1024,1200,2048] : [512,1024]).contains(maxPixelSize), valid(key), data.count <= 8 * 1024 * 1024,
+    guard (exporting ? [256,500,512,1000,1024,1200,2048] : [512,1024]).contains(maxPixelSize), valid(key), data.count <= 24 * 1024 * 1024,
           let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
           let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
           let width = properties[kCGImagePropertyPixelWidth] as? Int, let height = properties[kCGImagePropertyPixelHeight] as? Int,

@@ -28,7 +28,7 @@ import kotlin.math.min
  * Ephemeral HTTP client (no cookies, no cache), bounded 8 MiB streaming body guard,
  * JSON/form/multipart/binary request & response encoding, per-request abort & timeout.
  */
-internal class ScriptHTTP {
+internal class ScriptHTTP(private val maxBytes: Int = MAX_BYTES) {
   companion object {
     private const val MAX_BYTES = 8 * 1024 * 1024
     private const val MAX_CONCURRENT = 16
@@ -150,7 +150,7 @@ internal class ScriptHTTP {
               bos.write(value.toString().toByteArray(StandardCharsets.UTF_8))
             }
             bos.write("\r\n".toByteArray(StandardCharsets.UTF_8))
-            if (bos.size() > MAX_BYTES) throw IllegalStateException("limit")
+            if (bos.size() > maxBytes) throw IllegalStateException("limit")
           }
           bos.write("--$boundary--\r\n".toByteArray(StandardCharsets.UTF_8))
           bodyBytes = bos.toByteArray()
@@ -158,7 +158,7 @@ internal class ScriptHTTP {
         }
       }
 
-      if (bodyBytes != null && bodyBytes.size > MAX_BYTES) {
+      if (bodyBytes != null && bodyBytes.size > maxBytes) {
         throw IllegalStateException("limit")
       }
 
@@ -192,7 +192,7 @@ internal class ScriptHTTP {
           response.use { resp ->
             if (calls[id] !== call || destroyed) return
             val contentLength = resp.body?.contentLength() ?: -1L
-            if (contentLength > MAX_BYTES) {
+            if (contentLength > maxBytes) {
               calls.remove(id)
               completion("HTTP_RESPONSE_TOO_LARGE", null)
               return
@@ -205,7 +205,7 @@ internal class ScriptHTTP {
                 while (true) {
                   val n = stream.read(buf)
                   if (n <= 0) break
-                  if (bos.size() + n > MAX_BYTES) {
+                  if (bos.size() + n > maxBytes) {
                     calls.remove(id)
                     call.cancel()
                     completion("HTTP_RESPONSE_TOO_LARGE", null)

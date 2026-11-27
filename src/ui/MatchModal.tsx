@@ -85,7 +85,7 @@ export function MatchModal({services,track,onClose,inline=false}:{services:Servi
         </Pressable>;
       }}
       ListFooterComponent={items.length>0&&page<10?<Pressable accessibilityRole="button" disabled={loading||busy} onPress={()=>{void load(page+1);}} style={{marginTop:4,minHeight:44,borderRadius:16,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder,alignItems:'center',justifyContent:'center',opacity:loading||busy?0.45:1}}><Text style={{color:s.accent,fontSize:14,fontWeight:'600'}}>更多匹配候选</Text></Pressable>:null}
-      ListEmptyComponent={!loading?<View style={{padding:20,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center'}}><Text style={{color:s.muted,fontSize:13.5}}>尚无候选。原曲保留在歌单中。</Text></View>:null}/>
+      ListEmptyComponent={!loading?<View style={{padding:20,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,alignItems:'center'}}><Text style={{color:s.muted,fontSize:13.5}}>尚无候选。原曲保留在歌单中。</Text></View>:null} showsVerticalScrollIndicator={false}/>
   </View>;
   if(inline)return track?body:null;
   return <SheetModal allowSwipeDismissal visible={!!track} animationType="slide" onRequestClose={()=>{if(!busy)onClose();}}>{body}</SheetModal>;

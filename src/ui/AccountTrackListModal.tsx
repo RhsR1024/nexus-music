@@ -101,7 +101,7 @@ export function AccountTrackListModal({services,tracks,title,subtitle,note,visib
               <Ionicons name="play-skip-forward-outline" size={13} color={s.accent}/>
               <Text style={{fontSize:12,fontWeight:'600',color:s.ink}}>下一首</Text>
             </Pressable>}
-          </View>;}}/>}
+          </View>;}} showsVerticalScrollIndicator={false}/>}
         <DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/>
       </View>
     </View>

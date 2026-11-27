@@ -17,6 +17,7 @@ import {AudioMatchModal} from './AudioMatchModal.tsx';
 import {MVDetail} from './MVDetail.tsx';
 import {NeteasePodcastsModal} from './NeteasePodcastsModal.tsx';
 import {QishuiDiscoverSection} from './QishuiDiscoverSection.tsx';
+import {AccountFeatureSheet,type AccountFeatureKind} from './AccountFeatureSheet.tsx';
 import {classifyDiscoveryFailure,playlistLinkFailure} from '../providers/discoveryFailure.ts';
 import {Cover} from './Cover.tsx';
 import {QualityBadge} from './QualityBadge.tsx';
@@ -68,6 +69,10 @@ export function Discovery({
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),{width,fontScale}=useWindowDimensions();
   const sources=useSyncExternalStore(services.catalog.subscribe,services.catalog.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
+  const musicAccounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
+  const wySignedIn=musicAccounts.some(a=>a.platform==='wy');
+  const txSignedIn=musicAccounts.some(a=>a.platform==='tx');
+  const kgSignedIn=musicAccounts.some(a=>a.platform==='kg');
   const activeSource=sources.find(item=>item.enabled&&item.status==='ready')?.displayName??sources.find(item=>item.enabled)?.displayName;
   const hasSourceUpdates=sources.some(item=>item.hasUpdate&&item.allowUpdateAlert);
   const [contentWidth,setContentWidth]=useState<number>();
@@ -87,6 +92,7 @@ export function Discovery({
   const [podcastsOpen,setPodcastsOpen]=useState(false);
   const [radioOpen,setRadioOpen]=useState(false);
   const [audioMatchOpen,setAudioMatchOpen]=useState(false);
+  const [accountFeature,setAccountFeature]=useState<AccountFeatureKind|null>(null);
   const [qishuiTab,setQishuiTab]=useState(false);
   const [showBackTop,setShowBackTop]=useState(false);
   const listRef=useRef<FlatList<Item>|null>(null);
@@ -422,19 +428,25 @@ export function Discovery({
         onAction={action=>{void runBatch(action);}}/>}
       {selection.active&&picking&&<PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,shownRows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>toast.show(`已添加 ${selectionCount(selection)} 首到 ${title}`)}/>}
     </>:<>
-      {/* Sollin 01-discover.png: clean display header without private account avatar */}
+      {/* Sollin 01-discover.png: clean display header + universal top-right Globe (全球电台) & Audio Match icons */}
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:4}}>
         <Text accessibilityRole="header" style={{fontSize:30,fontWeight:'700',lineHeight:36,color:s.ink,letterSpacing:-0.5}}>发现</Text>
         <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
-          {openSources&&<Pressable accessibilityRole="button" accessibilityLabel="音乐来源设置" onPress={openSources} style={{height:34,paddingHorizontal:12,borderRadius:17,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:5,maxWidth:168}}>
+          {openSources&&<Pressable accessibilityRole="button" accessibilityLabel="音乐来源设置" onPress={openSources} style={{height:34,paddingHorizontal:12,borderRadius:17,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:5,maxWidth:146}}>
             <Ionicons name="radio-outline" size={14} color={s.muted}/>
             <Text numberOfLines={1} style={{color:s.muted,fontSize:12,fontWeight:'600'}}>{activeSource??'无 LX 音源'}</Text>
             {hasSourceUpdates&&<View style={{width:7,height:7,borderRadius:3.5,backgroundColor:'#E53935'}}/>}
           </Pressable>}
+          <Pressable testID="discovery-audio-match" accessibilityRole="button" accessibilityLabel="打开听歌识曲" onPress={()=>setAudioMatchOpen(true)} style={{width:34,height:34,borderRadius:17,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}>
+            <Ionicons name="ear-outline" size={17} color={s.ink}/>
+          </Pressable>
+          <Pressable testID="discovery-global-radio" accessibilityRole="button" accessibilityLabel="打开全球电台" onPress={()=>setRadioOpen(true)} style={{width:34,height:34,borderRadius:17,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}>
+            <Ionicons name="earth-outline" size={18} color={s.ink}/>
+          </Pressable>
         </View>
       </View>
 
-      {/* Compact borderless soft-glow platform radio bar (including 汽水 Scheme A) */}
+      {/* Compact borderless soft-glow platform radio bar (including 汽水) */}
       <View style={{flexDirection:'row',gap:6,flexWrap:'wrap',alignItems:'center'}}>
         {platforms.map(([id,name,dot])=>{
           const selected=!qishuiTab&&platform===id;
@@ -460,24 +472,76 @@ export function Discovery({
         })}
       </View>
 
-      {/* Sollin quick icon row (scrollable for rich discovery entry points) */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:14,paddingVertical:4,paddingHorizontal:2}}>
-        {[
-          {testID:'discovery-global-radio',label:'全球电台',a11y:'打开全球电台',icon:'earth-outline' as const,active:radioOpen,onPress:()=>setRadioOpen(true)},
-          {testID:'discovery-audio-match',label:'听歌识曲',a11y:'打开听歌识曲',icon:'ear-outline' as const,active:audioMatchOpen,onPress:()=>setAudioMatchOpen(true)},
-          {testID:'discovery-podcasts',label:'播客电台',a11y:'打开网易云播客',icon:'headset-outline' as const,active:podcastsOpen,onPress:()=>setPodcastsOpen(true)},
-          {testID:'discovery-popular-artists',label:'热门歌手',a11y:'热门歌手',icon:'mic-outline' as const,active:view.kind==='artists',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'artists'});}},
-          {testID:'discovery-new-albums',label:'新碟首发',a11y:'新碟首发',icon:'disc-outline' as const,active:view.kind==='albums',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'albums'});}},
-          {testID:undefined,label:'风格推荐',a11y:'打开风格推荐',icon:'sparkles' as const,active:styleOpen,onPress:()=>setStyleOpen(true)},
-          {testID:undefined,label:'账号推荐',a11y:'账号与本地推荐',icon:'heart' as const,active:false,onPress:()=>{if(openAccounts)openAccounts();else{setCategory(undefined);setView({kind:'playlists'});}}},
-          {testID:undefined,label:'歌单导入',a11y:'展开歌单导入',icon:'albums-outline' as const,active:tools,onPress:()=>setTools(value=>!value)},
-        ].map(shortcut=><Pressable key={shortcut.label} testID={shortcut.testID} accessibilityRole="button" accessibilityLabel={shortcut.a11y} onPress={shortcut.onPress} style={{width:58,alignItems:'center',gap:6}}>
-          <View style={{width:48,height:48,borderRadius:24,backgroundColor:shortcut.active?s.accent:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
-            <Ionicons name={shortcut.icon} size={21} color={shortcut.active?'#FFFFFF':s.accent}/>
-          </View>
-          <Text numberOfLines={1} style={{color:s.ink,fontSize:11.5,fontWeight:'500'}}>{shortcut.label}</Text>
-        </Pressable>)}
-      </ScrollView>
+      {/* Platform-capability-aware quick icon row (strictly honors each platform's real abilities; zero NetEase hijacks!) */}
+      {(()=>{
+        type Shortcut={testID?:string;label:string;a11y:string;icon:React.ComponentProps<typeof Ionicons>['name'];active:boolean;onPress:()=>void};
+        let shortcuts:Shortcut[]=[];
+        if(platform==='wy'&&wySignedIn){
+          // Exact 15-item Sollin NetEase order requested by user
+          shortcuts=[
+            {testID:'discovery-wy-daily',label:'每日推荐',a11y:'网易云每日推荐',icon:'calendar-outline',active:accountFeature==='wy_daily',onPress:()=>setAccountFeature('wy_daily')},
+            {testID:'discovery-wy-rec-playlists',label:'推荐歌单',a11y:'网易云推荐歌单',icon:'albums-outline',active:accountFeature==='wy_rec_playlists',onPress:()=>setAccountFeature('wy_rec_playlists')},
+            {testID:'discovery-wy-heartbeat',label:'心动模式',a11y:'开启网易云心动模式',icon:'pulse',active:accountFeature==='wy_heartbeat',onPress:()=>setAccountFeature('wy_heartbeat')},
+            {testID:'discovery-wy-sub-playlists',label:'收藏的歌单',a11y:'网易云收藏的歌单',icon:'bookmark-outline',active:accountFeature==='wy_sub_playlists',onPress:()=>setAccountFeature('wy_sub_playlists')},
+            {testID:'discovery-wy-created-playlists',label:'创建的歌单',a11y:'网易云创建的歌单',icon:'folder-open-outline',active:accountFeature==='wy_created_playlists',onPress:()=>setAccountFeature('wy_created_playlists')},
+            {testID:'discovery-wy-liked',label:'我喜欢',a11y:'网易云我喜欢的音乐',icon:'heart',active:accountFeature==='wy_liked',onPress:()=>setAccountFeature('wy_liked')},
+            {testID:'discovery-wy-fm',label:'私人FM',a11y:'开启网易云私人FM',icon:'radio-outline',active:accountFeature==='wy_fm',onPress:()=>setAccountFeature('wy_fm')},
+            {testID:'discovery-podcasts',label:'播客专区',a11y:'打开网易云播客专区',icon:'headset-outline',active:podcastsOpen,onPress:()=>setPodcastsOpen(true)},
+            {testID:'discovery-wy-recent-songs',label:'最近播放',a11y:'网易云最近播放',icon:'time-outline',active:accountFeature==='wy_recent_songs',onPress:()=>setAccountFeature('wy_recent_songs')},
+            {testID:'discovery-wy-recent-playlists',label:'最近歌单',a11y:'网易云最近歌单',icon:'list-outline',active:accountFeature==='wy_recent_playlists',onPress:()=>setAccountFeature('wy_recent_playlists')},
+            {testID:'discovery-wy-play-record',label:'听歌排行',a11y:'网易云听歌排行',icon:'stats-chart-outline',active:accountFeature==='wy_play_record',onPress:()=>setAccountFeature('wy_play_record')},
+            {testID:'discovery-wy-cloud',label:'我的云盘',a11y:'网易云我的云盘',icon:'cloud-outline',active:accountFeature==='wy_cloud',onPress:()=>setAccountFeature('wy_cloud')},
+            {testID:'discovery-wy-sub-artists',label:'收藏歌手',a11y:'网易云收藏歌手',icon:'people-outline',active:accountFeature==='wy_sub_artists',onPress:()=>setAccountFeature('wy_sub_artists')},
+            {testID:'discovery-wy-sub-albums',label:'收藏专辑',a11y:'网易云收藏专辑',icon:'disc-outline',active:accountFeature==='wy_sub_albums',onPress:()=>setAccountFeature('wy_sub_albums')},
+            {testID:'discovery-wy-sub-mvs',label:'收藏MV',a11y:'网易云收藏MV',icon:'videocam-outline',active:accountFeature==='wy_sub_mvs',onPress:()=>setAccountFeature('wy_sub_mvs')},
+          ];
+        }else if(platform==='wy'){
+          shortcuts=[
+            {testID:'discovery-popular-artists',label:'热门歌手',a11y:'热门歌手',icon:'mic-outline',active:view.kind==='artists',onPress:()=>{setCategory(undefined);setView({kind:'artists'});}},
+            {testID:'discovery-new-albums',label:'新碟首发',a11y:'新碟首发',icon:'disc-outline',active:view.kind==='albums',onPress:()=>{setCategory(undefined);setView({kind:'albums'});}},
+            {testID:'discovery-podcasts',label:'播客专区',a11y:'打开网易云播客专区',icon:'headset-outline',active:podcastsOpen,onPress:()=>setPodcastsOpen(true)},
+            {label:'风格推荐',a11y:'打开风格推荐',icon:'sparkles',active:styleOpen,onPress:()=>setStyleOpen(true)},
+            {label:'歌单导入',a11y:'展开歌单导入',icon:'albums-outline',active:tools,onPress:()=>setTools(value=>!value)},
+          ];
+        }else if(platform==='tx'){
+          // Exact 6-item Sollin QQ Music capability bar
+          shortcuts=[
+            {testID:'discovery-tx-liked',label:'我喜欢',a11y:'QQ音乐我喜欢',icon:'heart',active:accountFeature==='tx_liked',onPress:()=>setAccountFeature('tx_liked')},
+            {testID:'discovery-tx-playlists',label:'个人歌单',a11y:'QQ音乐个人歌单',icon:'albums-outline',active:accountFeature==='tx_playlists',onPress:()=>setAccountFeature('tx_playlists')},
+            {testID:'discovery-tx-radar',label:'雷达推荐',a11y:'QQ音乐雷达推荐',icon:'radio-outline',active:accountFeature==='tx_radar',onPress:()=>setAccountFeature('tx_radar')},
+            {testID:'discovery-tx-new-songs',label:'新歌推荐',a11y:'QQ音乐新歌推荐',icon:'sparkles-outline',active:accountFeature==='tx_new_songs',onPress:()=>setAccountFeature('tx_new_songs')},
+            {testID:'discovery-tx-rec-playlists',label:'推荐歌单',a11y:'QQ音乐推荐歌单',icon:'musical-notes-outline',active:accountFeature==='tx_rec_playlists',onPress:()=>setAccountFeature('tx_rec_playlists')},
+            {testID:'discovery-tx-home-feed',label:'个性首页',a11y:'QQ音乐个性首页',icon:'compass-outline',active:accountFeature==='tx_home_feed',onPress:()=>setAccountFeature('tx_home_feed')},
+          ];
+        }else if(platform==='kg'){
+          // Exact 4-item Sollin Kugou Music capability bar
+          shortcuts=[
+            {testID:'discovery-kg-daily',label:'每日推荐',a11y:'酷狗每日推荐',icon:'calendar-outline',active:accountFeature==='kg_daily',onPress:()=>setAccountFeature('kg_daily')},
+            {testID:'discovery-kg-liked',label:'我喜欢',a11y:'酷狗我喜欢',icon:'heart',active:accountFeature==='kg_liked',onPress:()=>setAccountFeature('kg_liked')},
+            {testID:'discovery-kg-playlists',label:'个人歌单',a11y:'酷狗个人歌单',icon:'albums-outline',active:accountFeature==='kg_playlists',onPress:()=>setAccountFeature('kg_playlists')},
+            {testID:'discovery-kg-new-songs',label:'新歌速递',a11y:'酷狗新歌速递',icon:'flash-outline',active:accountFeature==='kg_new_songs',onPress:()=>setAccountFeature('kg_new_songs')},
+          ];
+        }
+        // Kuwo (kw) and Migu (mg) do not support account login or NetEase-only shortcuts.
+        if(!shortcuts.length)return null;
+        return <View style={{gap:10}}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:12,paddingVertical:4,paddingHorizontal:2}}>
+            {shortcuts.map(shortcut=><Pressable key={shortcut.label} testID={shortcut.testID} accessibilityRole="button" accessibilityLabel={shortcut.a11y} onPress={shortcut.onPress} style={{width:62,alignItems:'center',gap:6}}>
+              <View style={{width:48,height:48,borderRadius:24,backgroundColor:shortcut.active?s.accent:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+                <Ionicons name={shortcut.icon} size={21} color={shortcut.active?'#FFFFFF':s.accent}/>
+              </View>
+              <Text numberOfLines={1} style={{color:s.ink,fontSize:11.5,fontWeight:'500'}}>{shortcut.label}</Text>
+            </Pressable>)}
+          </ScrollView>
+          {((platform==='wy'&&!wySignedIn)||(platform==='tx'&&!txSignedIn)||(platform==='kg'&&!kgSignedIn))&&openAccounts&&<Pressable testID={`discovery-login-prompt-${platform}`} accessibilityRole="button" onPress={openAccounts} style={{flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:14,paddingVertical:10,borderRadius:16,backgroundColor:softSurface}}>
+            <Ionicons name="person-circle-outline" size={20} color={s.accent}/>
+            <Text numberOfLines={1} style={{flex:1,color:s.ink,fontSize:12.5,fontWeight:'600'}}>
+              {platform==='wy'?'登录网易云解锁每日推荐、心动模式、私人FM与个人歌单':platform==='tx'?'登录 QQ 音乐解锁我喜欢、个人歌单与雷达推荐':'登录酷狗解锁每日推荐、我喜欢与个人歌单'}
+            </Text>
+            <Ionicons name="chevron-forward" size={15} color={s.subtle}/>
+          </Pressable>}
+        </View>;
+      })()}
 
       {/* Sollin NetEase horizontal rotating banner carousel (positioned below quick actions, above 风格化推荐) */}
       {embedded&&platform==='wy'&&banners.length>0&&<View testID="netease-banner-carousel" style={{gap:8}}>
@@ -503,8 +567,8 @@ export function Discovery({
         </View>}
       </View>}
 
-      {/* Sollin 01-discover.png: borderless 风格化推荐 section + horizontal style cards */}
-      <View style={{gap:10,paddingTop:2}}>
+      {/* Sollin 01-discover.png: 风格化推荐 section (shown on NetEase where public style tags belong) */}
+      {platform==='wy'&&<View style={{gap:10,paddingTop:2}}>
         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
           <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
             <Text style={{color:s.ink,fontSize:19,fontWeight:'700'}}>风格化推荐</Text>
@@ -529,7 +593,7 @@ export function Discovery({
             <Text numberOfLines={1} style={{color:s.muted,fontSize:11.5}}>{card.subtitle}</Text>
           </Pressable>)}
         </ScrollView>
-      </View>
+      </View>}
 
       {catalogShortcuts}
 
@@ -538,6 +602,9 @@ export function Discovery({
         <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
           {view.kind==='playlists'&&<Pressable accessibilityRole="button" accessibilityLabel="按分类筛选歌单" onPress={()=>setView({kind:'categories'})} style={{paddingHorizontal:11,paddingVertical:5,borderRadius:14,backgroundColor:softSurface}}>
             <Text style={{color:s.ink,fontSize:12,fontWeight:'600'}}>分类筛选</Text>
+          </Pressable>}
+          {view.kind==='playlists'&&<Pressable accessibilityRole="button" accessibilityLabel="展开歌单链接导入" onPress={()=>setTools(v=>!v)} style={{paddingHorizontal:11,paddingVertical:5,borderRadius:14,backgroundColor:tools?s.accentSoft:softSurface}}>
+            <Text style={{color:tools?s.accent:s.ink,fontSize:12,fontWeight:'600'}}>链接导入</Text>
           </Pressable>}
           {!!category&&<Pressable accessibilityRole="button" accessibilityLabel="清除分类筛选" onPress={()=>{setCategory(undefined);setView({kind:'playlists'});}} style={{paddingHorizontal:11,paddingVertical:5,borderRadius:14,backgroundColor:s.accentSoft}}>
             <Text style={{color:s.accent,fontSize:12,fontWeight:'600'}}>清除筛选</Text>
@@ -563,14 +630,14 @@ export function Discovery({
         onRetry={()=>{void loadFeatured();}}
         onOpenPlaylist={pl=>openCollection(pl,false)}
         onOpenAlbum={al=>setNestedCollection({platform,kind:'album',collection:al,returnLabel:'返回精选'})}
-        onOpenArtist={ar=>setNestedCollection({platform:'wy',kind:'artist',collection:ar,returnLabel:'返回精选'})}
+        onOpenArtist={ar=>setNestedCollection({platform,kind:'artist',collection:ar,returnLabel:'返回精选'})}
         onOpenRank={rank=>openCollection({id:rank.id,title:rank.title,artwork:rank.artwork,description:rank.updateFrequency},true)}
         onOpenCategory={cat=>{setCategory(cat.id);setView({kind:'playlists'});}}
         onOpenMV={mv=>setActiveMV(mv)}
         onOpenMorePlaylists={()=>{setCategory(undefined);setView({kind:'playlists'});}}
         onOpenMoreRankings={()=>setView({kind:'rankings'})}
-        onOpenMoreAlbums={()=>{setPlatform('wy');setView({kind:'albums'});}}
-        onOpenMoreArtists={()=>{setPlatform('wy');setView({kind:'artists'});}}
+        onOpenMoreAlbums={platform==='wy'?()=>{setView({kind:'albums'});}:()=>{setView({kind:'playlists'});}}
+        onOpenMoreArtists={platform==='wy'?()=>{setView({kind:'artists'});}:()=>{setView({kind:'playlists'});}}
         onOpenSongShelf={(title,shelfTracks)=>{setDescriptionOpen(false);setTotal(shelfTracks.length);setView({kind:'bannerSongs',id:`shelf-${title}`,title,artwork:shelfTracks[0]?.artwork,tracks:shelfTracks});}}
       />}
       </>}
@@ -611,14 +678,14 @@ export function Discovery({
         <Text numberOfLines={2} style={{color:s.ink,fontSize:14,fontWeight:'600',lineHeight:19}}>{item.value.title}</Text>
         <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{item.kind==='artist'?'查看歌曲与专辑':item.value.count!==undefined?`${item.value.author?`${item.value.author} · `:''}${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
-      ListFooterComponent={view.kind==='featured'||qishuiTab?null:<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>}/>
+      ListFooterComponent={view.kind==='featured'||qishuiTab?null:<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>} showsVerticalScrollIndicator={false}/>
     {showBackTop&&<Pressable testID="discovery-back-top" accessibilityRole="button" accessibilityLabel="返回顶部" onPress={()=>listRef.current?.scrollToOffset({offset:0,animated:true})} style={[{position:'absolute',right:18,bottom:embedded?bottomInset+12:24,width:44,height:44,borderRadius:22,backgroundColor:segmentActive,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:s.cardBorder},s.cardShadow]}>
       <Ionicons name="arrow-up" size={20} color={s.ink}/>
     </Pressable>}
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 
-  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
+  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/><AccountFeatureSheet services={services} feature={accountFeature} onClose={()=>setAccountFeature(null)} onOpenAccounts={openAccounts} onOpenPlaylist={(plat,pl)=>{setPlatform(plat);openCollection(pl,false);}} onOpenArtist={(plat,ar)=>setNestedCollection({platform:plat,kind:'artist',collection:ar,returnLabel:'返回发现'})} onOpenAlbum={(plat,al)=>setNestedCollection({platform:plat,kind:'album',collection:al,returnLabel:'返回发现'})} onOpenMV={mv=>setActiveMV(mv)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

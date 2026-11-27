@@ -45,7 +45,7 @@ export function WebDAVLibrary({services}:{services:Services}){
     <Modal visible={open} onRequestClose={()=>setOpen(false)} animationType="slide"><View style={{flex:1,padding:22,paddingTop:64,gap:12,backgroundColor:p.background[0]}}>
       {button('收起WebDAV',()=>setOpen(false))}<Text style={{fontSize:30,fontWeight:'700',color:p.text}}>WebDAV音乐</Text>
       {button(showManage?'返回WebDAV目录':'管理WebDAV连接',()=>setManage(!showManage),!accounts.length&&showManage)}
-      {showManage?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,paddingBottom:32}}>
+      {showManage?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,paddingBottom:32}} showsVerticalScrollIndicator={false}>
         <Text style={{color:p.secondary,lineHeight:20}}>连接自己的音乐目录，密码保存在本机Keychain。支持Basic认证；只读取配置根目录内的音频。</Text>
         {accounts.map(account=><View key={account.id} style={{gap:8,padding:12,borderRadius:16,backgroundColor:p.surface}}><Text style={{color:p.text}}>{account.label} · {account.username}</Text><Text style={{color:p.secondary,fontSize:12}}>{account.url}</Text>
           <View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{button('修改WebDAV凭据',()=>{setURL(account.url);setUsername(account.username);setLabel(account.label);setPassword('');},busy)}{button(`移除WebDAV连接：${account.label}`,()=>Alert.alert('移除WebDAV连接？','停止当前WebDAV播放并删除本机凭据，歌单中的引用仍保留。',[{text:'取消',style:'cancel'},{text:'移除',style:'destructive',onPress:()=>{setBusy(true);void services.davAccounts.remove(account.id).then(()=>setMessage('WebDAV连接与凭据已移除')).catch(()=>setMessage('移除失败，原连接保留')).finally(()=>setBusy(false));}}]),busy)}</View>
@@ -53,7 +53,7 @@ export function WebDAVLibrary({services}:{services:Services}){
         {input('WebDAV服务器根目录',url,setURL)}{input('WebDAV用户名',username,setUsername)}{input('WebDAV密码',password,setPassword,true)}{input('WebDAV连接名称',label,setLabel)}
         {button(busy?'验证WebDAV中…':'验证并保存WebDAV',()=>{setBusy(true);setMessage('');void services.davAccounts.connect(url,username,password,label).then(result=>{setPassword('');setAccountId(result.account.id);setPath('');setManage(false);setMessage('WebDAV连接成功');}).catch(error=>setMessage(error instanceof WebDAVError?error.message:'WebDAV连接未保存，请检查本机凭据存储')).finally(()=>setBusy(false));},busy||!url.trim()||!username.trim()||!password)}
       </ScrollView>:<>
-        <ScrollView horizontal style={{flexGrow:0}} contentContainerStyle={{gap:8}}>{accounts.map(account=><View key={account.id}><Pressable testID={`webdav-account-${account.username}`} accessibilityRole="button" accessibilityState={{selected:account.id===accountId}} onPress={()=>{setAccountId(account.id);setPath('');}} style={{padding:12,borderRadius:14,backgroundColor:p.selected}}><Text style={{color:p.accent}}>{`${account.id===accountId?'● ':''}${account.label}`}</Text></Pressable></View>)}</ScrollView>
+        <ScrollView horizontal style={{flexGrow:0}} contentContainerStyle={{gap:8}} showsHorizontalScrollIndicator={false}>{accounts.map(account=><View key={account.id}><Pressable testID={`webdav-account-${account.username}`} accessibilityRole="button" accessibilityState={{selected:account.id===accountId}} onPress={()=>{setAccountId(account.id);setPath('');}} style={{padding:12,borderRadius:14,backgroundColor:p.selected}}><Text style={{color:p.accent}}>{`${account.id===accountId?'● ':''}${account.label}`}</Text></Pressable></View>)}</ScrollView>
         <Text numberOfLines={2} style={{color:p.secondary,fontSize:12}}>{path?decodeURIComponent(path):'根目录'} · {filtered.length}项</Text>
         <View style={{flexDirection:'row',gap:10}}>{button('刷新WebDAV目录',()=>{void load();},loading)}{path&&button('返回上级目录',()=>setPath(path.replace(/[^/]+\/$/,'')),loading)}</View>
         <TextInput accessibilityLabel="搜索当前WebDAV目录" placeholder="搜索当前目录已读取的歌曲、艺术家" placeholderTextColor={p.secondary} value={query} onChangeText={setQuery} style={{padding:12,color:p.text,borderColor:p.border,borderWidth:1,borderRadius:14}}/>
@@ -64,7 +64,7 @@ export function WebDAVLibrary({services}:{services:Services}){
             </Pressable>
             <View style={{flexDirection:'row',gap:10}}>{button('收藏WebDAV歌曲',()=>{void services.library.favorite(item.track!).catch(()=>setMessage('收藏未保存'));})}{button('加入歌单',()=>setAdding([item.track!]))}</View>
           </>}
-        </View>}/>
+        </View>} showsVerticalScrollIndicator={false}/>
         {filtered.length>visible&&button('显示更多WebDAV项目',()=>{const next=visible+20;setVisible(next);void scan(filtered.slice(visible,next),pending.current.signal,revision.current);})}
       </>}
       {loading&&<ActivityIndicator accessibilityLabel="读取WebDAV目录" color={p.accent}/>}{!!message&&<Text accessibilityRole="alert" style={{color:p.accent}}>{message}</Text>}

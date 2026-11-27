@@ -68,7 +68,7 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
   const themeRows=(ids:readonly VisualTheme[])=>Array.from({length:Math.ceil(ids.length/3)},(_,row)=>ids.slice(row*3,row*3+3));
   const themeChoices=(ids:readonly VisualTheme[],style?:React.ComponentProps<typeof View>['style'])=><View style={[{borderRadius:chips.radius,backgroundColor:themeGlass,paddingHorizontal:chips.inset,paddingVertical:chips.verticalInset},style]}><View style={{gap:chips.rowGap}}>{themeRows(ids).map((row,rowIndex)=><View key={`theme-row-${rowIndex}`} style={{marginLeft:rowIndex>=2?2:undefined,flexDirection:'row',flexWrap:'wrap',columnGap:rowIndex===2?10:rowIndex===1?8.7:chips.columnGap,rowGap:chips.rowGap}}>{row.map(id=><Pressable key={id} testID={`visual-${id}`} accessibilityRole="radio" accessibilityState={{selected:value.visualTheme===id}} onPress={()=>update({visualTheme:id})} style={{width:measuredThemeWidths[id],flexDirection:'row',alignItems:'center',justifyContent:'center',gap:chips.columnGap,minWidth:id==='blush'?chips.primaryMinWidth:undefined,minHeight:chips.height,paddingHorizontal:chips.chipInset,borderRadius:chips.chipRadius,backgroundColor:value.visualTheme===id?'#221919':darkMode?'rgba(255,255,255,0.10)':settingsSheet.themeChip}}>
     {value.visualTheme===id?<View style={{width:chips.swatch,height:chips.swatch,borderRadius:5.5,backgroundColor:'#FFFFFF'}}/>:<LinearGradient colors={themeSwatchBackground(id)} start={{x:0,y:0}} end={{x:1,y:1}} style={{width:chips.swatch,height:chips.swatch,borderRadius:5.5,borderWidth:StyleSheet.hairlineWidth,borderColor:'rgba(0,0,0,0.10)'}}/>}
-    <Text style={{color:value.visualTheme===id?'#FFFFFF':'#221919',fontSize:14.7,fontWeight:'600'}}>{themeLabels[id]}</Text>
+    <Text style={{color:value.visualTheme===id?'#FFFFFF':darkMode?'#F1E9EB':'#221919',fontSize:14.7,fontWeight:'600'}}>{themeLabels[id]}</Text>
   </Pressable>)}</View>)}</View></View>;
   // IMG_4856 measures both outlined fields at a 32pt border, an 18pt swatch whose
   // visible fill spans x 47.0..64.7pt, the '#RRGGBB' ink starting at 84.3pt and
@@ -135,7 +135,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
       ['photo','写真歌词','image','写真封面、长歌词与轻触快捷操作'],
       ['stage','歌词舞台','text','全屏逐字大字舞台与多种视觉风格'],
       ['groove','黑胶螺旋槽','disc','同心螺旋音槽、频谱律动光环与唱针聚焦歌词'],
+      ['groove2','黑胶螺旋槽 2','aperture-outline','Sollin 风格刻槽黑胶：阿基米德螺旋刻字、光学放大镜、衍射光扇与刻槽参数'],
       ['teletype','电报打字机','terminal-outline','复古纸带与磷光终端，逐字敲击电传歌词'],
+      ['teletype2','电报打字机 2','print-outline','Sollin Model 33 机械电传机：链式打孔纸带、指针 VU 表、副歌红带与立体机械键'],
     ] as const).map(([id,label,icon,detail],index)=>{
       const selected=value.playerLayout===id;
       return <View key={id}>

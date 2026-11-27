@@ -522,3 +522,82 @@ final class NexusRadioGlobeView: ExpoView, WKScriptMessageHandler, WKNavigationD
     onSelect(body)
   }
 }
+
+/// Offline-safe local HTML5 Canvas host for high-DPI interactive player skins (Groove 2 / Teletype 2).
+final class NexusLocalCanvasView: ExpoView, WKScriptMessageHandler, WKNavigationDelegate {
+  let onAction = EventDispatcher()
+  private let web: WKWebView
+  private var loaded = false
+  private var appliedHtmlHash = 0
+  private var appliedState = ""
+
+  var html = ""
+  var stateJson = "{}"
+
+  required init(appContext: AppContext? = nil) {
+    let config = WKWebViewConfiguration()
+    config.websiteDataStore = .nonPersistent()
+    let ucc = WKUserContentController()
+    config.userContentController = ucc
+    web = WKWebView(frame: .zero, configuration: config)
+    super.init(appContext: appContext)
+    isOpaque = false
+    backgroundColor = .clear
+    web.isOpaque = false
+    web.backgroundColor = .clear
+    web.scrollView.backgroundColor = .clear
+    web.scrollView.isScrollEnabled = false
+    web.scrollView.bounces = false
+    web.navigationDelegate = self
+    ucc.add(self, name: "NexusCanvas")
+    addSubview(web)
+  }
+
+  deinit {
+    web.configuration.userContentController.removeScriptMessageHandler(forName: "NexusCanvas")
+    web.stopLoading()
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    web.frame = bounds
+  }
+
+  func applyProps() {
+    let h = html.hashValue
+    if !html.isEmpty && h != appliedHtmlHash {
+      appliedHtmlHash = h
+      loaded = false
+      web.loadHTMLString(html, baseURL: nil)
+      return
+    }
+    if loaded {
+      pushStateIfNeeded()
+    }
+  }
+
+  private func pushStateIfNeeded() {
+    guard stateJson != appliedState, !stateJson.isEmpty else { return }
+    appliedState = stateJson
+    web.evaluateJavaScript("window.nexusCanvas && window.nexusCanvas.setState(\(stateJson));", completionHandler: nil)
+  }
+
+  func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    loaded = true
+    appliedState = ""
+    pushStateIfNeeded()
+  }
+
+  func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    if navigationAction.request.url?.scheme == "about" || navigationAction.request.url == nil {
+      decisionHandler(.allow)
+    } else {
+      decisionHandler(.cancel)
+    }
+  }
+
+  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    guard message.name == "NexusCanvas", let body = message.body as? [String: Any] else { return }
+    onAction(body)
+  }
+}

@@ -58,7 +58,7 @@ export function CloudSync({services,grouped=false}:{services:Services;grouped?:b
           <View style={[{padding:14,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder},s.cardShadow]}>
             <Text style={{color:s.ink,fontSize:16,fontWeight:'600'}}>{describeSyncRecord(details)}</Text>
           </View>
-          {playlistDetails?<FlatList data={playlistDetails.entries} keyExtractor={value=>value.id} initialNumToRender={16} windowSize={5} contentContainerStyle={{gap:8,paddingBottom:20}} renderItem={({item,index})=><View style={{padding:12,borderRadius:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.ink,fontWeight:'600'}}>{index+1}. {item.track.title}</Text><Text style={{color:s.muted,fontSize:12,marginTop:2}}>{item.track.artist}{item.track.album?` · ${item.track.album}`:''}</Text></View>}/>:<Text style={{color:s.muted,fontSize:13,lineHeight:20}}>此版本仅影响对应收藏或选择记录；未包含播放地址与连接凭据。</Text>}
+          {playlistDetails?<FlatList data={playlistDetails.entries} keyExtractor={value=>value.id} initialNumToRender={16} windowSize={5} contentContainerStyle={{gap:8,paddingBottom:20}} renderItem={({item,index})=><View style={{padding:12,borderRadius:14,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.ink,fontWeight:'600'}}>{index+1}. {item.track.title}</Text><Text style={{color:s.muted,fontSize:12,marginTop:2}}>{item.track.artist}{item.track.album?` · ${item.track.album}`:''}</Text></View>} showsVerticalScrollIndicator={false}/>:<Text style={{color:s.muted,fontSize:13,lineHeight:20}}>此版本仅影响对应收藏或选择记录；未包含播放地址与连接凭据。</Text>}
         </View>:<View style={{flex:1,paddingHorizontal:18,paddingTop:Math.max(insets.top+12,50),paddingBottom:Math.max(insets.bottom+14,20),gap:12}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
             <Text style={{color:s.ink,fontSize:24,fontWeight:'700'}}>多设备音乐库同步</Text>
@@ -100,7 +100,7 @@ export function CloudSync({services,grouped=false}:{services:Services;grouped?:b
                 {pill(`${choices[item.id]==='local'?'● ':''}采用本机版本`,()=>setChoices(value=>({...value,[item.id]:'local'})),busy,`cloud-sync-local-${index}`,choices[item.id]==='local')}
                 {pill(`${choices[item.id]==='remote'?'● ':''}采用云端版本`,()=>setChoices(value=>({...value,[item.id]:'remote'})),busy,`cloud-sync-remote-${index}`,choices[item.id]==='remote')}
               </View>
-            </View>}/>
+            </View>} showsVerticalScrollIndicator={false}/>
         </View>}
       </View>
     </Modal>

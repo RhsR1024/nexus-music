@@ -139,7 +139,7 @@ export function SourceHealthModal({health,ids,visible,onClose}:{health:SourceHea
             <Ionicons name="checkmark-done-circle-outline" size={32} color={s.subtle}/>
             <Text style={{color:s.muted,fontSize:13,textAlign:'center',lineHeight:19}}>输入关键词后开始；未启用或不支持所选档位的音源会单独说明。</Text>
           </View>}
-        />
+         showsVerticalScrollIndicator={false}/>
       </SafeAreaView>
     </SafeAreaProvider>
   </SheetModal>;

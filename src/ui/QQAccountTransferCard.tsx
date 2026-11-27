@@ -49,7 +49,7 @@ export function QQAccountTransferCard({services,active,disabled}:{services:Servi
             </View>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={{paddingHorizontal:20,paddingBottom:36,gap:14}} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <ScrollView contentContainerStyle={{paddingHorizontal:20,paddingBottom:36,gap:14}} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
           <View style={[{borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,padding:16,gap:8},s.cardShadow]}>
             <Text style={{fontSize:14,lineHeight:21,color:s.ink}}>在支持此配对协议的 Q-music 电脑端，进入音乐账号管理，用微信登录 QQ 音乐后选择“连接手机”。两端连接同一局域网。</Text>
             <Text style={{fontSize:12,lineHeight:18,color:s.muted}}>配对码包含短时连接密钥，仅用于自己的设备。不要发送给他人；过期或领取失败时请在电脑重新生成。音枢不自动读取剪贴板，也不通过云端中转。</Text>
