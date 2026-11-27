@@ -53,5 +53,11 @@
     <activity-alias android:name=".NexusAltGraphite" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_launcher_alt_graphite" android:roundIcon="@mipmap/ic_launcher_alt_graphite" android:label="@string/app_name" android:targetActivity=".MainActivity">
       <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
     </activity-alias>
+    <meta-data android:name="com.google.android.gms.car.application" android:resource="@xml/automotive_app_desc"/>
+    <service android:name="com.nexusmusic.nexusnative.NexusAutoMediaService" android:exported="true">
+      <intent-filter>
+        <action android:name="android.media.browse.MediaBrowserService"/>
+      </intent-filter>
+    </service>
   </application>
 </manifest>

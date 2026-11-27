@@ -134,6 +134,8 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
       ['wave','声波核','radio','环形进度、实时音频频谱环与居中歌词'],
       ['photo','写真歌词','image','写真封面、长歌词与轻触快捷操作'],
       ['stage','歌词舞台','text','全屏逐字大字舞台与多种视觉风格'],
+      ['groove','黑胶螺旋槽','disc','同心螺旋音槽、频谱律动光环与唱针聚焦歌词'],
+      ['teletype','电报打字机','terminal-outline','复古纸带与磷光终端，逐字敲击电传歌词'],
     ] as const).map(([id,label,icon,detail],index)=>{
       const selected=value.playerLayout===id;
       return <View key={id}>

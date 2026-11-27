@@ -15,6 +15,7 @@ Pod::Spec.new do |s|
   s.public_header_files = 'ios/NexusAudioDSP.h'
   s.resource_bundles = { 'NexusNative' => ['common/bootstrap.js'] }
   s.frameworks = 'JavaScriptCore', 'Security', 'AVFoundation', 'AVKit', 'MediaToolbox', 'MediaPlayer', 'ImageIO', 'CoreGraphics', 'UniformTypeIdentifiers', 'WebKit'
+  s.weak_frameworks = 'CarPlay', 'AppIntents'
   s.pod_target_xcconfig = { 'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20' }
   s.libraries = 'z'
 end

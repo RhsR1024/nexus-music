@@ -38,6 +38,7 @@ import {QishuiProvider} from '../providers/qishui.ts';
 import {GlobalRadioApi,GlobalRadioStore,validRadioStreamURL} from '../providers/globalRadio.ts';
 import {DlnaCastController,type DlnaNativeBridge} from '../providers/dlna.ts';
 import {AudioMatchCoordinator,type AudioMatchNativeBridge} from '../providers/audioMatch.ts';
+import {CarIntegrationCoordinator,type CarNativeBridge} from '../platform/carIntegration.ts';
 import {formatBluetoothLyric} from '../lyrics/bluetoothLyrics.ts';
 import {throwIfAborted} from '../providers/async.ts';
 import { restoreRecord } from '../storage/recovery.ts';
@@ -423,12 +424,14 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  const nativeAux=requireOptionalNativeModule<DlnaNativeBridge&AudioMatchNativeBridge>('NexusNative');
+  const nativeAux=requireOptionalNativeModule<DlnaNativeBridge&AudioMatchNativeBridge&CarNativeBridge>('NexusNative');
   const dlna=new DlnaCastController({native:nativeAux,repository});
   await restore('dlna.v1','DLNA 投屏记录',()=>dlna.restore());
   const audioMatch=new AudioMatchCoordinator({native:nativeAux,repository,search:(platform,q,page,signal,limit)=>online.search(platform,q,page,signal,limit)});
   await restore('audioMatch.v1','听歌识曲记录',()=>audioMatch.restore());
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, podcasts, radioApi, radioStore, dlna, audioMatch, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  const carIntegration=new CarIntegrationCoordinator({native:nativeAux,library,actions:{playTracks,resume:()=>{void playback.controller.play();},pause:()=>playback.controller.pause(),next:(dir)=>playback.next(dir)}});
+  carIntegration.start();
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, podcasts, radioApi, radioStore, dlna, audioMatch, carIntegration, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

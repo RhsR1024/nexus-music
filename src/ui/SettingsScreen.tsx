@@ -20,12 +20,13 @@ import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {MusicSourcesScreen} from './MusicSourcesScreen.tsx';
 import {appearanceCaptureFixture} from './captureFixtures.ts';
 import {MusicAccountSettings} from './MusicAccountSettings.tsx';
+import {CarPlaySiriSettings} from './CarPlaySiriSettings.tsx';
 
-export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|'accounts'|AppearanceSection;
+export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|'accounts'|'car'|AppearanceSection;
 type AppearanceSheetSection='background'|'theme'|'skins'|'mini'|'navigation'|'icons';
 const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='background'||page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='icons';
 const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-background-sheet',theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',icons:'app-icon-sheet'};
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色',icons:'软件图标'};
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',car:'车载与语音控制',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色',icons:'软件图标'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,bottomInset=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;bottomInset?:number;onExit:()=>void}){
   const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),sheetDark=theme.mode==='dark';
@@ -75,7 +76,9 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
         <View testID="settings-category-group" style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
           {row('playback','播放偏好、歌词、在线音源与音效','musical-notes',preferences.quality.toUpperCase(),true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
-          {row('appearance','主题、字体、界面布局与播放器外观','color-palette',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台',am2:'AM2'}as const)[preferences.playerLayout],true)}
+          {row('appearance','主题、字体、界面布局与播放器外观','color-palette',({classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台',am2:'AM2',groove:'螺旋槽',teletype:'打字机'}as const)[preferences.playerLayout],true)}
+          <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
+          {row('car','CarPlay、Siri 快捷指令与 Android Auto','car-sport',undefined,true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
           {row('downloads','下载音质、并发与任务文件管理','cloud-download','下载设置',true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
@@ -89,6 +92,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
         </View>
       </View>;
       case 'sources':return <MusicSourcesScreen services={services}/>;
+      case 'car':return <CarPlaySiriSettings services={services}/>;
       case 'accounts':return <MusicAccountSettings services={services} active={page==='accounts'&&!appearanceSheet.visible} onRevealQr={({top,height})=>{
         const scroller=scrolls.current.accounts;
         if(currentPage.current!=='accounts'||!scroller||!Number.isFinite(top)||height<=0)return;

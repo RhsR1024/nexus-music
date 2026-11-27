@@ -19,7 +19,15 @@ public final class NexusNativeModule: Module {
 
   public func definition() -> ModuleDefinition {
     Name("NexusNative")
-    Events("onPowerStateChange", "onSourceUpdateAlert", "onAudioMatchLevel")
+    Events("onPowerStateChange", "onSourceUpdateAlert", "onAudioMatchLevel", "onCarCommand")
+    OnStartObserving("onCarCommand") {
+      NexusCarBridgeStore.shared.setCommandHandler { [weak self] cmd in
+        self?.sendEvent("onCarCommand", cmd)
+      }
+    }
+    OnStopObserving("onCarCommand") {
+      NexusCarBridgeStore.shared.setCommandHandler(nil)
+    }
     OnStartObserving("onPowerStateChange") {
       self.startPowerObservation()
     }
@@ -273,8 +281,18 @@ public final class NexusNativeModule: Module {
     AsyncFunction("audioMatchStop") {
       self.audioMatch.stopCapture()
     }
+    AsyncFunction("updateCarCatalog") { (json: String) in
+      NexusCarBridgeStore.shared.updateCatalog(json: json)
+    }
+    AsyncFunction("consumePendingCarCommands") { () -> [[String: Any]] in
+      NexusCarBridgeStore.shared.consumePendingCommands()
+    }
+    AsyncFunction("carIntegrationStatus") { () -> [String: Any] in
+      NexusCarBridgeStore.shared.statusSnapshot()
+    }
 
     OnDestroy {
+      NexusCarBridgeStore.shared.setCommandHandler(nil)
       self.dlnaService.stopRelay()
       self.dlnaService.setKeepAlive(false)
       self.audioMatch.stopCapture()

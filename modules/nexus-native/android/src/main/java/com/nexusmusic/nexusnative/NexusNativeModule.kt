@@ -71,7 +71,16 @@ class NexusNativeModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("NexusNative")
-    Events("onPowerStateChange", "onSourceUpdateAlert", "onAudioMatchLevel")
+    Events("onPowerStateChange", "onSourceUpdateAlert", "onAudioMatchLevel", "onCarCommand")
+
+    OnStartObserving("onCarCommand") {
+      NexusCarBridgeStore.setCommandHandler { cmd ->
+        sendEvent("onCarCommand", cmd)
+      }
+    }
+    OnStopObserving("onCarCommand") {
+      NexusCarBridgeStore.setCommandHandler(null)
+    }
 
     OnStartObserving("onPowerStateChange") { startPowerObservation() }
     OnStopObserving("onPowerStateChange") { stopPowerObservation() }
@@ -449,7 +458,20 @@ class NexusNativeModule : Module() {
       audioMatch.stopCapture()
     }
 
+    AsyncFunction("updateCarCatalog") { json: String ->
+      NexusCarBridgeStore.updateCatalog(json)
+    }
+
+    AsyncFunction("consumePendingCarCommands") {
+      NexusCarBridgeStore.consumePendingCommands()
+    }
+
+    AsyncFunction("carIntegrationStatus") {
+      NexusCarBridgeStore.statusSnapshot()
+    }
+
     OnDestroy {
+      NexusCarBridgeStore.setCommandHandler(null)
       dlnaService.stopRelay()
       dlnaService.setKeepAlive(false)
       audioMatch.stopCapture()
