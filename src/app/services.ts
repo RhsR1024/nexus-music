@@ -34,6 +34,9 @@ import {LocalAudioStore,type LocalAudioNative} from '../storage/localAudio.ts';
 import { DiscoveryProvider } from '../providers/discovery.ts';
 import {CrossPlatformMatcher} from '../providers/crossPlatformMatcher.ts';
 import {MatchedResolver} from '../providers/matchedResolver.ts';
+import {AccountPlaybackResolver} from '../providers/accountPlaybackResolver.ts';
+import {AccountFeatureCache} from '../providers/accountFeatureCache.ts';
+import {BodianAccountStore,BodianProvider,BodianQrLoginCoordinator} from '../providers/bodian.ts';
 import {QishuiAccountStore,QishuiProvider} from '../providers/qishui.ts';
 import {AccountDiscoveryClient} from '../providers/accountDiscovery.ts';
 import {GlobalRadioApi,GlobalRadioStore,validRadioStreamURL} from '../providers/globalRadio.ts';
@@ -217,10 +220,30 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const qishuiAccount=new QishuiAccountStore(repository,nativeSecrets);
   await restore('qishui.account.v1','汽水曲库与漫游',()=>qishuiAccount.restore());
   const loginQishui=()=>qishuiAccount.loginWithWebView({native:nativeMusicAuth,uuid:Crypto.randomUUID,http:options.onlineHTTP});
+  const bodianAccount=new BodianAccountStore(repository,nativeSecrets,Crypto.randomUUID);
+  await restore('bodian.account.v1','波点音乐账号',()=>bodianAccount.restore());
+  const bodian=new BodianProvider({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),deviceId:bodianAccount.getSnapshot().deviceId});
+  const bodianQrLogin=new BodianQrLoginCoordinator({provider:bodian,account:bodianAccount});
+  const bodianQrPhoto=new KugouQrPhoto({login:bodianQrLogin,native:loginQrPhotoNative,uuid:Crypto.randomUUID});
+  const accountFeatureCache=new AccountFeatureCache(repository);
+  await restore('accountFeature.cache.v1','账号歌单缓存',()=>accountFeatureCache.restore());
   const accountDiscovery=new AccountDiscoveryClient({http:options.onlineHTTP??requestJSON,sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),accounts:musicAccounts,neteaseProfile});
   const radioApi=new GlobalRadioApi({http:options.onlineHTTP});
   const radioStore=new GlobalRadioStore(repository);
   await restore('radio.v1','全球电台',()=>radioStore.restore());
+  const accountPlaybackResolver=new AccountPlaybackResolver({
+    enabled:()=>preferences.getSnapshot().preferAccountPlayback,
+    quality:()=>preferences.getSnapshot().quality,
+    qualityForPlatform:playbackQualityFor,
+    musicAccounts,
+    bodian,
+    bodianAccount,
+    qishui,
+    qishuiAccount,
+    http:options.onlineHTTP??requestJSON,
+    md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),
+    hash,
+  });
   const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,qualityForPlatform:playbackQualityFor,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
   const preloadCache=new PreloadCache({maxEntries:12,ttlMs:180_000});
@@ -230,8 +253,12 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     preferences.getSnapshot().smartDegradeMode,
     preferences.getSnapshot().smartCrossScript,
     preferences.getSnapshot().autoMatch,
+    preferences.getSnapshot().preferAccountPlayback,
     preferences.getSnapshot().quality,
     preferences.getSnapshot().playbackQualities,
+    musicAccounts.getSnapshot().map(a=>[a.id,a.platform]),
+    bodianAccount.getSnapshot().loggedIn,
+    qishuiAccount.getSnapshot().loggedIn,
   ]);
   const resolveTrack=async(track:Track,signal:AbortSignal,excluded?:ReadonlySet<string>,trace?:PlaybackTraceSink)=>{
     const mark=(title:string,sourceName:string)=>trace?.({stage:'source',status:'success',title,sourceName});
@@ -245,6 +272,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
       return {url:streamUrl,headers:{'User-Agent':'NexusMusic/1.0 RadioPlayer'}};
     }
     if(track.origin.kind==='navidrome'){trace?.({stage:'source',status:'info',title:'向 Navidrome 请求原始媒体',sourceName:'Navidrome'});const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);const result={...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};trace?.({stage:'source',status:'success',title:'取得 Navidrome 原始媒体',sourceName:'Navidrome'});return result;}
+    const direct=await accountPlaybackResolver.resolve(track,signal,excluded,trace);
+    if(direct)return direct;
     return matchedResolver.resolve(track,signal,excluded,trace);
   };
   const downloadResolver=createDownloadResolver({registry,transport:nativeLX,matcher:matching,library,preferences:preferences.getSnapshot,enrich:(track,signal)=>online.enrich(track,signal),other:{resolve:resolveTrack},hash});
@@ -301,6 +330,13 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     if(rev!==lastPreloadRev||snap.preloadCount!==lastPreloadCount){lastPreloadRev=rev;lastPreloadCount=snap.preloadCount;preloader.invalidate();}
     if(snap.preloadNextTrack!==lastPreloadEnabled){lastPreloadEnabled=snap.preloadNextTrack;preloader.refresh();}
   });
+  const syncAccountPreload=()=>{
+    const rev=preloadRevision();
+    if(rev!==lastPreloadRev){lastPreloadRev=rev;preloader.invalidate();}
+  };
+  musicAccounts.subscribe(syncAccountPreload);
+  bodianAccount.subscribe(syncAccountPreload);
+  qishuiAccount.subscribe(syncAccountPreload);
   const accountFmStation=new AccountFmStation({client:accountFm,accounts:musicAccounts,playback:playback.controller,uuid:Crypto.randomUUID});
   musicAccounts.subscribe(()=>accountFmStation.stop());
   bindManualMatches(library,playback.controller);bindMatchPolicy(library,preferences,playback.controller);
@@ -352,7 +388,15 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const albums=new AlbumProvider({http:options.onlineHTTP,textHTTP:options.onlineTextHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),deviceId:Crypto.randomUUID});
   const albumSearch=new PagedSearchCoordinator(albums,item=>item.id);
   const playlistSearch=new PagedSearchCoordinator<PlaylistSearchItem>(new PlaylistSearchProvider({http:options.onlineHTTP,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),deviceId:Crypto.randomUUID}),item=>item.id);
-  const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},options.onlineHTTP,decodeKRC,decodeQRC);
+  const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{
+    if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);
+    if(track.origin.kind==='device')return deviceMedia.lyric(track);
+    if(track.origin.kind==='local')return localAudio.lyric(track);
+    if(track.origin.kind==='imported'&&track.origin.platform==='bodian')return bodian.lyric(track,signal);
+    if(track.origin.kind==='imported'&&track.origin.platform==='qishui'){const cookie=await qishuiAccount.sessionCookieHeader();return qishui.lyric(track,cookie,signal);}
+    if(track.origin.kind!=='navidrome')return '';
+    return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);
+  },options.onlineHTTP,decodeKRC,decodeQRC);
   const lyrics=new LyricSelection(rawLyrics,matching,library);
   const systemLyricPreview=new LyricPreview((track,signal)=>lyrics.load(track,signal));
   const floatingLyricsMod=requireOptionalNativeModule<{updateFloatingLyric?:(text:string|null,enabled:boolean,locked:boolean)=>Promise<void>}>('NexusLyrics');
@@ -436,7 +480,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   await restore('audioMatch.v1','听歌识曲记录',()=>audioMatch.restore());
   const carIntegration=new CarIntegrationCoordinator({native:nativeAux,library,actions:{playTracks,resume:()=>{void playback.controller.play();},pause:()=>playback.controller.pause(),next:(dir)=>playback.next(dir)}});
   carIntegration.start();
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountDiscovery, accountHeartbeat, videos, podcasts, radioApi, radioStore, dlna, audioMatch, carIntegration, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, qishuiAccount, loginQishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountDiscovery, accountHeartbeat, accountFeatureCache, accountPlaybackResolver, bodian, bodianAccount, bodianQrLogin, bodianQrPhoto, videos, podcasts, radioApi, radioStore, dlna, audioMatch, carIntegration, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, qishuiAccount, loginQishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

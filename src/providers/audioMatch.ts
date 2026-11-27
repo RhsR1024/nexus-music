@@ -373,7 +373,7 @@ export function assessAcousticSignal(capture: AudioMatchCaptureResult): {
   if (capture.peakLevel < 0.015 || capture.avgLevel < 0.004) {
     return {
       quality: 'too-quiet',
-      summary: '环境音过弱，请靠近扬声器重试，或在下方上传音频片段 / 输入歌词秒搜',
+      summary: '环境音过弱，请靠近扬声器重新点击识曲，或在下方输入歌词秒搜',
     };
   }
   if (capture.peakLevel > 0.85) {
@@ -399,7 +399,7 @@ const initialState: AudioMatchState = {
   results: [],
   history: [],
   searching: false,
-  hint: '轻触麦克风采样周围音乐、上传本地音频片段识曲，或输入听到的歌词跨平台秒搜',
+  hint: '选择识曲引擎后轻触麦克风，将自动录制环境片段并上传识曲；亦可直接输入歌词秒搜',
   error: '',
 };
 
@@ -513,12 +513,12 @@ export class AudioMatchCoordinator {
       error: '',
       hint:
         next.provider === 'acrcloud'
-          ? '已启用 ACRCloud 个人 Key 识曲：录制环境音频或上传音频片段均可直接识别'
+          ? '已选择 ACRCloud：轻触麦克风将自动录制环境音频并上传识别'
           : next.provider === 'audd'
             ? next.auddToken
-              ? '已启用 AudD 个人 Token 识曲：录制或上传音频片段均可直接识别'
-              : '已启用 AudD 体验模式（使用公共 test 额度，建议填入个人免费 Token）'
-            : '已切换为离线声纹 + 歌词秒搜模式',
+              ? '已选择 AudD：轻触麦克风将自动录制环境音频并上传识别'
+              : '已选择 AudD（公共体验额度）：轻触麦克风即录即识，建议填入个人免费 Token'
+            : '已切换为本机离线声纹 + 歌词秒搜模式',
     });
   }
 
@@ -637,11 +637,11 @@ export class AudioMatchCoordinator {
         level: 0,
         lastCapture: result,
         hint: canCloud
-          ? `${assessment.summary}，正在上传至云端识曲…`
+          ? `${assessment.summary}，正在自动上传至 ${this.state.cloudConfig.provider === 'acrcloud' ? 'ACRCloud' : 'AudD'} 识曲…`
           : `${assessment.summary}。${
-              result.audioBase64 && assessment.quality !== 'too-quiet'
-                ? '可点击下方「上传刚录片段识曲」或配置免费 ACRCloud / AudD Key 自动识别，也可输入歌词秒搜。'
-                : '可上传本地音频片段或输入歌词立即定位原曲。'
+              assessment.quality !== 'too-quiet'
+                ? '当前为本机离线模式，可在下方切换 AudD / ACRCloud 自动上传识曲，或输入听到的歌词秒搜。'
+                : '请靠近声源重新识曲，或输入听到的歌词秒搜。'
             }`,
       });
 

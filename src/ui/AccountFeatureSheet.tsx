@@ -12,10 +12,12 @@ import type { AccountPlaylist } from '../providers/accountPlaylists.ts';
 import type { AccountAlbum } from '../providers/accountAlbums.ts';
 import type { AccountMV } from '../providers/accountMVs.ts';
 import type { PlayRecordRow } from '../providers/accountDiscovery.ts';
+import { formatCacheAge } from '../providers/accountFeatureCache.ts';
 import type { VideoItem } from '../providers/videos.ts';
 import { Modal } from './AdaptiveModal.tsx';
 import { Cover } from './Cover.tsx';
 import { QualityBadge } from './QualityBadge.tsx';
+import { Toast, useToast } from './Toast.tsx';
 import { TrackActions } from './TrackActions.tsx';
 import { Text } from './Typography.tsx';
 import { useTheme } from './theme.tsx';
@@ -47,13 +49,15 @@ export type AccountFeatureKind =
   | 'kg_playlists'
   | 'kg_new_songs';
 
+const CACHE_STALE_MS = 10 * 60 * 1000;
+
 const FEATURE_META: Record<AccountFeatureKind, { title: string; platform: OnlinePlatform; requiresLogin: boolean; subtitle: string }> = {
   wy_daily: { title: '网易云 · 每日推荐', platform: 'wy', requiresLogin: true, subtitle: '根据你的听歌口味每日生成' },
   wy_rec_playlists: { title: '网易云 · 推荐歌单', platform: 'wy', requiresLogin: true, subtitle: '为你精选的个性化歌单' },
   wy_heartbeat: { title: '网易云 · 心动模式', platform: 'wy', requiresLogin: true, subtitle: '由你的红心歌曲延伸出的心动旋律' },
-  wy_sub_playlists: { title: '网易云 · 收藏的歌单', platform: 'wy', requiresLogin: true, subtitle: '点击歌单实时查看并直接播放' },
-  wy_created_playlists: { title: '网易云 · 创建的歌单', platform: 'wy', requiresLogin: true, subtitle: '点击歌单实时查看并直接播放' },
-  wy_liked: { title: '网易云 · 我喜欢的音乐', platform: 'wy', requiresLogin: true, subtitle: '云端红心曲库，点击直接播放' },
+  wy_sub_playlists: { title: '网易云 · 收藏的歌单', platform: 'wy', requiresLogin: true, subtitle: '点击歌单快速查看并直接播放' },
+  wy_created_playlists: { title: '网易云 · 创建的歌单', platform: 'wy', requiresLogin: true, subtitle: '点击歌单快速查看并直接播放' },
+  wy_liked: { title: '网易云 · 我喜欢的音乐', platform: 'wy', requiresLogin: true, subtitle: '云端红心曲库，默认缓存秒开' },
   wy_fm: { title: '网易云 · 私人 FM', platform: 'wy', requiresLogin: true, subtitle: '自动续播的专属音乐电台' },
   wy_recent_songs: { title: '网易云 · 最近播放', platform: 'wy', requiresLogin: true, subtitle: '云端最近收听歌曲记录' },
   wy_recent_playlists: { title: '网易云 · 最近歌单', platform: 'wy', requiresLogin: true, subtitle: '云端最近访问过的歌单' },
@@ -62,17 +66,35 @@ const FEATURE_META: Record<AccountFeatureKind, { title: string; platform: Online
   wy_sub_artists: { title: '网易云 · 收藏歌手', platform: 'wy', requiresLogin: true, subtitle: '点击歌手查看热门歌曲与专辑' },
   wy_sub_albums: { title: '网易云 · 收藏专辑', platform: 'wy', requiresLogin: true, subtitle: '点击专辑查看曲目并播放' },
   wy_sub_mvs: { title: '网易云 · 收藏 MV', platform: 'wy', requiresLogin: true, subtitle: '点击直接原生播放高清 MV' },
-  tx_liked: { title: 'QQ 音乐 · 我喜欢', platform: 'tx', requiresLogin: true, subtitle: 'QQ 云端红心收藏，点击即播' },
-  tx_playlists: { title: 'QQ 音乐 · 个人歌单', platform: 'tx', requiresLogin: true, subtitle: '实时读取 QQ 歌单并直接播放' },
+  tx_liked: { title: 'QQ 音乐 · 我喜欢', platform: 'tx', requiresLogin: true, subtitle: 'QQ 云端红心收藏，默认缓存秒开' },
+  tx_playlists: { title: 'QQ 音乐 · 个人歌单', platform: 'tx', requiresLogin: true, subtitle: '读取 QQ 歌单并默认缓存加速' },
   tx_radar: { title: 'QQ 音乐 · 雷达推荐', platform: 'tx', requiresLogin: true, subtitle: 'QQ 每日推荐与私人雷达' },
   tx_new_songs: { title: 'QQ 音乐 · 新歌推荐', platform: 'tx', requiresLogin: false, subtitle: 'QQ 音乐最新发行单曲' },
   tx_rec_playlists: { title: 'QQ 音乐 · 推荐歌单', platform: 'tx', requiresLogin: false, subtitle: 'QQ 音乐精选推荐歌单' },
   tx_home_feed: { title: 'QQ 音乐 · 个性首页', platform: 'tx', requiresLogin: false, subtitle: '整合雷达推荐、新歌与精选歌单' },
   kg_daily: { title: '酷狗音乐 · 每日推荐', platform: 'kg', requiresLogin: true, subtitle: '酷狗账号专属每日推荐' },
-  kg_liked: { title: '酷狗音乐 · 我喜欢', platform: 'kg', requiresLogin: true, subtitle: '酷狗云端红心收藏，点击即播' },
-  kg_playlists: { title: '酷狗音乐 · 个人歌单', platform: 'kg', requiresLogin: true, subtitle: '实时读取酷狗歌单并直接播放' },
+  kg_liked: { title: '酷狗音乐 · 我喜欢', platform: 'kg', requiresLogin: true, subtitle: '酷狗云端红心收藏，默认缓存秒开' },
+  kg_playlists: { title: '酷狗音乐 · 个人歌单', platform: 'kg', requiresLogin: true, subtitle: '读取酷狗歌单并默认缓存加速' },
   kg_new_songs: { title: '酷狗音乐 · 新歌速递', platform: 'kg', requiresLogin: false, subtitle: '酷狗音乐最新热门新歌' },
 };
+
+const TRACK_CACHE_FEATURES = new Set<AccountFeatureKind>([
+  'wy_liked',
+  'tx_liked',
+  'kg_liked',
+  'wy_daily',
+  'tx_radar',
+  'kg_daily',
+  'wy_cloud',
+  'wy_recent_songs',
+]);
+
+const CATALOG_CACHE_FEATURES = new Set<AccountFeatureKind>([
+  'wy_sub_playlists',
+  'wy_created_playlists',
+  'tx_playlists',
+  'kg_playlists',
+]);
 
 function findLikedPlaylist(playlists: readonly AccountPlaylist[]): AccountPlaylist | undefined {
   return (
@@ -106,8 +128,12 @@ export function AccountFeatureSheet({
   const s = sollinTokens(theme.mode, theme.palette.accent, theme.appearance);
   const insets = useSafeAreaInsets();
   const accounts = useSyncExternalStore(services.musicAccounts.subscribe, services.musicAccounts.getSnapshot);
+  const toast = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [cacheSyncLabel, setCacheSyncLabel] = useState('');
+  const [startingAction, setStartingAction] = useState<null | 'all' | 'shuffle'>(null);
   const [error, setError] = useState('');
   const [needsLogin, setNeedsLogin] = useState(false);
   const [recordRange, setRecordRange] = useState<1 | 0>(1);
@@ -120,7 +146,6 @@ export function AccountFeatureSheet({
   const [albums, setAlbums] = useState<readonly AccountAlbum[]>([]);
   const [mvs, setMvs] = useState<readonly AccountMV[]>([]);
 
-  // Live drill-down into an account playlist without manual import
   const [openedPlaylist, setOpenedPlaylist] = useState<AccountPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<readonly Track[]>([]);
   const [playlistLoading, setPlaylistLoading] = useState(false);
@@ -132,31 +157,97 @@ export function AccountFeatureSheet({
   const meta = feature ? FEATURE_META[feature] : null;
   const activeAccount = meta ? accounts.find(a => a.platform === meta.platform) : undefined;
 
-  async function loadFeature(target: AccountFeatureKind, range: 1 | 0 = recordRange) {
+  function triggerBatchPlay(pool: readonly Track[], mode: 'all' | 'shuffle') {
+    if (!pool.length || startingAction) return;
+    setStartingAction(mode);
+    toast.show(
+      mode === 'shuffle'
+        ? `正在准备随机播放（${pool.length} 首）…`
+        : `正在载入队列并开始播放（${pool.length} 首）…`,
+    );
+    // Yield one frame so the loading indicator & toast paint immediately even for 1000+ song playlists.
+    setTimeout(() => {
+      const startIndex = mode === 'shuffle' ? Math.floor(Math.random() * pool.length) : 0;
+      const done = () => setStartingAction(null);
+      if (mode === 'shuffle') {
+        void services.preferences
+          .update({ repeat: 'off', shuffle: true })
+          .then(() => services.playTracks(pool, startIndex))
+          .catch(() => services.playTracks(pool, startIndex))
+          .finally(done);
+      } else {
+        services.playTracks(pool, 0);
+        setTimeout(done, 260);
+      }
+    }, 16);
+  }
+
+  async function loadFeature(target: AccountFeatureKind, range: 1 | 0 = recordRange, forceRefresh = false) {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const info = FEATURE_META[target];
     const acct = accounts.find(a => a.platform === info.platform);
 
-    setLoading(true);
     setError('');
     setNeedsLogin(false);
     setOpenedPlaylist(null);
     setPlaylistTracks([]);
     setPlaylistError('');
-    setTracks([]);
-    setPlayRecordRows([]);
-    setAccountPlaylists([]);
-    setBrowsePlaylists([]);
-    setArtists([]);
-    setAlbums([]);
-    setMvs([]);
+    setCacheSyncLabel('');
 
     if (info.requiresLogin && !acct) {
       setLoading(false);
+      setRefreshing(false);
       setNeedsLogin(true);
+      setTracks([]);
+      setAccountPlaylists([]);
       return;
+    }
+
+    // Serve cached tracks / playlist catalog instantaneously when available
+    let servedFromCache = false;
+    if (!forceRefresh && acct) {
+      if (TRACK_CACHE_FEATURES.has(target)) {
+        const cached = services.accountFeatureCache.getTracks(`${acct.id}:${target}`);
+        if (cached?.tracks.length) {
+          setTracks(cached.tracks);
+          setCacheSyncLabel(`已缓存 · ${formatCacheAge(cached.updatedAt)}`);
+          servedFromCache = true;
+          if (Date.now() - cached.updatedAt < CACHE_STALE_MS) {
+            setLoading(false);
+            setRefreshing(false);
+            return;
+          }
+        }
+      } else if (CATALOG_CACHE_FEATURES.has(target)) {
+        const cached = services.accountFeatureCache.getCatalog(`${acct.id}:${target}`);
+        if (cached?.playlists.length) {
+          setAccountPlaylists(cached.playlists);
+          setCacheSyncLabel(`已缓存 · ${formatCacheAge(cached.updatedAt)}`);
+          servedFromCache = true;
+          if (Date.now() - cached.updatedAt < CACHE_STALE_MS) {
+            setLoading(false);
+            setRefreshing(false);
+            return;
+          }
+        }
+      }
+    }
+
+    if (servedFromCache) {
+      setLoading(false);
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+      setRefreshing(false);
+      setTracks([]);
+      setPlayRecordRows([]);
+      setAccountPlaylists([]);
+      setBrowsePlaylists([]);
+      setArtists([]);
+      setAlbums([]);
+      setMvs([]);
     }
 
     try {
@@ -169,8 +260,11 @@ export function AccountFeatureSheet({
         case 'kg_daily': {
           const res = await services.accountDaily.fetch(acct!, session!, ctrl.signal);
           if (!ctrl.signal.aborted) {
-            setTracks(res.tracks);
-            if (!res.tracks.length) {
+            if (res.tracks.length) {
+              setTracks(res.tracks);
+              const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, res.tracks);
+              setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+            } else if (!servedFromCache) {
               setError(
                 res.reason === 'login_required'
                   ? '登录会话已失效，请重新登录账号'
@@ -215,18 +309,32 @@ export function AccountFeatureSheet({
         }
         case 'wy_sub_playlists': {
           const all = await services.accountPlaylists.list(acct!, ctrl.signal);
-          if (!ctrl.signal.aborted) setAccountPlaylists(all.filter(p => p.kind === 'favorite'));
+          const filtered = all.filter(p => p.kind === 'favorite');
+          if (!ctrl.signal.aborted) {
+            setAccountPlaylists(filtered);
+            const saved = await services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, filtered);
+            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+          }
           break;
         }
         case 'wy_created_playlists': {
           const all = await services.accountPlaylists.list(acct!, ctrl.signal);
-          if (!ctrl.signal.aborted) setAccountPlaylists(all.filter(p => p.kind === 'created'));
+          const filtered = all.filter(p => p.kind === 'created');
+          if (!ctrl.signal.aborted) {
+            setAccountPlaylists(filtered);
+            const saved = await services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, filtered);
+            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+          }
           break;
         }
         case 'tx_playlists':
         case 'kg_playlists': {
           const all = await services.accountPlaylists.list(acct!, ctrl.signal);
-          if (!ctrl.signal.aborted) setAccountPlaylists(all);
+          if (!ctrl.signal.aborted) {
+            setAccountPlaylists(all);
+            const saved = await services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, all);
+            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+          }
           break;
         }
         case 'wy_liked':
@@ -235,21 +343,29 @@ export function AccountFeatureSheet({
           const all = await services.accountPlaylists.list(acct!, ctrl.signal);
           const fav = findLikedPlaylist(all);
           if (!fav) {
-            if (!ctrl.signal.aborted) setError('未在账号中找到「我喜欢」歌单');
+            if (!ctrl.signal.aborted && !servedFromCache) setError('未在账号中找到「我喜欢」歌单');
             break;
           }
           const preview = await services.accountPlaylists.preview(
             acct!,
             fav,
             ctrl.signal,
-            acct!.platform === 'tx' ? { lenient: true } : undefined,
+            acct!.platform === 'tx' || acct!.platform === 'kg' ? { lenient: true } : undefined,
           );
-          if (!ctrl.signal.aborted) setTracks(preview.tracks);
+          if (!ctrl.signal.aborted) {
+            setTracks(preview.tracks);
+            const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, preview.tracks);
+            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+          }
           break;
         }
         case 'wy_recent_songs': {
           const items = await services.accountDiscovery.recentSongs(acct!, session!, ctrl.signal, 100);
-          if (!ctrl.signal.aborted) setTracks(items);
+          if (!ctrl.signal.aborted) {
+            setTracks(items);
+            const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, items);
+            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+          }
           break;
         }
         case 'wy_recent_playlists': {
@@ -267,7 +383,11 @@ export function AccountFeatureSheet({
         }
         case 'wy_cloud': {
           const res = await services.accountDiscovery.cloudDrive(acct!, session!, ctrl.signal, 100, 0);
-          if (!ctrl.signal.aborted) setTracks(res.items);
+          if (!ctrl.signal.aborted) {
+            setTracks(res.items);
+            const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, res.items);
+            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+          }
           break;
         }
         case 'wy_sub_artists': {
@@ -320,39 +440,73 @@ export function AccountFeatureSheet({
         }
       }
     } catch (e) {
-      if (!ctrl.signal.aborted) {
+      if (!ctrl.signal.aborted && !servedFromCache) {
         const msg = e instanceof Error ? e.message : '读取失败，请稍后重试';
         if (/重新登录|失效/.test(msg)) setNeedsLogin(true);
         setError(msg);
       }
     } finally {
-      if (!ctrl.signal.aborted) setLoading(false);
+      if (!ctrl.signal.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }
 
-  async function openAccountPlaylist(pl: AccountPlaylist) {
+  async function openAccountPlaylist(pl: AccountPlaylist, forceRefresh = false) {
     if (!activeAccount) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setOpenedPlaylist(pl);
-    setPlaylistTracks([]);
     setPlaylistError('');
-    setPlaylistLoading(true);
+
+    const cacheKey = `${activeAccount.id}:pl:${pl.id}`;
+    let servedFromCache = false;
+    if (!forceRefresh) {
+      const cached = services.accountFeatureCache.getTracks(cacheKey);
+      if (cached?.tracks.length) {
+        setPlaylistTracks(cached.tracks);
+        setCacheSyncLabel(`已缓存 · ${formatCacheAge(cached.updatedAt)}`);
+        servedFromCache = true;
+        if (Date.now() - cached.updatedAt < CACHE_STALE_MS) {
+          setPlaylistLoading(false);
+          setRefreshing(false);
+          return;
+        }
+      }
+    }
+
+    if (servedFromCache) {
+      setPlaylistLoading(false);
+      setRefreshing(true);
+    } else {
+      setPlaylistTracks([]);
+      setPlaylistLoading(true);
+      setRefreshing(false);
+    }
+
     try {
       const preview = await services.accountPlaylists.preview(
         activeAccount,
         pl,
         ctrl.signal,
-        activeAccount.platform === 'tx' ? { lenient: true } : undefined,
+        activeAccount.platform === 'tx' || activeAccount.platform === 'kg' ? { lenient: true } : undefined,
       );
-      if (!ctrl.signal.aborted) setPlaylistTracks(preview.tracks);
-    } catch (e) {
       if (!ctrl.signal.aborted) {
+        setPlaylistTracks(preview.tracks);
+        const saved = await services.accountFeatureCache.setTracks(cacheKey, preview.tracks);
+        setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+      }
+    } catch (e) {
+      if (!ctrl.signal.aborted && !servedFromCache) {
         setPlaylistError(e instanceof Error ? e.message : '暂时无法读取该歌单歌曲，请重试');
       }
     } finally {
-      if (!ctrl.signal.aborted) setPlaylistLoading(false);
+      if (!ctrl.signal.aborted) {
+        setPlaylistLoading(false);
+        setRefreshing(false);
+      }
     }
   }
 
@@ -361,7 +515,7 @@ export function AccountFeatureSheet({
       abortRef.current?.abort();
       return;
     }
-    void loadFeature(feature, recordRange);
+    void loadFeature(feature, recordRange, false);
     return () => {
       abortRef.current?.abort();
     };
@@ -373,17 +527,35 @@ export function AccountFeatureSheet({
   const activeTracks = openedPlaylist ? playlistTracks : tracks;
   const headerTitle = openedPlaylist ? openedPlaylist.title : meta.title;
   const headerSubtitle = openedPlaylist
-    ? `${playlistTracks.length || openedPlaylist.count} 首 · 实时云端歌单`
-    : meta.subtitle;
+    ? `${playlistTracks.length || openedPlaylist.count} 首${cacheSyncLabel ? ` · ${cacheSyncLabel}` : ' · 云端歌单'}`
+    : cacheSyncLabel
+      ? `${meta.subtitle} · ${cacheSyncLabel}`
+      : meta.subtitle;
+
+  const isPureTrackList =
+    !loading &&
+    !playlistLoading &&
+    !needsLogin &&
+    ((openedPlaylist && playlistTracks.length > 0) ||
+      (!openedPlaylist &&
+        tracks.length > 0 &&
+        !accountPlaylists.length &&
+        !browsePlaylists.length &&
+        !artists.length &&
+        !albums.length &&
+        !mvs.length));
 
   const renderTrackItem = (track: Track, index: number, pool: readonly Track[], badgeText?: string) => (
     <View key={`${track.origin.kind === 'online' ? track.origin.id : index}-${index}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
       <Pressable
         accessibilityRole="button"
-        onPress={() => services.playTracks(pool, index)}
+        onPress={() => {
+          toast.show(`正在播放：${track.title}`);
+          services.playTracks(pool, index);
+        }}
         style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 11 }}
       >
-        <Text style={{ width: 24, textAlign: 'center', color: s.subtle, fontSize: 12.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+        <Text style={{ width: 28, textAlign: 'center', color: s.subtle, fontSize: 12.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
           {String(index + 1).padStart(2, '0')}
         </Text>
         <Cover services={services} track={track} size={46} radius={10} />
@@ -433,14 +605,15 @@ export function AccountFeatureSheet({
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="刷新"
+              accessibilityLabel="强制刷新云端数据"
+              disabled={loading || playlistLoading || refreshing}
               onPress={() => {
-                if (openedPlaylist) void openAccountPlaylist(openedPlaylist);
-                else void loadFeature(feature, recordRange);
+                if (openedPlaylist) void openAccountPlaylist(openedPlaylist, true);
+                else void loadFeature(feature, recordRange, true);
               }}
-              style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: softSurface, alignItems: 'center', justifyContent: 'center' }}
+              style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: softSurface, alignItems: 'center', justifyContent: 'center', opacity: loading || playlistLoading ? 0.5 : 1 }}
             >
-              <Ionicons name="refresh" size={18} color={s.ink} />
+              {refreshing ? <ActivityIndicator size="small" color={s.accent} /> : <Ionicons name="refresh" size={18} color={s.ink} />}
             </Pressable>
           </View>
 
@@ -459,7 +632,7 @@ export function AccountFeatureSheet({
                     accessibilityState={{ selected }}
                     onPress={() => {
                       setRecordRange(val);
-                      void loadFeature('wy_play_record', val);
+                      void loadFeature('wy_play_record', val, true);
                     }}
                     style={{
                       flex: 1,
@@ -477,27 +650,40 @@ export function AccountFeatureSheet({
             </View>
           )}
 
-          {/* Play All / Shuffle bar whenever tracks are visible */}
+          {/* Play All / Shuffle bar with immediate visual loading feedback */}
           {activeTracks.length > 0 && (
             <View style={{ flexDirection: 'row', gap: 10, paddingBottom: 10 }}>
               <Pressable
                 testID="account-feature-play-all"
                 accessibilityRole="button"
-                onPress={() => services.playTracks(activeTracks, 0)}
-                style={{ flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: s.control, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                disabled={!!startingAction}
+                onPress={() => triggerBatchPlay(activeTracks, 'all')}
+                style={{ flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: s.control, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: startingAction === 'shuffle' ? 0.55 : 1 }}
               >
-                <Ionicons name="play" size={15} color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>播放全部 ({activeTracks.length})</Text>
+                {startingAction === 'all' ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="play" size={15} color="#FFFFFF" />
+                )}
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
+                  {startingAction === 'all' ? '正在缓冲…' : `播放全部 (${activeTracks.length})`}
+                </Text>
               </Pressable>
               <Pressable
+                testID="account-feature-shuffle"
                 accessibilityRole="button"
-                onPress={() => {
-                  void services.preferences.update({ repeat: 'off', shuffle: true }).then(() => services.playTracks(activeTracks, 0)).catch(() => {});
-                }}
-                style={{ flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: softSurface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                disabled={!!startingAction}
+                onPress={() => triggerBatchPlay(activeTracks, 'shuffle')}
+                style={{ flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: softSurface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: startingAction === 'all' ? 0.55 : 1 }}
               >
-                <Ionicons name="shuffle" size={16} color={s.ink} />
-                <Text style={{ color: s.ink, fontSize: 14, fontWeight: '600' }}>随机播放</Text>
+                {startingAction === 'shuffle' ? (
+                  <ActivityIndicator size="small" color={s.accent} />
+                ) : (
+                  <Ionicons name="shuffle" size={16} color={s.ink} />
+                )}
+                <Text style={{ color: s.ink, fontSize: 14, fontWeight: '600' }}>
+                  {startingAction === 'shuffle' ? '正在准备…' : '随机播放'}
+                </Text>
               </Pressable>
             </View>
           )}
@@ -506,7 +692,7 @@ export function AccountFeatureSheet({
           {(loading || playlistLoading) && (
             <View style={{ paddingVertical: 40, alignItems: 'center', gap: 10 }}>
               <ActivityIndicator color={s.accent} />
-              <Text style={{ color: s.muted, fontSize: 13 }}>正在实时获取云端数据…</Text>
+              <Text style={{ color: s.muted, fontSize: 13 }}>正在读取云端歌单数据并写入本地缓存…</Text>
             </View>
           )}
 
@@ -515,7 +701,7 @@ export function AccountFeatureSheet({
               <Ionicons name="person-circle-outline" size={44} color={s.accent} />
               <Text style={{ color: s.ink, fontSize: 16, fontWeight: '700' }}>登录账号后即可直达使用</Text>
               <Text style={{ color: s.muted, fontSize: 13, lineHeight: 19, textAlign: 'center' }}>
-                {error || '登录后可直接在发现页实时查看并播放每日推荐、我喜欢、个人歌单与收藏内容。'}
+                {error || '登录后可直接在发现页快速查看并播放每日推荐、我喜欢、个人歌单与收藏内容。'}
               </Text>
               {onOpenAccounts && (
                 <Pressable
@@ -535,8 +721,8 @@ export function AccountFeatureSheet({
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
-                  if (openedPlaylist) void openAccountPlaylist(openedPlaylist);
-                  else void loadFeature(feature, recordRange);
+                  if (openedPlaylist) void openAccountPlaylist(openedPlaylist, true);
+                  else void loadFeature(feature, recordRange, true);
                 }}
                 style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: s.control }}
               >
@@ -545,13 +731,28 @@ export function AccountFeatureSheet({
             </View>
           )}
 
-          {/* Main scrollable result area */}
-          {!loading && !playlistLoading && !needsLogin && (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 32, 48), gap: 8 }}>
-              {/* Opened Account Playlist tracks */}
-              {openedPlaylist && playlistTracks.map((t, i) => renderTrackItem(t, i, playlistTracks))}
+          {/* High-performance virtualized FlatList for large track lists (1000+ songs open & scroll smoothly) */}
+          {isPureTrackList && (
+            <FlatList
+              data={activeTracks}
+              keyExtractor={(item, idx) => `${item.origin.kind === 'online' ? item.origin.id : idx}-${idx}`}
+              initialNumToRender={16}
+              maxToRenderPerBatch={20}
+              windowSize={7}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 32, 48) }}
+              renderItem={({ item, index }) => {
+                const rec = !openedPlaylist && feature === 'wy_play_record' ? playRecordRows[index] : undefined;
+                const badge = rec?.playCount ? `${rec.playCount}次` : rec?.score ? `${rec.score}分` : undefined;
+                return renderTrackItem(item, index, activeTracks, badge);
+              }}
+            />
+          )}
 
-              {/* Account Playlists list (live tap to drill in & play) */}
+          {/* Non-pure-track mixed / catalog scrollable area */}
+          {!loading && !playlistLoading && !needsLogin && !isPureTrackList && (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 32, 48), gap: 8 }}>
+              {/* Account Playlists list (live tap to drill in & play, with default caching) */}
               {!openedPlaylist && accountPlaylists.length > 0 && accountPlaylists.map(pl => (
                 <Pressable
                   key={pl.id}
@@ -562,7 +763,7 @@ export function AccountFeatureSheet({
                   <Cover services={services} url={pl.coverUrl || undefined} size={56} radius={12} fallbackText={pl.title} />
                   <View style={{ flex: 1, gap: 3 }}>
                     <Text numberOfLines={1} style={{ color: s.ink, fontSize: 15, fontWeight: '700' }}>{pl.title}</Text>
-                    <Text style={{ color: s.muted, fontSize: 12 }}>{pl.count} 首 · 点击实时查看与播放</Text>
+                    <Text style={{ color: s.muted, fontSize: 12 }}>{pl.count} 首 · 点击查看与播放</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={17} color={s.subtle} />
                 </Pressable>
@@ -597,17 +798,13 @@ export function AccountFeatureSheet({
                 </View>
               )}
 
-              {/* Direct Track List (Daily / Liked / Heartbeat / FM / Recent / Play Record / Cloud / New Songs / Home Feed) */}
+              {/* Mixed Home Feed Tracks */}
               {!openedPlaylist && tracks.length > 0 && (
                 <View style={{ gap: 2 }}>
                   {feature === 'tx_home_feed' && (
                     <Text style={{ color: s.ink, fontSize: 16, fontWeight: '700', marginTop: 8, marginBottom: 4 }}>雷达与新歌推荐</Text>
                   )}
-                  {tracks.map((t, i) => {
-                    const rec = feature === 'wy_play_record' ? playRecordRows[i] : undefined;
-                    const badge = rec?.playCount ? `${rec.playCount}次` : rec?.score ? `${rec.score}分` : undefined;
-                    return renderTrackItem(t, i, tracks, badge);
-                  })}
+                  {tracks.map((t, i) => renderTrackItem(t, i, tracks))}
                 </View>
               )}
 
@@ -687,6 +884,7 @@ export function AccountFeatureSheet({
             </ScrollView>
           )}
         </View>
+        <Toast message={toast.message} onDismiss={toast.clear} />
         <TrackActions services={services} track={menuTrack} prefix="account-feature" onClose={() => setMenuTrack(null)} />
       </View>
     </Modal>

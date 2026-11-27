@@ -5669,18 +5669,18 @@ final class SourceSettingsTests: XCTestCase {
     verifyLiveSpectrumOnPlayer(app,timeout:10)
     let image=XCTAttachment(screenshot:app.screenshot());image.lifetime = .keepAlways;add(image)
     if app.buttons["暂停"].firstMatch.exists{app.buttons["暂停"].firstMatch.tap()}
-    app.terminate();app.launch();app.descendants(matching:.any).matching(identifier:"tab-library").firstMatch.tap()
-    entry.tap();XCTAssertTrue(song.waitForExistence(timeout:10));song.tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap()
+    app.terminate();app.launch()
+    openLocalAudioFromLibrary(app);XCTAssertTrue(song.waitForExistence(timeout:10));song.tap();app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap()
     verifyLiveSpectrumOnPlayer(app,timeout:10);app.buttons["暂停"].firstMatch.tap()
     let close=app.buttons["收起播放页"];for _ in 0..<8 {if close.isHittable{break};app.swipeDown()};close.tap()
-    entry.tap();app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+    openLocalAudioFromLibrary(app);app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["音频正在使用或删除失败，原数据保留"].waitForExistence(timeout:5))
     app.buttons["收起本地音频"].tap();app.buttons["打开播放页"].tap()
     // Classic exposes queue mutations directly through its dedicated queue sheet.
     let queue=app.buttons["查看播放队列"]
     XCTAssertTrue(queue.waitForExistence(timeout:10));queue.tap()
     let remove=app.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","移除")).firstMatch;XCTAssertTrue(remove.waitForExistence(timeout:10));remove.tap()
-    XCTAssertTrue(entry.waitForExistence(timeout:5));entry.tap();app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
+    openLocalAudioFromLibrary(app);app.buttons["删除音频"].firstMatch.tap();app.alerts.buttons["删除"].tap()
     XCTAssertTrue(app.staticTexts["音频已删除"].waitForExistence(timeout:5));XCTAssertFalse(song.exists)
     app.buttons["收起本地音频"].tap()
   }

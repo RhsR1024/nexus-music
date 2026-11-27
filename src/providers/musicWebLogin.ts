@@ -31,7 +31,7 @@ export interface MusicWebLoginResult {
 }
 
 const allowedCookies=new Set(['MUSIC_U','MUSIC_A_T','MUSIC_R_T','MUSIC_SNS','__csrf','NMTID','_ntes_nuid']);
-const qishuiAllowedCookies=new Set(['sessionid','sessionid_ss','sid_tt','uid_tt','uid_tt_ss','passport_csrf_token','ttwid','odin_tt','sid_guard']);
+const qishuiAllowedCookies=new Set(['sessionid','sessionid_ss','sid_tt','uid_tt','uid_tt_ss','passport_csrf_token','passport_csrf_token_default','ttwid','odin_tt','sid_guard','ssid_ucp_v1','session_tlb_tag']);
 const cookieName=/^[A-Za-z_][A-Za-z0-9_]*$/;
 const invalidCookieValue=/[\u0000-\u001f\u007f;]/;
 

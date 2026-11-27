@@ -57,7 +57,7 @@ internal object MusicWebLoginPolicy {
 
   fun cookieNames(provider: String): Set<String> = when (provider) {
     "tx" -> setOf("qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin", "euin")
-    "qishui" -> setOf("sessionid", "sessionid_ss", "sid_tt", "uid_tt", "uid_tt_ss", "passport_csrf_token", "ttwid", "odin_tt", "sid_guard")
+    "qishui" -> setOf("sessionid", "sessionid_ss", "sid_tt", "uid_tt", "uid_tt_ss", "passport_csrf_token", "passport_csrf_token_default", "ttwid", "odin_tt", "sid_guard", "ssid_ucp_v1", "session_tlb_tag")
     else -> setOf("MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid")
   }
 
@@ -240,7 +240,7 @@ class NexusAuthWebActivity : Activity() {
     val allowed = MusicWebLoginPolicy.cookieNames(provider)
     val urls = when (provider) {
       "tx" -> listOf("https://qq.com/", "https://graph.qq.com/", "https://y.qq.com/")
-      "qishui" -> listOf("https://music.douyin.com/", "https://douyin.com/", "https://sso.douyin.com/", "https://qishui.com/", "https://beta-luna.douyin.com/")
+      "qishui" -> listOf("https://music.douyin.com/", "https://douyin.com/", "https://sso.douyin.com/", "https://qishui.com/", "https://api.qishui.com/", "https://bff-pc.qishui.com/", "https://beta-luna.douyin.com/")
       else -> listOf("https://163.com/", "https://interface.music.163.com/", "https://music.163.com/")
     }
     val merged = mutableMapOf<String, String>()

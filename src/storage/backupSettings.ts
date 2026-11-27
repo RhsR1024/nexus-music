@@ -7,13 +7,13 @@ const fields=[
   'visualTheme','accent','backgroundStyle','backgroundOpacity','cardOpacity','backgroundMask','maskColor','playerBackground','playerBlur','playerDarkness','coverRadius','coverColor','globalBackgroundMotion','dynamicBackground','glassNavigation',
   'miniActions','miniLyrics','localAudioSortField','localAudioSortDirection','stageStyle','stageBackdrop','am2AutoLyrics','am2DelaySeconds','am2ShowVolume','lyricStyle','autoMatch','lyricAlignment','lyricOffsets','volume','preampDB','eqPresets','playerLayout','favoriteVisualTheme','quality','eqEnabled','gains','repeat','shuffle','lyricOffsetMs','fontScale','rate','theme','cacheLimitMB','offlineLimitMB',
 ] as const satisfies readonly (keyof Preferences)[];
-const optionalFields=['tapeStyle','glassLevel','navigationStyle','showLocalTab','playlistAddPosition','keepScreenOn','fullScreenMode','autoPlayOnLaunch','autoPlaySource','openPlayerOnLaunch','mixWithOtherAudio','preloadNextTrack','preloadCount','playbackFadeEnabled','playbackFadeDurationMs','systemLyricsEnabled','systemLyricsPosition','bluetoothLyricsOrder','bluetoothLyricsRestoreOnPause','floatingLyricsEnabled','floatingLyricsLocked','grooveSpinSpeed','teletypeTheme','playbackQualities','smartDegradeMode','smartCrossScript','smartSkipOnFailure','homePlatform','lyricChineseMode'] as const satisfies readonly (keyof Preferences)[];
+const optionalFields=['tapeStyle','glassLevel','navigationStyle','showLocalTab','playlistAddPosition','keepScreenOn','fullScreenMode','autoPlayOnLaunch','autoPlaySource','openPlayerOnLaunch','mixWithOtherAudio','preloadNextTrack','preloadCount','playbackFadeEnabled','playbackFadeDurationMs','systemLyricsEnabled','systemLyricsPosition','bluetoothLyricsOrder','bluetoothLyricsRestoreOnPause','floatingLyricsEnabled','floatingLyricsLocked','grooveSpinSpeed','teletypeTheme','playbackQualities','smartDegradeMode','smartCrossScript','smartSkipOnFailure','homePlatform','lyricChineseMode','preferAccountPlayback'] as const satisfies readonly (keyof Preferences)[];
 export interface BackupSettings {version:1;preferences:Pick<Preferences,(typeof fields)[number]>&Partial<Pick<Preferences,(typeof optionalFields)[number]|'downloadQualities'>>}
 function portableOffsetKey(key:string){
   try{const value=JSON.parse(key);if(!Array.isArray(value)||value.length!==3||value.some(x=>typeof x!=='string')||JSON.stringify(value)!==key)return false;
     const [kind,namespace,id]=value as string[];
     if(!id||/[\u0000-\u001f\u007f]/.test(id)||/^(?:https?|file|ipod-library):\/\//i.test(id))return false;
-    return kind==='online'?['wy','tx','kw','kg','mg'].includes(namespace!):kind==='local'?namespace==='files':kind==='imported'?namespace==='qishui':['device','navidrome','webdav'].includes(kind!)&&/^[a-z\d-]{1,128}$/i.test(namespace!);
+    return kind==='online'?['wy','tx','kw','kg','mg'].includes(namespace!):kind==='local'?namespace==='files':kind==='imported'?(namespace==='qishui'||namespace==='bodian'):['device','navidrome','webdav'].includes(kind!)&&/^[a-z\d-]{1,128}$/i.test(namespace!);
   }catch{return false;}
 }
 export function cleanBackupSettings(value:unknown):BackupSettings{

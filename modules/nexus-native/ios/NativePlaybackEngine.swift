@@ -22,6 +22,7 @@ final class NativePlaybackEngine {
   private var fadeTimer: Timer?
   private var fadeGeneration = 0
   private var isFadingOutStop = false
+  private var activeItem: AVPlayerItem?
   private var fadingOutLoader: AudioResourceLoader?
   private var fadingOutAlias: URL?
   private var fadingOutLocalURL: URL?
@@ -61,7 +62,7 @@ final class NativePlaybackEngine {
   init(muted: Bool = false, emit: @escaping (String, [String: Any]) -> Void) {
     self.emit = emit
     player.isMuted = muted
-    progress = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] _ in self?.report("progress") }
+    progress = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: 600), queue: .main) { [weak self] _ in self?.report("progress") }
     listeningTimer=Timer.scheduledTimer(withTimeInterval:5,repeats:true){[weak self]_ in guard let self,self.player.rate>0 else{return};self.report("listening")}
     playerObservation = player.observe(\.timeControlStatus, options: [.new]) { [weak self] _, _ in DispatchQueue.main.async { self?.report("status") } }
     spectrumTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
@@ -241,6 +242,7 @@ final class NativePlaybackEngine {
             guard let self, self.generation == newGeneration, self.entryID == id else { return }
             self.cancelFade()
             self.releaseFadingOutResources()
+            self.activeItem = item
             self.player.volume = (self.fadeEnabled && self.fadeDurationMs >= 100 && self.targetVolume > 0) ? 0 : self.targetVolume
             self.player.replaceCurrentItem(with: item)
             self.updateNowPlaying()
@@ -321,6 +323,7 @@ final class NativePlaybackEngine {
       player.volume = targetVolume
       player.play(); player.rate = playbackRate
     }
+    report("progress")
   }
   func configureFade(_ enabled: Bool, _ durationMs: Int) {
     fadeEnabled = enabled
@@ -341,7 +344,7 @@ final class NativePlaybackEngine {
       try session.setCategory(.playback, mode: .default, options: mixWithOthers ? [.mixWithOthers] : [])
       try session.setActive(true)
       #endif
-      wantsPlay = true; if player.currentItem?.status == .readyToPlay && !initialSeekPending { startPlaybackWithFade() }; report("status")
+      wantsPlay = true; if let activeItem, player.currentItem === activeItem, activeItem.status == .readyToPlay, !initialSeekPending { startPlaybackWithFade() }; report("status")
     } catch { report("error") }
   }
   func pause(_ newGeneration: Int, immediate: Bool = false) {
@@ -378,7 +381,7 @@ final class NativePlaybackEngine {
     guard newGeneration >= generation else { return }
     report("stopped")
     if !preservingSleep { sleepTimer.trackChanged(to: "") }
-    generation = newGeneration; wantsPlay = false; loading?.cancel(); loading = nil
+    generation = newGeneration; wantsPlay = false; activeItem = nil; loading?.cancel(); loading = nil
     observation = nil; durationObservation = nil; if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
     let shouldSmoothFadeOut = !preservingSleep && fadeEnabled && fadeDurationMs >= 100 && player.rate > 0 && player.volume > 0.01
     if shouldSmoothFadeOut {
@@ -469,16 +472,19 @@ final class NativePlaybackEngine {
     dsp?.configure(enabled: enabled, gains: gains.map(NSNumber.init(value:)), preampDB: preampDB)
   }
   private func report(_ kind: String, _ extra: [String: Any] = [:]) {
+    let itemReadyForCurrentEntry = activeItem != nil && player.currentItem === activeItem && !isFadingOutStop
+    if kind == "progress" && !itemReadyForCurrentEntry { return }
     let clock = ProcessInfo.processInfo.systemUptime
     if wasActuallyPlaying { listenedSeconds += max(0, clock - listeningClock) }
     listeningClock = clock
-    wasActuallyPlaying = player.timeControlStatus == .playing && wantsPlay && kind != "ended" && kind != "stopped" && kind != "error"
-    let seconds = player.currentTime().seconds
-    let itemDuration = player.currentItem?.duration.seconds ?? 0
+    wasActuallyPlaying = itemReadyForCurrentEntry && player.timeControlStatus == .playing && wantsPlay && kind != "ended" && kind != "stopped" && kind != "error"
+    let seconds = itemReadyForCurrentEntry ? player.currentTime().seconds : 0
+    let itemDuration = itemReadyForCurrentEntry ? (player.currentItem?.duration.seconds ?? 0) : 0
     let duration = itemDuration.isFinite && itemDuration > 0 ? itemDuration : knownDuration
+    let isBuffering = (!itemReadyForCurrentEntry && wantsPlay && !entryID.isEmpty) || (itemReadyForCurrentEntry && player.timeControlStatus == .waitingToPlayAtSpecifiedRate)
     emit("playback", ["kind": kind, "entryId": entryID, "generation": generation,
-      "position": seconds.isFinite ? seconds : 0, "duration": duration.isFinite ? duration : 0,
-      "playing": player.rate > 0, "buffering": player.timeControlStatus == .waitingToPlayAtSpecifiedRate,
+      "position": seconds.isFinite && seconds >= 0 ? seconds : 0, "duration": duration.isFinite ? duration : 0,
+      "playing": itemReadyForCurrentEntry && player.rate > 0, "buffering": isBuffering,
       "listeningSession": listeningSession, "listenedMs": listenedSeconds * 1000].merging(extra) { _, latest in latest })
     updateNowPlaying()
   }

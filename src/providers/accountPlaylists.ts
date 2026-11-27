@@ -14,6 +14,7 @@ import type {KugouPlaylists} from './kugouPlaylists.ts';
 export interface AccountPlaylist {
   readonly id:string;readonly title:string;readonly count:number;
   readonly coverUrl:string;readonly kind:'created'|'favorite';
+  readonly globalCollectionId?:string;
 }
 export interface AccountPlaylistPreview {
   readonly playlist:AccountPlaylist;readonly tracks:readonly Track[];
@@ -104,7 +105,7 @@ export class AccountPlaylists {
       const reader=account.platform==='tx'?this.deps.qq:account.platform==='kg'?this.deps.kugou:undefined;
       if(reader){
         const session=await this.deps.accounts.session(account.id);check();
-        const tracks=Object.freeze(account.platform==='tx'&&this.deps.qq?await this.deps.qq.tracks(account,session,playlist,signal,check,options):await reader.tracks(account,session,playlist,signal,check));check();
+        const tracks=Object.freeze(account.platform==='tx'&&this.deps.qq?await this.deps.qq.tracks(account,session,playlist,signal,check,options):account.platform==='kg'&&this.deps.kugou?await this.deps.kugou.tracks(account,session,playlist,signal,check,options):await reader.tracks(account,session,playlist,signal,check));check();
         const result=Object.freeze({playlist,tracks});this.previews.set(result,{account,operation});return result;
       }
       const {auth}=await this.open(account,signal,check);

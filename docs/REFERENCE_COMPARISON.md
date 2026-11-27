@@ -1,3 +1,13 @@
+## 2026-11-28 Wow-CaiCai/Coda 协议参考与波点 / 汽水 / 账号直连对比
+
+按用户指令检查公开仓库 `https://github.com/Wow-CaiCai/Coda`，固定提交 `22bc58e`（许可声明为 **AGPL-3.0 / GPL-3.0**）。音枢严格遵守清洁室（clean-room）许可边界：**零复制任何 Coda 源码、Swift/JS 逻辑、PNG 图标或依赖**，仅提取公开协议端点、字段映射与产品能力清单，100% 以音枢原创 TypeScript + Swift/Kotlin + Ionicons 实现：
+
+- **波点音乐接入（原创 `src/providers/bodian.ts` + `src/ui/BodianDiscoverSection.tsx`）**：仅参考 `bd-api.kuwo.cn` / `mlyric.kuwo.cn` 端点语义与 `kuwotest` MD5 签名结构，自写二维码生成与轮询状态机、本机钥匙串凭据隔离、`精选 / 榜单 / 歌单` 目录与 7 项账号快捷能力（`潮趣日推`、`私人FM`、`我喜欢`、`个人歌单`、`最近播放`、`收藏专辑`、`关注歌手`）、`checkRight` 状态 3/7 试听拒绝与 `[kuwo:NN]` 八进制逐字歌词解码。
+- **账号自身权限优先播放（原创 `src/providers/accountPlaybackResolver.ts`）**：新增 `preferAccountPlayback`（默认开启）配置项，播放前优先尝试已登录平台账号官方完整播放权限（网易云 `/weapi/song/enhance/player/url/v1`、QQ `vkey.GetVkeyServer.CgiGetVkey`、酷狗 `/v5/url`、波点 `checkRight + audioUrl`、汽水 `/luna/pc/track_v2`），严格拒绝 30 秒试听 / `freeTrialInfo` / `is_try` / 加密 `spade_a` 流，无权限或失败时自动回退音枢自定义 LX 音源。
+- **汽水音乐登录方式对比（取其精华，弃其糟粕）**：
+  - 坚决**不采纳**漫途音乐车机版登录（车机版与 PC 版会员及曲库权益不互通），也**严禁接入** Coda 中将用户 Cookie 经明文 HTTP 发送至第三方未托管签名服务（`http://103.236.75.83:8899/sign`）的做法，且不引入 Coda 内置的 React 17 UMD 网页包装脚本。
+  - **保留并增强音枢原生官方 PC WebView 登录**（`https://music.douyin.com/qishui`，原生环境自动执行官方 `bdms.js` 与 `2046` 安全风控校验，iOS/Android 双端零第三方中转），同时吸纳 Coda 对官方 PC 端 Cookie 字段（补充 `ssid_ucp_v1`、`session_tlb_tag`、`passport_csrf_token_default`）及官方直连端点（`/luna/pc/me`、`/luna/pc/me/playlist`、`/luna/pc/me/recently-played-media`、`/luna/pc/discover`、`/luna/pc/charts/{id}`）的字段事实，并在保留音枢原有汽水发现页 UI 框架的基础上集成 **48 种听歌模式**（3 大核心默认模式 + 45 种场景/情绪/曲风模式），点击模式即直接切换并播放。
+
 ## 2026-11-05 网易云平台歌单创建与 2026-11-18 加歌/删歌/删除
 
 亲读 MIT Sollin-Music-Desktop 固定 `c9d446f6ad3b7ea1aff64bd5ce290b6e7f9712a8` 的 `neteaseAuth.ts` `createPlaylist`，采用 `/api/playlist/create` 的 `name/privacy/type` 与响应字段事实；自写账号/会话绑定、单次创建、目录回读、取消与状态机，未复制运行时、UI、依赖或私有逻辑。平台加歌/删歌在 2026-11-18 接入：采用 `updatePlaylistTracks` 的 `/api/playlist/manipulate/tracks` `op: add/del` 参数事实和 `/v6/playlist/detail` 的 `trackIds/trackCount/creator.userId` 字段事实，自写创建者核对、先读后单写、回读确认、重复成员处理、取消和幂等状态机。同日平台歌单删除采用固定参考的 `/api/playlist/remove` 与单 ID `ids` 事实，自写账号/`creator.userId` 绑定、目录回读、单写和确认缺席；同参考的重命名会通过 eAPI batch 同时写描述、标签和名称，因此音枢继续关闭该入口。匿名核验只证明端点需要登录，真实账号和跨设备效果未验。见[创建回执](2026-11-05-netease-platform-playlist-create-report.md)、[加歌回执](2026-11-18-netease-playlist-track-add-report.md)、[删歌回执](2026-11-18-netease-playlist-track-remove-report.md)与[平台删除回执](2026-11-18-netease-platform-playlist-delete-report.md)。

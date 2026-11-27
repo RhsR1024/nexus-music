@@ -100,16 +100,16 @@ export function StagePlayer({
   }, [playback.position, playback.queue.currentId]);
 
   useEffect(() => {
-    if (playback.intent !== 'playing' || playback.buffering) return;
+    if (playback.phase !== 'ready' || playback.intent !== 'playing' || playback.buffering || playback.duration <= 0) return;
     let raf = 0;
     const tick = () => {
-      const elapsed = (Date.now() - anchorRef.current.clock) * prefs.rate;
+      const elapsed = Math.min(300, Math.max(0, (Date.now() - anchorRef.current.clock) * prefs.rate));
       setSmoothMs(anchorRef.current.posMs + elapsed);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playback.intent, playback.buffering, prefs.rate]);
+  }, [playback.phase, playback.intent, playback.buffering, playback.duration, prefs.rate]);
 
   const key = trackKey(lyricTrack.origin);
   const offset = lyricOffset(prefs.lyricOffsetMs, prefs.lyricOffsets, key);

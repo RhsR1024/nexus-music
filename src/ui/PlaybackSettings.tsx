@@ -38,6 +38,8 @@ export function PlaybackSettings({services}:{services:Services}) {
   return <View style={{gap:14,marginTop:14}}>
     <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginBottom:-6}}>播放偏好</Text>
     <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+      {toggleRow('playback-prefer-account','key-outline','优先使用账号权限播放','已登录平台账号时优先用账号自身权益直连播放，无权限、仅试听或失败时自动回退自定义 LX 音源',settings.preferAccountPlayback,preferAccountPlayback=>update({preferAccountPlayback}))}
+      {divider}
       {toggleRow('playback-autoplay','power-outline','启动自动播放','打开应用且队列有歌曲时自动恢复播放',settings.autoPlayOnLaunch,autoPlayOnLaunch=>update({autoPlayOnLaunch}),
         <View style={{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:8}}>
           <Text style={{color:s.muted,fontSize:12}}>来源</Text>

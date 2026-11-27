@@ -2,14 +2,11 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as DocumentPicker from 'expo-document-picker';
-import { File, Paths } from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { Track } from '../domain/track.ts';
 import {
   DEFAULT_CLOUD_CONFIG,
-  MAX_UPLOAD_CLIP_BYTES,
   type AudioMatchCloudProvider,
 } from '../providers/audioMatch.ts';
 import { Modal } from './AdaptiveModal.tsx';
@@ -32,14 +29,13 @@ export function AudioMatchModal({
   const insets = useSafeAreaInsets();
   const match = useSyncExternalStore(services.audioMatch.subscribe, services.audioMatch.getSnapshot);
   const [phrase, setPhrase] = useState('');
-  const [configOpen, setConfigOpen] = useState(false);
+  const [editingKey, setEditingKey] = useState(false);
   const [provider, setProvider] = useState<AudioMatchCloudProvider>(match.cloudConfig.provider);
   const [acrHost, setAcrHost] = useState(match.cloudConfig.acrHost);
   const [acrKey, setAcrKey] = useState(match.cloudConfig.acrAccessKey);
   const [acrSecret, setAcrSecret] = useState(match.cloudConfig.acrAccessSecret);
   const [auddToken, setAuddToken] = useState(match.cloudConfig.auddToken);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [uploadBusy, setUploadBusy] = useState(false);
 
   useEffect(() => {
     setProvider(match.cloudConfig.provider);
@@ -55,52 +51,44 @@ export function AudioMatchModal({
     }
   }, [visible, match.listening]);
 
-  function toggleListen() {
-    if (match.listening) {
-      void services.audioMatch.stopListening();
+  async function selectMode(next: AudioMatchCloudProvider) {
+    setProvider(next);
+    if (next === 'off') {
+      setEditingKey(false);
+      await services.audioMatch.saveCloudConfig({ provider: 'off' });
+      return;
+    }
+    if (next === 'audd') {
+      await services.audioMatch.saveCloudConfig({ provider: 'audd', auddToken });
+      // Keep Key input collapsed if token already saved; let user optionally open it
+      setEditingKey(!auddToken.trim());
+      return;
+    }
+    // ACRCloud requires host + key + secret; expand inline setup if missing
+    if (acrKey.trim() && acrSecret.trim()) {
+      await services.audioMatch.saveCloudConfig({
+        provider: 'acrcloud',
+        acrHost,
+        acrAccessKey: acrKey,
+        acrAccessSecret: acrSecret,
+      });
+      setEditingKey(false);
     } else {
-      services.playback.controller.pause();
-      void services.audioMatch.startListening(6000);
+      setEditingKey(true);
     }
   }
 
-  async function pickAndIdentifyClip() {
-    if (uploadBusy || match.identifying || match.listening) return;
-    setUploadBusy(true);
-    try {
-      const picked = await DocumentPicker.getDocumentAsync({
-        type: ['audio/*', '*/*'],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-      if (picked.canceled || !picked.assets[0]) return;
-      const asset = picked.assets[0];
-      let bytes: Uint8Array;
-      const file = new File(asset.uri);
-      try {
-        const size = file.size && file.size > 0 ? Math.min(file.size, MAX_UPLOAD_CLIP_BYTES) : MAX_UPLOAD_CLIP_BYTES;
-        const handle = file.open();
-        try {
-          bytes = handle.readBytes(size);
-        } finally {
-          handle.close();
-        }
-      } finally {
-        if (asset.uri.startsWith(Paths.cache.uri)) {
-          try {
-            if (file.exists) file.delete();
-          } catch {}
-        }
-      }
-      await services.audioMatch.identifyAudioClip({
-        bytes,
-        filename: asset.name || 'clip.mp3',
-      });
-    } catch {
-      // Errors are surfaced cleanly via AudioMatchCoordinator state or user cancel.
-    } finally {
-      setUploadBusy(false);
+  function toggleListen() {
+    if (match.listening) {
+      void services.audioMatch.stopListening();
+      return;
     }
+    if (provider === 'acrcloud' && (!match.cloudConfig.acrAccessKey.trim() || !match.cloudConfig.acrAccessSecret.trim())) {
+      setEditingKey(true);
+      return;
+    }
+    services.playback.controller.pause();
+    void services.audioMatch.startListening(6000);
   }
 
   async function saveCloudSettings() {
@@ -114,7 +102,7 @@ export function AudioMatchModal({
         acrAccessSecret: acrSecret,
         auddToken,
       });
-      setConfigOpen(false);
+      setEditingKey(false);
     } finally {
       setSavingConfig(false);
     }
@@ -130,23 +118,15 @@ export function AudioMatchModal({
   const softTile = s.dark ? 'rgba(255,255,255,0.055)' : 'rgba(42,36,31,0.035)';
   const okColor = s.dark ? '#5EE0A0' : '#1D8A56';
   const okBg = s.dark ? 'rgba(94,224,160,0.14)' : 'rgba(29,138,86,0.11)';
-  const cloudBadgeLabel =
-    match.cloudConfig.provider === 'acrcloud'
-      ? 'ACRCloud'
-      : match.cloudConfig.provider === 'audd'
-        ? match.cloudConfig.auddToken
-          ? 'AudD'
-          : 'AudD 体验'
-        : '配置识曲 Key';
-  const cloudConfigured = match.cloudConfig.provider !== 'off';
-  const busyNow = match.identifying || uploadBusy;
+  const acrReady = Boolean(match.cloudConfig.acrAccessKey.trim() && match.cloudConfig.acrAccessSecret.trim());
+  const busyNow = match.identifying;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View testID="audio-match-modal" style={{ flex: 1 }}>
         <LinearGradient colors={[...s.sheetGradient]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
 
-        {/* Unified top-left back header */}
+        {/* Clean unified top-left back header (no redundant top-right Key button) */}
         <View style={{ paddingTop: Math.max(insets.top + 8, 22), paddingHorizontal: 18, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Pressable
             accessibilityRole="button"
@@ -168,31 +148,11 @@ export function AudioMatchModal({
             <Text style={{ color: s.ink, fontSize: 13.5, fontWeight: '600' }}>返回</Text>
           </Pressable>
           <Text style={{ flex: 1, color: s.ink, fontSize: 18.5, fontWeight: '700' }}>听歌识曲</Text>
-          <Pressable
-            testID="audio-match-cloud-toggle"
-            accessibilityRole="button"
-            accessibilityLabel="配置云端音频片段识曲"
-            onPress={() => setConfigOpen(v => !v)}
-            style={{
-              minHeight: 34,
-              paddingHorizontal: 11,
-              borderRadius: 17,
-              backgroundColor: cloudConfigured ? okBg : s.chip,
-              borderWidth: 1,
-              borderColor: cloudConfigured ? okColor + '44' : s.chipBorder,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-            }}
-          >
-            <Ionicons name={cloudConfigured ? 'cloud-done-outline' : 'key-outline'} size={14} color={cloudConfigured ? okColor : s.ink} />
-            <Text style={{ color: cloudConfigured ? okColor : s.ink, fontSize: 12, fontWeight: '700' }}>{cloudBadgeLabel}</Text>
-          </Pressable>
         </View>
 
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: Math.max(insets.bottom + 32, 44), gap: 16 }} showsVerticalScrollIndicator={false}>
-          {/* Pulsing Microphone Orb */}
-          <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4, gap: 14 }}>
+          {/* Pulsing Microphone Orb — records live clip & auto-uploads via selected recognition mode */}
+          <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 2, gap: 13 }}>
             <View style={{ width: 168, height: 168, alignItems: 'center', justifyContent: 'center' }}>
               <View
                 style={{
@@ -232,63 +192,14 @@ export function AudioMatchModal({
 
             <Text style={{ color: s.ink, fontSize: 16.5, fontWeight: '700' }}>
               {match.listening
-                ? `正在采集环境音频… ${(match.elapsedMs / 1000).toFixed(1)}s`
+                ? `正在录制环境片段… ${(match.elapsedMs / 1000).toFixed(1)}s`
                 : busyNow
-                  ? '正在上传音频片段识别…'
+                  ? `正在通过 ${provider === 'acrcloud' ? 'ACRCloud' : 'AudD'} 识别…`
                   : '轻触麦克风听歌识曲'}
             </Text>
             <Text style={{ color: s.muted, fontSize: 12.5, lineHeight: 18, textAlign: 'center', paddingHorizontal: 8 }}>
               {match.hint}
             </Text>
-
-            {/* Clip Upload & Instant Re-identify Buttons */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingTop: 2 }}>
-              <Pressable
-                testID="audio-match-upload-clip-btn"
-                accessibilityRole="button"
-                accessibilityLabel="上传本地音频片段识曲"
-                disabled={busyNow || match.listening}
-                onPress={() => void pickAndIdentifyClip()}
-                style={{
-                  minHeight: 40,
-                  paddingHorizontal: 15,
-                  borderRadius: 20,
-                  backgroundColor: s.card,
-                  borderWidth: 1,
-                  borderColor: s.cardBorder,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  opacity: busyNow || match.listening ? 0.5 : 1,
-                }}
-              >
-                <Ionicons name="cloud-upload-outline" size={16} color={s.accent} />
-                <Text style={{ color: s.ink, fontSize: 13, fontWeight: '600' }}>上传音频片段识曲</Text>
-              </Pressable>
-
-              {!!match.lastCapture?.audioBase64 && !match.listening && !busyNow && (
-                <Pressable
-                  testID="audio-match-upload-recorded-btn"
-                  accessibilityRole="button"
-                  accessibilityLabel="上传刚录片段识曲"
-                  onPress={() => void services.audioMatch.identifyAudioClip({ base64: match.lastCapture!.audioBase64!, filename: 'mic-clip.wav' })}
-                  style={{
-                    minHeight: 40,
-                    paddingHorizontal: 15,
-                    borderRadius: 20,
-                    backgroundColor: s.accentSoft,
-                    borderWidth: 1,
-                    borderColor: s.accent + '44',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <Ionicons name="sparkles-outline" size={15} color={s.accent} />
-                  <Text style={{ color: s.accent, fontSize: 13, fontWeight: '700' }}>上传刚录片段识曲</Text>
-                </Pressable>
-              )}
-            </View>
 
             {!!match.error && (
               <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, backgroundColor: s.dark ? 'rgba(255,107,129,0.14)' : 'rgba(217,67,85,0.09)', width: '100%' }}>
@@ -299,13 +210,194 @@ export function AudioMatchModal({
             )}
           </View>
 
+          {/* Streamlined Recognition Mode Selector (本机离线 | AudD | ACRCloud) + inline Key config */}
+          <View testID="audio-match-cloud-card" style={[{ padding: 14, borderRadius: 20, backgroundColor: s.card, borderWidth: 1, borderColor: s.cardBorder, gap: 12 }, s.cardShadow]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: s.ink, fontSize: 14.5, fontWeight: '700' }}>识别方式</Text>
+              {provider !== 'off' && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setEditingKey(v => !v)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 }}
+                >
+                  <Ionicons name={editingKey ? 'chevron-up' : 'key-outline'} size={13} color={s.accent} />
+                  <Text style={{ color: s.accent, fontSize: 12, fontWeight: '600' }}>
+                    {editingKey ? '收起 Key 配置' : provider === 'acrcloud' ? (acrReady ? '修改 ACRCloud Key' : '填入 ACRCloud Key') : match.cloudConfig.auddToken ? '修改 Token' : '填入个人 Token'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {([
+                ['off', '本机离线'],
+                ['audd', 'AudD'],
+                ['acrcloud', 'ACRCloud'],
+              ] as const).map(([key, label]) => {
+                const active = provider === key;
+                return (
+                  <Pressable
+                    key={key}
+                    testID={`audio-match-provider-${key}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => void selectMode(key)}
+                    style={{
+                      flex: 1,
+                      minHeight: 38,
+                      borderRadius: 12,
+                      backgroundColor: active ? s.control : softTile,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ color: active ? '#FFFFFF' : s.ink, fontSize: 13, fontWeight: '700' }}>{label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {provider === 'off' && (
+              <Text style={{ color: s.muted, fontSize: 12, lineHeight: 17 }}>
+                仅采集本地声纹特征并配合下方歌词秒搜；切换至 AudD 或 ACRCloud 后，点击麦克风录制片段即自动上传识曲。
+              </Text>
+            )}
+
+            {provider === 'audd' && !editingKey && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12, backgroundColor: okBg }}>
+                <Ionicons name="checkmark-circle" size={15} color={okColor} />
+                <Text style={{ flex: 1, color: okColor, fontSize: 12, fontWeight: '600' }}>
+                  {match.cloudConfig.auddToken ? 'AudD 个人 Token 已就绪 · 轻触麦克风自动录制并识别' : 'AudD 体验模式已就绪 · 轻触麦克风自动录制并识别'}
+                </Text>
+              </View>
+            )}
+
+            {provider === 'acrcloud' && !editingKey && acrReady && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12, backgroundColor: okBg }}>
+                <Ionicons name="checkmark-circle" size={15} color={okColor} />
+                <Text style={{ flex: 1, color: okColor, fontSize: 12, fontWeight: '600' }}>
+                  ACRCloud 个人 Key 已就绪 · 轻触麦克风自动录制并识别
+                </Text>
+              </View>
+            )}
+
+            {editingKey && provider === 'acrcloud' && (
+              <View style={{ gap: 9 }}>
+                <View style={{ padding: 11, borderRadius: 13, backgroundColor: softTile, gap: 5 }}>
+                  <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '700' }}>ACRCloud 个人免费 Key 申请步骤（华语曲库最准）</Text>
+                  <Text style={{ color: s.muted, fontSize: 11.5, lineHeight: 17 }}>
+                    1. 打开 console.acrcloud.com 注册免费个人账号{'\n'}
+                    2. 创建「Audio & Video Recognition」项目并勾选 ACRCloud Music{'\n'}
+                    3. 将 Host、Access Key、Access Secret 粘贴到下方保存即可
+                  </Text>
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={() => void Linking.openURL('https://console.acrcloud.com/')}
+                    style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2 }}
+                  >
+                    <Ionicons name="open-outline" size={13} color={s.accent} />
+                    <Text style={{ color: s.accent, fontSize: 12, fontWeight: '700' }}>前往 ACRCloud 控制台创建免费 Key</Text>
+                  </Pressable>
+                </View>
+                <TextInput
+                  testID="audio-match-acr-host"
+                  accessibilityLabel="ACRCloud Host"
+                  placeholder="Host，如 identify-cn-north-1.acrcloud.cn"
+                  placeholderTextColor={s.subtle}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={acrHost}
+                  onChangeText={setAcrHost}
+                  style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
+                />
+                <TextInput
+                  testID="audio-match-acr-key"
+                  accessibilityLabel="ACRCloud Access Key"
+                  placeholder="Access Key"
+                  placeholderTextColor={s.subtle}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={acrKey}
+                  onChangeText={setAcrKey}
+                  style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
+                />
+                <TextInput
+                  testID="audio-match-acr-secret"
+                  accessibilityLabel="ACRCloud Access Secret"
+                  placeholder="Access Secret（仅存本机钥匙串）"
+                  placeholderTextColor={s.subtle}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry
+                  value={acrSecret}
+                  onChangeText={setAcrSecret}
+                  style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
+                />
+                <Pressable
+                  testID="audio-match-cloud-save"
+                  accessibilityRole="button"
+                  disabled={savingConfig}
+                  onPress={() => void saveCloudSettings()}
+                  style={{ minHeight: 42, borderRadius: 14, backgroundColor: s.control, alignItems: 'center', justifyContent: 'center', opacity: savingConfig ? 0.5 : 1 }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
+                    {savingConfig ? '正在保存…' : '保存 ACRCloud Key'}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {editingKey && provider === 'audd' && (
+              <View style={{ gap: 9 }}>
+                <View style={{ padding: 11, borderRadius: 13, backgroundColor: softTile, gap: 5 }}>
+                  <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '700' }}>AudD 个人 API Token（可选，单 Key 最省心）</Text>
+                  <Text style={{ color: s.muted, fontSize: 11.5, lineHeight: 17 }}>
+                    1. 留空即可先使用官方公共 test 令牌直接录制识曲{'\n'}
+                    2. 访问 dashboard.audd.io 注册领取免费个人 Token 获得更稳定额度
+                  </Text>
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={() => void Linking.openURL('https://dashboard.audd.io/')}
+                    style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2 }}
+                  >
+                    <Ionicons name="open-outline" size={13} color={s.accent} />
+                    <Text style={{ color: s.accent, fontSize: 12, fontWeight: '700' }}>前往 AudD 控制台获取免费 Token</Text>
+                  </Pressable>
+                </View>
+                <TextInput
+                  testID="audio-match-audd-token"
+                  accessibilityLabel="AudD API Token"
+                  placeholder="填入 AudD API Token（留空默认使用 test 体验）"
+                  placeholderTextColor={s.subtle}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry
+                  value={auddToken}
+                  onChangeText={setAuddToken}
+                  style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
+                />
+                <Pressable
+                  testID="audio-match-cloud-save"
+                  accessibilityRole="button"
+                  disabled={savingConfig}
+                  onPress={() => void saveCloudSettings()}
+                  style={{ minHeight: 42, borderRadius: 14, backgroundColor: s.control, alignItems: 'center', justifyContent: 'center', opacity: savingConfig ? 0.5 : 1 }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
+                    {savingConfig ? '正在保存…' : '保存 AudD 配置'}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
           {/* Cloud Recognition Match Highlight Card */}
           {match.lastCloudMatch && (
             <View style={[{ padding: 14, borderRadius: 20, backgroundColor: okBg, borderWidth: 1, borderColor: okColor + '44', gap: 4 }, s.cardShadow]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="checkmark-circle" size={17} color={okColor} />
                 <Text style={{ color: okColor, fontSize: 12.5, fontWeight: '700' }}>
-                  云端音频片段识别命中 · {match.lastCloudMatch.provider === 'acrcloud' ? 'ACRCloud' : 'AudD'}
+                  云端识别命中 · {match.lastCloudMatch.provider === 'acrcloud' ? 'ACRCloud' : 'AudD'}
                   {match.lastCloudMatch.score !== undefined ? ` (${match.lastCloudMatch.score}%)` : ''}
                 </Text>
               </View>
@@ -317,168 +409,6 @@ export function AudioMatchModal({
               </Text>
             </View>
           )}
-
-          {/* Cloud API Key Setup & Free-Tier Guide Card */}
-          <View testID="audio-match-cloud-card" style={[{ borderRadius: 20, backgroundColor: s.card, borderWidth: 1, borderColor: s.cardBorder, overflow: 'hidden' }, s.cardShadow]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ expanded: configOpen }}
-              onPress={() => setConfigOpen(v => !v)}
-              style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: s.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="cloud-outline" size={18} color={s.accent} />
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={{ color: s.ink, fontSize: 14.5, fontWeight: '700' }}>云端音频片段识曲 · 免费 Key 引导</Text>
-                  <Text style={{ color: s.muted, fontSize: 12 }}>
-                    支持 ACRCloud / AudD 个人免费额度，录音或上传 MP3/WAV 自动认歌
-                  </Text>
-                </View>
-              </View>
-              <Ionicons name={configOpen ? 'chevron-up' : 'chevron-down'} size={17} color={s.subtle} />
-            </Pressable>
-
-            {configOpen && (
-              <View style={{ paddingHorizontal: 14, paddingBottom: 15, gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: s.hairline, paddingTop: 12 }}>
-                {/* Provider selector */}
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {([
-                    ['off', '仅离线'],
-                    ['acrcloud', 'ACRCloud'],
-                    ['audd', 'AudD'],
-                  ] as const).map(([key, label]) => {
-                    const active = provider === key;
-                    return (
-                      <Pressable
-                        key={key}
-                        testID={`audio-match-provider-${key}`}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: active }}
-                        onPress={() => setProvider(key)}
-                        style={{
-                          flex: 1,
-                          minHeight: 36,
-                          borderRadius: 12,
-                          backgroundColor: active ? s.control : softTile,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Text style={{ color: active ? '#FFFFFF' : s.ink, fontSize: 12.5, fontWeight: '700' }}>{label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                {provider === 'acrcloud' && (
-                  <View style={{ gap: 9 }}>
-                    <View style={{ padding: 11, borderRadius: 13, backgroundColor: softTile, gap: 5 }}>
-                      <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '700' }}>ACRCloud 个人免费 Key 申请步骤（华语曲库最准）</Text>
-                      <Text style={{ color: s.muted, fontSize: 11.5, lineHeight: 17 }}>
-                        1. 打开 console.acrcloud.com 注册免费个人账号{'\n'}
-                        2. 创建「Audio & Video Recognition」项目并勾选 ACRCloud Music{'\n'}
-                        3. 将项目页中的 Host、Access Key、Access Secret 粘贴到下方保存即可
-                      </Text>
-                      <Pressable
-                        accessibilityRole="link"
-                        onPress={() => void Linking.openURL('https://console.acrcloud.com/')}
-                        style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2 }}
-                      >
-                        <Ionicons name="open-outline" size={13} color={s.accent} />
-                        <Text style={{ color: s.accent, fontSize: 12, fontWeight: '700' }}>前往 ACRCloud 控制台创建免费 Key</Text>
-                      </Pressable>
-                    </View>
-                    <TextInput
-                      testID="audio-match-acr-host"
-                      accessibilityLabel="ACRCloud Host"
-                      placeholder="Host，如 identify-cn-north-1.acrcloud.cn"
-                      placeholderTextColor={s.subtle}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      value={acrHost}
-                      onChangeText={setAcrHost}
-                      style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
-                    />
-                    <TextInput
-                      testID="audio-match-acr-key"
-                      accessibilityLabel="ACRCloud Access Key"
-                      placeholder="Access Key"
-                      placeholderTextColor={s.subtle}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      value={acrKey}
-                      onChangeText={setAcrKey}
-                      style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
-                    />
-                    <TextInput
-                      testID="audio-match-acr-secret"
-                      accessibilityLabel="ACRCloud Access Secret"
-                      placeholder="Access Secret（仅存本机钥匙串）"
-                      placeholderTextColor={s.subtle}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      secureTextEntry
-                      value={acrSecret}
-                      onChangeText={setAcrSecret}
-                      style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
-                    />
-                  </View>
-                )}
-
-                {provider === 'audd' && (
-                  <View style={{ gap: 9 }}>
-                    <View style={{ padding: 11, borderRadius: 13, backgroundColor: softTile, gap: 5 }}>
-                      <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '700' }}>AudD 个人 API Token 申请步骤（单 Key 最省心）</Text>
-                      <Text style={{ color: s.muted, fontSize: 11.5, lineHeight: 17 }}>
-                        1. 打开 dashboard.audd.io 注册领取免费个人 API Token（每月含免费测试额度）{'\n'}
-                        2. 也可先留空，直接使用官方公共 `test` 令牌体验片段上传识曲
-                      </Text>
-                      <Pressable
-                        accessibilityRole="link"
-                        onPress={() => void Linking.openURL('https://dashboard.audd.io/')}
-                        style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2 }}
-                      >
-                        <Ionicons name="open-outline" size={13} color={s.accent} />
-                        <Text style={{ color: s.accent, fontSize: 12, fontWeight: '700' }}>前往 AudD 控制台获取免费 Token</Text>
-                      </Pressable>
-                    </View>
-                    <TextInput
-                      testID="audio-match-audd-token"
-                      accessibilityLabel="AudD API Token"
-                      placeholder="填入 AudD API Token（留空默认使用 test 体验）"
-                      placeholderTextColor={s.subtle}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      secureTextEntry
-                      value={auddToken}
-                      onChangeText={setAuddToken}
-                      style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
-                    />
-                  </View>
-                )}
-
-                {provider === 'off' && (
-                  <Text style={{ color: s.muted, fontSize: 12, lineHeight: 18 }}>
-                    当前仅使用本地声纹采样与跨平台歌词秒搜；点击上方「上传音频片段识曲」时可临时通过 AudD 公共体验接口识别，或切换上方引擎保存个人免费 Key。
-                  </Text>
-                )}
-
-                <Pressable
-                  testID="audio-match-cloud-save"
-                  accessibilityRole="button"
-                  disabled={savingConfig}
-                  onPress={() => void saveCloudSettings()}
-                  style={{ minHeight: 42, borderRadius: 14, backgroundColor: s.control, alignItems: 'center', justifyContent: 'center', opacity: savingConfig ? 0.5 : 1 }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
-                    {savingConfig ? '正在保存…' : '保存识曲配置'}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
 
           {/* Lyric / Hum Phrase Instant Multi-Platform Search */}
           <View style={[{ padding: 14, borderRadius: 20, backgroundColor: s.card, borderWidth: 1, borderColor: s.cardBorder, gap: 10 }, s.cardShadow]}>

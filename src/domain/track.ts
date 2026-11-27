@@ -6,7 +6,7 @@ export type TrackOrigin =
   | { kind: 'local'; id: string }
   | { kind: 'radio'; id: string }
   | { kind: 'online'; platform: OnlinePlatform; id: string }
-  | { kind: 'imported'; platform: 'qishui'; id: string }
+  | { kind: 'imported'; platform: 'qishui' | 'bodian'; id: string }
   | { kind: 'navidrome'; accountId: string; id: string };
 
 export interface Track {
@@ -23,7 +23,7 @@ export interface Track {
 
 export function trackKey(origin: TrackOrigin): string {
   if (!origin || (origin.kind !== 'online' && origin.kind !== 'navidrome' && origin.kind !== 'imported' && origin.kind !== 'local' && origin.kind !== 'radio' && origin.kind !== 'device' && origin.kind !== 'webdav') ||
-      (origin.kind === 'imported' && origin.platform !== 'qishui') ||
+      (origin.kind === 'imported' && origin.platform !== 'qishui' && origin.platform !== 'bodian') ||
       (origin.kind === 'online' && !['wy','tx','kw','kg','mg'].includes(origin.platform))) throw new Error('歌曲来源无效');
   const namespace = origin.kind === 'device'?origin.libraryId:(origin.kind === 'navidrome'||origin.kind === 'webdav') ? origin.accountId : origin.kind==='local'?'files':origin.kind==='radio'?'global':origin.platform;
   if (typeof namespace !== 'string' || !namespace || typeof origin.id !== 'string' || !origin.id) {

@@ -10,7 +10,10 @@ import {
   QISHUI_CURATED_COLLECTIONS,
   QISHUI_ROAM_MODES,
   type QishuiBoundPlaylist,
+  type QishuiChartSummary,
+  type QishuiCloudPlaylistSummary,
   type QishuiCuratedCollection,
+  type QishuiModeCategory,
   type QishuiRoamMode,
 } from '../providers/qishui.ts';
 import { Cover } from './Cover.tsx';
@@ -21,13 +24,24 @@ import { useTheme } from './theme.tsx';
 import { sollinTokens } from './tokens.ts';
 
 type QishuiTab = 'featured' | 'roam' | 'playlists';
+type ModeFilter = 'all' | QishuiModeCategory;
 type PersonalSheet =
   | null
   | { kind: 'liked' }
   | { kind: 'recent' }
   | { kind: 'playlists' }
   | { kind: 'bound'; playlist: QishuiBoundPlaylist }
+  | { kind: 'cloudPlaylist'; playlist: QishuiCloudPlaylistSummary }
+  | { kind: 'chart'; chart: QishuiChartSummary }
   | { kind: 'curated'; collection: QishuiCuratedCollection };
+
+const MODE_FILTERS: readonly { id: ModeFilter; label: string }[] = [
+  { id: 'all', label: '全部 48' },
+  { id: 'core', label: '核心默认' },
+  { id: 'mood', label: '情绪氛围' },
+  { id: 'scene', label: '日常场景' },
+  { id: 'genre', label: '曲风语种' },
+];
 
 export function QishuiDiscoverSection({ services }: { services: Services }) {
   const theme = useTheme();
@@ -43,20 +57,30 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
   const [subTab, setSubTab] = useState<QishuiTab>('featured');
   const [expandedModes, setExpandedModes] = useState(false);
+  const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
+  const [playingModeId, setPlayingModeId] = useState<string | null>(null);
+  const [modeNotice, setModeNotice] = useState('');
+
   const [query, setQuery] = useState('');
   const [searchTracks, setSearchTracks] = useState<readonly Track[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchStatus, setSearchStatus] = useState('');
 
-  // Wayferar-Music 292 style non-resetting mode cache: switching roam modes preserves loaded pools & scroll state.
+  // Non-resetting mode cache: switching modes preserves loaded pools while tapping a mode plays immediately.
   const [roamCache, setRoamCache] = useState<Record<string, readonly Track[]>>({});
   const [roamLoading, setRoamLoading] = useState(false);
   const [roamError, setRoamError] = useState('');
   const roamAbort = useRef<AbortController | null>(null);
 
+  // Real authenticated Qishui PC cloud data (merged cleanly into existing Personal Hub & Playlists UI)
+  const [cloudPlaylists, setCloudPlaylists] = useState<readonly QishuiCloudPlaylistSummary[]>([]);
+  const [cloudRecent, setCloudRecent] = useState<readonly Track[]>([]);
+  const [cloudFavTracks, setCloudFavTracks] = useState<readonly Track[]>([]);
+  const [cloudCharts, setCloudCharts] = useState<readonly QishuiChartSummary[]>([]);
+
   const [sheet, setSheet] = useState<PersonalSheet>(null);
-  const [curatedTracks, setCuratedTracks] = useState<readonly Track[]>([]);
-  const [curatedLoading, setCuratedLoading] = useState(false);
+  const [sheetTracks, setSheetTracks] = useState<readonly Track[]>([]);
+  const [sheetLoading, setSheetLoading] = useState(false);
   const [bindInput, setBindInput] = useState('');
   const [bindLoading, setBindLoading] = useState(false);
   const [bindMessage, setBindMessage] = useState('');
@@ -67,22 +91,42 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
   );
   const activeRoamTracks = roamCache[activeMode.id] ?? [];
 
-  async function loadModeTracks(mode: QishuiRoamMode, force = false) {
-    if (!force && roamCache[mode.id]?.length) return;
+  async function loadModeTracks(mode: QishuiRoamMode, options?: { force?: boolean; autoPlay?: boolean }) {
+    const force = options?.force ?? false;
+    const autoPlay = options?.autoPlay ?? false;
+    const cached = roamCache[mode.id];
+    if (!force && cached?.length) {
+      if (autoPlay) {
+        playQishuiTracks(cached, 0);
+        setModeNotice(`已切换至「${mode.title}」，开始播放`);
+      }
+      return;
+    }
     roamAbort.current?.abort();
     const ctrl = new AbortController();
     roamAbort.current = ctrl;
     setRoamLoading(true);
+    if (autoPlay) setPlayingModeId(mode.id);
     setRoamError('');
     try {
-      const res = await services.online.search('wy', mode.query, force ? 2 : 1, ctrl.signal, 24);
+      const page = force ? 2 : 1;
+      const res = await services.online.search('wy', mode.query, page, ctrl.signal, 24);
       if (ctrl.signal.aborted) return;
       const mapped = res.items.map(asQishuiMatchedTrack);
       setRoamCache(prev => ({ ...prev, [mode.id]: mapped }));
+      if (autoPlay && mapped.length) {
+        playQishuiTracks(mapped, 0);
+        setModeNotice(`已切换至「${mode.title}」，开始播放（${mapped.length} 首）`);
+      } else if (autoPlay) {
+        setModeNotice(`「${mode.title}」暂未匹配到歌曲，请稍后重试`);
+      }
     } catch {
       if (!ctrl.signal.aborted) setRoamError('拉取漫游流失败，请稍后重试');
     } finally {
-      if (!ctrl.signal.aborted) setRoamLoading(false);
+      if (!ctrl.signal.aborted) {
+        setRoamLoading(false);
+        setPlayingModeId(null);
+      }
     }
   }
 
@@ -93,9 +137,54 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
     };
   }, [activeMode.id]);
 
-  function selectMode(mode: QishuiRoamMode) {
+  // Load real Qishui PC charts & (when logged in) cloud playlists / recent plays / favorite tracks
+  useEffect(() => {
+    const ctrl = new AbortController();
+    void services.qishui
+      .fetchCharts(ctrl.signal)
+      .then(charts => {
+        if (!ctrl.signal.aborted) setCloudCharts(charts.slice(0, 6));
+      })
+      .catch(() => {});
+
+    if (!qishuiAccount.loggedIn) {
+      setCloudPlaylists([]);
+      setCloudRecent([]);
+      setCloudFavTracks([]);
+      return () => ctrl.abort();
+    }
+
+    void (async () => {
+      const cookie = await services.qishuiAccount.sessionCookieHeader();
+      if (!cookie || ctrl.signal.aborted) return;
+      const [plRes, recRes] = await Promise.allSettled([
+        services.qishui.fetchUserPlaylists(cookie, ctrl.signal),
+        services.qishui.fetchRecentPlays(cookie, ctrl.signal, 50),
+      ]);
+      if (ctrl.signal.aborted) return;
+      if (plRes.status === 'fulfilled') {
+        setCloudPlaylists(plRes.value);
+        const fav = plRes.value.find(p => p.isFavorite);
+        if (fav) {
+          void services.qishui
+            .playlistTracks(fav.id, ctrl.signal, cookie)
+            .then(detail => {
+              if (!ctrl.signal.aborted) setCloudFavTracks(detail.tracks);
+            })
+            .catch(() => {});
+        }
+      }
+      if (recRes.status === 'fulfilled') {
+        setCloudRecent(recRes.value);
+      }
+    })();
+
+    return () => ctrl.abort();
+  }, [qishuiAccount.loggedIn, qishuiAccount.userId]);
+
+  function selectAndPlayMode(mode: QishuiRoamMode) {
     void services.qishuiAccount.setActiveMode(mode.id).catch(() => {});
-    void loadModeTracks(mode);
+    void loadModeTracks(mode, { autoPlay: true });
   }
 
   function playQishuiTracks(tracks: readonly Track[], index: number) {
@@ -114,7 +203,7 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
       const res = await services.online.search('wy', q, 1, ctrl.signal, 24);
       const mapped = res.items.map(asQishuiMatchedTrack);
       setSearchTracks(mapped);
-      setSearchStatus(mapped.length ? `匹配到 ${mapped.length} 首曲目，点击即可通过 LX 音源播放` : '未找到匹配曲目，请更换关键词');
+      setSearchStatus(mapped.length ? `匹配到 ${mapped.length} 首曲目，点击即可播放` : '未找到匹配曲目，请更换关键词');
     } catch {
       setSearchStatus('跨源搜索失败，请稍后重试');
     } finally {
@@ -124,16 +213,47 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
   async function openCuratedCollection(collection: QishuiCuratedCollection) {
     setSheet({ kind: 'curated', collection });
-    setCuratedTracks([]);
-    setCuratedLoading(true);
+    setSheetTracks([]);
+    setSheetLoading(true);
     const ctrl = new AbortController();
     try {
       const res = await services.online.search('wy', collection.query, 1, ctrl.signal, 24);
-      setCuratedTracks(res.items.map(asQishuiMatchedTrack));
+      setSheetTracks(res.items.map(asQishuiMatchedTrack));
     } catch {
-      setCuratedTracks([]);
+      setSheetTracks([]);
     } finally {
-      setCuratedLoading(false);
+      setSheetLoading(false);
+    }
+  }
+
+  async function openCloudPlaylist(playlist: QishuiCloudPlaylistSummary) {
+    setSheet({ kind: 'cloudPlaylist', playlist });
+    setSheetTracks([]);
+    setSheetLoading(true);
+    const ctrl = new AbortController();
+    try {
+      const cookie = await services.qishuiAccount.sessionCookieHeader();
+      const detail = await services.qishui.playlistTracks(playlist.id, ctrl.signal, cookie);
+      setSheetTracks(detail.tracks);
+    } catch {
+      setSheetTracks([]);
+    } finally {
+      setSheetLoading(false);
+    }
+  }
+
+  async function openCloudChart(chart: QishuiChartSummary) {
+    setSheet({ kind: 'chart', chart });
+    setSheetTracks(chart.previewTracks);
+    setSheetLoading(true);
+    const ctrl = new AbortController();
+    try {
+      const items = await services.qishui.fetchChartTracks(chart.id, ctrl.signal);
+      if (items.length) setSheetTracks(items);
+    } catch {
+      // keep previewTracks if chart fetch failed
+    } finally {
+      setSheetLoading(false);
     }
   }
 
@@ -144,7 +264,8 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
     setBindMessage('');
     const ctrl = new AbortController();
     try {
-      const parsed = await services.qishui.complete(raw, ctrl.signal);
+      const cookie = await services.qishuiAccount.sessionCookieHeader();
+      const parsed = await services.qishui.complete(raw, ctrl.signal, cookie);
       await services.qishuiAccount.bindPlaylist(parsed);
       setBindInput('');
       setBindMessage(`已绑定「${parsed.title}」（${parsed.tracks.length} 首）`);
@@ -155,7 +276,40 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
     }
   }
 
-  const visibleModes = expandedModes ? QISHUI_ROAM_MODES : QISHUI_ROAM_MODES.slice(0, 6);
+  // Merge cloud & local lists deduplicated by trackKey
+  const mergedLiked = useMemo(() => {
+    const out: Track[] = [];
+    const seen = new Set<string>();
+    for (const t of [...cloudFavTracks, ...qishuiAccount.liked]) {
+      const k = trackKey(t.origin);
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push(t);
+      }
+    }
+    return out;
+  }, [cloudFavTracks, qishuiAccount.liked]);
+
+  const mergedRecent = useMemo(() => {
+    const out: Track[] = [];
+    const seen = new Set<string>();
+    for (const t of [...cloudRecent, ...qishuiAccount.recent]) {
+      const k = trackKey(t.origin);
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push(t);
+      }
+    }
+    return out;
+  }, [cloudRecent, qishuiAccount.recent]);
+
+  const totalPlaylistsCount = cloudPlaylists.length + qishuiAccount.playlists.length;
+
+  const filteredModes = useMemo(
+    () => (modeFilter === 'all' ? QISHUI_ROAM_MODES : QISHUI_ROAM_MODES.filter(m => m.category === modeFilter)),
+    [modeFilter],
+  );
+  const visibleModes = expandedModes ? filteredModes : QISHUI_ROAM_MODES.filter(m => m.primary).slice(0, 6);
 
   const renderTrackRow = (track: Track, idx: number, pool: readonly Track[]) => {
     const liked = qishuiAccount.liked.some(t => trackKey(t.origin) === trackKey(track.origin));
@@ -188,7 +342,7 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
   return (
     <View testID="qishui-discover-section" style={{ gap: 14, paddingBottom: 20 }}>
-      {/* Sollin-aligned 3-segment switcher: 精选 | 漫游 | 歌单 */}
+      {/* Preserve existing Sollin-aligned 3-segment switcher: 精选 | 漫游 | 歌单 */}
       <View style={{ flexDirection: 'row', padding: 3, borderRadius: 24, backgroundColor: segmentTrack }}>
         {([
           ['featured', '精选'],
@@ -214,12 +368,12 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
         })}
       </View>
 
-      {/* Personal Hub strip: 喜欢的歌 · 我的歌单 · 最近播放 (matches Sollin Qishui) */}
+      {/* Personal Hub strip: 喜欢的歌 · 我的歌单 · 最近播放 */}
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {[
-          { id: 'liked' as const, label: '喜欢的歌', count: `${qishuiAccount.liked.length} 首`, icon: 'heart' as const, color: '#E84C78' },
-          { id: 'playlists' as const, label: '我的歌单', count: `${qishuiAccount.playlists.length} 个`, icon: 'albums' as const, color: '#00B886' },
-          { id: 'recent' as const, label: '最近播放', count: `${qishuiAccount.recent.length} 首`, icon: 'time' as const, color: '#5A78E6' },
+          { id: 'liked' as const, label: '喜欢的歌', count: `${mergedLiked.length} 首`, icon: 'heart' as const, color: '#E84C78' },
+          { id: 'playlists' as const, label: '我的歌单', count: `${totalPlaylistsCount} 个`, icon: 'albums' as const, color: '#00B886' },
+          { id: 'recent' as const, label: '最近播放', count: `${mergedRecent.length} 首`, icon: 'time' as const, color: '#5A78E6' },
         ].map(hub => (
           <Pressable
             key={hub.id}
@@ -284,32 +438,64 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
             </View>
           )}
 
-          {/* 音乐漫游 2x3 + expandable scene mode grid */}
+          {/* 听歌模式：3 大默认模式 + 45 种场景/曲风模式（点击模式即直接切换并播放） */}
           <View style={{ gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ color: s.ink, fontSize: 18, fontWeight: '700' }}>音乐漫游</Text>
+                <Text style={{ color: s.ink, fontSize: 18, fontWeight: '700' }}>听歌模式</Text>
                 <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: 'rgba(0,184,134,0.16)' }}>
                   <Text style={{ color: '#00A882', fontSize: 11, fontWeight: '700' }}>{activeMode.title}</Text>
                 </View>
               </View>
-              <Pressable accessibilityRole="button" onPress={() => setExpandedModes(v => !v)}>
+              <Pressable
+                testID="qishui-modes-expand"
+                accessibilityRole="button"
+                onPress={() => setExpandedModes(v => !v)}
+              >
                 <Text style={{ color: s.accent, fontSize: 12.5, fontWeight: '600' }}>
                   {expandedModes ? '收起模式' : `全部 ${QISHUI_ROAM_MODES.length} 种`}
                 </Text>
               </Pressable>
             </View>
 
+            {expandedModes && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingVertical: 2 }}>
+                {MODE_FILTERS.map(f => {
+                  const active = modeFilter === f.id;
+                  return (
+                    <Pressable
+                      key={f.id}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setModeFilter(f.id)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 14,
+                        backgroundColor: active ? s.control : softSurface,
+                      }}
+                    >
+                      <Text style={{ color: active ? '#FFFFFF' : s.ink, fontSize: 12, fontWeight: active ? '700' : '500' }}>
+                        {f.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
               {visibleModes.map(mode => {
                 const selected = mode.id === activeMode.id;
+                const isStarting = playingModeId === mode.id;
                 return (
                   <Pressable
                     key={mode.id}
                     testID={`qishui-mode-${mode.id}`}
                     accessibilityRole="radio"
+                    accessibilityLabel={`${mode.title}，点击直接播放`}
                     accessibilityState={{ selected }}
-                    onPress={() => selectMode(mode)}
+                    onPress={() => selectAndPlayMode(mode)}
                     style={{
                       width: '31%',
                       flexGrow: 1,
@@ -321,13 +507,23 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
                       gap: 5,
                     }}
                   >
-                    <Ionicons name={mode.icon as React.ComponentProps<typeof Ionicons>['name']} size={18} color={mode.accent} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Ionicons name={mode.icon as React.ComponentProps<typeof Ionicons>['name']} size={18} color={mode.accent} />
+                      {isStarting ? (
+                        <ActivityIndicator size="small" color={mode.accent} />
+                      ) : (
+                        <Ionicons name={selected ? 'play-circle' : 'play-circle-outline'} size={16} color={selected ? mode.accent : s.subtle} />
+                      )}
+                    </View>
                     <Text numberOfLines={1} style={{ color: s.ink, fontSize: 13.5, fontWeight: '700' }}>{mode.title}</Text>
                     <Text numberOfLines={1} style={{ color: s.muted, fontSize: 10.5 }}>{mode.subtitle}</Text>
                   </Pressable>
                 );
               })}
             </View>
+            {!!modeNotice && (
+              <Text style={{ color: s.accent, fontSize: 12, fontWeight: '600' }}>{modeNotice}</Text>
+            )}
           </View>
 
           {/* Active Roam Preview Strip */}
@@ -337,7 +533,7 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => void loadModeTracks(activeMode, true)}
+                  onPress={() => void loadModeTracks(activeMode, { force: true })}
                   style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 14, backgroundColor: softSurface }}
                 >
                   <Text style={{ color: s.ink, fontSize: 12, fontWeight: '600' }}>换一批</Text>
@@ -369,6 +565,29 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
               </Pressable>
             )}
           </View>
+
+          {/* Official Qishui PC Charts (if returned by /luna/pc/discover) */}
+          {cloudCharts.length > 0 && (
+            <View style={{ gap: 10 }}>
+              <Text style={{ color: s.ink, fontSize: 18, fontWeight: '700' }}>汽水官方榜单</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                {cloudCharts.map(chart => (
+                  <Pressable
+                    key={chart.id}
+                    accessibilityRole="button"
+                    onPress={() => void openCloudChart(chart)}
+                    style={{ width: 152, padding: 10, borderRadius: 16, backgroundColor: softSurface, borderWidth: 1, borderColor: s.cardBorder, gap: 6 }}
+                  >
+                    <Cover services={services} url={chart.artwork} size={132} radius={12} fallbackText={chart.title} />
+                    <Text numberOfLines={1} style={{ color: s.ink, fontSize: 14, fontWeight: '700' }}>{chart.title}</Text>
+                    <Text numberOfLines={1} style={{ color: s.muted, fontSize: 11.5 }}>
+                      {chart.previewTracks[0] ? `${chart.previewTracks[0].title} - ${chart.previewTracks[0].artist}` : '点击查看榜单'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* 精选歌单 2-column visual cards */}
           <View style={{ gap: 10 }}>
@@ -403,15 +622,32 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
       {subTab === 'roam' && (
         <View style={{ gap: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingVertical: 2 }}>
+            {MODE_FILTERS.map(f => {
+              const active = modeFilter === f.id;
+              return (
+                <Pressable
+                  key={f.id}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setModeFilter(f.id)}
+                  style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: active ? s.control : softSurface }}
+                >
+                  <Text style={{ color: active ? '#FFFFFF' : s.ink, fontSize: 12, fontWeight: active ? '700' : '500' }}>{f.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
-            {QISHUI_ROAM_MODES.map(mode => {
+            {filteredModes.map(mode => {
               const selected = mode.id === activeMode.id;
               return (
                 <Pressable
                   key={mode.id}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
-                  onPress={() => selectMode(mode)}
+                  onPress={() => selectAndPlayMode(mode)}
                   style={{
                     paddingHorizontal: 13,
                     paddingVertical: 8,
@@ -430,12 +666,12 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
           </ScrollView>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ gap: 2 }}>
+            <View style={{ gap: 2, flex: 1 }}>
               <Text style={{ color: s.ink, fontSize: 18, fontWeight: '700' }}>{activeMode.title}</Text>
-              <Text style={{ color: s.muted, fontSize: 12 }}>{activeMode.subtitle} · 切换模式不重置浏览进度</Text>
+              <Text style={{ color: s.muted, fontSize: 12 }}>{activeMode.subtitle} · 点击任意模式即直接播放</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Pressable accessibilityRole="button" onPress={() => void loadModeTracks(activeMode, true)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 15, backgroundColor: softSurface }}>
+              <Pressable accessibilityRole="button" onPress={() => void loadModeTracks(activeMode, { force: true })} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 15, backgroundColor: softSurface }}>
                 <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '600' }}>刷新</Text>
               </Pressable>
               {activeRoamTracks.length > 0 && (
@@ -457,10 +693,31 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
       {subTab === 'playlists' && (
         <View style={{ gap: 14 }}>
+          {cloudPlaylists.length > 0 && (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: s.ink, fontSize: 17, fontWeight: '700' }}>汽水账号云端歌单 ({cloudPlaylists.length})</Text>
+              {cloudPlaylists.map(pl => (
+                <Pressable
+                  key={pl.id}
+                  accessibilityRole="button"
+                  onPress={() => void openCloudPlaylist(pl)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 15, backgroundColor: softSurface }}
+                >
+                  <Cover services={services} url={pl.artwork} size={50} radius={10} fallbackText={pl.title} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text numberOfLines={1} style={{ color: s.ink, fontSize: 15, fontWeight: '700' }}>{pl.title}</Text>
+                    <Text style={{ color: s.muted, fontSize: 12 }}>{pl.trackCount} 首 · 云端实时读取</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={17} color={s.subtle} />
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           <View style={{ padding: 14, borderRadius: 18, backgroundColor: softSurface, gap: 10 }}>
             <Text style={{ color: s.ink, fontSize: 15.5, fontWeight: '700' }}>绑定汽水公开歌单</Text>
             <Text style={{ color: s.muted, fontSize: 12, lineHeight: 17 }}>
-              粘贴汽水音乐 App 分享链接或歌单 ID，绑定后可在「我的歌单」中随时直达播放（支持 LX 多音源跨平台解析）。
+              粘贴汽水音乐 App 分享链接或歌单 ID，绑定后可在「我的歌单」中随时直达播放（支持账号直连与 LX 多音源解析）。
             </Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
@@ -541,7 +798,7 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
         </View>
       )}
 
-      {/* Unified In-App Detail Modal for 喜欢的歌 / 我的歌单 / 最近播放 / 精选主题歌单 */}
+      {/* Unified In-App Detail Modal for 喜欢的歌 / 我的歌单 / 最近播放 / 云端歌单 / 榜单 / 精选主题歌单 */}
       <Modal visible={sheet !== null} animationType="slide" onRequestClose={() => setSheet(null)}>
         <View style={{ flex: 1 }}>
           <LinearGradient colors={[...s.sheetGradient]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -555,14 +812,16 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
                   : sheet?.kind === 'recent' ? '汽水 · 最近播放'
                   : sheet?.kind === 'playlists' ? '汽水 · 我的歌单'
                   : sheet?.kind === 'bound' ? sheet.playlist.title
+                  : sheet?.kind === 'cloudPlaylist' ? sheet.playlist.title
+                  : sheet?.kind === 'chart' ? sheet.chart.title
                   : sheet?.kind === 'curated' ? sheet.collection.title : ''}
               </Text>
               {(() => {
                 const tracks =
-                  sheet?.kind === 'liked' ? qishuiAccount.liked
-                    : sheet?.kind === 'recent' ? qishuiAccount.recent
+                  sheet?.kind === 'liked' ? mergedLiked
+                    : sheet?.kind === 'recent' ? mergedRecent
                     : sheet?.kind === 'bound' ? sheet.playlist.tracks
-                    : sheet?.kind === 'curated' ? curatedTracks : [];
+                    : sheet?.kind === 'cloudPlaylist' || sheet?.kind === 'chart' || sheet?.kind === 'curated' ? sheetTracks : [];
                 if (!tracks.length) return null;
                 return (
                   <Pressable
@@ -579,23 +838,42 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, gap: 6 }}>
               {sheet?.kind === 'playlists' && (
-                qishuiAccount.playlists.length ? qishuiAccount.playlists.map(pl => (
-                  <Pressable
-                    key={pl.id}
-                    accessibilityRole="button"
-                    onPress={() => setSheet({ kind: 'bound', playlist: pl })}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: softSurface }}
-                  >
-                    <Cover services={services} url={pl.artwork} size={52} radius={10} fallbackText={pl.title} />
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text numberOfLines={1} style={{ color: s.ink, fontSize: 15, fontWeight: '700' }}>{pl.title}</Text>
-                      <Text style={{ color: s.muted, fontSize: 12 }}>{pl.trackCount} 首</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={17} color={s.subtle} />
-                  </Pressable>
-                )) : (
+                totalPlaylistsCount > 0 ? (
+                  <>
+                    {cloudPlaylists.map(pl => (
+                      <Pressable
+                        key={`cloud-${pl.id}`}
+                        accessibilityRole="button"
+                        onPress={() => void openCloudPlaylist(pl)}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: softSurface }}
+                      >
+                        <Cover services={services} url={pl.artwork} size={52} radius={10} fallbackText={pl.title} />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text numberOfLines={1} style={{ color: s.ink, fontSize: 15, fontWeight: '700' }}>{pl.title}</Text>
+                          <Text style={{ color: s.muted, fontSize: 12 }}>{pl.trackCount} 首 · 汽水账号云端歌单</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={17} color={s.subtle} />
+                      </Pressable>
+                    ))}
+                    {qishuiAccount.playlists.map(pl => (
+                      <Pressable
+                        key={`bound-${pl.id}`}
+                        accessibilityRole="button"
+                        onPress={() => setSheet({ kind: 'bound', playlist: pl })}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: softSurface }}
+                      >
+                        <Cover services={services} url={pl.artwork} size={52} radius={10} fallbackText={pl.title} />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text numberOfLines={1} style={{ color: s.ink, fontSize: 15, fontWeight: '700' }}>{pl.title}</Text>
+                          <Text style={{ color: s.muted, fontSize: 12 }}>{pl.trackCount} 首 · 已绑定歌单</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={17} color={s.subtle} />
+                      </Pressable>
+                    ))}
+                  </>
+                ) : (
                   <View style={{ padding: 24, alignItems: 'center', gap: 10 }}>
-                    <Text style={{ color: s.muted, fontSize: 14, textAlign: 'center' }}>尚未绑定汽水公开歌单，可切到「歌单」栏粘贴分享链接绑定。</Text>
+                    <Text style={{ color: s.muted, fontSize: 14, textAlign: 'center' }}>登录汽水账号或绑定公开歌单链接后即可在此直达播放。</Text>
                     <Pressable accessibilityRole="button" onPress={() => { setSheet(null); setSubTab('playlists'); }} style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18, backgroundColor: s.control }}>
                       <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '700' }}>去绑定汽水歌单</Text>
                     </Pressable>
@@ -604,21 +882,21 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
               )}
 
               {sheet?.kind === 'liked' && (
-                qishuiAccount.liked.length ? qishuiAccount.liked.map((t, i) => renderTrackRow(t, i, qishuiAccount.liked))
+                mergedLiked.length ? mergedLiked.map((t, i) => renderTrackRow(t, i, mergedLiked))
                   : <Text style={{ color: s.muted, fontSize: 14, textAlign: 'center', paddingTop: 28 }}>还没有在汽水频道点亮红心的歌曲。</Text>
               )}
 
               {sheet?.kind === 'recent' && (
-                qishuiAccount.recent.length ? qishuiAccount.recent.map((t, i) => renderTrackRow(t, i, qishuiAccount.recent))
+                mergedRecent.length ? mergedRecent.map((t, i) => renderTrackRow(t, i, mergedRecent))
                   : <Text style={{ color: s.muted, fontSize: 14, textAlign: 'center', paddingTop: 28 }}>暂无汽水频道播放记录。</Text>
               )}
 
               {sheet?.kind === 'bound' && sheet.playlist.tracks.map((t, i) => renderTrackRow(t, i, sheet.playlist.tracks))}
 
-              {sheet?.kind === 'curated' && (
-                curatedLoading ? <ActivityIndicator color={s.accent} style={{ marginTop: 28 }} />
-                  : curatedTracks.length ? curatedTracks.map((t, i) => renderTrackRow(t, i, curatedTracks))
-                  : <Text style={{ color: s.muted, fontSize: 14, textAlign: 'center', paddingTop: 28 }}>暂未获取到该主题歌单曲目，请稍后重试。</Text>
+              {(sheet?.kind === 'curated' || sheet?.kind === 'cloudPlaylist' || sheet?.kind === 'chart') && (
+                sheetLoading && !sheetTracks.length ? <ActivityIndicator color={s.accent} style={{ marginTop: 28 }} />
+                  : sheetTracks.length ? sheetTracks.map((t, i) => renderTrackRow(t, i, sheetTracks))
+                  : <Text style={{ color: s.muted, fontSize: 14, textAlign: 'center', paddingTop: 28 }}>暂未获取到曲目列表，请稍后重试。</Text>
               )}
             </ScrollView>
           </View>

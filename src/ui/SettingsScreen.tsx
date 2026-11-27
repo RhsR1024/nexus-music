@@ -61,7 +61,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
   const content=(key:SettingsPage)=>{
     switch(key){
       case 'home':return <View style={{gap:14}}>
-        <Text style={{color:s.ink,opacity:0.78,fontSize:18,fontWeight:'600',lineHeight:25,letterSpacing:-0.2,marginLeft:4,marginTop:2,marginBottom:4}}>让每一次聆听，更像你。</Text>
+        <Text style={{color:s.ink,opacity:0.78,fontSize:18,fontWeight:'600',lineHeight:25,letterSpacing:-0.2,marginLeft:4,marginTop:2,marginBottom:4}}>万源归枢，自在聆听。</Text>
         <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginBottom:-6}}>设置分类</Text>
         <View testID="settings-category-group" style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
           {row('playback','播放偏好、歌词、在线音源与音效','musical-notes',preferences.quality.toUpperCase(),true)}
@@ -78,7 +78,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
         <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
           {row('sources','LX 音源与 Navidrome 私人曲库','server',sourceUpdateCount>0?`${sourceUpdateCount} 个更新`:undefined,true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
-          {row('accounts','网易云、QQ、酷狗、汽水账号与本机会话','person-circle',undefined,true)}
+          {row('accounts','网易云、QQ、酷狗、汽水、波点账号与本机会话','person-circle',undefined,true)}
         </View>
       </View>;
       case 'sources':return <MusicSourcesScreen services={services}/>;

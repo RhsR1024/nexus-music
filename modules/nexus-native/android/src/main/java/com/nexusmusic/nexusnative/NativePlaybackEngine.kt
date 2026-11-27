@@ -80,6 +80,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
   private var fadeRunnable: Runnable? = null
   private var isFadingOutStop = false
   private var fadingOutCacheKey: String? = null
+  private var mediaInstalled = false
 
   private var systemLyricLine: String? = null
   private var systemLyricPosition = "artist"
@@ -115,10 +116,10 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
   private val progressTicker = object : Runnable {
     override fun run() {
       val p = exoPlayer
-      if (p != null && entryId.isNotEmpty() && p.isPlaying) {
+      if (p != null && entryId.isNotEmpty() && mediaInstalled && !isFadingOutStop && p.isPlaying) {
         report("progress")
       }
-      mainHandler.postDelayed(this, 500L)
+      mainHandler.postDelayed(this, 100L)
     }
   }
 
@@ -146,7 +147,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
   }
 
   init {
-    mainHandler.postDelayed(progressTicker, 500L)
+    mainHandler.postDelayed(progressTicker, 100L)
     mainHandler.postDelayed(listeningTicker, 5000L)
     mainHandler.postDelayed(spectrumTicker, 100L)
   }
@@ -184,7 +185,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
 
     player.addListener(object : Player.Listener {
       override fun onPlaybackStateChanged(playbackState: Int) {
-        if (entryId.isEmpty()) return
+        if (entryId.isEmpty() || !mediaInstalled || isFadingOutStop) return
         when (playbackState) {
           Player.STATE_READY -> {
             val durMs = player.duration
@@ -221,13 +222,13 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
       }
 
       override fun onIsPlayingChanged(isPlaying: Boolean) {
-        if (entryId.isNotEmpty()) {
+        if (entryId.isNotEmpty() && mediaInstalled && !isFadingOutStop) {
           report("status")
         }
       }
 
       override fun onPlayerError(error: PlaybackException) {
-        if (entryId.isEmpty()) return
+        if (entryId.isEmpty() || !mediaInstalled) return
         if (retryCorruptCache()) return
         wantsPlay = false
         player.pause()
@@ -286,6 +287,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     sleepTimer.trackChanged(id)
     stop(newGeneration, preservingSleep = true)
     entryId = id
+    mediaInstalled = false
     listeningSession = UUID.randomUUID().toString()
     listenedSeconds = 0.0
     listeningClockSec = SystemClock.elapsedRealtime() / 1000.0
@@ -367,6 +369,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
       if (generation == newGeneration && entryId == id) {
         cancelFade()
         releaseFadingOutResources()
+        mediaInstalled = true
         player.volume = if (fadeEnabled && fadeDurationMs >= 100 && targetVolume > 0f) 0f else targetVolume
         player.setMediaSource(mediaSource)
         player.prepare()
@@ -462,10 +465,12 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     wantsPlay = true
     ensureMediaServiceStarted()
     val player = getOrCreatePlayer()
-    if (player.playbackState == Player.STATE_READY && !initialSeekPending) {
-      startPlaybackWithFade()
-    } else if (!(fadeEnabled && fadeDurationMs >= 100 && targetVolume > 0f)) {
-      player.playWhenReady = true
+    if (mediaInstalled && !isFadingOutStop) {
+      if (player.playbackState == Player.STATE_READY && !initialSeekPending) {
+        startPlaybackWithFade()
+      } else if (!(fadeEnabled && fadeDurationMs >= 100 && targetVolume > 0f)) {
+        player.playWhenReady = true
+      }
     }
     report("status")
   }
@@ -582,6 +587,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     initialPosition = 0.0
     initialSeekPending = false
     reportedReady = false
+    mediaInstalled = false
   }
 
   fun seek(seconds: Double, id: String, newGeneration: Int) {
@@ -742,6 +748,7 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
       player.volume = targetVolume
       player.play()
     }
+    report("progress")
   }
 
   private fun retryCorruptCache(): Boolean {
@@ -771,12 +778,21 @@ internal class NativePlaybackEngine private constructor(private val appContext: 
     }
     listeningClockSec = nowSec
     val p = exoPlayer
-    val isPlaying = p?.isPlaying == true
-    val isBuffering = p?.playbackState == Player.STATE_BUFFERING
+    val validCurrent = p != null && mediaInstalled && !isFadingOutStop
+    val isPlaying = validCurrent && p?.isPlaying == true
+    val isBuffering = validCurrent && p?.playbackState == Player.STATE_BUFFERING
     wasActuallyPlaying = isPlaying && wantsPlay && kind !in setOf("ended", "stopped", "error")
 
-    val posSec = p?.currentPosition?.takeIf { it >= 0L }?.let { it / 1000.0 } ?: 0.0
-    val itemDurSec = p?.duration?.takeIf { it != C.TIME_UNSET && it > 0L }?.let { it / 1000.0 } ?: 0.0
+    val posSec = if (validCurrent) {
+      p?.currentPosition?.takeIf { it >= 0L }?.let { it / 1000.0 } ?: initialPosition
+    } else {
+      initialPosition
+    }
+    val itemDurSec = if (validCurrent) {
+      p?.duration?.takeIf { it != C.TIME_UNSET && it > 0L }?.let { it / 1000.0 } ?: 0.0
+    } else {
+      0.0
+    }
     val duration = if (itemDurSec > 0.0) itemDurSec else knownDuration
 
     val payload = mutableMapOf<String, Any>(

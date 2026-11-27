@@ -56,7 +56,7 @@ enum MusicWebLoginPolicy {
       return ["qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin", "euin"]
     }
     if provider == "qishui" {
-      return ["sessionid", "sessionid_ss", "sid_tt", "uid_tt", "uid_tt_ss", "passport_csrf_token", "ttwid", "odin_tt", "sid_guard"]
+      return ["sessionid", "sessionid_ss", "sid_tt", "uid_tt", "uid_tt_ss", "passport_csrf_token", "passport_csrf_token_default", "ttwid", "odin_tt", "sid_guard", "ssid_ucp_v1", "session_tlb_tag"]
     }
     return ["MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid"]
   }

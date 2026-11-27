@@ -21,7 +21,7 @@ export class LyricService {
     const cached=this.cache.get(key);if(cached&&cached.expires>Date.now())return cached.value;
     const save=(value:LyricResult)=>{throwIfAborted(signal);if(epoch!==this.epoch)throw new Error('歌词缓存已更新，请重试');if(usable(value)){this.cache.delete(key);this.cache.set(key,{value,expires:Date.now()+1800000});while(this.cache.size>20)this.cache.delete(this.cache.keys().next().value!);}return value;};
     if(track.origin.kind==='radio')return save(normalizeLyrics(''));
-    if(track.origin.kind==='navidrome'||track.origin.kind==='local'||track.origin.kind==='device'||track.origin.kind==='webdav')return save(normalizeLyrics(await this.privateLyrics(track,signal)));
+    if(track.origin.kind==='navidrome'||track.origin.kind==='local'||track.origin.kind==='device'||track.origin.kind==='webdav'||track.origin.kind==='imported')return save(normalizeLyrics(await this.privateLyrics(track,signal)));
     const platform=track.origin.platform;
     for(const source of sources){
       const capability=source.capabilities.find(item=>item.platform===platform&&item.actions.includes('lyric'));
@@ -37,7 +37,7 @@ export class LyricService {
   private async online(track:Track,signal:AbortSignal):Promise<unknown>{
     if(track.origin.kind!=='online')return '';
     const {platform,id}=track.origin;
-    if(platform==='wy')return this.http(queryURL('https://music.163.com/api/song/lyric',{id,lv:-1,kv:-1,tv:-1,rv:-1}),{},signal);
+    if(platform==='wy')return this.http(queryURL('https://music.163.com/api/song/lyric',{id,lv:-1,kv:-1,tv:-1,rv:-1,yv:-1}),{},signal);
     if(platform==='tx'){
       const songID=Number(track.metadata.id);
       if(this.qrcDecoder&&Number.isSafeInteger(songID)&&songID>0){

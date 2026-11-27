@@ -135,8 +135,8 @@ test('AccountDiscoveryClient fetches QQ and Kugou new songs cleanly', async () =
 });
 
 test('QishuiAccountStore persists active roam mode, bound playlists, likes, and recent tracks', async () => {
-  assert.equal(QISHUI_ROAM_MODES.length, 12);
-  assert.ok(QISHUI_ROAM_MODES.some(m => m.id === 'familiar' && m.title === '熟悉的歌'));
+  assert.equal(QISHUI_ROAM_MODES.length, 48);
+  assert.ok(QISHUI_ROAM_MODES.some(m => m.id === 'familiar' && m.title === '熟悉模式'));
   assert.ok(QISHUI_CURATED_COLLECTIONS.length >= 6);
 
   const mem = new Map<string, unknown>();

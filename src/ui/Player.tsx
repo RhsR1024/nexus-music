@@ -215,7 +215,7 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
         </View>
       </View>
       {canMatch&&<View style={{paddingTop:10,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:s.hairline,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
-        <Text style={{flex:1,color:s.muted,fontSize:12,lineHeight:17}}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?'汽水原曲 · 待匹配':'保留原曲，可选择其他录音版本'}</Text>
+        <Text style={{flex:1,color:s.muted,fontSize:12,lineHeight:17}}>{actualMatch?`正在通过 ${actualMatch.origin.kind==='online'?actualMatch.origin.platform:''} · ${actualMatch.title} 播放`:match?.method==='manual'?'已指定版本，重新播放后使用':entry.track.origin.kind==='imported'?(entry.track.origin.platform==='bodian'?'波点原曲 · 待匹配':'汽水原曲 · 待匹配'):'保留原曲，可选择其他录音版本'}</Text>
         {button('匹配歌曲',()=>openMatch(entry.track,true))}
       </View>}
       {!!detailStatus.text&&<Text style={{color:s.accent,fontSize:12.5}}>{detailStatus.text}</Text>}

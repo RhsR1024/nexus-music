@@ -18,6 +18,7 @@ import {MVDetail} from './MVDetail.tsx';
 import {MVPlazaModal,type MVPlazaTab} from './MVPlazaModal.tsx';
 import {NeteasePodcastsModal} from './NeteasePodcastsModal.tsx';
 import {QishuiDiscoverSection} from './QishuiDiscoverSection.tsx';
+import {BodianDiscoverSection} from './BodianDiscoverSection.tsx';
 import {AccountFeatureSheet,type AccountFeatureKind} from './AccountFeatureSheet.tsx';
 import {classifyDiscoveryFailure,playlistLinkFailure} from '../providers/discoveryFailure.ts';
 import {Cover} from './Cover.tsx';
@@ -36,7 +37,17 @@ import {StyleRecommendationSheet} from './StyleRecommendationSheet.tsx';
 
 type PageView={kind:'featured'}|{kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string}|{kind:'bannerSongs';id:string;title:string;artwork?:string;tracks:readonly Track[]};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'artist';value:ArtistItem}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
-const platforms=[['wy','网易','#E60026'],['tx','QQ','#31C27C'],['kw','酷我','#F5A623'],['kg','酷狗','#2B8CFF'],['mg','咪咕','#E91E63']]as const;
+const platforms=[['wy','网易云','#E60026','musical-notes'],['tx','QQ音乐','#31C27C','musical-note'],['kw','酷我音乐','#F5A623','disc'],['kg','酷狗音乐','#2B8CFF','radio'],['mg','咪咕音乐','#E91E63','headset']]as const;
+type DiscoverPlatformChoice=OnlinePlatform|'qishui'|'bodian';
+const platformOptions:readonly{id:DiscoverPlatformChoice;name:string;color:string;icon:React.ComponentProps<typeof Ionicons>['name']}[]=[
+  {id:'wy',name:'网易云',color:'#E60026',icon:'musical-notes'},
+  {id:'tx',name:'QQ音乐',color:'#31C27C',icon:'musical-note'},
+  {id:'kw',name:'酷我音乐',color:'#F5A623',icon:'disc'},
+  {id:'kg',name:'酷狗音乐',color:'#2B8CFF',icon:'radio'},
+  {id:'mg',name:'咪咕音乐',color:'#E91E63',icon:'headset'},
+  {id:'qishui',name:'汽水音乐',color:'#00C49A',icon:'sparkles'},
+  {id:'bodian',name:'波点音乐',color:'#7C5CFF',icon:'pulse'},
+];
 const styleQuickCards=[
   {title:'华语精选',subtitle:'流行 · 热门',icon:'musical-notes-outline' as const,tint:'rgba(232,61,86,0.12)'},
   {title:'深夜电台',subtitle:'夜晚 · 治愈',icon:'moon-outline' as const,tint:'rgba(116,92,188,0.12)'},
@@ -96,10 +107,12 @@ export function Discovery({
   const [audioMatchOpen,setAudioMatchOpen]=useState(false);
   const [accountFeature,setAccountFeature]=useState<AccountFeatureKind|null>(null);
   const [qishuiTab,setQishuiTab]=useState(false);
+  const [bodianTab,setBodianTab]=useState(false);
+  const [platformSheetOpen,setPlatformSheetOpen]=useState(false);
   const [showBackTop,setShowBackTop]=useState(false);
   const listRef=useRef<FlatList<Item>|null>(null);
   const scrollOffsets=useRef<Record<string,number>>({});
-  const activeScrollKey=qishuiTab?'qishui':`${platform}:${view.kind}`;
+  const activeScrollKey=qishuiTab?'qishui':bodianTab?'bodian':`${platform}:${view.kind}`;
   const bannerScroll=useRef<ScrollView|null>(null),bannerDragging=useRef(false);
   const [category,setCategory]=useState<string>();
   const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[linkLoading,setLinkLoading]=useState(false),[importing,setImporting]=useState(false),[menuTrack,setMenuTrack]=useState<Track|null>(null);
@@ -113,11 +126,11 @@ export function Discovery({
   const page=useRef(0),generation=useRef(0),pending=useRef(new AbortController()),importAbort=useRef(new AbortController()),linkAbort=useRef(new AbortController()),linkGeneration=useRef(0);
   const lastHomePlatform=useRef(preferences.homePlatform);
 
-  // Sync homePlatform preference ONLY when explicitly changed externally (never override active Qishui or current platform selection).
+  // Sync homePlatform preference ONLY when explicitly changed externally (never override active Qishui/Bodian or current platform selection).
   useEffect(()=>{
     if(!initialCollection&&preferences.homePlatform&&preferences.homePlatform!==lastHomePlatform.current){
       lastHomePlatform.current=preferences.homePlatform;
-      if(!qishuiTab&&preferences.homePlatform!==platform&&view.kind!=='detail'){
+      if(!qishuiTab&&!bodianTab&&preferences.homePlatform!==platform&&view.kind!=='detail'){
         setPlatform(preferences.homePlatform);
       }
     }
@@ -135,6 +148,7 @@ export function Discovery({
 
   function selectPlatform(next:OnlinePlatform){
     setQishuiTab(false);
+    setBodianTab(false);
     setPlatform(next);
     setCategory(undefined);
     setFeaturedData(null);
@@ -143,6 +157,23 @@ export function Discovery({
     if(!initialCollection){
       void services.preferences.update({homePlatform:next}).catch(()=>{});
     }
+  }
+
+  function pickDiscoverPlatform(choice:DiscoverPlatformChoice){
+    setPlatformSheetOpen(false);
+    if(choice==='qishui'){
+      setBodianTab(false);
+      setQishuiTab(true);
+      setView({kind:'featured'});
+      return;
+    }
+    if(choice==='bodian'){
+      setQishuiTab(false);
+      setBodianTab(true);
+      setView({kind:'featured'});
+      return;
+    }
+    selectPlatform(choice);
   }
 
   async function loadFeatured(){
@@ -447,15 +478,10 @@ export function Discovery({
         onAction={action=>{void runBatch(action);}}/>}
       {selection.active&&picking&&<PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,shownRows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>toast.show(`已添加 ${selectionCount(selection)} 首到 ${title}`)}/>}
     </>:<>
-      {/* Sollin 01-discover.png: clean display header + universal top-right Globe (全球电台) & Audio Match icons */}
+      {/* Sollin 01-discover.png: clean display header + universal top-right Audio Match & Globe (全球电台) icons */}
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:4}}>
         <Text accessibilityRole="header" style={{fontSize:30,fontWeight:'700',lineHeight:36,color:s.ink,letterSpacing:-0.5}}>发现</Text>
         <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
-          {openSources&&<Pressable accessibilityRole="button" accessibilityLabel="音乐来源设置" onPress={openSources} style={{height:34,paddingHorizontal:12,borderRadius:17,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:5,maxWidth:146}}>
-            <Ionicons name="radio-outline" size={14} color={s.muted}/>
-            <Text numberOfLines={1} style={{color:s.muted,fontSize:12,fontWeight:'600'}}>{activeSource??'无 LX 音源'}</Text>
-            {hasSourceUpdates&&<View style={{width:7,height:7,borderRadius:3.5,backgroundColor:'#E53935'}}/>}
-          </Pressable>}
           <Pressable testID="discovery-audio-match" accessibilityRole="button" accessibilityLabel="打开听歌识曲" onPress={()=>setAudioMatchOpen(true)} style={{width:34,height:34,borderRadius:17,backgroundColor:softSurface,alignItems:'center',justifyContent:'center'}}>
             <Ionicons name="ear-outline" size={17} color={s.ink}/>
           </Pressable>
@@ -465,22 +491,41 @@ export function Discovery({
         </View>
       </View>
 
-      {/* Compact borderless soft-glow platform radio bar (including 汽水) */}
-      <View style={{flexDirection:'row',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-        {platforms.map(([id,name,dot])=>{
-          const selected=!qishuiTab&&platform===id;
-          return <Pressable key={id} accessibilityRole="radio" accessibilityLabel={name} accessibilityState={{selected}} onPress={()=>selectPlatform(id)} style={[{paddingHorizontal:11,paddingVertical:6,borderRadius:16,backgroundColor:selected?segmentActive:'transparent',flexDirection:'row',alignItems:'center',gap:5},selected&&s.cardShadow]}>
-            <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:dot,opacity:selected?1:0.55}}/>
-            <Text style={{color:selected?s.ink:s.muted,fontSize:13,fontWeight:selected?'700':'500'}}>{name}</Text>
-          </Pressable>;
-        })}
-        <Pressable testID="platform-qishui" accessibilityRole="radio" accessibilityLabel="汽水" accessibilityState={{selected:qishuiTab}} onPress={()=>{setQishuiTab(true);setView({kind:'featured'});}} style={[{paddingHorizontal:11,paddingVertical:6,borderRadius:16,backgroundColor:qishuiTab?segmentActive:'transparent',flexDirection:'row',alignItems:'center',gap:5},qishuiTab&&s.cardShadow]}>
-          <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:'#00D6A0',opacity:qishuiTab?1:0.55}}/>
-          <Text style={{color:qishuiTab?s.ink:s.muted,fontSize:13,fontWeight:qishuiTab?'700':'500'}}>汽水</Text>
-        </Pressable>
-      </View>
+      {/* Sollin-style compact platform dropdown + active LX source switcher directly below 发现 */}
+      {(()=>{
+        const activeChoice:DiscoverPlatformChoice=qishuiTab?'qishui':bodianTab?'bodian':platform;
+        const activeMeta=platformOptions.find(opt=>opt.id===activeChoice)??platformOptions[0]!;
+        return <View style={{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap',marginTop:-4}}>
+          <Pressable
+            testID="discovery-platform-trigger"
+            accessibilityRole="button"
+            accessibilityLabel={`切换音乐平台，当前：${activeMeta.name}`}
+            onPress={()=>setPlatformSheetOpen(true)}
+            style={{flexDirection:'row',alignItems:'center',gap:6,paddingVertical:4,paddingRight:4}}
+          >
+            <View style={{width:20,height:20,borderRadius:10,backgroundColor:activeMeta.color,alignItems:'center',justifyContent:'center'}}>
+              <Ionicons name={activeMeta.icon} size={11} color="#FFFFFF"/>
+            </View>
+            <Text style={{color:s.ink,fontSize:14.5,fontWeight:'700'}}>{activeMeta.name}</Text>
+            <Ionicons name="chevron-down" size={14} color={s.muted}/>
+          </Pressable>
+          {openSources&&<>
+            <Text style={{color:s.subtle,fontSize:14}}>·</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="音乐来源设置"
+              onPress={openSources}
+              style={{flexDirection:'row',alignItems:'center',gap:4,paddingVertical:4,maxWidth:180}}
+            >
+              <Text numberOfLines={1} style={{color:s.muted,fontSize:14,fontWeight:'600'}}>{activeSource??'无 LX 音源'}</Text>
+              <Ionicons name="chevron-down" size={13} color={s.muted}/>
+              {hasSourceUpdates&&<View style={{width:7,height:7,borderRadius:3.5,backgroundColor:'#E53935'}}/>}
+            </Pressable>
+          </>}
+        </View>;
+      })()}
 
-      {qishuiTab?<QishuiDiscoverSection services={services}/>:<>
+      {qishuiTab?<QishuiDiscoverSection services={services}/>:bodianTab?<BodianDiscoverSection services={services} openAccounts={openAccounts}/>:<>
       {/* Sollin borderless translucent 3-segment control: 精选 | 榜单 | 歌单 */}
       <View style={{flexDirection:'row',padding:3,borderRadius:24,backgroundColor:segmentTrack}}>
         {([['featured','精选'],['rankings','榜单'],['playlists','歌单']]as const).map(([kind,label])=>{
@@ -666,7 +711,7 @@ export function Discovery({
   </View>;
 
   const content=<View testID="discovery-content" onLayout={event=>{const next=Math.max(1,event.nativeEvent.layout.width-40);setContentWidth(previous=>previous!==undefined&&Math.abs(previous-next)<.5?previous:next);}} style={{flex:1,backgroundColor:embedded?'transparent':theme.palette.background[0],paddingHorizontal:20,paddingTop:embedded?0:54}}>
-    <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'||qishuiTab?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=Math.max(0,e.nativeEvent.contentOffset.y);scrollOffsets.current[activeScrollKey]=y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
+    <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'||qishuiTab||bodianTab?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=Math.max(0,e.nativeEvent.contentOffset.y);scrollOffsets.current[activeScrollKey]=y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
       renderItem={({item,index})=>item.kind==='track'?<View testID={`discovery-track-${index}`} style={{flexDirection:'row',alignItems:'center',gap:8,paddingVertical:9}}>
         {(()=>{const key=item.key??`${index}-track`,checked=selectionHas(selection,key);return <>
         <Pressable accessibilityRole="button" onLongPress={()=>{setPicking(false);setSelection(selectionEnter(key));}} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else services.playTracks(tracks,index);}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放'}${item.track.title}`} accessibilityState={{selected:checked}} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',gap:12}}>
@@ -698,14 +743,50 @@ export function Discovery({
         <Text numberOfLines={2} style={{color:s.ink,fontSize:14,fontWeight:'600',lineHeight:19}}>{item.value.title}</Text>
         <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{item.kind==='artist'?'查看歌曲与专辑':item.value.count!==undefined?`${item.value.author?`${item.value.author} · `:''}${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
-      ListFooterComponent={view.kind==='featured'||qishuiTab?null:<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>} showsVerticalScrollIndicator={false}/>
+      ListFooterComponent={view.kind==='featured'||qishuiTab||bodianTab?null:<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>} showsVerticalScrollIndicator={false}/>
     {showBackTop&&<Pressable testID="discovery-back-top" accessibilityRole="button" accessibilityLabel="返回顶部" onPress={()=>listRef.current?.scrollToOffset({offset:0,animated:true})} style={[{position:'absolute',right:18,bottom:embedded?bottomInset+12:24,width:44,height:44,borderRadius:22,backgroundColor:segmentActive,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:s.cardBorder},s.cardShadow]}>
       <Ionicons name="arrow-up" size={20} color={s.ink}/>
     </Pressable>}
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 
-  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{mvPlazaTab&&<MVPlazaModal services={services} visible initialTab={mvPlazaTab} onClose={()=>setMvPlazaTab(null)} onSelectMV={mv=>{setMvPlazaTab(null);setActiveMV(mv);}}/>}{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/><AccountFeatureSheet services={services} feature={accountFeature} onClose={()=>setAccountFeature(null)} onOpenAccounts={openAccounts} onOpenPlaylist={(plat,pl)=>{setPlatform(plat);openCollection(pl,false);}} onOpenArtist={(plat,ar)=>setNestedCollection({platform:plat,kind:'artist',collection:ar,returnLabel:'返回发现'})} onOpenAlbum={(plat,al)=>setNestedCollection({platform:plat,kind:'album',collection:al,returnLabel:'返回发现'})} onOpenMV={mv=>setActiveMV(mv)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
+  const platformPickerSheet=<Modal visible={platformSheetOpen} transparent animationType="fade" onRequestClose={()=>setPlatformSheetOpen(false)}>
+    <View style={{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(0,0,0,0.42)'}}>
+      <Pressable accessibilityRole="button" accessibilityLabel="关闭平台选择" onPress={()=>setPlatformSheetOpen(false)} style={{flex:1}}/>
+      <View testID="discovery-platform-sheet" style={{backgroundColor:s.dark?'#1F1C20':'#FFF9F5',borderTopLeftRadius:28,borderTopRightRadius:28,paddingHorizontal:18,paddingTop:12,paddingBottom:34,gap:8}}>
+        <View style={{width:38,height:4,borderRadius:2,backgroundColor:s.subtle+'66',alignSelf:'center',marginBottom:8}}/>
+        {platformOptions.map(opt=>{
+          const activeChoice:DiscoverPlatformChoice=qishuiTab?'qishui':bodianTab?'bodian':platform;
+          const selected=activeChoice===opt.id;
+          return <Pressable
+            key={opt.id}
+            testID={`platform-${opt.id}`}
+            accessibilityRole="radio"
+            accessibilityLabel={opt.name}
+            accessibilityState={{selected}}
+            onPress={()=>pickDiscoverPlatform(opt.id)}
+            style={{
+              minHeight:54,
+              paddingHorizontal:14,
+              borderRadius:16,
+              backgroundColor:selected?s.accent:'transparent',
+              flexDirection:'row',
+              alignItems:'center',
+              gap:13,
+            }}
+          >
+            <View style={{width:32,height:32,borderRadius:16,backgroundColor:selected?'rgba(255,255,255,0.22)':opt.color,alignItems:'center',justifyContent:'center'}}>
+              <Ionicons name={opt.icon} size={17} color="#FFFFFF"/>
+            </View>
+            <Text style={{flex:1,fontSize:16,fontWeight:selected?'700':'600',color:selected?'#FFFFFF':s.ink}}>{opt.name}</Text>
+            {selected&&<Ionicons name="checkmark" size={20} color="#FFFFFF"/>}
+          </Pressable>;
+        })}
+      </View>
+    </View>
+  </Modal>;
+
+  const overlays=<>{platformPickerSheet}<DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{mvPlazaTab&&<MVPlazaModal services={services} visible initialTab={mvPlazaTab} onClose={()=>setMvPlazaTab(null)} onSelectMV={mv=>{setMvPlazaTab(null);setActiveMV(mv);}}/>}{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/><AccountFeatureSheet services={services} feature={accountFeature} onClose={()=>setAccountFeature(null)} onOpenAccounts={openAccounts} onOpenPlaylist={(plat,pl)=>{setPlatform(plat);openCollection(pl,false);}} onOpenArtist={(plat,ar)=>setNestedCollection({platform:plat,kind:'artist',collection:ar,returnLabel:'返回发现'})} onOpenAlbum={(plat,al)=>setNestedCollection({platform:plat,kind:'album',collection:al,returnLabel:'返回发现'})} onOpenMV={mv=>setActiveMV(mv)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

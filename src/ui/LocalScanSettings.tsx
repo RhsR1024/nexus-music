@@ -3,6 +3,7 @@ import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, View } 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Modal } from './AdaptiveModal.tsx';
 import { Text, TextInput } from './Typography.tsx';
 import { sollinTokens } from './tokens.ts';
 import { useTheme } from './theme.tsx';
@@ -73,48 +74,49 @@ export function LocalScanSettings({
   const activeFolders = state.folders.filter(folder => roots.some(root => root.id === folder.rootId));
 
   return (
-    <View accessibilityViewIsModal style={StyleSheet.absoluteFill}>
-      <LinearGradient colors={[...s.sheetGradient]} start={{ x: 0.12, y: 0 }} end={{ x: 0.88, y: 1 }} style={StyleSheet.absoluteFill} />
+    <Modal visible={visible} animationType="slide" onRequestClose={() => { if (!busy) onClose(); }}>
+      <View style={{ flex: 1 }}>
+        <LinearGradient colors={[...s.sheetGradient]} start={{ x: 0.12, y: 0 }} end={{ x: 0.88, y: 1 }} style={StyleSheet.absoluteFill} />
 
-      {/* Unified top-left back header */}
-      <View style={{ paddingTop: Math.max(insets.top + 8, 22), paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Pressable
-          testID="local-scan-close"
-          accessibilityRole="button"
-          accessibilityLabel="返回本地音频"
-          accessibilityState={{ disabled: busy }}
-          disabled={busy}
-          onPress={onClose}
-          style={{
-            minHeight: 38,
-            paddingHorizontal: 13,
-            borderRadius: 19,
-            backgroundColor: s.chip,
-            borderWidth: 1,
-            borderColor: s.chipBorder,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            opacity: busy ? 0.5 : 1,
-          }}
+        {/* Unified compact top-left back header (no double top inset) */}
+        <View style={{ paddingTop: Math.max(insets.top + 4, 14), paddingHorizontal: 18, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Pressable
+            testID="local-scan-close"
+            accessibilityRole="button"
+            accessibilityLabel="返回本地音频"
+            accessibilityState={{ disabled: busy }}
+            disabled={busy}
+            onPress={onClose}
+            style={{
+              minHeight: 38,
+              paddingHorizontal: 13,
+              borderRadius: 19,
+              backgroundColor: s.chip,
+              borderWidth: 1,
+              borderColor: s.chipBorder,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            <Ionicons name="chevron-back" size={17} color={s.ink} />
+            <Text style={{ color: s.ink, fontSize: 13.5, fontWeight: '600' }}>返回本地音频</Text>
+          </Pressable>
+          <Text accessibilityRole="header" numberOfLines={1} style={{ flex: 1, color: s.ink, fontSize: 19, fontWeight: '700' }}>
+            文件夹与扫描
+          </Text>
+        </View>
+
+        <View testID="local-scan-viewport" style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: Math.max(insets.bottom + 28, 36), gap: 14 }}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="chevron-back" size={17} color={s.ink} />
-          <Text style={{ color: s.ink, fontSize: 13.5, fontWeight: '600' }}>返回本地音频</Text>
-        </Pressable>
-        <Text accessibilityRole="header" numberOfLines={1} style={{ flex: 1, color: s.ink, fontSize: 19, fontWeight: '700' }}>
-          文件夹与扫描
-        </Text>
-      </View>
-
-      <ScrollView
-        testID="local-scan-viewport"
-        style={{ flex: 1 }}
-        keyboardDismissMode="on-drag"
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: Math.max(insets.bottom + 36, 48), gap: 14 }}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Sync status & primary scan actions */}
         <View style={[{ padding: 16, borderRadius: 22, backgroundColor: s.card, borderWidth: 1, borderColor: s.cardBorder, gap: 12 }, s.cardShadow]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -460,6 +462,8 @@ export function LocalScanSettings({
           </Text>
         </View>
       </ScrollView>
-    </View>
+      </View>
+      </View>
+    </Modal>
   );
 }
