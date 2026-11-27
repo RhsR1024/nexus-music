@@ -9,7 +9,11 @@ import {Ionicons} from '@expo/vector-icons';
 import {Modal} from './AdaptiveModal.tsx';
 import type {Services} from '../app/services.ts';
 import type {OnlinePlatform,Track} from '../domain/track.ts';
-import type {BrowseItem,NeteaseBanner} from '../providers/discovery.ts';
+import type {BrowseItem,FeaturedHomeData,NeteaseBanner} from '../providers/discovery.ts';
+import type {VideoItem} from '../providers/videos.ts';
+import {FeaturedDiscoverFeed} from './FeaturedDiscoverFeed.tsx';
+import {MVDetail} from './MVDetail.tsx';
+import {NeteasePodcastsModal} from './NeteasePodcastsModal.tsx';
 import {classifyDiscoveryFailure,playlistLinkFailure} from '../providers/discoveryFailure.ts';
 import {Cover} from './Cover.tsx';
 import {QualityBadge} from './QualityBadge.tsx';
@@ -25,7 +29,7 @@ import {Toast,useToast} from './Toast.tsx';
 import {selectionToggleAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
 import {StyleRecommendationSheet} from './StyleRecommendationSheet.tsx';
 
-type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string}|{kind:'bannerSongs';id:string;title:string;artwork?:string;tracks:readonly Track[]};
+type PageView={kind:'featured'}|{kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string}|{kind:'bannerSongs';id:string;title:string;artwork?:string;tracks:readonly Track[]};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'artist';value:ArtistItem}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易','#E60026'],['tx','QQ','#31C27C'],['kw','酷我','#F5A623'],['kg','酷狗','#2B8CFF'],['mg','咪咕','#E91E63']]as const;
 const styleQuickCards=[
@@ -73,8 +77,13 @@ export function Discovery({
 
   const [open,setOpen]=useState(!!initialCollection);
   const [platform,setPlatform]=useState<OnlinePlatform>(initialCollection?.platform??preferences.homePlatform??'wy');
-  const [view,setView]=useState<PageView>(initialCollection?{kind:'detail',id:initialCollection.collection.id,title:initialCollection.collection.title,rank:false,artwork:initialCollection.collection.artwork,description:initialCollection.collection.description}:{kind:'playlists'});
+  const [view,setView]=useState<PageView>(initialCollection?{kind:'detail',id:initialCollection.collection.id,title:initialCollection.collection.title,rank:false,artwork:initialCollection.collection.artwork,description:initialCollection.collection.description}:{kind:'featured'});
   const [banners,setBanners]=useState<readonly NeteaseBanner[]>([]),[bannerIndex,setBannerIndex]=useState(0);
+  const [featuredData,setFeaturedData]=useState<FeaturedHomeData|null>(null),[featuredLoading,setFeaturedLoading]=useState(false),[featuredError,setFeaturedError]=useState('');
+  const [activeMV,setActiveMV]=useState<VideoItem|null>(null);
+  const [podcastsOpen,setPodcastsOpen]=useState(false);
+  const [showBackTop,setShowBackTop]=useState(false);
+  const listRef=useRef<FlatList<Item>|null>(null);
   const bannerScroll=useRef<ScrollView|null>(null),bannerDragging=useRef(false);
   const [category,setCategory]=useState<string>();
   const [items,setItems]=useState<readonly Item[]>([]),[more,setMore]=useState(false),[retryAppend,setRetryAppend]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[link,setLink]=useState(''),[message,setMessage]=useState(''),[linkLoading,setLinkLoading]=useState(false),[importing,setImporting]=useState(false),[menuTrack,setMenuTrack]=useState<Track|null>(null);
@@ -97,13 +106,39 @@ export function Discovery({
   function selectPlatform(next:OnlinePlatform){
     setPlatform(next);
     setCategory(undefined);
-    setView({kind:'playlists'});
+    setFeaturedData(null);
+    setView({kind:'featured'});
     if(!initialCollection){
       void services.preferences.update({homePlatform:next}).catch(()=>{});
     }
   }
 
+  async function loadFeatured(){
+    const version=++generation.current;
+    pending.current.abort();
+    pending.current=new AbortController();
+    const signal=pending.current.signal;
+    setFeaturedLoading(true);
+    setFeaturedError('');
+    try{
+      const data=await services.discovery.featured(platform,signal,{
+        latestMVs:platform==='wy'?sig=>services.videos.latestNetease(sig,12):undefined,
+        topMVs:platform==='wy'?sig=>services.videos.topNetease(sig,12):undefined,
+        newAlbums:platform==='wy'?async sig=>(await services.albums.newNetease(1,sig)).items.slice(0,12):undefined,
+        popularArtists:platform==='wy'?async sig=>(await services.artists.popularNetease(1,sig)).items.slice(0,12):undefined,
+      });
+      if(version===generation.current&&!signal.aborted)setFeaturedData(data);
+    }catch(failure){
+      if(version===generation.current&&!signal.aborted){
+        setFeaturedError(classifyDiscoveryFailure(failure).message);
+      }
+    }finally{
+      if(version===generation.current)setFeaturedLoading(false);
+    }
+  }
+
   async function load(append=false){
+    if(view.kind==='featured'){await loadFeatured();return;}
     const version=++generation.current;pending.current.abort();pending.current=new AbortController();const signal=pending.current.signal,next=append?page.current+1:1;
     setRetryAppend(append);
     setLoading(true);setError('');
@@ -403,31 +438,32 @@ export function Discovery({
         })}
       </View>
 
-      {/* Sollin borderless translucent 3-segment control */}
+      {/* Sollin borderless translucent 3-segment control: 精选 | 榜单 | 歌单 */}
       <View style={{flexDirection:'row',padding:3,borderRadius:24,backgroundColor:segmentTrack}}>
-        {([['playlists','精选歌单'],['rankings','榜单'],['categories','分类']]as const).map(([kind,label])=>{
-          const selected=view.kind===kind;
+        {([['featured','精选'],['rankings','榜单'],['playlists','歌单']]as const).map(([kind,label])=>{
+          const selected=view.kind===kind||(kind==='playlists'&&(view.kind==='categories'||view.kind==='artists'||view.kind==='albums'));
           return <Pressable key={kind} accessibilityRole="tab" accessibilityState={{selected}} onPress={()=>setView({kind})} style={[{flex:1,minHeight:38,borderRadius:21,backgroundColor:selected?segmentActive:'transparent',alignItems:'center',justifyContent:'center'},selected&&s.cardShadow]}>
             <Text style={{color:selected?s.ink:s.muted,fontWeight:selected?'700':'500',fontSize:14}}>{label}</Text>
           </Pressable>;
         })}
       </View>
 
-      {/* Sollin 01-discover.png: 5-column rose-tinted circular quick icon grid */}
-      <View style={{flexDirection:'row',justifyContent:'space-between',gap:6,paddingVertical:4}}>
+      {/* Sollin quick icon row (scrollable for rich discovery entry points) */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:14,paddingVertical:4,paddingHorizontal:2}}>
         {[
           {testID:'discovery-popular-artists',label:'热门歌手',a11y:'热门歌手',icon:'mic-outline' as const,active:view.kind==='artists',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'artists'});}},
           {testID:'discovery-new-albums',label:'新碟首发',a11y:'新碟首发',icon:'disc-outline' as const,active:view.kind==='albums',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'albums'});}},
+          {testID:'discovery-podcasts',label:'播客电台',a11y:'打开网易云播客',icon:'headset-outline' as const,active:podcastsOpen,onPress:()=>setPodcastsOpen(true)},
           {testID:undefined,label:'风格推荐',a11y:'打开风格推荐',icon:'sparkles' as const,active:styleOpen,onPress:()=>setStyleOpen(true)},
           {testID:undefined,label:'账号推荐',a11y:'账号与本地推荐',icon:'heart' as const,active:false,onPress:()=>{if(openAccounts)openAccounts();else{setCategory(undefined);setView({kind:'playlists'});}}},
           {testID:undefined,label:'歌单导入',a11y:'展开歌单导入',icon:'albums-outline' as const,active:tools,onPress:()=>setTools(value=>!value)},
-        ].map(shortcut=><Pressable key={shortcut.label} testID={shortcut.testID} accessibilityRole="button" accessibilityLabel={shortcut.a11y} onPress={shortcut.onPress} style={{flex:1,alignItems:'center',gap:7}}>
-          <View style={{width:50,height:50,borderRadius:25,backgroundColor:shortcut.active?s.accent:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
-            <Ionicons name={shortcut.icon} size={22} color={shortcut.active?'#FFFFFF':s.accent}/>
+        ].map(shortcut=><Pressable key={shortcut.label} testID={shortcut.testID} accessibilityRole="button" accessibilityLabel={shortcut.a11y} onPress={shortcut.onPress} style={{width:58,alignItems:'center',gap:6}}>
+          <View style={{width:48,height:48,borderRadius:24,backgroundColor:shortcut.active?s.accent:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+            <Ionicons name={shortcut.icon} size={21} color={shortcut.active?'#FFFFFF':s.accent}/>
           </View>
           <Text numberOfLines={1} style={{color:s.ink,fontSize:11.5,fontWeight:'500'}}>{shortcut.label}</Text>
         </Pressable>)}
-      </View>
+      </ScrollView>
 
       {/* Sollin NetEase horizontal rotating banner carousel (positioned below quick actions, above 风格化推荐) */}
       {embedded&&platform==='wy'&&banners.length>0&&<View testID="netease-banner-carousel" style={{gap:8}}>
@@ -483,12 +519,17 @@ export function Discovery({
 
       {catalogShortcuts}
 
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:4}}>
-        <Text style={{color:s.ink,fontSize:20,fontWeight:'700'}}>{view.kind==='rankings'?'排行榜':view.kind==='categories'?'歌单分类':view.kind==='artists'?'网易热门歌手':view.kind==='albums'?'网易新碟首发':'推荐歌单'}</Text>
-        {!!category&&<Pressable accessibilityRole="button" accessibilityLabel="清除分类筛选" onPress={()=>{setCategory(undefined);setView({kind:'playlists'});}} style={{paddingHorizontal:11,paddingVertical:5,borderRadius:14,backgroundColor:s.accentSoft}}>
-          <Text style={{color:s.accent,fontSize:12,fontWeight:'600'}}>清除分类筛选</Text>
-        </Pressable>}
-      </View>
+      {view.kind!=='featured'&&<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:4}}>
+        <Text style={{color:s.ink,fontSize:20,fontWeight:'700'}}>{view.kind==='rankings'?'排行榜':view.kind==='categories'?'歌单分类':view.kind==='artists'?'网易热门歌手':view.kind==='albums'?'网易新碟首发':category?`歌单 · ${category}`:'歌单广场'}</Text>
+        <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+          {view.kind==='playlists'&&<Pressable accessibilityRole="button" accessibilityLabel="按分类筛选歌单" onPress={()=>setView({kind:'categories'})} style={{paddingHorizontal:11,paddingVertical:5,borderRadius:14,backgroundColor:softSurface}}>
+            <Text style={{color:s.ink,fontSize:12,fontWeight:'600'}}>分类筛选</Text>
+          </Pressable>}
+          {!!category&&<Pressable accessibilityRole="button" accessibilityLabel="清除分类筛选" onPress={()=>{setCategory(undefined);setView({kind:'playlists'});}} style={{paddingHorizontal:11,paddingVertical:5,borderRadius:14,backgroundColor:s.accentSoft}}>
+            <Text style={{color:s.accent,fontSize:12,fontWeight:'600'}}>清除筛选</Text>
+          </Pressable>}
+        </View>
+      </View>}
       {view.kind==='artists'&&<Text testID="popular-artists-count" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:12}}>已加载 {items.length} 位歌手 · 平台公开热门目录</Text>}
       {view.kind==='albums'&&<Text testID="new-albums-count" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:12}}>已加载 {items.length} 张专辑 · 平台公开新碟目录</Text>}
       {(tools||!embedded)&&<View style={{gap:10,padding:14,borderRadius:18,backgroundColor:softSurface}}>
@@ -499,12 +540,31 @@ export function Discovery({
         </View>
         <QishuiImport services={services}/>
       </View>}
+      {view.kind==='featured'&&<FeaturedDiscoverFeed
+        services={services}
+        platform={platform}
+        data={featuredData}
+        loading={featuredLoading}
+        error={featuredError}
+        onRetry={()=>{void loadFeatured();}}
+        onOpenPlaylist={pl=>openCollection(pl,false)}
+        onOpenAlbum={al=>setNestedCollection({platform,kind:'album',collection:al,returnLabel:'返回精选'})}
+        onOpenArtist={ar=>setNestedCollection({platform:'wy',kind:'artist',collection:ar,returnLabel:'返回精选'})}
+        onOpenRank={rank=>openCollection({id:rank.id,title:rank.title,artwork:rank.artwork,description:rank.updateFrequency},true)}
+        onOpenCategory={cat=>{setCategory(cat.id);setView({kind:'playlists'});}}
+        onOpenMV={mv=>setActiveMV(mv)}
+        onOpenMorePlaylists={()=>{setCategory(undefined);setView({kind:'playlists'});}}
+        onOpenMoreRankings={()=>setView({kind:'rankings'})}
+        onOpenMoreAlbums={()=>{setPlatform('wy');setView({kind:'albums'});}}
+        onOpenMoreArtists={()=>{setPlatform('wy');setView({kind:'artists'});}}
+        onOpenSongShelf={(title,shelfTracks)=>{setDescriptionOpen(false);setTotal(shelfTracks.length);setView({kind:'bannerSongs',id:`shelf-${title}`,title,artwork:shelfTracks[0]?.artwork,tracks:shelfTracks});}}
+      />}
     </>}
     {!!message&&<Text accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13,lineHeight:20}}>{message}</Text>}
   </View>;
 
   const content=<View testID="discovery-content" onLayout={event=>{const next=Math.max(1,event.nativeEvent.layout.width-40);setContentWidth(previous=>previous!==undefined&&Math.abs(previous-next)<.5?previous:next);}} style={{flex:1,backgroundColor:embedded?'transparent':theme.palette.background[0],paddingHorizontal:20,paddingTop:embedded?0:54}}>
-    <FlatList key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled"
+    <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=e.nativeEvent.contentOffset.y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
       renderItem={({item,index})=>item.kind==='track'?<View testID={`discovery-track-${index}`} style={{flexDirection:'row',alignItems:'center',gap:8,paddingVertical:9}}>
         {(()=>{const key=item.key??`${index}-track`,checked=selectionHas(selection,key);return <>
         <Pressable accessibilityRole="button" onLongPress={()=>{setPicking(false);setSelection(selectionEnter(key));}} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else services.playTracks(tracks,index);}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放'}${item.track.title}`} accessibilityState={{selected:checked}} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',gap:12}}>
@@ -536,11 +596,14 @@ export function Discovery({
         <Text numberOfLines={2} style={{color:s.ink,fontSize:14,fontWeight:'600',lineHeight:19}}>{item.value.title}</Text>
         <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{item.kind==='artist'?'查看歌曲与专辑':item.value.count!==undefined?`${item.value.author?`${item.value.author} · `:''}${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
-      ListFooterComponent={<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>}/>
+      ListFooterComponent={view.kind==='featured'?null:<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>}/>
+    {showBackTop&&<Pressable testID="discovery-back-top" accessibilityRole="button" accessibilityLabel="返回顶部" onPress={()=>listRef.current?.scrollToOffset({offset:0,animated:true})} style={[{position:'absolute',right:18,bottom:embedded?bottomInset+12:24,width:44,height:44,borderRadius:22,backgroundColor:segmentActive,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:s.cardBorder},s.cardShadow]}>
+      <Ionicons name="arrow-up" size={20} color={s.ink}/>
+    </Pressable>}
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 
-  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
+  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

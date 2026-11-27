@@ -112,6 +112,16 @@ class NexusNativeModule : Module() {
       OnViewDidUpdateProps { view: NexusPublicMVView -> view.applyProps() }
     }
 
+    View(NexusNativeVideoView::class) {
+      Name("NativeVideo")
+      Events("onState")
+      Prop("source") { view: NexusNativeVideoView, value: String -> view.source = value }
+      Prop("active") { view: NexusNativeVideoView, value: Boolean -> view.active = value }
+      Prop("paused") { view: NexusNativeVideoView, value: Boolean -> view.paused = value }
+      Prop("seekTo") { view: NexusNativeVideoView, value: Double -> view.seekTo = value }
+      OnViewDidUpdateProps { view: NexusNativeVideoView -> view.applyProps() }
+    }
+
     View(NexusVinylPivotView::class) { Name("VinylPivot") }
     View(NexusVinylReflectionView::class) { Name("VinylReflection") }
     View(NexusPhotoMaskView::class) {

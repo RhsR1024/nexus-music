@@ -5,6 +5,8 @@ import type {BrowseItem} from './discovery.ts';
 import {requestJSON,requestText,queryURL,type HTTPClient,type TextHTTPClient} from './http.ts';
 import {parseKuwoJSON} from './kuwoJSON.ts';
 import {qqSignature} from './qqSignature.ts';
+import {weapiPayload} from './neteaseCrypto.ts';
+import {DESKTOP_UA} from './neteaseSession.ts';
 import {safePublicURL} from '../storage/cleanTrack.ts';
 type Row=Record<string,unknown>;
 const row=(v:unknown):Row=>v&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
@@ -14,8 +16,10 @@ function id(v:unknown){const s=text(v);if(!/^[A-Za-z0-9_-]{1,128}$/.test(s))thro
 function count(v:unknown){if(v===undefined||v===null)return undefined;if(!['number','string'].includes(typeof v)||!String(v).trim()||!Number.isSafeInteger(Number(v))||Number(v)<0)throw Error('MV数量无效');return Number(v);}
 function duration(v:unknown){if(v===undefined||v===null||v==='')return undefined;const raw=typeof v==='number'&&Number.isFinite(v)?String(v):text(v),parts=raw.split(':');const n=!raw.trim()?NaN:parts.length===1?Number(raw):parts.length===2&&/^\d+:\d{2}$/.test(raw)&&Number(parts[1])<60?Number(parts[0])*60+Number(parts[1]):NaN;if(!Number.isFinite(n)||n<0||n>86400)throw Error('MV时长无效');return n>0?n:undefined;}
 function art(v:unknown){try{const u=new URL(text(v).replace('{size}','400').replace(/^\/\//,'https://'));if(u.protocol==='http:')u.protocol='https:';return safePublicURL(u.href)?u.href:undefined;}catch{return undefined;}}
-export interface VideoItem extends BrowseItem{platform:OnlinePlatform;durationSeconds?:number}
+export interface VideoItem extends BrowseItem{platform:OnlinePlatform;durationSeconds?:number;playCount?:number}
 export interface VideoSearchPage{items:readonly VideoItem[];page:number;total?:number;hasMore:boolean}
+export type VideoResolution=1080|720|480|240;
+export interface VideoStreamResolution{url?:string;resolution:VideoResolution;availableResolutions:readonly VideoResolution[];reason?:string}
 type Dependencies={http?:HTTPClient;textHTTP?:TextHTTPClient;md5:(v:string)=>Promise<string>;sha1:(v:string)=>Promise<string>;deviceId:()=>string;now?:()=>number};
 export class VideoProvider{
  private readonly deps:Dependencies;
@@ -46,5 +50,74 @@ export class VideoProvider{
   if(platform==='mg')return`https://h5.nf.migu.cn/app/v4/p/share/mv/index.html?id=${identity}`;
   // Resolve only the public page ID. Expiring media URLs never enter the model.
   const d=row(await this.http(queryURL('https://m.kugou.com/app/i/mv.php',{cmd:100,hash:identity,ismp3:1,ext:'mp4'}),{},signal));if(signal.aborted)throw Error('已取消');if(d.status!==1||d.errcode!==0)throw Error('MV页面暂不可读取');const pageId=id(d.id);if(!/^\d+$/.test(pageId))throw Error('MV页面标识无效');return`https://www.kugou.com/mvweb/html/mv_${pageId}.html`;
+ }
+ private mapNeteaseMVs(values:unknown):readonly VideoItem[]{
+  if(!Array.isArray(values))return[];
+  const out:VideoItem[]=[];
+  for(const entry of values){
+   try{
+    const v=row(entry),identity=id(v.id),title=clean(v.name);
+    if(!title||title.length>1000||/[\u0000-\u001f\u007f]/.test(title))continue;
+    const author=clean(v.artistName||(Array.isArray(v.artists)?v.artists.map(a=>clean(row(a).name)).filter(Boolean).join(' / '):''));
+    const artwork=art(v.cover??v.imgurl??v.picUrl);
+    const seconds=duration(typeof v.duration==='number'?v.duration/1000:v.duration);
+    const playCount=typeof v.playCount==='number'&&Number.isSafeInteger(v.playCount)&&v.playCount>=0?v.playCount:undefined;
+    out.push({id:identity,title,platform:'wy',...(author?{author:author.slice(0,1000)}:{}),...(artwork?{artwork}:{}),...(seconds!==undefined?{durationSeconds:seconds}:{}),...(playCount!==undefined?{playCount}:{})});
+   }catch{}
+  }
+  return[...new Map(out.map(v=>[v.id,v])).values()];
+ }
+ async latestNetease(signal:AbortSignal,limit=12):Promise<readonly VideoItem[]>{
+  if(signal.aborted)throw Error('已取消');
+  const r=row(await this.http(queryURL('https://music.163.com/api/mv/first',{limit}),{headers:{Referer:'https://music.163.com/','User-Agent':DESKTOP_UA}},signal));
+  if(r.code!==200)throw Error('最新MV暂不可用');
+  return this.mapNeteaseMVs(r.data);
+ }
+ async topNetease(signal:AbortSignal,limit=12):Promise<readonly VideoItem[]>{
+  if(signal.aborted)throw Error('已取消');
+  const enc=weapiPayload({limit,offset:0,total:true});
+  const r=row(await this.http('https://music.163.com/weapi/mv/toplist',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Referer:'https://music.163.com/',Origin:'https://music.163.com','User-Agent':DESKTOP_UA},body:`params=${encodeURIComponent(enc.params)}&encSecKey=${encodeURIComponent(enc.encSecKey)}`},signal));
+  if(r.code!==200)throw Error('MV排行暂不可用');
+  return this.mapNeteaseMVs(r.data);
+ }
+ async resolveStream(platform:OnlinePlatform,item:VideoItem,resolution:VideoResolution,signal:AbortSignal,cookieHeader?:string):Promise<VideoStreamResolution>{
+  if(signal.aborted)throw Error('已取消');
+  if(platform!=='wy'||item.platform!=='wy')return{resolution,availableResolutions:[],reason:'该平台支持官方MV页面播放'};
+  const identity=id(item.id);
+  if(!/^\d+$/.test(identity))return{resolution,availableResolutions:[],reason:'MV标识无效'};
+  const resolutions:readonly VideoResolution[]=[1080,720,480,240];
+  const order=[resolution,...resolutions.filter(r=>r!==resolution)];
+  let lastReason='当前MV暂无直链，已切换官方页面播放';
+  for(const candidate of order){
+   if(signal.aborted)throw Error('已取消');
+   const enc=weapiPayload({id:Number(identity),r:candidate});
+   const r=row(await this.http('https://music.163.com/weapi/song/enhance/play/mv/url',{
+    method:'POST',
+    headers:{
+     'Content-Type':'application/x-www-form-urlencoded',
+     Referer:'https://music.163.com/',
+     Origin:'https://music.163.com',
+     'User-Agent':DESKTOP_UA,
+     Cookie:cookieHeader?`os=pc; appver=2.10.13; ${cookieHeader}`:'os=pc; appver=2.10.13',
+    },
+    body:`params=${encodeURIComponent(enc.params)}&encSecKey=${encodeURIComponent(enc.encSecKey)}`,
+   },signal));
+   const data=row(r.data);
+   const rawUrl=text(data.url).trim();
+   if(rawUrl){
+    try{
+     const parsed=new URL(rawUrl);
+     if(['http:','https:'].includes(parsed.protocol)&&!parsed.username&&!parsed.password){
+      if(parsed.protocol==='http:'&&/\.126\.net$/i.test(parsed.hostname))parsed.protocol='https:';
+      const resolvedRes=([1080,720,480,240].includes(Number(data.r))?Number(data.r):candidate) as VideoResolution;
+      return{url:parsed.toString(),resolution:resolvedRes,availableResolutions:resolutions};
+     }
+    }catch{}
+   }
+   const msg=text(data.msg).trim();
+   if(msg)lastReason=msg;
+   if(Number(data.code)===-125||Number(data.st)===-100)break;
+  }
+  return{resolution,availableResolutions:[],reason:lastReason};
  }
 }

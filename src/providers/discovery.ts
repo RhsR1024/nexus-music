@@ -1,9 +1,11 @@
 import type {OnlinePlatform,Track} from '../domain/track.ts';
 import {onlineTrack} from './online.ts';
 import {DESKTOP_UA} from './neteaseSession.ts';
+import {weapiPayload} from './neteaseCrypto.ts';
 import {parseProviderJSON,queryURL,requestJSON,requestText,type TextHTTPClient,type HTTPClient} from './http.ts';
 import {throwIfAborted} from './async.ts';
 import {qqSignature} from './qqSignature.ts';
+import type {VideoItem} from './videos.ts';
 import {
   mergeStyleRecommendations,
   normalizeStyleSelection,
@@ -16,11 +18,38 @@ const row=(value:unknown):Row=>value&&typeof value==='object'&&!Array.isArray(va
 const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
 const text=(value:unknown)=>typeof value==='string'?value:typeof value==='number'&&Number.isSafeInteger(value)?String(value):'';
 const count=(value:unknown)=>value!==undefined&&value!==null&&Number.isFinite(Number(value))&&Number(value)>=0?Number(value):undefined;
-export interface BrowseItem {id:string;title:string;artwork?:string;description?:string;count?:number;author?:string;released?:string}
+export interface BrowseItem {id:string;title:string;artwork?:string;description?:string;count?:number;author?:string;released?:string;playCount?:number}
 export interface NeteaseBanner {id:string;imageUrl:string;typeTitle:string;titleColor:string;targetType:number;targetId:string;url?:string;song?:Track}
 export interface BrowsePage {items:readonly BrowseItem[];hasMore:boolean;page:number}
 export interface PlaylistPage {title:string;items:readonly Track[];total?:number;hasMore:boolean;page:number;info?:Partial<BrowseItem>;scope?:'popular'|'public'}
 export interface BrowseCategory {id:string;title:string;group?:string}
+export interface OfficialToplistPreview {id:string;title:string;artwork?:string;updateFrequency?:string;tracks:readonly {first:string;second:string}[]}
+export interface FeaturedSongShelf {title:string;tracks:readonly Track[]}
+export interface FeaturedHomeData {
+  recommendedPlaylists:readonly BrowseItem[];
+  curatedSongs?:FeaturedSongShelf;
+  newSongAlbumTracks:readonly Track[];
+  newSongAlbumCards:readonly BrowseItem[];
+  radarPlaylists:readonly BrowseItem[];
+  scenePlaylists:readonly BrowseItem[];
+  videoPlaylists:readonly BrowseItem[];
+  highQualityPlaylists:readonly BrowseItem[];
+  newExpressSongs:readonly Track[];
+  newAlbums:readonly BrowseItem[];
+  popularArtists:readonly {id:string;title:string;artwork?:string}[];
+  officialToplists:readonly OfficialToplistPreview[];
+  newSongChartTitle?:string;
+  newSongChartTracks:readonly Track[];
+  categories:readonly BrowseCategory[];
+  latestMVs:readonly VideoItem[];
+  topMVs:readonly VideoItem[];
+}
+export interface FeaturedHomeHelpers {
+  latestMVs?:(signal:AbortSignal)=>Promise<readonly VideoItem[]>;
+  topMVs?:(signal:AbortSignal)=>Promise<readonly VideoItem[]>;
+  newAlbums?:(signal:AbortSignal)=>Promise<readonly BrowseItem[]>;
+  popularArtists?:(signal:AbortSignal)=>Promise<readonly {id:string;title:string;artwork?:string}[]>;
+}
 function required(value:unknown){const id=text(value);if(!id)throw new Error('平台响应缺少有效ID');return id;}
 function tree(value:unknown,depth=0):Row[]{if(depth>12)return[];if(Array.isArray(value))return value.slice(0,2000).flatMap(item=>tree(item,depth+1));const object=row(value);return Object.keys(object).length?[object,...Object.values(object).filter(item=>item&&typeof item==='object').flatMap(item=>tree(item,depth+1))]:[];}
 function unique(items:BrowseItem[]){
@@ -266,5 +295,244 @@ export class DiscoveryProvider {
       if(!result.hasMore)return{title:title||'公开平台歌单',tracks};
     }
     throw new Error('歌单分页过多，未导入不完整结果');
+  }
+  private async neteaseWeapi(path:string,data:Record<string,unknown>,signal:AbortSignal):Promise<Row>{
+    const enc=weapiPayload(data);
+    return row(await this.http(`https://music.163.com${path}`,{
+      method:'POST',
+      credentials:'omit',
+      headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8',Referer:'https://music.163.com/',Origin:'https://music.163.com','User-Agent':DESKTOP_UA,Cookie:'os=pc; appver=2.10.13'},
+      body:`params=${encodeURIComponent(enc.params)}&encSecKey=${encodeURIComponent(enc.encSecKey)}`,
+    },signal));
+  }
+  private parseHomepagePlaylists(block:Row):BrowseItem[]{
+    const out:BrowseItem[]=[];
+    for(const creative of list(block.creatives)){
+      const c=row(creative);
+      const resources=list(c.resources);
+      const entries=resources.length?resources:[c];
+      for(const res of entries){
+        const r=row(res),ui=row(r.uiElement),ext=row(r.resourceExtInfo);
+        const rid=text(r.resourceId??c.creativeId).trim();
+        const title=text(row(ui.mainTitle).title??r.name).trim();
+        if(!rid||!title)continue;
+        const artwork=text(row(ui.image).imageUrl).trim()||undefined;
+        const playCount=count(ext.playCount);
+        out.push({id:rid,title,...(artwork?{artwork}:{}),...(playCount!==undefined?{playCount}:{})});
+      }
+    }
+    return unique(out);
+  }
+  private parseHomepageSongs(block:Row,limit=10):Track[]{
+    const out:Track[]=[];
+    const seen=new Set<string>();
+    for(const creative of list(block.creatives)){
+      for(const res of list(row(creative).resources)){
+        const r=row(res),ext=row(r.resourceExtInfo),songData=row(ext.songData);
+        if(!Object.keys(songData).length)continue;
+        try{
+          const track=onlineTrack('wy',songData);
+          if(!seen.has(track.origin.id)){
+            seen.add(track.origin.id);
+            out.push(track);
+            if(out.length>=limit)return out;
+          }
+        }catch{}
+      }
+    }
+    return out;
+  }
+  private parseHomepageAlbums(block:Row):BrowseItem[]{
+    const out:BrowseItem[]=[];
+    for(const creative of list(block.creatives)){
+      const c=row(creative);
+      const cType=text(c.creativeType).toUpperCase();
+      if(cType&&!cType.includes('ALBUM')&&!cType.includes('DIGITAL'))continue;
+      for(const res of list(c.resources)){
+        const r=row(res),ui=row(r.uiElement),ext=row(r.resourceExtInfo);
+        const rid=text(r.resourceId).trim();
+        const title=text(row(ui.mainTitle).title).trim();
+        if(!rid||!title)continue;
+        const artwork=text(row(ui.image).imageUrl).trim()||undefined;
+        const artists=list(ext.artists).map(a=>text(row(a).name)).filter(Boolean).join(' / ');
+        out.push({id:rid,title,...(artwork?{artwork}:{}),...(artists?{author:artists}:{})});
+      }
+    }
+    return unique(out);
+  }
+  async featured(platform:OnlinePlatform,signal:AbortSignal,helpers:FeaturedHomeHelpers={}):Promise<FeaturedHomeData>{
+    throwIfAborted(signal);
+    const empty:FeaturedHomeData={
+      recommendedPlaylists:[],
+      newSongAlbumTracks:[],
+      newSongAlbumCards:[],
+      radarPlaylists:[],
+      scenePlaylists:[],
+      videoPlaylists:[],
+      highQualityPlaylists:[],
+      newExpressSongs:[],
+      newAlbums:[],
+      popularArtists:[],
+      officialToplists:[],
+      newSongChartTracks:[],
+      categories:[],
+      latestMVs:[],
+      topMVs:[],
+    };
+    if(platform!=='wy'){
+      const [plRes,rankRes,catRes]=await Promise.allSettled([
+        this.playlists(platform,1,undefined,signal,18),
+        this.rankings(platform,signal),
+        this.categories(platform,signal),
+      ]);
+      throwIfAborted(signal);
+      const recommendedPlaylists=plRes.status==='fulfilled'?plRes.value.items:[];
+      const ranks=rankRes.status==='fulfilled'?rankRes.value:[];
+      const categories=catRes.status==='fulfilled'?catRes.value:[];
+      const officialToplists:OfficialToplistPreview[]=ranks.slice(0,8).map(r=>({
+        id:r.id,
+        title:r.title,
+        ...(r.artwork?{artwork:r.artwork}:{}),
+        ...(r.description?{updateFrequency:r.description.slice(0,24)}:{}),
+        tracks:[],
+      }));
+      let newSongChartTracks:Track[]=[];
+      let newSongChartTitle:string|undefined;
+      if(ranks[0]){
+        try{
+          const topDetail=await this.detail(platform,ranks[0].id,1,signal,true,10);
+          newSongChartTracks=[...topDetail.items.slice(0,10)];
+          newSongChartTitle=ranks[0].title;
+        }catch{}
+      }
+      return{
+        ...empty,
+        recommendedPlaylists,
+        officialToplists,
+        ...(newSongChartTitle?{newSongChartTitle}:{}),
+        newSongChartTracks,
+        categories,
+      };
+    }
+
+    const [hpRes,newSongsRes,hqRes,toplistRes,catRes,albumsRes,artistsRes,latestMvRes,topMvRes]=await Promise.allSettled([
+      this.neteaseWeapi('/weapi/homepage/block/page',{refresh:false},signal),
+      this.http('https://music.163.com/api/v1/discovery/new/songs?type=0',{credentials:'omit',headers:{Referer:'https://music.163.com/','User-Agent':DESKTOP_UA}},signal),
+      this.neteaseWeapi('/weapi/playlist/highquality/list',{cat:'全部',limit:12,lasttime:0,total:true},signal),
+      this.http('https://music.163.com/api/toplist/detail',{credentials:'omit',headers:{Referer:'https://music.163.com/','User-Agent':DESKTOP_UA}},signal),
+      this.categories('wy',signal),
+      helpers.newAlbums?helpers.newAlbums(signal):Promise.resolve([]),
+      helpers.popularArtists?helpers.popularArtists(signal):Promise.resolve([]),
+      helpers.latestMVs?helpers.latestMVs(signal):Promise.resolve([]),
+      helpers.topMVs?helpers.topMVs(signal):Promise.resolve([]),
+    ]);
+    throwIfAborted(signal);
+
+    let recommendedPlaylists:BrowseItem[]=[];
+    let curatedSongs:FeaturedSongShelf|undefined;
+    let newSongAlbumTracks:Track[]=[];
+    let newSongAlbumCards:BrowseItem[]=[];
+    let radarPlaylists:BrowseItem[]=[];
+    let scenePlaylists:BrowseItem[]=[];
+    let videoPlaylists:BrowseItem[]=[];
+
+    if(hpRes.status==='fulfilled'&&hpRes.value.code===200){
+      const blocks=list(row(hpRes.value.data).blocks);
+      for(const entry of blocks){
+        const b=row(entry),code=text(b.blockCode),title=text(row(row(b.uiElement).subTitle).title).trim();
+        if(code==='HOMEPAGE_BLOCK_PLAYLIST_RCMD')recommendedPlaylists=this.parseHomepagePlaylists(b);
+        else if(code==='HOMEPAGE_BLOCK_STYLE_RCMD'){
+          const songs=this.parseHomepageSongs(b,10);
+          if(songs.length)curatedSongs={title:title||'专属精选',tracks:songs};
+        }else if(code==='HOMEPAGE_BLOCK_NEW_ALBUM_NEW_SONG'){
+          newSongAlbumTracks=this.parseHomepageSongs(b,6);
+          newSongAlbumCards=this.parseHomepageAlbums(b);
+        }else if(code==='HOMEPAGE_BLOCK_MGC_PLAYLIST')radarPlaylists=this.parseHomepagePlaylists(b);
+        else if(code==='HOMEPAGE_BLOCK_OFFICIAL_PLAYLIST')scenePlaylists=this.parseHomepagePlaylists(b);
+        else if(code==='HOMEPAGE_BLOCK_VIDEO_PLAYLIST')videoPlaylists=this.parseHomepagePlaylists(b);
+      }
+    }
+
+    if(!recommendedPlaylists.length){
+      try{recommendedPlaylists=[...(await this.playlists('wy',1,undefined,signal,12)).items];}catch{}
+    }
+
+    const newExpressSongs:Track[]=[];
+    if(newSongsRes.status==='fulfilled'){
+      const raw=row(newSongsRes.value);
+      if(raw.code===200){
+        for(const s of list(raw.data).slice(0,10)){
+          try{newExpressSongs.push(onlineTrack('wy',s));}catch{}
+        }
+      }
+    }
+
+    const highQualityPlaylists:BrowseItem[]=[];
+    if(hqRes.status==='fulfilled'&&hqRes.value.code===200){
+      for(const pl of list(hqRes.value.playlists).slice(0,12)){
+        const v=row(pl);
+        try{
+          const mapped=item(v.id,v.name,v.coverImgUrl,v.description,v.trackCount);
+          const pc=count(v.playCount);
+          highQualityPlaylists.push({...mapped,...(pc!==undefined?{playCount:pc}:{})});
+        }catch{}
+      }
+    }
+
+    const officialToplists:OfficialToplistPreview[]=[];
+    let newSongChartId='';
+    let newSongChartTitle='新歌榜';
+    if(toplistRes.status==='fulfilled'){
+      const raw=row(toplistRes.value);
+      if(raw.code===200){
+        for(const entry of list(raw.list)){
+          const v=row(entry),tid=text(v.id),tname=text(v.name).trim();
+          if(!tid||!tname)continue;
+          const previewTracks=list(v.tracks).map(t=>{const tr=row(t);return{first:text(tr.first),second:text(tr.second)};}).filter(t=>t.first);
+          if(previewTracks.length&&officialToplists.length<8){
+            officialToplists.push({
+              id:tid,
+              title:tname,
+              ...(text(v.coverImgUrl)?{artwork:text(v.coverImgUrl)}:{}),
+              ...(text(v.updateFrequency)?{updateFrequency:text(v.updateFrequency)}:{}),
+              tracks:previewTracks.slice(0,3),
+            });
+          }
+          if(!newSongChartId&&tname.includes('新歌榜')){newSongChartId=tid;newSongChartTitle=tname;}
+        }
+      }
+    }
+
+    let newSongChartTracks:Track[]=[];
+    if(newSongChartId){
+      try{
+        const detailPage=await this.detail('wy',newSongChartId,1,signal,true,10);
+        newSongChartTracks=[...detailPage.items.slice(0,10)];
+      }catch{}
+    }
+
+    const newAlbums=albumsRes.status==='fulfilled'?albumsRes.value:[];
+    if(!newSongAlbumCards.length&&newAlbums.length)newSongAlbumCards=[...newAlbums.slice(0,8)];
+    if(!newSongAlbumTracks.length&&newExpressSongs.length)newSongAlbumTracks=newExpressSongs.slice(0,6);
+
+    return{
+      recommendedPlaylists,
+      ...(curatedSongs?{curatedSongs}:{}),
+      newSongAlbumTracks,
+      newSongAlbumCards,
+      radarPlaylists,
+      scenePlaylists,
+      videoPlaylists,
+      highQualityPlaylists,
+      newExpressSongs,
+      newAlbums,
+      popularArtists:artistsRes.status==='fulfilled'?artistsRes.value:[],
+      officialToplists,
+      ...(newSongChartTracks.length?{newSongChartTitle}:{}),
+      newSongChartTracks,
+      categories:catRes.status==='fulfilled'?catRes.value:[],
+      latestMVs:latestMvRes.status==='fulfilled'?latestMvRes.value:[],
+      topMVs:topMvRes.status==='fulfilled'?topMvRes.value:[],
+    };
   }
 }

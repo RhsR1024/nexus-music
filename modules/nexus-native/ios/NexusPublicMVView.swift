@@ -1,6 +1,199 @@
+import AVFoundation
+import AVKit
 import ExpoModulesCore
 import UIKit
 import WebKit
+
+/// Native AVPlayer-backed inline/fullscreen video player for direct MV MP4/HLS streams.
+final class NexusNativeVideoView: ExpoView {
+  let onState = EventDispatcher()
+  private let playerController = AVPlayerViewController()
+  private var player: AVPlayer?
+  private var timeObserver: Any?
+  private var statusObservation: NSKeyValueObservation?
+  private var rateObservation: NSKeyValueObservation?
+  private var endObserver: NSObjectProtocol?
+
+  var source = ""
+  var active = true
+  var paused = false
+  var seekTo: Double = -1
+  private var appliedSource = ""
+  private var appliedSeek: Double = -1
+
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
+    clipsToBounds = true
+    backgroundColor = .black
+    playerController.showsPlaybackControls = true
+    playerController.videoGravity = .resizeAspect
+    playerController.allowsPictureInPicturePlayback = true
+    playerController.view.backgroundColor = .black
+    addSubview(playerController.view)
+
+    let center = NotificationCenter.default
+    for name in [UIApplication.willResignActiveNotification, UIApplication.didEnterBackgroundNotification] {
+      center.addObserver(self, selector: #selector(handleBackground), name: name, object: nil)
+    }
+  }
+
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+    teardownPlayer()
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    playerController.view.frame = bounds
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window == nil {
+      player?.pause()
+    } else if active, !paused {
+      player?.play()
+    }
+  }
+
+  @objc private func handleBackground() {
+    player?.pause()
+  }
+
+  func applyProps() {
+    if source != appliedSource {
+      appliedSource = source
+      teardownPlayer()
+      guard let url = Self.validatedStreamURL(source) else {
+        if !source.isEmpty {
+          onState(["phase": "error", "error": "不支持的视频地址"])
+        }
+        return
+      }
+      configurePlayer(url: url)
+    }
+    if seekTo >= 0, abs(seekTo - appliedSeek) > 0.25, let player {
+      appliedSeek = seekTo
+      let target = CMTime(seconds: seekTo, preferredTimescale: 600)
+      player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+    if !active || paused || window == nil {
+      player?.pause()
+    } else {
+      player?.play()
+    }
+  }
+
+  private func configurePlayer(url: URL) {
+    onState(["phase": "loading", "playing": false])
+    do {
+      let session = AVAudioSession.sharedInstance()
+      try session.setCategory(.playback, mode: .moviePlayback, options: [])
+      try session.setActive(true)
+    } catch {}
+    let headers = [
+      "Referer": "https://music.163.com/",
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148"
+    ]
+    let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+    let item = AVPlayerItem(asset: asset)
+    let avPlayer = AVPlayer(playerItem: item)
+    player = avPlayer
+    playerController.player = avPlayer
+
+    statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+      DispatchQueue.main.async {
+        guard let self, self.player?.currentItem === item else { return }
+        switch item.status {
+        case .readyToPlay:
+          let dur = item.duration.seconds
+          self.onState([
+            "phase": "ready",
+            "playing": (self.player?.rate ?? 0) > 0,
+            "duration": dur.isFinite && dur > 0 ? dur : 0,
+            "position": avPlayer.currentTime().seconds.isFinite ? max(0, avPlayer.currentTime().seconds) : 0
+          ])
+          if self.active && !self.paused && self.window != nil {
+            self.player?.play()
+          }
+        case .failed:
+          self.onState(["phase": "error", "playing": false, "error": "视频流暂时无法播放"])
+        default:
+          break
+        }
+      }
+    }
+
+    rateObservation = avPlayer.observe(\.rate, options: [.new]) { [weak self] player, _ in
+      DispatchQueue.main.async {
+        guard let self, self.player === player else { return }
+        let pos = player.currentTime().seconds
+        let dur = player.currentItem?.duration.seconds ?? 0
+        self.onState([
+          "playing": player.rate > 0,
+          "position": pos.isFinite && pos >= 0 ? pos : 0,
+          "duration": dur.isFinite && dur > 0 ? dur : 0
+        ])
+      }
+    }
+
+    endObserver = NotificationCenter.default.addObserver(
+      forName: .AVPlayerItemDidPlayToEndTime,
+      object: item,
+      queue: .main
+    ) { [weak self] _ in
+      guard let self else { return }
+      let dur = item.duration.seconds
+      self.onState(["phase": "ended", "playing": false, "position": dur.isFinite ? dur : 0, "duration": dur.isFinite ? dur : 0])
+    }
+
+    timeObserver = avPlayer.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] time in
+      guard let self, let player = self.player else { return }
+      let pos = time.seconds
+      let dur = player.currentItem?.duration.seconds ?? 0
+      self.onState([
+        "playing": player.rate > 0,
+        "position": pos.isFinite && pos >= 0 ? pos : 0,
+        "duration": dur.isFinite && dur > 0 ? dur : 0
+      ])
+    }
+
+    if active && !paused && window != nil {
+      avPlayer.play()
+    }
+  }
+
+  private func teardownPlayer() {
+    if let observer = timeObserver, let player {
+      player.removeTimeObserver(observer)
+    }
+    timeObserver = nil
+    statusObservation?.invalidate()
+    statusObservation = nil
+    rateObservation?.invalidate()
+    rateObservation = nil
+    if let endObserver {
+      NotificationCenter.default.removeObserver(endObserver)
+    }
+    endObserver = nil
+    player?.pause()
+    playerController.player = nil
+    player = nil
+  }
+
+  private static func validatedStreamURL(_ raw: String) -> URL? {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed.count <= 4096,
+          let components = URLComponents(string: trimmed),
+          let scheme = components.scheme?.lowercased(),
+          scheme == "https" || scheme == "http",
+          components.user == nil, components.password == nil,
+          let host = components.host, !host.isEmpty else {
+      return nil
+    }
+    return components.url
+  }
+}
 
 final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
   let onState = EventDispatcher()

@@ -688,3 +688,102 @@ class NexusPublicMVView(context: Context, appContext: AppContext) : ExpoView(con
     super.onDetachedFromWindow()
   }
 }
+
+/** Native Android VideoView-backed player for direct MV MP4/HLS streams, parity with iOS NativeVideo. */
+class NexusNativeVideoView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+  val onState by EventDispatcher()
+
+  var source: String = ""
+  var active: Boolean = true
+  var paused: Boolean = false
+  var seekTo: Double = -1.0
+
+  private var appliedSource: String = ""
+  private var appliedSeek: Double = -1.0
+  private var prepared: Boolean = false
+  private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+  private val videoView = android.widget.VideoView(context)
+  private val controller = android.widget.MediaController(context)
+
+  private val progressTicker = object : Runnable {
+    override fun run() {
+      if (prepared) {
+        val posSec = (videoView.currentPosition.coerceAtLeast(0)) / 1000.0
+        val durSec = (videoView.duration.coerceAtLeast(0)) / 1000.0
+        onState(mapOf("playing" to videoView.isPlaying, "position" to posSec, "duration" to durSec))
+      }
+      if (active && isAttachedToWindow) {
+        handler.postDelayed(this, 500L)
+      }
+    }
+  }
+
+  init {
+    setBackgroundColor(Color.BLACK)
+    controller.setAnchorView(videoView)
+    videoView.setMediaController(controller)
+    videoView.setOnPreparedListener { mp ->
+      prepared = true
+      val durSec = (mp.duration.coerceAtLeast(0)) / 1000.0
+      onState(mapOf("phase" to "ready", "playing" to (active && !paused), "position" to 0.0, "duration" to durSec))
+      if (active && !paused) {
+        videoView.start()
+      }
+      handler.removeCallbacks(progressTicker)
+      handler.postDelayed(progressTicker, 500L)
+    }
+    videoView.setOnCompletionListener {
+      val durSec = (videoView.duration.coerceAtLeast(0)) / 1000.0
+      onState(mapOf("phase" to "ended", "playing" to false, "position" to durSec, "duration" to durSec))
+    }
+    videoView.setOnErrorListener { _, _, _ ->
+      prepared = false
+      onState(mapOf("phase" to "error", "playing" to false, "error" to "视频流暂时无法播放"))
+      true
+    }
+    val params = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+    params.gravity = android.view.Gravity.CENTER
+    addView(videoView, params)
+  }
+
+  fun applyProps() {
+    if (source != appliedSource) {
+      appliedSource = source
+      prepared = false
+      handler.removeCallbacks(progressTicker)
+      videoView.stopPlayback()
+      val parsed = try { android.net.Uri.parse(source.trim()) } catch (_: Throwable) { null }
+      val scheme = parsed?.scheme?.lowercase()
+      if (parsed == null || (scheme != "https" && scheme != "http") || parsed.host.isNullOrBlank() || !parsed.userInfo.isNullOrEmpty()) {
+        if (source.isNotBlank()) {
+          onState(mapOf("phase" to "error", "error" to "不支持的视频地址"))
+        }
+        return
+      }
+      onState(mapOf("phase" to "loading", "playing" to false))
+      val headers = mapOf(
+        "Referer" to "https://music.163.com/",
+        "User-Agent" to "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126.0.0.0 Mobile Safari/537.36"
+      )
+      videoView.setVideoURI(parsed, headers)
+    }
+    if (prepared && seekTo >= 0.0 && kotlin.math.abs(seekTo - appliedSeek) > 0.25) {
+      appliedSeek = seekTo
+      videoView.seekTo((seekTo * 1000.0).toInt())
+    }
+    if (!active || paused) {
+      if (videoView.isPlaying) videoView.pause()
+      handler.removeCallbacks(progressTicker)
+    } else if (prepared && !videoView.isPlaying) {
+      videoView.start()
+      handler.removeCallbacks(progressTicker)
+      handler.postDelayed(progressTicker, 500L)
+    }
+  }
+
+  override fun onDetachedFromWindow() {
+    handler.removeCallbacks(progressTicker)
+    videoView.stopPlayback()
+    super.onDetachedFromWindow()
+  }
+}
