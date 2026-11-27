@@ -1,17 +1,20 @@
-// QR protocol adapted from Q-music Android 5db858f, kugouApi.ts
-// (Apache-2.0), with its MakcRe/KuGouMusicApi MIT attribution retained.
+// QR & SMS login protocols adapted from Q-music Android 5db858f, kugouApi.ts
+// (Apache-2.0), with MakcRe/KuGouMusicApi MIT attribution retained (licenses/kugou-api-mit.txt).
 // NexusMusic owns cancellation, validation and storage; no playlist APIs.
 import {bounded,throwIfAborted} from './async.ts';
 import {HTTPResponseError,queryURL,type HTTPClient} from './http.ts';
+import {kugouAesDecrypt,kugouAesEncrypt,kugouRsaEncrypt} from './kugouCrypto.ts';
 import {normalizeAccountAvatar} from '../domain/accountAvatar.ts';
 
 export interface KugouQr {readonly key:string;readonly image:string;readonly mid:string;readonly expiresAt:number}
 export interface KugouSession {readonly userId:string;readonly token:string;readonly mid:string;readonly nickname:string;readonly avatar?:string}
 export type KugouQrResult={status:'waiting'|'scanned'|'expired'}|{status:'connected';session:KugouSession};
+export type KugouLoginErrorKind='cancelled'|'unavailable'|'login_required'|'invalid_input'|'captcha_required';
 export class KugouLoginError extends Error {
-  readonly kind:'cancelled'|'unavailable'|'login_required';
-  constructor(kind:'cancelled'|'unavailable'|'login_required'='unavailable'){
-    super(kind==='cancelled'?'酷狗登录已取消':kind==='login_required'?'酷狗登录已失效，请重新登录':'酷狗登录服务暂时不可用，请重试');this.kind=kind;
+  readonly kind:KugouLoginErrorKind;
+  constructor(kind:KugouLoginErrorKind='unavailable',customMessage?:string){
+    super(customMessage??(kind==='cancelled'?'酷狗登录已取消':kind==='login_required'?'酷狗登录已失效，请重新登录':kind==='invalid_input'?'请输入正确的 11 位手机号和验证码':kind==='captcha_required'?'酷狗触发了人机安全验证，请改用「扫码登录」完成授权':'酷狗登录服务暂时不可用，请重试'));
+    this.kind=kind;
   }
 }
 const row=(value:unknown):Record<string,unknown>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
@@ -76,5 +79,110 @@ export class KugouLoginClient {
     const nickname=typeof data.nickname==='string'&&data.nickname.trim()&&data.nickname.length<=120&&!/[\u0000-\u001f\u007f]/.test(data.nickname)?data.nickname.trim():'酷狗账号';
     const avatar=normalizeAccountAvatar(data.pic??data.picurl);
     return{status:'connected',session:{userId,token:data.token,mid:qr.mid,nickname,...(avatar?{avatar}:{})}};
+  }
+
+  private async androidPost(baseUrl:string,path:string,bodyObj:Record<string,unknown>,mid:string,extraHeaders:Record<string,string>,signal:AbortSignal){
+    return bounded(async child=>{
+      const clienttime=Math.floor(this.now()/1000);
+      const query:Record<string,string|number>={dfid:'-',mid,uuid:'-',appid:1005,clientver:20489,clienttime};
+      const body=JSON.stringify(bodyObj);
+      const salt='OIlwieks28dk2k092lksi2UIkp';
+      const signature=await this.options.md5(salt+Object.keys(query).sort().map(key=>`${key}=${query[key]}`).join('')+body+salt);
+      throwIfAborted(child);
+      if(!/^[a-f0-9]{32}$/.test(signature))throw new KugouLoginError();
+      const result=row(await this.options.http(queryURL(baseUrl+path,{...query,signature}),{
+        method:'POST',
+        credentials:'omit',
+        headers:{'Content-Type':'application/json; charset=UTF-8',dfid:'-',mid,clienttime:String(clienttime),...extraHeaders},
+        body,
+      },child));
+      throwIfAborted(child);
+      return result;
+    },signal,12_000);
+  }
+
+  async sendPhoneCode(rawMobile:string,signal:AbortSignal,existingMid?:string):Promise<{readonly mid:string}>{
+    throwIfAborted(signal);
+    const mobile=rawMobile.trim();
+    if(!/^1\d{10}$/.test(mobile))throw new KugouLoginError('invalid_input','请输入正确的 11 位手机号');
+    const mid=existingMid&&/^[a-f0-9]{32}$/.test(existingMid)?existingMid:await this.options.md5(this.options.nonce());
+    throwIfAborted(signal);
+    if(!/^[a-f0-9]{32}$/.test(mid))throw new KugouLoginError();
+    try{
+      const result=await this.androidPost('https://login.user.kugou.com','/v7/send_mobile_code',{businessid:5,mobile,plat:3},mid,{},signal);
+      const ok=[1,'1'].includes(result.status as number|string)&&(result.error_code===undefined||[0,'0'].includes(result.error_code as number|string));
+      if(ok)return{mid};
+      const errCode=Number(result.error_code??0);
+      const errText=String(result.data??result.error_msg??result.err_msg??'');
+      if(errCode===20028||errCode===30001||/验证|人机|安全|captcha|ssa/i.test(errText)){
+        throw new KugouLoginError('captcha_required');
+      }
+      throw new KugouLoginError('unavailable','验证码发送失败，请稍后重试或改用扫码登录');
+    }catch(error){
+      if(signal.aborted)throw new KugouLoginError('cancelled');
+      if(error instanceof KugouLoginError)throw error;
+      throw new KugouLoginError('unavailable','验证码发送失败，请稍后重试或改用扫码登录');
+    }
+  }
+
+  async loginByPhone(rawMobile:string,rawCode:string,mid:string,signal:AbortSignal):Promise<KugouSession>{
+    throwIfAborted(signal);
+    const mobile=rawMobile.trim(),code=rawCode.trim();
+    if(!/^1\d{10}$/.test(mobile))throw new KugouLoginError('invalid_input','请输入正确的 11 位手机号');
+    if(!/^\d{4,8}$/.test(code))throw new KugouLoginError('invalid_input','请输入有效的短信验证码');
+    const sessionMid=/^[a-f0-9]{32}$/.test(mid)?mid:await this.options.md5(this.options.nonce());
+    throwIfAborted(signal);
+    try{
+      const dateTime=this.now();
+      const encrypted=await kugouAesEncrypt({mobile,code},this.options.md5);
+      throwIfAborted(signal);
+      const maskedMobile=`${mobile.slice(0,2)}*****${mobile.slice(10,11)}`;
+      const paramsKey=await this.options.md5(`1005OIlwieks28dk2k092lksi2UIkp20489${dateTime}`);
+      throwIfAborted(signal);
+      const pk=kugouRsaEncrypt({clienttime_ms:dateTime,key:encrypted.key});
+      const dataMap={
+        plat:1,
+        support_multi:1,
+        t1:0,
+        t2:0,
+        t3:'MCwwLDAsMCwwLDAsMCwwLDA=',
+        clienttime_ms:dateTime,
+        mobile:maskedMobile,
+        key:paramsKey,
+        pk,
+        params:encrypted.str,
+      };
+      const result=await this.androidPost(
+        'https://loginserviceretry.kugou.com',
+        '/v7/login_by_verifycode',
+        dataMap,
+        sessionMid,
+        {'support-calm':'1','User-Agent':'Android16-1070-11440-130-0-LOGIN-wifi'},
+        signal,
+      );
+      if(![1,'1'].includes(result.status as number|string)||(result.error_code!==undefined&&![0,'0'].includes(result.error_code as number|string))||!result.data||typeof result.data!=='object'||Array.isArray(result.data)){
+        throw new KugouLoginError('unavailable','登录失败，请检查验证码是否正确或改用扫码登录');
+      }
+      let merged:Record<string,unknown>={...row(result.data)};
+      if(typeof merged.secu_params==='string'&&merged.secu_params.length>0){
+        const decrypted=await kugouAesDecrypt(merged.secu_params,encrypted.key,this.options.md5);
+        if(decrypted&&typeof decrypted==='object'&&!Array.isArray(decrypted)){
+          merged={...merged,...row(decrypted)};
+        }else if(typeof decrypted==='string'&&decrypted.trim()){
+          merged={...merged,token:decrypted.trim()};
+        }
+      }
+      const userId=numericId(merged.userid);
+      const token=merged.token;
+      if(!userId||!opaque(token))throw new KugouLoginError('unavailable','酷狗登录响应缺少有效凭据，请重试');
+      const rawName=merged.nickname??merged.nick_name??merged.username;
+      const nickname=typeof rawName==='string'&&rawName.trim()&&rawName.length<=120&&!/[\u0000-\u001f\u007f]/.test(rawName)?rawName.trim():'酷狗账号';
+      const avatar=normalizeAccountAvatar(merged.pic??merged.picurl);
+      return{userId,token,mid:sessionMid,nickname,...(avatar?{avatar}:{})};
+    }catch(error){
+      if(signal.aborted)throw new KugouLoginError('cancelled');
+      if(error instanceof KugouLoginError)throw error;
+      throw new KugouLoginError('unavailable','登录失败，请检查验证码是否正确或改用扫码登录');
+    }
   }
 }

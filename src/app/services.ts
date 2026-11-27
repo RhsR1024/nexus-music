@@ -100,6 +100,7 @@ import {QQDailyAuthorization} from '../providers/qqDailyAuthorization.ts';
 import {AccountFmClient} from '../providers/accountFm.ts';
 import {AccountHeartbeat} from '../providers/accountHeartbeat.ts';
 import {MusicWebLoginCoordinator} from '../providers/musicWebLogin.ts';
+import {NeteaseQrLoginClient,NeteaseQrLoginCoordinator} from '../providers/neteaseQrLogin.ts';
 import {KugouLoginClient} from '../providers/kugouLogin.ts';
 import {KugouLoginCoordinator} from '../providers/kugouLoginCoordinator.ts';
 import {QQAccountProfileClient} from '../providers/qqAccountProfile.ts';
@@ -139,6 +140,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const neteasePlaylistTracks=new NeteasePlaylistTracksClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
   const kugouLoginClient=new KugouLoginClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
   const kugouLogin=new KugouLoginCoordinator({client:kugouLoginClient,accounts:musicAccounts});
+  const neteaseQrLogin=new NeteaseQrLoginCoordinator({client:new NeteaseQrLoginClient(),profile:neteaseProfile,accounts:musicAccounts});
   const musicAuth={wy:new MusicAuthFlow<Record<string,unknown>>(),tx:new MusicAuthFlow<Record<string,unknown>>(),kg:new MusicAuthFlow<Record<string,unknown>>()};
   const musicWebLogin=new MusicWebLoginCoordinator({native:loadNativeMusicAuth(),flow:musicAuth.wy,accounts:musicAccounts,profile:neteaseProfile,qqProfile,hash,uuid:Crypto.randomUUID});
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
@@ -152,6 +154,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const qqDailyAuthorization=new QQDailyAuthorization({native:loadNativeMusicAuth(),accounts:musicAccounts,profile:qqProfile,daily:qqDailyClient,hash,uuid:Crypto.randomUUID});
   const qqAccountTransfer=new QQAccountTransfer({native:loadNativeMusicAuth(),accounts:musicAccounts,profile:qqProfile,hash,uuid:Crypto.randomUUID});
   const kugouQrPhoto=new KugouQrPhoto({login:kugouLogin,native:loginQrPhotoNative,uuid:Crypto.randomUUID});
+  const neteaseQrPhoto=new KugouQrPhoto({login:neteaseQrLogin,native:loginQrPhotoNative,uuid:Crypto.randomUUID});
   const accountPlaylists=new AccountPlaylists({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile,library,qq:new QQPlaylists({http:options.onlineHTTP??requestJSON,profile:qqProfile}),kugou:new KugouPlaylists({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value)})});
   const accountAlbums=new AccountAlbums({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile});
   const accountMVs=new AccountMVs({http:options.onlineHTTP??requestJSON,accounts:musicAccounts,profile:neteaseProfile});
@@ -359,7 +362,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

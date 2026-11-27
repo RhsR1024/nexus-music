@@ -101,6 +101,7 @@ class NexusNativeModule : Module() {
       Prop("dark") { view: NexusMaterialView, dark: Boolean -> view.setDark(dark) }
       Prop("variant") { view: NexusMaterialView, variant: String -> view.setVariant(variant) }
       Prop("radius") { view: NexusMaterialView, radius: Double -> view.setRadius(radius) }
+      Prop("intensity") { view: NexusMaterialView, intensity: Int -> view.setIntensity(intensity) }
     }
 
     View(NexusPublicMVView::class) {

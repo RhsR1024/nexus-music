@@ -25,7 +25,7 @@ import {Toast,useToast} from './Toast.tsx';
 import {selectionToggleAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
 import {StyleRecommendationSheet} from './StyleRecommendationSheet.tsx';
 
-type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string};
+type PageView={kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string}|{kind:'bannerSongs';id:string;title:string;artwork?:string;tracks:readonly Track[]};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'artist';value:ArtistItem}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易','#E60026'],['tx','QQ','#31C27C'],['kw','酷我','#F5A623'],['kg','酷狗','#2B8CFF'],['mg','咪咕','#E91E63']]as const;
 const styleQuickCards=[
@@ -122,26 +122,37 @@ export function Discovery({
         values=result.items.map(value=>({kind:'collection',value,rank:false}));hasMore=result.hasMore;
       }
       else if(view.kind==='categories'){values=(await services.discovery.categories(platform,signal)).map(value=>({kind:'category',...value}));}
+      else if(view.kind==='bannerSongs'){
+        let list=[...view.tracks];
+        if(!list.length&&/^\d+$/.test(view.id)&&typeof services.discovery.neteaseSongs==='function'){
+          const resolved=await services.discovery.neteaseSongs([view.id],signal);
+          const hit=resolved.get(view.id);
+          if(hit)list=[hit];
+        }
+        values=list.map(track=>({kind:'track',track}));
+        detailTotal=list.length;
+      }
       else{const result=initialCollection?.kind==='artist'?await services.artists.songs(platform,initialCollection.collection,next,signal):initialCollection?.kind==='album'?await services.albums.detail(platform,initialCollection.collection,next,signal):await services.discovery.detail(platform,view.id,next,signal,view.rank);values=result.items.map(track=>({kind:'track',track}));hasMore=result.hasMore;detailTotal=result.total;if(initialCollection?.kind==='artist'&&version===generation.current&&!signal.aborted){setArtistInfo(result.info??{});setPopular(result.scope==='popular');}if(initialCollection?.kind==='album'&&version===generation.current&&!signal.aborted){setAlbumInfo(result.info??{});setPublicAlbum(result.scope==='public');}}
       if(version!==generation.current||signal.aborted)return;
-      if(view.kind==='detail')setTotal(detailTotal);
+      if(view.kind==='detail'||view.kind==='bannerSongs')setTotal(detailTotal);
       setItems(old=>append?[...old,...values]:values);setMore(hasMore);setRetryAppend(false);page.current=next;
     }catch(failure){if(version===generation.current&&!signal.aborted){const result=classifyDiscoveryFailure(failure);setError(append||items.length?retainedCopy(result.message,'已加载内容保留。'):result.message);}}
     finally{if(version===generation.current)setLoading(false);}
   }
+  const inDetail=view.kind==='detail'||view.kind==='bannerSongs';
   useEffect(()=>{if(open||embedded){setItems([]);setQuery('');setSort('original');setMore(false);setRetryAppend(false);setImporting(false);setMessage('');page.current=0;void load();}return()=>{generation.current++;pending.current.abort();importAbort.current.abort();linkGeneration.current++;linkAbort.current.abort();};},[open,embedded,platform,view,category,artistAlbums]);
 
   useEffect(()=>{
-    if(!embedded||platform!=='wy'||view.kind==='detail'){setBanners([]);setBannerIndex(0);return;}
+    if(!embedded||platform!=='wy'){setBanners([]);setBannerIndex(0);return;}
     const controller=new AbortController();
     void services.discovery.banners('wy',controller.signal).then(result=>{
       if(!controller.signal.aborted){setBanners(result);setBannerIndex(0);}
     }).catch(()=>{if(!controller.signal.aborted)setBanners([]);});
     return()=>controller.abort();
-  },[embedded,platform,view.kind,services]);
+  },[embedded,platform,services]);
 
   useEffect(()=>{
-    if(!embedded||platform!=='wy'||view.kind==='detail'||banners.length<2)return;
+    if(!embedded||platform!=='wy'||inDetail||banners.length<2)return;
     const widthStep=contentWidth??Math.max(1,width-40);
     const timer=setInterval(()=>{
       if(bannerDragging.current)return;
@@ -152,10 +163,22 @@ export function Discovery({
       });
     },5000);
     return()=>clearInterval(timer);
-  },[embedded,platform,view.kind,banners.length,contentWidth,width]);
+  },[embedded,platform,inDetail,banners.length,contentWidth,width]);
 
   function openBanner(banner:NeteaseBanner){
-    if(banner.targetType===1&&banner.song){services.playTracks([banner.song],0);return;}
+    if(banner.targetType===1&&(banner.song||(banner.targetId&&/^\d+$/.test(banner.targetId)))){
+      const song=banner.song;
+      setDescriptionOpen(false);
+      setTotal(song?1:undefined);
+      setView({
+        kind:'bannerSongs',
+        id:song?.origin.id??banner.targetId,
+        title:song?.title||banner.typeTitle||'新歌首发',
+        artwork:song?.artwork??banner.imageUrl,
+        tracks:song?[song]:[],
+      });
+      return;
+    }
     if(banner.targetType===10&&banner.targetId&&/^\d+$/.test(banner.targetId)){
       setNestedCollection({platform:'wy',kind:'album',collection:{id:banner.targetId,title:banner.typeTitle||'推荐专辑',artwork:banner.imageUrl},returnLabel:'返回发现'});
       return;
@@ -193,8 +216,8 @@ export function Discovery({
   const loadedTracks=useMemo(()=>items.flatMap(item=>item.kind==='track'?[item.track]:[]),[items]);
   const shownRows=useMemo(()=>viewTrackRows(trackRows(loadedTracks),query,sort),[loadedTracks,query,sort]);
   const tracks=useMemo(()=>shownRows.map(row=>row.track),[shownRows]);
-  const displayed:readonly Item[]=view.kind==='detail'&&!artistAlbums?shownRows.map(row=>({kind:'track',track:row.track,key:row.key})):items;
-  useEffect(()=>{setSelection(selectionNone);setPicking(false);},[view.kind,view.kind==='detail'?view.id:'',platform,query,artistAlbums]);
+  const displayed:readonly Item[]=(view.kind==='detail'&&!artistAlbums)||view.kind==='bannerSongs'?shownRows.map(row=>({kind:'track',track:row.track,key:row.key})):items;
+  useEffect(()=>{setSelection(selectionNone);setPicking(false);},[view.kind,view.kind==='detail'||view.kind==='bannerSongs'?view.id:'',platform,query,artistAlbums]);
   useEffect(()=>{setSelection(current=>{const valid=new Set(shownRows.map(row=>row.key));const kept=current.ids.filter(key=>valid.has(key));return kept.length===current.ids.length?current:{...current,ids:kept};});},[shownRows]);
 
   async function runBatch(action:BatchAction){
@@ -231,7 +254,7 @@ export function Discovery({
 
   const usableWidth=contentWidth??Math.max(1,width-40);
   const gridColumns=Math.max(1,Math.min(4,Math.floor((usableWidth+14)/(156*Math.max(1,fontScale)+14))));
-  const columns=view.kind==='detail'&&!artistAlbums?1:view.kind==='rankings'?1:gridColumns;
+  const columns=(view.kind==='detail'&&!artistAlbums)||view.kind==='bannerSongs'?1:view.kind==='rankings'?1:gridColumns;
   const cardWidth=Math.max(1,Math.min(240,(usableWidth-14*(columns-1))/columns));
   const openCollection=(item:BrowseItem,rank:boolean)=>{setDescriptionOpen(false);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank,artwork:item.artwork,description:item.description});};
   const albumMetadata=initialCollection?.kind==='album'?{...initialCollection.collection,...albumInfo}:undefined;
@@ -243,21 +266,50 @@ export function Discovery({
   const refreshLabel=initialCollection?.kind==='artist'?'刷新艺术家':initialCollection?.kind==='album'?'刷新专辑':'刷新歌单';
 
   const header=<View style={{gap:14,paddingBottom:12}}>
-    {(!embedded||view.kind==='detail')&&<View style={{flexDirection:'row',gap:8,alignItems:'center',justifyContent:'space-between'}}>
+    {(!embedded||inDetail)&&<View style={{flexDirection:'row',gap:8,alignItems:'center',justifyContent:'space-between'}}>
       <View style={{flexDirection:'row',gap:8,alignItems:'center',flex:1}}>
         {!embedded&&<Pressable accessibilityRole="button" accessibilityLabel={initialCollection?initialCollection.returnLabel??'返回搜索结果':'收起发现'} onPress={close} style={{minHeight:38,paddingHorizontal:12,borderRadius:19,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:4}}>
           <Ionicons name="chevron-back" size={18} color={s.ink}/>
           <Text numberOfLines={1} style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{initialCollection?initialCollection.returnLabel??'返回搜索结果':'收起发现'}</Text>
         </Pressable>}
-        {view.kind==='detail'&&!initialCollection&&<Pressable accessibilityRole="button" accessibilityLabel="返回歌单广场" onPress={()=>setView({kind:'playlists'})} style={{minHeight:38,paddingHorizontal:12,borderRadius:19,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:4}}>
+        {inDetail&&!initialCollection&&<Pressable accessibilityRole="button" accessibilityLabel={view.kind==='bannerSongs'?'返回发现':'返回歌单广场'} onPress={()=>setView({kind:'playlists'})} style={{minHeight:38,paddingHorizontal:12,borderRadius:19,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:4}}>
           <Ionicons name="chevron-back" size={18} color={s.ink}/>
-          <Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>返回歌单广场</Text>
+          <Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{view.kind==='bannerSongs'?'返回发现':'返回歌单广场'}</Text>
         </Pressable>}
       </View>
-      {view.kind==='detail'&&<Text numberOfLines={1} style={{color:s.muted,fontSize:13,fontWeight:'600',maxWidth:'42%'}}>{currentPlatform[1]}</Text>}
+      {inDetail&&<Text numberOfLines={1} style={{color:s.muted,fontSize:13,fontWeight:'600',maxWidth:'42%'}}>{currentPlatform[1]}</Text>}
     </View>}
 
-    {view.kind==='detail'?<>
+    {view.kind==='bannerSongs'?<>
+      {/* Sollin _NeteaseStaticSongsPage: borderless artwork + title + 1 首 + Play/Shuffle + 歌曲 N */}
+      <View testID="netease-banner-song-page" style={{flexDirection:'row',alignItems:'center',gap:16,paddingTop:4}}>
+        <View style={s.cardShadow}><Cover services={services} url={view.tracks[0]?.artwork??view.artwork} size={122} radius={16}/></View>
+        <View style={{flex:1,gap:6}}>
+          <Text accessibilityRole="header" numberOfLines={3} style={{fontSize:21,fontWeight:'700',lineHeight:27,color:s.ink}}>{view.title}</Text>
+          <Text style={{color:s.muted,fontSize:13}}>{loadedTracks.length} 首</Text>
+        </View>
+      </View>
+      {tracks.length>0&&<View style={{flexDirection:'row',gap:10,paddingTop:2}}>
+        <Pressable accessibilityRole="button" accessibilityLabel="播放" onPress={()=>services.playTracks(tracks,0)} style={{flex:1,minHeight:46,borderRadius:14,backgroundColor:playPrimaryBg,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,paddingHorizontal:12}}>
+          <Ionicons name="play" size={16} color={playPrimaryInk}/>
+          <Text numberOfLines={1} style={{color:playPrimaryInk,fontSize:14,fontWeight:'600'}}>播放</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="随机播放" onPress={()=>{void services.preferences.update({repeat:'off',shuffle:true}).then(()=>services.playTracks(tracks,0)).catch(()=>setMessage('无法保存随机模式，请重试'));}} style={{flex:1,minHeight:46,borderRadius:14,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,paddingHorizontal:12}}>
+          <Ionicons name="shuffle" size={17} color={s.ink}/>
+          <Text numberOfLines={1} style={{color:s.ink,fontSize:14,fontWeight:'600'}}>随机播放</Text>
+        </Pressable>
+      </View>}
+      <View style={{flexDirection:'row',alignItems:'baseline',gap:8,paddingTop:4}}>
+        <Text style={{color:s.ink,fontSize:17,fontWeight:'700'}}>歌曲</Text>
+        <Text style={{color:s.muted,fontSize:14,fontWeight:'600',fontVariant:['tabular-nums']}}>{tracks.length}</Text>
+      </View>
+      {(tracks.length>3||!!query)&&<TrackListTools query={query} onQuery={setQuery} sort={sort} onSort={setSort} label="搜索已加载歌曲歌手专辑"/>}
+      {selection.active&&!picking&&<BatchSelectionBar count={selectionCount(selection)} total={shownRows.length} allSelected={shownRows.length>0&&selectionCount(selection)===shownRows.length} actions={['favorite','playlist','next','download']} busy={busy} testPrefix="discovery"
+        onSelectAll={()=>setSelection(current=>selectionToggleAll(current,shownRows.map(row=>row.key)))}
+        onCancel={()=>{setSelection(selectionNone);setPicking(false);}}
+        onAction={action=>{void runBatch(action);}}/>}
+      {selection.active&&picking&&<PlaylistPicker inline services={services} tracks={selectionByListOrder(selection,shownRows,row=>row.key).map(row=>row.track)} visible onClose={()=>setPicking(false)} onAdded={title=>toast.show(`已添加 ${selectionCount(selection)} 首到 ${title}`)}/>}
+    </>:view.kind==='detail'?<>
       {/* Sollin 02-playlist.png: borderless floating artwork + metadata directly over warm blush ambient */}
       <View style={{flexDirection:'row',alignItems:'center',gap:16,paddingTop:4}}>
         <View style={s.cardShadow}><Cover services={services} url={artistMetadata?.artwork??view.artwork} size={122} radius={16}/></View>
@@ -349,30 +401,6 @@ export function Discovery({
         })}
       </View>
 
-      {/* Sollin NetEase horizontal rotating banner carousel */}
-      {embedded&&platform==='wy'&&banners.length>0&&<View testID="netease-banner-carousel" style={{gap:8}}>
-        <View style={[{borderRadius:18,overflow:'hidden',backgroundColor:softSurface},s.cardShadow]}>
-          <ScrollView ref={bannerScroll} horizontal pagingEnabled showsHorizontalScrollIndicator={false} scrollEventThrottle={32}
-            onScrollBeginDrag={()=>{bannerDragging.current=true;}}
-            onScrollEndDrag={()=>{bannerDragging.current=false;}}
-            onMomentumScrollEnd={event=>{
-              bannerDragging.current=false;
-              const idx=Math.round(event.nativeEvent.contentOffset.x/Math.max(1,usableWidth));
-              setBannerIndex(Math.max(0,Math.min(banners.length-1,idx)));
-            }}>
-            {banners.map((banner,idx)=><Pressable key={`${banner.id}-${idx}`} testID={`netease-banner-${idx}`} accessibilityRole="button" accessibilityLabel={banner.typeTitle?`网易云推荐横幅：${banner.typeTitle}`:'网易云推荐横幅'} onPress={()=>openBanner(banner)} style={{width:usableWidth,height:Math.round(Math.min(200,Math.max(132,usableWidth/2.55)))}}>
-              <Image source={{uri:banner.imageUrl}} resizeMode="cover" style={StyleSheet.absoluteFill}/>
-              {!!banner.typeTitle&&<View style={{position:'absolute',right:10,bottom:10,paddingHorizontal:9,paddingVertical:3.5,borderRadius:999,backgroundColor:banner.titleColor==='blue'?'rgba(43,140,255,0.88)':'rgba(230,57,70,0.88)'}}>
-                <Text style={{color:'#FFFFFF',fontSize:11,fontWeight:'700'}}>{banner.typeTitle}</Text>
-              </View>}
-            </Pressable>)}
-          </ScrollView>
-        </View>
-        {banners.length>1&&<View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:5}}>
-          {banners.map((banner,idx)=><View key={`${banner.id}-dot-${idx}`} style={{width:idx===bannerIndex?16:5,height:5,borderRadius:2.5,backgroundColor:idx===bannerIndex?s.accent:s.subtle+'66'}}/>)}
-        </View>}
-      </View>}
-
       {/* Sollin borderless translucent 3-segment control */}
       <View style={{flexDirection:'row',padding:3,borderRadius:24,backgroundColor:segmentTrack}}>
         {([['playlists','精选歌单'],['rankings','榜单'],['categories','分类']]as const).map(([kind,label])=>{
@@ -398,6 +426,30 @@ export function Discovery({
           <Text numberOfLines={1} style={{color:s.ink,fontSize:11.5,fontWeight:'500'}}>{shortcut.label}</Text>
         </Pressable>)}
       </View>
+
+      {/* Sollin NetEase horizontal rotating banner carousel (positioned below quick actions, above 风格化推荐) */}
+      {embedded&&platform==='wy'&&banners.length>0&&<View testID="netease-banner-carousel" style={{gap:8}}>
+        <View style={[{borderRadius:18,overflow:'hidden',backgroundColor:softSurface},s.cardShadow]}>
+          <ScrollView ref={bannerScroll} horizontal pagingEnabled showsHorizontalScrollIndicator={false} scrollEventThrottle={32}
+            onScrollBeginDrag={()=>{bannerDragging.current=true;}}
+            onScrollEndDrag={()=>{bannerDragging.current=false;}}
+            onMomentumScrollEnd={event=>{
+              bannerDragging.current=false;
+              const idx=Math.round(event.nativeEvent.contentOffset.x/Math.max(1,usableWidth));
+              setBannerIndex(Math.max(0,Math.min(banners.length-1,idx)));
+            }}>
+            {banners.map((banner,idx)=><Pressable key={`${banner.id}-${idx}`} testID={`netease-banner-${idx}`} accessibilityRole="button" accessibilityLabel={banner.typeTitle?`网易云推荐横幅：${banner.typeTitle}`:'网易云推荐横幅'} onPress={()=>openBanner(banner)} style={{width:usableWidth,height:Math.round(Math.min(200,Math.max(132,usableWidth/2.55)))}}>
+              <Image source={{uri:banner.imageUrl}} resizeMode="cover" style={StyleSheet.absoluteFill}/>
+              {!!banner.typeTitle&&<View style={{position:'absolute',left:10,bottom:10,paddingHorizontal:10,paddingVertical:4,borderRadius:999,backgroundColor:'rgba(0,0,0,0.55)'}}>
+                <Text style={{color:'#FFFFFF',fontSize:11.5,fontWeight:'700'}}>{banner.typeTitle}</Text>
+              </View>}
+            </Pressable>)}
+          </ScrollView>
+        </View>
+        {banners.length>1&&<View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:5}}>
+          {banners.map((banner,idx)=><View key={`${banner.id}-dot-${idx}`} style={{width:idx===bannerIndex?16:5,height:5,borderRadius:2.5,backgroundColor:idx===bannerIndex?s.accent:s.subtle+'66'}}/>)}
+        </View>}
+      </View>}
 
       {/* Sollin 01-discover.png: borderless 风格化推荐 section + horizontal style cards */}
       <View style={{gap:10,paddingTop:2}}>
@@ -482,7 +534,7 @@ export function Discovery({
         <Text numberOfLines={2} style={{color:s.ink,fontSize:14,fontWeight:'600',lineHeight:19}}>{item.value.title}</Text>
         <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{item.kind==='artist'?'查看歌曲与专辑':item.value.count!==undefined?`${item.value.author?`${item.value.author} · `:''}${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
-      ListFooterComponent={<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&view.kind!=='detail'&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(view.kind==='detail'||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View></View>}/>
+      ListFooterComponent={<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>}/>
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 

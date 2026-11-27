@@ -10,6 +10,7 @@ final class NexusMaterialView: ExpoView {
   private var dark = false
   private var variant = "liquid"
   private var cornerRadius: CGFloat = 30
+  private var intensity: Int = 2
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
@@ -40,17 +41,39 @@ final class NexusMaterialView: ExpoView {
     applyCornerRadius()
   }
 
+  func setIntensity(_ value: Int) {
+    let next = min(5, max(1, value))
+    guard self.intensity != next else { return }
+    self.intensity = next
+    applyEffect()
+  }
+
   private func applyEffect() {
+    let level = min(5, max(1, intensity))
     if #available(iOS 26.0, *), variant == "liquid" {
-      let glass = UIGlassEffect(style: .regular)
+      let glass = UIGlassEffect(style: level <= 2 ? .clear : .regular)
+      let lightAlphas: [CGFloat] = [0.02, 0.08, 0.14, 0.24, 0.38]
+      let darkAlphas: [CGFloat] = [0.04, 0.10, 0.16, 0.24, 0.36]
+      let alpha = dark ? darkAlphas[level - 1] : lightAlphas[level - 1]
       glass.tintColor = dark
-        ? UIColor(red: 0.14, green: 0.11, blue: 0.17, alpha: 0.24)
-        : UIColor(red: 1.0, green: 0.985, blue: 0.99, alpha: 0.28)
+        ? UIColor(red: 0.14, green: 0.11, blue: 0.17, alpha: alpha)
+        : UIColor(red: 1.0, green: 0.985, blue: 0.99, alpha: alpha)
+      material.alpha = 1.0
       material.effect = glass
     } else if variant == "frosted" {
-      material.effect = UIBlurEffect(style: dark ? .systemThinMaterialDark : .systemThinMaterialLight)
+      let styles: [UIBlurEffect.Style] = dark
+        ? [.systemUltraThinMaterialDark, .systemUltraThinMaterialDark, .systemThinMaterialDark, .systemMaterialDark, .systemThickMaterialDark]
+        : [.systemUltraThinMaterialLight, .systemUltraThinMaterialLight, .systemThinMaterialLight, .systemMaterialLight, .systemThickMaterialLight]
+      let alphas: [CGFloat] = [0.76, 0.90, 0.96, 1.0, 1.0]
+      material.alpha = alphas[level - 1]
+      material.effect = UIBlurEffect(style: styles[level - 1])
     } else {
-      material.effect = UIBlurEffect(style: dark ? .systemUltraThinMaterialDark : .systemUltraThinMaterialLight)
+      let styles: [UIBlurEffect.Style] = dark
+        ? [.systemUltraThinMaterialDark, .systemUltraThinMaterialDark, .systemThinMaterialDark, .systemMaterialDark, .systemThickMaterialDark]
+        : [.systemUltraThinMaterialLight, .systemUltraThinMaterialLight, .systemThinMaterialLight, .systemMaterialLight, .systemThickMaterialLight]
+      let alphas: [CGFloat] = [0.68, 0.84, 0.94, 1.0, 1.0]
+      material.alpha = alphas[level - 1]
+      material.effect = UIBlurEffect(style: styles[level - 1])
     }
     applyCornerRadius()
   }

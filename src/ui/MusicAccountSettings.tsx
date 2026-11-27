@@ -1,6 +1,6 @@
 import {QQAccountTransferCard} from './QQAccountTransferCard.tsx';
 import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {ActivityIndicator,Pressable,StyleSheet,View} from 'react-native';
+import {ActivityIndicator,AppState,Image,Pressable,StyleSheet,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {MusicWebLoginProvider} from '../providers/musicWebLogin.ts';
@@ -11,6 +11,7 @@ import {sollinTokens} from './tokens.ts';
 import {QQDailyAuthorizationCard} from './QQDailyAuthorizationCard.tsx';
 import {KugouAccountCard} from './KugouAccountCard.tsx';
 import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
+import {neteaseQrBusy} from '../providers/neteaseQrLogin.ts';
 import {AccountPlaylistImport} from './AccountPlaylistImport.tsx';
 import {AccountAlbumCatalog,AccountMVCatalog} from './AccountAlbumCatalog.tsx';
 import {Cover} from './Cover.tsx';
@@ -21,11 +22,15 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
   const auth=useSyncExternalStore(services.musicWebLogin.subscribe,services.musicWebLogin.getSnapshot);
+  const wyQr=useSyncExternalStore(services.neteaseQrLogin.subscribe,services.neteaseQrLogin.getSnapshot);
+  const wyQrPhoto=useSyncExternalStore(services.neteaseQrPhoto.subscribe,services.neteaseQrPhoto.getSnapshot);
+  const wyQrImage=useRef<Image|null>(null);
   const kugouAuth=useSyncExternalStore(services.kugouLogin.subscribe,services.kugouLogin.getSnapshot);
   const dailyAuth=useSyncExternalStore(services.qqDailyAuthorization.subscribe,services.qqDailyAuthorization.getSnapshot);
   const transfer=useSyncExternalStore(services.qqAccountTransfer.subscribe,services.qqAccountTransfer.getSnapshot);
   const transferWaiting=['scanning','connecting','verifying','confirm','saving'].includes(transfer.status);
   const dailyWaiting=dailyAuth.status==='waiting';
+  const wyQrWaiting=neteaseQrBusy(wyQr.status);
   const [selectedPlatform,setSelectedPlatform]=useState<AccountPlatformTab>('wy');
   const [error,setError]=useState('');
   const [verifying,setVerifying]=useState('');
@@ -36,13 +41,16 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const txTab={id:'tx' as const,label:'QQ 音乐',title:'QQ 音乐',icon:'disc-outline' as const,tint:s.dark?'rgba(49,194,124,0.18)':'rgba(49,194,124,0.12)',ink:s.dark?'#5EE0A0':'#1B9C5E'};
   const kgTab={id:'kg' as const,label:'酷狗',title:'酷狗音乐',icon:'radio-outline' as const,tint:s.dark?'rgba(62,152,255,0.18)':'rgba(32,126,232,0.12)',ink:s.dark?'#6BB4FF':'#1E72D8'};
   const tabs=[wyTab,txTab,kgTab] as const;
-  const webWaiting=auth.status==='waiting',waiting=webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting||transferWaiting;
-  useEffect(()=>()=>{verifyController.current?.abort();services.musicWebLogin.cancel();},[services]);
+  const webWaiting=auth.status==='waiting',waiting=webWaiting||wyQrWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting||transferWaiting;
+  useEffect(()=>{
+    const subscription=AppState.addEventListener('change',value=>{if(value==='background')services.neteaseQrLogin.setForeground(false);else if(value==='active')services.neteaseQrLogin.setForeground(true);});
+    return()=>{subscription.remove();verifyController.current?.abort();services.musicWebLogin.cancel();services.neteaseQrLogin.cancel();};
+  },[services]);
   // Settings caches visited pages. Hidden pages are not unmounted, so revoke
   // the attempt when navigation removes focus as well as on actual teardown.
   useLayoutEffect(()=>{
     if(active)return;
-    verifyController.current?.abort();services.musicWebLogin.cancel();services.kugouLogin.cancel();
+    verifyController.current?.abort();services.musicWebLogin.cancel();services.neteaseQrLogin.cancel();services.kugouLogin.cancel();
   },[active,services]);
   const login=(provider:MusicWebLoginProvider)=>{
     verifyController.current?.abort();setVerified('');setLoginProvider(provider);
@@ -121,15 +129,41 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
         </View>
       </View>)}
       <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>
-      <View style={{padding:14,flexDirection:'row',alignItems:'center',gap:10}}>
-        <Pressable testID={`login-music-account-${provider.id}`} accessibilityRole="button" accessibilityLabel={`${signedIn?'添加':'登录'}${provider.label}账号`} disabled={waiting} onPress={()=>login(provider.id)} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:waiting?.6:1}}>
-          {webWaiting&&loginProvider===provider.id?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="log-in-outline" size={17} color="#FFFFFF"/>}
-          <Text style={{fontSize:14.5,fontWeight:'700',color:'#FFFFFF'}}>{webWaiting&&loginProvider===provider.id?'等待官方网页登录':`${signedIn?'添加':'登录'}${provider.label}账号`}</Text>
-        </Pressable>
-        {webWaiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.label}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:40,paddingHorizontal:14,borderRadius:20,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>取消</Text></Pressable>}
+      <View style={{padding:14,gap:12}}>
+        <View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:10}}>
+          <Pressable testID={`login-music-account-${provider.id}`} accessibilityRole="button" accessibilityLabel={`${signedIn?'添加':'登录'}${provider.label}账号`} disabled={waiting} onPress={()=>login(provider.id)} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:waiting?.6:1}}>
+            {webWaiting&&loginProvider===provider.id?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="log-in-outline" size={17} color="#FFFFFF"/>}
+            <Text style={{fontSize:14.5,fontWeight:'700',color:'#FFFFFF'}}>{webWaiting&&loginProvider===provider.id?'等待官方网页登录':`${signedIn?'添加':'登录'}${provider.label}账号`}</Text>
+          </Pressable>
+          {provider.id==='wy'&&<Pressable testID="login-music-account-wy-qr" accessibilityRole="button" accessibilityLabel="网易云扫码登录" disabled={waiting} onPress={()=>{setError('');setVerified('');void services.neteaseQrLogin.login();}} style={{minHeight:44,paddingHorizontal:16,borderRadius:22,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,opacity:waiting?.6:1}}>
+            {wyQrWaiting?<ActivityIndicator size="small" color={s.control}/>:<Ionicons name="qr-code-outline" size={16} color={s.control}/>}
+            <Text style={{fontSize:14,fontWeight:'700',color:s.ink}}>{wyQrWaiting?'等待扫码中':'扫码登录'}</Text>
+          </Pressable>}
+          {webWaiting&&loginProvider===provider.id&&<Pressable testID={`cancel-music-login-${provider.id}`} accessibilityRole="button" accessibilityLabel={`取消${provider.label}登录`} onPress={()=>services.musicWebLogin.cancel()} style={{minWidth:60,minHeight:40,paddingHorizontal:14,borderRadius:20,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>取消</Text></Pressable>}
+          {provider.id==='wy'&&wyQrWaiting&&<Pressable testID="cancel-music-login-wy-qr" accessibilityRole="button" accessibilityLabel="取消网易云扫码登录" onPress={()=>services.neteaseQrLogin.cancel()} style={{minWidth:60,minHeight:40,paddingHorizontal:14,borderRadius:20,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>取消</Text></Pressable>}
+        </View>
+        {provider.id==='wy'&&!!wyQr.image&&<View style={{alignItems:'center',gap:10,padding:14,borderRadius:16,backgroundColor:s.dark?'rgba(255,255,255,0.04)':'rgba(42,36,31,0.03)'}}>
+          <View style={{padding:10,borderRadius:16,backgroundColor:'#FFFFFF'}}>
+            <Image key={wyQr.generation} ref={wyQrImage} testID="netease-login-qr" accessibilityLabel="网易云官方登录二维码" accessible source={{uri:wyQr.image}} resizeMode="contain" onError={()=>services.neteaseQrLogin.imageFailed(wyQr.generation)} onLayout={()=>requestAnimationFrame(()=>{
+              const current=services.neteaseQrLogin.getSnapshot();
+              if(current.generation!==wyQr.generation||!current.image)return;
+              wyQrImage.current?.measureInWindow((_x,top,_width,height)=>onRevealQr({top,height}));
+            })} style={{width:220,height:220,maxWidth:'100%',backgroundColor:'#FFFFFF'}}/>
+          </View>
+          <Pressable testID="netease-login-save-photo" accessibilityRole="button" disabled={wyQrPhoto.status==='saving'} onPress={()=>{void services.neteaseQrPhoto.save();}} style={{minHeight:40,paddingHorizontal:16,borderRadius:20,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,flexDirection:'row',alignItems:'center',gap:6,opacity:wyQrPhoto.status==='saving'?.5:1}}>
+            <Ionicons name="download-outline" size={15} color={s.control}/>
+            <Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>{wyQrPhoto.status==='saving'?'正在保存二维码…':'保存二维码到照片'}</Text>
+          </Pressable>
+          {wyQrPhoto.generation===wyQr.generation&&wyQrPhoto.status!=='idle'&&wyQrPhoto.status!=='saving'&&<Text testID={`netease-qr-photo-${wyQrPhoto.status}`} accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:17,color:s.muted,textAlign:'center'}}>{wyQrPhoto.status==='saved'?'已保存到照片。请在本机网易云音乐 App 扫一扫中选择该图。':wyQrPhoto.status==='saved_stale'?'已保存到照片，但二维码已变化，请重新获取。':wyQrPhoto.status==='denied'?'未保存。需要允许添加照片权限；仍可用另一台设备扫码。':wyQrPhoto.status==='expired'?'二维码已失效，请重新获取。':wyQrPhoto.status==='cancelled'?'二维码保存已取消。':'未能保存二维码，请重试。'}</Text>}
+          <Text style={{fontSize:11.5,lineHeight:17,color:s.muted,textAlign:'center'}}>{wyQr.sameDevice?'保存后可切换到网易云 App 扫码确认，确认后返回音枢即可自动完成登录。':'请使用网易云音乐 App 扫一扫；二维码约三分钟有效。'}</Text>
+        </View>}
+        {provider.id==='wy'&&wyQr.status!=='idle'&&(()=>{
+          const wyQrMsg=wyQr.status==='loading'?'正在生成网易云登录二维码…':wyQr.status==='waiting'?'等待网易云 App 扫码':wyQr.status==='scanned'?`已扫码${wyQr.nickname?`（${wyQr.nickname}）`:''}，请在网易云 App 中点击确认`:wyQr.status==='saving'?'正在验证并保存网易云账号…':wyQr.status==='succeeded'?'网易云扫码登录已保存':wyQr.status==='expired'?'二维码已过期，请点击「扫码登录」重新获取':wyQr.status==='cancelled'?'网易云扫码登录已取消':'网易云扫码登录失败，请重试或改用网页登录';
+          return <Text testID={`netease-qr-${wyQr.status}`} accessibilityLiveRegion="polite" style={{fontSize:12.5,color:wyQr.status==='succeeded'?okColor:wyQr.status==='failed'?s.accent:s.muted,fontWeight:wyQr.status==='succeeded'?'600':'400'}}>{wyQrMsg}</Text>;
+        })()}
       </View>
-      {provider.id==='tx'&&<QQAccountTransferCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting}/>}
-      {provider.id==='tx'&&<QQDailyAuthorizationCard services={services} active={active} disabled={webWaiting||kugouLoginBusy(kugouAuth.status)||transferWaiting}/>}
+      {provider.id==='tx'&&<QQAccountTransferCard services={services} active={active} disabled={webWaiting||wyQrWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting}/>}
+      {provider.id==='tx'&&<QQDailyAuthorizationCard services={services} active={active} disabled={webWaiting||wyQrWaiting||kugouLoginBusy(kugouAuth.status)||transferWaiting}/>}
     </View>;
   };
 
@@ -186,7 +220,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     </>}
 
     {selectedPlatform==='kg'&&<>
-      <KugouAccountCard services={services} disabled={webWaiting||dailyWaiting||transferWaiting} onRevealQr={onRevealQr}/>
+      <KugouAccountCard services={services} disabled={webWaiting||wyQrWaiting||dailyWaiting||transferWaiting} onRevealQr={onRevealQr}/>
       <Text accessibilityRole="header" style={{color:s.muted,fontSize:12.5,fontWeight:'600',marginLeft:4,marginTop:2,marginBottom:-4}}>酷狗歌单导入</Text>
       <AccountPlaylistImport services={services} active={active} disabled={waiting} platform="kg" onLogin={()=>{void services.kugouLogin.login();}}/>
     </>}

@@ -7,7 +7,7 @@ import {HTTPResponseError} from './http.ts';
 import type {MusicSession} from './musicAccounts.ts';
 import {MusicAuthError} from './musicAuth.ts';
 
-const names=['qqmusic_key','qm_keyst','musickey','qqmusic_uin','uin','musicid','login_type','wxuin'];
+const names=['qqmusic_key','qm_keyst','musickey','qqmusic_uin','uin','musicid','login_type','wxuin','euin'];
 const object=(value:unknown):Record<string,unknown>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
 
 export function parseQQCookiePayload(raw:string,mode:'web'|'music'='web'):Readonly<Record<string,string>>{
@@ -99,6 +99,9 @@ export class QQAccountProfileClient{
         if(typeof info.headurl==='string'&&/^https?:\/\/[a-z0-9.-]+/i.test(info.headurl)&&info.headurl.length<=1024&&!/[\u0000-\u001f\u007f]/.test(info.headurl)){
           avatar=info.headurl.replace(/^http:\/\//i,'https://');
         }
+        encryptedUin=info.euin??info.encrypt_uin??cookies.euin??object(status.data).encrypt_uin??object(status.data).euin;
+      }else if(!encryptedUin){
+        encryptedUin=cookies.euin??object(status.data).encrypt_uin??object(status.data).euin;
       }
       // Only the authorization result is consumed. Never save or expose lists.
       return{userId:uin,nickname:nickname.trim(),...(avatar?{avatar}:{}),...(typeof encryptedUin==='string'&&encryptedUin.length>0&&encryptedUin.length<=1024&&!/[\u0000-\u001f\u007f]/.test(encryptedUin)?{encryptedUin}:{})};

@@ -4,7 +4,7 @@ import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {AppearanceSection} from './AppearanceSettings.tsx';
 import {miniActionLabels} from '../domain/miniPlayer.ts';
-import {visualThemeLabels} from '../domain/appearance.ts';
+import {glassLevelLabels,visualThemeLabels} from '../domain/appearance.ts';
 import {effectiveLyricFont} from '../storage/fontCatalog.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
@@ -29,7 +29,7 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
     {id:'globalFont',title:'全局字体',icon:'text',detail:fontName(fonts.global),page:'globalFont'},
     {id:'lyricFont',title:'歌词字体',icon:'reader-outline',detail:fonts.lyricMode==='inherit'?'跟随全局字体':fontName(effectiveLyricFont(fonts)),page:'lyricFont'},
     {id:'skins',title:'播放界面样式',icon:'albums',detail:layouts[value.playerLayout],page:'skins'},
-    {id:'navigation',title:'底部栏样式',icon:'grid',detail:navLabels[value.navigationStyle],page:'navigation'},
+    {id:'navigation',title:'底部栏样式与毛玻璃',icon:'grid',detail:`${navLabels[value.navigationStyle]} · ${value.glassNavigation?glassLevelLabels[value.glassLevel]:'实色'}`,page:'navigation'},
     {id:'show-local',title:'显示「本地」菜单',icon:'phone-portrait-outline',subtitle:'关闭后底部栏与侧边栏不再显示「本地」入口，本地音乐仍保留在设备上',toggle:{value:value.showLocalTab,change:showLocalTab=>update({showLocalTab})}},
     {id:'mini',title:'迷你播放器按钮',icon:'options-outline',subtitle:'选择与调整按钮顺序，最多 4 个',detail:value.miniActions.map(action=>miniActionLabels[action]).join('、'),page:'mini'},
   ];

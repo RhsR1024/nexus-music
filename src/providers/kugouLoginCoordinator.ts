@@ -12,7 +12,7 @@ export class KugouLoginCoordinator {
   private controller?:AbortController;
   private deadline?:ReturnType<typeof setTimeout>;
   private foreground=true;private handoff?:number;private wake?:()=>void;
-  private readonly options:{client:Pick<KugouLoginClient,'create'|'poll'>;accounts:Pick<MusicAccounts,'save'>;pollMs?:number;now?:()=>number};
+  private readonly options:{client:Pick<KugouLoginClient,'create'|'poll'>&Partial<Pick<KugouLoginClient,'sendPhoneCode'|'loginByPhone'>>;accounts:Pick<MusicAccounts,'save'>;pollMs?:number;now?:()=>number};
   constructor(options:KugouLoginCoordinator['options']){this.options=options;}
   getSnapshot=()=>this.value;
   subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>this.listeners.delete(listener);};
@@ -40,6 +40,17 @@ export class KugouLoginCoordinator {
   }
   cancel=()=>{if(!kugouLoginBusy(this.value.status))return;this.stop();this.publish({status:'cancelled',generation:this.value.generation});};
   imageFailed=(generation:number)=>{if(generation!==this.value.generation||!kugouLoginBusy(this.value.status))return;this.stop();this.publish({status:'failed',generation});};
+  async sendPhoneCode(mobile:string,signal:AbortSignal,mid?:string):Promise<{readonly mid:string}>{
+    if(!this.options.client.sendPhoneCode)throw new KugouLoginError('unavailable');
+    return this.options.client.sendPhoneCode(mobile,signal,mid);
+  }
+  async loginWithPhone(mobile:string,code:string,mid:string,signal:AbortSignal):Promise<void>{
+    if(!this.options.client.loginByPhone)throw new KugouLoginError('unavailable');
+    this.stop();
+    const session=await this.options.client.loginByPhone(mobile,code,mid,signal);
+    if(signal.aborted)throw new KugouLoginError('cancelled');
+    await this.options.accounts.save({platform:'kg',label:'酷狗音乐',username:session.userId,displayName:session.nickname,...(session.avatar?{avatar:session.avatar}:{}),capabilities:[]},{version:1,platform:'kg',...session},signal);
+  }
   async login():Promise<void>{
     this.stop();
     const generation=this.value.generation+1,controller=new AbortController(),signal=controller.signal;

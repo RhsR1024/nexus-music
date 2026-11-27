@@ -2,6 +2,7 @@ import type {HTTPClient,HTTPRequest} from './http.ts';
 import {HTTPResponseError} from './http.ts';
 import type {MusicSession} from './musicAccounts.ts';
 import {musicCookieHeader,parseNeteaseCookiePayload} from './musicWebLogin.ts';
+import {DESKTOP_UA,neteaseWeapiRequest} from './neteaseSession.ts';
 import {throwIfAborted} from './async.ts';
 import {normalizeAccountAvatar} from '../domain/accountAvatar.ts';
 
@@ -37,34 +38,58 @@ export interface NeteaseAccountProfileClientOptions {
   readonly endpoint?:string;
 }
 
+const DEFAULT_ACCOUNT_ENDPOINT='https://music.163.com/api/nuser/account/get';
+const WEAPI_ACCOUNT_ENDPOINT='https://music.163.com/weapi/nuser/account/get';
+
 /** Validates the web session by reading its own official account profile. */
 export class NeteaseAccountProfileClient {
   private readonly http:HTTPClient;
   private readonly endpoint:string;
   constructor(options:NeteaseAccountProfileClientOptions={}){
     this.http=options.http??(async()=>{throw new NeteaseAccountProfileError('unavailable');});
-    this.endpoint=options.endpoint??'https://music.163.com/api/nuser/account/get';
+    this.endpoint=options.endpoint??DEFAULT_ACCOUNT_ENDPOINT;
   }
   async fetch(session:MusicSession,signal:AbortSignal):Promise<NeteaseAccountProfile>{
     try{throwIfAborted(signal);}catch{throw new NeteaseAccountProfileError('cancelled');}
     const cookies=parseNeteaseCookiePayload(JSON.stringify(object(session.cookies)));
+    const cookieHeader=musicCookieHeader(cookies);
     const request:HTTPRequest={
       method:'GET',
+      credentials:'omit',
       headers:{
         Accept:'application/json',
-        Cookie:musicCookieHeader(cookies),
+        Cookie:cookieHeader,
         Referer:'https://music.163.com/',
         Origin:'https://music.163.com',
+        'User-Agent':DESKTOP_UA,
       },
     };
-    let raw:unknown;
-    try{raw=await this.http(this.endpoint,request,signal);}
-    catch(error){
-      if(signal.aborted||error instanceof NeteaseAccountProfileError&&error.kind==='cancelled')throw new NeteaseAccountProfileError('cancelled');
-      if(error instanceof HTTPResponseError&&(error.status===401||error.status===403))throw new NeteaseAccountProfileError('login_required');
-      throw new NeteaseAccountProfileError('unavailable');
+    const classifyError=(error:unknown):NeteaseAccountProfileError=>{
+      if(signal.aborted||(error instanceof NeteaseAccountProfileError&&error.kind==='cancelled'))return new NeteaseAccountProfileError('cancelled');
+      if(error instanceof NeteaseAccountProfileError)return error;
+      if(error instanceof HTTPResponseError&&(error.status===401||error.status===403))return new NeteaseAccountProfileError('login_required');
+      return new NeteaseAccountProfileError('unavailable');
+    };
+    try{
+      const raw=await this.http(this.endpoint,request,signal);
+      try{throwIfAborted(signal);}catch{throw new NeteaseAccountProfileError('cancelled');}
+      return parseNeteaseAccountProfile(raw);
+    }catch(primaryError){
+      const classified=classifyError(primaryError);
+      if(classified.kind==='cancelled'||this.endpoint!==DEFAULT_ACCOUNT_ENDPOINT)throw classified;
+      const weapiRequest=neteaseWeapiRequest({},{
+        cookie:`${cookieHeader}; os=pc; appver=2.10.13; channel=netease`,
+        csrf:cookies.__csrf??'',
+      });
+      try{
+        const fallbackRaw=await this.http(WEAPI_ACCOUNT_ENDPOINT,{...weapiRequest,credentials:'omit'},signal);
+        try{throwIfAborted(signal);}catch{throw new NeteaseAccountProfileError('cancelled');}
+        return parseNeteaseAccountProfile(fallbackRaw);
+      }catch(fallbackError){
+        const fallbackClassified=classifyError(fallbackError);
+        if(fallbackClassified.kind==='cancelled')throw fallbackClassified;
+        throw classified;
+      }
     }
-    try{throwIfAborted(signal);}catch{throw new NeteaseAccountProfileError('cancelled');}
-    return parseNeteaseAccountProfile(raw);
   }
 }

@@ -9,7 +9,7 @@ import {requireNativeView} from 'expo';
 import {LinearGradient} from 'expo-linear-gradient';
 import {useTheme} from './theme.tsx';
 import {usePresentationVisible} from './AdaptiveModal.tsx';
-const NativeMaterial=requireNativeView<ViewProps&{dark:boolean;variant?:string;radius?:number}>('NexusNative');
+const NativeMaterial=requireNativeView<ViewProps&{dark:boolean;variant?:string;radius?:number;intensity?:number}>('NexusNative');
 const noSubscribe=()=>()=>{},noCover:CoverTheme={},noCoverSnapshot=()=>noCover;
 export function AmbientBackground({services,visible=true,gradient}:{services?:Services;visible?:boolean;gradient?:{colors:readonly [string,string,...string[]];locations:readonly [number,number,...number[]]}}){
   const presented=usePresentationVisible(),shown=visible&&presented;
@@ -48,19 +48,27 @@ export function GlassSurface({children,style,variant='liquid',radius=30}:PropsWi
   useEffect(()=>{if(Platform.OS!=='ios')return;let active=true;void AccessibilityInfo.isReduceTransparencyEnabled().then(value=>{cachedReduceTransparency=value;if(active)setReduce(value);});const subscription=AccessibilityInfo.addEventListener('reduceTransparencyChanged',value=>{cachedReduceTransparency=value;setReduce(value);});return()=>{active=false;subscription.remove();};},[]);
   const dark=theme.mode==='dark';
   const useBlur=theme.appearance.glassNavigation&&!reduce;
+  const level=Math.max(1,Math.min(5,theme.appearance.glassLevel??2));
+  const idx=level-1;
+  const iosAlphas={
+    liquid:dark?[0.03,0.06,0.11,0.20,0.32]:[0.02,0.05,0.10,0.19,0.32],
+    acrylic:dark?[0.06,0.11,0.18,0.28,0.40]:[0.05,0.10,0.17,0.27,0.40],
+    frosted:dark?[0.12,0.19,0.28,0.40,0.52]:[0.10,0.18,0.28,0.40,0.52],
+  } as const;
+  const androidAlphas={
+    liquid:dark?[0.14,0.26,0.42,0.58,0.74]:[0.12,0.24,0.40,0.56,0.72],
+    acrylic:dark?[0.12,0.22,0.36,0.52,0.68]:[0.10,0.20,0.34,0.50,0.66],
+    frosted:dark?[0.24,0.38,0.54,0.68,0.82]:[0.22,0.36,0.52,0.68,0.82],
+  } as const;
+  const fillAlpha=Platform.OS==='ios'?iosAlphas[variant][idx]!:androidAlphas[variant][idx]!;
   const fill=useBlur
-    ?(Platform.OS==='ios'
-      ?(variant==='acrylic'?(dark?'rgba(28,22,34,0.20)':'rgba(255,253,253,0.22)')
-        :variant==='frosted'?(dark?'rgba(32,26,38,0.34)':'rgba(255,250,251,0.36)')
-        :(dark?'rgba(30,24,36,0.12)':'rgba(255,252,253,0.14)'))
-      :(variant==='acrylic'?(dark?'rgba(32,26,38,0.48)':'rgba(255,253,253,0.42)')
-        :variant==='frosted'?(dark?'rgba(36,29,42,0.74)':'rgba(255,250,250,0.74)')
-        :(dark?'rgba(40,32,46,0.56)':'rgba(255,252,252,0.48)')))
+    ?(dark?`rgba(28,22,34,${fillAlpha})`:`rgba(255,252,253,${fillAlpha})`)
     :(dark?'rgba(42,34,48,0.96)':'rgba(255,251,249,0.96)');
-  const borderColor=dark?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.78)';
-  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.30:0.08,shadowRadius:18,shadowOffset:{width:0,height:4},elevation:Platform.OS==='android'?4:0},style]}>
+  const borderAlpha=dark?(0.12+idx*0.03):(0.52+idx*0.07);
+  const borderColor=dark?`rgba(255,255,255,${borderAlpha.toFixed(2)})`:`rgba(255,255,255,${borderAlpha.toFixed(2)})`;
+  return <View style={[{borderRadius:radius,shadowColor:'#2B181C',shadowOpacity:dark?0.26:0.06,shadowRadius:18,shadowOffset:{width:0,height:4},elevation:Platform.OS==='android'?4:0},style]}>
     <View style={{flexGrow:1,borderRadius:radius,overflow:'hidden',borderWidth:StyleSheet.hairlineWidth*1.5,borderColor}}>
-      {useBlur&&<NativeMaterial pointerEvents="none" dark={dark} variant={variant} radius={radius} style={StyleSheet.absoluteFill}/>}
+      {useBlur&&<NativeMaterial pointerEvents="none" dark={dark} variant={variant} radius={radius} intensity={level} style={StyleSheet.absoluteFill}/>}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:fill}]}/>
       {children}
     </View>

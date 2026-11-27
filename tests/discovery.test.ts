@@ -106,20 +106,38 @@ test('style recommendation rejects duplicate-beyond-limit or pre-cancelled selec
   await assert.rejects(p.styleRecommendations('wy',[{id:'one',name:'one',dimension:'genre'}],controller.signal),{name:'AbortError'});
   assert.equal(calls,0);
 });
-test('NetEase banners parse Sollin /api/v2/banner/get response, upgrade 126 image URLs, and ignore non-wy platforms',async()=>{
-  const p=new DiscoveryProvider(sha,async url=>{
-    assert.ok(url.includes('/api/v2/banner/get'));
-    return{code:200,banners:[
-      {bannerId:'b1',pic:'http://p1.music.126.net/a.jpg',typeTitle:'新歌首发',titleColor:'red',targetType:1,targetId:12345,song:{id:12345,name:'Banner Song',ar:[{name:'Artist A'}],al:{name:'Album A',picUrl:'http://p1.music.126.net/cover.jpg'},dt:200000}},
-      {bannerId:'b2',imageUrl:'https://p2.music.126.net/b.jpg',typeTitle:'独家策划',titleColor:'blue',targetType:3000,targetId:0,url:'https://music.163.com/activity'},
-      {bannerId:'bad',pic:'javascript:alert(1)',targetType:1,targetId:1},
-    ]};
+test('NetEase banners parse Sollin /api/v2/banner/get response, classify orpheus/music.163 targets, hydrate missing songs, and ignore non-wy platforms',async()=>{
+  const seenUrls:string[]=[];
+  const p=new DiscoveryProvider(sha,async(url,req)=>{
+    seenUrls.push(url);
+    if(url.includes('/api/v2/banner/get')){
+      assert.ok(url.includes('clientType=pc'));
+      assert.equal(req?.credentials,'omit');
+      return{code:200,banners:[
+        {bannerId:'b1',pic:'http://p1.music.126.net/a.jpg',typeTitle:'新歌首发',titleColor:'red',targetType:1,targetId:12345,url:'orpheus://song/12345'},
+        {bannerId:'b2',imageUrl:'https://p2.music.126.net/b.jpg',typeTitle:'活动',titleColor:'red',targetType:3000,targetId:0,url:'https://act.music.163.com/activity'},
+        {bannerId:'b3',imageUrl:'https://p2.music.126.net/c.jpg',typeTitle:'精选歌单',titleColor:'blue',targetType:3000,targetId:0,url:'https://music.163.com/#/playlist?id=998877'},
+        {bannerId:'bad',pic:'javascript:alert(1)',targetType:1,targetId:1},
+      ]};
+    }
+    if(url.includes('/api/v3/song/detail')){
+      assert.equal(req?.method,'POST');
+      assert.equal(req?.credentials,'omit');
+      return{code:200,songs:[{id:12345,name:'心动一半',ar:[{name:'Gareth.T'}],al:{name:'Single',picUrl:'http://p1.music.126.net/cover.jpg'},dt:200000}]};
+    }
+    throw new Error(`unexpected URL ${url}`);
   });
   assert.deepEqual(await p.banners('tx',new AbortController().signal),[]);
   const banners=await p.banners('wy',new AbortController().signal);
-  assert.equal(banners.length,2);
+  assert.equal(banners.length,3);
   assert.equal(banners[0]?.imageUrl,'https://p1.music.126.net/a.jpg');
   assert.equal(banners[0]?.targetType,1);
-  assert.equal(banners[0]?.song?.title,'Banner Song');
-  assert.equal(banners[1]?.url,'https://music.163.com/activity');
+  assert.equal(banners[0]?.url,undefined);
+  assert.equal(banners[0]?.song?.title,'心动一半');
+  assert.equal(banners[1]?.targetType,3000);
+  assert.equal(banners[1]?.url,'https://act.music.163.com/activity');
+  assert.equal(banners[2]?.targetType,1000);
+  assert.equal(banners[2]?.targetId,'998877');
+  assert.equal(banners[2]?.url,undefined);
+  assert.equal(seenUrls.filter(u=>u.includes('/api/v3/song/detail')).length,1);
 });

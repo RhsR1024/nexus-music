@@ -3,7 +3,7 @@ import type {AppearanceOptions} from '../domain/appearance.ts';
 
 export const themeConfigLimit=64*1024;
 const fields=['visualTheme','accent','backgroundStyle','backgroundOpacity','cardOpacity','backgroundMask','maskColor','playerBackground','playerBlur','playerDarkness','coverRadius','coverColor','globalBackgroundMotion','dynamicBackground','glassNavigation'] as const satisfies readonly(keyof AppearanceOptions)[];
-const optionalFields=['tapeStyle'] as const satisfies readonly(keyof AppearanceOptions)[];
+const optionalFields=['tapeStyle','glassLevel'] as const satisfies readonly(keyof AppearanceOptions)[];
 const legacyFields=['visualTheme','accent','backgroundStyle','cardOpacity'] as const;
 export interface ThemeConfig {format:'nexus-theme';version:1;appearance:AppearanceOptions}
 function size(text:string){let bytes=0;for(const char of text){const code=char.codePointAt(0)!;bytes+=code<128?1:code<2048?2:code<65536?3:4;if(bytes>themeConfigLimit)throw Error('主题配置超过64KiB');}}

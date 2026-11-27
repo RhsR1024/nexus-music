@@ -15,6 +15,7 @@ test('official account profile validates numeric identity and bounded nickname',
 test('profile request sends only the bounded NetEase cookies to the official endpoint',async()=>{
   let captured:string[]=[];
   const client=new NeteaseAccountProfileClient({endpoint:'https://fixture.test/account',http:async(_url,request)=>{
+    assert.equal(request.credentials,'omit');
     captured=[request.headers?.Cookie??'',request.headers?.Referer??'',request.headers?.Origin??''];
     return{code:200,profile:{userId:42,nickname:'Fixture listener',avatarUrl:'https://p1.music.126.net/avatar.jpg'}};
   }});
@@ -32,4 +33,21 @@ test('expired, unavailable and cancelled profile reads do not expose protocol de
   const controller=new AbortController();controller.abort();
   const client=new NeteaseAccountProfileClient();
   await assert.rejects(client.fetch(session,controller.signal),(error)=>error instanceof NeteaseAccountProfileError&&error.kind==='cancelled');
+});
+
+test('default profile endpoint falls back to encrypted weapi endpoint with omit credentials when GET returns null profile',async()=>{
+  const calls:Array<{url:string;credentials?:string;cookie?:string}>=[];
+  const client=new NeteaseAccountProfileClient({http:async(url,request)=>{
+    calls.push({url,credentials:request.credentials,cookie:request.headers?.Cookie});
+    if(url.endsWith('/api/nuser/account/get'))return{code:200,profile:null};
+    return{code:200,profile:{userId:7788,nickname:'Verified listener',avatarUrl:'http://p1.music.126.net/u.jpg'}};
+  }});
+  const profile=await client.fetch(session,new AbortController().signal);
+  assert.equal(profile.userId,'7788');
+  assert.equal(profile.nickname,'Verified listener');
+  assert.equal(calls.length,2);
+  assert.equal(calls[0]?.credentials,'omit');
+  assert.ok(calls[1]?.url.endsWith('/weapi/nuser/account/get'));
+  assert.equal(calls[1]?.credentials,'omit');
+  assert.ok(calls[1]?.cookie?.includes('os=pc'));
 });

@@ -11,7 +11,7 @@ enum MusicWebLoginPolicy {
   static let dailyURL = "https://y.qq.com/n/ryqq_v2/qqmusic_skills"
   static func dailyOrigin(_ url: URL) -> Bool {
     url.scheme == "https" && url.user == nil && url.password == nil &&
-      (url.port == nil || url.port == 443) && ["y.qq.com", "a.qq.com"].contains(url.host?.lowercased() ?? "")
+      (url.port == nil || url.port == 443) && ["y.qq.com", "a.qq.com", "a.y.qq.com", "i2.y.qq.com"].contains(url.host?.lowercased() ?? "")
   }
   static let qqURL = "https://graph.qq.com/oauth2.0/authorize?client_id=100497308&redirect_uri=https%3A%2F%2Fy.qq.com%2Fportal%2Fwx_redirect.html%3Flogin_type%3D1%26surl%3Dhttps%253A%252F%252Fy.qq.com%252F&response_type=code&scope=all"
   static func initialURL(_ provider: String, state: String? = nil) -> String? {
@@ -45,7 +45,7 @@ enum MusicWebLoginPolicy {
     return false
   }
   static func cookieNames(_ provider: String) -> Set<String> {
-    provider == "tx" ? ["qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin"] :
+    provider == "tx" ? ["qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin", "euin"] :
       ["MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid"]
   }
   static func documentReady(_ value: Any?, observedEpoch: Int, currentEpoch: Int, committedEpoch: Int?) -> Bool {
@@ -203,12 +203,19 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     configuration.websiteDataStore = dataStore
     configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
     configuration.allowsInlineMediaPlayback = true
+    if daily {
+      let captureSource = #"(() => {if(window.__nexusDailyCaptureHooked)return;window.__nexusDailyCaptureHooked=true;const re=/\bqmk-[A-Za-z0-9_-]{12,1024}\b/;const grab=v=>{try{const s=typeof v==='string'?v:JSON.stringify(v);const m=s&&s.match(re);if(m&&m[0])window.__nexusCapturedDailyKey=m[0];}catch{}};try{if(navigator.clipboard&&navigator.clipboard.writeText){const orig=navigator.clipboard.writeText.bind(navigator.clipboard);navigator.clipboard.writeText=function(t){grab(t);return orig(t);};}}catch{}try{const origFetch=window.fetch;if(typeof origFetch==='function'){window.fetch=function(...args){return origFetch.apply(this,args).then(res=>{try{res.clone().text().then(grab).catch(()=>{});}catch{}return res;});};}}catch{}try{const origSend=XMLHttpRequest.prototype.send;XMLHttpRequest.prototype.send=function(...args){this.addEventListener('load',()=>{try{grab(this.responseText);}catch{}});return origSend.apply(this,args);};}catch{}})();"#
+      configuration.userContentController.addUserScript(WKUserScript(source: captureSource, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+    }
     let webView = WKWebView(frame: .zero, configuration: configuration)
     webView.accessibilityIdentifier = daily ? "qq-daily-authorization-web" : "music-web-login-\(provider)"
     if provider == "tx" {
       // Request the official website's desktop login controls. The mobile
       // presentation offers only an unsupported QQ-app launch in this host.
       webView.customUserAgent = daily ? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+    } else if provider == "wy" {
+      // Align with Sollin: Chrome mobile UA keeps NetEase on /m/login and avoids iOS app-handoff dead ends.
+      webView.customUserAgent = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
     }
     webView.navigationDelegate = self
     webView.uiDelegate = self
@@ -229,13 +236,36 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     loadingIndicator = loading
     controller.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: loading)
     webView.translatesAutoresizingMaskIntoConstraints = false
-    controller.view.addSubview(webView)
-    NSLayoutConstraint.activate([
-      webView.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor),
-      webView.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor),
-      webView.topAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.topAnchor),
-      webView.bottomAnchor.constraint(equalTo: controller.view.bottomAnchor),
-    ])
+    if daily {
+      let banner = UILabel()
+      banner.text = "登录后请点击「快速配置」生成或复制 qmk- 密钥，将自动识别并保存"
+      banner.font = .systemFont(ofSize: 12.5, weight: .medium)
+      banner.textColor = .secondaryLabel
+      banner.textAlignment = .center
+      banner.numberOfLines = 2
+      banner.backgroundColor = .secondarySystemBackground
+      banner.translatesAutoresizingMaskIntoConstraints = false
+      controller.view.addSubview(banner)
+      controller.view.addSubview(webView)
+      NSLayoutConstraint.activate([
+        banner.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor),
+        banner.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor),
+        banner.topAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.topAnchor),
+        banner.heightAnchor.constraint(greaterThanOrEqualToConstant: 36),
+        webView.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor),
+        webView.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor),
+        webView.topAnchor.constraint(equalTo: banner.bottomAnchor),
+        webView.bottomAnchor.constraint(equalTo: controller.view.bottomAnchor),
+      ])
+    } else {
+      controller.view.addSubview(webView)
+      NSLayoutConstraint.activate([
+        webView.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor),
+        webView.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor),
+        webView.topAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.topAnchor),
+        webView.bottomAnchor.constraint(equalTo: controller.view.bottomAnchor),
+      ])
+    }
     let navigation = UINavigationController(rootViewController: controller)
     navigation.modalPresentationStyle = .fullScreen
     presenter.present(navigation, animated: true)
@@ -274,15 +304,21 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     markDocumentReady(webView)
   }
 
+  private func isPolicyInterruption(_ error: Error) -> Bool {
+    let ns = error as NSError
+    if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return true }
+    return (ns.domain == "WebKitErrorDomain" || ns.domain == WKErrorDomain) && ns.code == 102
+  }
+
   func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
     guard self.webView === webView, let navigation, navigation === currentNavigation else { return }
-    if (error as NSError).code == NSURLErrorCancelled { return }
+    if isPolicyInterruption(error) { pollCookies(); return }
     finish(.failed)
   }
 
   func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
     guard self.webView === webView, let navigation, navigation === currentNavigation else { return }
-    if (error as NSError).code == NSURLErrorCancelled { return }
+    if isPolicyInterruption(error) { pollCookies(); return }
     finish(.failed)
   }
 
@@ -293,6 +329,7 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
       return
     }
     guard MusicWebLoginPolicy.allows(url, provider: provider) else {
+      pollCookies()
       decisionHandler(.cancel)
       return
     }
@@ -312,13 +349,14 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
 
   private func pollCookies() {
     guard !finished else { return }
-    if !pageReady { inspectDocument(); return }
-    if daily { inspectDaily(); return }
-    guard let webView, let url = documentURL(webView) else { return }
-    let epoch = navigationEpoch
+    if !pageReady { inspectDocument() }
+    if daily {
+      inspectDaily()
+      return
+    }
+    guard let webView else { return }
     dataStore?.httpCookieStore.getAllCookies { [weak self] cookies in
-      guard let self, !self.finished, self.pageReady, self.navigationEpoch == epoch,
-        self.webView === webView, self.webView?.url == url else { return }
+      guard let self, !self.finished, self.webView === webView else { return }
       var values: [String: String] = [:]
       for cookie in cookies {
         let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
@@ -327,8 +365,8 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
         if allowed, MusicWebLoginPolicy.cookieNames(self.provider).contains(cookie.name),
           cookie.expiresDate == nil || cookie.expiresDate! > Date() { values[cookie.name] = cookie.value }
       }
-      guard MusicWebLoginPolicy.ready(values, provider: self.provider), self.pageReady,
-        self.provider != "tx" || self.callbackValidated else { return }
+      guard MusicWebLoginPolicy.ready(values, provider: self.provider),
+        self.provider != "tx" || (self.pageReady && self.callbackValidated) else { return }
       guard JSONSerialization.isValidJSONObject(values), let data = try? JSONSerialization.data(withJSONObject: values), let json = String(data: data, encoding: .utf8) else {
         self.finish(.failed)
         return
@@ -368,25 +406,25 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     }
   }
 
-  // Evaluate only the current main document on the two official Skills origins.
+  // Evaluate only the current main document on the official QQ Skills origins.
   // No message bridge accepts arbitrary frames, URLs or page-supplied cookies.
   private func inspectDaily() {
-    guard !finished, pageReady, !dailyInspecting, let webView, let url = webView.url,
+    guard !finished, !dailyInspecting, let webView, let url = webView.url,
       MusicWebLoginPolicy.dailyOrigin(url) else { return }
     dailyInspecting = true
-    let epoch = navigationEpoch
-    let script = #"(() => {const texts=[(document.body?.innerText||'').slice(0,200000),...Array.from(document.querySelectorAll('input,textarea')).slice(0,100).map(x=>String(x.value||'').slice(0,2048))];return texts.join('\n').match(/\bqmk-[A-Za-z0-9_-]{12,1024}\b/)?.[0]||null;})()"#
+    let script = #"(() => {const re=/\bqmk-[A-Za-z0-9_-]{12,1024}\b/;if(typeof window.__nexusCapturedDailyKey==='string'&&re.test(window.__nexusCapturedDailyKey))return window.__nexusCapturedDailyKey.match(re)[0];const texts=[(document.body?.innerText||'').slice(0,200000),(document.body?.textContent||'').slice(0,200000),...Array.from(document.querySelectorAll('input,textarea')).slice(0,100).map(x=>String(x.value||'').slice(0,2048))];try{for(let i=0;i<localStorage.length&&i<50;i++){const k=localStorage.key(i);if(k)texts.push(String(localStorage.getItem(k)||'').slice(0,2048));}}catch{}try{for(let i=0;i<sessionStorage.length&&i<50;i++){const k=sessionStorage.key(i);if(k)texts.push(String(sessionStorage.getItem(k)||'').slice(0,2048));}}catch{}return texts.join('\n').match(re)?.[0]||null;})()"#
     webView.evaluateJavaScript(script) { [weak self] value, _ in
       guard let self else { return }
       self.dailyInspecting = false
-      guard !self.finished, self.pageReady, self.navigationEpoch == epoch,
-        self.webView?.url == url, let key = value as? String,
+      guard !self.finished, self.webView === webView,
+        let currentURL = webView.url, MusicWebLoginPolicy.dailyOrigin(currentURL),
+        let key = value as? String,
         key.range(of: "^qmk-[A-Za-z0-9_-]{12,1024}$", options: .regularExpression) != nil else { return }
       self.dataStore?.httpCookieStore.getAllCookies { [weak self] cookies in
-        guard let self, !self.finished, self.pageReady, self.navigationEpoch == epoch,
-          self.webView?.url == url else { return }
+        guard let self, !self.finished, self.webView === webView else { return }
         var values: [String: String] = [:]
-        var identities = Set<String>()
+        var qqIdentities = Set<String>()
+        var wxIdentities = Set<String>()
         for cookie in cookies {
           let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
           guard (domain == "qq.com" || domain.hasSuffix(".qq.com")),
@@ -396,10 +434,20 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
           if ["uin", "qqmusic_uin", "musicid"].contains(cookie.name),
             cookie.value.range(of: "^o?[0-9]{1,20}$", options: [.regularExpression,.caseInsensitive]) != nil {
             let normalized = cookie.value.replacingOccurrences(of: "^[oO]?0*", with: "", options: .regularExpression)
-            if !normalized.isEmpty { identities.insert(normalized) }
+            if !normalized.isEmpty { qqIdentities.insert(normalized) }
+          }
+          if ["wxuin", "qqmusic_uin", "musicid"].contains(cookie.name),
+            cookie.value.range(of: "^o?[0-9]{1,20}$", options: [.regularExpression,.caseInsensitive]) != nil {
+            let normalized = cookie.value.replacingOccurrences(of: "^[oO]?0*", with: "", options: .regularExpression)
+            if !normalized.isEmpty { wxIdentities.insert(normalized) }
           }
         }
-        guard MusicWebLoginPolicy.ready(values, provider: "tx"), identities.count == 1 else { return }
+        let isWx = values["login_type"] == "2" || (values["wxuin"] != nil && !wxIdentities.isEmpty)
+        let hasWxKey = ["qqmusic_key", "qm_keyst", "musickey"].compactMap { values[$0] }.contains { !$0.isEmpty }
+        let qqReady = MusicWebLoginPolicy.ready(values, provider: "tx") && qqIdentities.count == 1
+        let wxReady = isWx && hasWxKey && !wxIdentities.isEmpty
+        if wxReady && values["login_type"] == nil { values["login_type"] = "2" }
+        guard qqReady || wxReady else { return }
         let payload: [String: Any] = ["key": key, "cookies": values]
         guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { self.finish(.failed); return }
         self.finish(.success(json))

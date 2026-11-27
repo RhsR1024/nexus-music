@@ -50,8 +50,17 @@ internal object MusicWebLoginPolicy {
   }
 
   fun cookieNames(provider: String): Set<String> = when (provider) {
-    "tx" -> setOf("qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin")
+    "tx" -> setOf("qqmusic_key", "qm_keyst", "musickey", "qqmusic_uin", "uin", "musicid", "login_type", "wxuin", "euin")
     else -> setOf("MUSIC_U", "MUSIC_A_T", "MUSIC_R_T", "MUSIC_SNS", "__csrf", "NMTID", "_ntes_nuid")
+  }
+
+  fun dailyOrigin(raw: String?): Boolean {
+    if (raw.isNullOrBlank()) return false
+    val parsed = try { java.net.URI(raw) } catch (_: Exception) { return false }
+    val host = parsed.host?.lowercase() ?: return false
+    return parsed.scheme?.lowercase() == "https" && parsed.userInfo == null &&
+      (parsed.port == -1 || parsed.port == 443) &&
+      host in setOf("y.qq.com", "a.qq.com", "a.y.qq.com", "i2.y.qq.com")
   }
 
   fun ready(values: Map<String, String>, provider: String): Boolean {
@@ -173,14 +182,31 @@ class NexusAuthWebActivity : Activity() {
       settings.javaScriptEnabled = true
       settings.domStorageEnabled = true
       settings.cacheMode = WebSettings.LOAD_NO_CACHE
+      if (provider == "wy") {
+        settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+      } else if (provider == "tx") {
+        settings.userAgentString = if (dailyMode) {
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        } else {
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        }
+      }
       cm.setAcceptThirdPartyCookies(this, true)
       webViewClient = object : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
           val target = request?.url ?: return true
-          return !MusicWebLoginPolicy.allows(target, provider)
+          if (!MusicWebLoginPolicy.allows(target, provider)) {
+            inspectCookies()
+            return true
+          }
+          return false
         }
 
         override fun onPageFinished(view: WebView?, url: String?) {
+          if (dailyMode && MusicWebLoginPolicy.dailyOrigin(url)) {
+            val hook = "(() => {if(window.__nexusDailyCaptureHooked)return;window.__nexusDailyCaptureHooked=true;const re=/\\bqmk-[A-Za-z0-9_-]{12,1024}\\b/;const grab=v=>{try{const s=typeof v==='string'?v:JSON.stringify(v);const m=s&&s.match(re);if(m&&m[0])window.__nexusCapturedDailyKey=m[0];}catch{}};try{if(navigator.clipboard&&navigator.clipboard.writeText){const orig=navigator.clipboard.writeText.bind(navigator.clipboard);navigator.clipboard.writeText=function(t){grab(t);return orig(t);};}}catch{}try{const origFetch=window.fetch;if(typeof origFetch==='function'){window.fetch=function(...args){return origFetch.apply(this,args).then(res=>{try{res.clone().text().then(grab).catch(()=>{});}catch{}return res;});};}}catch{}try{const origSend=XMLHttpRequest.prototype.send;XMLHttpRequest.prototype.send=function(...args){this.addEventListener('load',()=>{try{grab(this.responseText);}catch{}});return origSend.apply(this,args);};}catch{}})();"
+            view?.evaluateJavascript(hook, null)
+          }
           inspectCookies()
         }
       }
@@ -207,15 +233,29 @@ class NexusAuthWebActivity : Activity() {
     for (u in urls) {
       merged.putAll(MusicWebLoginPolicy.parseCookieHeader(cm.getCookie(u), allowed))
     }
-    if (!MusicWebLoginPolicy.ready(merged, provider)) return
 
     if (dailyMode) {
-      val key = merged["qqmusic_key"] ?: merged["qm_keyst"] ?: merged["musickey"] ?: return
-      val payload = JSONObject()
-        .put("key", key)
-        .put("cookies", JSONObject(merged as Map<*, *>))
-      finishWith(Result.success(payload.toString()))
+      val wv = webView ?: return
+      val currentUrl = wv.url
+      if (!MusicWebLoginPolicy.dailyOrigin(currentUrl)) return
+      val isWx = merged["login_type"] == "2" || !merged["wxuin"].isNullOrEmpty()
+      val hasWxKey = listOf("qqmusic_key", "qm_keyst", "musickey").any { !merged[it].isNullOrEmpty() }
+      val qqReady = MusicWebLoginPolicy.ready(merged, provider)
+      val wxReady = isWx && hasWxKey
+      if (!qqReady && !wxReady) return
+      if (wxReady && merged["login_type"] == null) merged["login_type"] = "2"
+      val script = "(() => {const re=/\\bqmk-[A-Za-z0-9_-]{12,1024}\\b/;if(typeof window.__nexusCapturedDailyKey==='string'&&re.test(window.__nexusCapturedDailyKey))return window.__nexusCapturedDailyKey.match(re)[0];const texts=[(document.body?.innerText||'').slice(0,200000),(document.body?.textContent||'').slice(0,200000),...Array.from(document.querySelectorAll('input,textarea')).slice(0,100).map(x=>String(x.value||'').slice(0,2048))];try{for(let i=0;i<localStorage.length&&i<50;i++){const k=localStorage.key(i);if(k)texts.push(String(localStorage.getItem(k)||'').slice(0,2048));}}catch{}try{for(let i=0;i<sessionStorage.length&&i<50;i++){const k=sessionStorage.key(i);if(k)texts.push(String(sessionStorage.getItem(k)||'').slice(0,2048));}}catch{}return texts.join('\\n').match(re)?.[0]||'';})()"
+      wv.evaluateJavascript(script) { raw ->
+        if (finished || raw.isNullOrBlank()) return@evaluateJavascript
+        val candidate = raw.trim().removeSurrounding("\"")
+        if (!Regex("^qmk-[A-Za-z0-9_-]{12,1024}$").matches(candidate)) return@evaluateJavascript
+        val payload = JSONObject()
+          .put("key", candidate)
+          .put("cookies", JSONObject(merged as Map<*, *>))
+        finishWith(Result.success(payload.toString()))
+      }
     } else {
+      if (!MusicWebLoginPolicy.ready(merged, provider)) return
       finishWith(Result.success(JSONObject(merged as Map<*, *>).toString()))
     }
   }

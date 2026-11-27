@@ -69,6 +69,7 @@ class NexusMaterialView(context: Context, appContext: AppContext) : ExpoView(con
   private var dark: Boolean = false
   private var variant: String = "liquid"
   private var radiusDp: Double = 30.0
+  private var intensity: Int = 2
 
   init {
     isClickable = false
@@ -95,14 +96,23 @@ class NexusMaterialView(context: Context, appContext: AppContext) : ExpoView(con
     radiusDp = value.coerceAtLeast(0.0)
   }
 
+  fun setIntensity(value: Int) {
+    val next = value.coerceIn(1, 5)
+    if (intensity != next) {
+      intensity = next
+      updateSurface()
+    }
+  }
+
   private fun updateSurface() {
-    val alpha = when (variant) {
-      "frosted" -> if (dark) 185 else 198
-      "acrylic" -> if (dark) 130 else 148
-      else -> if (dark) 145 else 165
+    val idx = (intensity - 1).coerceIn(0, 4)
+    val baseAlpha = when (variant) {
+      "frosted" -> if (dark) intArrayOf(75, 115, 155, 190, 222)[idx] else intArrayOf(82, 124, 165, 200, 228)[idx]
+      "acrylic" -> if (dark) intArrayOf(40, 72, 110, 150, 192)[idx] else intArrayOf(48, 82, 122, 164, 204)[idx]
+      else -> if (dark) intArrayOf(46, 80, 120, 162, 204)[idx] else intArrayOf(52, 88, 130, 174, 214)[idx]
     }
     setBackgroundColor(
-      if (dark) Color.argb(alpha, 28, 22, 34) else Color.argb(alpha, 255, 250, 250)
+      if (dark) Color.argb(baseAlpha, 28, 22, 34) else Color.argb(baseAlpha, 255, 250, 250)
     )
   }
 }

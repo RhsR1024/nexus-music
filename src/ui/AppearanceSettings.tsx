@@ -7,7 +7,7 @@ import {ThemeConfigActions} from './ThemeConfigActions.tsx';
 import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
-import {accentColors,appearanceDefaults,themeBackground,themeSwatchBackground,visualThemeLabels as themeLabels,visualThemes,type Accent,type VisualTheme} from '../domain/appearance.ts';
+import {accentColors,appearanceDefaults,glassLevelLabels,glassLevels,themeBackground,themeSwatchBackground,visualThemeLabels as themeLabels,visualThemes,type Accent,type VisualTheme} from '../domain/appearance.ts';
 import {useTheme} from './theme.tsx';
 import {useVisualAssets} from './VisualBackground.tsx';
 import {settingsInk,settingsLegend,settingsMuted,settingsSheet,sollinTokens,themeChoiceLayout as chips} from './tokens.ts';
@@ -166,8 +166,28 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
         <View style={{flex:1,gap:2}}><Text style={{fontSize:15.5,fontWeight:'700',color:s.ink}}>玻璃底栏</Text><Text style={{color:s.muted,fontSize:12,lineHeight:17}}>关闭或开启系统“降低透明度”时，使用实色表面。</Text></View>
         <Switch accessibilityLabel="玻璃底栏" value={value.glassNavigation} onValueChange={glassNavigation=>update({glassNavigation})} trackColor={s.switchTrack} thumbColor={s.switchThumb(value.glassNavigation)}/>
       </View>
+      <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,padding:16,gap:12,opacity:value.glassNavigation?1:.55},s.cardShadow]}>
+        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
+          <View style={{flex:1,gap:2}}>
+            <Text style={{fontSize:15.5,fontWeight:'700',color:s.ink}}>毛玻璃透明度</Text>
+            <Text style={{color:s.muted,fontSize:12,lineHeight:17}}>调节底部悬浮栏与迷你播放器的通透度，选择后自动保存并在下次启动生效。</Text>
+          </View>
+          <View style={{paddingHorizontal:9,paddingVertical:3,borderRadius:999,backgroundColor:s.accentSoft}}>
+            <Text testID="glass-level-current" style={{fontSize:12,fontWeight:'700',color:s.accent}}>{glassLevelLabels[value.glassLevel]}</Text>
+          </View>
+        </View>
+        <View style={{flexDirection:'row',gap:6}}>
+          {glassLevels.map(level=>{
+            const selected=value.glassLevel===level;
+            return <Pressable key={level} testID={`glass-level-${level}`} accessibilityRole="radio" accessibilityLabel={`毛玻璃透明度：${glassLevelLabels[level]}`} accessibilityState={{selected,disabled:!value.glassNavigation}} disabled={!value.glassNavigation} onPress={()=>update({glassLevel:level})} style={{flex:1,minHeight:40,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:selected?s.control:s.chip,borderWidth:1,borderColor:selected?s.control:s.chipBorder}}>
+              <Text style={{fontSize:12.5,fontWeight:selected?'700':'600',color:selected?'#FFFFFF':s.ink}}>{glassLevelLabels[level]}</Text>
+            </Pressable>;
+          })}
+        </View>
+      </View>
     </View>}
-    {page==='background'&&<><VisualSettings services={services}/><Text accessibilityRole="header" style={{color:muted,fontSize:13,marginLeft:4,marginTop:12,marginBottom:8}}>音枢扩展主题 · {themeLabels[value.visualTheme]}</Text>{themeChoices(['soft','classic'])}</>} {page==='mini'&&<MiniPlayerSettings services={services}/>}
+    {page==='background'&&<><VisualSettings services={services}/><Text accessibilityRole="header" style={{color:muted,fontSize:13,marginLeft:4,marginTop:12,marginBottom:8}}>音枢扩展主题 · {themeLabels[value.visualTheme]}</Text>{themeChoices(['soft','classic'])}</>}
+    {page==='mini'&&<MiniPlayerSettings services={services}/>}
     {!!error&&<Text accessibilityLiveRegion="polite" style={{color:theme.palette.accent}}>{error}</Text>}
   </View>;
 }

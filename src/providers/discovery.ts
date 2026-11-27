@@ -1,5 +1,6 @@
 import type {OnlinePlatform,Track} from '../domain/track.ts';
 import {onlineTrack} from './online.ts';
+import {DESKTOP_UA} from './neteaseSession.ts';
 import {parseProviderJSON,queryURL,requestJSON,requestText,type TextHTTPClient,type HTTPClient} from './http.ts';
 import {throwIfAborted} from './async.ts';
 import {qqSignature} from './qqSignature.ts';
@@ -24,6 +25,37 @@ function required(value:unknown){const id=text(value);if(!id)throw new Error('�
 function tree(value:unknown,depth=0):Row[]{if(depth>12)return[];if(Array.isArray(value))return value.slice(0,2000).flatMap(item=>tree(item,depth+1));const object=row(value);return Object.keys(object).length?[object,...Object.values(object).filter(item=>item&&typeof item==='object').flatMap(item=>tree(item,depth+1))]:[];}
 function unique(items:BrowseItem[]){return [...new Map(items.map(item=>[item.id,item])).values()];}
 function item(id:unknown,title:unknown,artwork?:unknown,description?:unknown,total?:unknown):BrowseItem {const name=text(title);if(!name)throw new Error('平台响应缺少名称');return{id:required(id),title:name,...(text(artwork)?{artwork:text(artwork)}:{}),...(text(description)?{description:text(description)}:{}),...(count(total)!==undefined?{count:count(total)}:{})};}
+function bannerTarget(targetTypeRaw:unknown,targetIdRaw:unknown,rawUrl:string):{targetType:number;targetId:string;url?:string}{
+  const rawType=Number.isFinite(Number(targetTypeRaw))?Number(targetTypeRaw):0;
+  const rawId=text(targetIdRaw).trim();
+  const numeric=(v:string)=>/^\d+$/.test(v)?v:'';
+  const orpheus=rawUrl.match(/^orpheus:\/\/(song|album|playlist)\/(\d+)/i);
+  if(orpheus&&orpheus[1]&&orpheus[2]){
+    const kind=orpheus[1].toLowerCase();
+    return{targetType:kind==='song'?1:kind==='album'?10:1000,targetId:orpheus[2]};
+  }
+  if(rawUrl){
+    try{
+      const parsed=new URL(rawUrl);
+      if((parsed.protocol==='https:'||parsed.protocol==='http:')&&!parsed.username&&!parsed.password){
+        const host=parsed.hostname.toLowerCase();
+        if(host==='music.163.com'||host==='y.music.163.com'||host==='st.music.163.com'){
+          const route=`${parsed.pathname}${parsed.hash}`;
+          const pathMatch=route.match(/\/(song|album|playlist)(?:\/(\d+))?/i);
+          const idParam=numeric(parsed.searchParams.get('id')??'');
+          const hashQuery=parsed.hash.includes('?')?new URLSearchParams(parsed.hash.slice(parsed.hash.indexOf('?')+1)).get('id')??'':'';
+          const resolvedId=numeric(pathMatch?.[2]??'')||idParam||numeric(hashQuery);
+          if(pathMatch&&pathMatch[1]&&resolvedId){
+            const kind=pathMatch[1].toLowerCase();
+            return{targetType:kind==='song'?1:kind==='album'?10:1000,targetId:resolvedId};
+          }
+        }
+        if(parsed.protocol==='https:')return{targetType:rawType,targetId:rawId,url:parsed.toString()};
+      }
+    }catch{}
+  }
+  return{targetType:rawType,targetId:rawId};
+}
 export class DiscoveryProvider {
   private http:HTTPClient;private textHTTP:TextHTTPClient;private sha1:(value:string)=>Promise<string>;
   constructor(sha1:(value:string)=>Promise<string>,http:HTTPClient=requestJSON,textHTTP:TextHTTPClient=requestText){this.sha1=sha1;this.http=http;this.textHTTP=textHTTP;}
@@ -32,10 +64,25 @@ export class DiscoveryProvider {
     const raw=row(await this.http(queryURL('https://u.y.qq.com/cgi-bin/musics.fcg',{sign:await qqSignature(body,this.sha1)}),{method:'POST',headers:{'Content-Type':'application/json',Referer:'https://y.qq.com/'},body},signal));
     const response=row(raw.req);if(raw.code!==0||response.code!==0)throw new Error('QQ服务暂时不可用');return row(response.data);
   }
+  async neteaseSongs(ids:readonly string[],signal:AbortSignal):Promise<Map<string,Track>>{
+    const clean=[...new Set(ids.filter(id=>/^\d+$/.test(id)))].slice(0,20);
+    const resolved=new Map<string,Track>();
+    if(!clean.length)return resolved;
+    const raw=row(await this.http('https://music.163.com/api/v3/song/detail',{
+      method:'POST',
+      credentials:'omit',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':DESKTOP_UA,Referer:'https://music.163.com/',Origin:'https://music.163.com'},
+      body:`c=${encodeURIComponent(JSON.stringify(clean.map(id=>({id}))))}&ids=${encodeURIComponent(JSON.stringify(clean))}`,
+    },signal));
+    for(const entry of list(raw.songs)){
+      try{const track=onlineTrack('wy',entry);resolved.set(track.origin.id,track);}catch{}
+    }
+    return resolved;
+  }
   async banners(platform:OnlinePlatform,signal:AbortSignal):Promise<readonly NeteaseBanner[]>{
     if(platform!=='wy')return [];
-    // Public NetEase mobile banner endpoint matching Sollin IPA NeteaseCloudApi::fetchBanners (/api/v2/banner/get).
-    const raw=row(await this.http('https://music.163.com/api/v2/banner/get?clientType=iphone',{headers:{Referer:'https://music.163.com/'}},signal));
+    // Align with Sollin's NetEase discover banners (clientType=pc returns single-song, album, playlist, and activity banners).
+    const raw=row(await this.http('https://music.163.com/api/v2/banner/get?clientType=pc',{credentials:'omit',headers:{'User-Agent':DESKTOP_UA,Referer:'https://music.163.com/'}},signal));
     if(raw.code!==200||!Array.isArray(raw.banners))throw new Error('轮播图响应无效');
     const parsed:NeteaseBanner[]=[];
     for(const entry of list(raw.banners).slice(0,10)){
@@ -49,14 +96,21 @@ export class DiscoveryProvider {
         imageUrl=u.toString();
       }catch{continue;}
       const id=text(v.bannerId??v.encodeId)||`${parsed.length}`;
-      const targetType=Number.isFinite(Number(v.targetType))?Number(v.targetType):0;
-      const targetId=text(v.targetId??v.encodeId);
-      const rawUrl=text(v.url).trim();
-      let safeUrl:string|undefined;
-      if(rawUrl){try{const u=new URL(rawUrl);if(u.protocol==='https:'&&!u.username&&!u.password)safeUrl=u.toString();}catch{}}
+      const target=bannerTarget(v.targetType,v.targetId??v.encodeId,text(v.url).trim());
       let song:Track|undefined;
       if(v.song&&typeof v.song==='object'){try{song=onlineTrack('wy',v.song);}catch{}}
-      parsed.push({id,imageUrl,typeTitle:text(v.typeTitle),titleColor:text(v.titleColor)||'red',targetType,targetId,...(safeUrl?{url:safeUrl}:{}),...(song?{song}:{})});
+      parsed.push({id,imageUrl,typeTitle:text(v.typeTitle),titleColor:text(v.titleColor)||'red',targetType:target.targetType,targetId:target.targetId,...(target.url?{url:target.url}:{}),...(song?{song}:{})});
+    }
+    const missingSongIds=parsed.filter(b=>b.targetType===1&&!b.song&&/^\d+$/.test(b.targetId)).map(b=>b.targetId);
+    if(missingSongIds.length){
+      try{
+        const songs=await this.neteaseSongs(missingSongIds,signal);
+        return parsed.map(banner=>{
+          if(banner.targetType!==1||banner.song)return banner;
+          const hit=songs.get(banner.targetId);
+          return hit?{...banner,song:hit}:banner;
+        });
+      }catch{}
     }
     return parsed;
   }

@@ -3,7 +3,7 @@ import type {HTTPRequest} from './http.ts';
 import {weapiPayload} from './neteaseCrypto.ts';
 
 export interface NeteaseSessionAuth {readonly cookie:string;readonly csrf:string}
-const DESKTOP_UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+export const DESKTOP_UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 /** Reads the same cookie subset the official web API accepts; anything else is no session. */
 export function neteaseSessionAuth(session:unknown):NeteaseSessionAuth|undefined {

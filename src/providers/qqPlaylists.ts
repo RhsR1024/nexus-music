@@ -19,10 +19,11 @@ const numeric=(v:unknown)=>{const id=text(v);return /^[1-9]\d{0,15}$/.test(id)&&
 const mid=(v:unknown):v is string=>typeof v==='string'&&/^[A-Za-z0-9]{1,128}$/.test(v);
 const authCode=(v:unknown)=>[301,401,403,1000,104400,104401].includes(Number(v));
 const publicCover=(v:unknown)=>{try{const u=new URL(text(v).replace(/^\/\//,'https://'));return u.protocol==='https:'&&safePublicURL(u.href)?u.href:'';}catch{return '';}};
-function playlist(value:unknown,kind:AccountPlaylist['kind']):AccountPlaylist{
+const systemDirIds=new Set(['202','205','206']);
+function playlist(value:unknown,kind:AccountPlaylist['kind'],preferTidForLiked=false):AccountPlaylist{
   const item=row(value),dir=item.dirId??item.dirid;
   const raw=[item.tid,item.dissid,item.dissId,item.id].find(v=>/^[1-9]\d*$/.test(text(v)));
-  const id=text(dir)==='201'?'dir:201':raw!==undefined?numeric(raw):`dir:${numeric(dir)}`;
+  const id=text(dir)==='201'?(preferTidForLiked&&raw!==undefined?numeric(raw):'dir:201'):raw!==undefined?numeric(raw):`dir:${numeric(dir)}`;
   const title=text(item.dirName??item.dirname??item.title??item.dissname??item.name).trim();
   if(!title||title.length>200||/[\u0000-\u001f\u007f]/.test(title))fail();
   return Object.freeze({id,title,count:total(item.songNum??item.song_cnt??item.songnum??item.song_num??item.songCount??item.trackCount),coverUrl:publicCover(item.picUrl??item.bigpicUrl??item.picurl??item.logo),kind});
@@ -41,8 +42,8 @@ export class QQPlaylists{
     let profile:Awaited<ReturnType<QQAccountProfileClient['fetch']>>;
     try{profile=await this.deps.profile.fetch(session,signal);}catch(error){check();if(error instanceof QQAccountProfileError)throw new AccountPlaylistError(error.kind);throw error;}
     check();if(profile.userId!==identity.uin)throw new AccountPlaylistError('login_required');
-    const encryptedUin=profile.encryptedUin;
-    if(typeof encryptedUin!=='string'||!encryptedUin||encryptedUin.length>1024||/[\u0000-\u001f\u007f]/.test(encryptedUin))throw new AccountPlaylistError('unavailable');
+    const candidateEuin=profile.encryptedUin??cookies.euin;
+    const encryptedUin=typeof candidateEuin==='string'&&candidateEuin.length>0&&candidateEuin.length<=1024&&!/[\u0000-\u001f\u007f]/.test(candidateEuin)?candidateEuin:'';
     const request=async(calls:Row)=>{
       check();const result=row(await this.deps.http('https://u.y.qq.com/cgi-bin/musicu.fcg',{
         method:'POST',credentials:'omit',headers:{Cookie:Object.entries(cookies).map(([k,v])=>`${k}=${v}`).join('; '),Referer:'https://y.qq.com/',Origin:'https://y.qq.com','Content-Type':'application/json;charset=UTF-8'},
@@ -52,18 +53,58 @@ export class QQPlaylists{
       for(const key of Object.keys(calls))if(!row(result[key]).data||typeof row(result[key]).data!=='object'||Array.isArray(row(result[key]).data))fail();
       return Object.fromEntries(Object.keys(calls).map(key=>[key,row(row(result[key]).data)]));
     };
-    const detail=(id:string,offset:number,size=100)=>({module:'music.srfDissInfo.DissInfo',method:'CgiGetDiss',param:{disstid:id.startsWith('dir:')?0:Number(numeric(id)),dirid:id.startsWith('dir:')?Number(numeric(id.slice(4))):0,tag:true,song_begin:offset,song_num:size,userinfo:true,orderlist:true,enc_host_uin:encryptedUin}});
+    const detail=(id:string,offset:number,size=100)=>({module:'music.srfDissInfo.DissInfo',method:'CgiGetDiss',param:{disstid:id.startsWith('dir:')?0:Number(numeric(id)),dirid:id.startsWith('dir:')?Number(numeric(id.slice(4))):0,tag:true,song_begin:offset,song_num:size,userinfo:true,orderlist:true,...(encryptedUin?{enc_host_uin:encryptedUin}:id.startsWith('dir:')?{host_uin:Number(identity.uin)}:{})}});
     return{request,detail,uin:identity.uin,encryptedUin};
   }
   async list(account:MusicAccount,session:MusicSession,signal:AbortSignal,check:()=>void):Promise<AccountPlaylist[]>{
     const {request,detail,uin,encryptedUin}=await this.open(account,session,signal,check);
-    const favorite=(offset:number)=>({module:'music.musicasset.PlaylistFavRead',method:'CgiGetPlaylistFavInfo',param:{uin:encryptedUin,offset,size:100}});
+    const favorite=(offset:number)=>({module:'music.musicasset.PlaylistFavRead',method:'CgiGetPlaylistFavInfo',param:{uin:encryptedUin||uin,offset,size:100}});
+    if(!encryptedUin){
+      // When c6 profile is anti-bot challenged (1306) and session lacks euin, still load created playlists
+      // via GetPlaylistByUin (numeric uin only) and best-effort fetch favorites/liked count.
+      const createdRes=await request({created:{module:'music.musicasset.PlaylistBaseRead',method:'GetPlaylistByUin',param:{uin}}});
+      const created=createdRes.created!;
+      if(!Array.isArray(created.v_playlist)||created.v_playlist.length>10000||created.hasmore!=null&&more(created.hasmore))fail();
+      const filteredCreated=created.v_playlist.filter(value=>!systemDirIds.has(text(row(value).dirId??row(value).dirid)));
+      const likedEntry=filteredCreated.find(value=>text(row(value).dirId??row(value).dirid)==='201');
+      const likedRow=row(likedEntry);
+      const likedTid=[likedRow.tid,likedRow.dissid,likedRow.dissId,likedRow.id].find(v=>/^[1-9]\d*$/.test(text(v)));
+      let likedCount:number|undefined;
+      try{
+        const targetId=likedTid?numeric(likedTid):'dir:201';
+        const likedData=(await request({liked:detail(targetId,0,1)})).liked!;
+        const rawLikedCount=likedData.total_song_num??likedData.songnum??likedData.totalnum;
+        if(rawLikedCount!=null)likedCount=total(rawLikedCount);
+      }catch{}
+      const items:AccountPlaylist[]=[];
+      const seen=new Set<string>();
+      for(const value of filteredCreated){
+        const item=row(value);
+        const isLiked=text(item.dirId??item.dirid)==='201';
+        const fallbackCount=item.songNum??item.song_cnt??item.songnum??item.song_num??item.songCount??item.trackCount;
+        const normalized=playlist(isLiked&&likedCount!==undefined?{...item,songNum:likedCount}:fallbackCount===undefined?{...item,songNum:0}:item,'created',true);
+        if(!seen.has(normalized.id)){items.push(normalized);seen.add(normalized.id);}
+      }
+      if(!likedEntry){items.unshift(Object.freeze({id:'dir:201',title:'我喜欢',count:likedCount??0,coverUrl:'',kind:'created'}));seen.add('dir:201');}
+      try{
+        let favData=(await request({favorite:favorite(0)})).favorite!,offset=0;
+        for(let page=0;page<100;page++){
+          const rows=favData.v_list??favData.v_playlist;if(!Array.isArray(rows)||rows.length>100)break;
+          let added=0;
+          for(const value of rows){try{const item=playlist(value,'favorite');if(!seen.has(item.id)){items.push(item);seen.add(item.id);added++;}}catch{}}
+          if(items.length>10000)break;offset+=rows.length;
+          if(favData.hasmore==null||!more(favData.hasmore)||!added)break;
+          favData=(await request({favorite:favorite(offset)})).favorite!;
+        }
+      }catch{}
+      return items;
+    }
     const result=await request({created:{module:'music.musicasset.PlaylistBaseRead',method:'GetPlaylistByUin',param:{uin}},favorite:favorite(0),liked:detail('dir:201',0,1)});
     const created=result.created!;
     // This fixed API is unpaged. Reject an explicit truncated response.
     if(!Array.isArray(created.v_playlist)||created.v_playlist.length>10000||created.hasmore!=null&&more(created.hasmore))fail();
     const likedCount=total(result.liked!.total_song_num??result.liked!.songnum??result.liked!.totalnum);
-    const items=created.v_playlist.map(value=>{
+    const items=created.v_playlist.filter(value=>!systemDirIds.has(text(row(value).dirId??row(value).dirid))).map(value=>{
       const item=row(value);
       return playlist(text(item.dirId??item.dirid)==='201'?{...item,songNum:likedCount}:item,'created');
     }),seen=new Set(items.map(v=>v.id));
