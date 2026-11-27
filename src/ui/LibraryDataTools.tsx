@@ -1,6 +1,7 @@
 import {Text} from './Typography.tsx';
 import {useState} from 'react';
-import {Alert,Pressable,View} from 'react-native';
+import {Alert,Pressable,StyleSheet,View} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import {shareLocalFile} from '../storage/shareLocalFiles.ts';
 import * as DocumentPicker from 'expo-document-picker';
 import {File,Paths} from 'expo-file-system';
@@ -18,14 +19,36 @@ import {PlaybackStatistics} from './PlaybackStatistics.tsx';
 import {StatisticsCloud} from './StatisticsCloud.tsx';
 
 // One implementation shared by the music library and data settings.
-export function LibraryDataTools({services}:{services:Services}){
+export function LibraryDataTools({services,showStatistics=true}:{services:Services;showStatistics?:boolean}){
   const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance);
   const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
-  const soft=s.dark?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.48)';
-  const chipBg=s.dark?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.60)';
 
   async function perform(run:()=>Promise<void>){setBusy(true);setMessage('');try{await run();}catch{setMessage('操作未确认完成，请核对本机数据与文件后重试');}finally{setBusy(false);}}
-  const button=(label:string,action:()=>void,primary=false,testID?:string)=><Pressable testID={testID} accessibilityRole="button" disabled={busy} accessibilityState={{disabled:busy}} onPress={action} style={{paddingHorizontal:14,paddingVertical:10,minHeight:42,borderRadius:21,backgroundColor:primary?s.accent:chipBg,justifyContent:'center',alignItems:'center',opacity:busy?.4:1}}><Text style={{color:primary?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{label}</Text></Pressable>;
+  const divider=<View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:62,backgroundColor:s.hairline}}/>;
+  const actionRow=(
+    title:string,
+    subtitle:string,
+    icon:React.ComponentProps<typeof Ionicons>['name'],
+    action:()=>void,
+    options?:{testID?:string;accessibilityLabel?:string;highlight?:boolean},
+  )=><Pressable
+    testID={options?.testID}
+    accessibilityRole="button"
+    accessibilityLabel={options?.accessibilityLabel??title}
+    disabled={busy}
+    accessibilityState={{disabled:busy}}
+    onPress={action}
+    style={{minHeight:60,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:12,opacity:busy?.45:1}}
+  >
+    <View style={{width:34,height:34,borderRadius:10,backgroundColor:options?.highlight?s.accent:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+      <Ionicons name={icon} size={18} color={options?.highlight?'#FFFFFF':s.accent}/>
+    </View>
+    <View style={{flex:1,minWidth:0,gap:2}}>
+      <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{title}</Text>
+      <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{subtitle}</Text>
+    </View>
+    <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+  </Pressable>;
 
   async function exportBackup(){const file=new File(Paths.cache,`nexus-music-${Date.now()}.json`);try{file.write(await services.snapshotBackup());await shareLocalFile(file.uri,'音枢音乐库备份');}finally{if(file.exists)file.delete();}}
   async function exportLX(){
@@ -78,25 +101,43 @@ export function LibraryDataTools({services}:{services:Services}){
     }finally{if(file.exists)file.delete();}
   }
 
-  return <View style={{gap:12,marginVertical:10}}>
-    <PlaybackStatistics services={services}/>
-    <StatisticsCloud services={services}/>
-    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'600',marginLeft:4}}>备份与迁移</Text>
-    <View style={{padding:16,borderRadius:20,backgroundColor:soft,gap:10}}>
-      <Text accessibilityRole="header" style={{color:s.ink,fontSize:16,fontWeight:'700'}}>备份与歌单迁移</Text>
-      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-        {button('导出音乐库备份',()=>{void perform(exportBackup);},true)}
-        {button('恢复音枢备份',()=>{void perform(importBackup);})}
+  return <View style={{gap:12,marginVertical:8}}>
+    {showStatistics&&<>
+      <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'600',marginLeft:6}}>聆听统计</Text>
+      <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+        <PlaybackStatistics services={services} triggerVariant="row"/>
+        {divider}
+        <StatisticsCloud services={services} grouped/>
       </View>
-      <CloudBackup services={services}/><CloudSync services={services}/>
-      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-        {button('导入LX v2歌单 JSON / LXMC',()=>{void perform(importLX);})}
-        {button('导出 LX 歌单 JSON',()=>{void perform(exportLX);},false,'library-export-lx-json')}
-        {button('导入漫途版本1备份',()=>{void perform(importWayfarer);})}
-      </View>
-      <QishuiImport services={services}/>
-      <Text style={{color:s.muted,fontSize:12,lineHeight:19}}>备份包含音乐库、实际播放统计及播放/歌词/EQ/外观设置；不含密码、JS音源、音频/图片/字体文件。LX 导出仅包含支持的在线歌曲。</Text>
+    </>}
+    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'600',marginLeft:6,marginTop:showStatistics?4:0}}>备份与云同步</Text>
+    <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+      {actionRow('导出音乐库备份','导出收藏、歌单、统计与偏好为 JSON','share-outline',()=>{void perform(exportBackup);},{highlight:true})}
+      {divider}
+      {actionRow('恢复音枢备份','从本机备份文件还原音乐库与设置','refresh-outline',()=>{void perform(importBackup);})}
+      {divider}
+      <CloudBackup services={services} grouped/>
+      {divider}
+      <CloudSync services={services} grouped/>
+      {!showStatistics&&<>
+        {divider}
+        <StatisticsCloud services={services} grouped/>
+      </>}
     </View>
-    {!!message&&<Text testID="library-data-message" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13,marginLeft:4}}>{message}</Text>}
+    <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'600',marginLeft:6,marginTop:4}}>外部歌单导入与导出</Text>
+    <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+      {actionRow('导入 LX 歌单','支持 LX v2 JSON 与 LXMC 文件追加导入','document-text-outline',()=>{void perform(importLX);},{accessibilityLabel:'导入LX v2歌单 JSON / LXMC'})}
+      {divider}
+      {actionRow('导出 LX 歌单 JSON','将收藏与歌单导出为 LX v2 通用格式','code-download-outline',()=>{void perform(exportLX);},{testID:'library-export-lx-json'})}
+      {divider}
+      {actionRow('导入漫途备份','兼容漫途版本 1 备份文件追加导入','archive-outline',()=>{void perform(importWayfarer);},{accessibilityLabel:'导入漫途版本1备份'})}
+      {divider}
+      <QishuiImport services={services} grouped/>
+    </View>
+    <View style={{flexDirection:'row',alignItems:'flex-start',gap:8,paddingHorizontal:12,paddingVertical:10,borderRadius:14,backgroundColor:s.dark?'rgba(255,255,255,0.035)':'rgba(42,36,31,0.03)'}}>
+      <Ionicons name="information-circle-outline" size={15} color={s.subtle} style={{marginTop:1}}/>
+      <Text style={{flex:1,color:s.muted,fontSize:11.5,lineHeight:17.5}}>备份包含音乐库、实际播放统计及播放/歌词/EQ/外观设置，不含账号凭据、JS 音源与音频/图片/字体文件；LX 导出仅包含支持的在线歌曲。</Text>
+    </View>
+    {!!message&&<Text testID="library-data-message" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13,marginLeft:6}}>{message}</Text>}
   </View>;
 }

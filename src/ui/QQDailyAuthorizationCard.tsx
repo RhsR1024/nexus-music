@@ -2,7 +2,9 @@ import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 're
 import {ActivityIndicator,Pressable,StyleSheet,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
+import {AccountDailyError} from '../providers/accountDaily.ts';
 import type {MusicAccount} from '../providers/musicAccounts.ts';
+import {decodeQQBaseInfoNick} from '../providers/qqAccountProfile.ts';
 import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {sollinTokens} from './tokens.ts';
@@ -36,7 +38,9 @@ export function QQDailyAuthorizationCard({services,active,disabled}:{services:Se
       if(!next.signal.aborted){setManualKey('');setManualOpen(false);setNotice('官方 Skills 密钥验证通过，日推授权已保存');}
     }catch(caught){
       if(!next.signal.aborted){
-        setError(caught instanceof Error&&caught.message.includes('qmk-')?caught.message:'密钥验证失败，请确认该密钥属于当前已登录 QQ 账号且未过期');
+        if(caught instanceof Error&&caught.message.includes('qmk-'))setError(caught.message);
+        else if(caught instanceof AccountDailyError&&caught.kind==='login_required')setError('当前 QQ 账号会话已失效或结构异常，请先重新登录 QQ 账号后再保存密钥');
+        else setError('密钥验证失败：QQ 官方接口未通过此密钥，请确认密钥有效且网络畅通后重试');
       }
     }finally{if(controller.current===next){controller.current=null;setSavingManual(false);}}
   };
@@ -56,7 +60,7 @@ export function QQDailyAuthorizationCard({services,active,disabled}:{services:Se
           <Text style={{fontSize:14.5,fontWeight:'700',color:s.ink}}>官方每日推荐授权</Text>
           {dailyAccounts.length>0&&<View style={{paddingHorizontal:7,paddingVertical:2,borderRadius:999,backgroundColor:okBg}}><Text style={{fontSize:10.5,fontWeight:'700',color:okColor}}>已授权</Text></View>}
         </View>
-        <Text style={{fontSize:12,lineHeight:17,color:s.muted}}>在官方 Skills 页面登录后点击「快速配置」生成或复制 `qmk-` 密钥，将自动捕获并绑定；私人雷达无需此授权。</Text>
+        <Text style={{fontSize:12,lineHeight:17,color:s.muted}}>在官方 Skills 页面登录后点击「快速配置」生成或复制 qmk- 密钥，将自动捕获并绑定；私人雷达无需此授权。</Text>
       </View>
     </View>
 
@@ -83,20 +87,23 @@ export function QQDailyAuthorizationCard({services,active,disabled}:{services:Se
     </View>
 
     {manualOpen&&qqAccounts.length>0&&<View style={{padding:12,borderRadius:14,backgroundColor:insetBg,gap:8}}>
-      <Text style={{fontSize:12,color:s.muted}}>若已在官方 Skills 页复制了 `qmk-...` 密钥，可直接粘贴并验证保存：</Text>
-      <TextInput testID="qq-daily-manual-input" accessibilityLabel="官方 Skills 密钥" placeholder="粘贴 qmk-... 密钥" placeholderTextColor={s.subtle} value={manualKey} onChangeText={setManualKey} autoCapitalize="none" autoCorrect={false} secureTextEntry style={{color:s.ink,backgroundColor:s.inputBg,paddingHorizontal:12,paddingVertical:9,borderRadius:12,fontSize:13}}/>
+      <Text style={{fontSize:12,color:s.muted}}>若已在官方 Skills 页复制了 qmk-... 密钥（或包含该密钥的命令片段），可直接粘贴并验证保存：</Text>
+      <TextInput testID="qq-daily-manual-input" accessibilityLabel="官方 Skills 密钥" placeholder="粘贴 qmk-... 密钥" placeholderTextColor={s.subtle} value={manualKey} onChangeText={setManualKey} autoCapitalize="none" autoCorrect={false} autoComplete="off" textContentType="none" clearButtonMode="while-editing" style={{color:s.ink,backgroundColor:s.inputBg,borderWidth:1,borderColor:s.cardBorder,paddingHorizontal:12,paddingVertical:10,borderRadius:12,fontSize:13}}/>
       <Pressable testID="qq-daily-manual-save" accessibilityRole="button" accessibilityLabel="验证并保存日推密钥" disabled={savingManual||!manualKey.trim()} onPress={()=>{void saveManual();}} style={{minHeight:38,paddingHorizontal:14,borderRadius:19,backgroundColor:s.control,alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,opacity:savingManual||!manualKey.trim()?.5:1}}>
         {savingManual&&<ActivityIndicator size="small" color="#FFFFFF"/>}
         <Text style={{fontSize:13,fontWeight:'700',color:'#FFFFFF'}}>{savingManual?'正在验证…':'验证并保存'}</Text>
       </Pressable>
     </View>}
 
-    {dailyAccounts.map(account=><View key={account.id} style={{padding:11,borderRadius:14,backgroundColor:insetBg,gap:8}}>
-      <Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{account.displayName??account.label} · 已配置日推授权</Text>
-      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-        <Pressable testID={`qq-daily-reauthorize-${account.id}`} accessibilityRole="button" accessibilityLabel={`重新授权：${account.displayName??account.label}`} onPress={()=>authorize(account)} disabled={disabled||busy} style={{minHeight:34,paddingHorizontal:12,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,justifyContent:'center',opacity:disabled||busy?.5:1}}><Text style={{fontSize:12,fontWeight:'600',color:s.ink}}>重新授权：{account.displayName??account.label}</Text></Pressable>
-        <Pressable testID={`qq-daily-clear-${account.id}`} accessibilityRole="button" accessibilityLabel={`移除日推授权：${account.displayName??account.label}`} onPress={()=>{void clear(account);}} disabled={disabled||busy} style={{minHeight:34,paddingHorizontal:12,borderRadius:17,backgroundColor:warnBg,justifyContent:'center',opacity:disabled||busy?.5:1}}><Text style={{fontSize:12,fontWeight:'600',color:s.accent}}>移除日推授权：{account.displayName??account.label}</Text></Pressable>
-      </View>
-    </View>)}
+    {dailyAccounts.map(account=>{
+      const shownName=account.displayName?decodeQQBaseInfoNick(account.displayName)||account.displayName:account.label;
+      return <View key={account.id} style={{padding:11,borderRadius:14,backgroundColor:insetBg,gap:8}}>
+        <Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{shownName} · 已配置日推授权</Text>
+        <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+          <Pressable testID={`qq-daily-reauthorize-${account.id}`} accessibilityRole="button" accessibilityLabel={`重新授权：${shownName}`} onPress={()=>authorize(account)} disabled={disabled||busy} style={{minHeight:34,paddingHorizontal:12,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,justifyContent:'center',opacity:disabled||busy?.5:1}}><Text style={{fontSize:12,fontWeight:'600',color:s.ink}}>重新授权：{shownName}</Text></Pressable>
+          <Pressable testID={`qq-daily-clear-${account.id}`} accessibilityRole="button" accessibilityLabel={`移除日推授权：${shownName}`} onPress={()=>{void clear(account);}} disabled={disabled||busy} style={{minHeight:34,paddingHorizontal:12,borderRadius:17,backgroundColor:warnBg,justifyContent:'center',opacity:disabled||busy?.5:1}}><Text style={{fontSize:12,fontWeight:'600',color:s.accent}}>移除日推授权：{shownName}</Text></Pressable>
+        </View>
+      </View>;
+    })}
   </View>;
 }

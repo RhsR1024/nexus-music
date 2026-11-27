@@ -5,6 +5,7 @@ import {Ionicons} from '@expo/vector-icons';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import type {Services} from '../app/services.ts';
 import {AccountPlaylistError,type AccountPlaylist,type AccountPlaylistPreview} from '../providers/accountPlaylists.ts';
+import {decodeQQBaseInfoNick} from '../providers/qqAccountProfile.ts';
 import {Text} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {space,radius,typography,controls,sollinTokens} from './tokens.ts';
@@ -98,7 +99,10 @@ export function AccountPlaylistImport({services,active,disabled,onLogin,platform
       <Text testID={testID("account-playlists-login-required")} style={[styles.caption,{color:s.muted}]}>登录{platformName}后，可读取并导入账号歌单。</Text>
       {button('account-playlists-login',`登录${platformName}`,onLogin,disabled)}
     </>:<>
-      {available.map(item=><Pressable key={item.id} testID={testID(`account-playlists-owner-${item.id}`)} accessibilityRole="radio" accessibilityState={{selected:item===account}} disabled={blocked} onPress={()=>setSelected(item.id)} style={[styles.owner,{backgroundColor:item===account?s.accentSoft:s.chip,borderWidth:1,borderColor:item===account?s.control+'44':s.chipBorder}]}><Text style={[styles.body,{color:item===account?s.control:s.ink,fontWeight:'600'}]}>{item.displayName??item.label}</Text></Pressable>)}
+      {available.map(item=>{
+        const shownName=item.displayName?(item.platform==='tx'?decodeQQBaseInfoNick(item.displayName)||item.displayName:item.displayName):item.label;
+        return <Pressable key={item.id} testID={testID(`account-playlists-owner-${item.id}`)} accessibilityRole="radio" accessibilityState={{selected:item===account}} disabled={blocked} onPress={()=>setSelected(item.id)} style={[styles.owner,{backgroundColor:item===account?s.accentSoft:s.chip,borderWidth:1,borderColor:item===account?s.control+'44':s.chipBorder}]}><Text style={[styles.body,{color:item===account?s.control:s.ink,fontWeight:'600'}]}>{shownName}</Text></Pressable>;
+      })}
       {platform==='wy'&&<View testID="account-playlist-create" style={[styles.create,{borderColor:s.cardBorder,backgroundColor:s.dark?'rgba(255,255,255,0.035)':'rgba(42,36,31,0.03)'}]}>
         <Text accessibilityRole="header" style={[styles.body,{color:s.ink,fontWeight:'700',fontSize:14}]}>新建网易云歌单</Text>
         <TextInput testID="account-playlist-create-name" accessibilityLabel="新建网易云歌单名称" placeholder="歌单名称（1–40字）" placeholderTextColor={s.subtle} value={createName} editable={!pending} onChangeText={value=>{setCreateName(value);setCreateMessage('');}} maxLength={80} style={[styles.input,{color:s.ink,borderColor:s.cardBorder,backgroundColor:s.inputBg}]}/>

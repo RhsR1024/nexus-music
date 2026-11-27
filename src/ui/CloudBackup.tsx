@@ -10,7 +10,7 @@ import {sollinTokens} from './tokens.ts';
 import type {Services} from '../app/services.ts';
 import {backupDirectory,CloudBackupError,normalizeBackupDirectory} from '../storage/webdavBackups.ts';
 
-export function CloudBackup({services}:{services:Services}){
+export function CloudBackup({services,grouped=false}:{services:Services;grouped?:boolean}){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),insets=useSafeAreaInsets(),store=services.davBackups,state=useSyncExternalStore(store.subscribe,store.getSnapshot),accounts=useSyncExternalStore(services.davAccounts.subscribe,services.davAccounts.getSnapshot);
   const [open,setOpen]=useState(false),[accountId,setAccountId]=useState(''),[directory,setDirectory]=useState(backupDirectory),[message,setMessage]=useState(''),[visible,setVisible]=useState(20);
   useEffect(()=>{if(open&&!accounts.some(account=>account.id===accountId))setAccountId(accounts[0]?.id??'');},[accounts,open,accountId]);
@@ -26,14 +26,21 @@ export function CloudBackup({services}:{services:Services}){
   );
   const preview=state.preview,backup=preview?.backup,settingsScroll=useRef<ScrollView>(null);
   function confirmRestore(){if(!preview||!saved)return;Alert.alert('恢复云端备份？',`将替换本机音乐库和播放统计。${backup?.settings?'包含播放/歌词/EQ和外观设置，将一并恢复。':'此旧备份无设置，保留当前设置。'}音频/图片/字体文件、连接凭据与音源不包含在备份内。队列保留；若当前歌曲绑定改变，播放会停止。`,[{text:'取消',style:'cancel'},{text:'确认恢复云备份',style:'destructive',onPress:()=>{void perform(()=>store.restorePreview());}}]);}
-  return <View style={{marginVertical:6}}>
-    <Pressable accessibilityRole="button" accessibilityLabel="WebDAV云备份" testID="cloud-backup-open" onPress={show} style={[{minHeight:54,paddingHorizontal:16,paddingVertical:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},s.cardShadow]}>
+  return <View style={grouped?undefined:{marginVertical:6}}>
+    {grouped?<Pressable accessibilityRole="button" accessibilityLabel="WebDAV云备份" testID="cloud-backup-open" onPress={show} style={{minHeight:60,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:12}}>
+      <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="cloud-upload-outline" size={18} color={s.accent}/></View>
+      <View style={{flex:1,minWidth:0,gap:2}}>
+        <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>WebDAV 云备份</Text>
+        <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>上传独立校验版本，恢复前支持预览</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+    </Pressable>:<Pressable accessibilityRole="button" accessibilityLabel="WebDAV云备份" testID="cloud-backup-open" onPress={show} style={[{minHeight:54,paddingHorizontal:16,paddingVertical:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},s.cardShadow]}>
       <View style={{flexDirection:'row',alignItems:'center',gap:11}}>
         <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="cloud-upload-outline" size={18} color={s.accent}/></View>
         <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>WebDAV云备份</Text>
       </View>
       <Ionicons name="chevron-forward" size={17} color={s.subtle}/>
-    </Pressable>
+    </Pressable>}
     <Modal visible={open} onRequestClose={close} animationType="slide">
       <View style={{flex:1}}>
         <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>

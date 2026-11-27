@@ -358,11 +358,16 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
     dataStore?.httpCookieStore.getAllCookies { [weak self] cookies in
       guard let self, !self.finished, self.webView === webView else { return }
       var values: [String: String] = [:]
-      for cookie in cookies {
+      let orderedCookies = cookies.sorted {
+        $0.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).count <
+          $1.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).count
+      }
+      for cookie in orderedCookies {
         let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
         let allowed = self.provider == "tx" ? domain == "qq.com" || domain.hasSuffix(".qq.com") :
           domain == "163.com" || domain.hasSuffix(".163.com")
         if allowed, MusicWebLoginPolicy.cookieNames(self.provider).contains(cookie.name),
+          !cookie.value.isEmpty,
           cookie.expiresDate == nil || cookie.expiresDate! > Date() { values[cookie.name] = cookie.value }
       }
       guard MusicWebLoginPolicy.ready(values, provider: self.provider),
@@ -425,10 +430,15 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
         var values: [String: String] = [:]
         var qqIdentities = Set<String>()
         var wxIdentities = Set<String>()
-        for cookie in cookies {
+        let orderedCookies = cookies.sorted {
+          $0.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).count <
+            $1.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).count
+        }
+        for cookie in orderedCookies {
           let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
           guard (domain == "qq.com" || domain.hasSuffix(".qq.com")),
             MusicWebLoginPolicy.cookieNames("tx").contains(cookie.name),
+            !cookie.value.isEmpty,
             cookie.expiresDate == nil || cookie.expiresDate! > Date() else { continue }
           values[cookie.name] = cookie.value
           if ["uin", "qqmusic_uin", "musicid"].contains(cookie.name),

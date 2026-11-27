@@ -1,8 +1,10 @@
-import {useState,useSyncExternalStore} from 'react';
+import {useEffect,useState,useSyncExternalStore} from 'react';
 import {Pressable,StyleSheet,Switch,View,useWindowDimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {requireNativeModule} from 'expo';
 import type {Services} from '../app/services.ts';
 import type {AppearanceSection} from './AppearanceSettings.tsx';
+import {appIconIDForNativeName,nexusAppIcons} from '../domain/appIcons.ts';
 import {miniActionLabels} from '../domain/miniPlayer.ts';
 import {glassLevelLabels,visualThemeLabels} from '../domain/appearance.ts';
 import {effectiveLyricFont} from '../storage/fontCatalog.ts';
@@ -15,6 +17,21 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
   const value=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),fonts=useSyncExternalStore(services.fonts.subscribe,services.fonts.getSnapshot);
   const stacked=useWindowDimensions().fontScale>1.4;
   const [error,setError]=useState('');
+  const [iconDetail,setIconDetail]=useState('默认图标');
+  useEffect(()=>{
+    let alive=true;
+    try{
+      const mod=requireNativeModule<{snapshot():Promise<{supported:boolean;current?:string|null;liveContainer?:boolean}>}>('NexusAppIcon');
+      void mod.snapshot().then(snap=>{
+        if(!alive)return;
+        if(snap.liveContainer){setIconDetail('容器宿主管理');return;}
+        const id=appIconIDForNativeName(snap.current);
+        const label=nexusAppIcons.find(item=>item.id===id)?.label;
+        if(label)setIconDetail(label);
+      }).catch(()=>{});
+    }catch{}
+    return()=>{alive=false;};
+  },[]);
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{setError('');void services.preferences.update(patch).catch(()=>setError('设置未保存，请重试；之前的设置已保留。'));};
   const fontName=(id:string|null|undefined)=>fonts.fonts.find(font=>font.id===id)?.name??'系统默认';
   const themes=visualThemeLabels,styles={gradient:'渐变',solid:'纯色',image:'图片'},layouts={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'};
@@ -25,7 +42,7 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
     {id:'background',title:'主题与背景',icon:'color-palette',detail:`${themes[value.visualTheme]} · ${styles[value.backgroundStyle]} · 卡片 ${Math.round(value.cardOpacity*100)}%`,page:'background'},
     {id:'cover-color',title:'背景随封面变化',icon:'color-filter-outline',subtitle:'使用封面主体色，应用到全局及播放器',toggle:{value:value.coverColor,change:coverColor=>update({coverColor})}},
     {id:'motion',title:'动态背景',icon:'pulse',subtitle:'封面色彩流动并优先显示；暂停或减少动态效果时停止',toggle:{value:value.dynamicBackground,change:dynamicBackground=>update({dynamicBackground})}},
-    {id:'icons',title:'软件图标',icon:'apps',detail:'默认图标',page:'icons'},
+    {id:'icons',title:'软件图标',icon:'apps',detail:iconDetail,page:'icons'},
     {id:'globalFont',title:'全局字体',icon:'text',detail:fontName(fonts.global),page:'globalFont'},
     {id:'lyricFont',title:'歌词字体',icon:'reader-outline',detail:fonts.lyricMode==='inherit'?'跟随全局字体':fontName(effectiveLyricFont(fonts)),page:'lyricFont'},
     {id:'skins',title:'播放界面样式',icon:'albums',detail:layouts[value.playerLayout],page:'skins'},

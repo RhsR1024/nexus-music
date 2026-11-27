@@ -61,10 +61,14 @@ export function PlaybackStatistics({
   services,
   triggerTestID='open-listening-statistics',
   triggerLabel='听歌统计',
+  triggerSubtitle,
+  triggerVariant='card',
 }:{
   services:Services;
   triggerTestID?:string;
   triggerLabel?:string;
+  triggerSubtitle?:string;
+  triggerVariant?:'card'|'row'|'compact';
 }){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),insets=useSafeAreaInsets();
   const state=useSyncExternalStore(services.playbackStats.subscribe,services.playbackStats.getSnapshot);
@@ -147,29 +151,55 @@ export function PlaybackStatistics({
     </Pressable>;
   }
 
+  const selectedTitle=selected?summary.rows.find(item=>item.id===selected)?.title:undefined;
+  const triggerSub=triggerSubtitle??`${fullSummary.songCount} 首 · ${fullSummary.totalPlays} 次 · ${listeningDuration(fullSummary.totalMs)}`;
+  const openModal=()=>{setSelected(undefined);setMessage('');setOpen(true);};
+
   return <>
-    <Pressable testID={triggerTestID} accessibilityRole="button" accessibilityLabel={triggerLabel} disabled={busy} onPress={()=>{setSelected(undefined);setMessage('');setOpen(true);}} style={{minHeight:controls.hit,paddingHorizontal:16,paddingVertical:11,borderRadius:20,backgroundColor:softCard,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10}}>
-      <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
-        <View style={{width:32,height:32,borderRadius:16,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
-          <Ionicons name="stats-chart" size={16} color={s.accent}/>
+    {triggerVariant==='row'?<Pressable testID={triggerTestID} accessibilityRole="button" accessibilityLabel={triggerLabel} disabled={busy} onPress={openModal} style={{minHeight:60,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:12,opacity:busy?.45:1}}>
+      <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+        <Ionicons name="stats-chart-outline" size={18} color={s.accent}/>
+      </View>
+      <View style={{flex:1,minWidth:0,gap:2}}>
+        <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{triggerLabel}</Text>
+        <Text numberOfLines={1} style={{color:s.muted,fontSize:12,fontVariant:['tabular-nums']}}>{triggerSub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+    </Pressable>:triggerVariant==='compact'?<Pressable testID={triggerTestID} accessibilityRole="button" accessibilityLabel={triggerLabel} disabled={busy} onPress={openModal} style={{minHeight:48,paddingHorizontal:12,paddingVertical:9,borderRadius:14,backgroundColor:s.dark?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.62)',borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10,opacity:busy?.45:1}}>
+      <View style={{flexDirection:'row',alignItems:'center',gap:10,flex:1,minWidth:0}}>
+        <View style={{width:30,height:30,borderRadius:9,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+          <Ionicons name="stats-chart" size={15} color={s.accent}/>
         </View>
-        <View style={{gap:1}}>
-          <Text style={{color:s.ink,fontSize:14.5,fontWeight:'600'}}>{triggerLabel}</Text>
-          <Text style={{color:s.muted,fontSize:11.5,fontVariant:['tabular-nums']}}>{fullSummary.songCount} 首 · {fullSummary.totalPlays} 次 · {listeningDuration(fullSummary.totalMs)}</Text>
+        <View style={{flex:1,minWidth:0,gap:1}}>
+          <Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{triggerLabel}</Text>
+          <Text numberOfLines={1} style={{color:s.muted,fontSize:11.5}}>{triggerSub}</Text>
         </View>
       </View>
       <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
-    </Pressable>
+    </Pressable>:<Pressable testID={triggerTestID} accessibilityRole="button" accessibilityLabel={triggerLabel} disabled={busy} onPress={openModal} style={[{minHeight:controls.hit,paddingHorizontal:16,paddingVertical:11,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},s.cardShadow]}>
+      <View style={{flexDirection:'row',alignItems:'center',gap:10,flex:1,minWidth:0}}>
+        <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+          <Ionicons name="stats-chart" size={17} color={s.accent}/>
+        </View>
+        <View style={{flex:1,minWidth:0,gap:1}}>
+          <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{triggerLabel}</Text>
+          <Text numberOfLines={1} style={{color:s.muted,fontSize:12,fontVariant:['tabular-nums']}}>{triggerSub}</Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+    </Pressable>}
 
-    <Modal visible={open} animationType="slide" onRequestClose={()=>setOpen(false)}>
+    <Modal visible={open} animationType="slide" onRequestClose={()=>selected?setSelected(undefined):setOpen(false)}>
       <View style={{flex:1,backgroundColor:s.sheetGradient[0]}}>
         <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
-        <View style={{flex:1,paddingHorizontal:20,paddingLeft:Math.max(20,insets.left+12),paddingRight:Math.max(20,insets.right+12),paddingTop:insets.top+10,paddingBottom:insets.bottom+12,gap:12}}>
-          <View style={{alignItems:'center'}}><View style={{width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66'}}/></View>
-          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:12}}>
-            <Text accessibilityRole="header" style={{color:s.ink,fontSize:26,fontWeight:'700',letterSpacing:-0.4}}>听歌统计</Text>
-            {pill(selected?'返回统计分组':'收起听歌统计',()=>selected?setSelected(undefined):setOpen(false))}
+        <View style={{flex:1,paddingTop:insets.top,paddingBottom:insets.bottom+12}}>
+          <View style={{minHeight:52,paddingHorizontal:16,paddingLeft:Math.max(12,insets.left+6),paddingRight:Math.max(12,insets.right+6),flexDirection:'row',alignItems:'center',justifyContent:'center',borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
+            <Pressable testID="statistics-back" accessibilityRole="button" accessibilityLabel={selected?'返回统计分组':'收起听歌统计'} disabled={busy} onPress={()=>selected?setSelected(undefined):setOpen(false)} style={{position:'absolute',left:Math.max(8,insets.left+4),width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center',opacity:busy?.45:1}}>
+              <Ionicons name="chevron-back" size={26} color={s.ink}/>
+            </Pressable>
+            <Text accessibilityRole="header" numberOfLines={1} style={{color:s.ink,fontSize:19,fontWeight:'700',letterSpacing:-0.3,marginHorizontal:48,textAlign:'center'}}>{selectedTitle??'听歌统计'}</Text>
           </View>
+          <View style={{flex:1,paddingHorizontal:20,paddingLeft:Math.max(20,insets.left+12),paddingRight:Math.max(20,insets.right+12),paddingTop:12,gap:12}}>
 
           <FlatList testID="statistics-list" style={{flex:1}} data={rows} keyExtractor={item=>item.id} renderItem={({item,index})=>row(item,index)} contentContainerStyle={{paddingBottom:20}} ListHeaderComponent={<View style={{gap:12,paddingBottom:12}}>
             {/* Time range segmented bar: 近7天 / 近30天 / 今年 / 全部 */}
@@ -292,16 +322,21 @@ export function PlaybackStatistics({
           <Modal visible={dates} animationType="slide" onRequestClose={()=>setDates(false)}>
             <View style={{flex:1,backgroundColor:s.sheetGradient[0]}}>
               <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
-              <View style={{flex:1,padding:space.xxl,paddingLeft:Math.max(space.xxl,insets.left+space.md),paddingRight:Math.max(space.xxl,insets.right+space.md),paddingTop:insets.top+space.md,paddingBottom:insets.bottom+space.md,gap:10}}>
-                <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
-                  <Text style={{color:s.ink,fontSize:20,fontWeight:'700'}}>按日期筛选</Text>
-                  {pill('取消选择日期',()=>setDates(false))}
+              <View style={{flex:1,paddingTop:insets.top,paddingBottom:insets.bottom+space.md}}>
+                <View style={{minHeight:52,paddingHorizontal:16,flexDirection:'row',alignItems:'center',justifyContent:'center',borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:s.hairline}}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="取消选择日期" onPress={()=>setDates(false)} style={{position:'absolute',left:8,width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center'}}>
+                    <Ionicons name="chevron-back" size={26} color={s.ink}/>
+                  </Pressable>
+                  <Text accessibilityRole="header" style={{color:s.ink,fontSize:19,fontWeight:'700'}}>按日期筛选</Text>
                 </View>
-                {pill('全部日期',()=>{setDay(undefined);setSelected(undefined);setDates(false);},!day)}
-                <FlatList data={fullSummary.days} keyExtractor={item=>item.date} contentContainerStyle={{gap:8,paddingTop:4}} renderItem={({item})=>pill(`${item.date} · ${listeningDuration(item.listenedMs)}`,()=>{setDay(item.date);setRange('all');setSelected(undefined);setDates(false);},day===item.date)}/>
+                <View style={{flex:1,padding:space.xl,paddingLeft:Math.max(space.xl,insets.left+space.md),paddingRight:Math.max(space.xl,insets.right+space.md),gap:10}}>
+                  {pill('全部日期',()=>{setDay(undefined);setSelected(undefined);setDates(false);},!day)}
+                  <FlatList data={fullSummary.days} keyExtractor={item=>item.date} contentContainerStyle={{gap:8,paddingTop:4}} renderItem={({item})=>pill(`${item.date} · ${listeningDuration(item.listenedMs)}`,()=>{setDay(item.date);setRange('all');setSelected(undefined);setDates(false);},day===item.date)}/>
+                </View>
               </View>
             </View>
           </Modal>
+          </View>
         </View>
       </View>
     </Modal>

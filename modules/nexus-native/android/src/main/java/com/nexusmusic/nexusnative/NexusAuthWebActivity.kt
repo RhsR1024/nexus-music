@@ -225,9 +225,9 @@ class NexusAuthWebActivity : Activity() {
     val cm = CookieManager.getInstance()
     val allowed = MusicWebLoginPolicy.cookieNames(provider)
     val urls = if (provider == "tx") {
-      listOf("https://y.qq.com/", "https://graph.qq.com/", "https://qq.com/")
+      listOf("https://qq.com/", "https://graph.qq.com/", "https://y.qq.com/")
     } else {
-      listOf("https://music.163.com/", "https://interface.music.163.com/", "https://163.com/")
+      listOf("https://163.com/", "https://interface.music.163.com/", "https://music.163.com/")
     }
     val merged = mutableMapOf<String, String>()
     for (u in urls) {

@@ -23,16 +23,16 @@ import {appearanceCaptureFixture} from './captureFixtures.ts';
 import {MusicAccountSettings} from './MusicAccountSettings.tsx';
 
 export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|'accounts'|AppearanceSection;
-type AppearanceSheetSection='background'|'theme'|'skins'|'mini'|'navigation'|'icons'|'typography'|'globalFont'|'lyricFont';
-const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='background'||page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='icons'||page==='typography'||page==='globalFont'||page==='lyricFont';
-const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-background-sheet',theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',icons:'app-icon-sheet',typography:'lyric-display-sheet',globalFont:'global-font-sheet',lyricFont:'lyric-font-sheet'};
+type AppearanceSheetSection='background'|'theme'|'skins'|'mini'|'navigation'|'icons';
+const isAppearanceSheet=(page:SettingsPage):page is AppearanceSheetSection=>page==='background'||page==='theme'||page==='skins'||page==='mini'||page==='navigation'||page==='icons';
+const sheetIDs:Record<AppearanceSheetSection,string>={background:'theme-background-sheet',theme:'theme-mode-sheet',skins:'player-style-sheet',mini:'mini-settings-sheet',navigation:'navigation-style-sheet',icons:'app-icon-sheet'};
 const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式',accent:'强调色',icons:'软件图标'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,bottomInset=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;bottomInset?:number;onExit:()=>void}){
   const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),sheetDark=theme.mode==='dark';
   const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  const firstPage=isAppearanceSheet(initialPage)?initialPage==='typography'?'playback':'appearance':initialPage;
+  const firstPage=isAppearanceSheet(initialPage)?'appearance':initialPage;
   const [history,setHistory]=useState<SettingsPage[]>([firstPage]);
   const [visited,setVisited]=useState<SettingsPage[]>([firstPage]);
   const [appearanceSheet,setAppearanceSheet]=useState<{section:AppearanceSheetSection;visible:boolean;session:number}>({section:isAppearanceSheet(initialPage)?initialPage:'theme',visible:isAppearanceSheet(initialPage),session:0});
@@ -150,7 +150,7 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
           <View style={{alignSelf:'center',width:36,height:4,borderRadius:2,backgroundColor:s.subtle+'66',marginBottom:8}}/>
         </>}
         {appearanceSheet.section!=='background'&&sheetHeader}
-        <ScrollView ref={node=>{if(appearanceSheet.section==='background')appearanceScroll.current=node;}} key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={appearanceSheet.section==='background'?event=>{appearanceOffset.current=event.nativeEvent.contentOffset.y;}:undefined} scrollEventThrottle={appearanceSheet.section==='background'?32:undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='background'&&sheetHeader}{appearanceSheet.section==='typography'||appearanceSheet.section==='globalFont'||appearanceSheet.section==='lyricFont'?content(appearanceSheet.section):appearanceSheet.section==='icons'?<AppIconSettings/>:<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} accentFieldRef={appearanceSheet.section==='background'?accentField:undefined} onStyleSaved={()=>{
+        <ScrollView ref={node=>{if(appearanceSheet.section==='background')appearanceScroll.current=node;}} key={`${appearanceSheet.section}:${appearanceSheet.session}`} testID={`${appearanceSheet.section}-sheet-scroll`} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={appearanceSheet.section==='background'?event=>{appearanceOffset.current=event.nativeEvent.contentOffset.y;}:undefined} scrollEventThrottle={appearanceSheet.section==='background'?32:undefined} contentContainerStyle={{paddingBottom:32}}>{appearanceSheet.section==='background'&&sheetHeader}{appearanceSheet.section==='icons'?<AppIconSettings/>:<AppearanceSettings key={`${appearanceSheet.section}:${appearanceSheet.session}`} services={services} section={appearanceSheet.section} accentFieldRef={appearanceSheet.section==='background'?accentField:undefined} onStyleSaved={()=>{
           // A completed write from an earlier presentation must not close a newly opened sheet.
           const session=appearanceSheet.session;
           setAppearanceSheet(value=>value.session===session?{...value,visible:false,session:value.session+1}:value);

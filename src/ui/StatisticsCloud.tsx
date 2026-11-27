@@ -13,7 +13,7 @@ import {WebDAVError} from '../providers/webdav.ts';
 import {listeningDuration} from '../domain/listeningStatistics.ts';
 import type {Services} from '../app/services.ts';
 
-export function StatisticsCloud({services}:{services:Services}){
+export function StatisticsCloud({services,grouped=false}:{services:Services;grouped?:boolean}){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),insets=useSafeAreaInsets(),store=services.davStatistics,state=useSyncExternalStore(store.subscribe,store.getSnapshot),accounts=useSyncExternalStore(services.davAccounts.subscribe,services.davAccounts.getSnapshot);
   const [open,setOpen]=useState(false),[accountId,setAccountId]=useState(''),[directory,setDirectory]=useState(statisticsDirectory),[message,setMessage]=useState('');
   useEffect(()=>{if(open&&!accounts.some(x=>x.id===accountId))setAccountId(accounts[0]?.id??'');},[accounts,open,accountId]);
@@ -29,13 +29,20 @@ export function StatisticsCloud({services}:{services:Services}){
   function close(){if(store.cancel())setOpen(false);}
   async function upload(){await store.prepareUpload();const preview=store.getSnapshot().preview;if(!preview)return;Alert.alert('上传听歌统计？',`将用预览快照覆盖云端统计：${preview.local.tracks}首、${preview.local.playCount}次、${listeningDuration(preview.local.listenedMs)}。${preview.remote?`云端当前修订 #${preview.remote.revision}。`:'云端目前没有统计。'}此操作不上传歌单、账号、音源或音频文件。`,[{text:'取消',style:'cancel',onPress:()=>store.cancel()},{text:'继续上传统计',style:'destructive',onPress:()=>{void perform(()=>store.uploadPrepared());}}]);}
   return <>
-    <Pressable testID="statistics-cloud-open" accessibilityRole="button" accessibilityLabel="听歌统计手动同步" onPress={show} style={[{minHeight:54,paddingHorizontal:16,paddingVertical:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},s.cardShadow]}>
+    {grouped?<Pressable testID="statistics-cloud-open" accessibilityRole="button" accessibilityLabel="听歌统计手动同步" onPress={show} style={{minHeight:60,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:12}}>
+      <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="bar-chart-outline" size={18} color={s.accent}/></View>
+      <View style={{flex:1,minWidth:0,gap:2}}>
+        <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>听歌统计手动同步</Text>
+        <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>通过 WebDAV 上传快照或合并云端听歌记录</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+    </Pressable>:<Pressable testID="statistics-cloud-open" accessibilityRole="button" accessibilityLabel="听歌统计手动同步" onPress={show} style={[{minHeight:54,paddingHorizontal:16,paddingVertical:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},s.cardShadow]}>
       <View style={{flexDirection:'row',alignItems:'center',gap:11}}>
         <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="bar-chart-outline" size={18} color={s.accent}/></View>
         <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>听歌统计手动同步</Text>
       </View>
       <Ionicons name="chevron-forward" size={17} color={s.subtle}/>
-    </Pressable>
+    </Pressable>}
     <Modal visible={open} animationType="slide" onRequestClose={close}>
       <View style={{flex:1}}>
         <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>

@@ -8,7 +8,8 @@ import { KugouLoginClient, KugouLoginError, validKugouQrImage } from '../src/pro
 import { KugouLoginCoordinator } from '../src/providers/kugouLoginCoordinator.ts';
 import { MusicAccounts } from '../src/providers/musicAccounts.ts';
 import { QQPlaylists } from '../src/providers/qqPlaylists.ts';
-import { QQDailyAuthorization } from '../src/providers/qqDailyAuthorization.ts';
+import { QQDailyClient } from '../src/providers/qqDaily.ts';
+import { extractQQDailyKey, QQDailyAuthorization } from '../src/providers/qqDailyAuthorization.ts';
 import { defaults, validatePreferences } from '../src/app/preferences.ts';
 
 const md5 = async (v: string) => createHash('md5').update(v).digest('hex');
@@ -207,4 +208,95 @@ test('glassLevel preference defaults to 2 (清透) and validates bounds 1..5', (
   }
   assert.throws(() => validatePreferences({ ...defaults, glassLevel: 0 as never }));
   assert.throws(() => validatePreferences({ ...defaults, glassLevel: 6 as never }));
+});
+
+test('NetEase QR login pauses in background without cancelling and completes immediately on foreground return', async () => {
+  let polls = 0;
+  const client = new NeteaseQrLoginClient({
+    http: async url => {
+      if (url.endsWith('/weapi/login/qrcode/unikey')) {
+        return { body: { code: 200, unikey: '481f41a1-9f91-4ff9-988f-561e735f2e84' }, setCookies: [] };
+      }
+      polls++;
+      if (polls === 1) return { body: { code: 801 }, setCookies: [] };
+      return {
+        body: { code: 803 },
+        setCookies: ['MUSIC_U=qr_bg_resumed_token; Path=/; HttpOnly'],
+      };
+    },
+  });
+  const records = new Map<string, unknown>();
+  const secrets = new Map<string, string>();
+  const accounts = new MusicAccounts(
+    { get: async <T>(k: string) => records.get(k) as T | undefined, put: async (k, v) => { records.set(k, v); } },
+    { get: async k => secrets.get(k) ?? null, set: async (k, v) => { secrets.set(k, v); }, remove: async k => { secrets.delete(k); } },
+    sha256,
+  );
+  const coord = new NeteaseQrLoginCoordinator({
+    client,
+    profile: { fetch: async () => ({ userId: '777888', nickname: 'Resumed Listener' }) },
+    accounts,
+    pollMs: 5000,
+  });
+  const pending = coord.login();
+  while (polls < 1) await new Promise(r => setTimeout(r, 5));
+  // User screenshots QR or switches straight to NetEase Music App without tapping save-to-photos
+  coord.setForeground(false);
+  assert.equal(coord.getSnapshot().status, 'waiting');
+  // User confirms in NetEase Music App and returns to NexusMusic
+  coord.setForeground(true);
+  await pending;
+  assert.equal(coord.getSnapshot().status, 'succeeded');
+  assert.equal(accounts.getSnapshot().length, 1);
+  assert.equal(accounts.getSnapshot()[0]?.displayName, 'Resumed Listener');
+});
+
+test('QQ manual key extraction, session normalization, Base64 nick repair, and empty-cookie web auth work with real QQDailyClient', async () => {
+  assert.equal(extractQQDailyKey('  Authorization: Bearer qmk-synthetic_snippet_123456  '), 'qmk-synthetic_snippet_123456');
+  assert.equal(extractQQDailyKey('not-a-valid-key'), null);
+
+  const records = new Map<string, unknown>();
+  const secrets = new Map<string, string>();
+  const accounts = new MusicAccounts(
+    { get: async <T>(k: string) => records.get(k) as T | undefined, put: async (k, v) => { records.set(k, v); } },
+    { get: async k => secrets.get(k) ?? null, set: async (k, v) => { secrets.set(k, v); }, remove: async k => { secrets.delete(k); } },
+    sha256,
+  );
+  const encodedNick = Buffer.from('测试昵称╰╮', 'utf8').toString('base64');
+  // Deliberately omit accountId on stored session to verify normalization + real QQDailyClient.validateKey
+  const existing = await accounts.save(
+    { platform: 'tx', username: 'qq:2:123', label: 'QQ 音乐', displayName: encodedNick, capabilities: [] },
+    { version: 1, platform: 'tx', userId: '123', cookies: { login_type: '1', uin: '123', qqmusic_key: 'unit-k' } },
+  );
+  const seenHeaders: Record<string, string>[] = [];
+  const daily = new QQDailyClient({
+    http: async (_url, req) => {
+      seenHeaders.push({ ...(req.headers ?? {}) });
+      return { songlist: [{ songMid: '000Q8ONc00GqGy' }] };
+    },
+  });
+  const auth = new QQDailyAuthorization({
+    native: {
+      openQQDaily: async () => JSON.stringify({
+        key: 'qmk-synthetic_web_key_789012',
+        cookies: { login_type: '1', uin: '123', qqmusic_key: 'unit-k', wxuin: '', euin: '' },
+      }),
+      cancel: async () => {},
+    },
+    accounts,
+    profile: { fetch: async () => ({ userId: '123', nickname: encodedNick }) },
+    daily,
+    hash: sha256,
+    uuid: () => 'id-real-1',
+  });
+  await auth.saveManualKey(existing, 'export QQMUSIC_API_KEY="qmk-synthetic_manual_key_9999"', new AbortController().signal);
+  assert.equal(accounts.getSnapshot()[0]?.displayName, '测试昵称╰╮');
+  assert.ok(accounts.getSnapshot()[0]?.capabilities.includes('daily'));
+  assert.equal(seenHeaders[0]?.Authorization, 'Bearer qmk-synthetic_manual_key_9999');
+  assert.equal(seenHeaders[0]?.Cookie, undefined);
+
+  // Also verify web auth succeeds even if WebKit returns empty-string cookies like wxuin:"" or euin:""
+  await auth.authorize(accounts.getSnapshot()[0]);
+  assert.equal(auth.getSnapshot().status, 'succeeded');
+  assert.equal((await accounts.session(existing.id)).qqDailyKey, 'qmk-synthetic_web_key_789012');
 });

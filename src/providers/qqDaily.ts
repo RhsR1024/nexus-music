@@ -28,20 +28,24 @@ export class QQDailyClient{
   private readonly http:HTTPClient;
   constructor(options:{http:HTTPClient}){this.http=options.http;}
   private async officialIds(account:MusicAccount,session:MusicSession,key:string,signal:AbortSignal):Promise<readonly string[]>{
-    const {cookies}=credentials(account,session);
+    credentials(account,session);
     if(!validQQDailyKey(key))throw new AccountDailyError('unavailable');
-    const result=row(await this.http('https://a.y.qq.com/discover/daily-mix',{method:'POST',credentials:'omit',headers:{Cookie:Object.entries(cookies).map(([name,value])=>`${name}=${value}`).join('; '),Authorization:`Bearer ${key}`,'Content-Type':'application/json',Referer:'https://y.qq.com/'},body:JSON.stringify({params:{},comm:{skill_version:'0.0.3'}})},signal));
+    const result=row(await this.http('https://a.y.qq.com/discover/daily-mix',{method:'POST',credentials:'omit',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json',Accept:'application/json',Referer:'https://y.qq.com/'},body:JSON.stringify({params:{},comm:{skill_version:'0.0.3'}})},signal));
     throwIfAborted(signal);
     if(result.ret!==undefined&&Number(result.ret)!==0||result.sub_ret!==undefined&&Number(result.sub_ret)!==0||!Array.isArray(result.songlist))throw new AccountDailyError('unavailable');
     const ids:string[]=[];
-    for(const value of result.songlist){const id=row(value).songMid;if(mid(id)&&!ids.includes(id))ids.push(id);if(ids.length===30)break;}
+    for(const value of result.songlist){const item=row(value),id=item.songMid??item.songmid??item.mid;if(mid(id)&&!ids.includes(id))ids.push(id);if(ids.length===30)break;}
     if(result.songlist.length&&!ids.length)throw new AccountDailyError('unavailable');
     return ids;
   }
   /** For the separate official authorization flow; never persists the key. */
   async validateKey(account:MusicAccount,session:MusicSession,key:string,signal:AbortSignal):Promise<void>{
     try{await bounded(async child=>{if(!(await this.officialIds(account,session,key,child)).length)throw new AccountDailyError('unavailable');},signal,12_000);}
-    catch{throw new AccountDailyError(signal.aborted?'cancelled':'unavailable');}
+    catch(error){
+      if(signal.aborted)throw new AccountDailyError('cancelled');
+      if(error instanceof AccountDailyError)throw error;
+      throw new AccountDailyError('unavailable');
+    }
   }
   async fetch(account:MusicAccount,session:MusicSession,signal:AbortSignal):Promise<QQDailyResult>{
     try{

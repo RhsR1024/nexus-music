@@ -1,9 +1,28 @@
 import {MusicAuthError,MusicAuthFlow} from './musicAuth.ts';
 import type {MusicAccount,MusicAccounts} from './musicAccounts.ts';
-import {parseQQCookiePayload,qqMusicIdentity,type QQAccountProfileClient} from './qqAccountProfile.ts';
+import {decodeQQBaseInfoNick,parseQQCookiePayload,qqMusicIdentity,type QQAccountProfileClient} from './qqAccountProfile.ts';
 import {validQQDailyKey,type QQDailyClient} from './qqDaily.ts';
 
 export interface QQDailyAuthNative{openQQDaily(id:string):Promise<string>;cancel(id:string):Promise<void>}
+
+/** Extract a valid `qmk-...` key from raw user input or copied snippet text. */
+export function extractQQDailyKey(raw:string):string|null{
+  const trimmed:unknown=raw.trim();
+  if(validQQDailyKey(trimmed))return trimmed;
+  const match=raw.match(/\bqmk-[A-Za-z0-9_-]{12,1024}\b/);
+  return match&&validQQDailyKey(match[0])?match[0]:null;
+}
+
+function stripEmptyCookies(raw:unknown):Record<string,unknown>{
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return {};
+  const out:Record<string,unknown>={};
+  for(const [k,v] of Object.entries(raw as Record<string,unknown>)){
+    if(v==='')continue;
+    out[k]=v;
+  }
+  return out;
+}
+
 /** The native page owns its fresh web login. Only the key paired with that
  * page's verified QQ identity can enter the matching Keychain session. */
 export class QQDailyAuthorization{
@@ -24,7 +43,7 @@ export class QQDailyAuthorization{
           if(raw.length>40000)throw new Error('授权结果无效');
           const payload=JSON.parse(raw) as {key?:unknown;cookies?:unknown};
           if(!payload||!validQQDailyKey(payload.key))throw new Error('授权结果无效');
-          const cookies=parseQQCookiePayload(JSON.stringify(payload.cookies),'music');
+          const cookies=parseQQCookiePayload(JSON.stringify(stripEmptyCookies(payload.cookies)),'music');
           const {uin,tmeLoginType}=qqMusicIdentity(cookies),username=`qq:${tmeLoginType}:${uin}`;
           bound=target??initial.find(item=>item.platform==='tx'&&item.username===username);current();
           const identityKeys=tmeLoginType===1?['wxuin','qqmusic_uin','musicid']:['uin','qqmusic_uin','musicid'];
@@ -37,7 +56,7 @@ export class QQDailyAuthorization{
           const existing=bound??this.options.accounts.getSnapshot().find(item=>item.id===accountId);
           await this.options.daily.validateKey({id:accountId,platform:'tx',username,label:'QQ 音乐',capabilities:[],updatedAt:0},session,payload.key,controller.signal);current();
           const avatar=('avatar' in profile&&typeof profile.avatar==='string'&&profile.avatar)||existing?.avatar;
-          await this.options.accounts.save({platform:'tx',username,label:'QQ 音乐',displayName:profile.nickname,...(avatar?{avatar}:{}),capabilities:[...new Set([...(existing?.capabilities??[]),'daily' as const])]},session,controller.signal,existing??null);
+          await this.options.accounts.save({platform:'tx',username,label:'QQ 音乐',displayName:decodeQQBaseInfoNick(profile.nickname)||profile.nickname,...(avatar?{avatar}:{}),capabilities:[...new Set([...(existing?.capabilities??[]),'daily' as const])]},session,controller.signal,existing??null);
           if(!active||controller.signal.aborted)throw new MusicAuthError('cancelled','授权已取消');
           if(active)emit({type:'success',value:undefined});
         }catch(error){if(active){const code=(error as {code?:unknown})?.code;if(code==='AUTH_CANCELLED')emit({type:'cancel'});else if(code==='AUTH_EXPIRED')emit({type:'expired'});else emit({type:'error',error});}}
@@ -47,21 +66,34 @@ export class QQDailyAuthorization{
   }
   async saveManualKey(account:MusicAccount,rawKey:string,signal:AbortSignal):Promise<void>{
     if(account.platform!=='tx')throw new Error('平台不支持');
-    const key=rawKey.trim();
-    if(!validQQDailyKey(key))throw new Error('请输入有效的 qmk- 官方 Skills 密钥');
+    const key=extractQQDailyKey(rawKey);
+    if(!key)throw new Error('请输入有效的 qmk- 官方 Skills 密钥');
     this.cancel();
     const existingSession={...await this.options.accounts.session(account.id)};
-    const nextSession={...existingSession,qqDailyKey:key,qqDailyKeyOwner:account.id};
-    await this.options.daily.validateKey(account,nextSession,key,signal);
+    const cleanedCookies=stripEmptyCookies(existingSession.cookies);
+    const cookies=parseQQCookiePayload(JSON.stringify(cleanedCookies),'music');
+    const identity=qqMusicIdentity(cookies);
+    const normalizedSession={
+      ...existingSession,
+      version:1,
+      platform:'tx',
+      accountId:account.id,
+      userId:identity.uin,
+      cookies,
+      qqDailyKey:key,
+      qqDailyKeyOwner:account.id,
+    };
+    await this.options.daily.validateKey(account,normalizedSession,key,signal);
     if(signal.aborted)throw new MusicAuthError('cancelled','授权已取消');
+    const repairedDisplayName=account.displayName?decodeQQBaseInfoNick(account.displayName)||account.displayName:undefined;
     await this.options.accounts.save({
       platform:account.platform,
       username:account.username,
       label:account.label,
-      ...(account.displayName?{displayName:account.displayName}:{}),
+      ...(repairedDisplayName?{displayName:repairedDisplayName}:{}),
       ...(account.avatar?{avatar:account.avatar}:{}),
       capabilities:[...new Set([...account.capabilities,'daily' as const])],
-    },nextSession,signal,account);
+    },normalizedSession,signal,account);
   }
   async clear(account:MusicAccount,signal:AbortSignal){
     if(account.platform!=='tx')throw new Error('平台不支持');

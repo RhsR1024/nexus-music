@@ -14,7 +14,6 @@ import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {sollinTokens} from './tokens.ts';
 import {Fragment,useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {historyTimestamp} from '../domain/historyPresentation.ts';
-import {listeningDuration} from '../domain/listeningStatistics.ts';
 import {Alert, Pressable, StyleSheet, View} from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
@@ -287,20 +286,34 @@ export function LibraryHome({
     <View style={{gap:6}}><LocalAudioLibrary services={services}/><DeviceMediaLibrary services={services}/><WebDAVLibrary services={services}/></View>
 
     {/* Dedicated Playback Statistics overview card + clear entry to full statistics */}
-    <View style={styles.softCard}>
+    <View style={[{padding:16,borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:12},s.cardShadow]}>
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
-        <View style={{flex:1}}>
+        <View style={{flexDirection:'row',alignItems:'center',gap:9,flex:1,minWidth:0}}>
+          <View style={{width:30,height:30,borderRadius:9,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+            <Ionicons name="pulse-outline" size={16} color={s.accent}/>
+          </View>
           <Text style={styles.heading}>实际聆听统计</Text>
-          <Text style={[styles.caption,{fontVariant:['tabular-nums']}]}>{playbackStats.items.length} 首曲目 · {totalPlays} 次播放 · {listeningDuration(totalListenedMs)}</Text>
         </View>
-        {playbackStats.items.length>0&&button('清空播放统计',()=>Alert.alert('清空播放统计？','只清除本机记录；服务端播放量和最近播放列表不变。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>services.playbackStats.clear());}}]))}
+        {playbackStats.items.length>0&&<Pressable accessibilityRole="button" accessibilityLabel="清空播放统计" disabled={busy} onPress={()=>Alert.alert('清空播放统计？','只清除本机记录；服务端播放量和最近播放列表不变。',[{text:'取消',style:'cancel'},{text:'清空',style:'destructive',onPress:()=>{void perform(async()=>services.playbackStats.clear());}}])} style={{minHeight:32,paddingHorizontal:11,borderRadius:16,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,justifyContent:'center',opacity:busy?.45:1}}>
+          <Text style={{color:s.muted,fontSize:12,fontWeight:'600'}}>清空</Text>
+        </Pressable>}
       </View>
-      {playbackStats.items.slice(0,3).map(item=><Text key={JSON.stringify(item.track.origin)} numberOfLines={1} style={[styles.caption,{fontVariant:['tabular-nums']}]}>{item.track.title} · 播放 {item.playCount} 次 · 听歌 {Math.floor(item.listenedMs/60000)}分{Math.floor(item.listenedMs/1000)%60}秒</Text>)}
-      <PlaybackStatistics services={services} triggerTestID="library-open-statistics" triggerLabel="查看完整听歌统计"/>
+      <View style={{flexDirection:'row',gap:8}}>
+        {([
+          {icon:'musical-notes-outline' as const,value:`${playbackStats.items.length}`,label:'聆听曲目'},
+          {icon:'play-circle-outline' as const,value:`${totalPlays}`,label:'累计播放'},
+          {icon:'time-outline' as const,value:totalListenedMs>=3600000?`${(totalListenedMs/3600000).toFixed(1)}h`:totalListenedMs>=60000?`${Math.floor(totalListenedMs/60000)}分`:`${Math.floor(totalListenedMs/1000)}秒`,label:'聆听时长'},
+        ]).map(metric=><View key={metric.label} style={{flex:1,paddingVertical:11,paddingHorizontal:10,borderRadius:14,backgroundColor:s.dark?'rgba(255,255,255,0.05)':'rgba(42,36,31,0.035)',gap:4}}>
+          <Ionicons name={metric.icon} size={15} color={s.accent}/>
+          <Text numberOfLines={1} style={{color:s.ink,fontSize:18,fontWeight:'800',fontVariant:['tabular-nums'],letterSpacing:-0.3}}>{metric.value}</Text>
+          <Text numberOfLines={1} style={{color:s.muted,fontSize:11,fontWeight:'500'}}>{metric.label}</Text>
+        </View>)}
+      </View>
+      <PlaybackStatistics services={services} triggerTestID="library-open-statistics" triggerLabel="查看完整听歌统计" triggerSubtitle="单曲明细、90 天聆听足迹与时段分布" triggerVariant="compact"/>
     </View>
 
     {services.recoveryWarnings.map((warning,index)=><Text key={index} style={styles.caption}>{warning}</Text>)}
-    <LibraryDataTools services={services}/>
+    <LibraryDataTools services={services} showStatistics={false}/>
     {!!message&&<Text accessibilityLiveRegion="polite" style={[styles.caption,{color:s.accent}]}>{message}</Text>}
     <Toast message={undoSnapshot?`已删除歌单「${undoSnapshot.title}」`:''} onDismiss={()=>setUndoSnapshot(null)} action={undoSnapshot?{label:'撤销',onRun:()=>{void perform(async()=>{await services.library.restorePlaylist(undoSnapshot);});}}:undefined}/>
     <TrackListModal services={services} tracks={tracks} entryIds={playlist?.entries.map(item=>item.id)} playlistId={playlist?.id} kind={playlist?'playlist':tab==='history'?'history':'favorites'} title={playlist?.title??(tab==='history'?'最近播放':'我的收藏')} coverUrl={playlist?.coverUrl} visible={listOpen} onClose={()=>setListOpen(false)}/>

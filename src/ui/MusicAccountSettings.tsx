@@ -12,6 +12,7 @@ import {QQDailyAuthorizationCard} from './QQDailyAuthorizationCard.tsx';
 import {KugouAccountCard} from './KugouAccountCard.tsx';
 import {kugouLoginBusy} from '../providers/kugouLoginCoordinator.ts';
 import {neteaseQrBusy} from '../providers/neteaseQrLogin.ts';
+import {decodeQQBaseInfoNick} from '../providers/qqAccountProfile.ts';
 import {AccountPlaylistImport} from './AccountPlaylistImport.tsx';
 import {AccountAlbumCatalog,AccountMVCatalog} from './AccountAlbumCatalog.tsx';
 import {Cover} from './Cover.tsx';
@@ -116,18 +117,21 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
         </View>
         {provider.id==='tx'&&<Text style={{fontSize:12,lineHeight:18,color:s.muted}}>使用 QQ 官方网页登录，不跳转 QQ App；微信账号请用下方电脑配对。</Text>}
       </View>
-      {platformAccounts.map((account,index)=><View key={account.id}>
-        <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:index===0?0:68,backgroundColor:s.hairline}}/>
-        <View style={{minHeight:64,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12}}>
-          <Cover services={services} url={account.avatar} size={42} radius={21} fallbackText={account.displayName??account.label} testID={`music-account-avatar-${account.platform}`}/>
-          <View style={{flex:1,minWidth:0,gap:2}}>
-            <Text numberOfLines={1} style={{fontSize:15,fontWeight:'600',color:s.ink}}>{account.displayName??account.label}</Text>
-            <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>会话凭据已保存到本机</Text>
+      {platformAccounts.map((account,index)=>{
+        const accountName=account.displayName?(account.platform==='tx'?decodeQQBaseInfoNick(account.displayName)||account.displayName:account.displayName):account.label;
+        return <View key={account.id}>
+          <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:index===0?0:68,backgroundColor:s.hairline}}/>
+          <View style={{minHeight:64,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12}}>
+            <Cover services={services} url={account.avatar} size={42} radius={21} fallbackText={accountName} testID={`music-account-avatar-${account.platform}`}/>
+            <View style={{flex:1,minWidth:0,gap:2}}>
+              <Text numberOfLines={1} style={{fontSize:15,fontWeight:'600',color:s.ink}}>{accountName}</Text>
+              <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>会话凭据已保存到本机</Text>
+            </View>
+            <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`验证${provider.label}会话`} disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
+            <Pressable testID={`remove-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`退出${provider.label}账号`} onPress={()=>remove(account.id)} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text></Pressable>
           </View>
-          <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`验证${provider.label}会话`} disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
-          <Pressable testID={`remove-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`退出${provider.label}账号`} onPress={()=>remove(account.id)} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text></Pressable>
-        </View>
-      </View>)}
+        </View>;
+      })}
       <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>
       <View style={{padding:14,gap:12}}>
         <View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:10}}>
@@ -155,7 +159,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
             <Text style={{fontSize:13.5,fontWeight:'600',color:s.ink}}>{wyQrPhoto.status==='saving'?'正在保存二维码…':'保存二维码到照片'}</Text>
           </Pressable>
           {wyQrPhoto.generation===wyQr.generation&&wyQrPhoto.status!=='idle'&&wyQrPhoto.status!=='saving'&&<Text testID={`netease-qr-photo-${wyQrPhoto.status}`} accessibilityLiveRegion="polite" style={{fontSize:12,lineHeight:17,color:s.muted,textAlign:'center'}}>{wyQrPhoto.status==='saved'?'已保存到照片。请在本机网易云音乐 App 扫一扫中选择该图。':wyQrPhoto.status==='saved_stale'?'已保存到照片，但二维码已变化，请重新获取。':wyQrPhoto.status==='denied'?'未保存。需要允许添加照片权限；仍可用另一台设备扫码。':wyQrPhoto.status==='expired'?'二维码已失效，请重新获取。':wyQrPhoto.status==='cancelled'?'二维码保存已取消。':'未能保存二维码，请重试。'}</Text>}
-          <Text style={{fontSize:11.5,lineHeight:17,color:s.muted,textAlign:'center'}}>{wyQr.sameDevice?'保存后可切换到网易云 App 扫码确认，确认后返回音枢即可自动完成登录。':'请使用网易云音乐 App 扫一扫；二维码约三分钟有效。'}</Text>
+          <Text style={{fontSize:11.5,lineHeight:17,color:s.muted,textAlign:'center'}}>请使用网易云音乐 App 扫一扫（可截图或保存到照片后切换 App 扫码），确认登录并返回音枢即可自动完成；二维码约三分钟有效。</Text>
         </View>}
         {provider.id==='wy'&&wyQr.status!=='idle'&&(()=>{
           const wyQrMsg=wyQr.status==='loading'?'正在生成网易云登录二维码…':wyQr.status==='waiting'?'等待网易云 App 扫码':wyQr.status==='scanned'?`已扫码${wyQr.nickname?`（${wyQr.nickname}）`:''}，请在网易云 App 中点击确认`:wyQr.status==='saving'?'正在验证并保存网易云账号…':wyQr.status==='succeeded'?'网易云扫码登录已保存':wyQr.status==='expired'?'二维码已过期，请点击「扫码登录」重新获取':wyQr.status==='cancelled'?'网易云扫码登录已取消':'网易云扫码登录失败，请重试或改用网页登录';

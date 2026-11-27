@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseQQCookiePayload,qqWebIdentity,qqMusicIdentity,QQAccountProfileClient,QQAccountProfileError} from '../src/providers/qqAccountProfile.ts';
+import {decodeQQBaseInfoNick,parseQQCookiePayload,qqWebIdentity,qqMusicIdentity,QQAccountProfileClient,QQAccountProfileError} from '../src/providers/qqAccountProfile.ts';
 import {HTTPResponseError} from '../src/providers/http.ts';
 
 const cookies={qqmusic_key:'synthetic-qq-key',qqmusic_uin:'o000042',login_type:'1'};
@@ -108,4 +108,17 @@ test('WX official profile and music authorization use its own ID and tmeLoginTyp
   }});
   assert.deepEqual(await client.fetch({platform:'tx',userId:'99',cookies:wx},new AbortController().signal),{userId:'99',nickname:'Fixture listener'});
   await assert.rejects(client.fetch({platform:'tx',userId:'42',cookies:wx},new AbortController().signal));assert.equal(calls,2);
+});
+
+test('QQ BaseUserInfoServer UTF-8 Base64 nicknames decode cleanly without altering plain ASCII names',async()=>{
+  const encodedChinese=Buffer.from('音枢测试用户╰╮','utf8').toString('base64');
+  assert.equal(decodeQQBaseInfoNick(encodedChinese),'音枢测试用户╰╮');
+  assert.equal(decodeQQBaseInfoNick(Buffer.from('Alice','utf8').toString('base64')),'Alice');
+  assert.equal(decodeQQBaseInfoNick('MusicU User'),'MusicU User');
+  assert.equal(decodeQQBaseInfoNick('Alex'),'Alex');
+  const client=new QQAccountProfileClient({http:async(url)=>url.includes('c6.y.qq.com')
+    ?{code:1306}
+    :{code:0,status:{code:0,data:{}},userInfo:{code:0,data:{map_userinfo:{'42':{nick:encodedChinese}}}}}});
+  const result=await client.fetch(session,new AbortController().signal);
+  assert.equal(result.nickname,'音枢测试用户╰╮');
 });

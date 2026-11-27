@@ -9,6 +9,86 @@ import {MusicAuthError} from './musicAuth.ts';
 
 const names=['qqmusic_key','qm_keyst','musickey','qqmusic_uin','uin','musicid','login_type','wxuin','euin'];
 const object=(value:unknown):Record<string,unknown>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
+const BASE64_CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+function encodeBase64(bytes:Uint8Array):string{
+  let out='';
+  for(let i=0;i<bytes.length;i+=3){
+    const a=bytes[i]!,b=i+1<bytes.length?bytes[i+1]!:0,c=i+2<bytes.length?bytes[i+2]!:0;
+    const n=(a<<16)|(b<<8)|c;
+    out+=BASE64_CHARS[(n>>18)&63]!+BASE64_CHARS[(n>>12)&63]!+(i+1<bytes.length?BASE64_CHARS[(n>>6)&63]!:'=')+(i+2<bytes.length?BASE64_CHARS[n&63]!:'=');
+  }
+  return out;
+}
+
+function decodeBase64Bytes(input:string):Uint8Array|null{
+  if(input.length<4||input.length%4!==0||!/^[A-Za-z0-9+/]+={0,2}$/.test(input))return null;
+  const pad=input.endsWith('==')?2:input.endsWith('=')?1:0;
+  const out=new Uint8Array((input.length/4)*3-pad);
+  let pos=0;
+  for(let i=0;i<input.length;i+=4){
+    const c0=BASE64_CHARS.indexOf(input[i]!);
+    const c1=BASE64_CHARS.indexOf(input[i+1]!);
+    const c2=input[i+2]==='='?0:BASE64_CHARS.indexOf(input[i+2]!);
+    const c3=input[i+3]==='='?0:BASE64_CHARS.indexOf(input[i+3]!);
+    if(c0<0||c1<0||c2<0||c3<0)return null;
+    const n=(c0<<18)|(c1<<12)|(c2<<6)|c3;
+    out[pos++]=(n>>16)&255;
+    if(input[i+2]!=='=')out[pos++]=(n>>8)&255;
+    if(input[i+3]!=='=')out[pos++]=n&255;
+  }
+  return out;
+}
+
+function decodeStrictUtf8(bytes:Uint8Array):string|null{
+  let out='';
+  for(let i=0;i<bytes.length;){
+    const b0=bytes[i++]!;
+    if(b0<0x80){out+=String.fromCharCode(b0);continue;}
+    if(b0>=0xc2&&b0<=0xdf){
+      if(i>=bytes.length)return null;
+      const b1=bytes[i++]!;
+      if((b1&0xc0)!==0x80)return null;
+      out+=String.fromCharCode(((b0&0x1f)<<6)|(b1&0x3f));
+      continue;
+    }
+    if(b0>=0xe0&&b0<=0xef){
+      if(i+1>=bytes.length)return null;
+      const b1=bytes[i++]!,b2=bytes[i++]!;
+      if((b1&0xc0)!==0x80||(b2&0xc0)!==0x80)return null;
+      const cp=((b0&0x0f)<<12)|((b1&0x3f)<<6)|(b2&0x3f);
+      if(cp<0x800||(cp>=0xd800&&cp<=0xdfff))return null;
+      out+=String.fromCharCode(cp);
+      continue;
+    }
+    if(b0>=0xf0&&b0<=0xf4){
+      if(i+2>=bytes.length)return null;
+      const b1=bytes[i++]!,b2=bytes[i++]!,b3=bytes[i++]!;
+      if((b1&0xc0)!==0x80||(b2&0xc0)!==0x80||(b3&0xc0)!==0x80)return null;
+      const cp=((b0&0x07)<<18)|((b1&0x3f)<<12)|((b2&0x3f)<<6)|(b3&0x3f);
+      if(cp<0x10000||cp>0x10ffff)return null;
+      out+=String.fromCodePoint(cp);
+      continue;
+    }
+    return null;
+  }
+  return out;
+}
+
+/** QQ musicu `userInfo.BaseUserInfoServer.get_user_baseinfo_v2` returns `nick`
+ * as UTF-8 Base64 for non-ASCII nicknames. Decode canonical Base64 safely in
+ * Hermes & Node without touching normal plain-ASCII names. */
+export function decodeQQBaseInfoNick(raw:string):string{
+  const trimmed=raw.trim();
+  if(!trimmed)return '';
+  const bytes=decodeBase64Bytes(trimmed);
+  if(!bytes||!bytes.length)return trimmed;
+  if(encodeBase64(bytes)!==trimmed)return trimmed;
+  const decoded=decodeStrictUtf8(bytes)?.trim();
+  if(!decoded||decoded.length>120||/[\u0000-\u001f\u007f\ufffd]/.test(decoded))return trimmed;
+  if(/[^\x20-\x7e]/.test(decoded)||trimmed.endsWith('='))return decoded;
+  return trimmed;
+}
 
 export function parseQQCookiePayload(raw:string,mode:'web'|'music'='web'):Readonly<Record<string,string>>{
   let source:Record<string,unknown>;
@@ -94,7 +174,8 @@ export class QQAccountProfileClient{
       if(c6Challenged){
         const map=object(object(object(raw.userInfo).data).map_userinfo);
         const info=object(map[uin]);
-        const candidate=typeof info.nick==='string'?info.nick.trim():'';
+        const rawCandidate=typeof info.nick==='string'?info.nick.trim():'';
+        const candidate=rawCandidate?decodeQQBaseInfoNick(rawCandidate):'';
         nickname=candidate&&candidate.length<=120&&!/[\u0000-\u001f\u007f]/.test(candidate)?candidate:`QQ 音乐 (${uin})`;
         if(typeof info.headurl==='string'&&/^https?:\/\/[a-z0-9.-]+/i.test(info.headurl)&&info.headurl.length<=1024&&!/[\u0000-\u001f\u007f]/.test(info.headurl)){
           avatar=info.headurl.replace(/^http:\/\//i,'https://');

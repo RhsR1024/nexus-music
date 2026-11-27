@@ -4,11 +4,22 @@ import UIKit
 public final class NexusAppIconModule: Module {
   private var changing = false
 
+  private var isLiveContainer: Bool {
+    AppIconPolicy.isLiveContainer(
+      environment: ProcessInfo.processInfo.environment,
+      bundlePath: Bundle.main.bundlePath,
+      hasLCClass: NSClassFromString("LCSharedUtils") != nil
+    )
+  }
+
   public func definition() -> ModuleDefinition {
     Name("NexusAppIcon")
 
     AsyncFunction("snapshot") {
-      var result: [String: Any] = ["supported": UIApplication.shared.supportsAlternateIcons]
+      var result: [String: Any] = [
+        "supported": UIApplication.shared.supportsAlternateIcons,
+        "liveContainer": self.isLiveContainer,
+      ]
       if let current = UIApplication.shared.alternateIconName {
         result["current"] = current
       }
@@ -38,25 +49,31 @@ public final class NexusAppIconModule: Module {
       }
 
       self.changing = true
+      let inLiveContainer = self.isLiveContainer
       var attempt = 0
       func applyIcon() {
         UIApplication.shared.setAlternateIconName(name) { error in
           DispatchQueue.main.async {
             if let error {
               let systemError = error as NSError
-              NSLog("NexusAppIcon setIcon failed domain=%@ code=%ld description=%@", systemError.domain, systemError.code, systemError.localizedDescription)
-              let transientServiceError = systemError.domain == NSPOSIXErrorDomain
+              NSLog("NexusAppIcon setIcon failed domain=%@ code=%ld liveContainer=%d description=%@", systemError.domain, systemError.code, inLiveContainer ? 1 : 0, systemError.localizedDescription)
+              let transientServiceError = !inLiveContainer
+                && systemError.domain == NSPOSIXErrorDomain
                 && (systemError.code == Int(EIO) || systemError.code == Int(EAGAIN))
               // The icon service can briefly report I/O or EAGAIN while its
-              // upcall/alert host is settling. Retry these two POSIX results;
-              // validation and all other errors fail immediately.
+              // upcall/alert host is settling. Retry these two POSIX results on
+              // native installs; LiveContainer host rejections fail immediately.
               if transientServiceError, attempt < 3 {
                 attempt += 1
                 DispatchQueue.main.asyncAfter(deadline: .now() + Double(attempt) * 0.75, execute: applyIcon)
                 return
               }
               self.changing = false
-              promise.reject("APP_ICON_FAILED", "系统未能切换应用图标，请重试。")
+              if inLiveContainer {
+                promise.reject("APP_ICON_LIVECONTAINER", "当前运行在 LiveContainer 容器中，iOS 桌面图标由宿主管理，不支持应用内直接修改。请在 LiveContainer 中长按「音枢」→「设置」更换自定义图标，或独立侧载安装后即可在此切换。")
+                return
+              }
+              promise.reject("APP_ICON_FAILED", "系统未能切换应用图标（\(systemError.domain) \(systemError.code)），请重试。")
               return
             }
             self.changing = false

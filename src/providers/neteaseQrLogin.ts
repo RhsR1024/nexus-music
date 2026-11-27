@@ -159,6 +159,7 @@ export class NeteaseQrLoginCoordinator {
   private foreground = true;
   private handoff?: number;
   private wake?: () => void;
+  private sleepWake?: () => void;
   private readonly options: {
     client: Pick<NeteaseQrLoginClient, 'create' | 'poll'>;
     profile: Pick<NeteaseAccountProfileClient, 'fetch'>;
@@ -189,6 +190,8 @@ export class NeteaseQrLoginCoordinator {
     this.handoff = undefined;
     clearTimeout(this.deadline);
     this.deadline = undefined;
+    this.wake = undefined;
+    this.sleepWake = undefined;
     this.controller?.abort();
     this.controller = undefined;
   }
@@ -199,19 +202,20 @@ export class NeteaseQrLoginCoordinator {
     this.publish({ ...this.value, sameDevice: true });
   };
 
+  /** Switching to NetEase Music App (via screenshot, saved photo, or direct app switch)
+   * pauses new polls while in background without cancelling the active QR attempt.
+   * Returning to foreground resumes polling immediately until the QR expires or the user cancels. */
   setForeground = (active: boolean) => {
     this.foreground = active;
-    if (!active && this.handoff !== this.value.generation) {
-      this.cancel();
-      return;
-    }
-    if (active && neteaseQrBusy(this.value.status) && this.value.expiresAt && this.value.expiresAt <= (this.options.now ?? Date.now)()) {
+    if (!active) return;
+    if (neteaseQrBusy(this.value.status) && this.value.expiresAt && this.value.expiresAt <= (this.options.now ?? Date.now)()) {
       const generation = this.value.generation;
       this.stop();
       this.publish({ status: 'expired', generation });
       return;
     }
-    if (active) this.wake?.();
+    this.wake?.();
+    this.sleepWake?.();
   };
 
   private waitForForeground(signal: AbortSignal): Promise<void> {
@@ -304,9 +308,15 @@ export class NeteaseQrLoginCoordinator {
           });
         }
         await new Promise<void>((resolve, reject) => {
-          const cleanup = () => signal.removeEventListener('abort', cancel);
-          const timer = setTimeout(() => { cleanup(); resolve(); }, this.options.pollMs ?? 2000);
-          const cancel = () => { clearTimeout(timer); cleanup(); reject(new NeteaseQrLoginError('cancelled')); };
+          const cleanup = () => {
+            clearTimeout(timer);
+            signal.removeEventListener('abort', cancel);
+            if (this.sleepWake === resumeNow) this.sleepWake = undefined;
+          };
+          const resumeNow = () => { cleanup(); resolve(); };
+          const timer = setTimeout(resumeNow, this.options.pollMs ?? 2000);
+          const cancel = () => { cleanup(); reject(new NeteaseQrLoginError('cancelled')); };
+          this.sleepWake = resumeNow;
           signal.addEventListener('abort', cancel, { once: true });
           if (signal.aborted) cancel();
         });

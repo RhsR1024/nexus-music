@@ -13,7 +13,7 @@ import {normalizeBackupDirectory} from '../storage/webdavBackups.ts';
 import {describeSyncRecord,SyncError,type SyncChoices,type SyncRecord} from '../storage/multiDeviceSync.ts';
 import type {LocalPlaylist} from '../storage/library.ts';
 
-export function CloudSync({services}:{services:Services}){
+export function CloudSync({services,grouped=false}:{services:Services;grouped?:boolean}){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),insets=useSafeAreaInsets(),store=services.davSync,state=useSyncExternalStore(store.subscribe,store.getSnapshot),accounts=useSyncExternalStore(services.davAccounts.subscribe,services.davAccounts.getSnapshot);
   const [open,setOpen]=useState(false),[accountId,setAccountId]=useState(''),[directory,setDirectory]=useState(syncDirectory),[choices,setChoices]=useState<SyncChoices>({}),[message,setMessage]=useState(''),[details,setDetails]=useState<SyncRecord>();
   useEffect(()=>{setChoices({});setDetails(undefined);},[state.preview]);
@@ -32,14 +32,21 @@ export function CloudSync({services}:{services:Services}){
   function confirm(){if(!ready||!state.preview)return;const preview=state.preview,confirmedChoices={...choices};Alert.alert('确认同步音乐库？','将按预览合并歌曲收藏、目录收藏、歌单、音频匹配和歌词选择；冲突按所选版本处理。历史、统计、队列与凭据保留本机。',[{text:'取消',style:'cancel'},{text:'确认同步两端',onPress:()=>{void perform(()=>store.commit(confirmedChoices,preview));}}]);}
   const version=(record:SyncRecord|undefined)=>record&&!record.deleted?record:undefined;
   const playlistDetails=details?.kind==='playlist'?details.payload as LocalPlaylist:undefined;
-  return <View style={{marginVertical:6}}>
-    <Pressable accessibilityRole="button" accessibilityLabel="WebDAV多设备同步" testID="cloud-sync-open" onPress={show} style={[{minHeight:54,paddingHorizontal:16,paddingVertical:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},s.cardShadow]}>
+  return <View style={grouped?undefined:{marginVertical:6}}>
+    {grouped?<Pressable accessibilityRole="button" accessibilityLabel="WebDAV多设备同步" testID="cloud-sync-open" onPress={show} style={{minHeight:60,paddingHorizontal:16,paddingVertical:12,flexDirection:'row',alignItems:'center',gap:12}}>
+      <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="sync-outline" size={18} color={s.accent}/></View>
+      <View style={{flex:1,minWidth:0,gap:2}}>
+        <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>WebDAV 多设备同步</Text>
+        <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>跨设备预览合并歌单、收藏与歌词选择</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+    </Pressable>:<Pressable accessibilityRole="button" accessibilityLabel="WebDAV多设备同步" testID="cloud-sync-open" onPress={show} style={[{minHeight:54,paddingHorizontal:16,paddingVertical:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},s.cardShadow]}>
       <View style={{flexDirection:'row',alignItems:'center',gap:11}}>
         <View style={{width:34,height:34,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}><Ionicons name="sync-outline" size={18} color={s.accent}/></View>
         <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>WebDAV多设备同步</Text>
       </View>
       <Ionicons name="chevron-forward" size={17} color={s.subtle}/>
-    </Pressable>
+    </Pressable>}
     <Modal visible={open} onRequestClose={close} animationType="slide">
       <View style={{flex:1}}>
         <LinearGradient pointerEvents="none" colors={[...s.sheetGradient]} start={{x:0.15,y:0}} end={{x:0.85,y:1}} style={StyleSheet.absoluteFill}/>
