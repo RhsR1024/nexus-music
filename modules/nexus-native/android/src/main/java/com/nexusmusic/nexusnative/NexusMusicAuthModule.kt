@@ -175,6 +175,48 @@ class NexusMusicAuthModule : Module() {
       activity.startActivity(intent)
     }.runOnQueue(Queues.MAIN)
 
+    AsyncFunction("neteaseQrRequest") { path: String, formBody: String, cookieHeader: String, promise: Promise ->
+      val allowedPaths = setOf("/weapi/login/qrcode/unikey", "/weapi/login/qrcode/client/login")
+      if (path !in allowedPaths || formBody.toByteArray(StandardCharsets.UTF_8).size > 65_536 ||
+        cookieHeader.toByteArray(StandardCharsets.UTF_8).size > 8_192
+      ) {
+        promise.reject("QR_INVALID", "网易云扫码请求参数无效", null)
+        return@AsyncFunction
+      }
+      transferExecutor.execute {
+        try {
+          val reqBody = formBody.toRequestBody("application/x-www-form-urlencoded; charset=UTF-8".toMediaType())
+          val builder = Request.Builder()
+            .url("https://music.163.com$path")
+            .post(reqBody)
+            .header("Referer", "https://music.163.com/")
+            .header("Origin", "https://music.163.com")
+            .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+          if (cookieHeader.isNotEmpty()) builder.header("Cookie", cookieHeader)
+          httpClient.newCall(builder.build()).execute().use { resp ->
+            if (resp.code !in 200..299) {
+              promise.reject("QR_HTTP", "网易云扫码服务暂时不可用", null)
+              return@execute
+            }
+            val bodyBytes = resp.body?.bytes() ?: ByteArray(0)
+            if (bodyBytes.size > 2 * 1024 * 1024) {
+              promise.reject("QR_PARSE", "网易云扫码响应过大", null)
+              return@execute
+            }
+            val bodyText = String(bodyBytes, StandardCharsets.UTF_8)
+            val setCookies = org.json.JSONArray()
+            for (sc in resp.headers("Set-Cookie")) setCookies.put(sc)
+            val payload = JSONObject()
+              .put("bodyText", bodyText)
+              .put("setCookies", setCookies)
+            promise.resolve(payload.toString())
+          }
+        } catch (t: Throwable) {
+          promise.reject("QR_NETWORK", t.message ?: "网络请求失败", t)
+        }
+      }
+    }
+
     OnDestroy {
       transferCalls.values.forEach { it.cancel() }
       transferCalls.clear()

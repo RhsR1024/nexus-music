@@ -17,7 +17,7 @@ public final class NexusNativeModule: Module {
 
   public func definition() -> ModuleDefinition {
     Name("NexusNative")
-    Events("onPowerStateChange")
+    Events("onPowerStateChange", "onSourceUpdateAlert")
     OnStartObserving("onPowerStateChange") {
       self.startPowerObservation()
     }
@@ -143,8 +143,47 @@ public final class NexusNativeModule: Module {
       self.runtimes[id]?.runtime.destroy()
       self.revisions[id] = revision
       let runtime = ScriptRuntime(id: id, revision: revision)
+      runtime.onUpdateAlert = { [weak self] payload in
+        self?.sendEvent("onSourceUpdateAlert", [
+          "id": id,
+          "revision": revision,
+          "payload": payload,
+        ])
+      }
       self.runtimes[id] = (revision, runtime)
       runtime.initialize(script: script, name: name, bootstrap: bootstrap) { result in self.complete(promise, result) }
+    }.runOnQueue(runtimeQueue)
+
+    AsyncFunction("probeSourceUpdateAlert") { (id: String, name: String, script: String, waitMs: Int, promise: Promise) in
+      guard script.utf8.count <= 8 * 1024 * 1024, let bootstrap = self.bootstrapText() else {
+        promise.resolve(NSNull()); return
+      }
+      let runtime = ScriptRuntime(id: "update-probe:\(id)", revision: 1)
+      let boundedWait = min(max(Double(waitMs) / 1000.0, 1.5), 12.0)
+      var settled = false
+      var timeoutWork: DispatchWorkItem?
+      let finishProbe: (String?) -> Void = { payload in
+        self.runtimeQueue.async {
+          guard !settled else { return }
+          settled = true
+          timeoutWork?.cancel()
+          timeoutWork = nil
+          runtime.destroy()
+          if let payload { promise.resolve(payload) } else { promise.resolve(NSNull()) }
+        }
+      }
+      runtime.onUpdateAlert = { payload in
+        finishProbe(payload)
+      }
+      let work = DispatchWorkItem { finishProbe(nil) }
+      timeoutWork = work
+      self.runtimeQueue.asyncAfter(deadline: .now() + boundedWait, execute: work)
+      runtime.initialize(script: script, name: name, bootstrap: bootstrap) { result in
+        if case .failure = result {
+          // Some scripts emit updateAlert slightly after/before init failure; keep a brief grace window.
+          self.runtimeQueue.asyncAfter(deadline: .now() + 1.5) { finishProbe(nil) }
+        }
+      }
     }.runOnQueue(runtimeQueue)
 
     AsyncFunction("requestSource") { (id: String, revision: Int, requestID: String, payload: String, promise: Promise) in
@@ -215,7 +254,7 @@ public final class NexusNativeModule: Module {
     let cache = exporting ? exportCovers : covers, requestKey = (exporting ? "export:" : "display:") + key
     if let hit = cache.hit(key) { promise.resolve(hit); return }
     if var pending = coverRequests[requestKey] { pending.promises.append(promise); coverRequests[requestKey] = pending; return }
-    guard coverRequests.count < 4 else { promise.reject("COVER_BUSY", "封面加载繁忙"); return }
+    guard coverRequests.count < 12 else { promise.reject("COVER_BUSY", "封面加载繁忙"); return }
     let client = ScriptHTTP(queue: coverQueue), epoch = cache.epoch
     coverRequests[requestKey] = (client, [promise])
     client.start(id: 1, url: url, optionsJSON: "{\"binary\":true,\"timeout\":10000}") { [weak self] error, response in

@@ -15,8 +15,8 @@ export function NavidromeSettings({services}:{services:Services}) {
     setBusy(true);setMessage('');try{await run();}catch(error){setMessage(error instanceof NavidromeError||error instanceof CredentialStorageError?error.message:'操作未完成，请检查连接配置或本机凭据存储');}finally{setBusy(false);}
   }
   const button=(label:string,action:()=>void,disabled=busy,accessibilityLabel=label)=><Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} disabled={disabled} onPress={action} style={[styles.button,disabled&&{opacity:.4}]}><Text style={styles.text}>{label}</Text></Pressable>;
-  return <View style={styles.card}>
-    <Text style={styles.title}>Navidrome</Text><Text style={styles.caption}>连接自己的曲库。密码保存在本机Keychain；支持星标与服务端歌单编辑。</Text>
+  return <View style={[styles.card,sollinTokens(theme.mode,theme.palette.accent,theme.appearance).cardShadow]}>
+    <Text style={styles.title}>Navidrome 私人曲库</Text><Text style={styles.caption}>连接自己的 Subsonic / Navidrome 服务器。密码保存在本机钥匙串；支持星标与服务端歌单编辑。</Text>
     {accounts.map(account=><View key={account.id} style={styles.account}>
       <Text style={styles.text}>{account.username}</Text><Text style={styles.caption}>{account.url}</Text>
       <View style={styles.row}>

@@ -108,6 +108,7 @@ internal class ScriptRuntime(private val id: String, private val revision: Int) 
   private var destroyed = false
   private var initCallback: ((Result<String>) -> Unit)? = null
   private var initDeadline: ScheduledFuture<*>? = null
+  var onUpdateAlert: ((String) -> Unit)? = null
 
   private val bridge = object : QuickJSHostBridge {
     override fun onEmit(event: String, json: String) {
@@ -275,6 +276,9 @@ internal class ScriptRuntime(private val id: String, private val revision: Int) 
         if (reqId.isNotEmpty()) {
           finish(reqId, Result.failure(RuntimeException(ScriptRuntimeError.REQUEST.code)))
         }
+      }
+      "updateAlert" -> {
+        onUpdateAlert?.invoke(json)
       }
     }
   }

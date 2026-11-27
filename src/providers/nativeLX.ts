@@ -10,6 +10,23 @@ export function loadNativeLX() {
 export function fetchSourceScript(url: string): Promise<string> {
   return requireNativeModule<{ fetchScript(url: string): Promise<string> }>('NexusNative').fetchScript(url);
 }
+export function probeSourceUpdateAlert(id: string, name: string, script: string, waitMs = 5500): Promise<string | null> {
+  try {
+    const mod = requireNativeModule<{ probeSourceUpdateAlert?: (id: string, name: string, script: string, waitMs: number) => Promise<string | null> }>('NexusNative');
+    return mod.probeSourceUpdateAlert ? mod.probeSourceUpdateAlert(id, name, script, waitMs) : Promise.resolve(null);
+  } catch {
+    return Promise.resolve(null);
+  }
+}
+export function subscribeSourceUpdateAlerts(listener: (event: { id: string; revision?: number; payload: string }) => void): () => void {
+  try {
+    const mod = requireNativeModule<{ addListener?: (name: string, cb: (event: { id: string; revision?: number; payload: string }) => void) => { remove(): void } }>('NexusNative');
+    const sub = mod.addListener?.('onSourceUpdateAlert', listener);
+    return () => { try { sub?.remove(); } catch {} };
+  } catch {
+    return () => {};
+  }
+}
 
 export function loadNativeCovers(){return requireNativeModule<import('./covers.ts').CoverNative>('NexusNative');}
 

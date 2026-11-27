@@ -30,6 +30,7 @@ export interface NeteaseQrSnapshot {
   readonly expiresAt?: number;
   readonly sameDevice?: boolean;
   readonly nickname?: string;
+  readonly detail?: string;
 }
 
 export const neteaseQrBusy = (status: NeteaseQrStatus) => ['loading', 'waiting', 'scanned', 'saving'].includes(status);
@@ -81,16 +82,49 @@ export function extractNeteaseSetCookies(setCookies: readonly string[], bodyCook
   return parseNeteaseCookiePayload(JSON.stringify(captured));
 }
 
+export type NeteaseQrNativeRequest = (path: string, formBody: string, cookieHeader: string) => Promise<string>;
+
+export function createNativeNeteaseQrHTTP(nativeRequest: NeteaseQrNativeRequest): NeteaseQrHTTPClient {
+  return (url, request, signal) => bounded(async child => {
+    throwIfAborted(child);
+    const parsedUrl = new URL(url);
+    const raw = await nativeRequest(parsedUrl.pathname, request.body ?? '', request.headers?.Cookie ?? '');
+    throwIfAborted(child);
+    const envelope = row(JSON.parse(raw));
+    const bodyText = typeof envelope.bodyText === 'string' ? envelope.bodyText : '';
+    const setCookies = Array.isArray(envelope.setCookies)
+      ? envelope.setCookies.filter((v): v is string => typeof v === 'string' && v.length > 0)
+      : [];
+    return { body: parseProviderJSON(bodyText), setCookies };
+  }, signal, 14_000);
+}
+
 export class NeteaseQrLoginClient {
   private readonly http: NeteaseQrHTTPClient;
   private readonly now: () => number;
-  constructor(options: { http?: NeteaseQrHTTPClient; now?: () => number } = {}) {
-    this.http = options.http ?? requestNeteaseQrHTTP;
+  private sessionCookies: Record<string, string> = {};
+  constructor(options: { http?: NeteaseQrHTTPClient; nativeRequest?: NeteaseQrNativeRequest; now?: () => number } = {}) {
+    this.http = options.http ?? (options.nativeRequest ? createNativeNeteaseQrHTTP(options.nativeRequest) : requestNeteaseQrHTTP);
     this.now = options.now ?? Date.now;
+  }
+
+  private captureAuxiliaryCookies(setCookies: readonly string[]) {
+    for (const source of setCookies) {
+      COOKIE_CAPTURE.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = COOKIE_CAPTURE.exec(source)) !== null) {
+        const name = match[1];
+        const value = match[2]?.trim();
+        if (name && value && value.length <= 4096) this.sessionCookies[name] = value;
+      }
+    }
   }
 
   private weapiPost(path: string, data: Record<string, unknown>, signal: AbortSignal) {
     const encrypted = weapiPayload(data);
+    const auxCookie = ['os=pc', 'appver=2.10.13', 'channel=netease',
+      ...Object.entries(this.sessionCookies).filter(([k]) => k === 'NMTID' || k === '_ntes_nuid').map(([k, v]) => `${k}=${v}`),
+    ].join('; ');
     return this.http(`https://music.163.com${path}`, {
       method: 'POST',
       credentials: 'omit',
@@ -98,6 +132,7 @@ export class NeteaseQrLoginClient {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         Referer: 'https://music.163.com/',
         Origin: 'https://music.163.com',
+        Cookie: auxCookie,
         'User-Agent': DESKTOP_UA,
       },
       body: `params=${encodeURIComponent(encrypted.params)}&encSecKey=${encodeURIComponent(encrypted.encSecKey)}`,
@@ -106,10 +141,12 @@ export class NeteaseQrLoginClient {
 
   async create(signal: AbortSignal): Promise<NeteaseQr> {
     throwIfAborted(signal);
+    this.sessionCookies = {};
     try {
       const expiresAt = this.now() + 180_000;
       const res = await this.weapiPost('/weapi/login/qrcode/unikey', { type: 3 }, signal);
       throwIfAborted(signal);
+      this.captureAuxiliaryCookies(res.setCookies);
       const data = row(res.body);
       const key = typeof data.unikey === 'string' ? data.unikey.trim() : '';
       if (data.code !== 200 || !/^[A-Za-z0-9_-]{8,128}$/.test(key)) throw new NeteaseQrLoginError();
@@ -129,6 +166,7 @@ export class NeteaseQrLoginClient {
     try {
       const res = await this.weapiPost('/weapi/login/qrcode/client/login', { key: qr.key, type: 3 }, signal);
       throwIfAborted(signal);
+      this.captureAuxiliaryCookies(res.setCookies);
       if (this.now() >= qr.expiresAt) return { status: 'expired' };
       const body = row(res.body);
       const code = Number(body.code);
@@ -164,6 +202,7 @@ export class NeteaseQrLoginCoordinator {
     client: Pick<NeteaseQrLoginClient, 'create' | 'poll'>;
     profile: Pick<NeteaseAccountProfileClient, 'fetch'>;
     accounts: Pick<MusicAccounts, 'save'>;
+    hash?: (value: string) => Promise<string>;
     pollMs?: number;
     now?: () => number;
   };
@@ -253,11 +292,24 @@ export class NeteaseQrLoginCoordinator {
     this.controller = controller;
     const active = () => this.controller === controller && !signal.aborted;
     const now = () => (this.options.now ?? Date.now)();
-    const finish = (status: NeteaseQrStatus) => {
+    const finish = (status: NeteaseQrStatus, detail?: string) => {
       if (!active()) return;
       this.stop();
-      this.publish({ status, generation });
+      this.publish({ status, generation, ...(detail ? { detail } : {}) });
     };
+    const sleep = (ms: number) => new Promise<void>((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timer);
+        signal.removeEventListener('abort', cancel);
+        if (this.sleepWake === resumeNow) this.sleepWake = undefined;
+      };
+      const resumeNow = () => { cleanup(); resolve(); };
+      const timer = setTimeout(resumeNow, ms);
+      const cancel = () => { cleanup(); reject(new NeteaseQrLoginError('cancelled')); };
+      this.sleepWake = resumeNow;
+      signal.addEventListener('abort', cancel, { once: true });
+      if (signal.aborted) cancel();
+    });
     this.publish({ status: 'loading', generation });
     this.deadline = setTimeout(() => finish('expired'), 180_000);
     try {
@@ -267,11 +319,34 @@ export class NeteaseQrLoginCoordinator {
       clearTimeout(this.deadline);
       this.deadline = setTimeout(() => finish('expired'), Math.min(180_000, qr.expiresAt - now()));
       this.publish({ status: 'waiting', generation, image: qr.image, expiresAt: qr.expiresAt });
+      let consecutivePollErrors = 0;
       while (active()) {
         await this.waitForForeground(signal);
         if (!active()) return;
         if (qr.expiresAt <= now()) { finish('expired'); return; }
-        const result = await this.options.client.poll(qr, signal);
+        let result: NeteaseQrPollResult;
+        try {
+          result = await this.options.client.poll(qr, signal);
+          consecutivePollErrors = 0;
+        } catch (pollError) {
+          if (!active() || signal.aborted) return;
+          // iOS suspends in-flight sockets when switching to NetEase Music App to scan.
+          // Do not terminate the QR session on background/transient transport drops;
+          // wait until foreground resumes and retry until expiry.
+          if (!this.foreground) {
+            await this.waitForForeground(signal);
+            if (!active()) return;
+            await sleep(Math.min(400, this.options.pollMs ?? 2000));
+            continue;
+          }
+          consecutivePollErrors++;
+          if (consecutivePollErrors >= 8) {
+            finish('failed', pollError instanceof NeteaseQrLoginError ? undefined : '网络不稳定，请重试或改用网页登录');
+            return;
+          }
+          await sleep(Math.min(1200, this.options.pollMs ?? 2000));
+          continue;
+        }
         await this.waitForForeground(signal);
         if (!active()) return;
         if (qr.expiresAt <= now()) { finish('expired'); return; }
@@ -280,18 +355,34 @@ export class NeteaseQrLoginCoordinator {
           clearTimeout(this.deadline);
           this.deadline = undefined;
           this.publish({ status: 'saving', generation });
-          const profile = await this.options.profile.fetch({ platform: 'wy', cookies: result.cookies }, signal);
+          let profile: Awaited<ReturnType<NeteaseAccountProfileClient['fetch']>> | undefined;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            await this.waitForForeground(signal);
+            if (!active()) return;
+            try {
+              profile = await this.options.profile.fetch({ platform: 'wy', cookies: result.cookies }, signal);
+              break;
+            } catch {
+              if (!active() || signal.aborted) return;
+              if (attempt === 2) { finish('failed', '扫码已确认，但读取网易云账号资料失败，请重试'); return; }
+              await sleep(600);
+            }
+          }
+          if (!active() || !profile) return;
+          const username = `netease:${profile.userId}`;
+          const accountId = this.options.hash ? await this.options.hash(JSON.stringify(['wy', username])) : undefined;
           if (!active()) return;
           await this.options.accounts.save({
             platform: 'wy',
             label: '网易云音乐',
-            username: profile.userId,
+            username,
             displayName: profile.nickname,
             ...(profile.avatar ? { avatar: profile.avatar } : {}),
-            capabilities: [],
+            capabilities: ['daily', 'fm'],
           }, {
             version: 1,
             platform: 'wy',
+            ...(accountId ? { accountId } : {}),
             userId: profile.userId,
             cookies: result.cookies,
           }, signal);
@@ -307,19 +398,7 @@ export class NeteaseQrLoginCoordinator {
             ...(result.status === 'scanned' && result.nickname ? { nickname: result.nickname } : {}),
           });
         }
-        await new Promise<void>((resolve, reject) => {
-          const cleanup = () => {
-            clearTimeout(timer);
-            signal.removeEventListener('abort', cancel);
-            if (this.sleepWake === resumeNow) this.sleepWake = undefined;
-          };
-          const resumeNow = () => { cleanup(); resolve(); };
-          const timer = setTimeout(resumeNow, this.options.pollMs ?? 2000);
-          const cancel = () => { cleanup(); reject(new NeteaseQrLoginError('cancelled')); };
-          this.sleepWake = resumeNow;
-          signal.addEventListener('abort', cancel, { once: true });
-          if (signal.aborted) cancel();
-        });
+        await sleep(this.options.pollMs ?? 2000);
       }
     } catch {
       finish('failed');

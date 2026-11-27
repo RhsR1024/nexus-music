@@ -46,7 +46,7 @@ import * as Crypto from 'expo-crypto';
 import * as Font from 'expo-font';
 import { openRepository } from '../storage/nativeDatabase.ts';
 import {CoverService} from '../providers/covers.ts';
-import { decodeKRC, decodeQRC, loadNativeCovers, loadNativeLX } from '../providers/nativeLX.ts';
+import { decodeKRC, decodeQRC, fetchSourceScript, loadNativeCovers, loadNativeLX, probeSourceUpdateAlert, subscribeSourceUpdateAlerts } from '../providers/nativeLX.ts';
 import { SourceRegistry } from '../providers/sourceRegistry.ts';
 import { SourceCatalog } from '../providers/sourceCatalog.ts';
 import { PreferenceStore } from './preferences.ts';
@@ -140,9 +140,19 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const neteasePlaylistTracks=new NeteasePlaylistTracksClient({http:options.onlineHTTP??requestJSON,accounts:musicAccounts});
   const kugouLoginClient=new KugouLoginClient({http:options.onlineHTTP??requestJSON,md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
   const kugouLogin=new KugouLoginCoordinator({client:kugouLoginClient,accounts:musicAccounts});
-  const neteaseQrLogin=new NeteaseQrLoginCoordinator({client:new NeteaseQrLoginClient(),profile:neteaseProfile,accounts:musicAccounts});
+  const nativeMusicAuth=loadNativeMusicAuth();
+  const neteaseQrLogin=new NeteaseQrLoginCoordinator({
+    client:new NeteaseQrLoginClient({
+      nativeRequest:nativeMusicAuth.neteaseQrRequest
+        ?(path,formBody,cookieHeader)=>nativeMusicAuth.neteaseQrRequest!(path,formBody,cookieHeader)
+        :undefined,
+    }),
+    profile:neteaseProfile,
+    accounts:musicAccounts,
+    hash,
+  });
   const musicAuth={wy:new MusicAuthFlow<Record<string,unknown>>(),tx:new MusicAuthFlow<Record<string,unknown>>(),kg:new MusicAuthFlow<Record<string,unknown>>()};
-  const musicWebLogin=new MusicWebLoginCoordinator({native:loadNativeMusicAuth(),flow:musicAuth.wy,accounts:musicAccounts,profile:neteaseProfile,qqProfile,hash,uuid:Crypto.randomUUID});
+  const musicWebLogin=new MusicWebLoginCoordinator({native:nativeMusicAuth,flow:musicAuth.wy,accounts:musicAccounts,profile:neteaseProfile,qqProfile,hash,uuid:Crypto.randomUUID});
   const fonts=new FontStore(repository);await restore('fonts.v1','字体',()=>fonts.restore());
   await Font.loadAsync({CupertinoIcons:require('../../assets/fonts/CupertinoIcons.ttf')});
   const library=new LibraryStore(repository,Crypto.randomUUID,Date.now,libraryMutations,()=>preferences.getSnapshot().playlistAddPosition);await restore('library.v1','音乐库',()=>library.restore());
@@ -167,9 +177,24 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const registry = new SourceRegistry(nativeLX);
   const catalog = new SourceCatalog(registry, repository, script => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, script));
   await restore('sources.v1','音源',()=>catalog.restore());
+  // Capture runtime LX updateAlert events emitted by any initialized source script.
+  subscribeSourceUpdateAlerts(event => {
+    if (event?.id && typeof event.payload === 'string') {
+      void catalog.recordUpdateAlert(event.id, event.payload).catch(() => {});
+    }
+  });
   // Source initialization can require network/timeouts. Keep the UI available,
   // but wait for restored sources before resolving recovered downloads.
   const sourcesReady = catalog.restoreEnabled();
+  // Quietly check all imported sources for updates in the background after startup settles.
+  void sourcesReady.then(() => {
+    setTimeout(() => {
+      void catalog.checkAllUpdates({
+        probeAlert: probeSourceUpdateAlert,
+        fetchScript: fetchSourceScript,
+      }).catch(() => {});
+    }, 2500);
+  }).catch(() => {});
   const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal,size)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size},signal),(track,signal)=>track.origin.kind==='webdav'?davMedia.cover(track,signal):track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track),(track,signal)=>online.artwork(track,signal));
   const playbackQualityFor=(platform:OnlinePlatform)=>preferences.getSnapshot().playbackQualities[platform]??preferences.getSnapshot().quality;

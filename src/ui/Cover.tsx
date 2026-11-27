@@ -8,9 +8,22 @@ export function Cover({services,track,url,privateCover,size=56,radius,aspectRati
   const theme=useTheme(),[file,setFile]=useState<string>();
   const pixels=size*useWindowDimensions().scale,coverSize=pixels>512?1024:512;
   const key=JSON.stringify([coverSize,track?.origin,track?.artwork,track?.metadata.coverArtId,track?.metadata.davVersion,url,privateCover]);
-  useEffect(()=>{const abort=new AbortController();setFile(undefined);
-    const pending=track?services.covers.loadTrack(track,abort.signal,coverSize):privateCover?services.covers.loadPrivate(privateCover.accountId,privateCover.id,abort.signal,coverSize):url?services.covers.loadURL(url,abort.signal,coverSize):Promise.resolve(undefined);
-    pending.then(value=>{if(!abort.signal.aborted)setFile(value);}).catch(()=>{});return()=>abort.abort();
+  useEffect(()=>{
+    const abort=new AbortController();
+    let retryTimer:ReturnType<typeof setTimeout>|undefined;
+    setFile(undefined);
+    const loadOnce=()=>track?services.covers.loadTrack(track,abort.signal,coverSize):privateCover?services.covers.loadPrivate(privateCover.accountId,privateCover.id,abort.signal,coverSize):url?services.covers.loadURL(url,abort.signal,coverSize):Promise.resolve(undefined);
+    const run=(attempt:number)=>{
+      loadOnce().then(value=>{
+        if(abort.signal.aborted)return;
+        if(value){setFile(value);return;}
+        if(attempt===0&&(url||track||privateCover)){retryTimer=setTimeout(()=>run(1),900);}
+      }).catch(()=>{
+        if(!abort.signal.aborted&&attempt===0&&(url||track||privateCover)){retryTimer=setTimeout(()=>run(1),900);}
+      });
+    };
+    run(0);
+    return()=>{if(retryTimer)clearTimeout(retryTimer);abort.abort();};
   },[services,key]);
   const height=size/aspectRatio;
   return <View testID={testID} accessible={false} style={{width:size,height,borderRadius:radius??Math.min(theme.appearance.coverRadius,size/2,height/2),backgroundColor:theme.color('#25283A'),overflow:'hidden',alignItems:'center',justifyContent:'center'}}>{file?<Image testID={`${testID}-image`} source={{uri:file}} onError={()=>setFile(undefined)} style={{width:size,height}} resizeMode="cover"/>:<Text style={{color:theme.color('#959EAC'),fontSize:Math.max(12,size/4),fontWeight:'600'}}>{fallbackText?.trim().slice(0,1)||'♫'}</Text>}</View>;

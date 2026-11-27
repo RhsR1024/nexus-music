@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCipheriv, createDecipheriv, createHash } from 'node:crypto';
 import { encodeQrPngDataUri } from '../src/domain/qrPng.ts';
-import { extractNeteaseSetCookies, NeteaseQrLoginClient, NeteaseQrLoginCoordinator } from '../src/providers/neteaseQrLogin.ts';
+import { createNativeNeteaseQrHTTP, extractNeteaseSetCookies, NeteaseQrLoginClient, NeteaseQrLoginCoordinator } from '../src/providers/neteaseQrLogin.ts';
 import { kugouAesDecrypt, kugouAesEncrypt, kugouRsaEncrypt } from '../src/providers/kugouCrypto.ts';
 import { KugouLoginClient, KugouLoginError, validKugouQrImage } from '../src/providers/kugouLogin.ts';
 import { KugouLoginCoordinator } from '../src/providers/kugouLoginCoordinator.ts';
@@ -299,4 +299,74 @@ test('QQ manual key extraction, session normalization, Base64 nick repair, and e
   await auth.authorize(accounts.getSnapshot()[0]);
   assert.equal(auth.getSnapshot().status, 'succeeded');
   assert.equal((await accounts.session(existing.id)).qqDailyKey, 'qmk-synthetic_web_key_789012');
+});
+
+test('NetEase QR native HTTP bridge forwards Set-Cookie list, survives background socket drop, and saves aligned account metadata', async () => {
+  let pollCalls = 0;
+  const seenCookies: string[] = [];
+  const nativeHttp = createNativeNeteaseQrHTTP(async (path, _formBody, cookieHeader) => {
+    seenCookies.push(cookieHeader);
+    if (path === '/weapi/login/qrcode/unikey') {
+      return JSON.stringify({
+        status: 200,
+        bodyText: JSON.stringify({ code: 200, unikey: '481f41a1-9f91-4ff9-988f-561e735f2e99' }),
+        setCookies: ['NMTID=nmt_aux_777; Path=/'],
+      });
+    }
+    pollCalls++;
+    if (pollCalls === 1) throw new TypeError('The network connection was lost');
+    if (pollCalls === 2) throw new TypeError('Transient foreground hiccup');
+    return JSON.stringify({
+      status: 200,
+      bodyText: JSON.stringify({ code: 803 }),
+      setCookies: ['MUSIC_U=native_qr_cookie_token; Path=/; HttpOnly', '__csrf=native_qr_csrf; Path=/'],
+    });
+  });
+
+  const client = new NeteaseQrLoginClient({ http: nativeHttp });
+  const records = new Map<string, unknown>();
+  const secrets = new Map<string, string>();
+  const accounts = new MusicAccounts(
+    { get: async <T>(k: string) => records.get(k) as T | undefined, put: async (k, v) => { records.set(k, v); } },
+    { get: async k => secrets.get(k) ?? null, set: async (k, v) => { secrets.set(k, v); }, remove: async k => { secrets.delete(k); } },
+    sha256,
+  );
+  let profileAttempts = 0;
+  const coord = new NeteaseQrLoginCoordinator({
+    client,
+    profile: {
+      fetch: async () => {
+        profileAttempts++;
+        if (profileAttempts === 1) throw new TypeError('Network request failed');
+        return { userId: '555666', nickname: 'Native QR User', avatar: 'https://p1.music.126.net/qr.jpg' };
+      },
+    },
+    accounts,
+    hash: sha256,
+    pollMs: 5,
+  });
+
+  // Simulate iOS suspending socket during first poll, then returning to foreground
+  const origPoll = client.poll.bind(client);
+  client.poll = async (qr, signal) => {
+    if (pollCalls === 0) coord.setForeground(false);
+    try {
+      return await origPoll(qr, signal);
+    } finally {
+      if (pollCalls === 1) setTimeout(() => coord.setForeground(true), 10);
+    }
+  };
+
+  await coord.login();
+  assert.equal(coord.getSnapshot().status, 'succeeded');
+  assert.equal(pollCalls, 3);
+  assert.equal(profileAttempts, 2);
+  assert.ok(seenCookies[1]?.includes('NMTID=nmt_aux_777'));
+  const saved = accounts.getSnapshot()[0]!;
+  assert.equal(saved.username, 'netease:555666');
+  assert.equal(saved.displayName, 'Native QR User');
+  assert.deepEqual(saved.capabilities, ['daily', 'fm']);
+  const session = await accounts.session(saved.id);
+  assert.equal(session.accountId, saved.id);
+  assert.equal((session.cookies as Record<string, string>).MUSIC_U, 'native_qr_cookie_token');
 });

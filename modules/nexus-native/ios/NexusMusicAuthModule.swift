@@ -147,6 +147,59 @@ public final class NexusMusicAuthModule: Module {
         self.sessions[id] = session; session.start(from: presenter)
       }
     }
+    AsyncFunction("neteaseQrRequest") { (path: String, formBody: String, cookieHeader: String, promise: Promise) in
+      let allowedPaths: Set<String> = ["/weapi/login/qrcode/unikey", "/weapi/login/qrcode/client/login"]
+      guard allowedPaths.contains(path), formBody.utf8.count <= 65536, cookieHeader.utf8.count <= 8192,
+            let url = URL(string: "https://music.163.com\(path)") else {
+        promise.reject("QR_INVALID", "网易云扫码请求参数无效"); return
+      }
+      let config = URLSessionConfiguration.ephemeral
+      config.httpCookieStorage = nil
+      config.httpShouldSetCookies = false
+      config.urlCache = nil
+      config.timeoutIntervalForRequest = 12
+      config.timeoutIntervalForResource = 15
+      var req = URLRequest(url: url)
+      req.httpMethod = "POST"
+      req.httpShouldHandleCookies = false
+      req.setValue("application/x-www-form-urlencoded; charset=UTF-8", forHTTPHeaderField: "Content-Type")
+      req.setValue("https://music.163.com/", forHTTPHeaderField: "Referer")
+      req.setValue("https://music.163.com", forHTTPHeaderField: "Origin")
+      req.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
+      if !cookieHeader.isEmpty { req.setValue(cookieHeader, forHTTPHeaderField: "Cookie") }
+      req.httpBody = Data(formBody.utf8)
+      let session = URLSession(configuration: config)
+      let task = session.dataTask(with: req) { data, response, error in
+        session.finishTasksAndInvalidate()
+        if let error {
+          promise.reject("QR_NETWORK", error.localizedDescription); return
+        }
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let data, data.count <= 2 * 1024 * 1024,
+              let bodyText = String(data: data, encoding: .utf8) else {
+          promise.reject("QR_HTTP", "网易云扫码服务暂时不可用"); return
+        }
+        var headerFields: [String: String] = [:]
+        for (k, v) in http.allHeaderFields {
+          headerFields[String(describing: k)] = String(describing: v)
+        }
+        var setCookies: [String] = []
+        let parsedCookies = HTTPCookie.cookies(withResponseHeaderFields: headerFields, for: url)
+        for c in parsedCookies {
+          setCookies.append("\(c.name)=\(c.value)")
+        }
+        for (k, v) in headerFields where k.lowercased() == "set-cookie" {
+          setCookies.append(v)
+        }
+        let payload: [String: Any] = ["bodyText": bodyText, "setCookies": setCookies]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: jsonData, encoding: .utf8) else {
+          promise.reject("QR_PARSE", "网易云扫码响应无效"); return
+        }
+        promise.resolve(json)
+      }
+      task.resume()
+    }
     OnDestroy {
       for session in Array(self.sessions.values) { session.cancel() }
       self.sessions.removeAll()

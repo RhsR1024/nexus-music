@@ -66,7 +66,7 @@ class NexusNativeModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("NexusNative")
-    Events("onPowerStateChange")
+    Events("onPowerStateChange", "onSourceUpdateAlert")
 
     OnStartObserving("onPowerStateChange") { startPowerObservation() }
     OnStopObserving("onPowerStateChange") { stopPowerObservation() }
@@ -260,8 +260,45 @@ class NexusNativeModule : Module() {
         runtimes[id]?.second?.destroy()
         revisions[id] = revision
         val runtime = ScriptRuntime(id, revision)
+        runtime.onUpdateAlert = { payload ->
+          sendEvent(
+            "onSourceUpdateAlert",
+            mapOf("id" to id, "revision" to revision, "payload" to payload)
+          )
+        }
         runtimes[id] = revision to runtime
         runtime.initialize(script, name, bootstrap) { result -> completeRuntime(promise, result) }
+      }
+    }
+
+    AsyncFunction("probeSourceUpdateAlert") { id: String, name: String, script: String, waitMs: Int, promise: Promise ->
+      runtimeExecutor.execute {
+        val bootstrap = bootstrapText()
+        if (script.toByteArray(StandardCharsets.UTF_8).size > 8 * 1024 * 1024 || bootstrap == null) {
+          promise.resolve(null)
+          return@execute
+        }
+        val runtime = ScriptRuntime("update-probe:$id", 1)
+        val boundedWaitMs = waitMs.coerceIn(1500, 12_000).toLong()
+        val settled = java.util.concurrent.atomic.AtomicBoolean(false)
+        val scheduler = Executors.newSingleThreadScheduledExecutor()
+        fun finishProbe(payload: String?) {
+          if (!settled.compareAndSet(false, true)) return
+          runtime.destroy()
+          scheduler.shutdownNow()
+          promise.resolve(payload)
+        }
+        runtime.onUpdateAlert = { payload -> finishProbe(payload) }
+        scheduler.schedule({ finishProbe(null) }, boundedWaitMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        runtime.initialize(script, name, bootstrap) { result ->
+          if (result.isFailure) {
+            try {
+              scheduler.schedule({ finishProbe(null) }, 1500L, java.util.concurrent.TimeUnit.MILLISECONDS)
+            } catch (_: Throwable) {
+              finishProbe(null)
+            }
+          }
+        }
       }
     }
 
@@ -387,7 +424,7 @@ class NexusNativeModule : Module() {
       list.add(promise)
       return
     }
-    if (coverRequests.size >= 4) {
+    if (coverRequests.size >= 12) {
       promise.reject("COVER_BUSY", "封面加载繁忙", null)
       return
     }

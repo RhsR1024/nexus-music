@@ -18,6 +18,7 @@ final class ScriptRuntime {
   private var destroyed = false
   private var initialization: Completion?
   private var initializationDeadline: DispatchWorkItem?
+  var onUpdateAlert: ((String) -> Void)?
 
   init(id: String, revision: Int) { queue = DispatchQueue(label: "nexus.lx.\(id).\(revision)") }
   func initialize(script: String, name: String, bootstrap: String, completion: @escaping Completion) {
@@ -93,6 +94,8 @@ final class ScriptRuntime {
       finish(id, .success(ScriptUtilities.json(object["result"] ?? NSNull())))
     case "requestFailed":
       if let id = object["id"] as? String { finish(id, .failure(.request)) }
+    case "updateAlert":
+      onUpdateAlert?(json)
     default: break
     }
   }

@@ -141,3 +141,79 @@ test('NetEase banners parse Sollin /api/v2/banner/get response, classify orpheus
   assert.equal(banners[2]?.url,undefined);
   assert.equal(seenUrls.filter(u=>u.includes('/api/v3/song/detail')).length,1);
 });
+
+test('Migu playlist square merges parent artwork with logEvent duplicates, Migu rankings read imageUrl, and QQ reads basic.cover fallback',async()=>{
+  const signal=new AbortController().signal;
+  const p=new DiscoveryProvider(sha,async url=>{
+    if(url.includes('playlist-square-recommend')){
+      return{
+        code:'000000',
+        data:{
+          contentItemList:[{
+            itemList:[
+              {
+                resType:'2021',
+                resId:'1001',
+                txt:'欧美流行精选',
+                img:'http://d.musicapp.migu.cn/prod/file-service/file-down/cover1.jpg',
+                logEvent:{contentType:'2021',contentId:'1001',contentName:'欧美流行精选'},
+              },
+              {
+                resType:'2021',
+                resId:'1002',
+                title:'华语经典歌单',
+                imageUrl:'https://cdnmusic.migu.cn/cover2.jpg',
+                logEvent:{contentType:'2021',contentId:'1002'},
+              },
+            ],
+          }],
+        },
+      };
+    }
+    if(url.includes('rank/rank-index')){
+      return{
+        code:'000000',
+        data:{
+          contents:[{
+            rankId:'27553319',
+            rankName:'音乐榜',
+            imageUrl:'http://d.musicapp.migu.cn/rank.jpg',
+          }],
+        },
+      };
+    }
+    if(url.includes('u.y.qq.com')){
+      return{
+        code:0,
+        req:{
+          code:0,
+          data:{
+            content:{
+              v_item:[{
+                basic:{
+                  tid:'8888',
+                  title:'QQ 精选',
+                  cover:{big_url:'http://qpic.y.qq.com/music_cover/qq_big.jpg'},
+                },
+              }],
+            },
+          },
+        },
+      };
+    }
+    throw new Error(`unexpected ${url}`);
+  });
+  const mgPage=await p.playlists('mg',1,undefined,signal);
+  assert.equal(mgPage.items.length,2);
+  assert.equal(mgPage.items[0]?.id,'1001');
+  assert.equal(mgPage.items[0]?.title,'欧美流行精选');
+  assert.equal(mgPage.items[0]?.artwork,'http://d.musicapp.migu.cn/prod/file-service/file-down/cover1.jpg');
+  assert.equal(mgPage.items[1]?.artwork,'https://cdnmusic.migu.cn/cover2.jpg');
+
+  const mgRanks=await p.rankings('mg',signal);
+  assert.equal(mgRanks[0]?.id,'27553319');
+  assert.equal(mgRanks[0]?.artwork,'http://d.musicapp.migu.cn/rank.jpg');
+
+  const qqPage=await p.playlists('tx',1,'10000000',signal);
+  assert.equal(qqPage.items[0]?.artwork,'http://qpic.y.qq.com/music_cover/qq_big.jpg');
+});

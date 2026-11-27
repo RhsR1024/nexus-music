@@ -51,10 +51,11 @@ export class CoverService {
   }
   loadURL(url:string,signal:AbortSignal,size:CoverSize=512){return this.loadSizedURL(url,signal,size,false);}
   private loadSizedURL(url:string,signal:AbortSignal,size:CoverSize|DownloadCoverSize,exporting:boolean){
-    // These public CDNs support TLS but providers sometimes return legacy HTTP.
+    // Normalize protocol-relative URLs and upgrade known public music CDNs to HTTPS.
     // Do not rewrite user/private servers, whose endpoints may be HTTP-only.
-    const parsed=new URL(url);
-    if(parsed.protocol==='http:'&&!parsed.port&&/^(?:p[1-9]c?\.music\.126\.net|y\.gtimg\.cn|y\.qq\.com)$/i.test(parsed.hostname))parsed.protocol='https:';
+    const raw=url.trim();
+    const parsed=new URL(raw.startsWith('//')?`https:${raw}`:raw);
+    if(parsed.protocol==='http:'&&!parsed.port&&/^(?:p[1-9]c?\.music\.126\.net|(?:[a-z0-9-]+\.)?y\.qq\.com|y\.gtimg\.cn|p\.qpic\.cn|d\.musicapp\.migu\.cn|cdnmusic\.migu\.cn|img[1-4]\.kuwo\.cn|imge(?:ssl)?\.kugou\.com)$/i.test(parsed.hostname))parsed.protocol='https:';
     const normalized=parsed.toString();return this.withFallback(size,signal,side=>this.fetch(['public',normalized],normalized,signal,side,exporting),exporting);
   }
   private async withFallback(size:CoverSize|DownloadCoverSize,signal:AbortSignal,load:(side:CoverSize|DownloadCoverSize)=>Promise<string>,exporting=false){
@@ -78,7 +79,7 @@ export class CoverService {
   private async acquire(signal:AbortSignal):Promise<()=>void>{
     throwIfAborted(signal);
     if(this.active>=4){
-      if(this.waiting.length>=64)throw new Error('封面加载繁忙');
+      if(this.waiting.length>=240)throw new Error('封面加载繁忙');
       await new Promise<void>((resolve,reject)=>{
         const remove=()=>{const index=this.waiting.indexOf(job);if(index>=0)this.waiting.splice(index,1);signal.removeEventListener('abort',cancel);};
         const cancel=()=>{remove();reject(new Error('封面请求已取消'));};

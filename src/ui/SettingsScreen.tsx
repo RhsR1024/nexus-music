@@ -17,8 +17,7 @@ import {FontSettings} from './FontSettings.tsx';
 import {CacheSettings} from './CacheSettings.tsx';
 import {DownloadSettings,DownloadTasks} from './DownloadSettings.tsx';
 import {LibraryDataTools} from './LibraryDataTools.tsx';
-import {NavidromeSettings} from './NavidromeSettings.tsx';
-import {SourceSettings} from './SourceSettings.tsx';
+import {MusicSourcesScreen} from './MusicSourcesScreen.tsx';
 import {appearanceCaptureFixture} from './captureFixtures.ts';
 import {MusicAccountSettings} from './MusicAccountSettings.tsx';
 
@@ -32,6 +31,8 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
   const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),sheetDark=theme.mode==='dark';
   const {fontScale}=useWindowDimensions();
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
+  const sources=useSyncExternalStore(services.catalog.subscribe,services.catalog.getSnapshot);
+  const sourceUpdateCount=sources.filter(item=>item.hasUpdate&&item.allowUpdateAlert).length;
   const firstPage=isAppearanceSheet(initialPage)?'appearance':initialPage;
   const [history,setHistory]=useState<SettingsPage[]>([firstPage]);
   const [visited,setVisited]=useState<SettingsPage[]>([firstPage]);
@@ -82,12 +83,12 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
         </View>
         <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginTop:4,marginBottom:-6}}>曲库与播放来源</Text>
         <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
-          {row('sources','LX 音源与 Navidrome 私人曲库','server',undefined,true)}
+          {row('sources','LX 音源与 Navidrome 私人曲库','server',sourceUpdateCount>0?`${sourceUpdateCount} 个更新`:undefined,true)}
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
           {row('accounts','网易云、QQ、酷狗平台登录与本机会话','person-circle',undefined,true)}
         </View>
       </View>;
-      case 'sources':return <><NavidromeSettings services={services}/><SourceSettings catalog={services.catalog} health={services.sourceHealth}/></>;
+      case 'sources':return <MusicSourcesScreen services={services}/>;
       case 'accounts':return <MusicAccountSettings services={services} active={page==='accounts'&&!appearanceSheet.visible} onRevealQr={({top,height})=>{
         const scroller=scrolls.current.accounts;
         if(currentPage.current!=='accounts'||!scroller||!Number.isFinite(top)||height<=0)return;

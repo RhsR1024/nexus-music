@@ -61,7 +61,8 @@ export function Discovery({
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),{width,fontScale}=useWindowDimensions();
   const sources=useSyncExternalStore(services.catalog.subscribe,services.catalog.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
-  const activeSource=sources.find(item=>item.enabled&&item.status==='ready')?.name??sources.find(item=>item.enabled)?.name;
+  const activeSource=sources.find(item=>item.enabled&&item.status==='ready')?.displayName??sources.find(item=>item.enabled)?.displayName;
+  const hasSourceUpdates=sources.some(item=>item.hasUpdate&&item.allowUpdateAlert);
   const [contentWidth,setContentWidth]=useState<number>();
   const [tools,setTools]=useState(false),[descriptionOpen,setDescriptionOpen]=useState(false);
   const [styleOpen,setStyleOpen]=useState(false);
@@ -383,9 +384,10 @@ export function Discovery({
       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:4}}>
         <Text accessibilityRole="header" style={{fontSize:30,fontWeight:'700',lineHeight:36,color:s.ink,letterSpacing:-0.5}}>发现</Text>
         <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
-          {openSources&&<Pressable accessibilityRole="button" accessibilityLabel="音乐来源设置" onPress={openSources} style={{height:34,paddingHorizontal:12,borderRadius:17,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:5,maxWidth:164}}>
+          {openSources&&<Pressable accessibilityRole="button" accessibilityLabel="音乐来源设置" onPress={openSources} style={{height:34,paddingHorizontal:12,borderRadius:17,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:5,maxWidth:168}}>
             <Ionicons name="radio-outline" size={14} color={s.muted}/>
             <Text numberOfLines={1} style={{color:s.muted,fontSize:12,fontWeight:'600'}}>{activeSource??'无 LX 音源'}</Text>
+            {hasSourceUpdates&&<View style={{width:7,height:7,borderRadius:3.5,backgroundColor:'#E53935'}}/>}
           </Pressable>}
         </View>
       </View>

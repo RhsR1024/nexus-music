@@ -64,3 +64,59 @@ test('catalog diagnostic snapshot rejects an outdated script/revision without ch
  const imported=await catalog.import('/** @name Fixture */\nold','fixture.js');await catalog.batch([imported.id],'enable');const source=sources.getSnapshot()[0]!;assert.equal(catalog.diagnosticDefinition(source).script,'/** @name Fixture */\nold');
  await catalog.update(imported.id,'/** @name Fixture */\nnew');assert.throws(()=>catalog.diagnosticDefinition(source));assert.equal(sources.getSnapshot()[0]!.status,'disabled');
 });
+
+test('catalog persists alias, allowUpdateAlert, updateAlert payloads, subscription update diff, and background checkAllUpdates',async()=>{
+ const {SourceCatalog,parseUpdateAlertPayload}=await import('../src/providers/sourceCatalog.ts');
+ assert.equal(parseUpdateAlertPayload('{"log":"v2 修复解析","updateUrl":"https://example.test/v2.js"}')?.updateUrl,'https://example.test/v2.js');
+ assert.equal(parseUpdateAlertPayload('{"log":"bad url","updateUrl":"javascript:alert(1)"}')?.updateUrl,undefined);
+ assert.equal(parseUpdateAlertPayload('{}'),null);
+
+ const store=new Map<string,unknown>();
+ const repo={get:async<T>(k:string)=>store.get(k) as T|undefined,put:async(k:string,v:unknown)=>{store.set(k,v);}};
+ const makeCatalog=()=>{
+  const reg=new SourceRegistry({initialize:async()=>[cap('wy',['128k'])],destroy(){}});
+  return new SourceCatalog(reg,repo as never,async script=>`h:${script.length}:${script.slice(-6)}`);
+ };
+ const catalog=makeCatalog();
+ const a=await catalog.import('/** @name Alpha\n * @version 1.0.0\n * @author TeamA */\nconsole.log(1);','alpha.js');
+ const b=await catalog.import('/** @name Beta\n * @version 1.0.0 */\nconsole.log(2);','beta.js','https://example.test/beta.js');
+
+ await catalog.setAlias(a.id,'我的主音源');
+ await catalog.setAllowUpdateAlert(b.id,false);
+ assert.equal(catalog.getSnapshot().find(s=>s.id===a.id)?.displayName,'我的主音源');
+ assert.equal(catalog.getSnapshot().find(s=>s.id===b.id)?.allowUpdateAlert,false);
+
+ const scan=await catalog.checkAllUpdates({
+  probeAlert:async id=>id===a.id?JSON.stringify({log:'新增无损接口',updateUrl:'https://example.test/alpha-v2.js'}):null,
+  fetchScript:async url=>url==='https://example.test/beta.js'?'/** @name Beta\n * @version 2.0.0 */\nconsole.log(22);':'',
+ });
+ assert.equal(scan.checked,2);
+ assert.deepEqual(scan.updatedIds.sort(),[a.id,b.id].sort());
+ const viewA=catalog.getSnapshot().find(s=>s.id===a.id)!;
+ const viewB=catalog.getSnapshot().find(s=>s.id===b.id)!;
+ assert.equal(viewA.hasUpdate,true);
+ assert.equal(viewA.updateInfo?.kind,'alert');
+ assert.equal(viewA.updateInfo?.updateUrl,'https://example.test/alpha-v2.js');
+ assert.equal(viewB.hasUpdate,true);
+ assert.equal(viewB.updateInfo?.kind,'subscription');
+ assert.equal(viewB.updateInfo?.latestVersion,'2.0.0');
+
+ // Restore into a fresh catalog instance and confirm alias, allowUpdateAlert, and updateInfo survive restart
+ const restored=makeCatalog();
+ await restored.restore();
+ const rA=restored.getSnapshot().find(s=>s.id===a.id)!;
+ const rB=restored.getSnapshot().find(s=>s.id===b.id)!;
+ assert.equal(rA.alias,'我的主音源');
+ assert.equal(rA.displayName,'我的主音源');
+ assert.equal(rA.hasUpdate,true);
+ assert.equal(rB.allowUpdateAlert,false);
+ assert.equal(rB.hasUpdate,true);
+
+ // Clearing alias restores original name, updating clears updateInfo
+ await restored.setAlias(a.id,'   ');
+ assert.equal(restored.getSnapshot().find(s=>s.id===a.id)?.displayName,'Alpha');
+ await restored.update(b.id,'/** @name Beta\n * @version 2.0.0 */\nconsole.log(22);');
+ assert.equal(restored.getSnapshot().find(s=>s.id===b.id)?.hasUpdate,false);
+ await restored.dismissUpdate(a.id);
+ assert.equal(restored.getSnapshot().find(s=>s.id===a.id)?.hasUpdate,false);
+});

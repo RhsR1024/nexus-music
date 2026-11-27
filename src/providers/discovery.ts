@@ -23,7 +23,22 @@ export interface PlaylistPage {title:string;items:readonly Track[];total?:number
 export interface BrowseCategory {id:string;title:string;group?:string}
 function required(value:unknown){const id=text(value);if(!id)throw new Error('平台响应缺少有效ID');return id;}
 function tree(value:unknown,depth=0):Row[]{if(depth>12)return[];if(Array.isArray(value))return value.slice(0,2000).flatMap(item=>tree(item,depth+1));const object=row(value);return Object.keys(object).length?[object,...Object.values(object).filter(item=>item&&typeof item==='object').flatMap(item=>tree(item,depth+1))]:[];}
-function unique(items:BrowseItem[]){return [...new Map(items.map(item=>[item.id,item])).values()];}
+function unique(items:BrowseItem[]){
+  const byId=new Map<string,BrowseItem>();
+  for(const entry of items){
+    const prev=byId.get(entry.id);
+    if(!prev){byId.set(entry.id,entry);continue;}
+    // Prefer whichever duplicate carries artwork/description/count so bare logEvent nodes never erase covers.
+    byId.set(entry.id,{
+      ...prev,
+      title:prev.title||entry.title,
+      ...(prev.artwork||entry.artwork?{artwork:prev.artwork||entry.artwork}:{}),
+      ...(prev.description||entry.description?{description:prev.description||entry.description}:{}),
+      ...(prev.count!==undefined?{count:prev.count}:entry.count!==undefined?{count:entry.count}:{}),
+    });
+  }
+  return [...byId.values()];
+}
 function item(id:unknown,title:unknown,artwork?:unknown,description?:unknown,total?:unknown):BrowseItem {const name=text(title);if(!name)throw new Error('平台响应缺少名称');return{id:required(id),title:name,...(text(artwork)?{artwork:text(artwork)}:{}),...(text(description)?{description:text(description)}:{}),...(count(total)!==undefined?{count:count(total)}:{})};}
 function bannerTarget(targetTypeRaw:unknown,targetIdRaw:unknown,rawUrl:string):{targetType:number;targetId:string;url?:string}{
   const rawType=Number.isFinite(Number(targetTypeRaw))?Number(targetTypeRaw):0;
@@ -133,7 +148,7 @@ export class DiscoveryProvider {
     }else if(platform==='tx'){
       const data=category?await this.qq('playlist.PlayListCategoryServer','get_category_content',{titleid:Number(category),caller:'0',category_id:Number(category),size:limit,page:page-1,use_page:1},signal):await this.qq('music.playlist.PlaylistSquare','GetRecommendWhole',{IsReqFeed:true,FeedReq:{From:(page-1)*limit,Size:limit}},signal);
       const rows=category?row(data.content).v_item:list(row(data.FeedRsp).List).map(value=>row(value).Playlist);if(!Array.isArray(rows))throw new Error('QQ歌单响应无效');
-      items=list(rows).map(value=>{const v=row(value),basic=row(v.basic);return item(v.tid??v.dissid??basic.tid,v.title??v.dissname??basic.title,v.cover_url_big??v.imgurl??row(basic.cover).medium_url??row(basic.cover).default_url,v.desc);});hasMore=items.length>=limit;
+      items=list(rows).map(value=>{const v=row(value),basic=row(v.basic),cover=row(basic.cover);return item(v.tid??v.dissid??basic.tid,v.title??v.dissname??basic.title,v.cover_url_big??v.cover_url_medium??v.cover_url_small??v.imgurl??cover.big_url??cover.medium_url??cover.default_url??cover.small_url,v.desc);});hasMore=items.length>=limit;
     }else if(platform==='kw'){
       const tag=category?.match(/^(\d+)-(43|10000)$/);
       if(category&&!tag)throw new Error('酷我分类无效');
@@ -157,8 +172,13 @@ export class DiscoveryProvider {
       const url=category?queryURL('https://app.c.nf.migu.cn/pc/v1.0/template/musiclistplaza-listbytag/release',{pageNumber:page,templateVersion:2,tagId:category}):queryURL('https://app.c.nf.migu.cn/pc/bmw/page-data/playlist-square-recommend/v1.0',{templateVersion:2,pageNo:page});
       const raw=row(await this.http(url,{},signal));if(raw.code!=='000000')throw new Error('咪咕歌单服务暂时不可用');
       items=unique(tree(raw.data).flatMap(v=>{
-        if(v.resourceType==='2021'&&v.resourceId&&v.contentName)return[item(v.resourceId,v.contentName)];
-        const event=row(v.logEvent);return event.contentType==='2021'&&event.contentId&&v.title?[item(event.contentId,v.title,v.imageUrl)]:[];
+        const event=row(v.logEvent);
+        const art=v.img??v.imageUrl??v.picUrl??v.imgUrl;
+        if((v.resType==='2021'||event.contentType==='2021'||event.resourceType==='2021')&&(v.resId||event.contentId||event.resourceId)&&(v.txt||v.title||event.contentName)){
+          return[item(v.resId??event.contentId??event.resourceId,v.txt??v.title??event.contentName,art,v.txt2??v.subTitle)];
+        }
+        if(v.resourceType==='2021'&&v.resourceId&&v.contentName)return[item(v.resourceId,v.contentName,art)];
+        return[];
       }));
       const next=count(row(row(raw.data).header).nextPageNo),nextURL=text(row(raw.data).nextPageUrl);
       hasMore=next!==undefined?next>page:!!nextURL&&Number(nextURL.match(/[?&]pageNumber=(\d+)/)?.[1]??0)>page;
@@ -191,7 +211,7 @@ export class DiscoveryProvider {
     if(platform==='kg'){const raw=row(await this.http('https://m.kugou.com/rank/list?json=true',{},signal));const values=row(raw.rank).list;if(!Array.isArray(values))throw new Error('榜单响应无效');return list(values).map(v=>{const x=row(v);return item(x.rankid,x.rankname,text(x.imgurl).replace('{size}','400'));});}
     if(platform==='kw'){const raw=await this.http('https://qukudata.kuwo.cn/q.k?op=query&cont=tree&node=2&pn=0&rn=1000&fmt=json&level=2',{},signal);const values=tree(raw).filter(v=>v.id&&v.name&&v.sourceid);if(!values.length)throw new Error('榜单响应无效');return unique(values.map(v=>item(v.sourceid,v.name,v.pic)));}
     const raw=await this.http('https://app.c.nf.migu.cn/pc/bmw/rank/rank-index/v1.0',{headers:{channel:'0146921',Referer:'https://app.c.nf.migu.cn/'}},signal);
-    const values=tree(raw).filter(v=>v.rankId&&v.rankName);if(!values.length)throw new Error('咪咕榜单响应无效');return unique(values.map(v=>item(v.rankId,v.rankName,v.img)));
+    const values=tree(raw).filter(v=>v.rankId&&v.rankName);if(!values.length)throw new Error('咪咕榜单响应无效');return unique(values.map(v=>item(v.rankId,v.rankName,v.imageUrl??v.img??v.picUrl)));
   }
   async detail(platform:OnlinePlatform,id:string,page:number,signal:AbortSignal,rank=false,limit=100):Promise<PlaylistPage>{
     if(!/^\d{1,30}$/.test(id)||!Number.isInteger(page)||page<1)throw new Error('歌单ID或页码无效');

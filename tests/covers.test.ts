@@ -34,6 +34,9 @@ test('legacy public cover CDNs use HTTPS while private and unknown endpoints kee
   await service.loadURL('http://192.0.2.1/fixture.jpg',signal);assert.equal(requests[2]!.url,'http://192.0.2.1/fixture.jpg');
   await service.loadURL('http://p1.music.126.net.evil.invalid/fixture.jpg',signal);assert.ok(requests[3]!.url.startsWith('http:'));
   await service.loadPrivate('fixture-account','fixture-cover',signal);assert.ok(requests[4]!.url.startsWith('http:'));
+  await service.loadURL('http://qpic.y.qq.com/music_cover/qq.jpg',signal);assert.equal(requests[5]!.url,'https://qpic.y.qq.com/music_cover/qq.jpg');
+  await service.loadURL('//d.musicapp.migu.cn/prod/migu.jpg',signal);assert.equal(requests[6]!.url,'https://d.musicapp.migu.cn/prod/migu.jpg');
+  await service.loadURL('http://img4.kuwo.cn/star/kw.jpg',signal);assert.equal(requests[7]!.url,'https://img4.kuwo.cn/star/kw.jpg');
 });
 
 test('cover grid bounds native concurrency and cancelled queued work never starts',async()=>{

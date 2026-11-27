@@ -162,7 +162,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
           <Text style={{fontSize:11.5,lineHeight:17,color:s.muted,textAlign:'center'}}>请使用网易云音乐 App 扫一扫（可截图或保存到照片后切换 App 扫码），确认登录并返回音枢即可自动完成；二维码约三分钟有效。</Text>
         </View>}
         {provider.id==='wy'&&wyQr.status!=='idle'&&(()=>{
-          const wyQrMsg=wyQr.status==='loading'?'正在生成网易云登录二维码…':wyQr.status==='waiting'?'等待网易云 App 扫码':wyQr.status==='scanned'?`已扫码${wyQr.nickname?`（${wyQr.nickname}）`:''}，请在网易云 App 中点击确认`:wyQr.status==='saving'?'正在验证并保存网易云账号…':wyQr.status==='succeeded'?'网易云扫码登录已保存':wyQr.status==='expired'?'二维码已过期，请点击「扫码登录」重新获取':wyQr.status==='cancelled'?'网易云扫码登录已取消':'网易云扫码登录失败，请重试或改用网页登录';
+          const wyQrMsg=wyQr.status==='loading'?'正在生成网易云登录二维码…':wyQr.status==='waiting'?'等待网易云 App 扫码':wyQr.status==='scanned'?`已扫码${wyQr.nickname?`（${wyQr.nickname}）`:''}，请在网易云 App 中点击确认`:wyQr.status==='saving'?'正在验证并保存网易云账号…':wyQr.status==='succeeded'?'网易云扫码登录已保存':wyQr.status==='expired'?'二维码已过期，请点击「扫码登录」重新获取':wyQr.status==='cancelled'?'网易云扫码登录已取消':wyQr.detail??'网易云扫码登录失败，请重试或改用网页登录';
           return <Text testID={`netease-qr-${wyQr.status}`} accessibilityLiveRegion="polite" style={{fontSize:12.5,color:wyQr.status==='succeeded'?okColor:wyQr.status==='failed'?s.accent:s.muted,fontWeight:wyQr.status==='succeeded'?'600':'400'}}>{wyQrMsg}</Text>;
         })()}
       </View>
