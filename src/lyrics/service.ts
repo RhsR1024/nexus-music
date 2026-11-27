@@ -20,6 +20,7 @@ export class LyricService {
     const key=JSON.stringify([lyricSignature(track),sources.map(source=>[source.id,source.revision])]);
     const cached=this.cache.get(key);if(cached&&cached.expires>Date.now())return cached.value;
     const save=(value:LyricResult)=>{throwIfAborted(signal);if(epoch!==this.epoch)throw new Error('歌词缓存已更新，请重试');if(usable(value)){this.cache.delete(key);this.cache.set(key,{value,expires:Date.now()+1800000});while(this.cache.size>20)this.cache.delete(this.cache.keys().next().value!);}return value;};
+    if(track.origin.kind==='radio')return save(normalizeLyrics(''));
     if(track.origin.kind==='navidrome'||track.origin.kind==='local'||track.origin.kind==='device'||track.origin.kind==='webdav')return save(normalizeLyrics(await this.privateLyrics(track,signal)));
     const platform=track.origin.platform;
     for(const source of sources){

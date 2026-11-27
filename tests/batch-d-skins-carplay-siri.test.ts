@@ -87,7 +87,7 @@ test('CarIntegrationCoordinator syncs catalog and routes CarPlay/Siri/Android Au
 
   const events: string[] = [];
   let pushedJson = '';
-  let liveListener: ((cmd: CarCommand) => void) | null = null;
+  const bus: { listener: ((cmd: CarCommand) => void) | null } = { listener: null };
   const listeners = new Set<() => void>();
 
   const coord = new CarIntegrationCoordinator({
@@ -104,8 +104,8 @@ test('CarIntegrationCoordinator syncs catalog and routes CarPlay/Siri/Android Au
         catalogPlaylists: 1,
       }),
       addListener: (_ev, fn) => {
-        liveListener = fn;
-        return { remove: () => { liveListener = null; } };
+        bus.listener = fn;
+        return { remove: () => { bus.listener = null; } };
       },
     },
     library: {
@@ -128,9 +128,9 @@ test('CarIntegrationCoordinator syncs catalog and routes CarPlay/Siri/Android Au
   assert.ok(pushedJson.includes('深夜车载'));
   assert.ok(events.includes('resume'));
 
-  liveListener?.({ source: 'carplay', action: 'playPlaylist', id: 'pl-1' });
-  liveListener?.({ source: 'android-auto', action: 'playSectionTrack', section: 'favorites', index: 0 });
-  liveListener?.({ source: 'siri', action: 'next' });
+  bus.listener?.({ source: 'carplay', action: 'playPlaylist', id: 'pl-1' });
+  bus.listener?.({ source: 'android-auto', action: 'playSectionTrack', section: 'favorites', index: 0 });
+  bus.listener?.({ source: 'siri', action: 'next' });
   assert.deepEqual(events, ['resume', 'play:晴天', 'play:以父之名', 'next:1']);
 
   const st = await coord.status();
