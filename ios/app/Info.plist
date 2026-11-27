@@ -51,7 +51,9 @@
     <key>NSAppleMusicUsageDescription</key>
     <string>读取你授权的设备音乐库，用于浏览和播放已在本机可用的音乐。</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>连接你配置的局域网音乐服务，或在你主动配对时连接自己的电脑。</string>
+    <string>连接你配置的局域网音乐服务、发现并投屏至局域网 DLNA 电视或音箱，或在你主动配对时连接自己的电脑。</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>仅在你主动开启「听歌识曲」时采集环境音频特征用于识别歌曲，不保存或上传录音文件。</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UIBackgroundModes</key>

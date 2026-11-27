@@ -13,6 +13,7 @@ import type {BrowseItem,FeaturedHomeData,NeteaseBanner} from '../providers/disco
 import type {VideoItem} from '../providers/videos.ts';
 import {FeaturedDiscoverFeed} from './FeaturedDiscoverFeed.tsx';
 import {GlobalRadioModal} from './GlobalRadioModal.tsx';
+import {AudioMatchModal} from './AudioMatchModal.tsx';
 import {MVDetail} from './MVDetail.tsx';
 import {NeteasePodcastsModal} from './NeteasePodcastsModal.tsx';
 import {QishuiDiscoverSection} from './QishuiDiscoverSection.tsx';
@@ -85,6 +86,7 @@ export function Discovery({
   const [activeMV,setActiveMV]=useState<VideoItem|null>(null);
   const [podcastsOpen,setPodcastsOpen]=useState(false);
   const [radioOpen,setRadioOpen]=useState(false);
+  const [audioMatchOpen,setAudioMatchOpen]=useState(false);
   const [qishuiTab,setQishuiTab]=useState(false);
   const [showBackTop,setShowBackTop]=useState(false);
   const listRef=useRef<FlatList<Item>|null>(null);
@@ -462,6 +464,7 @@ export function Discovery({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:14,paddingVertical:4,paddingHorizontal:2}}>
         {[
           {testID:'discovery-global-radio',label:'全球电台',a11y:'打开全球电台',icon:'earth-outline' as const,active:radioOpen,onPress:()=>setRadioOpen(true)},
+          {testID:'discovery-audio-match',label:'听歌识曲',a11y:'打开听歌识曲',icon:'ear-outline' as const,active:audioMatchOpen,onPress:()=>setAudioMatchOpen(true)},
           {testID:'discovery-podcasts',label:'播客电台',a11y:'打开网易云播客',icon:'headset-outline' as const,active:podcastsOpen,onPress:()=>setPodcastsOpen(true)},
           {testID:'discovery-popular-artists',label:'热门歌手',a11y:'热门歌手',icon:'mic-outline' as const,active:view.kind==='artists',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'artists'});}},
           {testID:'discovery-new-albums',label:'新碟首发',a11y:'新碟首发',icon:'disc-outline' as const,active:view.kind==='albums',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'albums'});}},
@@ -615,7 +618,7 @@ export function Discovery({
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 
-  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
+  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

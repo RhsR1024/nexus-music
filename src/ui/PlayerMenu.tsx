@@ -65,7 +65,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
       {row('speedometer-outline','播放倍速',`${preferences.rate}x`,onRate)}
       {row('moon-outline','睡眠定时器',sleepLabel,onSleep)}
       {onEQ&&row('stats-chart-outline','均衡器',preferences.eqEnabled?'已开启':'已关闭',onEQ)}
-      {onAudioOutput&&row('volume-medium-outline','音频输出设备','AirPlay / 蓝牙',onAudioOutput)}
+      {onAudioOutput&&row('tv-outline','投屏与音频输出','AirPlay / DLNA / 蓝牙',onAudioOutput)}
       {row('pulse-outline','播放链路诊断','查看过程',onDiagnostics)}
       {row('list-outline','队列与播放选项',`${queueCount} 首`,onQueue,true)}
     </View>

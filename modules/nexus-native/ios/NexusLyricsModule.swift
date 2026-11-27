@@ -5,6 +5,9 @@ import CoreImage
 public final class NexusLyricsModule: Module {
   public func definition() -> ModuleDefinition {
     Name("NexusLyrics")
+    Function("canDrawFloatingLyrics") { false }
+    AsyncFunction("requestFloatingLyricsPermission") { false }
+    AsyncFunction("updateFloatingLyric") { (_: String?, _: Bool, _: Bool) in }
     View(NexusLyricLineView.self) {
       Prop("configuration") { (view: NexusLyricLineView, json: String) in view.configure(json) }
     }

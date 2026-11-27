@@ -40,6 +40,11 @@ class NexusNativeModule : Module() {
   private var coversCache: CoverCache? = null
   private var exportCoversCache: CoverCache? = null
   private var cachedBootstrap: String? = null
+  private val dlnaService = NativeDlnaService()
+  private val audioMatch = NativeAudioMatch()
+  private val auxExecutor = Executors.newCachedThreadPool { r ->
+    Thread(r, "nexus.aux").apply { isDaemon = true }
+  }
 
   private fun covers(): CoverCache {
     coversCache?.let { return it }
@@ -66,7 +71,7 @@ class NexusNativeModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("NexusNative")
-    Events("onPowerStateChange", "onSourceUpdateAlert")
+    Events("onPowerStateChange", "onSourceUpdateAlert", "onAudioMatchLevel")
 
     OnStartObserving("onPowerStateChange") { startPowerObservation() }
     OnStopObserving("onPowerStateChange") { stopPowerObservation() }
@@ -391,7 +396,63 @@ class NexusNativeModule : Module() {
       }
     }
 
+    AsyncFunction("dlnaDiscover") { timeoutMs: Int, promise: Promise ->
+      auxExecutor.execute {
+        try {
+          promise.resolve(dlnaService.discover(appContext.reactContext, timeoutMs))
+        } catch (err: Throwable) {
+          promise.reject("DLNA_DISCOVER_FAILED", err.message ?: "局域网扫描失败", err)
+        }
+      }
+    }
+
+    AsyncFunction("dlnaStartRelay") { sourceUrl: String, headersJson: String, promise: Promise ->
+      auxExecutor.execute {
+        try {
+          promise.resolve(dlnaService.startRelay(sourceUrl, headersJson))
+        } catch (err: Throwable) {
+          promise.reject("DLNA_RELAY_FAILED", err.message ?: "投屏中继启动失败", err)
+        }
+      }
+    }
+
+    AsyncFunction("dlnaStopRelay") {
+      dlnaService.stopRelay()
+    }
+
+    AsyncFunction("dlnaSetKeepAlive") { enabled: Boolean ->
+      dlnaService.setKeepAlive(enabled)
+    }
+
+    AsyncFunction("audioMatchPermission") {
+      audioMatch.permissionStatus(appContext.reactContext)
+    }
+
+    AsyncFunction("audioMatchRequestPermission") {
+      audioMatch.requestPermission(appContext.currentActivity)
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("audioMatchStart") { durationMs: Int, promise: Promise ->
+      auxExecutor.execute {
+        try {
+          val payload = audioMatch.startCapture(appContext.reactContext, durationMs) { event ->
+            sendEvent("onAudioMatchLevel", event)
+          }
+          promise.resolve(payload)
+        } catch (err: Throwable) {
+          promise.reject("AUDIO_MATCH_FAILED", err.message ?: "听歌识曲采集失败", err)
+        }
+      }
+    }
+
+    AsyncFunction("audioMatchStop") {
+      audioMatch.stopCapture()
+    }
+
     OnDestroy {
+      dlnaService.stopRelay()
+      dlnaService.setKeepAlive(false)
+      audioMatch.stopCapture()
       stopPowerObservation()
       probes.values.forEach { it.cancel() }
       probes.clear()

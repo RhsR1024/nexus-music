@@ -29,13 +29,16 @@ import {WebDAVAccounts} from '../providers/webdavAccounts.ts';
 import {WebDAVMedia} from '../providers/webdavMedia.ts';
 import {AppState} from 'react-native';
 import {DeviceMediaStore,type DeviceMediaNative} from '../providers/deviceMedia.ts';
-import {requireNativeModule} from 'expo';
+import {requireNativeModule,requireOptionalNativeModule} from 'expo';
 import {LocalAudioStore,type LocalAudioNative} from '../storage/localAudio.ts';
 import { DiscoveryProvider } from '../providers/discovery.ts';
 import {CrossPlatformMatcher} from '../providers/crossPlatformMatcher.ts';
 import {MatchedResolver} from '../providers/matchedResolver.ts';
 import {QishuiProvider} from '../providers/qishui.ts';
 import {GlobalRadioApi,GlobalRadioStore,validRadioStreamURL} from '../providers/globalRadio.ts';
+import {DlnaCastController,type DlnaNativeBridge} from '../providers/dlna.ts';
+import {AudioMatchCoordinator,type AudioMatchNativeBridge} from '../providers/audioMatch.ts';
+import {formatBluetoothLyric} from '../lyrics/bluetoothLyrics.ts';
 import {throwIfAborted} from '../providers/async.ts';
 import { restoreRecord } from '../storage/recovery.ts';
 import { FontStore } from '../storage/fonts.ts';
@@ -346,12 +349,22 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const rawLyrics=new LyricService(registry,nativeLX,async(track,signal)=>{if(track.origin.kind==='webdav')return davMedia.lyric(track,signal);if(track.origin.kind==='device')return deviceMedia.lyric(track);if(track.origin.kind==='local')return localAudio.lyric(track);if(track.origin.kind!=='navidrome')return '';return(await accounts.client(track.origin.accountId)).lyrics(track.origin.id,track.artist,track.title,signal);},options.onlineHTTP,decodeKRC,decodeQRC);
   const lyrics=new LyricSelection(rawLyrics,matching,library);
   const systemLyricPreview=new LyricPreview((track,signal)=>lyrics.load(track,signal));
-  let systemLyricLoadedKey='',systemLyricSentKey='';
+  const floatingLyricsMod=requireOptionalNativeModule<{updateFloatingLyric?:(text:string|null,enabled:boolean,locked:boolean)=>Promise<void>}>('NexusLyrics');
+  let systemLyricLoadedKey='',systemLyricSentKey='',floatingLyricSentKey='';
   const syncSystemLyrics=()=>{
     const pref=preferences.getSnapshot(),state=playback.controller.getSnapshot(),entry=currentEntry(state.queue);
-    if(!pref.systemLyricsEnabled||!entry||state.intent!=='playing'||state.phase!=='ready'){
+    const activePlay=!!entry&&state.intent==='playing'&&state.phase==='ready';
+    if(!pref.systemLyricsEnabled&&!pref.floatingLyricsEnabled){
       if(systemLyricSentKey!==''){systemLyricSentKey='';playback.setSystemLyricLine(null,pref.systemLyricsPosition);}
+      if(floatingLyricSentKey!==''){floatingLyricSentKey='';void floatingLyricsMod?.updateFloatingLyric?.(null,false,pref.floatingLyricsLocked)?.catch(()=>{});}
       return;
+    }
+    if(!entry||(!activePlay&&pref.bluetoothLyricsRestoreOnPause)){
+      if(systemLyricSentKey!==''){systemLyricSentKey='';playback.setSystemLyricLine(null,pref.systemLyricsPosition);}
+    }
+    if(!entry||!activePlay){
+      if(floatingLyricSentKey!==''){floatingLyricSentKey='';void floatingLyricsMod?.updateFloatingLyric?.(null,false,pref.floatingLyricsLocked)?.catch(()=>{});}
+      if(!entry||pref.bluetoothLyricsRestoreOnPause)return;
     }
     const savedMatch=entry.track.origin.kind==='imported'||entry.track.origin.kind==='online'?library.matchFor(entry.track):undefined;
     const lyricTrack=state.media?.matchedTrack??(entry.track.origin.kind==='imported'?savedMatch?.target:savedMatch?.method==='manual'&&!state.media?savedMatch.target:undefined)??entry.track;
@@ -359,9 +372,20 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     if(systemLyricLoadedKey!==sig){systemLyricLoadedKey=sig;void systemLyricPreview.load(lyricTrack);}
     const preview=systemLyricPreview.getSnapshot();
     const raw=miniLyricText(preview.document,state.position*1000,lyricOffset(pref.lyricOffsetMs,pref.lyricOffsets,trackKey(lyricTrack.origin)));
-    const line=raw?convertLyricScript(raw,pref.lyricChineseMode):null;
-    const nextKey=`${pref.systemLyricsPosition}:${line??''}`;
-    if(nextKey!==systemLyricSentKey){systemLyricSentKey=nextKey;playback.setSystemLyricLine(line,pref.systemLyricsPosition);}
+    const converted=raw?convertLyricScript(raw,pref.lyricChineseMode):null;
+    if(pref.systemLyricsEnabled&&(activePlay||!pref.bluetoothLyricsRestoreOnPause)){
+      const btLine=formatBluetoothLyric(converted,lyricTrack,pref.systemLyricsPosition,pref.bluetoothLyricsOrder);
+      const nextKey=`${pref.systemLyricsPosition}:${pref.bluetoothLyricsOrder}:${btLine??''}`;
+      if(nextKey!==systemLyricSentKey){systemLyricSentKey=nextKey;playback.setSystemLyricLine(btLine,pref.systemLyricsPosition);}
+    } else if(systemLyricSentKey!==''){
+      systemLyricSentKey='';playback.setSystemLyricLine(null,pref.systemLyricsPosition);
+    }
+    if(pref.floatingLyricsEnabled&&activePlay){
+      const nextFloat=`${pref.floatingLyricsLocked}:${converted??''}`;
+      if(nextFloat!==floatingLyricSentKey){floatingLyricSentKey=nextFloat;void floatingLyricsMod?.updateFloatingLyric?.(converted,true,pref.floatingLyricsLocked)?.catch(()=>{});}
+    } else if(floatingLyricSentKey!==''){
+      floatingLyricSentKey='';void floatingLyricsMod?.updateFloatingLyric?.(null,false,pref.floatingLyricsLocked)?.catch(()=>{});
+    }
   };
   playback.controller.subscribe(syncSystemLyrics);
   preferences.subscribe(syncSystemLyrics);
@@ -399,7 +423,12 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, podcasts, radioApi, radioStore, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  const nativeAux=requireOptionalNativeModule<DlnaNativeBridge&AudioMatchNativeBridge>('NexusNative');
+  const dlna=new DlnaCastController({native:nativeAux,repository});
+  await restore('dlna.v1','DLNA 投屏记录',()=>dlna.restore());
+  const audioMatch=new AudioMatchCoordinator({native:nativeAux,repository,search:(platform,q,page,signal,limit)=>online.search(platform,q,page,signal,limit)});
+  await restore('audioMatch.v1','听歌识曲记录',()=>audioMatch.restore());
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, podcasts, radioApi, radioStore, dlna, audioMatch, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

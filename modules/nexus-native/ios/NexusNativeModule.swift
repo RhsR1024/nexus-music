@@ -14,10 +14,12 @@ public final class NexusNativeModule: Module {
   private let exportCovers = CoverCache(directory: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("NexusExportCovers"), maximumBytes: 16 * 1024 * 1024)
   private var coverRequests: [String: (client: ScriptHTTP, promises: [Promise])] = [:]
   private var powerObserver: NSObjectProtocol?
+  private let dlnaService = NativeDlnaService()
+  private let audioMatch = NativeAudioMatch()
 
   public func definition() -> ModuleDefinition {
     Name("NexusNative")
-    Events("onPowerStateChange", "onSourceUpdateAlert")
+    Events("onPowerStateChange", "onSourceUpdateAlert", "onAudioMatchLevel")
     OnStartObserving("onPowerStateChange") {
       self.startPowerObservation()
     }
@@ -232,7 +234,50 @@ public final class NexusNativeModule: Module {
     AsyncFunction("cancelHealthRequest") { (id: String, requestID: String) in self.diagnosticRuntimes[id]?.cancel(id: requestID) }.runOnQueue(runtimeQueue)
     AsyncFunction("destroyHealthSource") { (id: String) in self.diagnosticRuntimes.removeValue(forKey: id)?.destroy() }.runOnQueue(runtimeQueue)
 
+    AsyncFunction("dlnaDiscover") { (timeoutMs: Int, promise: Promise) in
+      self.dlnaService.discover(timeoutMs: timeoutMs) { devices in
+        promise.resolve(devices)
+      }
+    }
+    AsyncFunction("dlnaStartRelay") { (sourceUrl: String, headersJSON: String) throws -> [String: String] in
+      try self.dlnaService.startRelay(sourceUrl: sourceUrl, headersJSON: headersJSON)
+    }
+    AsyncFunction("dlnaStopRelay") {
+      self.dlnaService.stopRelay()
+    }
+    AsyncFunction("dlnaSetKeepAlive") { (enabled: Bool) in
+      self.dlnaService.setKeepAlive(enabled)
+    }
+    AsyncFunction("audioMatchPermission") { () -> String in
+      self.audioMatch.permissionStatus()
+    }
+    AsyncFunction("audioMatchRequestPermission") { (promise: Promise) in
+      self.audioMatch.requestPermission { granted in
+        promise.resolve(granted)
+      }
+    }
+    AsyncFunction("audioMatchStart") { (durationMs: Int, promise: Promise) in
+      self.audioMatch.startCapture(
+        durationMs: durationMs,
+        onLevel: { [weak self] event in
+          self?.sendEvent("onAudioMatchLevel", event)
+        },
+        completion: { result in
+          switch result {
+          case .success(let payload): promise.resolve(payload)
+          case .failure(let error): promise.reject("AUDIO_MATCH_FAILED", error.localizedDescription)
+          }
+        }
+      )
+    }
+    AsyncFunction("audioMatchStop") {
+      self.audioMatch.stopCapture()
+    }
+
     OnDestroy {
+      self.dlnaService.stopRelay()
+      self.dlnaService.setKeepAlive(false)
+      self.audioMatch.stopCapture()
       self.stopPowerObservation()
       self.probeQueue.async { [self] in for probe in Array(probes.values) { probe.cancel() }; probes.removeAll() }
       self.coverQueue.async { [self] in

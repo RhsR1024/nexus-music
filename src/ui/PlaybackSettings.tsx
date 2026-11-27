@@ -1,10 +1,10 @@
 import {Text,TextInput} from './Typography.tsx';
 import {useEffect,useState,useSyncExternalStore} from 'react';
-import {Pressable, StyleSheet, Switch, View, type ViewProps} from 'react-native';
+import {Platform, Pressable, StyleSheet, Switch, View, type ViewProps} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {requireNativeView} from 'expo';
+import {requireNativeView,requireOptionalNativeModule} from 'expo';
 import type {Services} from '../app/services.ts';
-import type {AutoPlaySource,LyricChineseMode,SystemLyricsPosition} from '../app/preferences.ts';
+import type {AutoPlaySource,BluetoothLyricsOrder,LyricChineseMode,SystemLyricsPosition} from '../app/preferences.ts';
 import {GainSlider} from './EqualizerGraph.tsx';
 import {useTheme} from './theme.tsx';
 import {controls,radius,sollinTokens,space} from './tokens.ts';
@@ -16,6 +16,7 @@ const autoPlaySources:readonly [AutoPlaySource,string][]=[['last','上次播放'
 const preloadCounts=[1,2,3] as const;
 const fadeDurations=[200,500,1000,1500] as const;
 const systemLyricPositions:readonly [SystemLyricsPosition,string][]=[['artist','歌手栏'],['title','标题栏']];
+const bluetoothLyricOrders:readonly [BluetoothLyricsOrder,string][]=[['lyric-first','仅歌词'],['artist-first','原信息 · 歌词']];
 export function PlaybackSettings({services}:{services:Services}) {
   const theme=useTheme(),p=theme.palette,s=sollinTokens(theme.mode,p.accent,theme.appearance),settings=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot),sleep=useSyncExternalStore(services.playback.sleep.subscribe,services.playback.sleep.getSnapshot);
   const [minutes,setMinutes]=useState('30'),[now,setNow]=useState(Date.now()),[error,setError]=useState('');
@@ -55,11 +56,36 @@ export function PlaybackSettings({services}:{services:Services}) {
         </View>
       )}
       {divider}
-      {toggleRow('playback-system-lyrics','radio-outline','灵动岛与锁屏实时歌词','将当前播放歌词同步推送至系统锁屏与蓝牙设备',settings.systemLyricsEnabled,systemLyricsEnabled=>update({systemLyricsEnabled}),
-        <View style={{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:8}}>
-          <Text style={{color:s.muted,fontSize:12}}>显示位置</Text>
-          {systemLyricPositions.map(([pos,label])=>pill(`playback-system-lyrics-pos-${pos}`,label,settings.systemLyricsPosition===pos,()=>update({systemLyricsPosition:pos})))}
+      {toggleRow('playback-system-lyrics','car-outline','蓝牙车载与锁屏实时歌词','将当前播放歌词同步推送至系统锁屏、灵动岛与蓝牙车机',settings.systemLyricsEnabled,systemLyricsEnabled=>update({systemLyricsEnabled}),
+        <View style={{gap:8}}>
+          <View style={{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:8}}>
+            <Text style={{color:s.muted,fontSize:12}}>显示位置</Text>
+            {systemLyricPositions.map(([pos,label])=>pill(`playback-system-lyrics-pos-${pos}`,label,settings.systemLyricsPosition===pos,()=>update({systemLyricsPosition:pos})))}
+          </View>
+          <View style={{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:8}}>
+            <Text style={{color:s.muted,fontSize:12}}>车机格式</Text>
+            {bluetoothLyricOrders.map(([ord,label])=>pill(`playback-bt-lyrics-order-${ord}`,label,settings.bluetoothLyricsOrder===ord,()=>update({bluetoothLyricsOrder:ord})))}
+          </View>
+          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
+            <Text style={{color:s.muted,fontSize:12}}>暂停时立即恢复原歌名/歌手</Text>
+            <Switch testID="playback-bt-lyrics-restore" accessibilityLabel="暂停时恢复原歌名和歌手" value={settings.bluetoothLyricsRestoreOnPause} onValueChange={bluetoothLyricsRestoreOnPause=>update({bluetoothLyricsRestoreOnPause})} trackColor={s.switchTrack} thumbColor={s.switchThumb(settings.bluetoothLyricsRestoreOnPause)}/>
+          </View>
         </View>
+      )}
+      {divider}
+      {toggleRow('playback-floating-lyrics','layers-outline','桌面悬浮歌词',Platform.OS==='android'?'在其他应用上方显示可拖拽歌词条（需系统悬浮窗权限）':'iOS 系统限制第三方悬浮窗，请开启上方「蓝牙车载与锁屏实时歌词」',settings.floatingLyricsEnabled,floatingLyricsEnabled=>{
+        if(Platform.OS==='android'&&floatingLyricsEnabled){
+          const mod=requireOptionalNativeModule<{canDrawFloatingLyrics?:()=>boolean;requestFloatingLyricsPermission?:()=>Promise<boolean>}>('NexusLyrics');
+          if(mod?.canDrawFloatingLyrics&&!mod.canDrawFloatingLyrics()){
+            void mod.requestFloatingLyricsPermission?.();
+          }
+        }
+        update({floatingLyricsEnabled});
+      },
+        Platform.OS==='android'?<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
+          <Text style={{color:s.muted,fontSize:12}}>锁定悬浮窗位置（防止误触）</Text>
+          <Switch testID="playback-floating-lyrics-locked" accessibilityLabel="锁定桌面悬浮歌词" value={settings.floatingLyricsLocked} onValueChange={floatingLyricsLocked=>update({floatingLyricsLocked})} trackColor={s.switchTrack} thumbColor={s.switchThumb(settings.floatingLyricsLocked)}/>
+        </View>:undefined
       )}
       {divider}
       {toggleRow('playback-preload-next','link-outline','播放链接预加载','在播放当前在线歌曲时提前解析后续歌曲链接',settings.preloadNextTrack,preloadNextTrack=>update({preloadNextTrack}),

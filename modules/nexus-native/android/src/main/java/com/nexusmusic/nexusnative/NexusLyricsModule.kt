@@ -1,16 +1,20 @@
 package com.nexusmusic.nexusnative
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.PixelFormat
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
+import android.provider.Settings
 import android.text.Layout
 import android.text.SpannableString
 import android.text.Spanned
@@ -20,7 +24,12 @@ import android.text.TextUtils
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.view.Choreographer
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.WindowManager
+import android.widget.TextView
 import expo.modules.kotlin.AppContext
+import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.views.ExpoView
@@ -32,13 +41,140 @@ import kotlin.math.max
 import kotlin.math.min
 
 class NexusLyricsModule : Module() {
+  private var overlayView: TextView? = null
+  private var overlayParams: WindowManager.LayoutParams? = null
+  private var overlayY: Int = 180
+
   override fun definition() = ModuleDefinition {
     Name("NexusLyrics")
+
+    Function("canDrawFloatingLyrics") {
+      val ctx = appContext.reactContext ?: return@Function false
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(ctx) else true
+    }
+
+    AsyncFunction("requestFloatingLyricsPermission") {
+      val ctx = appContext.reactContext ?: return@AsyncFunction false
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(ctx)) {
+        val intent = Intent(
+          Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+          Uri.parse("package:${ctx.packageName}")
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+          ctx.startActivity(intent)
+        } catch (_: Throwable) {
+        }
+        return@AsyncFunction false
+      }
+      true
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("updateFloatingLyric") { text: String?, enabled: Boolean, locked: Boolean ->
+      val ctx = appContext.reactContext ?: return@AsyncFunction
+      if (!enabled || text.isNullOrBlank()) {
+        removeFloatingOverlay(ctx)
+        return@AsyncFunction
+      }
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(ctx)) {
+        removeFloatingOverlay(ctx)
+        return@AsyncFunction
+      }
+      showOrUpdateFloatingOverlay(ctx, text.trim(), locked)
+    }.runOnQueue(Queues.MAIN)
 
     View(NexusLyricLineView::class) {
       Prop("configuration") { view: NexusLyricLineView, json: String ->
         view.configure(json)
       }
+    }
+
+    OnDestroy {
+      appContext.reactContext?.let { removeFloatingOverlay(it) }
+    }
+  }
+
+  private fun showOrUpdateFloatingOverlay(ctx: Context, text: String, locked: Boolean) {
+    val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+    val baseFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+    val flags = if (locked) baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE else baseFlags
+    val view = overlayView
+    val params = overlayParams
+    if (view != null && params != null) {
+      view.text = text
+      if (params.flags != flags) {
+        params.flags = flags
+        try { wm.updateViewLayout(view, params) } catch (_: Throwable) {}
+      }
+      return
+    }
+    val density = ctx.resources.displayMetrics.density
+    val tv = TextView(ctx).apply {
+      this.text = text
+      setTextColor(Color.WHITE)
+      textSize = 14.5f
+      typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      maxLines = 2
+      ellipsize = TextUtils.TruncateAt.END
+      gravity = Gravity.CENTER
+      val padH = (16f * density).toInt()
+      val padV = (8f * density).toInt()
+      setPadding(padH, padV, padH, padV)
+      background = GradientDrawable().apply {
+        cornerRadius = 22f * density
+        setColor(Color.argb(185, 22, 20, 26))
+        setStroke((1f * density).toInt().coerceAtLeast(1), Color.argb(60, 255, 255, 255))
+      }
+    }
+    val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    } else {
+      @Suppress("DEPRECATION")
+      WindowManager.LayoutParams.TYPE_PHONE
+    }
+    val lp = WindowManager.LayoutParams(
+      WindowManager.LayoutParams.WRAP_CONTENT,
+      WindowManager.LayoutParams.WRAP_CONTENT,
+      type,
+      flags,
+      PixelFormat.TRANSLUCENT
+    ).apply {
+      gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+      y = overlayY
+    }
+    var dragStartRawY = 0f
+    var dragStartY = 0
+    tv.setOnTouchListener { _, event ->
+      when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> {
+          dragStartRawY = event.rawY
+          dragStartY = lp.y
+          true
+        }
+        MotionEvent.ACTION_MOVE -> {
+          lp.y = (dragStartY + (event.rawY - dragStartRawY).toInt()).coerceAtLeast(40)
+          overlayY = lp.y
+          try { wm.updateViewLayout(tv, lp) } catch (_: Throwable) {}
+          true
+        }
+        else -> false
+      }
+    }
+    try {
+      wm.addView(tv, lp)
+      overlayView = tv
+      overlayParams = lp
+    } catch (_: Throwable) {
+    }
+  }
+
+  private fun removeFloatingOverlay(ctx: Context) {
+    val view = overlayView ?: return
+    overlayView = null
+    overlayParams = null
+    val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
+    try {
+      wm.removeViewImmediate(view)
+    } catch (_: Throwable) {
     }
   }
 }

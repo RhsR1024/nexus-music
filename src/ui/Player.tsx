@@ -27,6 +27,7 @@ import { ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
 import { EqualizerSettings } from './EqualizerSettings.tsx';
+import { CastDeviceSheet } from './CastDeviceSheet.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
 import { PlaybackDiagnostics } from './PlaybackDiagnostics.tsx';
 import { LyricOffsetPanel, RatePanel, SleepPanel } from './PlaybackSheets.tsx';
@@ -34,7 +35,6 @@ import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { useStablePlaybackStatus } from './usePlaybackStatus.ts';
 import { useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type PropsWithChildren } from 'react';
 import {Alert, Platform, Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent, type ViewProps, useWindowDimensions} from 'react-native';
-const NativeRoutePicker=requireNativeView<ViewProps&{tint:string;activeTint:string}>('NexusNative','RoutePicker');
 const AndroidSystemBarSync=Platform.OS==='android'?requireNativeView<ViewProps&{darkIcons:boolean}>('NexusNative','SystemBarSync'):null;
 const layoutLabels={classic:'经典',am:'AM 风格',immersive:'封面沉浸',photo:'写真歌词',vinyl:'黑胶唱机',wave:'声波核',stage:'歌词舞台',am2:'AM2'} as const;
 import {DownloadQualityChoice} from './DownloadQualityChoice.tsx';
@@ -378,23 +378,7 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
           </>:detailPanel==='offset'?<LyricOffsetPanel services={services} track={lyricTrack} onBack={()=>setDetailPanel(returnPanel??'menu')}/>:detailPanel==='eq'?<>
             <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={()=>setDetailPanel('menu')} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>返回播放选项</Text></Pressable>
             <EqualizerSettings services={services}/>
-          </>:detailPanel==='output'?<>
-            <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={()=>setDetailPanel('menu')} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>返回播放选项</Text></Pressable>
-            <Text style={{color:s.ink,fontSize:24,fontWeight:'700'}}>音频输出设备</Text>
-            <View style={{borderRadius:20,padding:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12}}>
-              <View style={{flex:1,gap:4}}>
-                <Text style={{color:s.ink,fontSize:16,fontWeight:'600'}}>AirPlay 与蓝牙音频</Text>
-                <Text style={{color:s.muted,fontSize:12.5}}>轻触右侧图标切换当前系统音频输出设备</Text>
-              </View>
-              <NativeRoutePicker tint={s.ink} activeTint={s.accent} pointerEvents="auto" style={{width:44,height:44}}/>
-            </View>
-            <View style={{borderRadius:20,padding:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,gap:12}}>
-              <Text style={{color:s.ink,fontSize:15,fontWeight:'600'}}>应用内播放音量 · {Math.round(preferences.volume*100)}%</Text>
-              <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>
-                {[0.25,0.5,0.75,1].map(v=>{const active=Math.abs(preferences.volume-v)<0.04;return <Pressable key={v} accessibilityRole="button" onPress={()=>{void services.preferences.update({volume:v}).catch(()=>{});}} style={{flex:1,minWidth:64,minHeight:42,borderRadius:12,backgroundColor:active?s.accentSoft:s.chip,borderWidth:1,borderColor:active?s.accent:s.cardBorder,alignItems:'center',justifyContent:'center'}}><Text style={{color:active?s.accent:s.ink,fontSize:13,fontWeight:'600'}}>{Math.round(v*100)}%</Text></Pressable>;})}
-              </View>
-            </View>
-          </>:detailPanel==='diagnostics'?<>
+          </>:detailPanel==='output'?<CastDeviceSheet services={services} onBack={()=>setDetailPanel('menu')}/>:detailPanel==='diagnostics'?<>
             <Pressable accessibilityRole="button" accessibilityLabel="返回播放选项" onPress={()=>setDetailPanel('menu')} style={{alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:9,borderRadius:999,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Ionicons name="chevron-back" size={16} color={s.ink}/><Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>返回播放选项</Text></Pressable>
             <PlaybackDiagnostics services={services}/>
           </>:detailPanel==='lyrics'||detailPanel==='globalFont'||detailPanel==='lyricFont'?<>
