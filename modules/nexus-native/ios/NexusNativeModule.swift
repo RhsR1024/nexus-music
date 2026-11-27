@@ -59,6 +59,14 @@ public final class NexusNativeModule: Module {
       Prop("seekTo") { (view: NexusNativeVideoView, value: Double) in view.seekTo = value }
       OnViewDidUpdateProps { (view: NexusNativeVideoView) in view.applyProps() }
     }
+    View(NexusRadioGlobeView.self) {
+      ViewName("RadioGlobe")
+      Events("onSelect")
+      Prop("html") { (view: NexusRadioGlobeView, value: String) in view.html = value }
+      Prop("pointsJson") { (view: NexusRadioGlobeView, value: String) in view.pointsJson = value }
+      Prop("commandJson") { (view: NexusRadioGlobeView, value: String) in view.commandJson = value }
+      OnViewDidUpdateProps { (view: NexusRadioGlobeView) in view.applyProps() }
+    }
     View(NexusVinylPivotView.self) {
       ViewName("VinylPivot")
     }

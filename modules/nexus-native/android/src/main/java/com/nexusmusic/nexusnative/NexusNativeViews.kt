@@ -787,3 +787,91 @@ class NexusNativeVideoView(context: Context, appContext: AppContext) : ExpoView(
     super.onDetachedFromWindow()
   }
 }
+
+/** Offline-safe local HTML WebView host for Global Radio 3D interactive globe (Android parity). */
+class NexusRadioGlobeView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+  val onSelect by EventDispatcher()
+
+  var html: String = ""
+  var pointsJson: String = "[]"
+  var commandJson: String = ""
+
+  private var loaded = false
+  private var appliedHtmlHash = 0
+  private var appliedPoints = ""
+  private var appliedCommand = ""
+
+  private inner class GlobeBridge {
+    @android.webkit.JavascriptInterface
+    fun postMessage(raw: String) {
+      try {
+        val obj = org.json.JSONObject(raw)
+        val out = mutableMapOf<String, Any>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+          val k = keys.next()
+          val v = obj.opt(k)
+          if (v != null && v != org.json.JSONObject.NULL) out[k] = v
+        }
+        post { onSelect(out) }
+      } catch (_: Throwable) {}
+    }
+  }
+
+  private val webView = WebView(context).apply {
+    setBackgroundColor(Color.rgb(7, 18, 30))
+    settings.javaScriptEnabled = true
+    settings.domStorageEnabled = false
+    settings.allowFileAccess = false
+    settings.allowContentAccess = false
+    settings.cacheMode = WebSettings.LOAD_NO_CACHE
+    addJavascriptInterface(GlobeBridge(), "RadioGlobeBridge")
+    webViewClient = object : WebViewClient() {
+      override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = true
+      override fun onPageFinished(view: WebView?, url: String?) {
+        loaded = true
+        appliedPoints = ""
+        appliedCommand = ""
+        pushDataIfNeeded()
+        pushCommandIfNeeded()
+      }
+    }
+  }
+
+  init {
+    addView(webView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+  }
+
+  fun applyProps() {
+    val h = html.hashCode()
+    if (html.isNotEmpty() && h != appliedHtmlHash) {
+      appliedHtmlHash = h
+      loaded = false
+      webView.loadDataWithBaseURL("about:blank", html, "text/html", "UTF-8", null)
+      return
+    }
+    if (loaded) {
+      pushDataIfNeeded()
+      pushCommandIfNeeded()
+    }
+  }
+
+  private fun pushDataIfNeeded() {
+    if (pointsJson == appliedPoints || pointsJson.isEmpty()) return
+    appliedPoints = pointsJson
+    webView.evaluateJavascript("window.nexusGlobe && window.nexusGlobe.setData($pointsJson);", null)
+  }
+
+  private fun pushCommandIfNeeded() {
+    if (commandJson == appliedCommand || commandJson.isEmpty()) return
+    appliedCommand = commandJson
+    webView.evaluateJavascript("window.nexusGlobe && window.nexusGlobe.command($commandJson);", null)
+  }
+
+  override fun onDetachedFromWindow() {
+    webView.removeJavascriptInterface("RadioGlobeBridge")
+    webView.stopLoading()
+    webView.destroy()
+    super.onDetachedFromWindow()
+  }
+}

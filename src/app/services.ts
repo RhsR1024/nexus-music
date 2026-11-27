@@ -35,6 +35,7 @@ import { DiscoveryProvider } from '../providers/discovery.ts';
 import {CrossPlatformMatcher} from '../providers/crossPlatformMatcher.ts';
 import {MatchedResolver} from '../providers/matchedResolver.ts';
 import {QishuiProvider} from '../providers/qishui.ts';
+import {GlobalRadioApi,GlobalRadioStore,validRadioStreamURL} from '../providers/globalRadio.ts';
 import {throwIfAborted} from '../providers/async.ts';
 import { restoreRecord } from '../storage/recovery.ts';
 import { FontStore } from '../storage/fonts.ts';
@@ -208,6 +209,9 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const comments=new PublicComments(options.onlineHTTP,{md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
   const sourceHealth=new SourceHealth({registry,open:createSourceDiagnostics(catalog,loadNativeDiagnosticLX(),Crypto.randomUUID),online,probe:loadAudioProbe(Crypto.randomUUID)});
   const qishui=new QishuiProvider(options.onlineHTTP);
+  const radioApi=new GlobalRadioApi({http:options.onlineHTTP});
+  const radioStore=new GlobalRadioStore(repository);
+  await restore('radio.v1','全球电台',()=>radioStore.restore());
   const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,qualityForPlatform:playbackQualityFor,hash,
     available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
   const preloadCache=new PreloadCache({maxEntries:12,ttlMs:180_000});
@@ -225,6 +229,12 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     if(track.origin.kind==='webdav'){const media=await davMedia.resolve(track,signal);mark('读取 WebDAV 媒体','WebDAV');return media;}
     if(track.origin.kind==='device'){const media=await deviceMedia.resolve(track);trace?.({stage:'source',status:'success',title:'读取系统媒体库条目',sourceName:'系统媒体库'});return media;}
     if(track.origin.kind==='local'){const media=await localAudio.resolve(track);trace?.({stage:'source',status:'success',title:'读取本机音频文件',sourceName:'本机文件'});return media;}
+    if(track.origin.kind==='radio'){
+      const streamUrl=typeof track.metadata.streamUrl==='string'?validRadioStreamURL(track.metadata.streamUrl):undefined;
+      if(!streamUrl)throw new Error('该电台流地址无效，请尝试其他电台');
+      trace?.({stage:'source',status:'success',title:'连接全球电台直播流',sourceName:'全球电台'});
+      return {url:streamUrl,headers:{'User-Agent':'NexusMusic/1.0 RadioPlayer'}};
+    }
     if(track.origin.kind==='navidrome'){trace?.({stage:'source',status:'info',title:'向 Navidrome 请求原始媒体',sourceName:'Navidrome'});const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);const result={...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};trace?.({stage:'source',status:'success',title:'取得 Navidrome 原始媒体',sourceName:'Navidrome'});return result;}
     return matchedResolver.resolve(track,signal,excluded,trace);
   };
@@ -389,7 +399,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, podcasts, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountHeartbeat, videos, podcasts, radioApi, radioStore, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

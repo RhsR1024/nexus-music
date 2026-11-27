@@ -122,6 +122,15 @@ class NexusNativeModule : Module() {
       OnViewDidUpdateProps { view: NexusNativeVideoView -> view.applyProps() }
     }
 
+    View(NexusRadioGlobeView::class) {
+      Name("RadioGlobe")
+      Events("onSelect")
+      Prop("html") { view: NexusRadioGlobeView, value: String -> view.html = value }
+      Prop("pointsJson") { view: NexusRadioGlobeView, value: String -> view.pointsJson = value }
+      Prop("commandJson") { view: NexusRadioGlobeView, value: String -> view.commandJson = value }
+      OnViewDidUpdateProps { view: NexusRadioGlobeView -> view.applyProps() }
+    }
+
     View(NexusVinylPivotView::class) { Name("VinylPivot") }
     View(NexusVinylReflectionView::class) { Name("VinylReflection") }
     View(NexusPhotoMaskView::class) {

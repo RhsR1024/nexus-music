@@ -27,6 +27,33 @@ function qishuiTrack(value:unknown):Track {
     metadata:{originalPlatform:'qishui',originalId:id,mediaKind:kind},qualities:[]});
 }
 export interface QishuiPlaylist {id:string;title:string;tracks:readonly Track[]}
+export interface QishuiRoamMode {
+  readonly id: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly query: string;
+  readonly tint: string;
+}
+export const QISHUI_ROAM_MODES: readonly QishuiRoamMode[] = [
+  { id: 'hot', title: '汽水热歌漫游', subtitle: '热门流行 · 节奏热单', query: '抖音热歌', tint: 'rgba(0,214,160,0.16)' },
+  { id: 'chill', title: '深夜治愈时刻', subtitle: '轻缓民谣 · 晚安精选', query: '治愈 轻音乐', tint: 'rgba(116,92,188,0.16)' },
+  { id: 'drive', title: '公路车载动感', subtitle: '节奏电音 · 驾车必备', query: '车载 节奏', tint: 'rgba(43,140,255,0.16)' },
+  { id: 'rap', title: '国风与说唱', subtitle: '律动说唱 · 潮流现场', query: '中文说唱', tint: 'rgba(230,118,52,0.16)' },
+  { id: 'retro', title: '复古华语金曲', subtitle: '粤语经典 · 时代记忆', query: '粤语经典', tint: 'rgba(232,61,86,0.16)' },
+  { id: 'study', title: '专注学习白噪', subtitle: '纯音氛围 · 沉浸工作', query: '纯音乐 专注', tint: 'rgba(52,168,128,0.16)' },
+];
+export function asQishuiMatchedTrack(source: Track): Track {
+  return cleanTrack({
+    origin: { kind: 'imported', platform: 'qishui', id: `roam-${source.origin.kind === 'online' ? source.origin.platform : 'mix'}-${source.origin.id}` },
+    title: source.title,
+    artist: source.artist,
+    ...(source.album ? { album: source.album } : {}),
+    ...(source.durationMs !== undefined ? { durationMs: source.durationMs } : {}),
+    ...(source.artwork ? { artwork: source.artwork } : {}),
+    metadata: { originalPlatform: 'qishui', matchedFrom: source.origin.kind === 'online' ? source.origin.platform : source.origin.kind },
+    qualities: source.qualities,
+  });
+}
 export class QishuiProvider {
   private http:HTTPClient;private expand:(url:string,signal:AbortSignal)=>Promise<string>;
   constructor(http:HTTPClient=requestJSON,expand=(url:string,signal:AbortSignal)=>bounded(async child=>{const result=await fetch(url,{signal:child});if(!result.ok)throw new Error('短链接展开失败');const expanded=result.url;try{await result.body?.cancel();}catch{/* RN may not expose a readable body. */}return expanded;},signal,12000)){this.http=http;this.expand=expand;}

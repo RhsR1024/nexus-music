@@ -12,8 +12,10 @@ import type {OnlinePlatform,Track} from '../domain/track.ts';
 import type {BrowseItem,FeaturedHomeData,NeteaseBanner} from '../providers/discovery.ts';
 import type {VideoItem} from '../providers/videos.ts';
 import {FeaturedDiscoverFeed} from './FeaturedDiscoverFeed.tsx';
+import {GlobalRadioModal} from './GlobalRadioModal.tsx';
 import {MVDetail} from './MVDetail.tsx';
 import {NeteasePodcastsModal} from './NeteasePodcastsModal.tsx';
+import {QishuiDiscoverSection} from './QishuiDiscoverSection.tsx';
 import {classifyDiscoveryFailure,playlistLinkFailure} from '../providers/discoveryFailure.ts';
 import {Cover} from './Cover.tsx';
 import {QualityBadge} from './QualityBadge.tsx';
@@ -82,6 +84,8 @@ export function Discovery({
   const [featuredData,setFeaturedData]=useState<FeaturedHomeData|null>(null),[featuredLoading,setFeaturedLoading]=useState(false),[featuredError,setFeaturedError]=useState('');
   const [activeMV,setActiveMV]=useState<VideoItem|null>(null);
   const [podcastsOpen,setPodcastsOpen]=useState(false);
+  const [radioOpen,setRadioOpen]=useState(false);
+  const [qishuiTab,setQishuiTab]=useState(false);
   const [showBackTop,setShowBackTop]=useState(false);
   const listRef=useRef<FlatList<Item>|null>(null);
   const bannerScroll=useRef<ScrollView|null>(null),bannerDragging=useRef(false);
@@ -104,6 +108,7 @@ export function Discovery({
   },[preferences.homePlatform]);
 
   function selectPlatform(next:OnlinePlatform){
+    setQishuiTab(false);
     setPlatform(next);
     setCategory(undefined);
     setFeaturedData(null);
@@ -427,17 +432,22 @@ export function Discovery({
         </View>
       </View>
 
-      {/* Compact borderless soft-glow platform radio bar */}
+      {/* Compact borderless soft-glow platform radio bar (including 汽水 Scheme A) */}
       <View style={{flexDirection:'row',gap:6,flexWrap:'wrap',alignItems:'center'}}>
         {platforms.map(([id,name,dot])=>{
-          const selected=platform===id;
+          const selected=!qishuiTab&&platform===id;
           return <Pressable key={id} accessibilityRole="radio" accessibilityLabel={name} accessibilityState={{selected}} onPress={()=>selectPlatform(id)} style={[{paddingHorizontal:11,paddingVertical:6,borderRadius:16,backgroundColor:selected?segmentActive:'transparent',flexDirection:'row',alignItems:'center',gap:5},selected&&s.cardShadow]}>
             <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:dot,opacity:selected?1:0.55}}/>
             <Text style={{color:selected?s.ink:s.muted,fontSize:13,fontWeight:selected?'700':'500'}}>{name}</Text>
           </Pressable>;
         })}
+        <Pressable testID="platform-qishui" accessibilityRole="radio" accessibilityLabel="汽水" accessibilityState={{selected:qishuiTab}} onPress={()=>{setQishuiTab(true);setView({kind:'featured'});}} style={[{paddingHorizontal:11,paddingVertical:6,borderRadius:16,backgroundColor:qishuiTab?segmentActive:'transparent',flexDirection:'row',alignItems:'center',gap:5},qishuiTab&&s.cardShadow]}>
+          <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:'#00D6A0',opacity:qishuiTab?1:0.55}}/>
+          <Text style={{color:qishuiTab?s.ink:s.muted,fontSize:13,fontWeight:qishuiTab?'700':'500'}}>汽水</Text>
+        </Pressable>
       </View>
 
+      {qishuiTab?<QishuiDiscoverSection services={services}/>:<>
       {/* Sollin borderless translucent 3-segment control: 精选 | 榜单 | 歌单 */}
       <View style={{flexDirection:'row',padding:3,borderRadius:24,backgroundColor:segmentTrack}}>
         {([['featured','精选'],['rankings','榜单'],['playlists','歌单']]as const).map(([kind,label])=>{
@@ -451,9 +461,10 @@ export function Discovery({
       {/* Sollin quick icon row (scrollable for rich discovery entry points) */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:14,paddingVertical:4,paddingHorizontal:2}}>
         {[
+          {testID:'discovery-global-radio',label:'全球电台',a11y:'打开全球电台',icon:'earth-outline' as const,active:radioOpen,onPress:()=>setRadioOpen(true)},
+          {testID:'discovery-podcasts',label:'播客电台',a11y:'打开网易云播客',icon:'headset-outline' as const,active:podcastsOpen,onPress:()=>setPodcastsOpen(true)},
           {testID:'discovery-popular-artists',label:'热门歌手',a11y:'热门歌手',icon:'mic-outline' as const,active:view.kind==='artists',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'artists'});}},
           {testID:'discovery-new-albums',label:'新碟首发',a11y:'新碟首发',icon:'disc-outline' as const,active:view.kind==='albums',onPress:()=>{setPlatform('wy');setCategory(undefined);setView({kind:'albums'});}},
-          {testID:'discovery-podcasts',label:'播客电台',a11y:'打开网易云播客',icon:'headset-outline' as const,active:podcastsOpen,onPress:()=>setPodcastsOpen(true)},
           {testID:undefined,label:'风格推荐',a11y:'打开风格推荐',icon:'sparkles' as const,active:styleOpen,onPress:()=>setStyleOpen(true)},
           {testID:undefined,label:'账号推荐',a11y:'账号与本地推荐',icon:'heart' as const,active:false,onPress:()=>{if(openAccounts)openAccounts();else{setCategory(undefined);setView({kind:'playlists'});}}},
           {testID:undefined,label:'歌单导入',a11y:'展开歌单导入',icon:'albums-outline' as const,active:tools,onPress:()=>setTools(value=>!value)},
@@ -559,12 +570,13 @@ export function Discovery({
         onOpenMoreArtists={()=>{setPlatform('wy');setView({kind:'artists'});}}
         onOpenSongShelf={(title,shelfTracks)=>{setDescriptionOpen(false);setTotal(shelfTracks.length);setView({kind:'bannerSongs',id:`shelf-${title}`,title,artwork:shelfTracks[0]?.artwork,tracks:shelfTracks});}}
       />}
+      </>}
     </>}
     {!!message&&<Text accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13,lineHeight:20}}>{message}</Text>}
   </View>;
 
   const content=<View testID="discovery-content" onLayout={event=>{const next=Math.max(1,event.nativeEvent.layout.width-40);setContentWidth(previous=>previous!==undefined&&Math.abs(previous-next)<.5?previous:next);}} style={{flex:1,backgroundColor:embedded?'transparent':theme.palette.background[0],paddingHorizontal:20,paddingTop:embedded?0:54}}>
-    <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=e.nativeEvent.contentOffset.y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
+    <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'||qishuiTab?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=e.nativeEvent.contentOffset.y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
       renderItem={({item,index})=>item.kind==='track'?<View testID={`discovery-track-${index}`} style={{flexDirection:'row',alignItems:'center',gap:8,paddingVertical:9}}>
         {(()=>{const key=item.key??`${index}-track`,checked=selectionHas(selection,key);return <>
         <Pressable accessibilityRole="button" onLongPress={()=>{setPicking(false);setSelection(selectionEnter(key));}} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else services.playTracks(tracks,index);}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放'}${item.track.title}`} accessibilityState={{selected:checked}} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',gap:12}}>
@@ -596,14 +608,14 @@ export function Discovery({
         <Text numberOfLines={2} style={{color:s.ink,fontSize:14,fontWeight:'600',lineHeight:19}}>{item.value.title}</Text>
         <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>{item.kind==='artist'?'查看歌曲与专辑':item.value.count!==undefined?`${item.value.author?`${item.value.author} · `:''}${item.value.count} 首`:item.value.description}</Text>
       </Pressable>}
-      ListFooterComponent={view.kind==='featured'?null:<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>}/>
+      ListFooterComponent={view.kind==='featured'||qishuiTab?null:<View style={{gap:10,paddingVertical:18}}>{loading&&<Text style={{color:s.muted,fontSize:13}}>正在获取平台数据…</Text>}{!!error&&<Text testID="discovery-load-error" accessibilityLiveRegion="polite" style={{color:s.accent,fontSize:13}}>{error}</Text>}{!!emptyDetailMessage&&<Text testID="discovery-empty-detail" accessibilityLiveRegion="polite" style={{color:s.muted,fontSize:13}}>{emptyDetailMessage}</Text>}{!loading&&!error&&!items.length&&!inDetail&&<Text style={{color:s.muted,fontSize:13}}>此平台暂未返回可展示内容</Text>}{view.kind!=='bannerSongs'&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{loading&&(inDetail||view.kind==='artists'||view.kind==='albums')&&button('取消页面读取',cancelPageRead,false,'discovery-page-cancel')}{button(error?'重试':'刷新',()=>{void load(error?retryAppend:false);},loading,'discovery-load-retry')}{more&&button('加载更多',()=>{void load(true);},loading,'discovery-load-more')}</View>}</View>}/>
     {showBackTop&&<Pressable testID="discovery-back-top" accessibilityRole="button" accessibilityLabel="返回顶部" onPress={()=>listRef.current?.scrollToOffset({offset:0,animated:true})} style={[{position:'absolute',right:18,bottom:embedded?bottomInset+12:24,width:44,height:44,borderRadius:22,backgroundColor:segmentActive,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:s.cardBorder},s.cardShadow]}>
       <Ionicons name="arrow-up" size={20} color={s.ink}/>
     </Pressable>}
     <Toast message={toast.message} onDismiss={toast.clear}/>
   </View>;
 
-  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
+  const overlays=<><DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

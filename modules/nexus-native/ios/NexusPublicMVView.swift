@@ -435,3 +435,90 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
     }
   }
 }
+
+/// Offline-safe local HTML WebView host for the Global Radio 3D interactive globe.
+final class NexusRadioGlobeView: ExpoView, WKScriptMessageHandler, WKNavigationDelegate {
+  let onSelect = EventDispatcher()
+  private let web: WKWebView
+  private var loaded = false
+  private var appliedHtmlHash = 0
+  private var appliedPoints = ""
+  private var appliedCommand = ""
+
+  var html = ""
+  var pointsJson = "[]"
+  var commandJson = ""
+
+  required init(appContext: AppContext? = nil) {
+    let config = WKWebViewConfiguration()
+    config.websiteDataStore = .nonPersistent()
+    let ucc = WKUserContentController()
+    config.userContentController = ucc
+    web = WKWebView(frame: .zero, configuration: config)
+    super.init(appContext: appContext)
+    web.isOpaque = false
+    web.backgroundColor = UIColor(red: 0.027, green: 0.071, blue: 0.118, alpha: 1)
+    web.scrollView.isScrollEnabled = false
+    web.scrollView.bounces = false
+    web.navigationDelegate = self
+    ucc.add(self, name: "RadioGlobe")
+    addSubview(web)
+  }
+
+  deinit {
+    web.configuration.userContentController.removeScriptMessageHandler(forName: "RadioGlobe")
+    web.stopLoading()
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    web.frame = bounds
+  }
+
+  func applyProps() {
+    let h = html.hashValue
+    if !html.isEmpty && h != appliedHtmlHash {
+      appliedHtmlHash = h
+      loaded = false
+      web.loadHTMLString(html, baseURL: nil)
+      return
+    }
+    if loaded {
+      pushDataIfNeeded()
+      pushCommandIfNeeded()
+    }
+  }
+
+  private func pushDataIfNeeded() {
+    guard pointsJson != appliedPoints, !pointsJson.isEmpty else { return }
+    appliedPoints = pointsJson
+    web.evaluateJavaScript("window.nexusGlobe && window.nexusGlobe.setData(\(pointsJson));", completionHandler: nil)
+  }
+
+  private func pushCommandIfNeeded() {
+    guard commandJson != appliedCommand, !commandJson.isEmpty else { return }
+    appliedCommand = commandJson
+    web.evaluateJavaScript("window.nexusGlobe && window.nexusGlobe.command(\(commandJson));", completionHandler: nil)
+  }
+
+  func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    loaded = true
+    appliedPoints = ""
+    appliedCommand = ""
+    pushDataIfNeeded()
+    pushCommandIfNeeded()
+  }
+
+  func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    if navigationAction.request.url?.scheme == "about" || navigationAction.request.url == nil {
+      decisionHandler(.allow)
+    } else {
+      decisionHandler(.cancel)
+    }
+  }
+
+  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    guard message.name == "RadioGlobe", let body = message.body as? [String: Any] else { return }
+    onSelect(body)
+  }
+}

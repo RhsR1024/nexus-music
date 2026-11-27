@@ -1,4 +1,5 @@
 import {SavedCatalogs} from './SavedCatalogs.tsx';
+import {AlbumLibrarySection} from './AlbumLibrarySection.tsx';
 import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {AccountRecommendations} from './AccountRecommendations.tsx';
 import {Cover} from './Cover.tsx';
@@ -44,7 +45,7 @@ export function LibraryHome({
   const playbackStats=useSyncExternalStore(services.playbackStats.subscribe,services.playbackStats.getSnapshot);
   const recommendations=useSyncExternalStore(services.recommendations.subscribe,services.recommendations.getSnapshot);
 
-  const [tab,setTab]=useState<'favorites'|'history'|'playlists'>('favorites');
+  const [tab,setTab]=useState<'favorites'|'history'|'playlists'|'albums'>('favorites');
   const [selected,setSelected]=useState<string|null>(null);
   const [composerOpen,setComposerOpen]=useState(true);
   const [dailyExpanded,setDailyExpanded]=useState(false);
@@ -91,7 +92,7 @@ export function LibraryHome({
   const button=(label:string,action:()=>void,disabled=busy,testID?:string,primary=false)=><Pressable testID={testID} accessibilityRole="button" onPress={action} disabled={disabled} style={[styles.button,primary&&styles.buttonPrimary,disabled&&{opacity:.4}]}><Text style={[styles.action,primary&&styles.actionPrimary]}>{label}</Text></Pressable>;
   const openPlaylistComposer=()=>{setTab('playlists');setSelected(null);setName('');setDescription('');setCoverUrl('');setComposerOpen(true);};
   const iconButton=(id:string,label:string,icon:React.ComponentProps<typeof Ionicons>['name'],action:()=>void)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.iconButton}><Ionicons name={icon} size={20} color="#FFFFFF"/></Pressable>;
-  const tabButton=(value:'favorites'|'history'|'playlists',label:string)=><Pressable key={value} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:tab===value}} onPress={()=>{setTab(value);setSelected(null);}} style={[styles.tabButton,tab===value&&styles.tabButtonSelected]}><Text style={[styles.tabLabel,tab===value&&styles.tabLabelSelected]}>{label}</Text></Pressable>;
+  const tabButton=(value:'favorites'|'history'|'playlists'|'albums',label:string)=><Pressable key={value} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:tab===value}} onPress={()=>{setTab(value);setSelected(null);}} style={[styles.tabButton,tab===value&&styles.tabButtonSelected]}><Text style={[styles.tabLabel,tab===value&&styles.tabLabelSelected]}>{label}</Text></Pressable>;
 
   const tracks=playlist?playlist.entries.map(item=>item.track):tab==='favorites'?library.favorites:tab==='history'?library.history.map(item=>item.track):[];
   const selectedCover=playlist?playlistCoverSource(playlist.coverUrl,playlist.entries[0]?.track):undefined;
@@ -171,8 +172,9 @@ export function LibraryHome({
       </View>}
     </View>}
 
-    {/* Borderless soft-translucent 3-segment tabs */}
-    <View style={styles.tabs}>{tabButton('favorites','我的收藏')}{tabButton('history','最近播放')}{tabButton('playlists','我的歌单')}</View>
+    {/* Borderless soft-translucent 4-segment tabs: 我的收藏 | 最近播放 | 我的歌单 | 专辑库 */}
+    <View style={styles.tabs}>{tabButton('favorites','我的收藏')}{tabButton('history','最近播放')}{tabButton('playlists','我的歌单')}{tabButton('albums','专辑库')}</View>
+    {!playlist&&tab==='albums'&&<AlbumLibrarySection services={services}/>}
 
     {playlist?<View style={styles.softCard}>
       <View style={{flexDirection:'row',gap:14,alignItems:'center'}}>
@@ -262,7 +264,7 @@ export function LibraryHome({
       <View testID={tab==='history'?`history-item-${index}`:undefined} style={tab==='history'?styles.historyRow:styles.trackRow}>
         {tab==='history'&&<View style={styles.historyRail}><View style={styles.historyDot}/><View style={styles.historyLine}/><Text style={styles.historyTime}>{historyTimestamp(library.history[index]?.playedAt).clock}</Text></View>}
         <View style={tab==='history'?styles.historyCard:styles.trackInner}>
-          {(()=>{const sub=`${track.artist}${track.album?` · ${track.album}`:''} · ${track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='local'?'本地音频':track.origin.kind==='device'?'设备媒体库':track.origin.kind==='webdav'?'WebDAV':'私人曲库'}`;return <Pressable accessibilityRole="button" accessibilityLabel={`${track.title}, ${sub}`} onPress={()=>services.playTracks(tracks,index)} style={{flex:1,flexDirection:'row',alignItems:'center',gap:12}}>
+          {(()=>{const sub=`${track.artist}${track.album?` · ${track.album}`:''} · ${track.origin.kind==='online'?track.origin.platform:track.origin.kind==='imported'?`汽水 · ${services.library.matchFor(track)?'已匹配':'待匹配'}`:track.origin.kind==='radio'?'全球电台':track.origin.kind==='local'?'本地音频':track.origin.kind==='device'?'设备媒体库':track.origin.kind==='webdav'?'WebDAV':'私人曲库'}`;return <Pressable accessibilityRole="button" accessibilityLabel={`${track.title}, ${sub}`} onPress={()=>services.playTracks(tracks,index)} style={{flex:1,flexDirection:'row',alignItems:'center',gap:12}}>
             <Cover services={services} track={track} size={46} radius={10}/>
             <View style={{flex:1,gap:3}}>
               <Text numberOfLines={1} style={styles.track}>{track.title}</Text>

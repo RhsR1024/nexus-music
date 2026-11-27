@@ -5,10 +5,11 @@ import type {Repository} from './repository.ts';
 import type {LibraryStore} from './library.ts';
 import type {MutationQueue} from './mutations.ts';
 import {buildSyncState,canonical,decodeSync,encodeSync,libraryFromSync,planSync,resolveSync,syncRecords,SyncError,validateSyncState,type SyncChoices,type SyncPlan,type SyncState} from './multiDeviceSync.ts';
+import {computePlanDelta,summarizeLibraryDelta,type LibraryDelta} from './libraryDelta.ts';
 
 export const syncDirectory='nexus-music-sync/';
 export interface SyncConfig {version:1;accountId:string;directory:string}
-export interface SyncPreview {plan:SyncPlan;etag?:string;localSignature:string}
+export interface SyncPreview {plan:SyncPlan;etag?:string;localSignature:string;delta?:LibraryDelta;deltaSummary?:string}
 export interface WebDAVSyncState {config?:SyncConfig;preview?:SyncPreview;busy:null|'configure'|'preview'|'commit';message:string;error:string}
 interface Accounts {getSnapshot():readonly WebDAVAccount[];subscribe(listener:()=>void):()=>void;credentials(id:string):Promise<WebDAVCredentials>;client(id:string):Promise<Pick<WebDAVClient,'stat'>>}
 type Schedule=(callback:()=>void,milliseconds:number)=>()=>void;
@@ -160,7 +161,10 @@ export class WebDAVSync {
     const root=davURL(account.url,config.directory),read=await this.options.transport.backup(root,fileName,credentials,'GET','','',signal);check();
     let remote:SyncState|undefined,etag:string|undefined;
     if(read.status!==404){status(read.status,[200]);etag=strongBackupETag(read.etag);if(!etag)throw new SyncError('format');remote=decodeSync(read.body);}
-    const plan=planSync(local,remote,baseline);return{preview:{plan,etag,localSignature:canonical(syncRecords(snapshot))},message:plan.conflicts.length?`发现 ${plan.conflicts.length} 项冲突，请逐项选择后确认`:'合并预览已就绪，确认后同步两端音乐库'};
+    const plan=planSync(local,remote,baseline);
+    const delta=computePlanDelta(baseline,plan);
+    const deltaSummary=summarizeLibraryDelta(delta);
+    return{preview:{plan,etag,localSignature:canonical(syncRecords(snapshot)),delta,deltaSummary},message:plan.conflicts.length?`发现 ${plan.conflicts.length} 项冲突，请逐项选择后确认`:`合并预览已就绪（${deltaSummary}），确认后同步两端音乐库`};
   });}
   /** Refresh a configured sync preview when the app returns to the foreground.
    * Conflicts remain explicit and require the existing user confirmation path;

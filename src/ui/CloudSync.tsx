@@ -86,6 +86,7 @@ export function CloudSync({services,grouped=false}:{services:Services;grouped?:b
               {plan&&<View testID="cloud-sync-summary" style={[{gap:8,padding:15,borderWidth:1,borderColor:s.accent+'44',borderRadius:20,backgroundColor:s.card},s.cardShadow]}>
                 <Text style={{color:s.ink,fontSize:15.5,fontWeight:'700'}}>待确认合并 · {conflicts.length} 项冲突</Text>
                 <Text style={{color:s.muted,fontSize:12.5}}>无冲突记录 {plan.records.filter(value=>!value.deleted).length} · 删除标记 {plan.records.filter(value=>value.deleted).length}</Text>
+                {!!state.preview?.deltaSummary&&<Text testID="cloud-sync-delta" style={{color:s.accent,fontSize:12,fontWeight:'600'}}>{state.preview.deltaSummary}</Text>}
                 <View style={{alignSelf:'flex-start',marginTop:4}}>{pill('确认当前合并方案',confirm,busy||!saved||!ready,'cloud-sync-commit',true)}</View>
               </View>}
             </View>}

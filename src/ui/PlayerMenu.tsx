@@ -24,7 +24,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
   const sleepLabel=sleep.mode==='off'?'已关闭':sleep.mode==='track'?'本曲结束后':`剩余 ${Math.max(0,Math.ceil((sleep.deadline-Date.now())/60000))} 分钟`;
   const effectiveOffset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,trackKey(track.origin));
   const favorite=services.songFavorites.isFavorite(favoriteTrack);
-  const platform=track.origin.kind==='online'?platformName[track.origin.platform]:track.origin.kind==='imported'?'汽水':'本地';
+  const platform=track.origin.kind==='online'?platformName[track.origin.platform]:track.origin.kind==='imported'?'汽水':track.origin.kind==='radio'?'全球电台':'本地';
   const subtitle=[track.artist,track.album,platform].filter(Boolean).join(' · ');
   const toggleFavorite=()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
   const card=(icon:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,active=false)=>(
