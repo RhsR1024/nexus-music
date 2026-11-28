@@ -36,6 +36,7 @@ const cover=(v:unknown)=>{try{const u=new URL(text(v).replace(/^\/\//,'https://'
 
 export class AccountPlaylists {
   private readonly operations=new Map<string,object>();
+  private readonly lenientPreviewOps=new Map<string,object>();
   private readonly catalogs=new WeakMap<MusicAccount,readonly AccountPlaylist[]>();
   private readonly previews=new WeakMap<AccountPlaylistPreview,{account:MusicAccount;operation:object}>();
   private readonly imports=new WeakSet<AccountPlaylistPreview>();
@@ -46,6 +47,14 @@ export class AccountPlaylists {
     const check=()=>{
       if(signal.aborted)throw new AccountPlaylistError('cancelled');
       if(!this.deps.accounts.getSnapshot().includes(account)||this.operations.get(account.id)!==operation)throw new AccountPlaylistError('account_changed');
+    };
+    check();return {operation,check};
+  }
+  private beginLenientPreview(account:MusicAccount,signal:AbortSignal){
+    const operation={};this.lenientPreviewOps.set(account.id,operation);
+    const check=()=>{
+      if(signal.aborted)throw new AccountPlaylistError('cancelled');
+      if(!this.deps.accounts.getSnapshot().includes(account)||this.lenientPreviewOps.get(account.id)!==operation)throw new AccountPlaylistError('account_changed');
     };
     check();return {operation,check};
   }
@@ -99,18 +108,67 @@ export class AccountPlaylists {
     }catch(error){return this.failure(error,check);}
   }
   async preview(account:MusicAccount,playlist:AccountPlaylist,signal:AbortSignal,options?:{lenient?:boolean}):Promise<AccountPlaylistPreview>{
-    const {operation,check}=this.begin(account,signal);
+    const lenient=options?.lenient===true;
+    const {operation,check}=lenient?this.beginLenientPreview(account,signal):this.begin(account,signal);
     try{
-      if(!this.catalogs.get(account)?.includes(playlist))throw new AccountPlaylistError('account_changed');
+      if(!lenient&&!this.catalogs.get(account)?.includes(playlist))throw new AccountPlaylistError('account_changed');
       const reader=account.platform==='tx'?this.deps.qq:account.platform==='kg'?this.deps.kugou:undefined;
       if(reader){
         const session=await this.deps.accounts.session(account.id);check();
         const tracks=Object.freeze(account.platform==='tx'&&this.deps.qq?await this.deps.qq.tracks(account,session,playlist,signal,check,options):account.platform==='kg'&&this.deps.kugou?await this.deps.kugou.tracks(account,session,playlist,signal,check,options):await reader.tracks(account,session,playlist,signal,check));check();
-        const result=Object.freeze({playlist,tracks});this.previews.set(result,{account,operation});return result;
+        const result=Object.freeze({playlist,tracks});
+        if(!lenient)this.previews.set(result,{account,operation});
+        return result;
       }
       const {auth}=await this.open(account,signal,check);
       const detail=row((await this.request('v6/playlist/detail',{id:playlist.id,n:100000,s:0},auth,signal,check)).playlist);
       if(identifier(detail.id)!==playlist.id||!Array.isArray(detail.trackIds))throw new AccountPlaylistError('incomplete');
+      if(lenient){
+        const ids:string[]=[],seenIds=new Set<string>();
+        for(const v of detail.trackIds){
+          const rawId=text(row(v).id);
+          if(!/^[1-9]\d{0,19}$/.test(rawId)||seenIds.has(rawId))continue;
+          seenIds.add(rawId);
+          ids.push(rawId);
+          if(ids.length>=10000)break;
+        }
+        const songs=new Map<string,Track>();
+        if(Array.isArray(detail.tracks)){
+          for(const value of detail.tracks){
+            const rawId=text(row(value).id);
+            if(!/^[1-9]\d{0,19}$/.test(rawId)||songs.has(rawId))continue;
+            try{songs.set(rawId,cleanTrack(onlineTrack('wy',value)));}catch{}
+          }
+        }
+        const missing=ids.filter(id=>!songs.has(id));
+        const batches:string[][]=[];
+        for(let offset=0;offset<missing.length;offset+=500)batches.push(missing.slice(offset,offset+500));
+        let cursor=0;
+        const worker=async()=>{
+          while(cursor<batches.length){
+            const batch=batches[cursor++]!;
+            check();
+            try{
+              const raw=await this.request('v3/song/detail',{c:JSON.stringify(batch.map(id=>({id})))},auth,signal,check);
+              if(Array.isArray(raw.songs)){
+                for(const value of raw.songs){
+                  const rawId=text(row(value).id);
+                  if(!/^[1-9]\d{0,19}$/.test(rawId)||songs.has(rawId))continue;
+                  try{songs.set(rawId,cleanTrack(onlineTrack('wy',value)));}catch{}
+                }
+              }
+            }catch(err){
+              check();
+              if(err instanceof AccountPlaylistError&&(err.kind==='login_required'||err.kind==='cancelled'||err.kind==='account_changed'))throw err;
+            }
+          }
+        };
+        await Promise.all(Array.from({length:Math.min(3,batches.length)},()=>worker()));
+        check();
+        const tracks=ids.map(id=>songs.get(id)).filter((t):t is Track=>!!t);
+        if(ids.length>0&&tracks.length===0)throw new AccountPlaylistError('incomplete');
+        return Object.freeze({playlist,tracks:Object.freeze(tracks)});
+      }
       const ids=detail.trackIds.map(v=>identifier(row(v).id));
       if(ids.length!==count(detail.trackCount)||new Set(ids).size!==ids.length)throw new AccountPlaylistError('incomplete');
       const tracks:Track[]=[];

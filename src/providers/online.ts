@@ -1,5 +1,5 @@
 import type { OnlinePlatform, Track } from '../domain/track.ts';
-import { queryURL, requestJSON, type HTTPClient } from './http.ts';
+import { queryURL, requestJSON, requestText, type HTTPClient, type TextHTTPClient } from './http.ts';
 import { qqSignature } from './qqSignature.ts';
 
 type Row = Record<string, unknown>;
@@ -21,6 +21,7 @@ function normalizePublicArtwork(raw: unknown, relativeBase?: string): string | u
   if (s.startsWith('//')) s = `https:${s}`;
   else if (s.startsWith('/') && relativeBase) s = `${relativeBase}${s}`;
   else if (s.startsWith('http://')) s = `https://${s.slice(7)}`;
+  s = s.replace(/^(https:\/\/img[1-4])\.kwcdn(\.kuwo\.cn\/)/i, '$1$2');
   return /^https?:\/\//i.test(s) ? s : undefined;
 }
 function extractKugouArtwork(value: Row): string | undefined {
@@ -67,24 +68,24 @@ function extractMiguArtwork(value: Row): string | undefined {
   return pickFromArray(value.albumImgs) ?? pickFromArray(value.imgItems) ?? normalizePublicArtwork(row(list(value.singerImg ? Object.values(row(value.singerImg)) : [])[0]).miguImgUrl, 'https://d.musicapp.migu.cn');
 }
 function extractKuwoArtwork(value: Row): string | undefined {
-  for (const direct of [value.pic, value.hts_MVPIC, value.albumpic, value.albumPic, value.cover]) {
+  for (const direct of [value.pic, value.hts_MVPIC, value.albumpic, value.albumPic, value.musicPic, value.pic120, value.artistPic, value.cover]) {
     const url = normalizePublicArtwork(direct);
     if (url) return url;
   }
   const albumShort = text(value.web_albumpic_short ?? value.albumpic_short).trim();
   if (albumShort) {
-    if (/^https?:\/\//i.test(albumShort)) return albumShort.replace(/^http:\/\//i, 'https://');
+    if (/^https?:\/\//i.test(albumShort)) return normalizePublicArtwork(albumShort);
     const clean = albumShort.replace(/^\/+/, '').replace(/^120\//, '500/');
     return `https://img4.kuwo.cn/star/albumcover/${clean}`;
   }
   const mvPic = text(value.MVPIC).trim();
   if (mvPic) {
-    if (/^https?:\/\//i.test(mvPic)) return mvPic.replace(/^http:\/\//i, 'https://');
+    if (/^https?:\/\//i.test(mvPic)) return normalizePublicArtwork(mvPic);
     return `https://img2.kuwo.cn/wmvpic/${mvPic.replace(/^\/+/, '')}`;
   }
   const artistShort = text(value.web_artistpic_short).trim();
   if (artistShort) {
-    if (/^https?:\/\//i.test(artistShort)) return artistShort.replace(/^http:\/\//i, 'https://');
+    if (/^https?:\/\//i.test(artistShort)) return normalizePublicArtwork(artistShort);
     const clean = artistShort.replace(/^\/+/, '').replace(/^120\//, '300/');
     return `https://img3.kuwo.cn/star/starheads/${clean}`;
   }
@@ -162,11 +163,17 @@ export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
   if (!track.title) throw new Error('歌曲缺少名称'); return track;
 }
 export interface SearchPage { items: readonly Track[]; total?: number; page: number; hasMore: boolean }
-export interface OnlineDependencies { http?: HTTPClient; md5: (value: string) => Promise<string>; sha1?: (value: string) => Promise<string>; deviceId: () => string }
+export interface OnlineDependencies { http?: HTTPClient; textHTTP?: TextHTTPClient; md5: (value: string) => Promise<string>; sha1?: (value: string) => Promise<string>; deviceId: () => string }
 export class OnlineProvider {
-  private http: HTTPClient; private md5: OnlineDependencies['md5']; private deviceId: () => string;
+  private http: HTTPClient; private textHTTP?: TextHTTPClient; private md5: OnlineDependencies['md5']; private deviceId: () => string;
   private sha1: NonNullable<OnlineDependencies['sha1']>;
-  constructor(dependencies: OnlineDependencies) { this.http = dependencies.http ?? requestJSON; this.md5 = dependencies.md5; this.deviceId = dependencies.deviceId; this.sha1 = dependencies.sha1 ?? (async () => { throw new Error('SHA1不可用'); }); }
+  constructor(dependencies: OnlineDependencies) {
+    this.http = dependencies.http ?? requestJSON;
+    this.textHTTP = dependencies.textHTTP ?? (dependencies.http ? undefined : requestText);
+    this.md5 = dependencies.md5;
+    this.deviceId = dependencies.deviceId;
+    this.sha1 = dependencies.sha1 ?? (async () => { throw new Error('SHA1不可用'); });
+  }
   async artwork(track:Track,signal:AbortSignal):Promise<string|undefined>{
     if(track.origin.kind!=='online')return undefined;
     if(track.origin.platform==='wy'&&/^\d+$/.test(track.origin.id)){
@@ -185,6 +192,16 @@ export class OnlineProvider {
       return extractQQArtwork(info,row(info.album));
     }
     if(track.origin.platform==='kw'&&/^\d+$/.test(track.origin.id)){
+      // Primary: Kuwo's dedicated rid_pic CDN resolver (returns 500x500 artwork without songinfoandlrc 301 rate-limits).
+      if(this.textHTTP){
+        try{
+          const rawUrl=await this.textHTTP(queryURL('https://artistpicserver.kuwo.cn/pic.web',{corp:'kuwo',type:'rid_pic',pictype:500,size:500,rid:track.origin.id}),{},signal);
+          const direct=normalizePublicArtwork(rawUrl);
+          if(direct&&!/NO_PIC/i.test(direct))return direct;
+        }catch(err){
+          if(signal.aborted)throw err;
+        }
+      }
       const response=row(await this.http(queryURL('https://m.kuwo.cn/newh5/singles/songinfoandlrc',{musicId:track.origin.id}),{},signal));
       const info=row(row(response.data).songinfo);
       return extractKuwoArtwork(info);

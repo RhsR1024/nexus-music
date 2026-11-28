@@ -55,6 +55,10 @@ export class CoverService {
     // Do not rewrite user/private servers, whose endpoints may be HTTP-only.
     const raw=url.trim();
     const parsed=new URL(raw.startsWith('//')?`https:${raw}`:raw);
+    if(/^img[1-4]\.kwcdn\.kuwo\.cn$/i.test(parsed.hostname)){
+      parsed.hostname=parsed.hostname.replace(/\.kwcdn\.kuwo\.cn$/i,'.kuwo.cn');
+      if(parsed.protocol==='http:'&&!parsed.port)parsed.protocol='https:';
+    }
     if(parsed.protocol==='http:'&&!parsed.port&&/^(?:p[1-9]c?\.music\.126\.net|(?:[a-z0-9-]+\.)?y\.qq\.com|y\.gtimg\.cn|p\.qpic\.cn|d\.musicapp\.migu\.cn|cdnmusic\.migu\.cn|img[1-4]\.kuwo\.cn|(?:singerimg|imge(?:ssl)?)\.kugou\.com|(?:[a-z0-9-]+\.)?kgimg\.com)$/i.test(parsed.hostname))parsed.protocol='https:';
     const normalized=parsed.toString();return this.withFallback(size,signal,side=>this.fetch(['public',normalized],normalized,signal,side,exporting),exporting);
   }

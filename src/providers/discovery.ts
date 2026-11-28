@@ -155,7 +155,15 @@ function unique(items:BrowseItem[]){
   }
   return [...byId.values()];
 }
-function item(id:unknown,title:unknown,artwork?:unknown,description?:unknown,total?:unknown):BrowseItem {const name=text(title);if(!name)throw new Error('平台响应缺少名称');return{id:required(id),title:name,...(text(artwork)?{artwork:text(artwork)}:{}),...(text(description)?{description:text(description)}:{}),...(count(total)!==undefined?{count:count(total)}:{})};}
+function normalizeKuwoArtwork(raw:unknown):string{
+  const s=text(raw).trim();
+  if(!s)return '';
+  return s
+    .replace(/^\/\//,'https://')
+    .replace(/^https?:\/\/(img[1-4])\.kwcdn\.kuwo\.cn\//i,'https://$1.kuwo.cn/')
+    .replace(/^http:\/\/(img[1-4]\.kuwo\.cn\/)/i,'https://$1');
+}
+function item(id:unknown,title:unknown,artwork?:unknown,description?:unknown,total?:unknown):BrowseItem {const name=text(title);if(!name)throw new Error('平台响应缺少名称');const art=normalizeKuwoArtwork(artwork);return{id:required(id),title:name,...(art?{artwork:art}:{}),...(text(description)?{description:text(description)}:{}),...(count(total)!==undefined?{count:count(total)}:{})};}
 function bannerTarget(targetTypeRaw:unknown,targetIdRaw:unknown,rawUrl:string):{targetType:number;targetId:string;url?:string}{
   const rawType=Number.isFinite(Number(targetTypeRaw))?Number(targetTypeRaw):0;
   const rawId=text(targetIdRaw).trim();
@@ -362,7 +370,7 @@ export class DiscoveryProvider {
       const values=data.songlist??data.songInfoList;if(!Array.isArray(values))throw new Error('歌单歌曲响应无效');rows=list(values).map(value=>row(value).songInfo??value);title=text(row(data.dirinfo).title??row(data.data).title);total=count(data.total_song_num??row(data.data).totalNum);hasMore=total!==undefined?page*limit<total:rows.length>=limit;
     }else if(platform==='kw'){
       const url=rank?queryURL('https://kbangserver.kuwo.cn/ksong.s',{from:'pc',fmt:'json',pn:page-1,rn:limit,type:'bang',data:'content',id,show_copyright_off:0,pcmp4:1,isbang:1}):queryURL('https://nplserver.kuwo.cn/pl.svc',{op:'getlistinfo',pid:id,pn:page-1,rn:limit,encode:'utf8',keyset:'pl2012',identity:'kuwo',pcmp4:1,newver:1,vipver:'MUSIC_9.0.5.0_W1'});
-      const data=row(await this.http(url,{},signal));const values=data.musiclist;if(!Array.isArray(values))throw new Error('酷我歌单响应无效');title=text(data.title??data.name);total=count(data.total??data.totalmusic);rows=list(values).map(value=>{const v=row(value);return{...v,rid:v.id??v.rid,name:v.name,artist:v.artist,album:v.album,duration:v.duration,N_MINFO:v.n_minfo};});hasMore=total!==undefined?page*limit<total:rows.length>=limit;
+      const data=row(await this.http(url,{},signal));const values=data.musiclist;if(!Array.isArray(values))throw new Error('酷我歌单响应无效');title=text(data.title??data.name);total=count(data.total??data.totalmusic);rows=list(values).map(value=>{const v=row(value);return{...v,rid:v.id??v.rid,name:v.name,artist:v.artist,album:v.album,duration:v.song_duration??v.duration,N_MINFO:v.n_minfo};});hasMore=total!==undefined?page*limit<total:rows.length>=limit;
     }else if(platform==='kg'){
       if(!rank){
         // Use official HTTPS PC special page (avoids iOS ATS rejection on plaintext http://www2.kugou.kugou.com).

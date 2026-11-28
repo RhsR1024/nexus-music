@@ -123,11 +123,19 @@ export class AccountHeartbeat {
   private async favoritePlaylist(owner:string,auth:NeteaseSessionAuth,signal:AbortSignal,check:()=>void){
     const response=await this.request('user/playlist',{uid:owner,limit:2000,offset:0,includeVideo:true},auth,signal,check);
     if(!Array.isArray(response.playlist)||response.playlist.length>2000)throw new AccountHeartbeatError('unavailable');
+    let fallbackTen:{id:string;title:string}|undefined;
+    let fallbackNamed:{id:string;title:string}|undefined;
     for(const value of response.playlist){
       const playlist=row(value),id=identifier(playlist.id);
-      if(Number(playlist.specialType)!==10||text(row(playlist.creator).userId)!==owner||!id)continue;
-      return{id,title:text(playlist.name)};
+      if(text(row(playlist.creator).userId)!==owner||!id)continue;
+      const st=Number(playlist.specialType),title=text(playlist.name);
+      // Real NetEase liked-music playlist carries specialType === 5; keep 10 and title fallback for compatibility.
+      if(st===5)return{id,title};
+      if(st===10&&!fallbackTen)fallbackTen={id,title};
+      if(!fallbackNamed&&/我喜欢的音乐|喜欢的音乐/.test(title))fallbackNamed={id,title};
     }
+    const found=fallbackTen??fallbackNamed;
+    if(found)return found;
     throw new AccountHeartbeatError('favorite_playlist_missing');
   }
   private async playlistOrder(playlistId:string,auth:NeteaseSessionAuth,signal:AbortSignal,check:()=>void){

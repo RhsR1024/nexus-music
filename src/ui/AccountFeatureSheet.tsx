@@ -153,9 +153,30 @@ export function AccountFeatureSheet({
 
   const [menuTrack, setMenuTrack] = useState<Track | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const deferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catalogSyncLabelRef = useRef('');
 
   const meta = feature ? FEATURE_META[feature] : null;
   const activeAccount = meta ? accounts.find(a => a.platform === meta.platform) : undefined;
+
+  function cancelPendingWork() {
+    if (deferTimerRef.current) {
+      clearTimeout(deferTimerRef.current);
+      deferTimerRef.current = null;
+    }
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }
+
+  function closeOpenedPlaylist() {
+    cancelPendingWork();
+    setOpenedPlaylist(null);
+    setPlaylistTracks([]);
+    setPlaylistError('');
+    setPlaylistLoading(false);
+    setRefreshing(false);
+    setCacheSyncLabel(catalogSyncLabelRef.current);
+  }
 
   function triggerBatchPlay(pool: readonly Track[], mode: 'all' | 'shuffle') {
     if (!pool.length || startingAction) return;
@@ -183,7 +204,7 @@ export function AccountFeatureSheet({
   }
 
   async function loadFeature(target: AccountFeatureKind, range: 1 | 0 = recordRange, forceRefresh = false) {
-    abortRef.current?.abort();
+    cancelPendingWork();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const info = FEATURE_META[target];
@@ -193,15 +214,24 @@ export function AccountFeatureSheet({
     setNeedsLogin(false);
     setOpenedPlaylist(null);
     setPlaylistTracks([]);
+    setPlaylistLoading(false);
     setPlaylistError('');
     setCacheSyncLabel('');
+    catalogSyncLabelRef.current = '';
+    // Always reset all list buckets before checking cache so stale lists from a
+    // previous feature never bleed into the current screen or break FlatList virtualization.
+    setTracks([]);
+    setPlayRecordRows([]);
+    setAccountPlaylists([]);
+    setBrowsePlaylists([]);
+    setArtists([]);
+    setAlbums([]);
+    setMvs([]);
 
     if (info.requiresLogin && !acct) {
       setLoading(false);
       setRefreshing(false);
       setNeedsLogin(true);
-      setTracks([]);
-      setAccountPlaylists([]);
       return;
     }
 
@@ -224,7 +254,9 @@ export function AccountFeatureSheet({
         const cached = services.accountFeatureCache.getCatalog(`${acct.id}:${target}`);
         if (cached?.playlists.length) {
           setAccountPlaylists(cached.playlists);
-          setCacheSyncLabel(`已缓存 · ${formatCacheAge(cached.updatedAt)}`);
+          const lbl = `已缓存 · ${formatCacheAge(cached.updatedAt)}`;
+          setCacheSyncLabel(lbl);
+          catalogSyncLabelRef.current = lbl;
           servedFromCache = true;
           if (Date.now() - cached.updatedAt < CACHE_STALE_MS) {
             setLoading(false);
@@ -238,16 +270,23 @@ export function AccountFeatureSheet({
     if (servedFromCache) {
       setLoading(false);
       setRefreshing(true);
+      // Let the modal slide-in animation & cached list render smoothly before starting stale background sync.
+      await new Promise<void>(resolve => {
+        const timer = setTimeout(() => {
+          deferTimerRef.current = null;
+          resolve();
+        }, 180);
+        deferTimerRef.current = timer;
+        ctrl.signal.addEventListener('abort', () => {
+          clearTimeout(timer);
+          if (deferTimerRef.current === timer) deferTimerRef.current = null;
+          resolve();
+        }, { once: true });
+      });
+      if (ctrl.signal.aborted) return;
     } else {
       setLoading(true);
       setRefreshing(false);
-      setTracks([]);
-      setPlayRecordRows([]);
-      setAccountPlaylists([]);
-      setBrowsePlaylists([]);
-      setArtists([]);
-      setAlbums([]);
-      setMvs([]);
     }
 
     try {
@@ -262,8 +301,8 @@ export function AccountFeatureSheet({
           if (!ctrl.signal.aborted) {
             if (res.tracks.length) {
               setTracks(res.tracks);
-              const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, res.tracks);
-              setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+              setCacheSyncLabel('已缓存 · 刚刚同步');
+              void services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, res.tracks);
             } else if (!servedFromCache) {
               setError(
                 res.reason === 'login_required'
@@ -312,8 +351,10 @@ export function AccountFeatureSheet({
           const filtered = all.filter(p => p.kind === 'favorite');
           if (!ctrl.signal.aborted) {
             setAccountPlaylists(filtered);
-            const saved = await services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, filtered);
-            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+            const lbl = '已缓存 · 刚刚同步';
+            setCacheSyncLabel(lbl);
+            catalogSyncLabelRef.current = lbl;
+            void services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, filtered);
           }
           break;
         }
@@ -322,8 +363,10 @@ export function AccountFeatureSheet({
           const filtered = all.filter(p => p.kind === 'created');
           if (!ctrl.signal.aborted) {
             setAccountPlaylists(filtered);
-            const saved = await services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, filtered);
-            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+            const lbl = '已缓存 · 刚刚同步';
+            setCacheSyncLabel(lbl);
+            catalogSyncLabelRef.current = lbl;
+            void services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, filtered);
           }
           break;
         }
@@ -332,8 +375,10 @@ export function AccountFeatureSheet({
           const all = await services.accountPlaylists.list(acct!, ctrl.signal);
           if (!ctrl.signal.aborted) {
             setAccountPlaylists(all);
-            const saved = await services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, all);
-            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+            const lbl = '已缓存 · 刚刚同步';
+            setCacheSyncLabel(lbl);
+            catalogSyncLabelRef.current = lbl;
+            void services.accountFeatureCache.setCatalog(`${acct!.id}:${target}`, all);
           }
           break;
         }
@@ -350,12 +395,12 @@ export function AccountFeatureSheet({
             acct!,
             fav,
             ctrl.signal,
-            acct!.platform === 'tx' || acct!.platform === 'kg' ? { lenient: true } : undefined,
+            { lenient: true },
           );
           if (!ctrl.signal.aborted) {
             setTracks(preview.tracks);
-            const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, preview.tracks);
-            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+            setCacheSyncLabel('已缓存 · 刚刚同步');
+            void services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, preview.tracks);
           }
           break;
         }
@@ -363,8 +408,8 @@ export function AccountFeatureSheet({
           const items = await services.accountDiscovery.recentSongs(acct!, session!, ctrl.signal, 100);
           if (!ctrl.signal.aborted) {
             setTracks(items);
-            const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, items);
-            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+            setCacheSyncLabel('已缓存 · 刚刚同步');
+            void services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, items);
           }
           break;
         }
@@ -385,8 +430,8 @@ export function AccountFeatureSheet({
           const res = await services.accountDiscovery.cloudDrive(acct!, session!, ctrl.signal, 100, 0);
           if (!ctrl.signal.aborted) {
             setTracks(res.items);
-            const saved = await services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, res.items);
-            setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+            setCacheSyncLabel('已缓存 · 刚刚同步');
+            void services.accountFeatureCache.setTracks(`${acct!.id}:${target}`, res.items);
           }
           break;
         }
@@ -455,11 +500,12 @@ export function AccountFeatureSheet({
 
   async function openAccountPlaylist(pl: AccountPlaylist, forceRefresh = false) {
     if (!activeAccount) return;
-    abortRef.current?.abort();
+    cancelPendingWork();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setOpenedPlaylist(pl);
     setPlaylistError('');
+    setError('');
 
     const cacheKey = `${activeAccount.id}:pl:${pl.id}`;
     let servedFromCache = false;
@@ -480,6 +526,19 @@ export function AccountFeatureSheet({
     if (servedFromCache) {
       setPlaylistLoading(false);
       setRefreshing(true);
+      await new Promise<void>(resolve => {
+        const timer = setTimeout(() => {
+          deferTimerRef.current = null;
+          resolve();
+        }, 180);
+        deferTimerRef.current = timer;
+        ctrl.signal.addEventListener('abort', () => {
+          clearTimeout(timer);
+          if (deferTimerRef.current === timer) deferTimerRef.current = null;
+          resolve();
+        }, { once: true });
+      });
+      if (ctrl.signal.aborted) return;
     } else {
       setPlaylistTracks([]);
       setPlaylistLoading(true);
@@ -491,12 +550,12 @@ export function AccountFeatureSheet({
         activeAccount,
         pl,
         ctrl.signal,
-        activeAccount.platform === 'tx' || activeAccount.platform === 'kg' ? { lenient: true } : undefined,
+        { lenient: true },
       );
       if (!ctrl.signal.aborted) {
         setPlaylistTracks(preview.tracks);
-        const saved = await services.accountFeatureCache.setTracks(cacheKey, preview.tracks);
-        setCacheSyncLabel(`已缓存 · ${formatCacheAge(saved.updatedAt)}`);
+        setCacheSyncLabel('已缓存 · 刚刚同步');
+        void services.accountFeatureCache.setTracks(cacheKey, preview.tracks);
       }
     } catch (e) {
       if (!ctrl.signal.aborted && !servedFromCache) {
@@ -512,12 +571,12 @@ export function AccountFeatureSheet({
 
   useEffect(() => {
     if (!feature) {
-      abortRef.current?.abort();
+      cancelPendingWork();
       return;
     }
     void loadFeature(feature, recordRange, false);
     return () => {
-      abortRef.current?.abort();
+      cancelPendingWork();
     };
   }, [feature, activeAccount?.id]);
 
@@ -546,7 +605,7 @@ export function AccountFeatureSheet({
         !mvs.length));
 
   const renderTrackItem = (track: Track, index: number, pool: readonly Track[], badgeText?: string) => (
-    <View key={`${track.origin.kind === 'online' ? track.origin.id : index}-${index}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
+    <View key={`${track.origin.kind === 'online' ? track.origin.id : index}-${index}`} style={{ height: 64, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <Pressable
         accessibilityRole="button"
         onPress={() => {
@@ -584,7 +643,7 @@ export function AccountFeatureSheet({
   );
 
   return (
-    <Modal visible={!!feature} animationType="slide" onRequestClose={() => { if (openedPlaylist) setOpenedPlaylist(null); else onClose(); }}>
+    <Modal visible={!!feature} animationType="slide" onRequestClose={() => { if (openedPlaylist) closeOpenedPlaylist(); else onClose(); }}>
       <View style={{ flex: 1 }}>
         <LinearGradient colors={[...s.sheetGradient]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={{ flex: 1, paddingTop: Math.max(insets.top + 8, 52), paddingHorizontal: 18 }}>
@@ -594,7 +653,7 @@ export function AccountFeatureSheet({
               testID="account-feature-back"
               accessibilityRole="button"
               accessibilityLabel={openedPlaylist ? '返回歌单列表' : '返回发现'}
-              onPress={() => { if (openedPlaylist) setOpenedPlaylist(null); else onClose(); }}
+              onPress={() => { if (openedPlaylist) closeOpenedPlaylist(); else onClose(); }}
               style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: softSurface, alignItems: 'center', justifyContent: 'center' }}
             >
               <Ionicons name="chevron-back" size={22} color={s.ink} />
@@ -736,9 +795,12 @@ export function AccountFeatureSheet({
             <FlatList
               data={activeTracks}
               keyExtractor={(item, idx) => `${item.origin.kind === 'online' ? item.origin.id : idx}-${idx}`}
-              initialNumToRender={16}
-              maxToRenderPerBatch={20}
-              windowSize={7}
+              getItemLayout={(_, index) => ({ length: 64, offset: 64 * index, index })}
+              initialNumToRender={14}
+              maxToRenderPerBatch={14}
+              updateCellsBatchingPeriod={40}
+              windowSize={5}
+              removeClippedSubviews
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 32, 48) }}
               renderItem={({ item, index }) => {

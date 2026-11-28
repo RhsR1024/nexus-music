@@ -26,7 +26,10 @@ const num = (value: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 const safeHTTPS = (raw: unknown): string | undefined => {
-  const s = text(raw).replace(/^http:\/\//i, 'https://');
+  const s = text(raw)
+    .replace(/^\/\//, 'https://')
+    .replace(/^http:\/\//i, 'https://')
+    .replace(/^(https:\/\/img[1-4])\.kwcdn(\.kuwo\.cn\/)/i, '$1$2');
   return s && safePublicURL(s) ? s : undefined;
 };
 

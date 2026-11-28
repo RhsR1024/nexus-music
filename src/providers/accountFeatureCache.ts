@@ -5,7 +5,10 @@ import { cleanTrack } from '../storage/cleanTrack.ts';
 import type { Repository } from '../storage/repository.ts';
 import type { AccountPlaylist } from './accountPlaylists.ts';
 
-const STORAGE_KEY = 'accountFeature.cache.v1';
+const LEGACY_STORAGE_KEY = 'accountFeature.cache.v1';
+const INDEX_STORAGE_KEY = 'accountFeature.index.v1';
+const TRACK_KEY_PREFIX = 'accountFeature.track.v1:';
+const CATALOG_KEY_PREFIX = 'accountFeature.catalog.v1:';
 const MAX_TRACK_CACHES = 18;
 const MAX_PLAYLIST_LIST_CACHES = 12;
 
@@ -23,6 +26,12 @@ interface PersistedAccountCache {
   readonly version: 1;
   readonly tracks: Record<string, CachedTrackList>;
   readonly catalogs: Record<string, CachedPlaylistCatalog>;
+}
+
+interface PersistedAccountCacheIndex {
+  readonly version: 1;
+  readonly trackKeys: readonly string[];
+  readonly catalogKeys: readonly string[];
 }
 
 export function formatCacheAge(updatedAt: number, now = Date.now()): string {
@@ -47,7 +56,24 @@ export class AccountFeatureCache {
   async restore(): Promise<void> {
     if (!this.repo) return;
     try {
-      const saved = await this.repo.get<PersistedAccountCache>(STORAGE_KEY);
+      const index = await this.repo.get<PersistedAccountCacheIndex>(INDEX_STORAGE_KEY);
+      if (index && index.version === 1 && Array.isArray(index.trackKeys) && Array.isArray(index.catalogKeys)) {
+        for (const k of index.trackKeys.slice(-MAX_TRACK_CACHES)) {
+          const v = await this.repo.get<CachedTrackList>(`${TRACK_KEY_PREFIX}${k}`);
+          if (v && Array.isArray(v.tracks) && typeof v.updatedAt === 'number') {
+            this.trackEntries.set(k, { tracks: v.tracks, updatedAt: v.updatedAt });
+          }
+        }
+        for (const k of index.catalogKeys.slice(-MAX_PLAYLIST_LIST_CACHES)) {
+          const v = await this.repo.get<CachedPlaylistCatalog>(`${CATALOG_KEY_PREFIX}${k}`);
+          if (v && Array.isArray(v.playlists) && typeof v.updatedAt === 'number') {
+            this.catalogEntries.set(k, { playlists: v.playlists, updatedAt: v.updatedAt });
+          }
+        }
+        return;
+      }
+      // Migrate legacy monolithic cache snapshot seamlessly without blocking future single-entry writes.
+      const saved = await this.repo.get<PersistedAccountCache>(LEGACY_STORAGE_KEY);
       if (!saved || saved.version !== 1) return;
       if (saved.tracks && typeof saved.tracks === 'object') {
         for (const [k, v] of Object.entries(saved.tracks)) {
@@ -95,7 +121,7 @@ export class AccountFeatureCache {
       if (oldest === undefined) break;
       this.trackEntries.delete(oldest);
     }
-    await this.persist();
+    await this.persistSingle(`${TRACK_KEY_PREFIX}${key}`, entry);
     return entry;
   }
 
@@ -108,7 +134,7 @@ export class AccountFeatureCache {
       if (oldest === undefined) break;
       this.catalogEntries.delete(oldest);
     }
-    await this.persist();
+    await this.persistSingle(`${CATALOG_KEY_PREFIX}${key}`, entry);
     return entry;
   }
 
@@ -126,18 +152,28 @@ export class AccountFeatureCache {
         changed = true;
       }
     }
-    if (changed) await this.persist();
+    if (changed) await this.persistIndexOnly();
   }
 
-  private async persist(): Promise<void> {
+  private async persistSingle(storageKey: string, entry: unknown): Promise<void> {
     if (!this.repo) return;
     try {
-      const payload: PersistedAccountCache = {
+      await this.repo.put(storageKey, entry);
+      await this.persistIndexOnly();
+    } catch {
+      // Non-fatal; in-memory cache stays valid for current session.
+    }
+  }
+
+  private async persistIndexOnly(): Promise<void> {
+    if (!this.repo) return;
+    try {
+      const index: PersistedAccountCacheIndex = {
         version: 1,
-        tracks: Object.fromEntries(this.trackEntries.entries()),
-        catalogs: Object.fromEntries(this.catalogEntries.entries()),
+        trackKeys: [...this.trackEntries.keys()],
+        catalogKeys: [...this.catalogEntries.keys()],
       };
-      await this.repo.put(STORAGE_KEY, payload);
+      await this.repo.put(INDEX_STORAGE_KEY, index);
     } catch {
       // Non-fatal; in-memory cache stays valid for current session.
     }
