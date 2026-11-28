@@ -1,9 +1,10 @@
-// Audio Match (听歌识曲): native mic WAV capture + optional cloud audio-clip recognition
-// (ACRCloud / AudD with user-supplied personal free-tier keys) + multi-platform lyric/phrase search.
+// Audio Match (听歌识曲): native mic WAV capture + zero-key Shazam acoustic fingerprint
+// recognition + ACRCloud personal key recognition + multi-platform lyric/phrase search.
 import type { OnlinePlatform, Track } from '../domain/track.ts';
 import { cleanTrack } from '../storage/cleanTrack.ts';
 import type { Repository } from '../storage/repository.ts';
 import type { MusicSecretStore } from './musicAccounts.ts';
+import { recognizeWithShazam } from './shazamSignature.ts';
 
 export interface AudioMatchCaptureResult {
   readonly durationMs: number;
@@ -17,7 +18,7 @@ export interface AudioMatchCaptureResult {
   readonly mimeType?: string;
 }
 
-export type AudioMatchCloudProvider = 'off' | 'acrcloud' | 'audd';
+export type AudioMatchCloudProvider = 'off' | 'shazam' | 'acrcloud' | 'audd';
 
 export interface AudioMatchCloudConfig {
   readonly provider: AudioMatchCloudProvider;
@@ -28,7 +29,7 @@ export interface AudioMatchCloudConfig {
 }
 
 export interface AudioMatchCloudResult {
-  readonly provider: 'acrcloud' | 'audd';
+  readonly provider: 'shazam' | 'acrcloud' | 'audd';
   readonly title: string;
   readonly artist: string;
   readonly album?: string;
@@ -73,8 +74,8 @@ const SECRETS_KEY = 'nexus.audiomatch.keys.v1';
 export const MAX_UPLOAD_CLIP_BYTES = 1_500_000; // 1.5 MiB bounded upload clip
 
 export const DEFAULT_CLOUD_CONFIG: AudioMatchCloudConfig = {
-  provider: 'off',
-  acrHost: 'identify-cn-north-1.acrcloud.cn',
+  provider: 'shazam',
+  acrHost: 'identify-ap-southeast-1.acrcloud.com',
   acrAccessKey: '',
   acrAccessSecret: '',
   auddToken: '',
@@ -322,6 +323,22 @@ export async function identifyWithACRCloud(
   };
 }
 
+export async function identifyWithShazam(
+  audioBytes: Uint8Array,
+  fetchFn: typeof fetch = fetch,
+  signal?: AbortSignal,
+): Promise<AudioMatchCloudResult | null> {
+  const hit = await recognizeWithShazam(audioBytes, fetchFn, signal);
+  if (!hit) return null;
+  return {
+    provider: 'shazam',
+    title: hit.title,
+    artist: hit.artist,
+    ...(hit.album ? { album: hit.album } : {}),
+    ...(hit.releaseDate ? { releaseDate: hit.releaseDate } : {}),
+  };
+}
+
 export async function identifyWithAudD(
   audioBase64: string,
   token: string,
@@ -444,7 +461,7 @@ export class AudioMatchCoordinator {
 
   async restore(): Promise<void> {
     let history: AudioMatchHistoryEntry[] = [];
-    let provider: AudioMatchCloudProvider = 'off';
+    let provider: AudioMatchCloudProvider = DEFAULT_CLOUD_CONFIG.provider;
     let acrHost = DEFAULT_CLOUD_CONFIG.acrHost;
     if (this.repo) {
       try {
@@ -456,7 +473,7 @@ export class AudioMatchCoordinator {
         if (saved && Array.isArray(saved.history)) {
           history = saved.history.slice(0, 30);
         }
-        if (saved?.cloud?.provider && ['off', 'acrcloud', 'audd'].includes(saved.cloud.provider)) {
+        if (saved?.cloud?.provider && ['off', 'shazam', 'acrcloud', 'audd'].includes(saved.cloud.provider)) {
           provider = saved.cloud.provider;
         }
         if (typeof saved?.cloud?.acrHost === 'string' && saved.cloud.acrHost.trim()) {
@@ -513,13 +530,13 @@ export class AudioMatchCoordinator {
       cloudConfig: next,
       error: '',
       hint:
-        next.provider === 'acrcloud'
-          ? '已选择 ACRCloud：轻触麦克风将自动录制环境音频并上传识别'
-          : next.provider === 'audd'
-            ? next.auddToken
+        next.provider === 'shazam'
+          ? '已启用 Shazam（免 Key）：轻触麦克风录制片段即自动提取声纹并识别中英文歌曲'
+          : next.provider === 'acrcloud'
+            ? '已选择 ACRCloud（华语/翻唱曲库强）：轻触麦克风将自动录制环境音频并上传识别'
+            : next.provider === 'audd'
               ? '已选择 AudD：轻触麦克风将自动录制环境音频并上传识别'
-              : '已选择 AudD（公共体验额度）：轻触麦克风即录即识，建议填入个人免费 Token'
-            : '已切换为本机离线声纹 + 歌词秒搜模式',
+              : '已切换为本机离线声纹 + 歌词秒搜模式',
     });
   }
 
@@ -527,10 +544,10 @@ export class AudioMatchCoordinator {
     bytes?: Uint8Array;
     base64?: string;
     filename?: string;
-    overrideProvider?: 'acrcloud' | 'audd';
+    overrideProvider?: 'shazam' | 'acrcloud' | 'audd';
   }): Promise<AudioMatchCloudResult | null> {
     const cfg = this.state.cloudConfig;
-    const provider = input.overrideProvider ?? (cfg.provider === 'off' ? 'audd' : cfg.provider);
+    const provider = input.overrideProvider ?? (cfg.provider === 'off' ? 'shazam' : cfg.provider);
     let rawBytes = input.bytes;
     let rawBase64 = input.base64;
     if (!rawBytes && rawBase64) {
@@ -544,7 +561,7 @@ export class AudioMatchCoordinator {
       rawBytes = rawBytes.slice(0, MAX_UPLOAD_CLIP_BYTES);
       rawBase64 = undefined;
     }
-    if (!rawBase64) {
+    if (!rawBase64 && provider === 'audd') {
       rawBase64 = bytesToBase64(rawBytes);
     }
 
@@ -552,22 +569,29 @@ export class AudioMatchCoordinator {
       identifying: true,
       error: '',
       lastCloudMatch: null,
-      hint: provider === 'acrcloud' ? '正在上传音频片段至 ACRCloud 识别…' : '正在上传音频片段至 AudD 识别…',
+      hint:
+        provider === 'shazam'
+          ? '正在本地提取声纹并匹配 Shazam 曲库…'
+          : provider === 'acrcloud'
+            ? '正在上传音频片段至 ACRCloud 识别…'
+            : '正在上传音频片段至 AudD 识别…',
     });
 
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 20000);
     try {
       const hit =
-        provider === 'acrcloud'
-          ? await identifyWithACRCloud(
-              rawBytes,
-              input.filename || 'clip.wav',
-              { host: cfg.acrHost, accessKey: cfg.acrAccessKey, accessSecret: cfg.acrAccessSecret },
-              this.fetchFn,
-              ctrl.signal,
-            )
-          : await identifyWithAudD(rawBase64, cfg.auddToken, this.fetchFn, ctrl.signal);
+        provider === 'shazam'
+          ? await identifyWithShazam(rawBytes, this.fetchFn, ctrl.signal)
+          : provider === 'acrcloud'
+            ? await identifyWithACRCloud(
+                rawBytes,
+                input.filename || 'clip.wav',
+                { host: cfg.acrHost, accessKey: cfg.acrAccessKey, accessSecret: cfg.acrAccessSecret },
+                this.fetchFn,
+                ctrl.signal,
+              )
+            : await identifyWithAudD(rawBase64 ?? bytesToBase64(rawBytes), cfg.auddToken, this.fetchFn, ctrl.signal);
 
       if (!hit) {
         this.setState({
@@ -633,15 +657,21 @@ export class AudioMatchCoordinator {
         !!result.audioBase64 &&
         this.state.cloudConfig.provider !== 'off';
 
+      const engineLabel =
+        this.state.cloudConfig.provider === 'shazam'
+          ? 'Shazam'
+          : this.state.cloudConfig.provider === 'acrcloud'
+            ? 'ACRCloud'
+            : 'AudD';
       this.setState({
         listening: false,
         level: 0,
         lastCapture: result,
         hint: canCloud
-          ? `${assessment.summary}，正在自动上传至 ${this.state.cloudConfig.provider === 'acrcloud' ? 'ACRCloud' : 'AudD'} 识曲…`
+          ? `${assessment.summary}，正在通过 ${engineLabel} 识曲…`
           : `${assessment.summary}。${
               assessment.quality !== 'too-quiet'
-                ? '当前为本机离线模式，可在下方切换 AudD / ACRCloud 自动上传识曲，或输入听到的歌词秒搜。'
+                ? '当前为本机离线模式，可在下方切换 Shazam 免Key 或 ACRCloud 自动识曲，或输入听到的歌词秒搜。'
                 : '请靠近声源重新识曲，或输入听到的歌词秒搜。'
             }`,
       });

@@ -3,7 +3,7 @@
 import type { Track } from '../domain/track.ts';
 import type { ArtistItem } from './artists.ts';
 import type { BrowseItem } from './discovery.ts';
-import { queryURL, requestJSON, type HTTPClient } from './http.ts';
+import { HTTPResponseError, queryURL, requestJSON, type HTTPClient } from './http.ts';
 import type { MusicAccount, MusicAccounts } from './musicAccounts.ts';
 import { neteaseSessionAuth, neteaseWeapiRequest } from './neteaseSession.ts';
 import type { NeteaseAccountProfileClient } from './neteaseAccountProfile.ts';
@@ -68,9 +68,10 @@ export function parseNeteaseRecentSongs(raw: unknown): readonly Track[] {
   if (r.code !== 200) {
     throw new AccountDiscoveryError([301, 401, 403].includes(Number(r.code)) ? 'login_required' : 'unavailable');
   }
+  const rows = Array.isArray(r.data) ? r.data : list(row(r.data).list ?? row(r.allData).list);
   const seen = new Set<string>();
   const tracks: Track[] = [];
-  for (const entry of list(row(r.data).list)) {
+  for (const entry of rows) {
     const song = row(entry).data ?? entry;
     try {
       const track = onlineTrack('wy', song);
@@ -88,15 +89,17 @@ export function parseNeteaseRecentPlaylists(raw: unknown): readonly BrowseItem[]
   if (r.code !== 200) {
     throw new AccountDiscoveryError([301, 401, 403].includes(Number(r.code)) ? 'login_required' : 'unavailable');
   }
+  const rows = Array.isArray(r.data) ? r.data : list(row(r.data).list ?? row(r.allData).list);
   const seen = new Set<string>();
   const items: BrowseItem[] = [];
-  for (const entry of list(row(r.data).list)) {
-    const pl = row(row(entry).data ?? entry);
-    const id = text(pl.id).trim();
+  for (const entry of rows) {
+    const outer = row(entry);
+    const pl = row(outer.data ?? entry);
+    const id = text(pl.id ?? outer.resourceId).trim();
     const title = text(pl.name).trim();
     if (!id || !title || seen.has(id)) continue;
     seen.add(id);
-    const artwork = cleanArt(pl.coverImgUrl ?? pl.picUrl);
+    const artwork = cleanArt(pl.coverImgUrl ?? pl.picUrl ?? pl.cover);
     const author = text(row(pl.creator).nickname).trim();
     const count = num(pl.trackCount);
     items.push({
@@ -150,25 +153,32 @@ export function parseNeteaseCloudDrive(raw: unknown): { items: readonly Track[];
     const title = text(simple.name ?? item.songName ?? item.fileName).trim();
     if (!songId || !title || seen.has(songId)) continue;
     seen.add(songId);
+    const fallbackTrack: Track = {
+      origin: { kind: 'online' as const, platform: 'wy' as const, id: songId },
+      title,
+      artist: text(item.artist) || '云盘歌手',
+      album: text(item.album) || '我的云盘',
+      metadata: { cloudDrive: true },
+      qualities: [],
+    };
     try {
+      const ar = Array.isArray(simple.ar)
+        ? simple.ar.filter(a => text(row(a).name).trim().length > 0)
+        : [];
+      const al = row(simple.al);
       const track = Object.keys(simple).length
         ? onlineTrack('wy', {
             ...simple,
             id: songId,
             name: title,
-            ar: Array.isArray(simple.ar) && simple.ar.length ? simple.ar : [{ name: text(item.artist) || '云盘歌手' }],
-            al: Object.keys(row(simple.al)).length ? simple.al : { name: text(item.album) || '我的云盘' },
+            ar: ar.length ? ar : [{ name: text(item.artist) || '云盘歌手' }],
+            al: text(al.name).trim() || text(al.picUrl).trim() ? al : { name: text(item.album) || '我的云盘' },
           })
-        : {
-            origin: { kind: 'online' as const, platform: 'wy' as const, id: songId },
-            title,
-            artist: text(item.artist) || '云盘歌手',
-            album: text(item.album) || '我的云盘',
-            metadata: { cloudDrive: true },
-            qualities: [],
-          };
+        : fallbackTrack;
       tracks.push(track);
-    } catch {}
+    } catch {
+      tracks.push(fallbackTrack);
+    }
   }
   return {
     items: tracks,
@@ -284,21 +294,45 @@ export class AccountDiscoveryClient {
     if (signal.aborted) throw new AccountDiscoveryError('cancelled');
     const auth = neteaseSessionAuth(session);
     if (!auth) throw new AccountDiscoveryError('login_required');
-    return this.http(endpoint, neteaseWeapiRequest(payload, auth), signal);
+    try {
+      // Explicitly omit ambient NSURLSession/WebView cookie jar so our saved MUSIC_U header is never overwritten.
+      const primary = await this.http(endpoint, { ...neteaseWeapiRequest(payload, auth), credentials: 'omit' }, signal);
+      const primaryCode = Number(row(primary).code);
+      if (primaryCode === 301 && !/(?:^|;\s*)os=/i.test(auth.cookie)) {
+        const pcAuth = {
+          cookie: `${auth.cookie}; os=pc; appver=3.1.17.204416; channel=netease`,
+          csrf: auth.csrf,
+        };
+        try {
+          const retry = await this.http(endpoint, { ...neteaseWeapiRequest(payload, pcAuth), credentials: 'omit' }, signal);
+          if (Number(row(retry).code) === 200) return retry;
+        } catch {}
+      }
+      return primary;
+    } catch (error) {
+      if (signal.aborted) throw new AccountDiscoveryError('cancelled');
+      if (error instanceof AccountDiscoveryError) throw error;
+      if (error instanceof HTTPResponseError && [401, 403].includes(error.status)) {
+        throw new AccountDiscoveryError('login_required');
+      }
+      throw new AccountDiscoveryError('unavailable');
+    }
   }
 
   async recentSongs(account: MusicAccount, session: Readonly<Record<string, unknown>>, signal: AbortSignal, limit = 100): Promise<readonly Track[]> {
-    const raw = await this.neteasePost('https://music.163.com/weapi/record/recent/song', { limit }, account, session, signal);
+    const raw = await this.neteasePost('https://music.163.com/weapi/play-record/song/list', { limit }, account, session, signal);
     return parseNeteaseRecentSongs(raw);
   }
 
   async recentPlaylists(account: MusicAccount, session: Readonly<Record<string, unknown>>, signal: AbortSignal, limit = 60): Promise<readonly BrowseItem[]> {
-    const raw = await this.neteasePost('https://music.163.com/weapi/record/recent/playlist', { limit }, account, session, signal);
+    const raw = await this.neteasePost('https://music.163.com/weapi/play-record/playlist/list', { limit }, account, session, signal);
     return parseNeteaseRecentPlaylists(raw);
   }
 
   async playRecord(account: MusicAccount, session: Readonly<Record<string, unknown>>, type: 0 | 1, signal: AbortSignal): Promise<readonly PlayRecordRow[]> {
-    let uid = /^\d+$/.test(account.username.trim()) ? account.username.trim() : '';
+    const sessionUid = text(session.userId).trim();
+    const accountUid = account.username.trim().replace(/^netease:/i, '');
+    let uid = /^\d+$/.test(sessionUid) ? sessionUid : /^\d+$/.test(accountUid) ? accountUid : '';
     if (!uid && this.neteaseProfile) {
       const profile = await this.neteaseProfile.fetch(session, signal);
       uid = profile.userId;
@@ -314,7 +348,7 @@ export class AccountDiscoveryClient {
   }
 
   async subscribedArtists(account: MusicAccount, session: Readonly<Record<string, unknown>>, signal: AbortSignal, limit = 100, offset = 0) {
-    const raw = await this.neteasePost('https://music.163.com/weapi/artist/sublist', { limit, offset }, account, session, signal);
+    const raw = await this.neteasePost('https://music.163.com/weapi/artist/sublist', { limit, offset, total: true }, account, session, signal);
     return parseNeteaseSubscribedArtists(raw);
   }
 

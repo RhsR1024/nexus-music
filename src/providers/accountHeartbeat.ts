@@ -178,7 +178,15 @@ export class AccountHeartbeat {
     if(!ids.length)throw new AccountHeartbeatError('liked_empty');
     const tracks:Track[]=[];
     for(let offset=0;offset<ids.length;offset+=NETEASE_HEARTBEAT_DETAIL_BATCH){
-      tracks.push(...await this.detailBatch(ids.slice(offset,offset+NETEASE_HEARTBEAT_DETAIL_BATCH),auth,signal,check));
+      try{
+        tracks.push(...await this.detailBatch(ids.slice(offset,offset+NETEASE_HEARTBEAT_DETAIL_BATCH),auth,signal,check));
+      }catch(error){
+        check();
+        if(error instanceof AccountHeartbeatError&&(error.kind==='login_required'||error.kind==='cancelled'||error.kind==='account_changed'))throw error;
+        // Propagate when no liked batch succeeded yet; for huge liked libraries (1000+ songs),
+        // keep earlier successful batches so a transient tail-batch error doesn't break heartbeat.
+        if(!tracks.length)throw error;
+      }
     }
     check();
     return tracks;
@@ -191,33 +199,52 @@ export class AccountHeartbeat {
     const index=Math.max(0,Math.min(liked.length-1,Math.floor(this.random()*liked.length)||0));
     return{track:liked[index]!,source:'liked' as const};
   }
-  private intelligenceIDs(response:Row,seedId:string){
-    const payload=row(response.data);
-    if(!Array.isArray(payload.list))throw new AccountHeartbeatError('unavailable');
-    const rows=payload.list,ids:string[]=[],seen=new Set<string>();
+  private intelligenceRows(response:Row,seedId:string):{ids:string[];inline:Map<string,Track>}{
+    // Real NetEase /weapi/playmode/intelligence/list returns `data` as an array directly;
+    // keep `data.list` compatibility for wrapped payload formats.
+    const rows=Array.isArray(response.data)
+      ?response.data
+      :Array.isArray(row(response.data).list)
+        ?(row(response.data).list as unknown[])
+        :null;
+    if(!rows)throw new AccountHeartbeatError('unavailable');
+    const ids:string[]=[],seen=new Set<string>(),inline=new Map<string,Track>();
     let parsed=0;
     for(const value of rows){
       const item=row(value),songInfo=row(item.songInfo),song=row(item.song);
-      const id=identifier(songInfo.id)??identifier(song.id);
+      const id=identifier(songInfo.id)??identifier(song.id)??identifier(item.id);
       if(!id)continue;
       parsed++;
       if(id===seedId||seen.has(id))continue;
       seen.add(id);ids.push(id);
+      const rawSong=Object.keys(songInfo).length?songInfo:Object.keys(song).length?song:undefined;
+      if(rawSong&&typeof rawSong.name==='string'&&rawSong.name.trim()){
+        try{inline.set(id,cleanTrack(onlineTrack('wy',rawSong)));}catch{/* Hydrate via v3/song/detail instead. */}
+      }
     }
     if(rows.length&&!parsed)throw new AccountHeartbeatError('unavailable');
     if(!ids.length)throw new AccountHeartbeatError('recommendations_empty');
-    return ids;
+    return {ids,inline};
   }
-  private async recommendationTracks(ids:readonly string[],auth:NeteaseSessionAuth,signal:AbortSignal,check:()=>void){
+  private async recommendationTracks(ids:readonly string[],inline:ReadonlyMap<string,Track>,auth:NeteaseSessionAuth,signal:AbortSignal,check:()=>void){
     const tracks:Track[]=[];
     for(let offset=0;offset<ids.length;offset+=NETEASE_HEARTBEAT_DETAIL_BATCH){
+      const batch=ids.slice(offset,offset+NETEASE_HEARTBEAT_DETAIL_BATCH);
       try{
-        tracks.push(...await this.detailBatch(ids.slice(offset,offset+NETEASE_HEARTBEAT_DETAIL_BATCH),auth,signal,check));
+        const fetched=await this.detailBatch(batch,auth,signal,check);
+        const fetchedIds=new Set(fetched.map(t=>t.origin.id));
+        tracks.push(...fetched);
+        for(const id of batch){
+          if(!fetchedIds.has(id)&&inline.has(id))tracks.push(inline.get(id)!);
+        }
       }catch(error){
         check();
         if(error instanceof AccountHeartbeatError&&error.kind==='login_required')throw error;
-        // The target logs and omits one failed recommendation-detail batch
-        // while retaining other successful batches.
+        // Retain inline songInfo rows when a detail batch fails transiently, while
+        // omitting rows that only carried bare IDs.
+        for(const id of batch){
+          if(inline.has(id))tracks.push(inline.get(id)!);
+        }
       }
     }
     return tracks;
@@ -232,9 +259,17 @@ export class AccountHeartbeat {
       const liked=await this.likedTracks(likedIds,auth,signal,check);
       const selected=this.seed(current,liked);
       const seedId=selected.track.origin.id;
-      const response=await this.request('playmode/intelligence/list',{songId:seedId,type:'fromPlayOne',playlistId:favorite.id,startMusicId:seedId,count:NETEASE_HEARTBEAT_COUNT},auth,signal,check);
-      const recommendationIds=this.intelligenceIDs(response,seedId);
-      const recommendations=await this.recommendationTracks(recommendationIds,auth,signal,check);
+      let response:Row;
+      try{
+        response=await this.request('playmode/intelligence/list',{songId:seedId,type:'fromPlayOne',playlistId:favorite.id,startMusicId:seedId,count:NETEASE_HEARTBEAT_COUNT},auth,signal,check);
+      }catch(firstError){
+        check();
+        if(firstError instanceof AccountHeartbeatError&&firstError.kind!=='unavailable')throw firstError;
+        // Real NetEase servers occasionally reject large `count`; retry with standard PC count=1.
+        response=await this.request('playmode/intelligence/list',{songId:seedId,type:'fromPlayOne',playlistId:favorite.id,startMusicId:seedId,count:1},auth,signal,check);
+      }
+      const {ids:recommendationIds,inline}=this.intelligenceRows(response,seedId);
+      const recommendations=await this.recommendationTracks(recommendationIds,inline,auth,signal,check);
       check();
       return{seed:selected.track,tracks:[selected.track,...recommendations],source:selected.source};
     }catch(error){

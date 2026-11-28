@@ -18,7 +18,6 @@ import { Modal } from './AdaptiveModal.tsx';
 import { Cover } from './Cover.tsx';
 import { Player } from './Player.tsx';
 import { QualityBadge } from './QualityBadge.tsx';
-import { Toast, useToast } from './Toast.tsx';
 import { TrackActions } from './TrackActions.tsx';
 import { TrackPlaybackIndicator, useTrackPlaybackState } from './TrackPlaybackIndicator.tsx';
 import { Text } from './Typography.tsx';
@@ -132,7 +131,6 @@ export function AccountFeatureSheet({
   const accounts = useSyncExternalStore(services.musicAccounts.subscribe, services.musicAccounts.getSnapshot);
   const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
   const trackPlayback = useTrackPlaybackState(services);
-  const toast = useToast();
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -185,12 +183,7 @@ export function AccountFeatureSheet({
   function triggerBatchPlay(pool: readonly Track[], mode: 'all' | 'shuffle') {
     if (!pool.length || startingAction) return;
     setStartingAction(mode);
-    toast.show(
-      mode === 'shuffle'
-        ? `正在准备随机播放（${pool.length} 首）…`
-        : `正在载入队列并开始播放（${pool.length} 首）…`,
-    );
-    // Yield one frame so the loading indicator & toast paint immediately even for 1000+ song playlists.
+    // Yield one frame so the inline button spinner paints immediately even for 1000+ song playlists.
     setTimeout(() => {
       const startIndex = mode === 'shuffle' ? Math.floor(Math.random() * pool.length) : 0;
       const done = () => setStartingAction(null);
@@ -628,7 +621,6 @@ export function AccountFeatureSheet({
           accessibilityRole="button"
           onPress={() => {
             trackPlayback.markPending(track);
-            toast.show(`正在加载：${track.title}`);
             services.playTracks(pool, index);
           }}
           style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 11 }}
@@ -992,7 +984,6 @@ export function AccountFeatureSheet({
             <Player services={services} barVariant={preferences.navigationStyle} />
           </View>
         )}
-        <Toast message={toast.message} onDismiss={toast.clear} />
         <TrackActions services={services} track={menuTrack} prefix="account-feature" onClose={() => setMenuTrack(null)} />
       </View>
     </Modal>

@@ -18,6 +18,7 @@ export function neteaseWeapiRequest(data:Record<string,unknown>,auth:NeteaseSess
   const encrypted=weapiPayload({...data,csrf_token:auth.csrf});
   return{
     method:'POST',
+    credentials:'omit',
     headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8',Cookie:auth.cookie,Referer:'https://music.163.com/',Origin:'https://music.163.com','User-Agent':DESKTOP_UA},
     body:`params=${encodeURIComponent(encrypted.params)}&encSecKey=${encodeURIComponent(encrypted.encSecKey)}`,
   };

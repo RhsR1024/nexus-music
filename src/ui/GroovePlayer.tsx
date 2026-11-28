@@ -15,7 +15,6 @@ import { Lyrics, useLyricDocument } from './Lyrics.tsx';
 import { PlayModeButton } from './PlayModeButton.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { SkipGlyph } from './SkipGlyph.tsx';
-import { Toast, useToast } from './Toast.tsx';
 import { Text } from './Typography.tsx';
 import { useStablePlaybackStatus } from './usePlaybackStatus.ts';
 
@@ -69,7 +68,6 @@ export function GroovePlayer({
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
-  const toast = useToast();
 
   const { value: lyricResult } = useLyricDocument(services, lyricTrack);
 
@@ -284,7 +282,7 @@ export function GroovePlayer({
             mutedColor="rgba(255,255,255,0.5)"
             size={21}
             onCycle={next => {
-              void services.preferences.update({ repeat: next.repeat, shuffle: next.shuffle }).then(() => toast.show(next.label)).catch(() => {});
+              void services.preferences.update({ repeat: next.repeat, shuffle: next.shuffle }).catch(() => {});
             }}
           />
           <Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={() => services.playback.next(-1)} style={styles.hit}>
@@ -332,7 +330,6 @@ export function GroovePlayer({
           <Lyrics services={services} track={lyricTrack} font={font} presentation="immersive" />
         </View>
       </SheetModal>
-      <Toast message={toast.message} onDismiss={toast.clear} />
     </View>
   );
 }

@@ -30,19 +30,19 @@ export function AudioMatchModal({
   const match = useSyncExternalStore(services.audioMatch.subscribe, services.audioMatch.getSnapshot);
   const [phrase, setPhrase] = useState('');
   const [editingKey, setEditingKey] = useState(false);
-  const [provider, setProvider] = useState<AudioMatchCloudProvider>(match.cloudConfig.provider);
+  const normalizeUiProvider = (p: AudioMatchCloudProvider): 'shazam' | 'acrcloud' | 'off' =>
+    p === 'acrcloud' || p === 'off' ? p : 'shazam';
+  const [provider, setProvider] = useState<'shazam' | 'acrcloud' | 'off'>(normalizeUiProvider(match.cloudConfig.provider));
   const [acrHost, setAcrHost] = useState(match.cloudConfig.acrHost);
   const [acrKey, setAcrKey] = useState(match.cloudConfig.acrAccessKey);
   const [acrSecret, setAcrSecret] = useState(match.cloudConfig.acrAccessSecret);
-  const [auddToken, setAuddToken] = useState(match.cloudConfig.auddToken);
   const [savingConfig, setSavingConfig] = useState(false);
 
   useEffect(() => {
-    setProvider(match.cloudConfig.provider);
+    setProvider(normalizeUiProvider(match.cloudConfig.provider));
     setAcrHost(match.cloudConfig.acrHost || DEFAULT_CLOUD_CONFIG.acrHost);
     setAcrKey(match.cloudConfig.acrAccessKey);
     setAcrSecret(match.cloudConfig.acrAccessSecret);
-    setAuddToken(match.cloudConfig.auddToken);
   }, [match.cloudConfig]);
 
   useEffect(() => {
@@ -51,17 +51,16 @@ export function AudioMatchModal({
     }
   }, [visible, match.listening]);
 
-  async function selectMode(next: AudioMatchCloudProvider) {
+  async function selectMode(next: 'shazam' | 'acrcloud' | 'off') {
     setProvider(next);
     if (next === 'off') {
       setEditingKey(false);
       await services.audioMatch.saveCloudConfig({ provider: 'off' });
       return;
     }
-    if (next === 'audd') {
-      await services.audioMatch.saveCloudConfig({ provider: 'audd', auddToken });
-      // Keep Key input collapsed if token already saved; let user optionally open it
-      setEditingKey(!auddToken.trim());
+    if (next === 'shazam') {
+      setEditingKey(false);
+      await services.audioMatch.saveCloudConfig({ provider: 'shazam' });
       return;
     }
     // ACRCloud requires host + key + secret; expand inline setup if missing
@@ -88,6 +87,10 @@ export function AudioMatchModal({
       return;
     }
     services.playback.controller.pause();
+    if (provider === 'shazam' && match.cloudConfig.provider !== 'shazam') {
+      void services.audioMatch.saveCloudConfig({ provider: 'shazam' }).then(() => services.audioMatch.startListening(6000));
+      return;
+    }
     void services.audioMatch.startListening(6000);
   }
 
@@ -100,7 +103,6 @@ export function AudioMatchModal({
         acrHost,
         acrAccessKey: acrKey,
         acrAccessSecret: acrSecret,
-        auddToken,
       });
       setEditingKey(false);
     } finally {
@@ -194,7 +196,7 @@ export function AudioMatchModal({
               {match.listening
                 ? `正在录制环境片段… ${(match.elapsedMs / 1000).toFixed(1)}s`
                 : busyNow
-                  ? `正在通过 ${provider === 'acrcloud' ? 'ACRCloud' : 'AudD'} 识别…`
+                  ? `正在通过 ${provider === 'acrcloud' ? 'ACRCloud' : 'Shazam'} 识别…`
                   : '轻触麦克风听歌识曲'}
             </Text>
             <Text style={{ color: s.muted, fontSize: 12.5, lineHeight: 18, textAlign: 'center', paddingHorizontal: 8 }}>
@@ -210,11 +212,11 @@ export function AudioMatchModal({
             )}
           </View>
 
-          {/* Streamlined Recognition Mode Selector (本机离线 | AudD | ACRCloud) + inline Key config */}
+          {/* Streamlined Recognition Mode Selector (Shazam 免Key | ACRCloud | 仅歌词秒搜) + inline ACRCloud Key config */}
           <View testID="audio-match-cloud-card" style={[{ padding: 14, borderRadius: 20, backgroundColor: s.card, borderWidth: 1, borderColor: s.cardBorder, gap: 12 }, s.cardShadow]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ color: s.ink, fontSize: 14.5, fontWeight: '700' }}>识别方式</Text>
-              {provider !== 'off' && (
+              {provider === 'acrcloud' && (
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => setEditingKey(v => !v)}
@@ -222,7 +224,7 @@ export function AudioMatchModal({
                 >
                   <Ionicons name={editingKey ? 'chevron-up' : 'key-outline'} size={13} color={s.accent} />
                   <Text style={{ color: s.accent, fontSize: 12, fontWeight: '600' }}>
-                    {editingKey ? '收起 Key 配置' : provider === 'acrcloud' ? (acrReady ? '修改 ACRCloud Key' : '填入 ACRCloud Key') : match.cloudConfig.auddToken ? '修改 Token' : '填入个人 Token'}
+                    {editingKey ? '收起 Key 配置' : acrReady ? '修改 ACRCloud Key' : '填入 ACRCloud Key'}
                   </Text>
                 </Pressable>
               )}
@@ -230,9 +232,9 @@ export function AudioMatchModal({
 
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {([
-                ['off', '本机离线'],
-                ['audd', 'AudD'],
+                ['shazam', 'Shazam 免Key'],
                 ['acrcloud', 'ACRCloud'],
+                ['off', '仅歌词秒搜'],
               ] as const).map(([key, label]) => {
                 const active = provider === key;
                 return (
@@ -259,15 +261,15 @@ export function AudioMatchModal({
 
             {provider === 'off' && (
               <Text style={{ color: s.muted, fontSize: 12, lineHeight: 17 }}>
-                仅采集本地声纹特征并配合下方歌词秒搜；切换至 AudD 或 ACRCloud 后，点击麦克风录制片段即自动上传识曲。
+                仅采集本地声纹特征并配合下方歌词秒搜；切换至 Shazam（免费免 Key）或 ACRCloud（华语/翻唱曲库更全）即可自动听歌识曲。
               </Text>
             )}
 
-            {provider === 'audd' && !editingKey && (
+            {provider === 'shazam' && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12, backgroundColor: okBg }}>
                 <Ionicons name="checkmark-circle" size={15} color={okColor} />
                 <Text style={{ flex: 1, color: okColor, fontSize: 12, fontWeight: '600' }}>
-                  {match.cloudConfig.auddToken ? 'AudD 个人 Token 已就绪 · 轻触麦克风自动录制并识别' : 'AudD 体验模式已就绪 · 轻触麦克风自动录制并识别'}
+                  Shazam 免 Key 已就绪 · 轻触麦克风录制片段自动识曲（支持华语主流与全球曲库）
                 </Text>
               </View>
             )}
@@ -276,7 +278,7 @@ export function AudioMatchModal({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12, backgroundColor: okBg }}>
                 <Ionicons name="checkmark-circle" size={15} color={okColor} />
                 <Text style={{ flex: 1, color: okColor, fontSize: 12, fontWeight: '600' }}>
-                  ACRCloud 个人 Key 已就绪 · 轻触麦克风自动录制并识别
+                  ACRCloud 个人 Key 已就绪 · 轻触麦克风自动录制并识别（华语/翻唱识别最强）
                 </Text>
               </View>
             )}
@@ -284,11 +286,12 @@ export function AudioMatchModal({
             {editingKey && provider === 'acrcloud' && (
               <View style={{ gap: 9 }}>
                 <View style={{ padding: 11, borderRadius: 13, backgroundColor: softTile, gap: 5 }}>
-                  <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '700' }}>ACRCloud 个人免费 Key 申请步骤（华语曲库最准）</Text>
+                  <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '700' }}>ACRCloud 创建项目勾选指南（国内研发 · 华语曲库最全）</Text>
                   <Text style={{ color: s.muted, fontSize: 11.5, lineHeight: 17 }}>
-                    1. 打开 console.acrcloud.com 注册免费个人账号{'\n'}
-                    2. 创建「Audio & Video Recognition」项目并勾选 ACRCloud Music{'\n'}
-                    3. 将 Host、Access Key、Access Secret 粘贴到下方保存即可
+                    1. Audio Source 勾选「Recorded Audio」（麦克风录音场景）{'\n'}
+                    2. Audio Engine 选「Audio Fingerprinting」（勿只选 Humming 哼唱）{'\n'}
+                    3. Buckets 下拉勾选「ACRCloud Music」后点 Confirm 创建{'\n'}
+                    4. 复制项目详情里的 Host（如 identify-ap-southeast-1.acrcloud.com）、Access Key 与 Access Secret 填入下方
                   </Text>
                   <Pressable
                     accessibilityRole="link"
@@ -296,13 +299,13 @@ export function AudioMatchModal({
                     style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2 }}
                   >
                     <Ionicons name="open-outline" size={13} color={s.accent} />
-                    <Text style={{ color: s.accent, fontSize: 12, fontWeight: '700' }}>前往 ACRCloud 控制台创建免费 Key</Text>
+                    <Text style={{ color: s.accent, fontSize: 12, fontWeight: '700' }}>前往 ACRCloud 控制台</Text>
                   </Pressable>
                 </View>
                 <TextInput
                   testID="audio-match-acr-host"
                   accessibilityLabel="ACRCloud Host"
-                  placeholder="Host，如 identify-cn-north-1.acrcloud.cn"
+                  placeholder="Host，如 identify-ap-southeast-1.acrcloud.com"
                   placeholderTextColor={s.subtle}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -346,49 +349,6 @@ export function AudioMatchModal({
                 </Pressable>
               </View>
             )}
-
-            {editingKey && provider === 'audd' && (
-              <View style={{ gap: 9 }}>
-                <View style={{ padding: 11, borderRadius: 13, backgroundColor: softTile, gap: 5 }}>
-                  <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '700' }}>AudD 个人 API Token（可选，单 Key 最省心）</Text>
-                  <Text style={{ color: s.muted, fontSize: 11.5, lineHeight: 17 }}>
-                    1. 留空即可先使用官方公共 test 令牌直接录制识曲{'\n'}
-                    2. 访问 dashboard.audd.io 注册领取免费个人 Token 获得更稳定额度
-                  </Text>
-                  <Pressable
-                    accessibilityRole="link"
-                    onPress={() => void Linking.openURL('https://dashboard.audd.io/')}
-                    style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2 }}
-                  >
-                    <Ionicons name="open-outline" size={13} color={s.accent} />
-                    <Text style={{ color: s.accent, fontSize: 12, fontWeight: '700' }}>前往 AudD 控制台获取免费 Token</Text>
-                  </Pressable>
-                </View>
-                <TextInput
-                  testID="audio-match-audd-token"
-                  accessibilityLabel="AudD API Token"
-                  placeholder="填入 AudD API Token（留空默认使用 test 体验）"
-                  placeholderTextColor={s.subtle}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry
-                  value={auddToken}
-                  onChangeText={setAuddToken}
-                  style={{ color: s.ink, backgroundColor: s.inputBg, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: s.cardBorder, fontSize: 13.5 }}
-                />
-                <Pressable
-                  testID="audio-match-cloud-save"
-                  accessibilityRole="button"
-                  disabled={savingConfig}
-                  onPress={() => void saveCloudSettings()}
-                  style={{ minHeight: 42, borderRadius: 14, backgroundColor: s.control, alignItems: 'center', justifyContent: 'center', opacity: savingConfig ? 0.5 : 1 }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
-                    {savingConfig ? '正在保存…' : '保存 AudD 配置'}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
           </View>
 
           {/* Cloud Recognition Match Highlight Card */}
@@ -397,7 +357,7 @@ export function AudioMatchModal({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="checkmark-circle" size={17} color={okColor} />
                 <Text style={{ color: okColor, fontSize: 12.5, fontWeight: '700' }}>
-                  云端识别命中 · {match.lastCloudMatch.provider === 'acrcloud' ? 'ACRCloud' : 'AudD'}
+                  识曲命中 · {match.lastCloudMatch.provider === 'acrcloud' ? 'ACRCloud' : match.lastCloudMatch.provider === 'shazam' ? 'Shazam' : 'AudD'}
                   {match.lastCloudMatch.score !== undefined ? ` (${match.lastCloudMatch.score}%)` : ''}
                 </Text>
               </View>

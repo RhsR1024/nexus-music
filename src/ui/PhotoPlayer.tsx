@@ -70,7 +70,7 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
         {favoriteButton}
         <Pressable accessibilityRole="button" accessibilityLabel="队列与播放选项" onPress={()=>{presentation.interact();(onQueue??onMore)();}} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}><MaterialCommunityIcons name="playlist-music" size={22} color="#FFFFFF"/></Pressable>
         <View style={{width:38,height:38,borderRadius:19,backgroundColor:'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}>
-          <PlayModeButton repeat={prefs.repeat} shuffle={prefs.shuffle} color="#FFFFFF" activeColor="#F5A6B8" mutedColor="#FFFFFF" size={19} style={{minWidth:38,minHeight:38}} onCycle={next=>{presentation.interact();void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).then(()=>onNotify?.(next.label)).catch(()=>Alert.alert('设置未保存'));}}/>
+          <PlayModeButton repeat={prefs.repeat} shuffle={prefs.shuffle} color="#FFFFFF" activeColor="#F5A6B8" mutedColor="#FFFFFF" size={19} style={{minWidth:38,minHeight:38}} onCycle={next=>{presentation.interact();void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).catch(()=>Alert.alert('设置未保存'));}}/>
         </View>
       </View>
     </Animated.View>}

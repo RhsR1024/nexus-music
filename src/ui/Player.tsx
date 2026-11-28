@@ -301,7 +301,7 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
   // Rounded double-triangle ink from the existing official font.
   const skipGlyph=(dir:'back'|'forward')=><View style={{flexDirection:'row',gap:classicSkipIcon.gap}}>{[0,1].map(index=><View key={index} style={{width:classicSkipIcon.triangleWidth,height:classicSkipIcon.lineHeight,alignItems:'center'}}><CupertinoGlyph name="playFill" size={classicSkipIcon.size} color={classicHeaderInk} style={{width:24,lineHeight:classicSkipIcon.lineHeight,textAlign:'center',transform:[{scaleX:dir==='back'?-classicSkipIcon.scaleX:classicSkipIcon.scaleX}]}}/></View>)}</View>;
   const cyclePlayMode=(next:{repeat:'off'|'one'|'all';shuffle:boolean;label:string})=>{
-    void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).then(()=>toast.show(next.label)).catch(()=>Alert.alert('设置未保存'));
+    void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).catch(()=>Alert.alert('设置未保存'));
   };
   const qualityPillLabel=entry.track.origin.kind==='local'
     ?(typeof entry.track.metadata.localFormat==='string'?entry.track.metadata.localFormat.toUpperCase():'本地')

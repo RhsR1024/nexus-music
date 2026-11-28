@@ -107,7 +107,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
           mutedColor={paper.vinylIcon}
           size={23}
           style={{width:space.section}}
-          onCycle={next=>{void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).then(()=>onNotify?.(next.label)).catch(()=>Alert.alert('设置未保存'));}}
+          onCycle={next=>{void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).catch(()=>Alert.alert('设置未保存'));}}
         />
         <Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={[styles.hit,{width:space.section}]}><SkipGlyph direction="back" width={9.5} height={12.7} gap={2} color={paper.skipInk}/></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={playing?'暂停':'播放'} onPress={()=>{if(playing)controller.pause();else void controller.play();}} style={styles.play}>
