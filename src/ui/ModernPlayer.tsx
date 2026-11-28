@@ -15,6 +15,8 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
+import type {TrackArtistRef} from '../domain/artistNames.ts';
+import {ClickableArtistLine} from './ClickableArtistLine.tsx';
 import {FrequencyHalo} from './PlayerVisuals.tsx';
 import {VinylPlayer} from './VinylPlayer.tsx';
 import {GroovePlayer} from './GroovePlayer.tsx';
@@ -59,7 +61,7 @@ export function ArtworkBackdrop({services,track,photo=false}:{services:Services;
   </View>;
 }
 
-export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layout,onMore,onStyle,onLyricsSettings,onLyricSource,onQueue,onComments,onSleep,onPlaylist,onArtistPress,onQuality,onNotify,onChromeHiddenChange,visible=true}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;layout:Exclude<PlayerLayout,'classic'>;onMore:()=>void;onStyle:()=>void;onLyricsSettings?:()=>void;onLyricSource?:()=>void;onQueue?:()=>void;onComments?:()=>void;onSleep?:()=>void;onPlaylist?:()=>void;onArtistPress?:(artist:string)=>void;onQuality?:()=>void;onNotify?:(msg:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void;visible?:boolean}){
+export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layout,onMore,onStyle,onLyricsSettings,onLyricSource,onQueue,onComments,onSleep,onPlaylist,onArtistPress,onQuality,onNotify,onChromeHiddenChange,visible=true}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;layout:Exclude<PlayerLayout,'classic'>;onMore:()=>void;onStyle:()=>void;onLyricsSettings?:()=>void;onLyricSource?:()=>void;onQueue?:()=>void;onComments?:()=>void;onSleep?:()=>void;onPlaylist?:()=>void;onArtistPress?:(artist:TrackArtistRef)=>void;onQuality?:()=>void;onNotify?:(msg:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void;visible?:boolean}){
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const status=useStablePlaybackStatus(state,{resolving:'正在选择可用音源…',buffering:'正在缓冲…'});
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -81,11 +83,11 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
   const doublePillTransport=<Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={()=>{if(state.intent==='playing')controller.pause();else void controller.play();}} style={{width:68,height:68,alignItems:'center',justifyContent:'center'}}>{state.intent==='playing'?<View style={{flexDirection:'row',gap:9}}><View style={{width:9,height:32,borderRadius:4.5,backgroundColor:'#FFFFFF'}}/><View style={{width:9,height:32,borderRadius:4.5,backgroundColor:'#FFFFFF'}}/></View>:<Ionicons name="play" size={44} color="#FFFFFF" style={{marginLeft:4}}/>}</Pressable>;
   const cycleMode=(next:{repeat:'off'|'one'|'all';shuffle:boolean;label:string})=>{void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).catch(()=>Alert.alert('设置未保存'));};
   const qualityLabel=qualityBadgeText(state.media?.quality??preferences.quality);
-  if(layout==='vinyl')return <VinylPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onLyricsSettings={onLyricsSettings??onMore} onQueue={onQueue??onMore} onSleep={onSleep??onMore} onQuality={onQuality} onNotify={onNotify} onChromeHiddenChange={onChromeHiddenChange}/>;
-  if(layout==='groove')return <GroovePlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onQueue={onQueue??onMore} onComments={onComments}/>;
-  if(layout==='groove2')return <Groove2Player services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} onMore={onMore} onQueue={onQueue??onMore}/>;
-  if(layout==='teletype')return <TeletypePlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} onMore={onMore} onStyle={onStyle} onQueue={onQueue??onMore} onComments={onComments}/>;
-  if(layout==='teletype2')return <Teletype2Player services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} onMore={onMore}/>;
+  if(layout==='vinyl')return <VinylPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onLyricsSettings={onLyricsSettings??onMore} onQueue={onQueue??onMore} onSleep={onSleep??onMore} onArtistPress={onArtistPress} onQuality={onQuality} onNotify={onNotify} onChromeHiddenChange={onChromeHiddenChange}/>;
+  if(layout==='groove')return <GroovePlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onQueue={onQueue??onMore} onComments={onComments} onArtistPress={onArtistPress}/>;
+  if(layout==='groove2')return <Groove2Player services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} onMore={onMore} onQueue={onQueue??onMore} onArtistPress={onArtistPress}/>;
+  if(layout==='teletype')return <TeletypePlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} onMore={onMore} onStyle={onStyle} onQueue={onQueue??onMore} onComments={onComments} onArtistPress={onArtistPress}/>;
+  if(layout==='teletype2')return <Teletype2Player services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} onMore={onMore} onArtistPress={onArtistPress}/>;
   if(layout==='stage')return <StagePlayer services={services} track={track} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onLyricSource={onLyricSource} controls={<><PlaybackProgress services={services} adaptive variant="stage"/><View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:34,marginTop:6}}><Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={{minWidth:44,minHeight:56,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="back" width={20} height={26} gap={3.5} color="#FFFFFF"/></Pressable><Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={()=>{if(state.intent==='playing')controller.pause();else void controller.play();}} style={{width:72,height:72,borderRadius:36,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'}}>{state.intent==='playing'?<View style={{flexDirection:'row',gap:6}}><View style={{width:6.5,height:22,borderRadius:3.25,backgroundColor:'#101010'}}/><View style={{width:6.5,height:22,borderRadius:3.25,backgroundColor:'#101010'}}/></View>:<Ionicons name="play" size={32} color="#101010" style={{marginLeft:3}}/>}</Pressable><Pressable accessibilityRole="button" accessibilityLabel="下一首" onPress={()=>services.playback.next()} style={{minWidth:44,minHeight:56,alignItems:'center',justifyContent:'center'}}><SkipGlyph direction="forward" width={20} height={26} gap={3.5} color="#FFFFFF"/></Pressable></View></>}/>;
   if(layout==='photo')return <PhotoPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} visible={visible} onMore={onMore} onStyle={onStyle} onQueue={onQueue} onArtistPress={onArtistPress} onNotify={onNotify}/>;
   if(layout==='am')return <AMPlayer services={services} track={track} favoriteTrack={favoriteTrack} lyricTrack={lyricTrack} font={font} onMore={onMore} onStyle={onStyle} onComments={onComments} onArtistPress={onArtistPress} onChromeHiddenChange={onChromeHiddenChange} controls={<>
@@ -115,13 +117,15 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
     return <View style={{flex:1,minHeight:0,paddingHorizontal:24,paddingTop:inlineLyrics?Math.max(insets.top+10,56):Math.max(insets.top+54,102),paddingBottom:Math.max(insets.bottom+14,22),justifyContent:'space-between'}}>
       {inlineLyrics?<>
         <View style={{flexDirection:'row',alignItems:'center',gap:12,paddingBottom:8}}>
-          <Pressable testID="immersive-lyrics-back" accessibilityRole="button" accessibilityLabel="返回封面视图" onPress={()=>setInlineLyrics(false)} style={{flexDirection:'row',alignItems:'center',gap:12,flex:1,minWidth:0}}>
+          <Pressable testID="immersive-lyrics-back" accessibilityRole="button" accessibilityLabel="返回封面视图" onPress={()=>setInlineLyrics(false)}>
             <Cover services={services} track={track} size={46} radius={10}/>
-            <View style={{flex:1,minWidth:0,gap:2}}>
-              <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>
-              <Text numberOfLines={1} style={styles.small}>{track.artist}</Text>
-            </View>
           </Pressable>
+          <View style={{flex:1,minWidth:0,gap:2}}>
+            <Pressable accessibilityRole="button" accessibilityLabel="返回封面视图" onPress={()=>setInlineLyrics(false)}>
+              <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>
+            </Pressable>
+            <ClickableArtistLine track={track} onArtistPress={onArtistPress} textStyle={styles.small}/>
+          </View>
           {favoriteButton}{icon('ellipsis-horizontal','更多播放控制',onMore,23)}
         </View>
         <View testID="immersive-inline-lyrics" style={{flex:1,minHeight:160,overflow:'hidden'}}>
@@ -134,7 +138,7 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
         <View style={{flexDirection:'row',alignItems:'center',gap:10,marginTop:16}}>
           <View style={{flex:1,minWidth:0,gap:3}}>
             <Text numberOfLines={1} style={{fontSize:21,fontWeight:'700',color:'#FFFFFF',letterSpacing:-0.2}}>{track.title}</Text>
-            <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={styles.small}>{track.artist}{track.album?` · ${track.album}`:''}</Text></Pressable>
+            <ClickableArtistLine track={track} onArtistPress={onArtistPress} suffix={track.album?` · ${track.album}`:undefined} textStyle={styles.small}/>
           </View>
           {favoriteButton}{icon('ellipsis-horizontal','更多播放控制',onMore,23)}
         </View>
@@ -166,13 +170,15 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
   return <View style={{flex:1,minHeight:0,justifyContent:'space-between',gap:8,paddingTop:inlineLyrics?Math.max(insets.top+10,56):Math.max(insets.top+58,108),paddingBottom:Math.max(insets.bottom+12,20)}}>
     {inlineLyrics?<>
       <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
-        <Pressable testID="wave-lyrics-back" accessibilityRole="button" accessibilityLabel="返回封面视图" onPress={()=>setInlineLyrics(false)} style={{flexDirection:'row',alignItems:'center',gap:12,flex:1,minWidth:0}}>
+        <Pressable testID="wave-lyrics-back" accessibilityRole="button" accessibilityLabel="返回封面视图" onPress={()=>setInlineLyrics(false)}>
           <Cover services={services} track={track} size={46} radius={10}/>
-          <View style={{flex:1,minWidth:0,gap:2}}>
-            <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>
-            <Text numberOfLines={1} style={styles.small}>{track.artist}</Text>
-          </View>
         </Pressable>
+        <View style={{flex:1,minWidth:0,gap:2}}>
+          <Pressable accessibilityRole="button" accessibilityLabel="返回封面视图" onPress={()=>setInlineLyrics(false)}>
+            <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>
+          </Pressable>
+          <ClickableArtistLine track={track} onArtistPress={onArtistPress} textStyle={styles.small}/>
+        </View>
         {icon('ellipsis-vertical','更多播放控制',onMore,21)}
       </View>
       <View testID="wave-inline-lyrics" style={{flex:1,minHeight:160,overflow:'hidden'}}>
@@ -182,7 +188,7 @@ export function ModernPlayer({services,track,favoriteTrack,lyricTrack,font,layou
       <Pressable {...swipeHandlers} testID="player-artwork-viewport" accessibilityRole="button" accessibilityLabel="点击封面切换全屏歌词" collapsable={false} onPress={()=>{if(!didSwipe.current)setInlineLyrics(true);}} style={{width:waveSide,height:waveSide,alignSelf:'center',overflow:'hidden',borderRadius:waveRadius,shadowColor:'#000000',shadowOpacity:0.35,shadowRadius:22,shadowOffset:{width:0,height:10}}}><View testID="player-artwork-square" collapsable={false}><Cover services={services} track={track} size={waveSide} radius={waveRadius}/></View></Pressable>
       <View style={{alignItems:'center',gap:3,paddingHorizontal:8}}>
         <Text numberOfLines={1} style={{fontSize:21,fontWeight:'700',color:'#FFFFFF',letterSpacing:-0.2}}>{track.title}</Text>
-        <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)}><Text numberOfLines={1} style={styles.small}>{track.artist}{track.album?` · ${track.album}`:''}</Text></Pressable>
+        <ClickableArtistLine track={track} onArtistPress={onArtistPress} suffix={track.album?` · ${track.album}`:undefined} centered textStyle={styles.small}/>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="展开完整歌词" onPress={()=>setInlineLyrics(true)} testID="player-lyric-viewport" collapsable={false} style={{height:100,overflow:'hidden',justifyContent:'center'}}><Lyrics services={services} track={lyricTrack} font={font} visibleLines={3} presentation="wave" chrome={false}/></Pressable>
     </>}

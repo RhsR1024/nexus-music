@@ -16,6 +16,7 @@ import {bodianQrBusy} from '../providers/bodian.ts';
 import {decodeQQBaseInfoNick} from '../providers/qqAccountProfile.ts';
 import {AccountPlaylistImport} from './AccountPlaylistImport.tsx';
 import {AccountAlbumCatalog,AccountMVCatalog} from './AccountAlbumCatalog.tsx';
+import {AccountStatsStrip,MembershipPill} from './AccountInsightBadges.tsx';
 import {Cover} from './Cover.tsx';
 
 type AccountPlatformTab='wy'|'tx'|'kg'|'qishui'|'bodian';
@@ -23,6 +24,7 @@ type AccountPlatformTab='wy'|'tx'|'kg'|'qishui'|'bodian';
 export function MusicAccountSettings({services,active,onRevealQr}:{services:Services;active:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
+  const insights=useSyncExternalStore(services.accountInsights.subscribe,services.accountInsights.getSnapshot);
   const qishuiAccount=useSyncExternalStore(services.qishuiAccount.subscribe,services.qishuiAccount.getSnapshot);
   const bodianAccount=useSyncExternalStore(services.bodianAccount.subscribe,services.bodianAccount.getSnapshot);
   const bodianQr=useSyncExternalStore(services.bodianQrLogin.subscribe,services.bodianQrLogin.getSnapshot);
@@ -60,7 +62,14 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
   const bdTab={id:'bodian' as const,label:'波点',title:'波点音乐',icon:'pulse-outline' as const,tint:s.dark?'rgba(124,92,255,0.20)':'rgba(124,92,255,0.12)',ink:s.dark?'#A992FF':'#6848E8'};
   const tabs=[wyTab,txTab,kgTab,qsTab,bdTab] as const;
   const webWaiting=auth.status==='waiting',waiting=webWaiting||wyQrWaiting||bodianQrWaiting||kugouLoginBusy(kugouAuth.status)||dailyWaiting||transferWaiting;
+  const accountsSignature=accounts.map(a=>a.id).join(',');
   useEffect(()=>{setQishuiNick(qishuiAccount.nickname);},[qishuiAccount.nickname]);
+  useEffect(()=>{
+    if(!active)return;
+    const ctrl=new AbortController();
+    void services.accountInsights.refreshAll(ctrl.signal);
+    return()=>ctrl.abort();
+  },[active,accountsSignature,qishuiAccount.loggedIn,bodianAccount.loggedIn,services]);
   useEffect(()=>{
     const subscription=AppState.addEventListener('change',value=>{
       if(value==='background'){services.neteaseQrLogin.setForeground(false);services.bodianQrLogin.setForeground(false);}
@@ -97,6 +106,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     void services.musicAccounts.session(id).then(session=>(platform==='tx'?services.qqProfile:services.neteaseProfile).fetch(session,controller.signal)).then(async profile=>{
       const avatar='avatar' in profile&&typeof profile.avatar==='string'?profile.avatar:undefined;
       try{await services.musicAccounts.updateProfile(id,{displayName:profile.nickname,...(avatar?{avatar}:{})},controller.signal,account);}catch{}
+      if(account)void services.accountInsights.refreshAccount(account,controller.signal);
       if(!controller.signal.aborted&&services.musicAccounts.getSnapshot().some(account=>account.id===id))setVerified(`${platform==='tx'?'资料可读取':'会话有效'} · ${profile.nickname}`);
     },()=>{
       if(!controller.signal.aborted)setError('登录会话已失效或暂时无法验证，请重新登录');
@@ -109,6 +119,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     setQishuiLoggingIn(true);setQishuiMsg('');setError('');
     try{
       const next=await services.loginQishui();
+      void services.accountInsights.refreshSpecialPlatform('qishui');
       setQishuiMsg(`汽水音乐已登录（${next.nickname||'汽水音乐用户'}），会话凭据已安全保存至本机钥匙串。`);
     }catch(e){
       const code=typeof e==='object'&&e?String((e as {code?:unknown}).code??''):'';
@@ -144,7 +155,8 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
       if(!sess)throw new Error('波点登录凭据已失效，请重新扫码登录');
       const prof=await services.bodian.fetchProfile(sess,ctrl.signal);
       await services.bodianAccount.updateProfile(prof);
-      setVerified(`波点会话有效 · ${prof.nickname||bodianAccount.nickname||'波点用户'}${prof.isVip?'（会员有效）':''}`);
+      void services.accountInsights.refreshSpecialPlatform('bodian',ctrl.signal);
+      setVerified(`波点会话有效 · ${prof.nickname||bodianAccount.nickname||'波点用户'}${prof.isVip?`（${prof.vipLabel||'会员有效'}）`:'（非会员）'}`);
     }catch(e){
       setError(e instanceof Error?e.message:'波点登录会话已失效，请重新扫码登录');
     }finally{setBodianVerifying(false);}
@@ -183,17 +195,23 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
       </View>
       {platformAccounts.map((account,index)=>{
         const accountName=account.displayName?(account.platform==='tx'?decodeQQBaseInfoNick(account.displayName)||account.displayName:account.displayName):account.label;
+        const insight=insights.byKey[account.id];
+        const insightLoading=Boolean(insights.refreshing[account.id]);
         return <View key={account.id}>
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:index===0?0:68,backgroundColor:s.hairline}}/>
           <View style={{minHeight:64,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12}}>
             <Cover services={services} url={account.avatar} size={42} radius={21} fallbackText={accountName} testID={`music-account-avatar-${account.platform}`}/>
-            <View style={{flex:1,minWidth:0,gap:2}}>
-              <Text numberOfLines={1} style={{fontSize:15,fontWeight:'600',color:s.ink}}>{accountName}</Text>
+            <View style={{flex:1,minWidth:0,gap:3}}>
+              <View style={{flexDirection:'row',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                <Text numberOfLines={1} style={{fontSize:15,fontWeight:'600',color:s.ink,flexShrink:1}}>{accountName}</Text>
+                <MembershipPill insight={insight} loading={insightLoading} testID={`music-account-vip-${account.platform}`}/>
+              </View>
               <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>会话凭据已保存到本机</Text>
             </View>
             <Pressable testID={`verify-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`验证${provider.label}会话`} disabled={!!verifying} onPress={()=>verify(account.id)} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:verifying?0.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{verifying===account.id?'验证中':'验证'}</Text></Pressable>
             <Pressable testID={`remove-music-account-${account.platform}`} accessibilityRole="button" accessibilityLabel={`退出${provider.label}账号`} onPress={()=>remove(account.id)} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text></Pressable>
           </View>
+          <AccountStatsStrip insight={insight} loading={insightLoading}/>
         </View>;
       })}
       <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>
@@ -279,34 +297,41 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
     {selectedPlatform==='tx'&&renderWebProviderCard(txTab)}
     {selectedPlatform==='kg'&&<KugouAccountCard services={services} disabled={webWaiting||wyQrWaiting||dailyWaiting||transferWaiting} onRevealQr={onRevealQr}/>}
 
-    {selectedPlatform==='qishui'&&<View style={[{borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+    {selectedPlatform==='qishui'&&(()=>{
+      const qishuiInsight=insights.byKey['qishui:default']??(qishuiAccount.loggedIn&&qishuiAccount.isVip!==undefined?{accountKey:'qishui:default',platform:'qishui' as const,membership:(qishuiAccount.isVip?'qishui_vip':'none') as 'qishui_vip'|'none',isMember:Boolean(qishuiAccount.isVip),membershipLabel:qishuiAccount.isVip?'汽水会员':'非会员',checkedAt:0}:undefined);
+      const qishuiRefreshing=Boolean(insights.refreshing['qishui:default']);
+      return <View style={[{borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
       <View style={{padding:16,gap:12}}>
         <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
           <View style={{width:42,height:42,borderRadius:14,backgroundColor:qsTab.tint,alignItems:'center',justifyContent:'center'}}>
             <Ionicons name="sparkles-outline" size={21} color={qsTab.ink}/>
           </View>
           <View style={{flex:1,minWidth:0,gap:3}}>
-            <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+            <View style={{flexDirection:'row',alignItems:'center',gap:7,flexWrap:'wrap'}}>
               <Text style={{fontSize:17,fontWeight:'700',color:s.ink}}>汽水音乐账号</Text>
               <View style={{paddingHorizontal:8,paddingVertical:2,borderRadius:10,backgroundColor:qishuiAccount.loggedIn?okBg:s.chip,borderWidth:1,borderColor:qishuiAccount.loggedIn?okColor+'33':s.chipBorder}}>
                 <Text style={{fontSize:11,fontWeight:'700',color:qishuiAccount.loggedIn?okColor:s.muted}}>{qishuiAccount.loggedIn?'已扫码登录':'未登录'}</Text>
               </View>
-              {qishuiAccount.loggedIn&&qishuiAccount.isVip&&<View style={{paddingHorizontal:7,paddingVertical:2,borderRadius:9,backgroundColor:'rgba(245,158,11,0.18)'}}>
-                <Text style={{fontSize:10.5,fontWeight:'700',color:'#F59E0B'}}>VIP</Text>
-              </View>}
+              {qishuiAccount.loggedIn&&<MembershipPill insight={qishuiInsight} loading={qishuiRefreshing} testID="music-account-vip-qishui"/>}
             </View>
             <Text style={{fontSize:12,color:s.muted}}>已绑定 {qishuiAccount.playlists.length} 个歌单 · {qishuiAccount.liked.length} 首喜欢 · 支持抖音扫码登录</Text>
           </View>
         </View>
-        {qishuiAccount.loggedIn&&<View style={{flexDirection:'row',alignItems:'center',gap:12,padding:12,borderRadius:16,backgroundColor:s.dark?'rgba(255,255,255,0.05)':'rgba(42,36,31,0.035)'}}>
-          <Cover services={services} url={qishuiAccount.avatar} size={42} radius={21} fallbackText={qishuiAccount.nickname||'汽水'} testID="music-account-avatar-qishui"/>
-          <View style={{flex:1,minWidth:0,gap:2}}>
-            <Text numberOfLines={1} style={{fontSize:15,fontWeight:'700',color:s.ink}}>{qishuiAccount.nickname||'汽水音乐用户'}</Text>
-            <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>抖音 / 汽水网页会话已安全保存在本机钥匙串</Text>
+        {qishuiAccount.loggedIn&&<View style={{gap:8}}>
+          <View style={{flexDirection:'row',alignItems:'center',gap:10,padding:12,borderRadius:16,backgroundColor:s.dark?'rgba(255,255,255,0.05)':'rgba(42,36,31,0.035)'}}>
+            <Cover services={services} url={qishuiAccount.avatar} size={42} radius={21} fallbackText={qishuiAccount.nickname||'汽水'} testID="music-account-avatar-qishui"/>
+            <View style={{flex:1,minWidth:0,gap:2}}>
+              <Text numberOfLines={1} style={{fontSize:15,fontWeight:'700',color:s.ink}}>{qishuiAccount.nickname||'汽水音乐用户'}</Text>
+              <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>抖音 / 汽水网页会话已安全保存在本机钥匙串</Text>
+            </View>
+            <Pressable testID="refresh-music-account-qishui" accessibilityRole="button" accessibilityLabel="刷新汽水账号信息" disabled={qishuiRefreshing} onPress={()=>{void services.accountInsights.refreshSpecialPlatform('qishui');}} style={{minWidth:50,minHeight:34,paddingHorizontal:10,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:qishuiRefreshing?.5:1}}>
+              <Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{qishuiRefreshing?'刷新中':'刷新'}</Text>
+            </Pressable>
+            <Pressable testID="remove-music-account-qishui" accessibilityRole="button" accessibilityLabel="退出汽水音乐账号" onPress={()=>{void services.qishuiAccount.logout().then(()=>setQishuiMsg('已退出汽水音乐登录'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}>
+              <Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text>
+            </Pressable>
           </View>
-          <Pressable testID="remove-music-account-qishui" accessibilityRole="button" accessibilityLabel="退出汽水音乐账号" onPress={()=>{void services.qishuiAccount.logout().then(()=>setQishuiMsg('已退出汽水音乐登录'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}>
-            <Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text>
-          </Pressable>
+          <AccountStatsStrip inline insight={qishuiInsight} loading={qishuiRefreshing} extraPlaylistCount={qishuiAccount.playlists.length} extraLikedCount={qishuiAccount.liked.length}/>
         </View>}
         <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>
           <Pressable testID="login-music-account-qishui" accessibilityRole="button" accessibilityLabel="汽水音乐扫码登录" disabled={qishuiLoggingIn||waiting} onPress={()=>{void loginQishuiAccount();}} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:qishuiLoggingIn||waiting?.6:1}}>
@@ -358,9 +383,13 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
           </View>)}
         </View>}
       </View>
-    </View>}
+    </View>;})()}
 
-    {selectedPlatform==='bodian'&&<View style={[{borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+    {selectedPlatform==='bodian'&&(()=>{
+      const bodianFallbackTier=bodianAccount.isVip===true?(bodianAccount.vipLabel?.includes('大会员')?'bodian_big':'bodian_vip'):'none';
+      const bodianInsight=insights.byKey['bodian:default']??(bodianAccount.loggedIn&&bodianAccount.isVip!==undefined?{accountKey:'bodian:default',platform:'bodian' as const,membership:bodianFallbackTier as 'bodian_big'|'bodian_vip'|'none',isMember:bodianAccount.isVip===true,membershipLabel:bodianAccount.isVip===true?(bodianAccount.vipLabel||'波点会员'):'非会员',checkedAt:0}:undefined);
+      const bodianRefreshing=Boolean(insights.refreshing['bodian:default']);
+      return <View style={[{borderRadius:22,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
       <View style={{padding:16,gap:12}}>
         <View style={{flexDirection:'row',alignItems:'center',gap:12}}>
           <View style={{width:42,height:42,borderRadius:14,backgroundColor:bdTab.tint,alignItems:'center',justifyContent:'center'}}>
@@ -372,25 +401,26 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
               <View style={{paddingHorizontal:8,paddingVertical:2,borderRadius:10,backgroundColor:bodianAccount.loggedIn?okBg:s.chip,borderWidth:1,borderColor:bodianAccount.loggedIn?okColor+'33':s.chipBorder}}>
                 <Text style={{fontSize:11,fontWeight:'700',color:bodianAccount.loggedIn?okColor:s.muted}}>{bodianAccount.loggedIn?'已扫码登录':'未登录'}</Text>
               </View>
-              {bodianAccount.loggedIn&&bodianAccount.isVip&&<View style={{paddingHorizontal:7,paddingVertical:2,borderRadius:9,backgroundColor:'rgba(245,158,11,0.18)'}}>
-                <Text style={{fontSize:10.5,fontWeight:'700',color:'#F59E0B'}}>{bodianAccount.vipLabel||'VIP'}</Text>
-              </View>}
+              {bodianAccount.loggedIn&&<MembershipPill insight={bodianInsight} loading={bodianRefreshing} testID="music-account-vip-bodian"/>}
             </View>
             <Text style={{fontSize:12,color:s.muted}}>支持波点音乐 App 扫码登录；凭据仅保存在本机钥匙串。</Text>
           </View>
         </View>
-        {bodianAccount.loggedIn&&<View style={{flexDirection:'row',alignItems:'center',gap:12,padding:12,borderRadius:16,backgroundColor:s.dark?'rgba(255,255,255,0.05)':'rgba(42,36,31,0.035)'}}>
-          <Cover services={services} url={bodianAccount.avatar} size={42} radius={21} fallbackText={bodianAccount.nickname||'波点'} testID="music-account-avatar-bodian"/>
-          <View style={{flex:1,minWidth:0,gap:2}}>
-            <Text numberOfLines={1} style={{fontSize:15,fontWeight:'700',color:s.ink}}>{bodianAccount.nickname||'波点音乐用户'}</Text>
-            <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>UID {bodianAccount.userId} · 优先使用账号权限直连播放</Text>
+        {bodianAccount.loggedIn&&<View style={{gap:8}}>
+          <View style={{flexDirection:'row',alignItems:'center',gap:12,padding:12,borderRadius:16,backgroundColor:s.dark?'rgba(255,255,255,0.05)':'rgba(42,36,31,0.035)'}}>
+            <Cover services={services} url={bodianAccount.avatar} size={42} radius={21} fallbackText={bodianAccount.nickname||'波点'} testID="music-account-avatar-bodian"/>
+            <View style={{flex:1,minWidth:0,gap:2}}>
+              <Text numberOfLines={1} style={{fontSize:15,fontWeight:'700',color:s.ink}}>{bodianAccount.nickname||'波点音乐用户'}</Text>
+              <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>UID {bodianAccount.userId} · 优先使用账号权限直连播放</Text>
+            </View>
+            <Pressable testID="verify-music-account-bodian" accessibilityRole="button" accessibilityLabel="验证波点会话" disabled={bodianVerifying} onPress={()=>{void verifyBodian();}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:bodianVerifying?.5:1}}>
+              <Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{bodianVerifying?'验证中':'验证'}</Text>
+            </Pressable>
+            <Pressable testID="remove-music-account-bodian" accessibilityRole="button" accessibilityLabel="退出波点音乐账号" onPress={()=>{void services.bodianAccount.logout().then(()=>setBodianMsg('已退出波点音乐登录'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}>
+              <Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text>
+            </Pressable>
           </View>
-          <Pressable testID="verify-music-account-bodian" accessibilityRole="button" accessibilityLabel="验证波点会话" disabled={bodianVerifying} onPress={()=>{void verifyBodian();}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,alignItems:'center',justifyContent:'center',opacity:bodianVerifying?.5:1}}>
-            <Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{bodianVerifying?'验证中':'验证'}</Text>
-          </Pressable>
-          <Pressable testID="remove-music-account-bodian" accessibilityRole="button" accessibilityLabel="退出波点音乐账号" onPress={()=>{void services.bodianAccount.logout().then(()=>setBodianMsg('已退出波点音乐登录'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,alignItems:'center',justifyContent:'center'}}>
-            <Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text>
-          </Pressable>
+          <AccountStatsStrip inline insight={bodianInsight} loading={bodianRefreshing}/>
         </View>}
         <View style={{flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:10}}>
           <Pressable testID="login-music-account-bodian-qr" accessibilityRole="button" accessibilityLabel="波点音乐扫码登录" disabled={waiting} onPress={()=>{setError('');setVerified('');setBodianMsg('');void services.bodianQrLogin.login();}} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:waiting?.6:1}}>
@@ -427,7 +457,7 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
           登录波点音乐后，可在发现页切换至「波点音乐」直接畅听潮趣日推、私人 FM、我喜欢、个人歌单、最近播放、收藏专辑与关注歌手；播放时将优先使用账号权限直连，受限时自动回退自定义 LX 音源。
         </Text>
       </View>
-    </View>}
+    </View>;})()}
 
     {/* Streamlined direct-in-Discovery guidance (Item 8) + optional collapsed manual offline import */}
     {selectedPlatform!=='qishui'&&selectedPlatform!=='bodian'&&<>

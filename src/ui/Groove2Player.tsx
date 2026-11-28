@@ -6,10 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import { trackKey, type Track } from '../domain/track.ts';
+import type { TrackArtistRef } from '../domain/artistNames.ts';
 import { displayLyricIndex, lyricLineProgress } from '../lyrics/parser.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { Modal } from './AdaptiveModal.tsx';
+import { ClickableArtistLine } from './ClickableArtistLine.tsx';
 import { useLyricDocument } from './Lyrics.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { SkipGlyph } from './SkipGlyph.tsx';
@@ -441,6 +443,7 @@ export function Groove2Player({
   lyricTrack,
   onMore,
   onQueue,
+  onArtistPress,
 }: {
   services: Services;
   track: Track;
@@ -448,6 +451,7 @@ export function Groove2Player({
   lyricTrack: Track;
   onMore: () => void;
   onQueue: () => void;
+  onArtistPress?: (artist: TrackArtistRef) => void;
 }) {
   const insets = useSafeAreaInsets();
   const state = useSyncExternalStore(services.playback.controller.subscribe, services.playback.controller.getSnapshot);
@@ -562,7 +566,7 @@ export function Groove2Player({
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 62, paddingRight: 14, minHeight: 44, zIndex: 3 }}>
         <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 6 }}>
           <Text numberOfLines={1} style={{ color: '#F5F2EE', fontSize: 16.5, fontWeight: '700' }}>{track.title}</Text>
-          <Text numberOfLines={1} style={{ color: 'rgba(245,242,238,0.60)', fontSize: 12.5, marginTop: 1 }}>{track.artist}</Text>
+          <ClickableArtistLine track={track} onArtistPress={onArtistPress} centered containerStyle={{ marginTop: 1 }} textStyle={{ color: 'rgba(245,242,238,0.60)', fontSize: 12.5 }} />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Pressable testID="groove2-params-open" accessibilityRole="button" accessibilityLabel="刻槽参数" onPress={() => setParamsOpen(true)} style={{ width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }}>

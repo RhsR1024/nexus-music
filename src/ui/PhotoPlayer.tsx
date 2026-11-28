@@ -5,7 +5,9 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
+import type {TrackArtistRef} from '../domain/artistNames.ts';
 import {PhotoActions} from '../domain/photoPlayer.ts';
+import {ClickableArtistLine} from './ClickableArtistLine.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {PlayModeButton} from './PlayModeButton.tsx';
 import {PlaybackProgress} from './PlaybackProgress.tsx';
@@ -13,7 +15,7 @@ import {SkipGlyph} from './SkipGlyph.tsx';
 import {Text} from './Typography.tsx';
 import {useStablePlaybackStatus} from './usePlaybackStatus.ts';
 
-export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visible,onMore,onStyle,onQueue,onArtistPress,onNotify}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;visible:boolean;onMore:()=>void;onStyle:()=>void;onQueue?:()=>void;onArtistPress?:(artist:string)=>void;onNotify?:(msg:string)=>void}){
+export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visible,onMore,onStyle,onQueue,onArtistPress,onNotify}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;visible:boolean;onMore:()=>void;onStyle:()=>void;onQueue?:()=>void;onArtistPress?:(artist:TrackArtistRef)=>void;onNotify?:(msg:string)=>void}){
   const {width,height,fontScale}=useWindowDimensions(),insets=useSafeAreaInsets(),columns=width>height&&width>=600&&fontScale<1.8;
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot),controller=services.playback.controller;
   const status=useStablePlaybackStatus(state,{resolving:'正在选择可用音源…',buffering:'正在缓冲…'});
@@ -48,7 +50,7 @@ export function PhotoPlayer({services,track,favoriteTrack,lyricTrack,font,visibl
         <View testID="photo-song-info" style={{flexDirection:'row',alignItems:'center',gap:6}}>
           <View style={{flex:1,minWidth:0,gap:2}}>
             <Text numberOfLines={1} style={{fontSize:23,fontWeight:'700',color:'#FFFFFF',letterSpacing:-0.2}}>{track.title}</Text>
-            <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={{fontSize:13.5,color:'rgba(255,255,255,0.74)'}}>{track.artist}{track.album?` · ${track.album}`:''}</Text></Pressable>
+            <ClickableArtistLine track={track} onArtistPress={onArtistPress} suffix={track.album?` · ${track.album}`:undefined} textStyle={{fontSize:13.5,color:'rgba(255,255,255,0.74)'}}/>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel={state.intent==='playing'?'暂停':'播放'} onPress={togglePlay} style={{minWidth:42,minHeight:42,alignItems:'center',justifyContent:'center'}}>
             {state.intent==='playing'?<View style={{flexDirection:'row',gap:5}}><View style={{width:5.5,height:21,borderRadius:2.75,backgroundColor:'#FFFFFF'}}/><View style={{width:5.5,height:21,borderRadius:2.75,backgroundColor:'#FFFFFF'}}/></View>:<Ionicons name="play" size={26} color="#FFFFFF" style={{marginLeft:2}}/>}

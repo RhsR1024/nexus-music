@@ -5,10 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { TeletypeTheme } from '../app/preferences.ts';
 import { trackKey, type Track } from '../domain/track.ts';
+import type { TrackArtistRef } from '../domain/artistNames.ts';
 import { displayLyricIndex, lyricLineProgress } from '../lyrics/parser.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { teletypeVisibleChars } from '../lyrics/teletype.ts';
+import { ClickableArtistLine } from './ClickableArtistLine.tsx';
 import { Cover } from './Cover.tsx';
 import { useLyricDocument } from './Lyrics.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
@@ -73,6 +75,7 @@ export function TeletypePlayer({
   onStyle,
   onQueue,
   onComments,
+  onArtistPress,
 }: {
   services: Services;
   track: Track;
@@ -82,6 +85,7 @@ export function TeletypePlayer({
   onStyle: () => void;
   onQueue: () => void;
   onComments?: () => void;
+  onArtistPress?: (artist: TrackArtistRef) => void;
 }) {
   const insets = useSafeAreaInsets();
   const state = useSyncExternalStore(services.playback.controller.subscribe, services.playback.controller.getSnapshot);
@@ -167,9 +171,7 @@ export function TeletypePlayer({
             <Text numberOfLines={1} style={{ fontFamily: MONO_FONT, fontSize: 16.5, fontWeight: '700', color: pal.ink }}>
               {track.title}
             </Text>
-            <Text numberOfLines={1} style={{ fontFamily: MONO_FONT, fontSize: 12, color: pal.muted }}>
-              BY: {track.artist}
-            </Text>
+            <ClickableArtistLine track={track} onArtistPress={onArtistPress} prefix="BY: " textStyle={{ fontFamily: MONO_FONT, fontSize: 12, color: pal.muted }} />
             <Text numberOfLines={1} style={{ fontFamily: MONO_FONT, fontSize: 10.5, color: pal.accent }}>
               SIG/{qualityTag} · {state.intent === 'playing' ? 'TX-LIVE' : 'STANDBY'}{status.text ? ` · ${status.text}` : ''}
             </Text>

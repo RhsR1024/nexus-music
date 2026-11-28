@@ -13,9 +13,9 @@ import {sollinTokens, space, typography} from './tokens.ts';
 
 const platformName:Record<string,string>={wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水'};
 
-export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onLyricSource,onAllLyrics,onLyricOffset,onEQ,onAudioOutput,onQueue,onMatch,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,onDiagnostics,downloadLabel='下载'}:{
+export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,onStyle,onLyricsSettings,onLyricSource,onAllLyrics,onLyricOffset,onEQ,onAudioOutput,onQueue,onMatch,onRate,onSleep,onComments,onPlaylist,onClose,onDownload,onSimilar,onArtist,onDiagnostics,downloadLabel='下载'}:{
   services:Services;track:Track;favoriteTrack:Track;layoutLabel:string;queueCount:number;
-  onStyle:()=>void;onLyricsSettings:()=>void;onLyricSource?:()=>void;onAllLyrics?:()=>void;onLyricOffset?:()=>void;onEQ?:()=>void;onAudioOutput?:()=>void;onQueue:()=>void;onMatch?:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
+  onStyle:()=>void;onLyricsSettings:()=>void;onLyricSource?:()=>void;onAllLyrics?:()=>void;onLyricOffset?:()=>void;onEQ?:()=>void;onAudioOutput?:()=>void;onQueue:()=>void;onMatch?:()=>void;onRate:()=>void;onSleep:()=>void;onComments:()=>void;onPlaylist:()=>void;onClose:()=>void;onDownload?:()=>void;onSimilar?:()=>void;onArtist?:()=>void;onDiagnostics:()=>void;downloadLabel?:string;
 }){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),styles=makeStyles(theme),{share,sharing,error:shareError}=useSongShare(track);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -71,6 +71,7 @@ export function PlayerMenu({services,track,favoriteTrack,layoutLabel,queueCount,
     </View>
     <Text style={styles.section}>歌曲操作</Text>
     <View style={styles.group}>
+      {onArtist&&!!track.artist.trim()&&row('person-outline','查看歌手',track.artist,onArtist)}
       {onMatch&&row('git-compare-outline','匹配歌曲','切换音源版本',onMatch)}
       {row('share-outline','分享歌曲',sharing?'正在打开':'分享',()=>{void share();})}
       {row('add-circle-outline','添加到歌单','选择歌单',onPlaylist,true)}

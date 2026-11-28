@@ -9,6 +9,7 @@ import {qqSignature} from './qqSignature.ts';
 import {safePublicURL} from '../storage/cleanTrack.ts';
 import {miguArtistSongs} from './miguArtistSongs.ts';
 import {miguArtistAlbums} from './miguAlbums.ts';
+import {neteaseSessionAuth,neteaseWeapiRequest} from './neteaseSession.ts';
 type Row=Record<string,unknown>;
 const row=(v:unknown):Row=>v&&typeof v==='object'&&!Array.isArray(v)?v as Row:{};
 const text=(v:unknown)=>typeof v==='string'?v:typeof v==='number'&&Number.isSafeInteger(v)?String(v):'';
@@ -91,5 +92,81 @@ export class ArtistProvider{
   else{return{page,...await miguArtistAlbums(this.http,id,page,limit,signal)};}
   if(signal.aborted)throw Error('已取消');const parsedTotal=count(total),rows=array(values,parsedTotal);const items=rows.map(value=>{const v=row(value),albumId=identity(platform==='tx'?v.albumMID:platform==='kw'||platform==='kg'?v.albumid:v.id),title=clean(platform==='tx'?v.albumName:platform==='kg'?v.albumname:v.name);if(!title||title.length>1000)throw Error('艺术家专辑信息无效');const artwork=art(platform==='wy'?v.picUrl:platform==='tx'?`https://y.gtimg.cn/music/photo_new/T002R500x500M000${albumId}.jpg`:platform==='kw'?v.hts_img??v.img:platform==='kg'?v.imgurl:row(Array.isArray(v.imgItems)?v.imgItems[0]:undefined).img);return{id:albumId,title,author:clean(platform==='tx'?v.singerName:platform==='kw'?v.artist:platform==='kg'?v.singername:platform==='wy'&&Array.isArray(v.artists)?v.artists.map(a=>clean(row(a).name)).filter(Boolean).join(' / '):artist.title),...(artwork?{artwork}:{})};});
   return{items,page,total:parsedTotal,hasMore:rows.length>0&&(typeof more==='boolean'?more:parsedTotal!==undefined?page*limit<parsedTotal:rows.length>=limit)};
+ }
+ async resolveByName(name:string,preferredPlatform:OnlinePlatform|undefined,knownId:string|undefined,signal:AbortSignal):Promise<{platform:OnlinePlatform;artist:ArtistItem}>{
+  const cleaned=name.trim();
+  if(!cleaned)throw Error('歌手名称无效');
+  if(preferredPlatform&&knownId&&/^[A-Za-z0-9_-]{1,128}$/.test(knownId)&&knownId!=='0'){
+   return{platform:preferredPlatform,artist:{id:knownId,title:cleaned}};
+  }
+  const order:OnlinePlatform[]=preferredPlatform
+   ?[preferredPlatform,...(['wy','tx','kg','kw','mg'] as const).filter(p=>p!==preferredPlatform)]
+   :['wy','tx','kg','kw'];
+  const lower=cleaned.toLowerCase();
+  for(const platform of order){
+   if(signal.aborted)throw Error('已取消');
+   try{
+    const page=await this.search(platform,cleaned,1,signal,10);
+    if(!page.items.length)continue;
+    const exact=page.items.find(a=>a.title.trim().toLowerCase()===lower);
+    return{platform,artist:exact??page.items[0]!};
+   }catch{
+    if(signal.aborted)throw Error('已取消');
+   }
+  }
+  throw Error(`暂未找到歌手「${cleaned}」的相关信息`);
+ }
+ async similar(platform:OnlinePlatform,artist:ArtistItem,signal:AbortSignal,options?:{neteaseSession?:Readonly<Record<string,unknown>>}):Promise<{platform:OnlinePlatform;items:readonly ArtistItem[]}>{
+  if(signal.aborted)throw Error('已取消');
+  const parseQQSimilar=async(singerMid:string):Promise<ArtistItem[]>=>{
+   const d=await this.qq('music.SimilarSingerSvr','GetSimilarSingerList',{singerMid,number:12},signal);
+   const out:ArtistItem[]=[];
+   for(const raw of array(d.singerlist,0)){
+    const v=row(raw),mid=text(v.singerMid??v.singerMID).trim(),title=clean(v.singerName);
+    if(!mid||!title)continue;
+    const artwork=art(v.singerPic)??`https://y.gtimg.cn/music/photo_new/T001R300x300M000${mid}.jpg`;
+    out.push({id:mid,title,artwork});
+   }
+   return out;
+  };
+  if(platform==='tx'){
+   try{
+    const items=await parseQQSimilar(identity(artist.id));
+    if(items.length)return{platform:'tx',items};
+   }catch{
+    if(signal.aborted)throw Error('已取消');
+   }
+  }
+  if(platform==='wy'&&options?.neteaseSession){
+   const auth=neteaseSessionAuth(options.neteaseSession);
+   if(auth){
+    try{
+     const id=identity(artist.id);
+     const r=row(await this.http('https://music.163.com/weapi/discovery/simiArtist',neteaseWeapiRequest({artistid:id},auth),signal));
+     if(r.code===200&&Array.isArray(r.artists)&&r.artists.length){
+      const items:ArtistItem[]=[];
+      for(const raw of r.artists.slice(0,12)){
+       try{items.push(artistItem('wy',row(raw)));}catch{}
+      }
+      if(items.length)return{platform:'wy',items};
+     }
+    }catch{
+     if(signal.aborted)throw Error('已取消');
+    }
+   }
+  }
+  if(artist.title.trim()){
+   try{
+    const qqSearch=await this.search('tx',artist.title.trim(),1,signal,5);
+    const exact=qqSearch.items.find(a=>a.title.trim().toLowerCase()===artist.title.trim().toLowerCase())??qqSearch.items[0];
+    if(exact){
+     const items=await parseQQSimilar(exact.id);
+     if(items.length)return{platform:'tx',items};
+    }
+   }catch{
+    if(signal.aborted)throw Error('已取消');
+   }
+  }
+  return{platform,items:[]};
  }
 }

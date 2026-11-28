@@ -7,11 +7,13 @@ import {Text,TextInput} from './Typography.tsx';
 import {useTheme} from './theme.tsx';
 import {sollinTokens} from './tokens.ts';
 import {Cover} from './Cover.tsx';
+import {AccountStatsStrip,MembershipPill} from './AccountInsightBadges.tsx';
 
 export function KugouAccountCard({services,disabled,onRevealQr}:{services:Services;disabled:boolean;onRevealQr:(bounds:{top:number;height:number})=>void}){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const state=useSyncExternalStore(services.kugouLogin.subscribe,services.kugouLogin.getSnapshot);
   const accounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
+  const insights=useSyncExternalStore(services.accountInsights.subscribe,services.accountInsights.getSnapshot);
   const [error,setError]=useState('');
   const [mode,setMode]=useState<'qr'|'phone'>('qr');
   const [mobile,setMobile]=useState('');
@@ -82,17 +84,26 @@ export function KugouAccountCard({services,disabled,onRevealQr}:{services:Servic
       </View>
     </View>
 
-    {kgAccounts.map((account,index)=><View key={account.id}>
-      <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:index===0?0:68,backgroundColor:s.hairline}}/>
-      <View style={{minHeight:64,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12}}>
-        <Cover services={services} url={account.avatar} size={42} radius={21} fallbackText={account.displayName??account.label} testID="music-account-avatar-kg"/>
-        <View style={{flex:1,minWidth:0,gap:2}}>
-          <Text numberOfLines={1} style={{fontSize:15,fontWeight:'600',color:s.ink}}>{account.displayName??account.label}</Text>
-          <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>会话凭据已保存到本机</Text>
+    {kgAccounts.map((account,index)=>{
+      const insight=insights.byKey[account.id];
+      const refreshing=Boolean(insights.refreshing[account.id]);
+      return <View key={account.id}>
+        <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:index===0?0:68,backgroundColor:s.hairline}}/>
+        <View style={{minHeight:64,paddingHorizontal:16,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:12}}>
+          <Cover services={services} url={account.avatar} size={42} radius={21} fallbackText={account.displayName??account.label} testID="music-account-avatar-kg"/>
+          <View style={{flex:1,minWidth:0,gap:3}}>
+            <View style={{flexDirection:'row',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+              <Text numberOfLines={1} style={{fontSize:15,fontWeight:'600',color:s.ink,flexShrink:1}}>{account.displayName??account.label}</Text>
+              <MembershipPill insight={insight} loading={refreshing} testID="music-account-vip-kg"/>
+            </View>
+            <Text numberOfLines={1} style={{fontSize:12,color:s.muted}}>会话凭据已保存到本机</Text>
+          </View>
+          <Pressable testID="refresh-music-account-kg" accessibilityRole="button" accessibilityLabel="刷新酷狗账号信息" disabled={busy||refreshing} onPress={()=>{void services.accountInsights.refreshAccount(account);}} style={{minWidth:50,minHeight:34,paddingHorizontal:10,borderRadius:17,backgroundColor:s.chip,borderWidth:1,borderColor:s.chipBorder,justifyContent:'center',alignItems:'center',opacity:busy||refreshing?.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.ink}}>{refreshing?'刷新中':'刷新'}</Text></Pressable>
+          <Pressable testID="remove-music-account-kg" accessibilityRole="button" accessibilityLabel="退出酷狗账号" disabled={busy} onPress={()=>{setError('');void services.musicAccounts.remove(account.id).catch(()=>setError('账号未移除，原有会话仍保留'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,justifyContent:'center',alignItems:'center',opacity:busy?.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text></Pressable>
         </View>
-        <Pressable testID="remove-music-account-kg" accessibilityRole="button" accessibilityLabel="退出酷狗账号" disabled={busy} onPress={()=>{setError('');void services.musicAccounts.remove(account.id).catch(()=>setError('账号未移除，原有会话仍保留'));}} style={{minWidth:54,minHeight:34,paddingHorizontal:11,borderRadius:17,backgroundColor:warnBg,justifyContent:'center',alignItems:'center',opacity:busy?.5:1}}><Text style={{fontSize:12.5,fontWeight:'600',color:s.accent}}>退出</Text></Pressable>
-      </View>
-    </View>)}
+        <AccountStatsStrip insight={insight} loading={refreshing}/>
+      </View>;
+    })}
 
     <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>
     <View style={{padding:14,gap:12}}>

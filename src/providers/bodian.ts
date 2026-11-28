@@ -6,6 +6,7 @@ import { encodeQrPngDataUri } from '../domain/qrPng.ts';
 import type { Quality } from '../domain/quality.ts';
 import type { Track } from '../domain/track.ts';
 import { cleanTrack, safePublicURL } from '../storage/cleanTrack.ts';
+import { isMemberTier, membershipLabel, parseBodianVipInfo, type AccountMembershipTier } from './accountInsights.ts';
 import type { Repository } from '../storage/repository.ts';
 import { bounded, throwIfAborted } from './async.ts';
 import { HTTPResponseError, requestJSON, type HTTPClient } from './http.ts';
@@ -564,6 +565,8 @@ export class BodianProvider {
     readonly avatar?: string;
     readonly isVip: boolean;
     readonly vipLabel?: string;
+    readonly vipTier?: AccountMembershipTier;
+    readonly expireAt?: number;
   }> {
     const res = await this.request({
       path: `/api/ucenter/users/pub/${encodeURIComponent(session.userId)}`,
@@ -575,17 +578,31 @@ export class BodianProvider {
     const data = row(res.data);
     const userInfo = row(data.userInfo ?? data);
     const payInfo = row(data.payInfo ?? userInfo.payInfo);
-    const isVip = Boolean(
-      payInfo.isVip === true ||
-        payInfo.isVip === 1 ||
-        payInfo.vip === 1 ||
-        num(payInfo.vipType) > 0 ||
-        num(payInfo.expireTime) > this.now(),
-    );
-    const vipLabel = isVip ? text(payInfo.vipName ?? payInfo.levelName) || '波点会员' : undefined;
+    const parsedVip = parseBodianVipInfo(payInfo, this.now());
+    const isVip = parsedVip.tier !== 'unknown'
+      ? isMemberTier(parsedVip.tier)
+      : Boolean(
+          payInfo.isVip === true ||
+            payInfo.isVip === 1 ||
+            payInfo.vip === 1 ||
+            num(payInfo.vipType) > 0 ||
+            num(payInfo.expireTime) > this.now(),
+        );
+    const vipTier: AccountMembershipTier =
+      parsedVip.tier !== 'unknown' ? parsedVip.tier : isVip ? 'bodian_vip' : 'none';
+    const vipLabel = isVip
+      ? text(payInfo.vipName ?? payInfo.levelName) || membershipLabel(vipTier)
+      : undefined;
     const nickname = text(userInfo.nickname ?? data.nickname) || undefined;
     const avatar = safeHTTPS(userInfo.headImg ?? userInfo.avatar ?? data.headImg);
-    return { ...(nickname ? { nickname } : {}), ...(avatar ? { avatar } : {}), isVip, ...(vipLabel ? { vipLabel } : {}) };
+    return {
+      ...(nickname ? { nickname } : {}),
+      ...(avatar ? { avatar } : {}),
+      isVip,
+      vipTier,
+      ...(vipLabel ? { vipLabel } : {}),
+      ...(parsedVip.expireAt ? { expireAt: parsedVip.expireAt } : {}),
+    };
   }
 
   async homeModules(signal: AbortSignal, session?: BodianSession | null): Promise<readonly BodianHomeModule[]> {

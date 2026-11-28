@@ -4,7 +4,9 @@ import {Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
+import type {TrackArtistRef} from '../domain/artistNames.ts';
 import {AM2Presentation,am2Columns,type AM2Content} from '../domain/am2.ts';
+import {ClickableArtistLine} from './ClickableArtistLine.tsx';
 import {Cover} from './Cover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {QueuePanel} from './QueueView.tsx';
@@ -35,7 +37,7 @@ function AM2VolumeBar({value,onChange}:{value:number;onChange:(next:number)=>voi
   </View>;
 }
 
-export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity,visible,controls,onMore,onStyle,onLyricSource,onArtistPress,onChromeHiddenChange}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;identity:string;visible:boolean;controls:ReactNode;onMore:()=>void;onStyle?:()=>void;onLyricSource?:()=>void;onArtistPress?:(artist:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void}){
+export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity,visible,controls,onMore,onStyle,onLyricSource,onArtistPress,onChromeHiddenChange}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;identity:string;visible:boolean;controls:ReactNode;onMore:()=>void;onStyle?:()=>void;onLyricSource?:()=>void;onArtistPress?:(artist:TrackArtistRef)=>void;onChromeHiddenChange?:(hidden:boolean)=>void}){
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const model=useMemo(()=>new AM2Presentation(),[]),view=useSyncExternalStore(model.subscribe,model.getSnapshot);
@@ -60,7 +62,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
   const coverMeta=<View style={{flexDirection:'row',alignItems:'center',gap:8,marginTop:columns?2:fontScale>1.4?10:18}}>
     <View style={{flex:1,minWidth:0,gap:columns?1:3}}>
       <Text numberOfLines={1} style={{fontSize:columns?17:23,fontWeight:'700',color:'#FFFFFF',letterSpacing:-0.2}}>{track.title}</Text>
-      <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={{fontSize:columns?13:16,color:'rgba(255,255,255,0.68)'}}>{track.artist}{track.album?` — ${track.album}`:''}</Text></Pressable>
+      <ClickableArtistLine track={track} onArtistPress={onArtistPress} suffix={track.album?` — ${track.album}`:undefined} textStyle={{fontSize:columns?13:16,color:'rgba(255,255,255,0.68)'}}/>
     </View>
     {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>setError('收藏未保存，之前的数据保留。'));},favorite?'已收藏':'未收藏')}
     {circle('ellipsis-horizontal','更多播放控制',onMore)}
@@ -69,7 +71,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
     <Pressable testID="am2-return-cover" accessibilityRole="button" accessibilityLabel="返回封面" onPress={()=>{setSettings(false);model.select('cover');}} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={46} radius={10}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:2}}>
       <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>
-      <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={{fontSize:13,color:'rgba(255,255,255,0.66)'}}>{track.artist}</Text></Pressable>
+      <ClickableArtistLine track={track} onArtistPress={onArtistPress} textStyle={{fontSize:13,color:'rgba(255,255,255,0.66)'}}/>
     </View>
     {!settings&&view.content==='lyrics'&&<Pressable testID="am2-expand-lyrics" accessibilityRole="button" accessibilityLabel={view.fullscreen?'还原歌词区域':'展开歌词区域'} onPress={()=>model.toggleFullscreen()} style={{paddingHorizontal:10,minHeight:34,borderRadius:17,backgroundColor:'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}><Text style={{color:'#FFFFFF',fontSize:12,fontWeight:'600'}}>{view.fullscreen?'还原歌词区域':'展开歌词区域'}</Text></Pressable>}
     {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>setError('收藏未保存，之前的数据保留。'));},favorite?'已收藏':'未收藏')}

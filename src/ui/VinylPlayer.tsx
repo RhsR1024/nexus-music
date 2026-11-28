@@ -4,8 +4,10 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
+import type {TrackArtistRef} from '../domain/artistNames.ts';
 import {coverThemeGradient} from '../domain/appearance.ts';
 import {SheetModal} from './AdaptiveModal.tsx';
+import {ClickableArtistLine} from './ClickableArtistLine.tsx';
 import {Cover} from './Cover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {PlayModeButton} from './PlayModeButton.tsx';
@@ -35,10 +37,10 @@ function PaperBackdrop({services,track}:{services:Services;track:Track}){
   </View>;
 }
 
-export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue,onSleep,onQuality,onNotify,onChromeHiddenChange}:{
+export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue,onSleep,onArtistPress,onQuality,onNotify,onChromeHiddenChange}:{
   services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;
   onMore:()=>void;onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onSleep:()=>void;
-  onQuality?:()=>void;onNotify?:(msg:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void;
+  onArtistPress?:(artist:TrackArtistRef)=>void;onQuality?:()=>void;onNotify?:(msg:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void;
 }){
   const {width,height}=useWindowDimensions();
   const insets=useSafeAreaInsets();
@@ -65,13 +67,15 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
     <View style={[styles.content,{paddingTop:inlineLyrics?Math.max(insets.top+12,56):Math.max(96,height*(155.67/932))}]}>
       {inlineLyrics?<>
         <View style={{flexDirection:'row',alignItems:'center',gap:12,marginBottom:8}}>
-          <Pressable testID="vinyl-lyrics-back" accessibilityRole="button" accessibilityLabel="返回黑胶唱片" onPress={()=>setInlineLyrics(false)} style={{flexDirection:'row',alignItems:'center',gap:12,flex:1,minWidth:0}}>
+          <Pressable testID="vinyl-lyrics-back" accessibilityRole="button" accessibilityLabel="返回黑胶唱片" onPress={()=>setInlineLyrics(false)}>
             <Cover services={services} track={track} size={46} radius={10}/>
-            <View style={{flex:1,minWidth:0,gap:2}}>
-              <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:paper.titleInk}}>{track.title}</Text>
-              <Text numberOfLines={1} style={{fontSize:13,color:paper.artistInk}}>{track.artist}</Text>
-            </View>
           </Pressable>
+          <View style={{flex:1,minWidth:0,gap:2}}>
+            <Pressable accessibilityRole="button" accessibilityLabel="返回黑胶唱片" onPress={()=>setInlineLyrics(false)}>
+              <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:paper.titleInk}}>{track.title}</Text>
+            </Pressable>
+            <ClickableArtistLine track={track} onArtistPress={onArtistPress} textStyle={{fontSize:13,color:paper.artistInk}}/>
+          </View>
           <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" onPress={toggleFavorite} style={styles.hit}>
             <Ionicons name={isFavorite?'heart':'heart-outline'} size={22} color={paper.heartInk}/>
           </Pressable>
@@ -86,7 +90,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
         <View style={styles.titleRow}>
           <View style={{flex:1,minWidth:0,gap:4,marginLeft:-7.5}}>
             <Text numberOfLines={1} style={styles.title}>{track.title}</Text>
-            <Text numberOfLines={1} style={styles.artist}>{track.artist}</Text>
+            <ClickableArtistLine track={track} onArtistPress={onArtistPress} textStyle={styles.artist}/>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:isFavorite?'已收藏':'未收藏'}} onPress={toggleFavorite} style={[styles.hit,{marginRight:-5}]}>
             <Ionicons name={isFavorite?'heart':'heart-outline'} size={24} color={paper.heartInk}/>

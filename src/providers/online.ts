@@ -131,24 +131,27 @@ export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
     const album = row(value.album), file = row(value.file), mid = id(value.mid ?? value.songmid), albumMid = text(album.mid ?? value.albummid);
     const duration = number(value.interval);
     const txArtwork = extractQQArtwork(value, album);
+    const txArtistIds = list(value.singer).map(item => text(row(item).mid ?? row(item).pmid)).filter(Boolean);
     track = { origin: { kind: 'online', platform, id: mid }, title: text(value.title ?? value.name ?? value.songname), artist: names(value.singer), album: text(album.name ?? value.albumname),
       ...(duration !== undefined ? { durationMs: duration * 1000 } : {}), ...(txArtwork ? { artwork: txArtwork } : {}),
-      metadata: { id: text(value.id ?? value.songid), songId: mid, albumId: albumMid, albumMid, strMediaMid: text(file.media_mid ?? value.media_mid), songmid: mid },
+      metadata: { id: text(value.id ?? value.songid), songId: mid, albumId: albumMid, albumMid, strMediaMid: text(file.media_mid ?? value.media_mid), songmid: mid, ...(txArtistIds.length ? { artistIds: txArtistIds } : {}) },
       qualities: qualities({ '128k': file.size_128mp3, '320k': file.size_320mp3, flac: file.size_flac, flac24bit: file.size_hires }) };
   } else if (platform === 'kw') {
     const songId = id(value.MUSICRID ?? value.rid).replace(/^MUSIC_/, ''), duration = number(value.DURATION ?? value.duration);
     const info = text(value.N_MINFO), available = ['128k', '320k', 'flac', 'flac24bit'].filter((_, index) => info.includes(`bitrate:${[128,320,2000,4000][index]},`));
     const kwArtwork = extractKuwoArtwork(value);
+    const kwArtistId = text(value.ARTISTID ?? value.artistid);
     track = { origin: { kind: 'online', platform, id: songId }, title: decoded(value.SONGNAME ?? value.name), artist: decoded(value.ARTIST ?? value.artist).replaceAll('&', ' / '), album: decoded(value.ALBUM ?? value.album),
       ...(duration !== undefined ? { durationMs: duration*1000 } : {}), ...(kwArtwork ? { artwork: kwArtwork } : {}),
-      metadata: { albumId: text(value.ALBUMID ?? value.albumid), formats: text(value.FORMATS), N_MINFO: info }, qualities: available.map(id => ({ id })) };
+      metadata: { albumId: text(value.ALBUMID ?? value.albumid), ...(kwArtistId ? { artistIds: [kwArtistId] } : {}), formats: text(value.FORMATS), N_MINFO: info }, qualities: available.map(id => ({ id })) };
   } else if (platform === 'kg') {
     const hash = id(value.FileHash ?? value.hash), duration = number(value.Duration ?? value.duration), audioId = text(value.Audioid ?? value.audio_id);
     const types = { '128k': { hash, size: value.FileSize }, '320k': { hash: text(value.HQFileHash), size: value.HQFileSize }, flac: { hash: text(value.SQFileHash), size: value.SQFileSize }, flac24bit: { hash: text(value.ResFileHash), size: value.ResFileSize } };
     const kgArtwork = extractKugouArtwork(value);
+    const kgArtistIds = list(value.Singers ?? value.authors).map(item => text(row(item).id ?? row(item).author_id)).filter(Boolean);
     track = { origin: { kind: 'online', platform, id: audioId ? `${audioId}_${hash}` : hash }, title: decoded(value.OriSongName ?? value.SongName ?? value.FileName), artist: names(value.Singers) || decoded(value.SingerName), album: decoded(value.AlbumName),
       ...(duration !== undefined ? { durationMs: duration*1000 } : {}), ...(kgArtwork ? { artwork: kgArtwork } : {}),
-      metadata: { hash, songId: audioId || hash, songmid: audioId, albumId: text(value.AlbumID ?? value.album_id), _types: types },
+      metadata: { hash, songId: audioId || hash, songmid: audioId, albumId: text(value.AlbumID ?? value.album_id), ...(kgArtistIds.length ? { artistIds: kgArtistIds } : {}), _types: types },
       qualities: qualities(Object.fromEntries(Object.entries(types).map(([key, value]) => [key, value.size]))) };
   } else {
     const songId = id(value.songId ?? value.id), copyrightId = id(value.copyrightId ?? value.copyright_id), duration = number(value.duration);
@@ -156,9 +159,10 @@ export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
     const mapping: Record<string, string> = { PQ: '128k', HQ: '320k', SQ: 'flac', ZQ24: 'flac24bit', ZQ: 'flac24bit' };
     for (const format of formats) { const key = mapping[text(format.formatType)]; if (key) types[key] = format.asize ?? format.isize ?? format.size; }
     const mgArtwork = extractMiguArtwork(value);
+    const mgArtistIds = list(value.singerList ?? value.singers ?? value.artists).map(item => text(row(item).id)).filter(Boolean);
     track = { origin: { kind: 'online', platform, id: songId }, title: text(value.name ?? value.songName), artist: names(value.singerList ?? value.singers ?? value.artists) || text(value.singer), album: text(value.album),
       ...(duration !== undefined ? { durationMs: duration*1000 } : {}), ...(mgArtwork ? { artwork: mgArtwork } : {}),
-      metadata: { copyrightId, albumId: text(value.albumId), lrcUrl: text(value.lrcUrl), mrcUrl: text(value.mrcUrl ?? value.mrcurl), trcUrl: text(value.trcUrl), _types: types }, qualities: qualities(types) };
+      metadata: { copyrightId, albumId: text(value.albumId), ...(mgArtistIds.length ? { artistIds: mgArtistIds } : {}), lrcUrl: text(value.lrcUrl), mrcUrl: text(value.mrcUrl ?? value.mrcurl), trcUrl: text(value.trcUrl), _types: types }, qualities: qualities(types) };
   }
   if (!track.title) throw new Error('歌曲缺少名称'); return track;
 }

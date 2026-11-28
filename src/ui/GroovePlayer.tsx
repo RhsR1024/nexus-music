@@ -6,10 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { GrooveSpinSpeed } from '../app/preferences.ts';
 import { trackKey, type Track } from '../domain/track.ts';
+import type { TrackArtistRef } from '../domain/artistNames.ts';
 import { displayLyricIndex } from '../lyrics/parser.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { SheetModal } from './AdaptiveModal.tsx';
+import { ClickableArtistLine } from './ClickableArtistLine.tsx';
 import { Cover } from './Cover.tsx';
 import { Lyrics, useLyricDocument } from './Lyrics.tsx';
 import { PlayModeButton } from './PlayModeButton.tsx';
@@ -46,6 +48,7 @@ export function GroovePlayer({
   onStyle,
   onQueue,
   onComments,
+  onArtistPress,
 }: {
   services: Services;
   track: Track;
@@ -56,6 +59,7 @@ export function GroovePlayer({
   onStyle: () => void;
   onQueue: () => void;
   onComments?: () => void;
+  onArtistPress?: (artist: TrackArtistRef) => void;
 }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -258,7 +262,7 @@ export function GroovePlayer({
         <View style={styles.metaRow}>
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
             <Text numberOfLines={1} style={styles.title}>{track.title}</Text>
-            <Text numberOfLines={1} style={styles.artist}>{track.artist}{track.album ? ` · ${track.album}` : ''}</Text>
+            <ClickableArtistLine track={track} onArtistPress={onArtistPress} suffix={track.album ? ` · ${track.album}` : undefined} textStyle={styles.artist} />
           </View>
           <Pressable
             accessibilityRole="button"

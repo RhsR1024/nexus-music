@@ -36,6 +36,7 @@ import {CrossPlatformMatcher} from '../providers/crossPlatformMatcher.ts';
 import {MatchedResolver} from '../providers/matchedResolver.ts';
 import {AccountPlaybackResolver} from '../providers/accountPlaybackResolver.ts';
 import {AccountFeatureCache} from '../providers/accountFeatureCache.ts';
+import {ACCOUNT_INSIGHTS_VERSION,AccountInsightsStore} from '../providers/accountInsights.ts';
 import {BodianAccountStore,BodianProvider,BodianQrLoginCoordinator} from '../providers/bodian.ts';
 import {QishuiAccountStore,QishuiProvider} from '../providers/qishui.ts';
 import {AccountDiscoveryClient} from '../providers/accountDiscovery.ts';
@@ -227,6 +228,17 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const bodianQrPhoto=new KugouQrPhoto({login:bodianQrLogin,native:loginQrPhotoNative,uuid:Crypto.randomUUID});
   const accountFeatureCache=new AccountFeatureCache(repository);
   await restore('accountFeature.cache.v1','账号歌单缓存',()=>accountFeatureCache.restore());
+  const accountInsights=new AccountInsightsStore({
+    repository,
+    http:options.onlineHTTP??requestJSON,
+    md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),
+    musicAccounts,
+    qishui,
+    qishuiAccount,
+    bodian,
+    bodianAccount,
+  });
+  await restore('accountInsights.v1','账号会员与统计信息',()=>accountInsights.restore(),ACCOUNT_INSIGHTS_VERSION);
   const accountDiscovery=new AccountDiscoveryClient({http:options.onlineHTTP??requestJSON,sha1:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1,value),accounts:musicAccounts,neteaseProfile});
   const radioApi=new GlobalRadioApi({http:options.onlineHTTP});
   const radioStore=new GlobalRadioStore(repository);
@@ -480,7 +492,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   await restore('audioMatch.v1','听歌识曲记录',()=>audioMatch.restore(),AUDIO_MATCH_RECORD_VERSION);
   const carIntegration=new CarIntegrationCoordinator({native:nativeAux,library,actions:{playTracks,resume:()=>{void playback.controller.play();},pause:()=>playback.controller.pause(),next:(dir)=>playback.next(dir)}});
   carIntegration.start();
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountDiscovery, accountHeartbeat, accountFeatureCache, accountPlaybackResolver, bodian, bodianAccount, bodianQrLogin, bodianQrPhoto, videos, podcasts, radioApi, radioStore, dlna, audioMatch, carIntegration, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, qishuiAccount, loginQishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountDiscovery, accountHeartbeat, accountFeatureCache, accountInsights, accountPlaybackResolver, bodian, bodianAccount, bodianQrLogin, bodianQrPhoto, videos, podcasts, radioApi, radioStore, dlna, audioMatch, carIntegration, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, qishuiAccount, loginQishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

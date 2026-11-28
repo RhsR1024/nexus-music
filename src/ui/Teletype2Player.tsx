@@ -6,10 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import { move, remove, select } from '../domain/queue.ts';
 import { trackKey, type Track } from '../domain/track.ts';
+import type { TrackArtistRef } from '../domain/artistNames.ts';
 import { displayLyricIndex, lyricLineProgress } from '../lyrics/parser.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { Modal } from './AdaptiveModal.tsx';
+import { ClickableArtistLine } from './ClickableArtistLine.tsx';
 import { useLyricDocument } from './Lyrics.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { SliderControl } from './SliderControl.tsx';
@@ -275,12 +277,14 @@ export function Teletype2Player({
   favoriteTrack,
   lyricTrack,
   onMore,
+  onArtistPress,
 }: {
   services: Services;
   track: Track;
   favoriteTrack: Track;
   lyricTrack: Track;
   onMore: () => void;
+  onArtistPress?: (artist: TrackArtistRef) => void;
 }) {
   const insets = useSafeAreaInsets();
   const state = useSyncExternalStore(services.playback.controller.subscribe, services.playback.controller.getSnapshot);
@@ -415,7 +419,7 @@ export function Teletype2Player({
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 62, paddingRight: 12, gap: 8, paddingBottom: 8, zIndex: 3 }}>
         <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: '#0D0C0B', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center' }}>
           <Text numberOfLines={1} style={{ color: '#EFE9DF', fontSize: 14.5, fontWeight: '700' }}>{track.title}</Text>
-          <Text numberOfLines={1} style={{ color: '#9C948A', fontSize: 11.5 }}>{track.artist}</Text>
+          <ClickableArtistLine track={track} onArtistPress={onArtistPress} centered textStyle={{ color: '#9C948A', fontSize: 11.5 }} />
         </View>
         {metalRound('options-outline', '打字机参数', () => setParamsOpen(true), 'teletype2-params-open')}
         {metalRound('document-text-outline', '完整纸带歌词', () => setLyricsOpen(true))}

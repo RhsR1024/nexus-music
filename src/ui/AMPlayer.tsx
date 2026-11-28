@@ -3,6 +3,8 @@ import {Pressable,View,useWindowDimensions} from 'react-native';
 import {Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
+import type {TrackArtistRef} from '../domain/artistNames.ts';
+import {ClickableArtistLine} from './ClickableArtistLine.tsx';
 import {Cover} from './Cover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {QueuePanel} from './QueueView.tsx';
@@ -10,7 +12,7 @@ import {CommentsModal} from './CommentsModal.tsx';
 import {Text} from './Typography.tsx';
 
 type Content='cover'|'lyrics'|'comments'|'queue';
-export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,onMore,onStyle,onComments,onArtistPress,onChromeHiddenChange}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void;onComments?:()=>void;onArtistPress?:(artist:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void}){
+export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,onMore,onStyle,onComments,onArtistPress,onChromeHiddenChange}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void;onComments?:()=>void;onArtistPress?:(artist:TrackArtistRef)=>void;onChromeHiddenChange?:(hidden:boolean)=>void}){
   const {width,height,fontScale}=useWindowDimensions(),columns=width>height&&width>=600&&fontScale<1.8;
   const [content,setContent]=useState<Content>('cover');
   const swipeStart=useRef<{x:number;y:number}|null>(null);
@@ -29,11 +31,11 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
   const tool=(glyph:(color:string)=>ReactNode,label:string,action:()=>void,id?:string,selected?:boolean)=><Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={action} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}>{glyph(selected?'#FFFFFF':'rgba(255,255,255,0.55)')}</Pressable>;
   // IMG_4866 keeps the cover actions as 30pt quiet discs beside the title block; bodyInfo uses 34pt discs with hitSlop for 44pt target.
   const circle=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,value?:string,size=30)=><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} hitSlop={size<44?Math.ceil((44-size)/2):0} onPress={action} style={{width:size,height:size,borderRadius:size/2,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.12)'}}><Ionicons name={name} size={size<=30?18:20} color="#FFFFFF"/></Pressable>;
-  const subtitle=`${track.artist}${track.album?` — ${track.album}`:''}`;
+  const albumSuffix=track.album?` — ${track.album}`:undefined;
   const coverInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:6,minHeight:56,marginTop:fontScale>1.4?20:32}}>
     <View style={{flex:1,minWidth:0,gap:5}}>
       <Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:20,fontWeight:'600'}}>{track.title}</Text>
-      <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:17}}>{subtitle}</Text></Pressable>
+      <ClickableArtistLine track={track} onArtistPress={onArtistPress} suffix={albumSuffix} textStyle={{color:'rgba(255,255,255,0.66)',fontSize:17}}/>
     </View>
     {/* IMG_4866 heart/dots ink centre stays at 583pt while the text block
         sits 2pt higher, so the icon pair keeps the old offset. */}
@@ -46,7 +48,7 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
     <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={46} radius={10}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:3}}>
       <Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:16,fontWeight:'600'}}>{track.title}</Text>
-      <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:14}}>{subtitle}</Text></Pressable>
+      <ClickableArtistLine track={track} onArtistPress={onArtistPress} suffix={albumSuffix} textStyle={{color:'rgba(255,255,255,0.66)',fontSize:14}}/>
     </View>
     <View style={{flexDirection:'row',gap:10}}>
       {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).then(()=>setError('')).catch(()=>setError('收藏未保存，已有数据保留。'));},favorite?'已收藏':'未收藏',34)}
