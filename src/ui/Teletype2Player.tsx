@@ -142,21 +142,34 @@ const TELETYPE2_HTML = `<!doctype html>
       var y=baselineY-(state.activeIndex-i)*rowStep+(targetScroll-scrollY);
       if(y<paperTop-40||y>paperBottom+24)continue;
       var isAct=i===state.activeIndex;
-      var fullText=(p.showTimestamps?fmtTime(item.ms)+' ':'')+(item.t||'');
-      var visibleText=isAct?fullText.slice(0,Math.max(1,Math.ceil(fullText.length*Math.max(0.06,state.lineProgress)))):fullText;
+      var tsPrefix=p.showTimestamps?fmtTime(item.ms)+' ':'';
+      var lyricBody=item.t||'';
+      var bodyChars=Array.from(lyricBody);
+      var visibleBody=isAct
+        ?(bodyChars.length?bodyChars.slice(0,Math.min(bodyChars.length,Math.max(1,Math.ceil(bodyChars.length*Math.max(0,Math.min(1,state.lineProgress)))))).join(''):'')
+        :lyricBody;
 
       var isRed=p.redChorusRibbon&&item.c;
       var wearJitter=p.ribbonWear?(Math.sin(i*13.7)*p.ribbonWear*0.22):0;
       var alpha=Math.max(0.28,Math.min(1,inkAlpha-wearJitter))*(isAct?1:0.78);
 
       ctx.font=(isAct?'700 ':'600 ')+fSize+'px "Courier New",Menlo,monospace';
-      ctx.fillStyle=isRed?'rgba(176,42,36,'+alpha.toFixed(2)+')':'rgba(34,28,24,'+alpha.toFixed(2)+')';
       ctx.textBaseline='alphabetic';
-      ctx.fillText(visibleText,textLeft,y,textMaxW);
+      var prefixW=0;
+      if(tsPrefix){
+        ctx.fillStyle=isRed?'rgba(164,56,48,'+(alpha*0.72).toFixed(2)+')':'rgba(88,76,66,'+(alpha*0.74).toFixed(2)+')';
+        ctx.fillText(tsPrefix,textLeft,y,textMaxW*0.42);
+        prefixW=Math.min(textMaxW*0.42,ctx.measureText(tsPrefix).width);
+      }
+      ctx.fillStyle=isRed?'rgba(176,42,36,'+alpha.toFixed(2)+')':'rgba(34,28,24,'+alpha.toFixed(2)+')';
+      var bodyMaxW=Math.max(40,textMaxW-prefixW);
+      if(visibleBody){
+        ctx.fillText(visibleBody,textLeft+prefixW,y,bodyMaxW);
+      }
 
       if(isAct){
-        var measured=Math.min(textMaxW,ctx.measureText(visibleText).width);
-        activeCursorX=textLeft+measured;
+        var bodyMeasured=visibleBody?Math.min(bodyMaxW,ctx.measureText(visibleBody).width):0;
+        activeCursorX=textLeft+prefixW+bodyMeasured;
         // Strike block cursor
         if(state.playing&&Math.floor(now/260)%2===0){
           ctx.fillStyle=isRed?'#B82B24':'#1E1916';
@@ -296,7 +309,11 @@ export function Teletype2Player({
     if (!doc?.synced || !doc.lines.length) return 1;
     const cur = doc.lines[activeIdx];
     if (!cur) return 1;
-    return Math.max(0.05, lyricLineProgress(cur, posMs - offset, doc.lines[activeIdx + 1]?.startMs));
+    const raw = lyricLineProgress(cur, posMs - offset, doc.lines[activeIdx + 1]?.startMs);
+    // Word-timed lines (YRC/KRC/QRC/TTML) already track exact vocal syllables;
+    // plain LRC lines finish slightly before the next line's breath pause.
+    const normalized = cur.words?.length ? raw : Math.min(1, raw / 0.88);
+    return Math.max(0, Math.min(1, normalized));
   }, [doc, activeIdx, posMs, offset]);
 
   const canvasLines = useMemo(() => {
@@ -325,9 +342,9 @@ export function Teletype2Player({
     playing,
     energy: Math.round(energy * 20) / 20,
     activeIndex: activeIdx,
-    lineProgress: Math.round(lineProgress * 25) / 25,
+    lineProgress: Math.round(lineProgress * 100) / 100,
     params,
-  }), [playing, Math.round(energy * 10), activeIdx, Math.round(lineProgress * 25), params]);
+  }), [playing, Math.round(energy * 10), activeIdx, Math.round(lineProgress * 100), params]);
 
   const isFav = services.songFavorites.isFavorite(favoriteTrack);
   const togglePlay = () => {

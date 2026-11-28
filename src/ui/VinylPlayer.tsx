@@ -35,10 +35,10 @@ function PaperBackdrop({services,track}:{services:Services;track:Track}){
   </View>;
 }
 
-export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue,onSleep,onQuality,onNotify}:{
+export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue,onSleep,onQuality,onNotify,onChromeHiddenChange}:{
   services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;
   onMore:()=>void;onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onSleep:()=>void;
-  onQuality?:()=>void;onNotify?:(msg:string)=>void;
+  onQuality?:()=>void;onNotify?:(msg:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void;
 }){
   const {width,height}=useWindowDimensions();
   const insets=useSafeAreaInsets();
@@ -48,6 +48,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [lyricsOpen,setLyricsOpen]=useState(false);
   const [inlineLyrics,setInlineLyrics]=useState(false);
+  useEffect(()=>{onChromeHiddenChange?.(inlineLyrics);return()=>{onChromeHiddenChange?.(false);};},[inlineLyrics,onChromeHiddenChange]);
   // IMG_4851 deck: 370.33x351pt at x29.67/y155.67 on the 430x932 reference.
   const deck=Math.max(1,Math.min(width-59.34,370.33));
   const isFavorite=services.songFavorites.isFavorite(favoriteTrack);
@@ -61,7 +62,7 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
   const qualityLabel=qualityBadgeText(state.media?.quality??preferences.quality);
   return <View style={styles.root}>
     <PaperBackdrop services={services} track={track}/>
-    <View style={[styles.content,{paddingTop:inlineLyrics?Math.max(insets.top+54,104):Math.max(96,height*(155.67/932))}]}>
+    <View style={[styles.content,{paddingTop:inlineLyrics?Math.max(insets.top+12,56):Math.max(96,height*(155.67/932))}]}>
       {inlineLyrics?<>
         <View style={{flexDirection:'row',alignItems:'center',gap:12,marginBottom:8}}>
           <Pressable testID="vinyl-lyrics-back" accessibilityRole="button" accessibilityLabel="返回黑胶唱片" onPress={()=>setInlineLyrics(false)} style={{flexDirection:'row',alignItems:'center',gap:12,flex:1,minWidth:0}}>

@@ -1,5 +1,5 @@
 import {useRef,useState,useSyncExternalStore} from 'react';
-import {View,StyleSheet,useWindowDimensions,type GestureResponderEvent} from 'react-native';
+import {Pressable,View,StyleSheet,useWindowDimensions,type GestureResponderEvent} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {playbackTimeline} from '../playback/timeline.ts';
 import type {Services} from '../app/services.ts';
@@ -7,7 +7,7 @@ import {Text} from './Typography.tsx';
 import {paper,paperProgressShadow} from './tokens.ts';
 const time=(value:number)=>`${Math.floor(Math.max(0,value)/60)}:${String(Math.floor(Math.max(0,value)%60)).padStart(2,'0')}`;
 const paddedTime=(value:number)=>{const total=Math.floor(Math.max(0,value));return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;};
-export function PlaybackProgress({services,adaptive=false,variant='default'}:{services:Services;adaptive?:boolean;variant?:'default'|'paper'|'stage'|'am'|'am2'|'immersive'|'compact'}){
+export function PlaybackProgress({services,adaptive=false,variant='default',qualityLabel,onQualityPress}:{services:Services;adaptive?:boolean;variant?:'default'|'paper'|'stage'|'am'|'am2'|'immersive'|'compact';qualityLabel?:string;onQualityPress?:()=>void}){
   const controller=services.playback.controller,state=useSyncExternalStore(controller.subscribe,controller.getSnapshot);
   const timeline=playbackTimeline(state);
   const largeText=useWindowDimensions().fontScale>1.4&&adaptive;
@@ -30,7 +30,7 @@ export function PlaybackProgress({services,adaptive=false,variant='default'}:{se
     </View>
     {!compactTone&&<View style={{flexDirection:largeText&&!paperTone?'column':'row',justifyContent:'space-between',alignItems:largeText&&!paperTone?'stretch':'center',gap:largeText&&!paperTone?6:0,...(stageTimes?{marginTop:-8,marginLeft:-8}:{}),...(amTone?{marginTop:-5.3}:{}),...(modernTone?{marginTop:-6}:{}),...(paperTone?{marginTop:-5,marginHorizontal:-13.5}:{})}}>
       {largeText&&!paperTone?<View style={{flexDirection:'row',justifyContent:'space-between',gap:12}}><Text numberOfLines={1} style={[styles.small,{flexShrink:1}]}>{time(position)}</Text><Text numberOfLines={1} style={[styles.small,{flexShrink:1}]}>−{time(timeline.duration-position)}</Text></View>:<Text numberOfLines={1} style={timeStyle}>{paperTone?paddedTime(position):time(position)}</Text>}
-      {!paperTone&&!stageTone&&((amTone||modernTone)?<View style={{flexDirection:'row',alignItems:'center',gap:4,borderWidth:1,borderColor:'rgba(255,255,255,0.32)',borderRadius:10,paddingHorizontal:10,paddingVertical:1}}><Ionicons name="pulse" size={12} color="rgba(255,255,255,0.82)"/><Text numberOfLines={1} style={[styles.amTime,{color:'rgba(255,255,255,0.82)',fontWeight:'600'}]}>{state.media?.quality?state.media.quality.toUpperCase():'等待音源'}</Text></View>:<Text numberOfLines={1} style={[styles.small,{flexShrink:1,borderRadius:8,paddingHorizontal:9,paddingVertical:3,backgroundColor:'rgba(0,0,0,0.28)'}]}>{state.media?.quality?`◆ ${state.media.quality.toUpperCase()}`:'等待音源'}</Text>)}
+      {!paperTone&&!stageTone&&((amTone||modernTone)?(onQualityPress?<Pressable testID="progress-quality-pill" accessibilityRole="button" accessibilityLabel="切换播放音质" onPress={onQualityPress} style={{flexDirection:'row',alignItems:'center',gap:4,borderWidth:1,borderColor:'rgba(255,255,255,0.28)',backgroundColor:'rgba(255,255,255,0.10)',borderRadius:11,paddingHorizontal:10,paddingVertical:2}}><Ionicons name="pulse" size={12} color="rgba(255,255,255,0.86)"/><Text numberOfLines={1} style={[styles.amTime,{color:'rgba(255,255,255,0.88)',fontWeight:'600'}]}>{qualityLabel??(state.media?.quality?state.media.quality.toUpperCase():'等待音源')}</Text></Pressable>:<View style={{flexDirection:'row',alignItems:'center',gap:4,borderWidth:1,borderColor:'rgba(255,255,255,0.32)',borderRadius:10,paddingHorizontal:10,paddingVertical:1}}><Ionicons name="pulse" size={12} color="rgba(255,255,255,0.82)"/><Text numberOfLines={1} style={[styles.amTime,{color:'rgba(255,255,255,0.82)',fontWeight:'600'}]}>{qualityLabel??(state.media?.quality?state.media.quality.toUpperCase():'等待音源')}</Text></View>):<Text numberOfLines={1} style={[styles.small,{flexShrink:1,borderRadius:8,paddingHorizontal:9,paddingVertical:3,backgroundColor:'rgba(0,0,0,0.28)'}]}>{state.media?.quality?`◆ ${state.media.quality.toUpperCase()}`:'等待音源'}</Text>)}
       {paperTone?<Text numberOfLines={1} style={styles.paper}>{paddedTime(timeline.duration)}</Text>:!largeText&&<Text style={timeStyle}>−{time(timeline.duration-position)}</Text>}
     </View>}
   </View>;

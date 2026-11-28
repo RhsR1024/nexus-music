@@ -134,9 +134,28 @@ export function FrequencyHalo({services,playing,children}:PropsWithChildren<{ser
       onResponderMove={event=>{if(event.nativeEvent.touches.length!==1){cancel();return;}const value=current();setPreview(gesture.move(value.token,value.duration,fraction(event)));}}
       onResponderRelease={event=>{const value=current();if(fraction(event)===undefined){cancel();return;}gesture.move(value.token,value.duration,fraction(event));const seconds=gesture.finish(value.token,value.duration);setPreview(undefined);if(seconds!==undefined)controller.seek(seconds);}}
       onResponderTerminationRequest={()=>false} onResponderTerminate={cancel} style={{position:'absolute',width:152,height:152}}>
-      <View pointerEvents="none" accessible={false} style={{width:152,height:152}}>{Array.from({length:60},(_,i)=>{const angle=i/60*Math.PI*2-Math.PI/2,passed=i/60<=clamped,tickLen=passed?8.5:6;return <View key={i} style={{position:'absolute',left:76+Math.cos(angle)*64-1.1,top:76+Math.sin(angle)*64-tickLen/2,width:2.2,height:tickLen,borderRadius:1.1,backgroundColor:passed?'rgba(255,255,255,0.88)':'rgba(255,255,255,0.34)',transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>
+      <View testID={showSpectrum?'wave-spectrum-bars':undefined} pointerEvents="none" accessible={false} style={{width:152,height:152}}>{Array.from({length:60},(_,i)=>{
+        const angle=(i/60)*Math.PI*2-Math.PI/2;
+        const passed=i/60<=clamped;
+        let amp=0;
+        if(showSpectrum){
+          const pos=(i/60)*spectrum.bands.length;
+          const b0=Math.floor(pos)%spectrum.bands.length;
+          const b1=(b0+1)%spectrum.bands.length;
+          const frac=pos-Math.floor(pos);
+          const v0=Math.min(1,Math.max(0,spectrum.bands[b0]??0));
+          const v1=Math.min(1,Math.max(0,spectrum.bands[b1]??0));
+          amp=v0+(v1-v0)*frac;
+        }
+        const baseLen=passed?8.5:6;
+        const tickLen=showSpectrum?baseLen+amp*12.5:baseLen;
+        const centerR=59.5+tickLen/2;
+        const color=showSpectrum
+          ?(passed?'rgba(255,255,255,0.96)':`rgba(255,255,255,${(0.38+amp*0.54).toFixed(2)})`)
+          :(passed?'rgba(255,255,255,0.88)':'rgba(255,255,255,0.34)');
+        return <View key={i} style={{position:'absolute',left:76+Math.cos(angle)*centerR-1.1,top:76+Math.sin(angle)*centerR-tickLen/2,width:2.2,height:tickLen,borderRadius:1.1,backgroundColor:color,transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;
+      })}</View>
     </View>
-    {showSpectrum&&<View testID="wave-spectrum-bars" pointerEvents="none" accessible={false} style={{position:'absolute',width:152,height:152}}>{Array.from({length:32},(_,i)=>{const angle=(i/32)*Math.PI*2-Math.PI/2,length=5+Math.min(1,Math.max(0,spectrum.bands[i]??0))*15;return <View key={i} accessible={false} style={{position:'absolute',width:2.4,height:length,borderRadius:1.2,backgroundColor:'rgba(255,255,255,0.92)',left:76+Math.cos(angle)*65-1.2,top:76+Math.sin(angle)*65-length/2,transform:[{rotate:`${angle+Math.PI/2}rad`}]}}/>;})}</View>}
     {/* Base ring + true clockwise white progress arc around central transport disc */}
     <View pointerEvents="none" style={{position:'absolute',width:ringSize,height:ringSize,borderRadius:half,borderWidth:stroke,borderColor:'rgba(255,255,255,0.16)',backgroundColor:'rgba(255,255,255,0.05)'}}/>
     {clamped>0.002&&<View pointerEvents="none" style={{position:'absolute',width:ringSize,height:ringSize}}>

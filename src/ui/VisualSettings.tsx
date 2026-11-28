@@ -118,12 +118,10 @@ export function VisualSettings({services}:{services:Services}){
       </View>
     </View>
 
-    {/* Polished grouped card: 动效与磁带装饰开关 */}
+    {/* Polished grouped card: 封面取色与动态效果 */}
     <View style={{gap:8}}>
       <Text accessibilityRole="header" style={{color:muted,fontSize:13,fontWeight:'500',marginLeft:6}}>取色与动态效果</Text>
       <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
-        {switchRow('visual-tape-style','radio-outline','磁带封面','为经典、沉浸、声波核与 AM 系列主封面追加磁带框，列表缩略图保持简洁',value.tapeStyle,tapeStyle=>update({tapeStyle}))}
-        {divider}
         {switchRow('visual-cover-color','color-filter-outline','封面取色','提取当前播放歌曲封面主色并应用至全局氛围',value.coverColor,coverColor=>update({coverColor}))}
         {divider}
         {switchRow('visual-global-motion','sparkles-outline','全局封面流动','独立开启全局封面流动背景，关闭后恢复取色或主题背景',value.globalBackgroundMotion,globalBackgroundMotion=>update({globalBackgroundMotion}))}

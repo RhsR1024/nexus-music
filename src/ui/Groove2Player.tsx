@@ -45,7 +45,7 @@ const DEFAULT_PARAMS: Groove2Params = {
   material: 'wood',
   spinMode: 'lyric',
   loupe: true,
-  loupeZoom: 1.8,
+  loupeZoom: 2.5,
   diffraction: 0.55,
   fanWidth: 0.45,
   chorusVinyl: true,
@@ -73,7 +73,7 @@ const GROOVE2_HTML = `<!doctype html>
   var state={
     title:'',artist:'',playing:false,position:0,duration:180,energy:0,
     activeIndex:0,lineProgress:0.5,lines:[],chorusSet:{},coverData:'',
-    params:{material:'wood',spinMode:'lyric',loupe:true,loupeZoom:1.8,diffraction:0.55,fanWidth:0.45,chorusVinyl:true,needleBounce:true,dust:true,fingerprint:true}
+    params:{material:'wood',spinMode:'lyric',loupe:true,loupeZoom:2.5,diffraction:0.55,fanWidth:0.45,chorusVinyl:true,needleBounce:true,dust:true,fingerprint:true}
   };
   var coverImg=null,coverSrc='',pausedLoop=false,rafId=0;
   var angle=0,targetAngle=0,lastNow=performance.now();
@@ -92,7 +92,7 @@ const GROOVE2_HTML = `<!doctype html>
       var fallback=(state.title||'音枢 · 黑胶螺旋槽 2')+'  ·  '+(state.artist||'PURE VINYL GROOVE');
       lines=[{t:fallback,c:false},{t:fallback,c:false},{t:fallback,c:false}];
     }
-    var rOuter=0.92,rInner=0.36,turns=6.2;
+    var rOuter=0.91,rInner=0.37,turns=5.2;
     var flat=[];
     for(var i=0;i<lines.length;i++){
       var txt=(lines[i].t||'').trim();
@@ -107,14 +107,14 @@ const GROOVE2_HTML = `<!doctype html>
       lineCharBounds[i]={start:start,end:flat.length-3};
     }
     if(!flat.length)return;
-    // Distribute characters evenly along Archimedean spiral arc length
+    // Distribute characters cleanly along Archimedean spiral so adjacent rings stay separated
     var totalTheta=turns*Math.PI*2;
-    var step=totalTheta/Math.max(flat.length,120);
+    var step=totalTheta/Math.max(flat.length,110);
     var theta=0;
     for(var k=0;k<flat.length;k++){
       var frac=Math.min(1,k/Math.max(1,flat.length-1));
       var r=rOuter-(rOuter-rInner)*frac;
-      var adv=(flat[k].ch.charCodeAt(0)>127?0.058:0.036)/Math.max(0.36,r);
+      var adv=(flat[k].ch.charCodeAt(0)>127?0.062:0.038)/Math.max(0.37,r);
       spiralChars.push({ch:flat[k].ch,line:flat[k].line,chorus:flat[k].chorus,theta:theta,r:r});
       theta+=Math.max(step*0.65,adv);
     }
@@ -222,18 +222,18 @@ const GROOVE2_HTML = `<!doctype html>
       g.rotate(item.theta);
       g.translate(0,-rPx);
       if(isChorus){
-        g.fillStyle=isAct?'rgba(108,242,148,0.28)':'rgba(78,196,118,0.16)';
+        g.fillStyle=isAct?(isLoupe?'rgba(86,216,130,0.22)':'rgba(108,242,148,0.26)'):(isLoupe?'rgba(78,196,118,0.09)':'rgba(78,196,118,0.14)');
         g.fillRect(-fontSize*0.58,-fontSize*0.64,fontSize*1.16,fontSize*1.28);
       }
       if(isAct){
-        g.font='700 '+(fontSize*1.08).toFixed(1)+'px -apple-system,BlinkMacSystemFont,sans-serif';
-        g.shadowColor=isChorus?'rgba(128,255,168,0.85)':'rgba(255,255,255,0.75)';
-        g.shadowBlur=isLoupe?8:5;
-        g.fillStyle=isChorus?'#C8FFD4':'#FFFFFF';
+        g.font='700 '+(fontSize*(isLoupe?1.16:1.08)).toFixed(1)+'px -apple-system,BlinkMacSystemFont,sans-serif';
+        g.shadowColor=isLoupe?'rgba(0,0,0,0.65)':(isChorus?'rgba(128,255,168,0.85)':'rgba(255,255,255,0.75)');
+        g.shadowBlur=isLoupe?4:5;
+        g.fillStyle=isLoupe?'#FFFFFF':(isChorus?'#C8FFD4':'#FFFFFF');
       }else{
         g.font='500 '+fontSize.toFixed(1)+'px -apple-system,BlinkMacSystemFont,sans-serif';
         g.shadowBlur=0;
-        g.fillStyle=isChorus?'rgba(126,232,158,0.58)':'rgba(218,214,206,0.30)';
+        g.fillStyle=isLoupe?(isChorus?'rgba(126,232,158,0.28)':'rgba(218,214,206,0.18)'):(isChorus?'rgba(126,232,158,0.54)':'rgba(218,214,206,0.28)');
       }
       g.fillText(item.ch,0,0);
       g.restore();
@@ -353,37 +353,47 @@ const GROOVE2_HTML = `<!doctype html>
       angle=(angle+dt*0.58)%(Math.PI*2);
     }
 
-    var cx=W*0.5,cy=H*0.52,R=Math.min(W*0.46,H*0.44);
-    var bounce=(p.needleBounce&&state.playing)?Math.sin(now*0.025)*state.energy*2.5:0;
+    var cx=W*0.5,cy=H*0.455,R=Math.min(W*0.47,H*0.44);
+    var bounce=(p.needleBounce&&state.playing)?Math.sin(now*0.025)*state.energy*2.0:0;
     var stylusR=(activeChar.r||0.66)*R;
-    var stylusX=cx-R*0.06+bounce;
-    var stylusY=cy-stylusR+bounce*0.5;
+    var liveTheta=activeChar.theta+angle;
+    var focusX=cx+Math.sin(liveTheta)*stylusR;
+    var focusY=cy-Math.cos(liveTheta)*stylusR;
+    var loupeR=Math.min(58,R*0.31);
+    var lx=cx-R*0.11;
+    var ly=Math.max(cy-R*0.64,Math.min(cy-R*0.34,cy-stylusR*0.72));
+    var stylusX=(p.loupe?lx:cx-R*0.06)+bounce;
+    var stylusY=(p.loupe?(ly-loupeR-1):(cy-stylusR))+bounce*0.5;
 
     drawBackdrop(ctx);
     drawDisc(ctx,cx,cy,R,angle,false);
 
-    // Optical Magnifying Glass Loupe directly magnifying the engraved lyrics under the stylus!
+    // Optical Magnifying Glass Loupe: mathematically pins the currently sung character
+    // (focusX, focusY) to the exact dead-center (lx, ly) of the circular lens, rotated upright!
     if(p.loupe){
-      var loupeR=Math.min(48,R*0.26);
-      var lx=cx-R*0.10,ly=cy-stylusR*0.86;
       ctx.save();
       ctx.beginPath();ctx.arc(lx,ly,loupeR,0,Math.PI*2);ctx.clip();
-      ctx.fillStyle='#0B0C0E';ctx.fillRect(lx-loupeR,ly-loupeR,loupeR*2,loupeR*2);
-      var z=p.loupeZoom||1.8;
+      ctx.fillStyle='#0A0B0D';ctx.fillRect(lx-loupeR,ly-loupeR,loupeR*2,loupeR*2);
+      var z=p.loupeZoom||2.5;
       ctx.translate(lx,ly);
+      ctx.rotate(-liveTheta);
       ctx.scale(z,z);
-      ctx.translate(-lx,-ly);
+      ctx.translate(-focusX,-focusY);
       drawDisc(ctx,cx,cy,R,angle,true);
       ctx.restore();
 
-      // Optical glass lens highlight + metallic bezel ring
+      // Subtle vertical reading hairline from stylus rim toward lens center + glass reflection bezel
       ctx.save();
-      var glass=ctx.createRadialGradient(lx-loupeR*0.32,ly-loupeR*0.32,loupeR*0.1,lx,ly,loupeR);
-      glass.addColorStop(0,'rgba(255,255,255,0.24)');
+      ctx.beginPath();
+      ctx.moveTo(lx,ly-loupeR+3);
+      ctx.lineTo(lx,ly-loupeR*0.34);
+      ctx.strokeStyle='rgba(255,255,255,0.42)';ctx.lineWidth=1;ctx.stroke();
+      var glass=ctx.createRadialGradient(lx-loupeR*0.30,ly-loupeR*0.30,loupeR*0.08,lx,ly,loupeR);
+      glass.addColorStop(0,'rgba(255,255,255,0.22)');
       glass.addColorStop(0.55,'rgba(255,255,255,0.02)');
-      glass.addColorStop(1,'rgba(0,0,0,0.34)');
+      glass.addColorStop(1,'rgba(0,0,0,0.38)');
       ctx.beginPath();ctx.arc(lx,ly,loupeR,0,Math.PI*2);ctx.fillStyle=glass;ctx.fill();
-      ctx.lineWidth=2.2;ctx.strokeStyle='rgba(220,226,236,0.72)';ctx.stroke();
+      ctx.lineWidth=2.2;ctx.strokeStyle='rgba(220,226,236,0.78)';ctx.stroke();
       ctx.restore();
     }
 
@@ -644,7 +654,7 @@ export function Groove2Player({
                 </View>
               </View>
 
-              <SliderControl testID="groove2-loupe-zoom" label="放大镜倍率" value={params.loupeZoom} min={1.4} max={2.6} step={0.1} format={v => `${v.toFixed(1)}x`} onChange={loupeZoom => setParams(p => ({ ...p, loupeZoom }))} />
+              <SliderControl testID="groove2-loupe-zoom" label="放大镜倍率" value={params.loupeZoom} min={1.6} max={3.2} step={0.1} format={v => `${v.toFixed(1)}x`} onChange={loupeZoom => setParams(p => ({ ...p, loupeZoom }))} />
               <SliderControl testID="groove2-diffraction" label="衍射光扇强度" value={params.diffraction} min={0} max={1} step={0.05} format={v => `${Math.round(v * 100)}%`} onChange={diffraction => setParams(p => ({ ...p, diffraction }))} />
               <SliderControl testID="groove2-fan-width" label="光扇宽度" value={params.fanWidth} min={0.1} max={1} step={0.05} format={v => `${Math.round(v * 100)}%`} onChange={fanWidth => setParams(p => ({ ...p, fanWidth }))} />
 

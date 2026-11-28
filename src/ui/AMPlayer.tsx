@@ -1,21 +1,23 @@
-import {useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
 import {Pressable,View,useWindowDimensions} from 'react-native';
 import {Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {Cover} from './Cover.tsx';
-import {PlayerCover} from './TapeCover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {QueuePanel} from './QueueView.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
 import {Text} from './Typography.tsx';
 
 type Content='cover'|'lyrics'|'comments'|'queue';
-export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,onMore,onStyle,onComments,onArtistPress}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void;onComments?:()=>void;onArtistPress?:(artist:string)=>void}){
+export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,onMore,onStyle,onComments,onArtistPress,onChromeHiddenChange}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;controls:ReactNode;onMore:()=>void;onStyle:()=>void;onComments?:()=>void;onArtistPress?:(artist:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void}){
   const {width,height,fontScale}=useWindowDimensions(),columns=width>height&&width>=600&&fontScale<1.8;
   const [content,setContent]=useState<Content>('cover');
   const swipeStart=useRef<{x:number;y:number}|null>(null);
+  const didSwipe=useRef(false);
+  const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
+  useEffect(()=>{onChromeHiddenChange?.(!columns&&content!=='cover');return()=>{onChromeHiddenChange?.(false);};},[columns,content,onChromeHiddenChange]);
   const favorite=services.songFavorites.isFavorite(favoriteTrack);
   // IMG_4866: 382pt square artwork (24pt side margins) starting 110pt down,
   // then a 60pt gap before the 20pt title block.
@@ -40,8 +42,8 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
       {circle('ellipsis-horizontal','更多播放控制',onMore)}
     </View>
   </View>;
-  const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:12,minHeight:58,marginTop:columns?0:54}}>
-    <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={58} radius={10}/></Pressable>
+  const bodyInfo=<View testID="am-song-info" style={{flexDirection:'row',alignItems:'center',gap:12,minHeight:50,marginTop:0}}>
+    <Pressable accessibilityRole="button" accessibilityLabel="返回封面" testID="am-return-cover" onPress={()=>setContent('cover')} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={46} radius={10}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:3}}>
       <Text numberOfLines={1} style={{color:'#FFFFFF',fontSize:16,fontWeight:'600'}}>{track.title}</Text>
       <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={{color:'rgba(255,255,255,0.66)',fontSize:14}}>{subtitle}</Text></Pressable>
@@ -62,12 +64,14 @@ export function AMPlayer({services,track,favoriteTrack,lyricTrack,font,controls,
   return <View testID="am-player" style={{flex:1,minHeight:0}}>
     {content==='cover'?<View style={{flex:1,minHeight:0,gap:0}}>
       <View testID={columns?'am-horizontal':'am-vertical'} style={{flex:1,minHeight:0,flexDirection:columns?'row':'column',gap:12}}>
-        <View testID="am-body" collapsable={false}
-          onTouchStart={e=>{swipeStart.current={x:e.nativeEvent.pageX,y:e.nativeEvent.pageY};}}
-          onTouchEnd={e=>{const s=swipeStart.current;swipeStart.current=null;if(!s)return;const dx=e.nativeEvent.pageX-s.x,dy=e.nativeEvent.pageY-s.y;if(Math.abs(dx)>56&&Math.abs(dx)>Math.abs(dy)*1.4)services.playback.next(dx<0?1:-1);}}
+        <Pressable testID="am-body" collapsable={false}
+          accessibilityRole="button" accessibilityLabel="点击封面切换全屏歌词"
+          onTouchStart={e=>{didSwipe.current=false;swipeStart.current={x:e.nativeEvent.pageX,y:e.nativeEvent.pageY};}}
+          onTouchEnd={e=>{const s=swipeStart.current;swipeStart.current=null;if(!s)return;const dx=e.nativeEvent.pageX-s.x,dy=e.nativeEvent.pageY-s.y;if(Math.abs(dx)>56&&Math.abs(dx)>Math.abs(dy)*1.4){didSwipe.current=true;services.playback.next(dx<0?1:-1);}}}
+          onPress={()=>{if(!didSwipe.current)setContent('lyrics');}}
           style={{width:'100%',height:side,alignItems:'center',marginTop:columns?0:fontScale>1.4?16:72,overflow:'hidden'}}>
-          <View testID="am-artwork-square" collapsable={false} style={{width:side,height:side}}><PlayerCover services={services} track={track} size={side}/></View>
-        </View>
+          <View testID="am-artwork-square" collapsable={false} style={{width:side,height:side,borderRadius:Math.min(18,preferences.coverRadius),overflow:'hidden'}}><Cover services={services} track={track} size={side} radius={Math.min(18,preferences.coverRadius)}/></View>
+        </Pressable>
         <View testID="am-controls" style={{flexShrink:0,width:columns?Math.min(360,width*.42):undefined}}>
           {coverInfo}
           {!!error&&<Text accessibilityRole="alert" style={{color:'#FFD7BA'}}>{error}</Text>}

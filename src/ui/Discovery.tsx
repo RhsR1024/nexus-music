@@ -35,7 +35,8 @@ import {Toast,useToast} from './Toast.tsx';
 import {selectionToggleAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
 import {StyleRecommendationSheet} from './StyleRecommendationSheet.tsx';
 
-type PageView={kind:'featured'}|{kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string}|{kind:'bannerSongs';id:string;title:string;artwork?:string;tracks:readonly Track[]};
+type DiscoveryTabKind='featured'|'playlists'|'rankings';
+type PageView={kind:'featured'}|{kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string;returnView?:DiscoveryTabKind}|{kind:'bannerSongs';id:string;title:string;artwork?:string;tracks:readonly Track[];returnView?:DiscoveryTabKind};
 type Item={kind:'collection';value:BrowseItem;rank:boolean}|{kind:'artist';value:ArtistItem}|{kind:'category';id:string;title:string;group?:string}|{kind:'track';track:Track;key?:string};
 const platforms=[['wy','网易云','#E60026','musical-notes'],['tx','QQ音乐','#31C27C','musical-note'],['kw','酷我音乐','#F5A623','disc'],['kg','酷狗音乐','#2B8CFF','radio'],['mg','咪咕音乐','#E91E63','headset']]as const;
 type DiscoverPlatformChoice=OnlinePlatform|'qishui'|'bodian';
@@ -275,6 +276,7 @@ export function Discovery({
         title:song?.title||banner.typeTitle||'新歌首发',
         artwork:song?.artwork??banner.imageUrl,
         tracks:song?[song]:[],
+        returnView:'featured',
       });
       return;
     }
@@ -283,7 +285,7 @@ export function Discovery({
       return;
     }
     if(banner.targetType===1000&&banner.targetId&&/^\d+$/.test(banner.targetId)){
-      openCollection({id:banner.targetId,title:banner.typeTitle||'推荐歌单',artwork:banner.imageUrl},false);
+      openCollection({id:banner.targetId,title:banner.typeTitle||'推荐歌单',artwork:banner.imageUrl},false,'featured');
       return;
     }
     if(banner.url&&banner.url.startsWith('https://')){
@@ -295,7 +297,7 @@ export function Discovery({
   async function previewPlaylistLink(){
     linkAbort.current.abort();linkAbort.current=new AbortController();const signal=linkAbort.current.signal,version=++linkGeneration.current;
     setLinkLoading(true);setMessage('');
-    try{const value=await services.resolvePlaylistLink(link,platform,signal);if(signal.aborted||version!==linkGeneration.current)return;setError('');setTotal(undefined);setView({kind:'detail',id:value.id,title:'公开分享歌单',rank:false});}
+    try{const value=await services.resolvePlaylistLink(link,platform,signal);if(signal.aborted||version!==linkGeneration.current)return;setError('');setTotal(undefined);setView({kind:'detail',id:value.id,title:'公开分享歌单',rank:false,returnView:currentTabKind});}
     catch(failure){if(!signal.aborted&&version===linkGeneration.current)setMessage(playlistLinkFailure(failure));}
     finally{if(version===linkGeneration.current)setLinkLoading(false);}
   }
@@ -355,7 +357,10 @@ export function Discovery({
   const gridColumns=Math.max(1,Math.min(4,Math.floor((usableWidth+14)/(156*Math.max(1,fontScale)+14))));
   const columns=(view.kind==='detail'&&!artistAlbums)||view.kind==='bannerSongs'?1:view.kind==='rankings'?1:gridColumns;
   const cardWidth=Math.max(1,Math.min(240,(usableWidth-14*(columns-1))/columns));
-  const openCollection=(item:BrowseItem,rank:boolean)=>{setDescriptionOpen(false);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank,artwork:item.artwork,description:item.description});};
+  const currentTabKind:DiscoveryTabKind=view.kind==='featured'||view.kind==='rankings'||view.kind==='playlists'?view.kind:'featured';
+  const openCollection=(item:BrowseItem,rank:boolean,returnView?:DiscoveryTabKind)=>{setDescriptionOpen(false);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank,artwork:item.artwork,description:item.description,returnView:returnView??currentTabKind});};
+  const detailReturnView:DiscoveryTabKind=view.kind==='detail'||view.kind==='bannerSongs'?(view.returnView??(view.kind==='bannerSongs'?'featured':'playlists')):'playlists';
+  const detailReturnLabel=detailReturnView==='featured'?'返回精选':detailReturnView==='rankings'?'返回排行榜':'返回歌单广场';
   const albumMetadata=initialCollection?.kind==='album'?{...initialCollection.collection,...albumInfo}:undefined;
   const artistMetadata=initialCollection?.kind==='artist'?{...initialCollection.collection as ArtistItem,...artistInfo}:undefined;
   const detailDescription=view.kind==='detail'?artistMetadata?.description??albumMetadata?.description??view.description:undefined;
@@ -371,9 +376,9 @@ export function Discovery({
           <Ionicons name="chevron-back" size={18} color={s.ink}/>
           <Text numberOfLines={1} style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{initialCollection?initialCollection.returnLabel??'返回搜索结果':'收起发现'}</Text>
         </Pressable>}
-        {inDetail&&!initialCollection&&<Pressable accessibilityRole="button" accessibilityLabel={view.kind==='bannerSongs'?'返回发现':'返回歌单广场'} onPress={()=>setView({kind:'playlists'})} style={{minHeight:38,paddingHorizontal:12,borderRadius:19,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:4}}>
+        {inDetail&&!initialCollection&&<Pressable accessibilityRole="button" accessibilityLabel={detailReturnLabel} onPress={()=>setView({kind:detailReturnView})} style={{minHeight:38,paddingHorizontal:12,borderRadius:19,backgroundColor:softSurface,flexDirection:'row',alignItems:'center',gap:4}}>
           <Ionicons name="chevron-back" size={18} color={s.ink}/>
-          <Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{view.kind==='bannerSongs'?'返回发现':'返回歌单广场'}</Text>
+          <Text style={{color:s.ink,fontSize:14,fontWeight:'600'}}>{detailReturnLabel}</Text>
         </Pressable>}
       </View>
       {inDetail&&<Text numberOfLines={1} style={{color:s.muted,fontSize:13,fontWeight:'600',maxWidth:'42%'}}>{currentPlatform[1]}</Text>}
@@ -692,10 +697,10 @@ export function Discovery({
         loading={featuredLoading}
         error={featuredError}
         onRetry={()=>{void loadFeatured();}}
-        onOpenPlaylist={pl=>openCollection(pl,false)}
+        onOpenPlaylist={pl=>openCollection(pl,false,'featured')}
         onOpenAlbum={al=>setNestedCollection({platform,kind:'album',collection:al,returnLabel:'返回精选'})}
         onOpenArtist={ar=>setNestedCollection({platform,kind:'artist',collection:ar,returnLabel:'返回精选'})}
-        onOpenRank={rank=>openCollection({id:rank.id,title:rank.title,artwork:rank.artwork,description:rank.updateFrequency},true)}
+        onOpenRank={rank=>openCollection({id:rank.id,title:rank.title,artwork:rank.artwork,description:rank.updateFrequency},true,'featured')}
         onOpenCategory={cat=>{setCategory(cat.id);setView({kind:'playlists'});}}
         onOpenMV={mv=>setActiveMV(mv)}
         onOpenMorePlaylists={()=>{setCategory(undefined);setView({kind:'playlists'});}}
@@ -703,7 +708,7 @@ export function Discovery({
         onOpenMoreAlbums={platform==='wy'?()=>{setView({kind:'albums'});}:()=>{setView({kind:'playlists'});}}
         onOpenMoreArtists={platform==='wy'?()=>{setView({kind:'artists'});}:()=>{setView({kind:'playlists'});}}
         onOpenMoreMVs={platform==='wy'?tab=>setMvPlazaTab(tab):undefined}
-        onOpenSongShelf={(title,shelfTracks)=>{setDescriptionOpen(false);setTotal(shelfTracks.length);setView({kind:'bannerSongs',id:`shelf-${title}`,title,artwork:shelfTracks[0]?.artwork,tracks:shelfTracks});}}
+        onOpenSongShelf={(title,shelfTracks)=>{setDescriptionOpen(false);setTotal(shelfTracks.length);setView({kind:'bannerSongs',id:`shelf-${title}`,title,artwork:shelfTracks[0]?.artwork,tracks:shelfTracks,returnView:'featured'});}}
       />}
       </>}
     </>}
@@ -786,7 +791,7 @@ export function Discovery({
     </View>
   </Modal>;
 
-  const overlays=<>{platformPickerSheet}<DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description});}}/>{mvPlazaTab&&<MVPlazaModal services={services} visible initialTab={mvPlazaTab} onClose={()=>setMvPlazaTab(null)} onSelectMV={mv=>{setMvPlazaTab(null);setActiveMV(mv);}}/>}{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/><AccountFeatureSheet services={services} feature={accountFeature} onClose={()=>setAccountFeature(null)} onOpenAccounts={openAccounts} onOpenPlaylist={(plat,pl)=>{setPlatform(plat);openCollection(pl,false);}} onOpenArtist={(plat,ar)=>setNestedCollection({platform:plat,kind:'artist',collection:ar,returnLabel:'返回发现'})} onOpenAlbum={(plat,al)=>setNestedCollection({platform:plat,kind:'album',collection:al,returnLabel:'返回发现'})} onOpenMV={mv=>setActiveMV(mv)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
+  const overlays=<>{platformPickerSheet}<DownloadSubmissionModal services={services} report={downloadReport} onClose={()=>setDownloadReport(null)}/><TrackActions services={services} track={menuTrack} prefix="discovery" onClose={()=>setMenuTrack(null)}/><StyleRecommendationSheet services={services} visible={styleOpen} onClose={()=>setStyleOpen(false)} onOpenPlaylist={item=>{setStyleOpen(false);setPlatform('wy');setCategory(undefined);setTotal(undefined);setView({kind:'detail',id:item.id,title:item.title,rank:false,artwork:item.artwork,description:item.description,returnView:currentTabKind});}}/>{mvPlazaTab&&<MVPlazaModal services={services} visible initialTab={mvPlazaTab} onClose={()=>setMvPlazaTab(null)} onSelectMV={mv=>{setMvPlazaTab(null);setActiveMV(mv);}}/>}{activeMV&&<MVDetail services={services} platform={activeMV.platform} video={activeMV} onClose={()=>setActiveMV(null)}/>}<NeteasePodcastsModal services={services} visible={podcastsOpen} onClose={()=>setPodcastsOpen(false)}/><GlobalRadioModal services={services} visible={radioOpen} onClose={()=>setRadioOpen(false)}/><AudioMatchModal services={services} visible={audioMatchOpen} onClose={()=>setAudioMatchOpen(false)}/><AccountFeatureSheet services={services} feature={accountFeature} onClose={()=>setAccountFeature(null)} onOpenAccounts={openAccounts} onOpenPlaylist={(plat,pl)=>{setPlatform(plat);openCollection(pl,false,currentTabKind);}} onOpenArtist={(plat,ar)=>setNestedCollection({platform:plat,kind:'artist',collection:ar,returnLabel:'返回发现'})} onOpenAlbum={(plat,al)=>setNestedCollection({platform:plat,kind:'album',collection:al,returnLabel:'返回发现'})} onOpenMV={mv=>setActiveMV(mv)}/>{nestedCollection&&<Discovery services={services} initialCollection={nestedCollection} onClose={()=>setNestedCollection(null)}/>}</>;
   if(embedded)return <><View style={{flex:1}}>{content}</View>{overlays}</>;
   return <>{!initialCollection&&<View style={{marginBottom:18}}>{button('发现 · 分类 · 排行榜 · 歌单导入',()=>setOpen(true))}</View>}<Modal visible={open} animationType="slide" onRequestClose={close}>{content}{overlays}</Modal></>;
 }

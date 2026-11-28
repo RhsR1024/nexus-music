@@ -53,7 +53,6 @@ export function AppearanceOverview({services,open}:{services:Services;open:(page
   const playerRows:Row[]=[
     {id:'keep-screen-on',title:'播放界面屏幕常亮',icon:'sunny-outline',subtitle:'打开完整播放界面时阻止屏幕自动息屏',toggle:{value:value.keepScreenOn,change:keepScreenOn=>update({keepScreenOn})}},
     {id:'full-screen',title:'全屏模式',icon:'expand-outline',subtitle:'隐藏顶部状态栏，获得更沉浸的浏览与播放视野',toggle:{value:value.fullScreenMode,change:fullScreenMode=>update({fullScreenMode})}},
-    {id:'tape-style',title:'磁带封面',icon:'radio-outline',subtitle:'为经典、沉浸、声波核与 AM 系列主要封面追加粉调磁带框',toggle:{value:value.tapeStyle,change:tapeStyle=>update({tapeStyle})}},
     {id:'player-background',title:'播放器背景',icon:'image-outline',detail:{artwork:'歌曲封面',photo:'自定义写真',solid:'纯色'}[value.playerBackground],page:'background'},
     {id:'accent',title:'强调色',icon:'ellipse',detail:{rose:'玫瑰',coral:'珊瑚',purple:'紫色',blue:'蓝色',orange:'橙色'}[value.accent],page:'accent'},
   ];

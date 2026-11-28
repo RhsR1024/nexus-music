@@ -1,11 +1,11 @@
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
 import {AppState,Pressable,ScrollView,View,type GestureResponderEvent,useWindowDimensions} from 'react-native';
 import {Ionicons,MaterialCommunityIcons} from '@expo/vector-icons';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {Services} from '../app/services.ts';
 import type {Track} from '../domain/track.ts';
 import {AM2Presentation,am2Columns,type AM2Content} from '../domain/am2.ts';
 import {Cover} from './Cover.tsx';
-import {PlayerCover} from './TapeCover.tsx';
 import {Lyrics} from './Lyrics.tsx';
 import {QueuePanel} from './QueueView.tsx';
 import {CommentsModal} from './CommentsModal.tsx';
@@ -35,24 +35,26 @@ function AM2VolumeBar({value,onChange}:{value:number;onChange:(next:number)=>voi
   </View>;
 }
 
-export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity,visible,controls,onMore,onStyle,onLyricSource,onArtistPress}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;identity:string;visible:boolean;controls:ReactNode;onMore:()=>void;onStyle?:()=>void;onLyricSource?:()=>void;onArtistPress?:(artist:string)=>void}){
+export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity,visible,controls,onMore,onStyle,onLyricSource,onArtistPress,onChromeHiddenChange}:{services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;identity:string;visible:boolean;controls:ReactNode;onMore:()=>void;onStyle?:()=>void;onLyricSource?:()=>void;onArtistPress?:(artist:string)=>void;onChromeHiddenChange?:(hidden:boolean)=>void}){
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const model=useMemo(()=>new AM2Presentation(),[]),view=useSyncExternalStore(model.subscribe,model.getSnapshot);
   const [foreground,setForeground]=useState(AppState.currentState==='active'),[error,setError]=useState(''),[settings,setSettings]=useState(false);
-  const {width,height,fontScale}=useWindowDimensions(),columns=am2Columns(width-120,height-120,fontScale);
+  const {width,height,fontScale}=useWindowDimensions(),insets=useSafeAreaInsets(),columns=am2Columns(width-120,height-120,fontScale);
   const swipeStart=useRef<{x:number;y:number}|null>(null);
   useEffect(()=>{const subscription=AppState.addEventListener('change',value=>setForeground(value==='active'));return()=>subscription.remove();},[]);
   useEffect(()=>{model.configure({identity,active:visible&&foreground&&!settings,automatic:preferences.am2AutoLyrics,delaySeconds:preferences.am2DelaySeconds});},[model,identity,visible,foreground,settings,preferences.am2AutoLyrics,preferences.am2DelaySeconds]);
   useEffect(()=>()=>model.dispose(),[model]);
+  useEffect(()=>{const hidden=!columns&&(view.content!=='cover'||settings);onChromeHiddenChange?.(hidden);return()=>{onChromeHiddenChange?.(false);};},[columns,view.content,settings,onChromeHiddenChange]);
   const update=(patch:Parameters<typeof services.preferences.update>[0])=>{void services.preferences.update(patch).then(()=>setError('')).catch(()=>setError('设置未保存，之前的设置保留。'));};
   const favorite=services.songFavorites.isFavorite(favoriteTrack);
   const button=(title:string,action:()=>void,id?:string)=><Pressable testID={id} accessibilityRole="button" onPress={action} style={{minHeight:42,paddingHorizontal:12,borderRadius:12,backgroundColor:'rgba(255,255,255,0.12)',justifyContent:'center'}}><Text style={{color:'#FFFFFF',fontSize:14}}>{title}</Text></Pressable>;
   const circle=(name:React.ComponentProps<typeof Ionicons>['name'],label:string,action:()=>void,value?:string)=><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={value?{text:value}:undefined} onPress={action} style={{width:34,height:34,borderRadius:17,backgroundColor:'rgba(255,255,255,0.12)',alignItems:'center',justifyContent:'center'}}><Ionicons name={name} color="#FFFFFF" size={19}/></Pressable>;
   const content=view.content==='queue'?<QueuePanel services={services} tone="dark"/>:view.content==='comments'?<CommentsModal services={services} track={favoriteTrack} embedded tone="dark" onClose={()=>model.select('cover')}/>:view.content==='lyrics'?<Lyrics services={services} track={lyricTrack} font={font} presentation="am2" chrome={columns}/>:null;
-  const coverSide=Math.max(100,Math.min(columns?Math.min((width-96)*.34,126):width-48,height*(columns?.31:fontScale>1.4?.28:.42),382));
-  const artwork=<Pressable onTouchStart={e=>{swipeStart.current={x:e.nativeEvent.pageX,y:e.nativeEvent.pageY};}} onTouchEnd={e=>{const s=swipeStart.current;swipeStart.current=null;if(!s)return;const dx=e.nativeEvent.pageX-s.x,dy=e.nativeEvent.pageY-s.y;if(Math.abs(dx)>56&&Math.abs(dx)>Math.abs(dy)*1.4)services.playback.next(dx<0?1:-1);}} onPress={()=>model.select('lyrics')} style={{borderRadius:14,overflow:'hidden',shadowColor:'#000000',shadowOpacity:0.35,shadowRadius:22,shadowOffset:{width:0,height:12}}}>
-    <PlayerCover services={services} track={track} size={coverSide}/>
+  const coverSide=Math.max(100,Math.min(columns?Math.min((width-96)*.34,126):width-56,height*(columns?.31:fontScale>1.4?.26:.39),356));
+  const coverRadius=Math.min(18,preferences.coverRadius);
+  const artwork=<Pressable onTouchStart={e=>{swipeStart.current={x:e.nativeEvent.pageX,y:e.nativeEvent.pageY};}} onTouchEnd={e=>{const s=swipeStart.current;swipeStart.current=null;if(!s)return;const dx=e.nativeEvent.pageX-s.x,dy=e.nativeEvent.pageY-s.y;if(Math.abs(dx)>56&&Math.abs(dx)>Math.abs(dy)*1.4)services.playback.next(dx<0?1:-1);}} onPress={()=>model.select('lyrics')} style={{borderRadius:coverRadius,overflow:'hidden',shadowColor:'#000000',shadowOpacity:0.35,shadowRadius:22,shadowOffset:{width:0,height:12}}}>
+    <Cover services={services} track={track} size={coverSide} radius={coverRadius}/>
   </Pressable>;
   const transport=<View style={{gap:columns?4:10}}>{controls}{preferences.am2ShowVolume&&<AM2VolumeBar value={preferences.volume} onChange={volume=>update({volume})}/>}</View>;
   const coverMeta=<View style={{flexDirection:'row',alignItems:'center',gap:8,marginTop:columns?2:fontScale>1.4?10:18}}>
@@ -63,10 +65,10 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
     {circle(favorite?'heart':'heart-outline','收藏歌曲',()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>setError('收藏未保存，之前的数据保留。'));},favorite?'已收藏':'未收藏')}
     {circle('ellipsis-horizontal','更多播放控制',onMore)}
   </View>;
-  const compactHeader=<View style={{flexDirection:'row',alignItems:'center',gap:12,paddingLeft:2,marginTop:54}}>
-    <Pressable testID="am2-return-cover" accessibilityRole="button" accessibilityLabel="返回封面" onPress={()=>model.select('cover')} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={52} radius={10}/></Pressable>
+  const compactHeader=<View style={{flexDirection:'row',alignItems:'center',gap:12,paddingLeft:2,marginTop:Math.max(insets.top+10,56)}}>
+    <Pressable testID="am2-return-cover" accessibilityRole="button" accessibilityLabel="返回封面" onPress={()=>{setSettings(false);model.select('cover');}} style={{borderRadius:10,overflow:'hidden'}}><Cover services={services} track={track} size={46} radius={10}/></Pressable>
     <View style={{flex:1,minWidth:0,gap:2}}>
-      <Text numberOfLines={1} style={{fontSize:17,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>
+      <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:'#FFFFFF'}}>{track.title}</Text>
       <Pressable disabled={!onArtistPress} onPress={()=>onArtistPress?.(track.artist)} style={{alignSelf:'flex-start'}}><Text numberOfLines={1} style={{fontSize:13,color:'rgba(255,255,255,0.66)'}}>{track.artist}</Text></Pressable>
     </View>
     {!settings&&view.content==='lyrics'&&<Pressable testID="am2-expand-lyrics" accessibilityRole="button" accessibilityLabel={view.fullscreen?'还原歌词区域':'展开歌词区域'} onPress={()=>model.toggleFullscreen()} style={{paddingHorizontal:10,minHeight:34,borderRadius:17,backgroundColor:'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}><Text style={{color:'#FFFFFF',fontSize:12,fontWeight:'600'}}>{view.fullscreen?'还原歌词区域':'展开歌词区域'}</Text></Pressable>}
@@ -76,13 +78,13 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
   const tool=(glyph:(color:string)=>ReactNode,label:string,action:()=>void,id:string,selected:boolean)=>(
     <Pressable testID={id} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={action} style={{minWidth:48,minHeight:48,alignItems:'center',justifyContent:'center'}}>{glyph(selected?'#FFFFFF':'rgba(255,255,255,0.55)')}</Pressable>
   );
-  const bottomTools=<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingTop:4,marginBottom:8}}>
+  const bottomTools=<View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingTop:4,marginBottom:Math.max(insets.bottom+6,14)}}>
     {tool(color=><MaterialCommunityIcons name="subtitles" size={21} color={color}/>,'歌词',()=>{setSettings(false);model.select('lyrics');},'am2-content-lyrics',!settings&&view.content==='lyrics')}
     {tool(color=><View style={{transform:[{scaleX:-1}]}}><Ionicons name={view.content==='comments'&&!settings?'chatbox':'chatbox-outline'} size={22} color={color}/></View>,'评论',()=>{setSettings(false);model.select('comments');},'am2-content-comments',!settings&&view.content==='comments')}
     {tool(color=><Ionicons name="options-outline" size={23} color={color}/>,settings?'收起 AM2 设置':'AM2 设置',()=>setSettings(v=>!v),'am2-settings',settings)}
     {tool(color=><MaterialCommunityIcons name="playlist-music" size={22} color={color}/>,'队列',()=>{setSettings(false);model.select('queue');},'am2-content-queue',!settings&&view.content==='queue')}
   </View>;
-  return <View testID={columns?'am2-horizontal':'am2-vertical'} style={{flex:1,gap:columns?4:10}} onTouchStart={()=>model.setTouching(true)} onTouchEnd={event=>model.setTouching(event.nativeEvent.touches.length>0)} onTouchCancel={()=>model.setTouching(false)}>
+  return <View testID={columns?'am2-horizontal':'am2-vertical'} style={{flex:1,gap:columns?4:10,paddingTop:columns?14:0}} onTouchStart={()=>model.setTouching(true)} onTouchEnd={event=>model.setTouching(event.nativeEvent.touches.length>0)} onTouchCancel={()=>model.setTouching(false)}>
     {!columns&&(view.content!=='cover'||settings)&&compactHeader}
     {settings?<ScrollView style={{flex:1}} contentContainerStyle={{gap:12,paddingVertical:8}} showsVerticalScrollIndicator={false}>
       {button(`自动展开歌词：${preferences.am2AutoLyrics?'开':'关'}`,()=>update({am2AutoLyrics:!preferences.am2AutoLyrics}),'am2-auto')}
@@ -94,7 +96,7 @@ export function AM2Player({services,track,favoriteTrack,lyricTrack,font,identity
         {onStyle&&button('调整播放界面',onStyle)}
       </View>
     </ScrollView>:<View style={{flex:1,minHeight:0,flexDirection:columns?'row':'column',gap:columns?18:0}}>
-      {columns?<ScrollView style={{flex:.85}} contentContainerStyle={{gap:6}} showsVerticalScrollIndicator={false}>{!view.fullscreen&&<View style={{alignItems:'center'}}>{artwork}</View>}{coverMeta}{transport}</ScrollView>:view.content==='cover'?<View style={{flex:1,justifyContent:'space-between',paddingTop:fontScale>1.4?8:28}}>
+      {columns?<ScrollView style={{flex:.85}} contentContainerStyle={{gap:6}} showsVerticalScrollIndicator={false}>{!view.fullscreen&&<View style={{alignItems:'center'}}>{artwork}</View>}{coverMeta}{transport}</ScrollView>:view.content==='cover'?<View style={{flex:1,justifyContent:'space-between',paddingTop:Math.max(insets.top+60,108)}}>
         <View style={{alignItems:'center'}}>{artwork}</View>
         {coverMeta}
       </View>:null}

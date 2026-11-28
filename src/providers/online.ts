@@ -92,22 +92,25 @@ function extractKuwoArtwork(value: Row): string | undefined {
 }
 function extractQQArtwork(value: Row, album: Row): string | undefined {
   const albumMid = text(album.mid ?? value.albummid).trim();
-  if (albumMid && albumMid !== '00000000000000') {
+  if (albumMid && !/^0+$/.test(albumMid)) {
     return `https://y.gtimg.cn/music/photo_new/T002R500x500M000${albumMid}.jpg`;
   }
-  const vs = list(value.vs).map(item => text(item).trim()).filter(Boolean);
-  for (const vsId of [vs[1], vs[0], ...vs.slice(2)]) {
-    if (vsId && /^[A-Za-z0-9]{10,24}$/.test(vsId)) {
+  // Preserve original QQ `vs` slot positions! Slot [1] holds the UGC/single T062 cover ID
+  // when album.mid is empty (even if slot [0] is ""). Filtering out empty strings beforehand
+  // shifts unrelated non-image slots (e.g. vs[4]) into index 1 and produces 404 image URLs.
+  const rawVs = list(value.vs).map(item => text(item).trim());
+  for (const vsId of [rawVs[1], rawVs[0]]) {
+    if (vsId && /^[A-Za-z0-9]{10,24}$/.test(vsId) && !/^0+$/.test(vsId)) {
       return `https://y.gtimg.cn/music/photo_new/T062R300x300M000${vsId}.jpg`;
     }
   }
   const albumPmid = text(album.pmid ?? value.albumpmid).trim();
-  if (albumPmid && /^[A-Za-z0-9_]{10,32}$/.test(albumPmid)) {
+  if (albumPmid && /^[A-Za-z0-9_]{10,32}$/.test(albumPmid) && !/^0+(_0+)?$/.test(albumPmid)) {
     return `https://y.gtimg.cn/music/photo_new/T002R500x500M000${albumPmid}.jpg`;
   }
   const firstSinger = row(list(value.singer)[0]);
   const singerMid = text(firstSinger.mid ?? firstSinger.pmid).trim();
-  if (singerMid && /^[A-Za-z0-9]{10,24}$/.test(singerMid)) {
+  if (singerMid && /^[A-Za-z0-9]{10,24}$/.test(singerMid) && !/^0+$/.test(singerMid)) {
     return `https://y.gtimg.cn/music/photo_new/T001R300x300M000${singerMid}.jpg`;
   }
   return undefined;
@@ -173,6 +176,13 @@ export class OnlineProvider {
       if(response.code!==200)throw new Error('封面元数据暂不可用');
       const song=list(response.songs).map(row).find(song=>text(song.id)===id);
       return song?text(row(song.al??song.album).picUrl)||undefined:undefined;
+    }
+    if(track.origin.platform==='tx'&&/^[A-Za-z0-9]{8,32}$/.test(track.origin.id)){
+      const body=JSON.stringify({comm:{ct:19,cv:1859,uin:0},req:{module:'music.pf_song_detail_svr',method:'get_song_detail_yqq',param:{song_type:0,song_mid:track.origin.id}}});
+      const raw=row(await this.http(queryURL('https://u.y.qq.com/cgi-bin/musics.fcg',{sign:await qqSignature(body,this.sha1)}),{method:'POST',headers:{'Content-Type':'application/json',Referer:'https://y.qq.com/'},body},signal));
+      const detail=row(row(raw.req).data);
+      const info=row(detail.track_info);
+      return extractQQArtwork(info,row(info.album));
     }
     if(track.origin.platform==='kw'&&/^\d+$/.test(track.origin.id)){
       const response=row(await this.http(queryURL('https://m.kuwo.cn/newh5/singles/songinfoandlrc',{musicId:track.origin.id}),{},signal));
