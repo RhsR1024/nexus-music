@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
-import type { Track } from '../domain/track.ts';
+import { trackPlatform, type Track } from '../domain/track.ts';
 import { normalizeQuality, type Quality } from '../domain/quality.ts';
 import { Modal } from './AdaptiveModal.tsx';
 import { Text } from './Typography.tsx';
@@ -105,7 +105,7 @@ export function QualityPickerSheet({
   const [switching, setSwitching] = useState<Quality | null>(null);
   const [error, setError] = useState('');
 
-  const platform = track.origin.kind === 'online' ? track.origin.platform : undefined;
+  const platform = trackPlatform(track);
   const activeQuality =
     (platform ? preferences.playbackQualities?.[platform] : undefined) ??
     normalizeQuality(playback.media?.quality ?? '') ??

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.icu.text.Transliterator
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.PowerManager
 import android.util.Base64
@@ -477,6 +479,50 @@ class NexusNativeModule : Module() {
 
     AsyncFunction("carIntegrationStatus") {
       NexusCarBridgeStore.statusSnapshot()
+    }
+
+    AsyncFunction("getNetworkStatus") {
+      try {
+        val ctx = appContext.reactContext
+        val cm = ctx?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val active = cm?.activeNetwork
+        val caps = if (active != null) cm.getNetworkCapabilities(active) else null
+        val connected = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        val validated = caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        val transport = when {
+          caps == null -> "none"
+          caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
+          caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "cellular"
+          caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "ethernet"
+          else -> "other"
+        }
+        val hasVpn = caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        val isExpensive = cm?.isActiveNetworkMetered == true
+        val dnsCount = try {
+          if (active != null) cm.getLinkProperties(active)?.dnsServers?.size ?: -1 else 0
+        } catch (_: Throwable) {
+          -1
+        }
+        mapOf(
+          "connected" to connected,
+          "validated" to validated,
+          "transport" to transport,
+          "isExpensive" to isExpensive,
+          "isConstrained" to false,
+          "hasVpn" to hasVpn,
+          "dnsCount" to dnsCount,
+        )
+      } catch (_: Throwable) {
+        mapOf(
+          "connected" to false,
+          "validated" to false,
+          "transport" to "unknown",
+          "isExpensive" to false,
+          "isConstrained" to false,
+          "hasVpn" to false,
+          "dnsCount" to -1,
+        )
+      }
     }
 
     OnDestroy {

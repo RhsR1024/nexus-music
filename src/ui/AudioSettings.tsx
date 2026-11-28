@@ -6,16 +6,13 @@ import {Pressable,StyleSheet,Switch,View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import type {Services} from '../app/services.ts';
 import type {SmartDegradeMode} from '../app/preferences.ts';
+import {countPlatformRoutingCustomizations} from '../domain/platformRouting.ts';
 import {qualityOrder,type Quality} from '../domain/quality.ts';
-import type {OnlinePlatform} from '../domain/track.ts';
+import type {MusicPlatform} from '../domain/track.ts';
+import {PlatformLogo} from './PlatformLogo.tsx';
+import {ALL_MUSIC_PLATFORM_ITEMS,PlatformSourceRoutingModal} from './PlatformSourceRoutingModal.tsx';
 
-const platformList:readonly {id:OnlinePlatform;label:string}[]=[
-  {id:'wy',label:'网易云音乐'},
-  {id:'tx',label:'QQ 音乐'},
-  {id:'kw',label:'酷我音乐'},
-  {id:'kg',label:'酷狗音乐'},
-  {id:'mg',label:'咪咕音乐'},
-];
+const platformList:readonly {id:MusicPlatform;label:string}[]=ALL_MUSIC_PLATFORM_ITEMS.map(({id,label})=>({id,label}));
 const degradeModes:readonly [SmartDegradeMode,string,string][]=[
   ['progressive','逐级降级','从首选音质逐级尝试至 128k'],
   ['direct128k','直降 128k','降音质时直接尝试 128k 兜底'],
@@ -23,13 +20,19 @@ const degradeModes:readonly [SmartDegradeMode,string,string][]=[
 
 export function AudioSettings({ services }: { services: Services }) {
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),[error,setError]=useState('');
-  const [expandedPlatform,setExpandedPlatform]=useState<OnlinePlatform|null>(null);
+  const [expandedPlatform,setExpandedPlatform]=useState<MusicPlatform|null>(null);
+  const [routingOpen,setRoutingOpen]=useState(false);
   const value = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
+  const sources = useSyncExternalStore(services.catalog.subscribe, services.catalog.getSnapshot);
+  const knownSourceIds = new Set(sources.map(item => item.id));
+  const customizedPlatformCount = platformList.filter(item =>
+    countPlatformRoutingCustomizations(value.platformSourceRouting[item.id], knownSourceIds).hasCustom,
+  ).length;
   const update=(patch:Parameters<typeof services.preferences.update>[0],msg='音质设置未保存，请重试；之前的设置已保留。')=>{
     setError('');
     void services.preferences.update(patch).catch(()=>setError(msg));
   };
-  const setPlatformQuality=(platform:OnlinePlatform,quality?:Quality)=>{
+  const setPlatformQuality=(platform:MusicPlatform,quality?:Quality)=>{
     const next={...value.playbackQualities};
     if(quality===undefined)delete next[platform];else next[platform]=quality;
     update({playbackQualities:next},'分平台播放音质未保存，请重试。');
@@ -61,7 +64,7 @@ export function AudioSettings({ services }: { services: Services }) {
           return <View key={item.id}>
             {index>0&&<View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:44,backgroundColor:s.hairline}}/>}
             <Pressable testID={`playback-platform-${item.id}`} accessibilityRole="button" accessibilityLabel={`${item.label}播放音质`} accessibilityState={{expanded:open}} onPress={()=>setExpandedPlatform(open?null:item.id)} style={{minHeight:48,paddingHorizontal:13,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:10}}>
-              <Ionicons name="pulse-outline" size={18} color={custom?s.control:s.ink}/>
+              <PlatformLogo platform={item.id} size={22}/>
               <Text style={{flex:1,color:s.ink,fontSize:14.5,fontWeight:'700'}}>{item.label}</Text>
               <Text style={{color:custom?s.control:s.muted,fontSize:12.5,fontWeight:custom?'600':'400'}}>{custom?custom.toUpperCase():'跟随全局'}</Text>
               <Ionicons name={open?'chevron-up':'chevron-forward'} size={15} color={s.subtle}/>
@@ -98,6 +101,16 @@ export function AudioSettings({ services }: { services: Services }) {
         <Switch testID="smart-cross-script" accessibilityLabel="跨脚本换源" value={value.smartCrossScript} onValueChange={smartCrossScript=>update({smartCrossScript},'跨脚本设置未保存')} trackColor={s.switchTrack} thumbColor={s.switchThumb(value.smartCrossScript)}/>
       </View>
       <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:54,backgroundColor:s.hairline}}/>
+      <Pressable testID="smart-platform-source-routing" accessibilityRole="button" accessibilityLabel="分平台音源优先级与排除" onPress={()=>setRoutingOpen(true)} style={{flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:16,paddingVertical:13}}>
+        <View style={{width:26,alignItems:'center'}}><Ionicons name="git-branch-outline" size={20} color={s.ink}/></View>
+        <View style={{flex:1,gap:2}}>
+          <Text style={{color:s.ink,fontSize:15.5,fontWeight:'700'}}>分平台音源优先级与排除</Text>
+          <Text style={{color:s.muted,fontSize:12,lineHeight:17}}>为网易云、QQ、汽水等 7 个平台单独定制优先顺序与禁用音源</Text>
+        </View>
+        <Text style={{color:customizedPlatformCount>0?s.control:s.muted,fontSize:12.5,fontWeight:customizedPlatformCount>0?'600':'400'}}>{customizedPlatformCount>0?`已定制 ${customizedPlatformCount} 平台`:'跟随全局'}</Text>
+        <Ionicons name="chevron-forward" size={16} color={s.subtle}/>
+      </Pressable>
+      <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:54,backgroundColor:s.hairline}}/>
       <View style={{flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:16,paddingVertical:13}}>
         <View style={{width:26,alignItems:'center'}}><Ionicons name="play-skip-forward-outline" size={20} color={s.ink}/></View>
         <View style={{flex:1,gap:2}}>
@@ -108,5 +121,6 @@ export function AudioSettings({ services }: { services: Services }) {
       </View>
     </View>
     {!!error&&<Text accessibilityRole="alert" style={{color:s.accent,fontSize:12,lineHeight:18,marginLeft:6}}>{error}</Text>}
+    <PlatformSourceRoutingModal catalog={services.catalog} preferences={services.preferences} visible={routingOpen} onClose={()=>setRoutingOpen(false)}/>
   </View>;
 }

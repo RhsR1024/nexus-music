@@ -1,4 +1,4 @@
-import {trackKey,type OnlinePlatform,type Track} from '../domain/track.ts';
+import {trackKey,trackPlatform,type MusicPlatform,type OnlinePlatform,type Track} from '../domain/track.ts';
 import {fallbackQualities,qualityOrder,type Quality} from '../domain/quality.ts';
 import {scoreCandidate} from '../domain/matching.ts';
 import {PlaybackMessageError} from '../playback/errors.ts';
@@ -8,11 +8,12 @@ import type {PlaybackTraceSink} from '../playback/diagnostics.ts';
 import type {CrossPlatformMatcher} from './crossPlatformMatcher.ts';
 import type {MultiSourceResolver,RoutedMedia} from './multiSourceResolver.ts';
 export class MatchedResolver {
-  private deps:{matcher:Pick<CrossPlatformMatcher,'candidates'>;library:Pick<LibraryStore,'matchFor'|'setMatch'>;router:Pick<MultiSourceResolver,'resolve'>;available:()=>readonly OnlinePlatform[];quality:()=>Quality;qualityForPlatform?:(platform:OnlinePlatform)=>Quality;persistMatches?:boolean;autoMatch?:()=>boolean;hash:(value:string)=>Promise<string>};
+  private deps:{matcher:Pick<CrossPlatformMatcher,'candidates'>;library:Pick<LibraryStore,'matchFor'|'setMatch'>;router:Pick<MultiSourceResolver,'resolve'>;available:(originPlatform?:MusicPlatform)=>readonly OnlinePlatform[];quality:()=>Quality;qualityForPlatform?:(platform:OnlinePlatform,originPlatform?:MusicPlatform)=>Quality;persistMatches?:boolean;autoMatch?:()=>boolean;hash:(value:string)=>Promise<string>};
   constructor(deps:MatchedResolver['deps']){this.deps=deps;}
   async resolve(original:Track,signal:AbortSignal,excluded:ReadonlySet<string>=new Set(),trace?:PlaybackTraceSink):Promise<RoutedMedia>{
     throwIfAborted(signal);if(original.origin.kind!=='imported'&&original.origin.kind!=='online')throw new Error('此来源不支持在线匹配');
-    const platforms=this.deps.available();if(!platforms.length)throw new PlaybackMessageError('请先启用LX音源，再播放或匹配歌曲');
+    const originPlatform=trackPlatform(original);
+    const platforms=this.deps.available(originPlatform);if(!platforms.length)throw new PlaybackMessageError('请先启用LX音源，再播放或匹配歌曲');
     let saved=this.deps.library.matchFor(original),targets:Track[]|undefined=saved?.method==='manual'?[saved.target]:undefined;
     const originalKey=trackKey(original.origin),manual=saved?.method==='manual',automatic=original.origin.kind==='imported'||(this.deps.autoMatch?.()??true);
     trace?.({stage:'match',status:'info',title:manual?'使用手动指定版本':original.origin.kind==='imported'?'开始跨平台匹配':'原曲优先，自动匹配作为回退',detail:manual&&saved?.target?`${saved.target.title} · ${saved.target.artist}`:undefined});
@@ -32,9 +33,9 @@ export class MatchedResolver {
     const attempt=async(target:Track,quality:Quality):Promise<RoutedMedia|undefined>=>{
       current();const targetKey=trackKey(target.origin),blocked=new Set<string>();
       if(target.origin.kind!=='online'||!platforms.includes(target.origin.platform))return;
-      if(this.deps.qualityForPlatform&&!fallbackQualities(this.deps.qualityForPlatform(target.origin.platform)).includes(quality))return;
+      if(this.deps.qualityForPlatform&&!fallbackQualities(this.deps.qualityForPlatform(target.origin.platform,originPlatform)).includes(quality))return;
       for(const value of excluded){try{const pair=JSON.parse(value);if(Array.isArray(pair)&&pair[0]===targetKey&&typeof pair[1]==='string')blocked.add(pair[1]);}catch{/* A route from another identity must not block this target. */}}
-      let media:RoutedMedia;try{media=await this.deps.router.resolve(target,signal,blocked,[quality],trace);}catch{current();return;}
+      let media:RoutedMedia;try{media=await this.deps.router.resolve(target,signal,blocked,[quality],trace,originPlatform);}catch{current();return;}
       current();const cacheKey=await this.deps.hash(JSON.stringify([originalKey,targetKey,media.sourceFingerprint,media.quality]));current();
       if(this.deps.persistMatches!==false&&targetKey!==originalKey&&(!saved||trackKey(saved.target.origin)!==targetKey)){
         try{await this.deps.library.setMatch(original,target,manual?'manual':'automatic',{signal,previous:saved});}
@@ -46,7 +47,7 @@ export class MatchedResolver {
     };
     // Quality is the outer loop: a lower-quality match must not win before
     // another platform has tried the user's preferred quality.
-    const qualities=this.deps.qualityForPlatform?qualityOrder.slice(Math.min(...platforms.map(platform=>qualityOrder.indexOf(this.deps.qualityForPlatform!(platform))))):fallbackQualities(this.deps.quality());
+    const qualities=this.deps.qualityForPlatform?qualityOrder.slice(Math.min(...platforms.map(platform=>qualityOrder.indexOf(this.deps.qualityForPlatform!(platform,originPlatform))))):fallbackQualities(this.deps.quality());
     for(const quality of qualities){
       if(!manual&&original.origin.kind==='online'){const media=await attempt(original,quality);if(media)return media;}
       if(manual||automatic){for(const target of await candidates()){const media=await attempt(target,quality);if(media)return media;}}

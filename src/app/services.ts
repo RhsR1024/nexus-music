@@ -22,6 +22,8 @@ import {CoverThemeStore} from '../appearance/coverTheme.ts';
 import {PublicComments} from '../providers/comments.ts';
 import {bindManualMatches,bindMatchPolicy} from '../playback/matchBinding.ts';
 import {SourceHealth} from '../providers/sourceHealth.ts';
+import {NetworkDiagnosticsCoordinator,type SystemNetworkInfo} from '../providers/networkDiagnostics.ts';
+import {applyPlatformSourceRouting} from '../domain/platformRouting.ts';
 import {loadAudioProbe,loadNativeDiagnosticLX} from '../providers/nativeLX.ts';
 import {createSourceDiagnostics} from '../providers/sourceDiagnostics.ts';
 import {DAVNativeTransport,type DAVNativeModule} from '../providers/davNativeTransport.ts';
@@ -70,8 +72,8 @@ import { AccountFmStation } from '../playback/accountFmStation.ts';
 import { OnlineProvider } from '../providers/online.ts';
 import { SearchCoordinator,PagedSearchCoordinator } from '../providers/searchCoordinator.ts';
 import { currentEntry, makeQueue, append, appendMany, enqueueNext, enqueueNextMany } from '../domain/queue.ts';
-import { trackKey } from '../domain/track.ts';
-import type { OnlinePlatform,Track } from '../domain/track.ts';
+import { trackKey, trackPlatform } from '../domain/track.ts';
+import type { MusicPlatform, OnlinePlatform, Track } from '../domain/track.ts';
 import {requestJSON,type HTTPClient,type TextHTTPClient} from '../providers/http.ts';
 import type {PlaybackTraceSink} from '../playback/diagnostics.ts';
 import { NavidromeAccounts } from '../providers/navidromeAccounts.ts';
@@ -208,15 +210,18 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   }).catch(() => {});
   const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal,size)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size},signal),(track,signal)=>track.origin.kind==='webdav'?davMedia.cover(track,signal):track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track),(track,signal)=>online.artwork(track,signal));
-  const playbackQualityFor=(platform:OnlinePlatform)=>preferences.getSnapshot().playbackQualities[platform]??preferences.getSnapshot().quality;
+  const playbackQualityFor=(platform:MusicPlatform)=>preferences.getSnapshot().playbackQualities[platform]??preferences.getSnapshot().quality;
   const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality, 15000, {
     qualityForPlatform: playbackQualityFor,
     degradeMode: () => preferences.getSnapshot().smartDegradeMode,
     crossScript: () => preferences.getSnapshot().smartCrossScript,
+    sourceRouting: () => preferences.getSnapshot().platformSourceRouting,
   });
   const matching=new CrossPlatformMatcher(online);
   const comments=new PublicComments(options.onlineHTTP,{md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),nonce:Crypto.randomUUID});
-  const sourceHealth=new SourceHealth({registry,open:createSourceDiagnostics(catalog,loadNativeDiagnosticLX(),Crypto.randomUUID),online,probe:loadAudioProbe(Crypto.randomUUID)});
+  const openDiagnostic=createSourceDiagnostics(catalog,loadNativeDiagnosticLX(),Crypto.randomUUID);
+  const audioProbe=loadAudioProbe(Crypto.randomUUID);
+  const sourceHealth=new SourceHealth({registry,open:openDiagnostic,online,probe:audioProbe});
   const qishui=new QishuiProvider(options.onlineHTTP);
   const qishuiAccount=new QishuiAccountStore(repository,nativeSecrets);
   await restore('qishui.account.v1','汽水曲库与漫游',()=>qishuiAccount.restore());
@@ -258,10 +263,21 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),
     hash,
   });
-  const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,qualityForPlatform:playbackQualityFor,hash,
-    available:()=>[...new Set(registry.getSnapshot().filter(source=>registry.isCurrent(source)).flatMap(source=>source.capabilities.filter(value=>value.actions.includes('musicUrl')).map(value=>value.platform)))]});
+  const matchedResolver=new MatchedResolver({matcher:matching,library,router:{resolve:async(track,signal,excluded,scope,trace,originPlatform)=>{let playable=track;try{playable=await online.enrich(track,signal);}catch{throwIfAborted(signal);}return resolver.resolve(playable,signal,excluded,scope,trace,originPlatform);}},autoMatch:()=>preferences.getSnapshot().autoMatch,quality:()=>preferences.getSnapshot().quality,qualityForPlatform:(platform,originPlatform)=>preferences.getSnapshot().playbackQualities[platform]??(originPlatform?preferences.getSnapshot().playbackQualities[originPlatform]:undefined)??preferences.getSnapshot().quality,hash,
+    available:(originPlatform?:MusicPlatform)=>{
+      const ready=registry.getSnapshot().filter(source=>registry.isCurrent(source));
+      const routing=preferences.getSnapshot().platformSourceRouting;
+      const out:OnlinePlatform[]=[];
+      for(const platform of ['wy','tx','kw','kg','mg'] as const){
+        const routed=applyPlatformSourceRouting(ready,platform,routing,originPlatform);
+        if(routed.some(source=>source.capabilities.some(value=>value.platform===platform&&value.actions.includes('musicUrl')))){
+          out.push(platform);
+        }
+      }
+      return out;
+    }});
   const preloadCache=new PreloadCache({maxEntries:12,ttlMs:180_000});
-  const preloadQualityFor=(track:Track)=>track.origin.kind==='online'?playbackQualityFor(track.origin.platform):preferences.getSnapshot().quality;
+  const preloadQualityFor=(track:Track)=>{const platform=trackPlatform(track);return platform?playbackQualityFor(platform):preferences.getSnapshot().quality;};
   const preloadRevision=()=>JSON.stringify([
     registry.getSnapshot().filter(source=>registry.isCurrent(source)).map(source=>[source.id,source.revision]),
     preferences.getSnapshot().smartDegradeMode,
@@ -270,6 +286,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     preferences.getSnapshot().preferAccountPlayback,
     preferences.getSnapshot().quality,
     preferences.getSnapshot().playbackQualities,
+    preferences.getSnapshot().platformSourceRouting,
     musicAccounts.getSnapshot().map(a=>[a.id,a.platform]),
     bodianAccount.getSnapshot().loggedIn,
     qishuiAccount.getSnapshot().loggedIn,
@@ -494,14 +511,59 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const songFavorites=createSongFavorites(library,localAudio);
   const probeDownloadQuality=createDownloadQualityProbe(downloadResolver);
   const submitDownloads=createDownloadSubmission(offlineDownloads);
-  const nativeAux=requireOptionalNativeModule<DlnaNativeBridge&AudioMatchNativeBridge&CarNativeBridge>('NexusNative');
+  const nativeAux=requireOptionalNativeModule<DlnaNativeBridge&AudioMatchNativeBridge&CarNativeBridge&{getNetworkStatus?:()=>Promise<Partial<SystemNetworkInfo>>}>('NexusNative');
+  const networkDiagnostics=new NetworkDiagnosticsCoordinator({
+    registry,
+    displayNameForSource:source=>catalog.getSnapshot().find(item=>item.id===source.id)?.displayName??source.name,
+    openDiagnostic,
+    discover:async(platform,signal)=>{
+      if(platform==='qishui'){
+        const charts=await qishui.fetchCharts(signal);
+        return charts.length;
+      }
+      if(platform==='bodian'){
+        const session=bodianAccount.getSnapshot().loggedIn?await bodianAccount.session().catch(()=>null):null;
+        const playlists=await bodian.recommendedPlaylists(signal,session).catch(()=>[]);
+        if(playlists.length>0)return playlists.length;
+        const charts=await bodian.charts(signal,session);
+        return charts.length;
+      }
+      const page=await discovery.playlists(platform,1,undefined,signal,8).catch(()=>({items:[] as readonly unknown[],hasMore:false,page:1}));
+      if(page.items.length>0)return page.items.length;
+      const ranks=await discovery.rankings(platform,signal);
+      return ranks.length;
+    },
+    searchSample:async(platform,keyword,signal)=>{
+      if(platform==='qishui'){
+        const charts=await qishui.fetchCharts(signal);
+        for(const chart of charts){
+          if(chart.previewTracks.length>0)return chart.previewTracks[0];
+        }
+        const firstChart=charts[0];
+        if(!firstChart)return undefined;
+        const tracks=await qishui.fetchChartTracks(firstChart.id,signal);
+        return tracks[0];
+      }
+      if(platform==='bodian'){
+        const session=bodianAccount.getSnapshot().loggedIn?await bodianAccount.session().catch(()=>null):null;
+        const res=await bodian.searchSongs(keyword,1,signal,session);
+        return res.items[0];
+      }
+      const res=await online.search(platform,keyword,1,signal,5);
+      return res.items.find(item=>item.origin.kind==='online'&&item.origin.platform===platform);
+    },
+    resolveSample:(track,signal)=>resolveTrack(track,signal),
+    enrichOnlineTrack:(track,signal)=>online.enrich(track,signal),
+    probe:audioProbe,
+    readNetworkStatus:async()=>nativeAux?.getNetworkStatus?nativeAux.getNetworkStatus():undefined,
+  });
   const dlna=new DlnaCastController({native:nativeAux,repository});
   await restore('dlna.v1','DLNA 投屏记录',()=>dlna.restore());
   const audioMatch=new AudioMatchCoordinator({native:nativeAux,repository,secrets:nativeSecrets,search:(platform,q,page,signal,limit)=>online.search(platform,q,page,signal,limit)});
   await restore('audioMatch.v1','听歌识曲记录',()=>audioMatch.restore(),AUDIO_MATCH_RECORD_VERSION);
   const carIntegration=new CarIntegrationCoordinator({native:nativeAux,library,actions:{playTracks,resume:()=>{void playback.controller.play();},pause:()=>playback.controller.pause(),next:(dir)=>playback.next(dir)}});
   carIntegration.start();
-  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountDiscovery, accountHeartbeat, accountFeatureCache, accountInsights, accountPlaybackResolver, bodian, bodianAccount, bodianQrLogin, bodianQrPhoto, videos, podcasts, radioApi, radioStore, dlna, audioMatch, carIntegration, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, qishuiAccount, loginQishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
+  return { similarSongs:readSimilarSongs, probeDownloadQuality, submitDownloads, searchAssistance, accountMVs, accountAlbums, accountDiscovery, accountHeartbeat, accountFeatureCache, accountInsights, accountPlaybackResolver, bodian, bodianAccount, bodianQrLogin, bodianQrPhoto, videos, podcasts, radioApi, radioStore, dlna, audioMatch, carIntegration, networkDiagnostics, videoSearch, artists, artistSearch, albums, albumSearch, playlistSearch, qqAccountTransfer, kugouQrPhoto, neteaseQrPhoto, accountPlaylists, accountRecommendedPlaylists, qqDailyAuthorization, qqFavorite, neteaseFavorite, neteasePlaylist, neteasePlaylistDelete, neteasePlaylistTracks, snapshotBackup, songFavorites, coverTheme, davStatistics, davSync, repository, visualAssets, visualColors, davAccounts, davBackups, davMedia, deviceMedia, devicePlaylists, localAudio, offlineDownloads, managedAttachments, downloadDestination, downloadDelivery, nativeLX, registry, catalog, preferences, searchHistory, resolver, playback, playbackStats, recommendations, accountDaily, accountFm, accountFmStation, covers, online, matching, comments, sourceHealth, qishui, qishuiAccount, loginQishui, search, discovery, resolvePlaylistLink:(input:string,platform:OnlinePlatform,signal:AbortSignal)=>resolvePlaylistLink(input,platform,signal,options.playlistLinkExpander), playTracks, addToQueue, addTracksToQueue, restoreBackup, accounts, musicAccounts, musicAuth, musicWebLogin, neteaseQrLogin, kugouLogin, neteaseProfile, qqProfile, library, lyrics, fonts, recoveryWarnings };
 }
 export type Services = Awaited<ReturnType<typeof createServices>>;
 let pending: Promise<Services> | undefined;

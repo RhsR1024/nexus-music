@@ -11,7 +11,7 @@
 import { scoreCandidate } from '../domain/matching.ts';
 import type { Quality } from '../domain/quality.ts';
 import { fallbackQualities, normalizeQuality } from '../domain/quality.ts';
-import { trackKey, type OnlinePlatform, type Track } from '../domain/track.ts';
+import { trackKey, type MusicPlatform, type OnlinePlatform, type Track } from '../domain/track.ts';
 import type { PlaybackTraceSink } from '../playback/diagnostics.ts';
 import { bounded, throwIfAborted } from './async.ts';
 import type { BodianAccountStore, BodianProvider } from './bodian.ts';
@@ -210,7 +210,7 @@ async function defaultProbeUrl(
 export interface AccountPlaybackResolverDeps {
   readonly enabled: () => boolean;
   readonly quality: () => Quality;
-  readonly qualityForPlatform?: (platform: OnlinePlatform) => Quality;
+  readonly qualityForPlatform?: (platform: MusicPlatform) => Quality;
   readonly musicAccounts: Pick<MusicAccounts, 'getSnapshot' | 'session'>;
   readonly bodian?: Pick<BodianProvider, 'directPlayback'> & Partial<Pick<BodianProvider, 'searchSongs'>>;
   readonly bodianAccount?: Pick<BodianAccountStore, 'getSnapshot' | 'session'>;
@@ -1056,7 +1056,7 @@ export class AccountPlaybackResolver {
     if (!this.deps.bodian) return null;
     const loggedIn = Boolean(this.deps.bodianAccount?.getSnapshot().loggedIn);
     const session = loggedIn ? await this.deps.bodianAccount?.session().catch(() => null) : null;
-    const preferred = this.deps.quality();
+    const preferred = this.deps.qualityForPlatform?.('bodian') ?? this.deps.quality();
     const sourceName = session ? '波点账号直连' : '波点官方免费直连';
     if (excluded.has(this.routeKeyFor(track, 'bodian', preferred))) return null;
     trace?.({
@@ -1102,7 +1102,7 @@ export class AccountPlaybackResolver {
     if (!/^\d{5,30}$/.test(track.origin.id)) return null;
     const loggedIn = Boolean(this.deps.qishuiAccount?.getSnapshot().loggedIn);
     const cookieHeader = loggedIn ? await this.deps.qishuiAccount?.sessionCookieHeader().catch(() => undefined) : undefined;
-    const preferred = this.deps.quality();
+    const preferred = this.deps.qualityForPlatform?.('qishui') ?? this.deps.quality();
     const sourceName = cookieHeader ? '汽水账号直连' : '汽水官方免费直连';
     if (
       excluded.has(this.routeKeyFor(track, 'qishui', 'flac')) &&

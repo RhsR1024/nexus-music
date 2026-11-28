@@ -1,4 +1,12 @@
 export type OnlinePlatform = 'wy' | 'tx' | 'kw' | 'kg' | 'mg';
+export type MusicPlatform = OnlinePlatform | 'qishui' | 'bodian';
+export const allMusicPlatforms = ['wy', 'tx', 'kw', 'kg', 'mg', 'qishui', 'bodian'] as const satisfies readonly MusicPlatform[];
+
+export function trackPlatform(track: Track): MusicPlatform | undefined {
+  if (track.origin.kind === 'online') return track.origin.platform;
+  if (track.origin.kind === 'imported') return track.origin.platform;
+  return undefined;
+}
 
 export type TrackOrigin =
   | { kind: 'webdav'; accountId:string; id:string }

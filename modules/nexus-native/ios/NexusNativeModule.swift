@@ -1,4 +1,5 @@
 import ExpoModulesCore
+import Network
 import UIKit
 
 public final class NexusNativeModule: Module {
@@ -297,6 +298,63 @@ public final class NexusNativeModule: Module {
     }
     AsyncFunction("carIntegrationStatus") { () -> [String: Any] in
       NexusCarBridgeStore.shared.statusSnapshot()
+    }
+    AsyncFunction("getNetworkStatus") { (promise: Promise) in
+      let monitor = NWPathMonitor()
+      let queue = DispatchQueue(label: "nexus.net.status")
+      var settled = false
+      let finish: ([String: Any]) -> Void = { payload in
+        guard !settled else { return }
+        settled = true
+        monitor.cancel()
+        promise.resolve(payload)
+      }
+      monitor.pathUpdateHandler = { path in
+        let connected = path.status == .satisfied
+        let transport: String
+        if !connected {
+          transport = "none"
+        } else if path.usesInterfaceType(.wifi) {
+          transport = "wifi"
+        } else if path.usesInterfaceType(.cellular) {
+          transport = "cellular"
+        } else if path.usesInterfaceType(.wiredEthernet) {
+          transport = "ethernet"
+        } else {
+          transport = "other"
+        }
+        let hasVpn = path.availableInterfaces.contains { iface in
+          let name = iface.name.lowercased()
+          return iface.type == .other && (
+            name.hasPrefix("utun") ||
+            name.hasPrefix("ppp") ||
+            name.hasPrefix("ipsec") ||
+            name.hasPrefix("tun") ||
+            name.hasPrefix("tap")
+          )
+        }
+        finish([
+          "connected": connected,
+          "validated": connected,
+          "transport": transport,
+          "isExpensive": path.isExpensive,
+          "isConstrained": path.isConstrained,
+          "hasVpn": hasVpn,
+          "dnsCount": -1,
+        ])
+      }
+      monitor.start(queue: queue)
+      queue.asyncAfter(deadline: .now() + 0.6) {
+        finish([
+          "connected": false,
+          "validated": false,
+          "transport": "unknown",
+          "isExpensive": false,
+          "isConstrained": false,
+          "hasVpn": false,
+          "dnsCount": -1,
+        ])
+      }
     }
 
     OnDestroy {

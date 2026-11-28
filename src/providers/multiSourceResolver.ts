@@ -1,4 +1,5 @@
-import type { OnlinePlatform, Track } from '../domain/track.ts';
+import type { MusicPlatform, OnlinePlatform, Track } from '../domain/track.ts';
+import { applyPlatformSourceRouting, type PlatformSourceRouting } from '../domain/platformRouting.ts';
 import { fallbackQualities, normalizeQuality, type Quality } from '../domain/quality.ts';
 import type { MediaResolver, ResolvedMedia } from '../playback/controller.ts';
 import { makeLXRequest } from './lx.ts';
@@ -30,6 +31,7 @@ export interface SmartSwitchPolicy {
   qualityForPlatform?: (platform: OnlinePlatform) => Quality;
   degradeMode?: () => 'progressive' | 'direct128k';
   crossScript?: () => boolean;
+  sourceRouting?: () => PlatformSourceRouting;
 }
 
 export class MultiSourceResolver {
@@ -38,12 +40,13 @@ export class MultiSourceResolver {
   constructor(registry: SourceRegistry, transport: LXTransport, preference: () => Quality, timeoutMs = 8000, policy: SmartSwitchPolicy = {}) {
     this.registry = registry; this.transport = transport; this.preference = preference; this.timeoutMs = timeoutMs; this.policy = policy;
   }
-  async resolve(track: Track, signal: AbortSignal, excluded: ReadonlySet<string> = new Set(), qualityScope?:readonly Quality[], trace?:PlaybackTraceSink): Promise<RoutedMedia> {
+  async resolve(track: Track, signal: AbortSignal, excluded: ReadonlySet<string> = new Set(), qualityScope?:readonly Quality[], trace?:PlaybackTraceSink, originPlatform?:MusicPlatform): Promise<RoutedMedia> {
     throwIfAborted(signal);
     if (track.origin.kind !== 'online') throw new Error('LX仅处理在线平台歌曲');
     const platform = track.origin.platform;
     const preference = this.policy.qualityForPlatform?.(platform) ?? this.preference();
-    const sources = this.registry.getSnapshot().filter(source => this.registry.isCurrent(source));
+    const readySources = this.registry.getSnapshot().filter(source => this.registry.isCurrent(source));
+    const sources = applyPlatformSourceRouting(readySources, platform, this.policy.sourceRouting?.(), originPlatform);
     const attempts: RouteAttempt[] = [];
     const degrade = this.policy.degradeMode?.() ?? 'progressive';
     const allowCrossScript = this.policy.crossScript?.() ?? true;

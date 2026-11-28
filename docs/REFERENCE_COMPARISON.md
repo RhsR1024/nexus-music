@@ -1,3 +1,13 @@
+## 2026-11-28 自有 Wayferar-Music「网络与音源检测」评估与双端原生移植比较
+
+按用户要求核查本机自有仓库 `/Users/ningli/WorkSpace/Wayferar-Music` 固定提交 `485a828242201d1533e3c4a2a6d981a557f8a0d0`（亲读 `NetworkCheckPage.java`、`NetworkCheckRun.java`、`NetworkCheckPresentation.java`、`NetworkCheckViews.java`、`NetworkTransfer.java`、`SourceSettings.java`），并与其余四参考项目（悦音 `d6f1af7`、Q-1515 `547ccfe`、wtfdelphia `6624ab5`、CyMusic `bf0d469`）既有边界对照：
+
+- **实现对比**：四外部参考工程均未提供“多平台四阶段分层链路 + 全部自定义音源横向批测”的独立设置诊断页。自有 Wayferar-Music 在设置页提供独立 `NetworkCheckPage`，覆盖 6 平台 × 4 阶段（发现 / 搜索 / 解析 / 音频）与全部已启用用户音源 5 平台批测，具备 90 秒总期限、单阶段超时、代次取消、无上传脱敏复制；其音频验证为下载整首（上限 64 MiB）并用 Android `MediaExtractor` / `MediaCodec` 抽样解码。
+- **音枢原创适配与改进**：音枢以纯 TypeScript 原创实现 `src/providers/networkDiagnostics.ts` 与 `src/ui/NetworkCheckScreen.tsx`，零复制任何 Java/smali/布局文件，并在三处做出更适合移动双端的改进：① 扩展为音枢全部 **7 个平台**（新增波点音乐，覆盖网易云 / QQ / 酷我 / 酷狗 / 咪咕 / 汽水 / 波点）；② 音频校验复用音枢现有双端 1:1 原生 `AudioURLProbe`（4 KiB Range 媒体头魔数与重定向/降级校验，零播放器副作用，避免移动网络下每轮下载数十至数百 MB 流量）；③ 全部 LX 音源批测运行在独立诊断沙箱（`createSourceDiagnostics`），并发严格匹配原生 `probes < 2` / `diagnosticRuntimes < 2` 预算，绝不修改选源顺序或打断当前播放。
+- **维护与 Android / iOS 双端边界**：核心检测调度、状态机与 UI 位于共享 `src/`；系统网络状态读取通过 `NexusNative.getNetworkStatus()` 实现 iOS（`Network.NWPathMonitor`，零新增依赖与权限）与 Android（`ConnectivityManager` + `NetworkCapabilities` + `LinkProperties`，复用已声明的 `ACCESS_NETWORK_STATE`）1:1 同构契约。
+- **许可边界**：Wayferar-Music 为用户自有工程，本批仍坚持清洁室原创 TypeScript + Swift/Kotlin 编写，不引入任何第三方库、反编译资源或外部上报逻辑。
+- **验收边界**：通过单元测试覆盖 7 平台四阶段状态机、全部 LX 音源独立诊断、超时/取消/旧代次隔离、URL 脱敏与分平台路由协同，并完成 iOS 无签名 Release IPA 干净归档；真实网络环境下的各平台实机链路状态仍以实际终端网络与账号权限为准。
+
 ## 2026-11-28 Wow-CaiCai/Coda 协议参考与波点 / 汽水 / 账号直连对比
 
 按用户指令检查公开仓库 `https://github.com/Wow-CaiCai/Coda`，固定提交 `22bc58e`（许可声明为 **AGPL-3.0 / GPL-3.0**）。音枢严格遵守清洁室（clean-room）许可边界：**零复制任何 Coda 源码、Swift/JS 逻辑、PNG 图标或依赖**，仅提取公开协议端点、字段映射与产品能力清单，100% 以音枢原创 TypeScript + Swift/Kotlin + Ionicons 实现：

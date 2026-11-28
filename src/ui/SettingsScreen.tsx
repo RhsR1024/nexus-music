@@ -18,9 +18,10 @@ import {LibraryDataTools} from './LibraryDataTools.tsx';
 import {MusicSourcesScreen} from './MusicSourcesScreen.tsx';
 import {MusicAccountSettings} from './MusicAccountSettings.tsx';
 import {CarPlaySiriSettings} from './CarPlaySiriSettings.tsx';
+import {NetworkCheckScreen} from './NetworkCheckScreen.tsx';
 
-export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|'accounts'|'car'|AppearanceSection;
-const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',car:'车载与语音控制',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式与毛玻璃',accent:'强调色',icons:'软件图标'};
+export type SettingsPage='home'|'playback'|'equalizer'|'appearance'|'typography'|'globalFont'|'lyricFont'|'storage'|'downloads'|'downloadTasks'|'sources'|'accounts'|'car'|'networkCheck'|AppearanceSection;
+const titles:Record<SettingsPage,string>={home:'设置',playback:'播放与歌词',equalizer:'EQ 均衡器',appearance:'外观与界面',typography:'歌词显示设置',globalFont:'全局字体',lyricFont:'歌词字体',storage:'数据与存储',downloads:'下载管理',downloadTasks:'下载任务与文件',sources:'音乐来源',accounts:'音乐账号',car:'车载与语音控制',networkCheck:'网络与音源检测',theme:'软件主题',background:'主题与背景',skins:'播放界面样式',mini:'迷你播放器按钮',navigation:'底部栏样式与毛玻璃',accent:'强调色',icons:'软件图标'};
 const layoutSummaryLabels:Record<string,string>={classic:'经典',am:'AM',immersive:'沉浸',photo:'写真',vinyl:'黑胶',wave:'声波核',stage:'舞台',am2:'AM2',groove:'螺旋槽',groove2:'螺旋槽 2',teletype:'打字机',teletype2:'打字机 2'};
 
 export function SettingsScreen({services,initialPage='home',homeRequest=0,bottomInset=0,onExit}:{services:Services;initialPage?:SettingsPage;homeRequest?:number;bottomInset?:number;onExit:()=>void}){
@@ -80,9 +81,14 @@ export function SettingsScreen({services,initialPage='home',homeRequest=0,bottom
           <View accessible={false} style={{height:StyleSheet.hairlineWidth,marginLeft:60,backgroundColor:s.hairline}}/>
           {row('accounts','网易云、QQ、酷狗、汽水、波点账号与本机会话','person-circle',undefined,true)}
         </View>
+        <Text accessibilityRole="header" style={{color:s.muted,fontSize:13,fontWeight:'500',marginLeft:6,marginTop:4,marginBottom:-6}}>诊断与检测</Text>
+        <View style={[{borderRadius:20,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,overflow:'hidden'},s.cardShadow]}>
+          {row('networkCheck','检测 7 平台链路与全部已启用音源可用性，仅本机保留','pulse-outline','一键检测',true)}
+        </View>
       </View>;
       case 'sources':return <MusicSourcesScreen services={services}/>;
       case 'car':return <CarPlaySiriSettings services={services}/>;
+      case 'networkCheck':return <NetworkCheckScreen services={services}/>;
       case 'accounts':return <MusicAccountSettings services={services} active={page==='accounts'} onRevealQr={({top,height})=>{
         const scroller=scrolls.current.accounts;
         if(currentPage.current!=='accounts'||!scroller||!Number.isFinite(top)||height<=0)return;

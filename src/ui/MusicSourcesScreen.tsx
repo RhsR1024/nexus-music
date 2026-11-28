@@ -39,7 +39,7 @@ export function MusicSourcesScreen({services}:{services:Services}){
     </View>
 
     {tab==='lx'
-      ?<SourceSettings catalog={services.catalog} health={services.sourceHealth}/>
+      ?<SourceSettings catalog={services.catalog} health={services.sourceHealth} preferences={services.preferences}/>
       :<NavidromeSettings services={services}/>}
   </View>;
 }

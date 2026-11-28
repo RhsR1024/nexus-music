@@ -8,8 +8,11 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import {File} from 'expo-file-system';
+import type {PreferenceStore} from '../app/preferences.ts';
+import {countPlatformRoutingCustomizations} from '../domain/platformRouting.ts';
 import type {SourceCatalog,SourceView} from '../providers/sourceCatalog.ts';
 import type {SourceHealth} from '../providers/sourceHealth.ts';
+import {ALL_MUSIC_PLATFORM_ITEMS,formatDeclaredPlatforms,PlatformSourceRoutingModal} from './PlatformSourceRoutingModal.tsx';
 import {SourceHealthModal} from './SourceHealthModal.tsx';
 import {SheetModal} from './AdaptiveModal.tsx';
 import {fetchSourceScript,probeSourceUpdateAlert} from '../providers/nativeLX.ts';
@@ -25,9 +28,13 @@ async function downloadScript(url:string){
 
 type ActionModalMode='menu'|'alias'|'manualUpdate'|'updateDetail';
 
-export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:SourceHealth}){
+export function SourceSettings({catalog,health,preferences}:{catalog:SourceCatalog;health:SourceHealth;preferences?:PreferenceStore}){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance),styles=useThemedStyles(makeStyles);
   const sources=useSyncExternalStore(catalog.subscribe,catalog.getSnapshot);
+  const prefs=useSyncExternalStore(
+    preferences?.subscribe ?? (()=>()=>{}),
+    preferences?.getSnapshot ?? (()=>undefined),
+  );
   const checkingAllUpdates=catalog.isCheckingUpdates();
 
   const [selected,setSelected]=useState<readonly string[]>([]);
@@ -35,6 +42,11 @@ export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:So
   const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
   const [importOpen,setImportOpen]=useState(false),[importUrl,setImportUrl]=useState('');
   const [healthIds,setHealthIds]=useState<readonly string[]|null>(null);
+  const [routingOpen,setRoutingOpen]=useState(false);
+  const knownIds=new Set(sources.map(item=>item.id));
+  const customizedPlatforms=prefs
+    ?ALL_MUSIC_PLATFORM_ITEMS.filter(item=>countPlatformRoutingCustomizations(prefs.platformSourceRouting[item.id],knownIds).hasCustom).length
+    :0;
 
   const [actionSourceId,setActionSourceId]=useState<string|null>(null);
   const [actionMode,setActionMode]=useState<ActionModalMode>('menu');
@@ -224,6 +236,18 @@ export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:So
       </Pressable>
     </View>}
 
+    {preferences&&<Pressable testID="sources-open-platform-routing" accessibilityRole="button" accessibilityLabel="分平台音源优先级与排除" onPress={()=>setRoutingOpen(true)} style={[{paddingHorizontal:14,paddingVertical:12,borderRadius:18,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder,flexDirection:'row',alignItems:'center',gap:11},s.cardShadow]}>
+      <View style={{width:32,height:32,borderRadius:10,backgroundColor:s.accentSoft,alignItems:'center',justifyContent:'center'}}>
+        <Ionicons name="git-branch-outline" size={17} color={s.control}/>
+      </View>
+      <View style={{flex:1,minWidth:0,gap:2}}>
+        <Text style={{color:s.ink,fontSize:14.5,fontWeight:'700'}}>分平台音源优先级与排除</Text>
+        <Text numberOfLines={1} style={{color:s.muted,fontSize:12}}>为网易云、QQ、汽水等 7 个平台单独指定优先顺序与禁用列表</Text>
+      </View>
+      <Text style={{color:customizedPlatforms>0?s.control:s.muted,fontSize:12,fontWeight:customizedPlatforms>0?'700':'500'}}>{customizedPlatforms>0?`已定制 ${customizedPlatforms} 平台`:'按平台定制'}</Text>
+      <Ionicons name="chevron-forward" size={15} color={s.subtle}/>
+    </Pressable>}
+
     {batchMode&&!!sources.length&&<View style={styles.batchBar}>
       <Pressable accessibilityRole="button" disabled={busy} onPress={()=>setSelected(selected.length===sources.length?[]:sources.map(item=>item.id))} style={[styles.compactChip,busy&&styles.disabled]}><Text style={styles.compactChipText}>{selected.length===sources.length?'取消全选':'全选'}</Text></Pressable>
       <Pressable accessibilityRole="button" disabled={busy||!selected.length} onPress={()=>batch('enable')} style={[styles.compactChip,(busy||!selected.length)&&styles.disabled]}><Text style={styles.compactChipText}>启用 ({selected.length})</Text></Pressable>
@@ -243,7 +267,8 @@ export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:So
         const initializing=source.status==='initializing';
         const failed=source.status==='failed';
         const showUpdate=source.hasUpdate;
-        const metaLine=[source.version,source.author].filter(Boolean).join(' · ')||(source.alias?source.name:'未提供版本信息');
+        const declaredLabel=ready?formatDeclaredPlatforms(source):'';
+        const metaLine=[source.version,source.author,declaredLabel].filter(Boolean).join(' · ')||(source.alias?source.name:'未提供版本信息');
 
         return <View key={source.id}>
           {index>0&&<View accessible={false} style={styles.rowDivider}/>}
@@ -566,6 +591,7 @@ export function SourceSettings({catalog,health}:{catalog:SourceCatalog;health:So
     </SheetModal>
 
     <SourceHealthModal health={health} ids={healthIds??[]} visible={healthIds!==null} onClose={()=>setHealthIds(null)}/>
+    {preferences&&<PlatformSourceRoutingModal catalog={catalog} preferences={preferences} visible={routingOpen} onClose={()=>setRoutingOpen(false)}/>}
   </View>;
 }
 
