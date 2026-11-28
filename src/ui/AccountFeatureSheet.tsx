@@ -16,9 +16,11 @@ import { formatCacheAge } from '../providers/accountFeatureCache.ts';
 import type { VideoItem } from '../providers/videos.ts';
 import { Modal } from './AdaptiveModal.tsx';
 import { Cover } from './Cover.tsx';
+import { Player } from './Player.tsx';
 import { QualityBadge } from './QualityBadge.tsx';
 import { Toast, useToast } from './Toast.tsx';
 import { TrackActions } from './TrackActions.tsx';
+import { TrackPlaybackIndicator, useTrackPlaybackState } from './TrackPlaybackIndicator.tsx';
 import { Text } from './Typography.tsx';
 import { useTheme } from './theme.tsx';
 import { sollinTokens } from './tokens.ts';
@@ -128,6 +130,8 @@ export function AccountFeatureSheet({
   const s = sollinTokens(theme.mode, theme.palette.accent, theme.appearance);
   const insets = useSafeAreaInsets();
   const accounts = useSyncExternalStore(services.musicAccounts.subscribe, services.musicAccounts.getSnapshot);
+  const preferences = useSyncExternalStore(services.preferences.subscribe, services.preferences.getSnapshot);
+  const trackPlayback = useTrackPlaybackState(services);
   const toast = useToast();
 
   const [loading, setLoading] = useState(false);
@@ -604,43 +608,71 @@ export function AccountFeatureSheet({
         !albums.length &&
         !mvs.length));
 
-  const renderTrackItem = (track: Track, index: number, pool: readonly Track[], badgeText?: string) => (
-    <View key={`${track.origin.kind === 'online' ? track.origin.id : index}-${index}`} style={{ height: 64, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          toast.show(`正在播放：${track.title}`);
-          services.playTracks(pool, index);
+  const renderTrackItem = (track: Track, index: number, pool: readonly Track[], badgeText?: string) => {
+    const rowPlayState = trackPlayback.stateFor(track);
+    const isActive = rowPlayState !== 'idle';
+    return (
+      <View
+        key={`${track.origin.kind === 'online' ? track.origin.id : index}-${index}`}
+        style={{
+          height: 64,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: isActive ? 6 : 0,
+          borderRadius: isActive ? 14 : 0,
+          backgroundColor: isActive ? (s.dark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.58)') : 'transparent',
         }}
-        style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 11 }}
       >
-        <Text style={{ width: 28, textAlign: 'center', color: s.subtle, fontSize: 12.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
-          {String(index + 1).padStart(2, '0')}
-        </Text>
-        <Cover services={services} track={track} size={46} radius={10} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text numberOfLines={1} style={{ color: s.ink, fontSize: 14.5, fontWeight: '600' }}>{track.title}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-            <QualityBadge track={track} />
-            <Text numberOfLines={1} style={{ flex: 1, color: s.muted, fontSize: 12 }}>
-              {track.artist}{track.album ? ` · ${track.album}` : ''}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            trackPlayback.markPending(track);
+            toast.show(`正在加载：${track.title}`);
+            services.playTracks(pool, index);
+          }}
+          style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 11 }}
+        >
+          <Text
+            style={{
+              width: 28,
+              textAlign: 'center',
+              color: isActive ? s.accent : s.subtle,
+              fontSize: 12.5,
+              fontWeight: '700',
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {String(index + 1).padStart(2, '0')}
+          </Text>
+          <Cover services={services} track={track} size={46} radius={10} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text numberOfLines={1} style={{ color: isActive ? s.accent : s.ink, fontSize: 14.5, fontWeight: isActive ? '700' : '600' }}>
+              {track.title}
             </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <QualityBadge track={track} />
+              <Text numberOfLines={1} style={{ flex: 1, color: s.muted, fontSize: 12 }}>
+                {track.artist}{track.album ? ` · ${track.album}` : ''}
+              </Text>
+            </View>
           </View>
-        </View>
-        {!!badgeText && (
-          <Text style={{ color: s.subtle, fontSize: 11.5, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{badgeText}</Text>
-        )}
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`更多操作：${track.title}`}
-        onPress={() => setMenuTrack(track)}
-        style={{ width: 36, height: 42, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Ionicons name="ellipsis-horizontal" size={18} color={s.muted} />
-      </Pressable>
-    </View>
-  );
+          <TrackPlaybackIndicator state={rowPlayState} color={s.accent} size={15} />
+          {!!badgeText && !isActive && (
+            <Text style={{ color: s.subtle, fontSize: 11.5, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{badgeText}</Text>
+          )}
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`更多操作：${track.title}`}
+          onPress={() => setMenuTrack(track)}
+          style={{ width: 36, height: 42, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="ellipsis-horizontal" size={18} color={s.muted} />
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <Modal visible={!!feature} animationType="slide" onRequestClose={() => { if (openedPlaylist) closeOpenedPlaylist(); else onClose(); }}>
@@ -794,6 +826,7 @@ export function AccountFeatureSheet({
           {isPureTrackList && (
             <FlatList
               data={activeTracks}
+              extraData={trackPlayback.activeTrackKey}
               keyExtractor={(item, idx) => `${item.origin.kind === 'online' ? item.origin.id : idx}-${idx}`}
               getItemLayout={(_, index) => ({ length: 64, offset: 64 * index, index })}
               initialNumToRender={14}
@@ -802,7 +835,7 @@ export function AccountFeatureSheet({
               windowSize={5}
               removeClippedSubviews
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 32, 48) }}
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + (trackPlayback.hasCurrentTrack ? 96 : 36), 96) }}
               renderItem={({ item, index }) => {
                 const rec = !openedPlaylist && feature === 'wy_play_record' ? playRecordRows[index] : undefined;
                 const badge = rec?.playCount ? `${rec.playCount}次` : rec?.score ? `${rec.score}分` : undefined;
@@ -813,7 +846,7 @@ export function AccountFeatureSheet({
 
           {/* Non-pure-track mixed / catalog scrollable area */}
           {!loading && !playlistLoading && !needsLogin && !isPureTrackList && (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 32, 48), gap: 8 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + (trackPlayback.hasCurrentTrack ? 96 : 36), 96), gap: 8 }}>
               {/* Account Playlists list (live tap to drill in & play, with default caching) */}
               {!openedPlaylist && accountPlaylists.length > 0 && accountPlaylists.map(pl => (
                 <Pressable
@@ -946,6 +979,19 @@ export function AccountFeatureSheet({
             </ScrollView>
           )}
         </View>
+        {trackPlayback.hasCurrentTrack && (
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: 'absolute',
+              bottom: Math.max(insets.bottom, 10),
+              left: 14,
+              right: 14,
+            }}
+          >
+            <Player services={services} barVariant={preferences.navigationStyle} />
+          </View>
+        )}
         <Toast message={toast.message} onDismiss={toast.clear} />
         <TrackActions services={services} track={menuTrack} prefix="account-feature" onClose={() => setMenuTrack(null)} />
       </View>

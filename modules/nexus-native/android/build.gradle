@@ -7,7 +7,7 @@ group = 'com.nexusmusic'
 version = '0.1.0'
 
 def syncSharedAssets = tasks.register('syncNexusSharedAssets', Copy) {
-  from(file('../common/bootstrap.js'))
+  from(file('../common/bootstrap.js'), file('../common/react-17.0.2.min.js'), file('../common/react-dom-17.0.2.min.js'))
   into(layout.buildDirectory.dir('generated/nexus-assets'))
 }
 

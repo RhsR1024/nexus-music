@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.dependency 'ExpoModulesCore'
   s.source_files = 'ios/**/*.{swift,h,mm}', 'common/**/*.{h,hpp}'
   s.public_header_files = 'ios/NexusAudioDSP.h'
-  s.resource_bundles = { 'NexusNative' => ['common/bootstrap.js'] }
+  s.resource_bundles = { 'NexusNative' => ['common/bootstrap.js', 'common/react-17.0.2.min.js', 'common/react-dom-17.0.2.min.js'] }
   s.frameworks = 'JavaScriptCore', 'Security', 'AVFoundation', 'AVKit', 'MediaToolbox', 'MediaPlayer', 'ImageIO', 'CoreGraphics', 'UniformTypeIdentifiers', 'WebKit'
   s.weak_frameworks = 'CarPlay', 'AppIntents'
   s.pod_target_xcconfig = { 'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20' }

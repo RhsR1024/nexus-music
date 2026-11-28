@@ -1202,7 +1202,17 @@ private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNa
   }
 
   func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-    // Primary Passport requests are driven natively via callAsyncJavaScript.
+    guard !finished, message.name == "QishuiAuth", let body = message.body as? [String: Any],
+          let type = body["type"] as? String else { return }
+    if type == "verifyReady" {
+      DispatchQueue.main.async { [weak self] in
+        guard let self, !self.finished else { return }
+        self.qrCardStack.isHidden = true
+        self.verifyContainer.alpha = 1.0
+        self.verifyContainer.isUserInteractionEnabled = true
+        self.verifyContainer.superview?.bringSubviewToFront(self.verifyContainer)
+      }
+    }
   }
 
   private func bootstrapPassport(gen: Int) {
@@ -1567,10 +1577,98 @@ private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNa
     return true
   }
 
+  private static func loadBundledReactScripts() -> [String]? {
+    guard let bundleURL = Bundle(for: NexusMusicAuthModule.self).url(forResource: "NexusNative", withExtension: "bundle"),
+          let bundle = Bundle(url: bundleURL),
+          let reactUrl = bundle.url(forResource: "react-17.0.2.min", withExtension: "js"),
+          let reactDomUrl = bundle.url(forResource: "react-dom-17.0.2.min", withExtension: "js"),
+          let reactSrc = try? String(contentsOf: reactUrl, encoding: .utf8),
+          let reactDomSrc = try? String(contentsOf: reactDomUrl, encoding: .utf8),
+          !reactSrc.isEmpty, !reactDomSrc.isEmpty else {
+      return nil
+    }
+    return [reactSrc, reactDomSrc]
+  }
+
+  private static func fetchReactScriptsFromCDN(completion: @escaping ([String]?) -> Void) {
+    let pairs: [(String, String)] = [
+      ("https://s3.pstatp.com/cdn/expire-1-M/react/17.0.2/umd/react.production.min.js",
+       "https://s3.pstatp.com/cdn/expire-1-M/react-dom/17.0.2/umd/react-dom.production.min.js"),
+      ("https://cdn.staticfile.net/react/17.0.2/umd/react.production.min.js",
+       "https://cdn.staticfile.net/react-dom/17.0.2/umd/react-dom.production.min.js"),
+      ("https://unpkg.com/react@17.0.2/umd/react.production.min.js",
+       "https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"),
+    ]
+    let config = URLSessionConfiguration.ephemeral
+    config.timeoutIntervalForRequest = 12
+    let session = URLSession(configuration: config)
+
+    func tryIndex(_ idx: Int) {
+      guard idx < pairs.count,
+            let u1 = URL(string: pairs[idx].0),
+            let u2 = URL(string: pairs[idx].1) else {
+        session.finishTasksAndInvalidate()
+        DispatchQueue.main.async { completion(nil) }
+        return
+      }
+      session.dataTask(with: u1) { d1, r1, e1 in
+        guard e1 == nil, let h1 = r1 as? HTTPURLResponse, (200..<300).contains(h1.statusCode),
+              let d1, let s1 = String(data: d1, encoding: .utf8), s1.contains("React") else {
+          tryIndex(idx + 1)
+          return
+        }
+        session.dataTask(with: u2) { d2, r2, e2 in
+          guard e2 == nil, let h2 = r2 as? HTTPURLResponse, (200..<300).contains(h2.statusCode),
+                let d2, let s2 = String(data: d2, encoding: .utf8), s2.contains("ReactDOM") else {
+            tryIndex(idx + 1)
+            return
+          }
+          session.finishTasksAndInvalidate()
+          DispatchQueue.main.async { completion([s1, s2]) }
+        }.resume()
+      }.resume()
+    }
+    tryIndex(0)
+  }
+
+  private func installReactInWebView(gen: Int, completion: @escaping (Bool) -> Void) {
+    guard !finished, gen == generation, let wv = webView else { completion(false); return }
+    let checkJS = "typeof window.React === 'object' && typeof window.ReactDOM === 'object'"
+    wv.evaluateJavaScript(checkJS) { [weak self] val, _ in
+      DispatchQueue.main.async {
+        guard let self, !self.finished, gen == self.generation, let wv = self.webView else { completion(false); return }
+        if (val as? Bool) == true { completion(true); return }
+        let inject: ([String]?) -> Void = { [weak self] scripts in
+          guard let self, !self.finished, gen == self.generation, let wv = self.webView,
+                let scripts, scripts.count == 2 else { completion(false); return }
+          wv.evaluateJavaScript(scripts[0] + "\n;true") { [weak self] _, _ in
+            guard let self, !self.finished, gen == self.generation, let wv = self.webView else { completion(false); return }
+            wv.evaluateJavaScript(scripts[1] + "\n;true") { [weak self] _, _ in
+              guard let self, !self.finished, gen == self.generation, let wv = self.webView else { completion(false); return }
+              wv.evaluateJavaScript(checkJS) { ok, _ in
+                DispatchQueue.main.async { completion((ok as? Bool) == true) }
+              }
+            }
+          }
+        }
+        if let bundled = Self.loadBundledReactScripts() {
+          inject(bundled)
+        } else {
+          Self.fetchReactScriptsFromCDN { inject($0) }
+        }
+      }
+    }
+  }
+
   private func handleSecondaryVerification(gen: Int, body: [String: Any], data: [String: Any]) {
     guard !finished, gen == generation else { return }
     statusLabel.text = "平台要求二次安全验证，正在加载验证组件…"
     statusLabel.textColor = .systemOrange
+    // Extend session expiry to 10 minutes so the user has ample time to complete SMS / CAPTCHA verification.
+    expiryTimer?.invalidate()
+    expiryTimer = Timer.scheduledTimer(withTimeInterval: 600, repeats: false) { [weak self] _ in
+      self?.finish(.expired)
+    }
 
     var decision = body.merging(data) { _, d in d }
     decision["data"] = nil
@@ -1596,34 +1694,56 @@ private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNa
       var patchedDecision = finalDecision
       patchedDecision["url"] = verifyUrl.absoluteString
       let bizParams = Self.parseBizParams(finalDecision["biz_params"], protectingIdentity: true)
+      guard JSONSerialization.isValidJSONObject(patchedDecision),
+            let decisionData = try? JSONSerialization.data(withJSONObject: patchedDecision),
+            let decisionJson = String(data: decisionData, encoding: .utf8),
+            let generalData = try? JSONSerialization.data(withJSONObject: general),
+            let generalJson = String(data: generalData, encoding: .utf8) else {
+        self.statusLabel.text = "安全验证参数编码失败，请点击「刷新二维码」重试"
+        self.statusLabel.textColor = .systemRed
+        return
+      }
 
-      self.qrCardStack.isHidden = true
-      self.verifyContainer.alpha = 1.0
-      self.verifyContainer.isUserInteractionEnabled = true
-      self.verifyContainer.superview?.bringSubviewToFront(self.verifyContainer)
-      self.verifyBridge?.isActive = true
-      wv.callAsyncJavaScript(
-        Self.verificationScript,
-        arguments: ["decision": patchedDecision, "general": general],
-        in: nil,
-        in: .page
-      ) { [weak self] res in
-        DispatchQueue.main.async {
-          guard let self, !self.finished, gen == self.generation else { return }
-          self.verifyBridge?.isActive = false
-          self.verifyContainer.alpha = 0.001
-          self.verifyContainer.isUserInteractionEnabled = false
-          self.qrCardStack.isHidden = false
-          self.qrCardStack.superview?.bringSubviewToFront(self.qrCardStack)
-          if case .success(let val) = res,
-             let obj = val as? [String: Any],
-             (obj["status"] as? Bool) == true {
-            self.statusLabel.text = "安全验证通过，正在完成汽水登录…"
-            self.statusLabel.textColor = .systemGreen
-            self.pollQrConnect(gen: gen, extraQuery: ["isResend": "true"], extraForm: bizParams)
-          } else {
-            self.statusLabel.text = "安全验证未完成，请点击「刷新二维码」重试"
-            self.statusLabel.textColor = .systemOrange
+      self.installReactInWebView(gen: gen) { [weak self] reactReady in
+        guard let self, !self.finished, gen == self.generation, let wv = self.webView else { return }
+        guard reactReady else {
+          self.statusLabel.text = "安全验证基础组件加载失败，请检查网络后点击「刷新二维码」"
+          self.statusLabel.textColor = .systemRed
+          return
+        }
+        self.verifyBridge?.isActive = true
+        wv.callAsyncJavaScript(
+          Self.verificationScript,
+          arguments: ["decisionJson": decisionJson, "generalJson": generalJson],
+          in: nil,
+          in: .page
+        ) { [weak self] res in
+          DispatchQueue.main.async {
+            guard let self, !self.finished, gen == self.generation else { return }
+            self.verifyBridge?.isActive = false
+            self.verifyContainer.alpha = 0.001
+            self.verifyContainer.isUserInteractionEnabled = false
+            self.qrCardStack.isHidden = false
+            self.qrCardStack.superview?.bringSubviewToFront(self.qrCardStack)
+            switch res {
+            case .success(let val):
+              if let obj = val as? [String: Any], (obj["status"] as? Bool) == true {
+                self.statusLabel.text = "安全验证通过，正在完成汽水登录…"
+                self.statusLabel.textColor = .systemGreen
+                self.pollQrConnect(gen: gen, extraQuery: ["isResend": "true"], extraForm: bizParams)
+              } else {
+                self.statusLabel.text = "安全验证已取消或未通过，请点击「刷新二维码」重试"
+                self.statusLabel.textColor = .systemOrange
+              }
+            case .failure(let err):
+              let info = (err as NSError).userInfo
+              let jsMsg = (info["WKJavaScriptExceptionMessage"] as? String) ?? err.localizedDescription
+              let cleanMsg = jsMsg
+                .replacingOccurrences(of: "https?://\\S+", with: "[url]", options: .regularExpression)
+                .prefix(80)
+              self.statusLabel.text = "安全验证加载失败（\(cleanMsg)），请点击「刷新二维码」重试"
+              self.statusLabel.textColor = .systemRed
+            }
           }
         }
       }
@@ -1658,6 +1778,13 @@ private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNa
 
   private static let bootstrapScript = #"""
   if (location.origin !== 'https://api.qishui.com') throw new Error('origin');
+  // Clear api.qishui.com's bare 404/TLB document immediately so users never see a 404 page during verification.
+  try {
+    document.title = '汽水音乐安全验证';
+    if (document.body) {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,sans-serif;color:#666;font-size:15px;background:#fff;">正在准备汽水安全验证…</div>';
+    }
+  } catch (_) {}
   localStorage.setItem('xmst', securitySeed);
   localStorage.setItem('xmsty', securitySeed);
   window.__nexusPassportToken = securitySeed;
@@ -1861,6 +1988,9 @@ private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNa
   """#
 
   private static let verificationScript = #"""
+  window.__nexusVerifyStage = 'init';
+  const decision = JSON.parse(decisionJson);
+  const general = JSON.parse(generalJson);
   const setMeta = (selector, create) => { document.head.querySelectorAll(selector).forEach(n => n.remove()); document.head.prepend(create()); };
   setMeta('meta[name="viewport"]', () => Object.assign(document.createElement('meta'), { name: 'viewport', content: 'width=device-width,initial-scale=1,viewport-fit=cover' }));
   setMeta('meta[charset]', () => { const m = document.createElement('meta'); m.setAttribute('charset', 'utf-8'); return m; });
@@ -1870,29 +2000,17 @@ private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNa
     st.textContent = 'html,body{margin:0;padding:0;width:100%;height:100%;background:#ffffff;}';
     document.head.appendChild(st);
   }
-  const loadScript = src => new Promise((resolve, reject) => {
+  const loadScript = (src, useCors) => new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.charset = 'utf-8';
-    s.crossOrigin = 'anonymous';
+    if (useCors) s.crossOrigin = 'anonymous';
     s.src = src;
     const t = setTimeout(() => reject(new Error('timeout')), 15000);
     s.onload = () => { clearTimeout(t); resolve(); };
     s.onerror = () => { clearTimeout(t); reject(new Error('load')); };
     document.head.appendChild(s);
   });
-  if (!window.React || !window.ReactDOM) {
-    const pairs = [
-      ['https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/17.0.2/umd/react.production.min.js', 'https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/17.0.2/umd/react-dom.production.min.js'],
-      ['https://cdn.staticfile.net/react/17.0.2/umd/react.production.min.js', 'https://cdn.staticfile.net/react/17.0.2/umd/react-dom.production.min.js'],
-    ];
-    for (const [rUrl, rdUrl] of pairs) {
-      try {
-        await loadScript(rUrl);
-        await loadScript(rdUrl);
-        if (window.React && window.ReactDOM) break;
-      } catch (_) {}
-    }
-  }
+  window.__nexusVerifyStage = 'react';
   if (!window.React || !window.ReactDOM) throw new Error('react unavailable');
   window.ucSecondVerifyReact = window.React;
   window.ucSecondVerifyReactDom = window.ReactDOM;
@@ -1904,15 +2022,26 @@ private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNa
   resource.searchParams.set('verify_reason', String(event.verify_reason || ''));
   resource.searchParams.set('verify_scene', String(event.verify_scene || ''));
   window.$$account_verify_portrait_id = String(decision.verify_portrait_id || '');
-  if (typeof window.ucWebSecondVerify !== 'function') await loadScript(resource.href);
+  window.__nexusVerifyStage = 'component-load';
+  if (typeof window.ucWebSecondVerify !== 'function') {
+    try {
+      await loadScript(resource.href, true);
+    } catch (_) {
+      await loadScript(resource.href, false);
+    }
+  }
+  window.__nexusVerifyStage = 'component-export';
   if (typeof window.ucWebSecondVerify !== 'function') throw new Error('component unavailable');
+  window.__nexusVerifyStage = 'component-run';
   document.body.replaceChildren();
+  try { window.webkit?.messageHandlers?.QishuiAuth?.postMessage({ type: 'verifyReady' }); } catch (_) {}
   return await new Promise(resolve => {
     let done = false;
     const timer = setTimeout(() => finish({ status: false }), 600000);
     const finish = result => {
       if (done) return;
       done = true; clearTimeout(timer); window.__nexusCancelVerify = null;
+      window.__nexusVerifyStage = 'finished';
       resolve({ status: result?.status === true });
     };
     window.__nexusCancelVerify = () => finish({ status: false });

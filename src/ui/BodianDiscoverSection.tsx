@@ -17,8 +17,10 @@ import {
 } from '../providers/bodian.ts';
 import { Modal } from './AdaptiveModal.tsx';
 import { Cover } from './Cover.tsx';
+import { Player } from './Player.tsx';
 import { QualityBadge } from './QualityBadge.tsx';
 import { TrackActions } from './TrackActions.tsx';
+import { TrackPlaybackIndicator, useTrackPlaybackState } from './TrackPlaybackIndicator.tsx';
 import { Text, TextInput } from './Typography.tsx';
 import { useTheme } from './theme.tsx';
 import { sollinTokens } from './tokens.ts';
@@ -56,6 +58,11 @@ export function BodianDiscoverSection({
     services.bodianAccount.subscribe,
     services.bodianAccount.getSnapshot,
   );
+  const preferences = useSyncExternalStore(
+    services.preferences.subscribe,
+    services.preferences.getSnapshot,
+  );
+  const trackPlayback = useTrackPlaybackState(services);
 
   const [subTab, setSubTab] = useState<BodianSubTab>('featured');
   const [modules, setModules] = useState<readonly BodianHomeModule[]>([]);
@@ -249,34 +256,55 @@ export function BodianDiscoverSection({
           { id: 'fm', label: '私人FM', icon: 'radio-outline', target: { kind: 'fm' } },
         ];
 
-  const renderTrackRow = (track: Track, idx: number, pool: readonly Track[]) => (
-    <View key={`${trackKey(track.origin)}-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => services.playTracks(pool, idx)}
-        style={{ flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 11 }}
+  const renderTrackRow = (track: Track, idx: number, pool: readonly Track[]) => {
+    const rowPlayState = trackPlayback.stateFor(track);
+    const isActive = rowPlayState !== 'idle';
+    return (
+      <View
+        key={`${trackKey(track.origin)}-${idx}`}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingVertical: 8,
+          paddingHorizontal: isActive ? 6 : 0,
+          borderRadius: isActive ? 14 : 0,
+          backgroundColor: isActive ? (s.dark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.58)') : 'transparent',
+        }}
       >
-        <Cover services={services} track={track} size={46} radius={10} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text numberOfLines={1} style={{ color: s.ink, fontSize: 14.5, fontWeight: '600' }}>{track.title}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-            <QualityBadge track={track} />
-            <Text numberOfLines={1} style={{ flex: 1, color: s.muted, fontSize: 12 }}>
-              {track.artist}{track.album ? ` · ${track.album}` : ''}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            trackPlayback.markPending(track);
+            services.playTracks(pool, idx);
+          }}
+          style={{ flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 11 }}
+        >
+          <Cover services={services} track={track} size={46} radius={10} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text numberOfLines={1} style={{ color: isActive ? s.accent : s.ink, fontSize: 14.5, fontWeight: isActive ? '700' : '600' }}>
+              {track.title}
             </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <QualityBadge track={track} />
+              <Text numberOfLines={1} style={{ flex: 1, color: s.muted, fontSize: 12 }}>
+                {track.artist}{track.album ? ` · ${track.album}` : ''}
+              </Text>
+            </View>
           </View>
-        </View>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`更多操作：${track.title}`}
-        onPress={() => setMenuTrack(track)}
-        style={{ width: 34, height: 38, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Ionicons name="ellipsis-horizontal" size={18} color={s.muted} />
-      </Pressable>
-    </View>
-  );
+          <TrackPlaybackIndicator state={rowPlayState} color={s.accent} size={15} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`更多操作：${track.title}`}
+          onPress={() => setMenuTrack(track)}
+          style={{ width: 34, height: 38, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="ellipsis-horizontal" size={18} color={s.muted} />
+        </Pressable>
+      </View>
+    );
+  };
 
   const sheetTitle = !sheet
     ? ''
@@ -603,7 +631,7 @@ export function BodianDiscoverSection({
             )}
 
             {!sheetLoading && !sheetError && (
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 32, 48), gap: 8 }}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + (trackPlayback.hasCurrentTrack ? 96 : 36), 96), gap: 8 }}>
                 {sheetTracks.map((t, i) => renderTrackRow(t, i, sheetTracks))}
                 {sheetPlaylists.map(pl => (
                   <Pressable
@@ -656,6 +684,19 @@ export function BodianDiscoverSection({
               </ScrollView>
             )}
           </View>
+          {trackPlayback.hasCurrentTrack && (
+            <View
+              pointerEvents="box-none"
+              style={{
+                position: 'absolute',
+                bottom: Math.max(insets.bottom, 10),
+                left: 14,
+                right: 14,
+              }}
+            >
+              <Player services={services} barVariant={preferences.navigationStyle} />
+            </View>
+          )}
           <TrackActions services={services} track={menuTrack} prefix="bodian" onClose={() => setMenuTrack(null)} />
         </View>
       </Modal>

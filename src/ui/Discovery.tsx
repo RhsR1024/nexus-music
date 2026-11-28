@@ -34,6 +34,8 @@ import {PlaylistPicker} from './PlaylistPicker.tsx';
 import {Toast,useToast} from './Toast.tsx';
 import {selectionToggleAll,selectionByListOrder,selectionByTapOrder,selectionCount,selectionEnter,selectionHas,selectionNone,selectionToggle,type SelectionModel} from '../domain/selection.ts';
 import {StyleRecommendationSheet} from './StyleRecommendationSheet.tsx';
+import {PlatformLogo} from './PlatformLogo.tsx';
+import {TrackPlaybackIndicator,useTrackPlaybackState} from './TrackPlaybackIndicator.tsx';
 
 type DiscoveryTabKind='featured'|'playlists'|'rankings';
 type PageView={kind:'featured'}|{kind:'playlists'}|{kind:'rankings'}|{kind:'categories'}|{kind:'artists'}|{kind:'albums'}|{kind:'detail';id:string;title:string;rank:boolean;artwork?:string;description?:string;returnView?:DiscoveryTabKind}|{kind:'bannerSongs';id:string;title:string;artwork?:string;tracks:readonly Track[];returnView?:DiscoveryTabKind};
@@ -83,6 +85,7 @@ export function Discovery({
   const sources=useSyncExternalStore(services.catalog.subscribe,services.catalog.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   const musicAccounts=useSyncExternalStore(services.musicAccounts.subscribe,services.musicAccounts.getSnapshot);
+  const trackPlayback=useTrackPlaybackState(services);
   const wySignedIn=musicAccounts.some(a=>a.platform==='wy');
   const txSignedIn=musicAccounts.some(a=>a.platform==='tx');
   const kgSignedIn=musicAccounts.some(a=>a.platform==='kg');
@@ -508,9 +511,7 @@ export function Discovery({
             onPress={()=>setPlatformSheetOpen(true)}
             style={{flexDirection:'row',alignItems:'center',gap:6,paddingVertical:4,paddingRight:4}}
           >
-            <View style={{width:20,height:20,borderRadius:10,backgroundColor:activeMeta.color,alignItems:'center',justifyContent:'center'}}>
-              <Ionicons name={activeMeta.icon} size={11} color="#FFFFFF"/>
-            </View>
+            <PlatformLogo platform={activeMeta.id} size={22}/>
             <Text style={{color:s.ink,fontSize:14.5,fontWeight:'700'}}>{activeMeta.name}</Text>
             <Ionicons name="chevron-down" size={14} color={s.muted}/>
           </Pressable>
@@ -717,23 +718,22 @@ export function Discovery({
 
   const content=<View testID="discovery-content" onLayout={event=>{const next=Math.max(1,event.nativeEvent.layout.width-40);setContentWidth(previous=>previous!==undefined&&Math.abs(previous-next)<.5?previous:next);}} style={{flex:1,backgroundColor:embedded?'transparent':theme.palette.background[0],paddingHorizontal:20,paddingTop:embedded?0:54}}>
     <FlatList ref={listRef} key={columns} numColumns={columns} columnWrapperStyle={columns>1?{gap:14}:undefined} data={view.kind==='featured'||qishuiTab||bodianTab?[]:displayed} keyExtractor={(item,index)=>item.kind==='track'?item.key??`${index}-track`:`${index}-${item.kind}`} ListHeaderComponent={header} initialNumToRender={12} windowSize={7} contentContainerStyle={{paddingBottom:embedded?bottomInset:44}} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" scrollEventThrottle={64} onScroll={e=>{const y=Math.max(0,e.nativeEvent.contentOffset.y);scrollOffsets.current[activeScrollKey]=y;setShowBackTop(prev=>(y>520)!==prev?y>520:prev);}}
-      renderItem={({item,index})=>item.kind==='track'?<View testID={`discovery-track-${index}`} style={{flexDirection:'row',alignItems:'center',gap:8,paddingVertical:9}}>
-        {(()=>{const key=item.key??`${index}-track`,checked=selectionHas(selection,key);return <>
-        <Pressable accessibilityRole="button" onLongPress={()=>{setPicking(false);setSelection(selectionEnter(key));}} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else services.playTracks(tracks,index);}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放'}${item.track.title}`} accessibilityState={{selected:checked}} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',gap:12}}>
+      renderItem={({item,index})=>item.kind==='track'?(()=>{const key=item.key??`${index}-track`,checked=selectionHas(selection,key),rowPlayState=trackPlayback.stateFor(item.track),isActive=rowPlayState!=='idle';return <View testID={`discovery-track-${index}`} style={{flexDirection:'row',alignItems:'center',gap:8,paddingVertical:9,paddingHorizontal:isActive?6:0,borderRadius:isActive?12:0,backgroundColor:isActive?(s.dark?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.48)'):'transparent'}}>
+        <Pressable accessibilityRole="button" onLongPress={()=>{setPicking(false);setSelection(selectionEnter(key));}} onPress={()=>{if(selection.active)setSelection(selectionToggle(selection,key));else{trackPlayback.markPending(item.track);services.playTracks(tracks,index);}}} accessibilityLabel={`${selection.active?checked?'取消选择':'选择':'播放'}${item.track.title}`} accessibilityState={{selected:checked}} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',gap:12}}>
           {selection.active&&<Ionicons name={checked?'checkmark-circle':'ellipse-outline'} size={21} color={checked?s.control:s.subtle}/>}
           <Cover services={services} track={item.track} size={46} radius={10}/>
           <View style={{flex:1,gap:3}}>
-            <Text numberOfLines={1} style={{color:s.ink,fontSize:15,fontWeight:'600'}}>{item.track.title}</Text>
+            <Text numberOfLines={1} style={{color:isActive?s.accent:s.ink,fontSize:15,fontWeight:isActive?'700':'600'}}>{item.track.title}</Text>
             <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
               <QualityBadge track={item.track}/>
               <Text numberOfLines={1} style={{flex:1,color:s.muted,fontSize:12.5}}>{item.track.artist}{item.track.album?` · ${item.track.album}`:''}</Text>
             </View>
           </View>
-          {view.kind==='detail'&&view.rank&&<Text style={{color:s.subtle,fontSize:13,fontWeight:'700',fontVariant:['tabular-nums']}}>{String(index+1).padStart(2,'0')}</Text>}
+          <TrackPlaybackIndicator state={rowPlayState} color={s.accent} size={15}/>
+          {view.kind==='detail'&&view.rank&&!isActive&&<Text style={{color:s.subtle,fontSize:13,fontWeight:'700',fontVariant:['tabular-nums']}}>{String(index+1).padStart(2,'0')}</Text>}
         </Pressable>
         {!selection.active&&<Pressable testID={`discovery-more-${index}`} accessibilityRole="button" accessibilityLabel={`更多操作：${item.track.title}`} onPress={()=>setMenuTrack(item.track)} style={{width:36,height:42,alignItems:'center',justifyContent:'center'}}><Ionicons name="ellipsis-horizontal" size={19} color={s.muted}/></Pressable>}
-        </>;})()}
-      </View>:view.kind==='rankings'&&item.kind==='collection'?<Pressable testID={`discovery-item-${index}`} accessibilityRole="button" onPress={()=>openCollection(item.value,item.rank)} style={{flexDirection:'row',alignItems:'center',gap:14,padding:10,marginBottom:10,borderRadius:16,backgroundColor:softSurface}}>
+      </View>;})():view.kind==='rankings'&&item.kind==='collection'?<Pressable testID={`discovery-item-${index}`} accessibilityRole="button" onPress={()=>openCollection(item.value,item.rank)} style={{flexDirection:'row',alignItems:'center',gap:14,padding:10,marginBottom:10,borderRadius:16,backgroundColor:softSurface}}>
         <Cover services={services} url={item.value.artwork} size={58} radius={12}/>
         <View style={{flex:1,gap:4}}>
           <Text numberOfLines={1} style={{color:s.ink,fontSize:16,fontWeight:'700'}}>{item.value.title}</Text>
@@ -780,9 +780,7 @@ export function Discovery({
               gap:13,
             }}
           >
-            <View style={{width:32,height:32,borderRadius:16,backgroundColor:selected?'rgba(255,255,255,0.22)':opt.color,alignItems:'center',justifyContent:'center'}}>
-              <Ionicons name={opt.icon} size={17} color="#FFFFFF"/>
-            </View>
+            <PlatformLogo platform={opt.id} size={34} ring={selected}/>
             <Text style={{flex:1,fontSize:16,fontWeight:selected?'700':'600',color:selected?'#FFFFFF':s.ink}}>{opt.name}</Text>
             {selected&&<Ionicons name="checkmark" size={20} color="#FFFFFF"/>}
           </Pressable>;

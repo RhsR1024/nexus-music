@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { Track } from '../domain/track.ts';
 import { trackKey } from '../domain/track.ts';
@@ -18,7 +19,9 @@ import {
 } from '../providers/qishui.ts';
 import { Cover } from './Cover.tsx';
 import { Modal } from './AdaptiveModal.tsx';
+import { Player } from './Player.tsx';
 import { QishuiImport } from './QishuiImport.tsx';
+import { TrackPlaybackIndicator, useTrackPlaybackState } from './TrackPlaybackIndicator.tsx';
 import { Text, TextInput } from './Typography.tsx';
 import { useTheme } from './theme.tsx';
 import { sollinTokens } from './tokens.ts';
@@ -46,6 +49,7 @@ const MODE_FILTERS: readonly { id: ModeFilter; label: string }[] = [
 export function QishuiDiscoverSection({ services }: { services: Services }) {
   const theme = useTheme();
   const s = sollinTokens(theme.mode, theme.palette.accent, theme.appearance);
+  const insets = useSafeAreaInsets();
   const softSurface = s.dark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.52)';
   const segmentTrack = s.dark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.34)';
   const segmentActive = s.dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.86)';
@@ -54,6 +58,11 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
     services.qishuiAccount.subscribe,
     services.qishuiAccount.getSnapshot,
   );
+  const preferences = useSyncExternalStore(
+    services.preferences.subscribe,
+    services.preferences.getSnapshot,
+  );
+  const trackPlayback = useTrackPlaybackState(services);
 
   const [subTab, setSubTab] = useState<QishuiTab>('featured');
   const [expandedModes, setExpandedModes] = useState(false);
@@ -189,7 +198,10 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
   function playQishuiTracks(tracks: readonly Track[], index: number) {
     const picked = tracks[index];
-    if (picked) void services.qishuiAccount.recordRecent(picked).catch(() => {});
+    if (picked) {
+      trackPlayback.markPending(picked);
+      void services.qishuiAccount.recordRecent(picked).catch(() => {});
+    }
     services.playTracks(tracks, index);
   }
 
@@ -313,8 +325,21 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
 
   const renderTrackRow = (track: Track, idx: number, pool: readonly Track[]) => {
     const liked = qishuiAccount.liked.some(t => trackKey(t.origin) === trackKey(track.origin));
+    const rowPlayState = trackPlayback.stateFor(track);
+    const isActive = rowPlayState !== 'idle';
     return (
-      <View key={`${trackKey(track.origin)}-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
+      <View
+        key={`${trackKey(track.origin)}-${idx}`}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          paddingVertical: 8,
+          paddingHorizontal: isActive ? 6 : 0,
+          borderRadius: isActive ? 14 : 0,
+          backgroundColor: isActive ? (s.dark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.58)') : 'transparent',
+        }}
+      >
         <Pressable
           accessibilityRole="button"
           onPress={() => playQishuiTracks(pool, idx)}
@@ -322,11 +347,14 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
         >
           <Cover services={services} track={track} size={46} radius={10} />
           <View style={{ flex: 1, gap: 2 }}>
-            <Text numberOfLines={1} style={{ color: s.ink, fontSize: 14.5, fontWeight: '600' }}>{track.title}</Text>
+            <Text numberOfLines={1} style={{ color: isActive ? s.accent : s.ink, fontSize: 14.5, fontWeight: isActive ? '700' : '600' }}>
+              {track.title}
+            </Text>
             <Text numberOfLines={1} style={{ color: s.muted, fontSize: 12 }}>
               {track.artist}{track.album ? ` · ${track.album}` : ''}
             </Text>
           </View>
+          <TrackPlaybackIndicator state={rowPlayState} color={s.accent} size={15} />
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -836,7 +864,7 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
               })()}
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, gap: 6 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + (trackPlayback.hasCurrentTrack ? 96 : 36), 96), gap: 6 }}>
               {sheet?.kind === 'playlists' && (
                 totalPlaylistsCount > 0 ? (
                   <>
@@ -900,6 +928,19 @@ export function QishuiDiscoverSection({ services }: { services: Services }) {
               )}
             </ScrollView>
           </View>
+          {trackPlayback.hasCurrentTrack && (
+            <View
+              pointerEvents="box-none"
+              style={{
+                position: 'absolute',
+                bottom: Math.max(insets.bottom, 10),
+                left: 14,
+                right: 14,
+              }}
+            >
+              <Player services={services} barVariant={preferences.navigationStyle} />
+            </View>
+          )}
         </View>
       </Modal>
     </View>
