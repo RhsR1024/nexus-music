@@ -21,9 +21,21 @@ function normalizeArtistIds(raw: unknown): string[] {
   return out;
 }
 
+function shouldSplitAmpersand(segment: string, expectedCount?: number): boolean {
+  if (!/[&＆]/.test(segment)) return false;
+  const parts = segment.split(/\s*[&＆]\s*/).map(p => p.trim()).filter(Boolean);
+  if (parts.length < 2) return false;
+  if (parts.length >= 3) return true;
+  if (expectedCount !== undefined && expectedCount > 1) return true;
+  // Preserve short ASCII acronym/brand duo names like "A&B", "R&B", "H&M", "AT&T"
+  const [a, b] = parts as [string, string];
+  if (/^[A-Za-z0-9.]{1,2}$/.test(a) && /^[A-Za-z0-9.]{1,2}$/.test(b)) return false;
+  return true;
+}
+
 /**
- * Splits a raw artist credit string (e.g. "林俊杰 / 麻吉 / JJ陆", "周杰伦、费玉清",
- * "许嵩 (with 何曼婷)", "Jay Chou feat. Lara") into clean individual artist names.
+ * Splits a raw artist credit string (e.g. "林俊杰 / 麻吉 / JJ陆", "赵本山&赵大牛&球球",
+ * "周杰伦、费玉清", "许嵩 (with 何曼婷)", "Jay Chou feat. Lara") into clean individual artist names.
  */
 export function splitArtistNames(raw: string, expectedCount?: number): string[] {
   const trimmed = raw.trim();
@@ -35,18 +47,26 @@ export function splitArtistNames(raw: string, expectedCount?: number): string[] 
     ' / $1',
   );
 
-  // Split on explicit collaboration separators first (/, 、, feat., ft., featuring)
-  let parts = unwrapped
-    .split(/\s*(?:\/|、|；|;|\bfeat\.?(?=\s|$)|\bft\.?(?=\s|$)|\bfeaturing\b)\s*/i)
+  // Split on explicit collaboration separators first (/, 、, ;, feat., ft., featuring, ×, ✕)
+  const initialParts = unwrapped
+    .split(/\s*(?:\/|、|；|;|×|✕|\bfeat\.?(?=\s|$)|\bft\.?(?=\s|$)|\bfeaturing\b)\s*/i)
     .map(p => p.trim())
     .filter(Boolean);
 
-  // Split on " & " or ", " when either multiple IDs exist or the delimiter clearly separates distinct names
+  // Also split segments joined by "&" / "＆" (with or without spaces, e.g. "赵本山&赵大牛&球球")
+  let parts: string[] = [];
+  for (const segment of initialParts) {
+    if (shouldSplitAmpersand(segment, expectedCount)) {
+      parts.push(...segment.split(/\s*[&＆]\s*/).map(p => p.trim()).filter(Boolean));
+    } else {
+      parts.push(segment);
+    }
+  }
+
+  // Fallback comma split when no other collaboration separator matched
   if (parts.length === 1 && (expectedCount === undefined || expectedCount > 1)) {
     const single = parts[0]!;
-    if (/\s+&\s+/.test(single) && (expectedCount === undefined ? !/^[A-Z0-9.\s]+&\s*[A-Z0-9.\s]+$/.test(single) || single.length > 12 : true)) {
-      parts = single.split(/\s+&\s+/).map(p => p.trim()).filter(Boolean);
-    } else if (/[,，]/.test(single) && (expectedCount === undefined || expectedCount > 1)) {
+    if (/[,，]/.test(single)) {
       const commaParts = single.split(/\s*[,，]\s*/).map(p => p.trim()).filter(Boolean);
       if (commaParts.length >= 2 && commaParts.every(p => p.length <= 32)) {
         parts = commaParts;

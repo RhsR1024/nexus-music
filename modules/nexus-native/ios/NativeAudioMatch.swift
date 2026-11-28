@@ -18,11 +18,11 @@ final class NativeAudioMatch {
   private var zeroCrossings: Int = 0
   private var bucketEnergies: [Double] = Array(repeating: 0, count: 24)
   private var bucketCounts: [Int] = Array(repeating: 0, count: 24)
-  private var targetDurationMs: Int = 6000
+  private var targetDurationMs: Int = 15000
   private var pcm16kSamples: [Int16] = []
   private var resamplePhase: Double = 0
   private static let targetWavSampleRate: Double = 16000
-  private static let maxWavSamples: Int = 16000 * 10 // <= 10s (320 KB PCM)
+  private static let maxWavSamples: Int = 16000 * 30 // <= 30s (960 KB PCM)
 
   deinit {
     stopCapture()
@@ -54,7 +54,7 @@ final class NativeAudioMatch {
       return
     }
 
-    let clampedMs = min(max(durationMs, 2000), 12000)
+    let clampedMs = min(max(durationMs, 2000), 30000)
     do {
       let session = AVAudioSession.sharedInstance()
       try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])

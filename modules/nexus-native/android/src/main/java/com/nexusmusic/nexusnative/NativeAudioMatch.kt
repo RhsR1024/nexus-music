@@ -60,9 +60,9 @@ class NativeAudioMatch {
       throw IllegalStateException("未获得麦克风权限")
     }
     stopCapture()
-    val clampedMs = durationMs.coerceIn(2000, 12_000)
+    val clampedMs = durationMs.coerceIn(2000, 30_000)
     val sampleRate = 16_000
-    val maxPcmBytes = sampleRate * 10 * 2 // <= 10s (320 KB PCM)
+    val maxPcmBytes = sampleRate * 30 * 2 // <= 30s (960 KB PCM)
     val minBuf = AudioRecord.getMinBufferSize(
       sampleRate,
       AudioFormat.CHANNEL_IN_MONO,

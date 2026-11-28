@@ -578,7 +578,7 @@ export class AudioMatchCoordinator {
     });
 
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 20000);
+    const timer = setTimeout(() => ctrl.abort(), 28000);
     try {
       const hit =
         provider === 'shazam'
@@ -621,7 +621,7 @@ export class AudioMatchCoordinator {
     }
   }
 
-  async startListening(durationMs = 6000): Promise<AudioMatchCaptureResult | null> {
+  async startListening(durationMs = 15000): Promise<AudioMatchCaptureResult | null> {
     if (!this.native) {
       this.setState({ error: '当前环境不支持原生麦克风识曲采样' });
       return null;

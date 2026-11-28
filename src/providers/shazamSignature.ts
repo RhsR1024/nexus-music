@@ -464,6 +464,43 @@ export function buildShazamSignatureFromWav(wavBytes: Uint8Array): ShazamSignatu
   return buildShazamSignatureFromPcm16k(decodeWavToPcm16k(wavBytes));
 }
 
+/**
+ * Selects up to 3 bounded <=12s windows from a 16 kHz PCM clip:
+ * - For clips <= 12s, returns the single clip directly.
+ * - For longer clips (e.g. 15s–30s), prioritizes the highest-energy 12s window
+ *   (skipping quiet intros/noise), followed by trailing and leading 12s fallback windows.
+ */
+export function selectShazamWindows(pcm: Int16Array): readonly Int16Array[] {
+  const windowSamples = SAMPLE_RATE_HZ * MAX_SEGMENT_SECONDS;
+  if (pcm.length <= windowSamples) return [pcm];
+
+  const stride = SAMPLE_RATE_HZ; // 1-second stride
+  const maxStart = pcm.length - windowSamples;
+  let bestStart = 0;
+  let bestEnergy = -1;
+  for (let start = 0; start <= maxStart; start += stride) {
+    let sumSq = 0;
+    // Sample every 16th point (~1 kHz energy envelope) for fast, accurate loudness ranking
+    for (let i = start; i < start + windowSamples; i += 16) {
+      const v = pcm[i]!;
+      sumSq += v * v;
+    }
+    if (sumSq > bestEnergy) {
+      bestEnergy = sumSq;
+      bestStart = start;
+    }
+  }
+
+  const candidateStarts = [bestStart, maxStart, 0];
+  const chosenStarts: number[] = [];
+  for (const s of candidateStarts) {
+    if (chosenStarts.every(prev => Math.abs(prev - s) >= SAMPLE_RATE_HZ * 2)) {
+      chosenStarts.push(s);
+    }
+  }
+  return chosenStarts.map(start => pcm.subarray(start, start + windowSamples));
+}
+
 function randomUuidUpper(): string {
   const hex = '0123456789ABCDEF';
   let out = '';
@@ -483,16 +520,15 @@ export interface ShazamTrackMatch {
   readonly releaseDate?: string;
 }
 
-export async function recognizeWithShazam(
-  wavBytes: Uint8Array,
-  fetchFn: typeof fetch = fetch,
+async function queryShazamWindow(
+  sig: ShazamSignaturePayload,
+  uuid1: string,
+  fetchFn: typeof fetch,
   signal?: AbortSignal,
 ): Promise<ShazamTrackMatch | null> {
-  const sig = buildShazamSignatureFromWav(wavBytes);
   if (sig.peakCount < 5) {
     return null;
   }
-  const uuid1 = randomUuidUpper();
   const uuid2 = randomUuidUpper();
   const url =
     `https://amp.shazam.com/discovery/v5/zh-CN/CN/iphone/-/tag/${uuid1}/${uuid2}` +
@@ -560,4 +596,21 @@ export async function recognizeWithShazam(
     ...(album ? { album } : {}),
     ...(releaseDate ? { releaseDate } : {}),
   };
+}
+
+export async function recognizeWithShazam(
+  wavBytes: Uint8Array,
+  fetchFn: typeof fetch = fetch,
+  signal?: AbortSignal,
+): Promise<ShazamTrackMatch | null> {
+  const pcm = decodeWavToPcm16k(wavBytes);
+  const windows = selectShazamWindows(pcm);
+  const uuid1 = randomUuidUpper();
+  for (const win of windows) {
+    if (signal?.aborted) throw new Error('已取消');
+    const sig = buildShazamSignatureFromPcm16k(win);
+    const hit = await queryShazamWindow(sig, uuid1, fetchFn, signal);
+    if (hit) return hit;
+  }
+  return null;
 }

@@ -11,7 +11,11 @@ import {
   parseQQVipInfo,
 } from '../src/providers/accountInsights.ts';
 import { extractTrackArtists, splitArtistNames } from '../src/domain/artistNames.ts';
+import { AlbumProvider } from '../src/providers/albums.ts';
+import { AccountPlaybackResolver } from '../src/providers/accountPlaybackResolver.ts';
 import { ArtistProvider } from '../src/providers/artists.ts';
+import { QishuiProvider } from '../src/providers/qishui.ts';
+import { selectShazamWindows } from '../src/providers/shazamSignature.ts';
 import type { Track } from '../src/domain/track.ts';
 import type { MusicAccount, MusicSession } from '../src/providers/musicAccounts.ts';
 
@@ -227,6 +231,9 @@ test('splitArtistNames and extractTrackArtists split collaborations and pair pla
   assert.deepEqual(splitArtistNames('许嵩 (with 何曼婷)'), ['许嵩', '何曼婷']);
   assert.deepEqual(splitArtistNames('Jay Chou feat. Lara'), ['Jay Chou', 'Lara']);
   assert.deepEqual(splitArtistNames('周杰伦 & 温岚'), ['周杰伦', '温岚']);
+  assert.deepEqual(splitArtistNames('赵本山&赵大牛&球球'), ['赵本山', '赵大牛', '球球']);
+  assert.deepEqual(splitArtistNames('张学友＆王菲'), ['张学友', '王菲']);
+  assert.deepEqual(splitArtistNames('林俊杰 / 麻吉&JJ陆'), ['林俊杰', '麻吉', 'JJ陆']);
   assert.deepEqual(splitArtistNames('A&B'), ['A&B']);
 
   const collabTrack: Track = {
@@ -331,4 +338,226 @@ test('ArtistProvider.resolveByName and similar handle WY auth + anonymous QQ fal
   assert.equal(fallbackSim.items.length, 2);
   assert.equal(fallbackSim.items[0]?.title, '王力宏');
   assert.ok(fallbackSim.items[0]?.artwork?.includes('T001R300x300M000001JDzPT3JdvqK'));
+});
+
+test('AlbumProvider.detail uses NetEase /api/v1/album and tolerates partial copyright removals', async () => {
+  const seenUrls: string[] = [];
+  const provider = new AlbumProvider({
+    http: async url => {
+      seenUrls.push(url);
+      return {
+        code: 200,
+        album: { id: 363435330, name: '飞瀑而下', size: 2, publishTime: Date.UTC(2026, 2, 1), artist: { name: '孙燕姿' } },
+        songs: [
+          {
+            id: 3352859087,
+            name: '飞瀑而下',
+            ar: [{ id: 9272, name: '孙燕姿' }],
+            al: { id: 363435330, name: '飞瀑而下', picUrl: 'https://p1.music.126.net/cover.jpg' },
+            dt: 245000,
+          },
+        ],
+      };
+    },
+    md5: async () => '',
+    sha1: async () => 'a'.repeat(40),
+    deviceId: () => 'test-device',
+  });
+  const detail = await provider.detail('wy', { id: '363435330', title: '飞瀑而下' }, 1, new AbortController().signal);
+  assert.equal(seenUrls[0], 'https://music.163.com/api/v1/album/363435330');
+  assert.equal(detail.items.length, 1);
+  assert.equal(detail.items[0]?.title, '飞瀑而下');
+  assert.equal(detail.total, 1);
+});
+
+test('QishuiProvider.directPlayback parses video_model + VOD PlayInfoList anonymously and rejects previews', async () => {
+  const fullTrack: Track = {
+    origin: { kind: 'imported', platform: 'qishui', id: '6777691046773000193' },
+    title: "Don't Let Me Down",
+    artist: 'The Chainsmokers',
+    durationMs: 208823,
+    qualities: [],
+    metadata: {},
+  };
+  const qishui = new QishuiProvider(async url => {
+    if (url.includes('/luna/h5/seo_track')) {
+      return {
+        track: { duration: 208823, playable_range: { start: 30720, duration: 25344 } },
+        track_player: {
+          expire_at: Math.floor(Date.now() / 1000) + 3600,
+          url_player_info: 'https://vod-luna.douyin.com/?Action=GetPlayInfo&Version=2019-03-15',
+          video_model: JSON.stringify({
+            video_duration: 208.774,
+            video_list: [
+              { main_url: 'https://v11-luna.douyinvod.com/low.m4a', bitrate: 128000, quality: 'higher', format: 'm4a' },
+            ],
+          }),
+        },
+      };
+    }
+    if (url.includes('Action=GetPlayInfo')) {
+      return {
+        Result: {
+          Data: {
+            PlayInfoList: [
+              { Quality: 'higher', Format: 'm4a', Bitrate: 129449, Duration: 208.774, Size: 3378207, MainPlayUrl: 'https://v11-luna.douyinvod.com/128.m4a' },
+              { Quality: 'highest', Format: 'm4a', Bitrate: 257489, Duration: 208.774, Size: 6719651, MainPlayUrl: 'https://v11-luna.douyinvod.com/320.m4a' },
+            ],
+          },
+        },
+      };
+    }
+    throw new Error(`Unexpected Qishui URL: ${url}`);
+  });
+
+  const stream = await qishui.directPlayback(fullTrack, undefined, new AbortController().signal, 'flac');
+  assert.ok(stream);
+  assert.equal(stream.url, 'https://v11-luna.douyinvod.com/320.m4a');
+  assert.equal(stream.quality, '320k');
+
+  // Preview-only track (29s vs 218s) must be strictly rejected
+  const previewQishui = new QishuiProvider(async () => ({
+    track: { duration: 218133 },
+    track_player: {
+      video_model: JSON.stringify({
+        video_duration: 29.002,
+        video_list: [{ main_url: 'https://v11-luna.douyinvod.com/preview.m4a', bitrate: 129000, quality: 'higher' }],
+      }),
+    },
+  }));
+  assert.equal(
+    await previewQishui.directPlayback(fullTrack, undefined, new AbortController().signal, 'flac'),
+    null,
+  );
+});
+
+test('AccountPlaybackResolver plays free Qishui anonymously, resolves QQ media_mid + downgrades 403 fake FLAC, and cross-falls back to signed-in platforms', async () => {
+  const ctrl = new AbortController();
+
+  // 1. Anonymous Qishui free track plays directly without account login!
+  const qishuiTrack: Track = {
+    origin: { kind: 'imported', platform: 'qishui', id: '6777691046773000193' },
+    title: 'Free Qishui Song',
+    artist: 'Artist',
+    qualities: [],
+    metadata: {},
+  };
+  const anonResolver = new AccountPlaybackResolver({
+    enabled: () => true,
+    quality: () => 'flac',
+    musicAccounts: { getSnapshot: () => [], session: async () => ({}) },
+    qishui: {
+      directPlayback: async (_t, cookie) => {
+        assert.equal(cookie, undefined);
+        return { url: 'https://v11-luna.douyinvod.com/free-full.m4a', quality: '320k' };
+      },
+    },
+    qishuiAccount: {
+      getSnapshot: () => ({ loggedIn: false } as never),
+      sessionCookieHeader: async () => undefined,
+    },
+    md5: async () => '00000000000000000000000000000000',
+    hash: async s => `h:${s}`,
+  });
+  const qsHit = await anonResolver.resolve(qishuiTrack, ctrl.signal);
+  assert.ok(qsHit);
+  assert.equal(qsHit.sourceName, '汽水官方免费直连');
+  assert.equal(qsHit.url, 'https://v11-luna.douyinvod.com/free-full.m4a');
+
+  // 2. QQ media_mid lookup + probe downgrades 403 fake FLAC to working C400 m4a
+  const qqTrack: Track = {
+    origin: { kind: 'online', platform: 'tx', id: '0039MnYb0qxYhV' },
+    title: '晴天',
+    artist: '周杰伦',
+    qualities: [],
+    metadata: {},
+  };
+  let fetchedMediaMid = false;
+  const qqResolver = new AccountPlaybackResolver({
+    enabled: () => true,
+    quality: () => 'flac',
+    musicAccounts: {
+      getSnapshot: () => [
+        { id: 'tx-1', platform: 'tx', label: 'QQ', username: 'qq:100', capabilities: [], updatedAt: NOW },
+      ],
+      session: async () => ({ platform: 'tx', cookies: { uin: '100', qm_keyst: 'key123' } }),
+    },
+    http: async (url, init) => {
+      if (init?.method === 'POST' && String(init.body).includes('get_song_detail_yqq')) {
+        fetchedMediaMid = true;
+        return { songinfo: { code: 0, data: { track_info: { file: { media_mid: '003Qui1q2u1Zho' } } } } };
+      }
+      if (url.includes('F000') && url.includes('003Qui1q2u1Zho')) {
+        return { req_0: { data: { sip: ['https://ws.stream.qqmusic.qq.com/'], midurlinfo: [{ purl: 'fake403.flac' }] } } };
+      }
+      if (url.includes('C400') && url.includes('003Qui1q2u1Zho')) {
+        return { req_0: { data: { sip: ['https://ws.stream.qqmusic.qq.com/'], midurlinfo: [{ purl: 'good.m4a' }] } } };
+      }
+      return { req_0: { data: { sip: ['https://ws.stream.qqmusic.qq.com/'], midurlinfo: [{ purl: '' }] } } };
+    },
+    probeUrl: async url => (url.includes('fake403.flac') ? 'forbidden' : 'ok'),
+    md5: async () => '00000000000000000000000000000000',
+    hash: async s => `h:${s}`,
+  });
+  const qqHit = await qqResolver.resolve(qqTrack, ctrl.signal);
+  assert.equal(fetchedMediaMid, true);
+  assert.ok(qqHit);
+  assert.equal(qqHit.url, 'https://ws.stream.qqmusic.qq.com/good.m4a');
+  assert.equal(qqHit.quality, '128k');
+
+  // 3. Cross-platform signed-in fallback when Qishui track is preview-only
+  const wyMatched: Track = {
+    origin: { kind: 'online', platform: 'wy', id: '186016' },
+    title: 'Free Qishui Song',
+    artist: 'Artist',
+    qualities: [{ id: 'flac' }],
+    metadata: {},
+  };
+  const crossResolver = new AccountPlaybackResolver({
+    enabled: () => true,
+    quality: () => 'flac',
+    musicAccounts: {
+      getSnapshot: () => [
+        { id: 'wy-1', platform: 'wy', label: 'WY', username: 'netease:1', capabilities: [], updatedAt: NOW },
+      ],
+      session: async () => ({ platform: 'wy', cookies: { MUSIC_U: 'valid-cookie', __csrf: 'c' } }),
+    },
+    qishui: { directPlayback: async () => null },
+    qishuiAccount: { getSnapshot: () => ({ loggedIn: false } as never), sessionCookieHeader: async () => undefined },
+    matcher: {
+      candidates: async () => ({
+        items: [{ track: wyMatched, automatic: true, score: 100, reasons: [] } as never],
+        failedPlatforms: [],
+      }),
+    },
+    http: async () => ({
+      code: 200,
+      data: [{ code: 200, url: 'https://m8.music.126.net/full.flac', level: 'lossless', freeTrialInfo: null }],
+    }),
+    md5: async () => '00000000000000000000000000000000',
+    hash: async s => `h:${s}`,
+  });
+  const crossHit = await crossResolver.resolve(qishuiTrack, ctrl.signal);
+  assert.ok(crossHit);
+  assert.equal(crossHit.sourceName, '网易云账号直连');
+  assert.equal(crossHit.matchedTrack?.origin.id, '186016');
+});
+
+test('selectShazamWindows keeps <=12s clips intact and extracts highest-energy 12s windows from 15s–25s clips', () => {
+  const shortClip = new Int16Array(8 * 16000);
+  assert.equal(selectShazamWindows(shortClip).length, 1);
+
+  // 20s clip: first 6s quiet, 6s..18s loud chorus -> highest-energy 12s window must start around 6s!
+  const longClip = new Int16Array(20 * 16000);
+  for (let i = 6 * 16000; i < 18 * 16000; i++) {
+    longClip[i] = Math.round(Math.sin(i * 0.1) * 20000);
+  }
+  const windows = selectShazamWindows(longClip);
+  assert.ok(windows.length >= 2 && windows.length <= 3);
+  assert.equal(windows[0]!.length, 12 * 16000);
+  // First window must be the loud chorus window (high average amplitude), not the silent intro
+  let avgAbs = 0;
+  for (let i = 0; i < windows[0]!.length; i += 64) avgAbs += Math.abs(windows[0]![i]!);
+  avgAbs /= windows[0]!.length / 64;
+  assert.ok(avgAbs > 10000);
 });

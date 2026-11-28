@@ -37,6 +37,7 @@ export function AudioMatchModal({
   const [acrKey, setAcrKey] = useState(match.cloudConfig.acrAccessKey);
   const [acrSecret, setAcrSecret] = useState(match.cloudConfig.acrAccessSecret);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [captureSec, setCaptureSec] = useState<8 | 15 | 25>(15);
 
   useEffect(() => {
     setProvider(normalizeUiProvider(match.cloudConfig.provider));
@@ -87,11 +88,12 @@ export function AudioMatchModal({
       return;
     }
     services.playback.controller.pause();
+    const durationMs = captureSec * 1000;
     if (provider === 'shazam' && match.cloudConfig.provider !== 'shazam') {
-      void services.audioMatch.saveCloudConfig({ provider: 'shazam' }).then(() => services.audioMatch.startListening(6000));
+      void services.audioMatch.saveCloudConfig({ provider: 'shazam' }).then(() => services.audioMatch.startListening(durationMs));
       return;
     }
-    void services.audioMatch.startListening(6000);
+    void services.audioMatch.startListening(durationMs);
   }
 
   async function saveCloudSettings() {
@@ -194,7 +196,7 @@ export function AudioMatchModal({
 
             <Text style={{ color: s.ink, fontSize: 16.5, fontWeight: '700' }}>
               {match.listening
-                ? `正在录制环境片段… ${(match.elapsedMs / 1000).toFixed(1)}s`
+                ? `正在录制环境片段… ${(match.elapsedMs / 1000).toFixed(1)}s / ${captureSec}s`
                 : busyNow
                   ? `正在通过 ${provider === 'acrcloud' ? 'ACRCloud' : 'Shazam'} 识别…`
                   : '轻触麦克风听歌识曲'}
@@ -269,10 +271,52 @@ export function AudioMatchModal({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12, backgroundColor: okBg }}>
                 <Ionicons name="checkmark-circle" size={15} color={okColor} />
                 <Text style={{ flex: 1, color: okColor, fontSize: 12, fontWeight: '600' }}>
-                  Shazam 免 Key 已就绪 · 轻触麦克风录制片段自动识曲（支持华语主流与全球曲库）
+                  Shazam 免 Key 已就绪 · 长片段自动切取高能 12s 多窗声纹，抗噪更稳
                 </Text>
               </View>
             )}
+
+            {/* Capture duration selector: 8s (fast) / 15s (recommended) / 25s (noisy environments) */}
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ color: s.muted, fontSize: 12, fontWeight: '600' }}>采样时长</Text>
+                <Text style={{ color: s.subtle, fontSize: 11 }}>
+                  {captureSec === 8 ? '适合安静环境快速识曲' : captureSec === 15 ? '兼顾速度与准确率（推荐）' : '适合嘈杂现场/前奏较长曲目'}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {([
+                  [8, '8 秒 · 快速'],
+                  [15, '15 秒 · 推荐'],
+                  [25, '25 秒 · 抗噪'],
+                ] as const).map(([sec, label]) => {
+                  const selected = captureSec === sec;
+                  return (
+                    <Pressable
+                      key={sec}
+                      testID={`audio-match-duration-${sec}`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      disabled={match.listening || busyNow}
+                      onPress={() => setCaptureSec(sec)}
+                      style={{
+                        flex: 1,
+                        minHeight: 34,
+                        borderRadius: 10,
+                        backgroundColor: selected ? s.accentSoft : softTile,
+                        borderWidth: 1,
+                        borderColor: selected ? s.accent + '66' : 'transparent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: match.listening || busyNow ? 0.5 : 1,
+                      }}
+                    >
+                      <Text style={{ color: selected ? s.accent : s.ink, fontSize: 12, fontWeight: selected ? '700' : '500' }}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
 
             {provider === 'acrcloud' && !editingKey && acrReady && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 12, backgroundColor: okBg }}>

@@ -252,6 +252,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     bodianAccount,
     qishui,
     qishuiAccount,
+    matcher:matching,
+    autoMatch:()=>preferences.getSnapshot().autoMatch,
     http:options.onlineHTTP??requestJSON,
     md5:value=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5,value),
     hash,
@@ -286,7 +288,14 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     if(track.origin.kind==='navidrome'){trace?.({stage:'source',status:'info',title:'向 Navidrome 请求原始媒体',sourceName:'Navidrome'});const media=await(await accounts.client(track.origin.accountId)).resolve(track,signal);const result={...media,cacheKey:await hash(JSON.stringify([trackKey(track.origin),'original']))};trace?.({stage:'source',status:'success',title:'取得 Navidrome 原始媒体',sourceName:'Navidrome'});return result;}
     const direct=await accountPlaybackResolver.resolve(track,signal,excluded,trace);
     if(direct)return direct;
-    return matchedResolver.resolve(track,signal,excluded,trace);
+    try{
+      return await matchedResolver.resolve(track,signal,excluded,trace);
+    }catch(lxError){
+      throwIfAborted(signal);
+      const publicFallback=await accountPlaybackResolver.resolvePublicFallback(track,signal,excluded,trace);
+      if(publicFallback)return publicFallback;
+      throw lxError;
+    }
   };
   const downloadResolver=createDownloadResolver({registry,transport:nativeLX,matcher:matching,library,preferences:preferences.getSnapshot,enrich:(track,signal)=>online.enrich(track,signal),other:{resolve:resolveTrack},hash});
   let playbackController:ReturnType<typeof createPlaybackSession>['controller']|undefined;

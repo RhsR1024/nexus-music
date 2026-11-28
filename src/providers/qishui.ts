@@ -766,24 +766,166 @@ export class QishuiProvider {
       .filter((t): t is Track => !!t);
   }
 
-  /** Official direct playback via `/luna/pc/track_v2` & `/luna/h5/seo_track` — unencrypted full tracks only. */
+  /**
+   * Official direct playback via `/luna/pc/track_v2` & `/luna/h5/seo_track`.
+   * Parses both inline `track_player.video_model` (`video_list[]`) and
+   * `track_player.url_player_info` VOD JSON (`Result.Data.PlayInfoList[]`),
+   * strictly rejecting preview clips and encrypted (`spade_a`/`play_auth`) streams.
+   * Works both with a signed-in account Cookie and anonymously for free full tracks.
+   */
   async directPlayback(
     track: Track,
     cookieHeader: string | undefined,
     signal: AbortSignal,
+    preferredQuality: Quality = 'flac',
   ): Promise<{ readonly url: string; readonly quality: Quality } | null> {
     if (track.origin.kind !== 'imported' || track.origin.platform !== 'qishui') return null;
     if (!/^\d{5,30}$/.test(track.origin.id)) return null;
-    const endpoints = [
-      queryURL('https://api.qishui.com/luna/pc/track_v2', {
-        track_id: track.origin.id,
-        media_type: 'track',
-        aid: '386088',
-        device_platform: 'web',
-        channel: 'pc_web',
-      }),
-      queryURL('https://api.qishui.com/luna/h5/seo_track', { track_id: track.origin.id }),
+
+    const ALLOWED_MEDIA_HOSTS = [
+      'douyin.com',
+      'qishui.com',
+      'douyinvod.com',
+      'bytedance.com',
+      'bytedance.net',
+      'bytedanceapi.com',
+      'bytecdn.cn',
+      'bytecdntp.com',
+      'snssdk.com',
+      'byted.org',
+      'bytevcloud.com',
+      'pstatp.com',
     ];
+    const safeMediaUrl = (raw: unknown): string | undefined => {
+      const normalized = text(raw).trim().replace(/^http:\/\//i, 'https://');
+      if (!normalized || !safePublicURL(normalized)) return undefined;
+      try {
+        const parsed = new URL(normalized);
+        const host = parsed.hostname.toLowerCase();
+        if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return undefined;
+        if (!ALLOWED_MEDIA_HOSTS.some(suffix => host === suffix || host.endsWith(`.${suffix}`))) return undefined;
+        return parsed.toString();
+      } catch {
+        return undefined;
+      }
+    };
+
+    type StreamCandidate = { url: string; quality: Quality; bitrate: number; size: number; rank: number };
+    const qualityRank = (q: Quality): number => (q === 'flac' ? 4 : q === '320k' ? 3 : q === '192k' ? 2 : 1);
+    const desiredRank =
+      preferredQuality === '128k' ? 1 : preferredQuality === '192k' ? 2 : preferredQuality === '320k' ? 3 : 4;
+
+    const collectStreams = (node: unknown, fullDurMs: number, inheritedAuth: string): StreamCandidate[] => {
+      const out: StreamCandidate[] = [];
+      const visit = (current: unknown, inheritedDurMs: number, auth: string, depth: number) => {
+        if (depth > 10 || current === null || current === undefined) return;
+        let parsed: unknown = current;
+        for (let i = 0; i < 2 && typeof parsed === 'string'; i++) {
+          const trimmed = parsed.trim();
+          if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) break;
+          try {
+            parsed = JSON.parse(trimmed);
+          } catch {
+            break;
+          }
+        }
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) visit(item, inheritedDurMs, auth, depth + 1);
+          return;
+        }
+        if (typeof parsed !== 'object' || !parsed) return;
+        const entry = parsed as Row;
+        const meta = row(entry.video_meta);
+        const enc = row(entry.encrypt_info ?? entry.EncryptInfo ?? entry.encryptInfo);
+        const ownAuth =
+          [
+            entry.play_auth,
+            entry.PlayAuth,
+            entry.spade_a,
+            entry.spadeA,
+            enc.play_auth,
+            enc.PlayAuth,
+            enc.spade_a,
+            enc.spadeA,
+            enc.SpadeA,
+          ]
+            .map(text)
+            .find(Boolean) ?? auth;
+
+        const rawDur = num(entry.video_duration ?? entry.duration ?? entry.Duration ?? meta.duration);
+        const durMs = rawDur > 0 ? (rawDur > 10_000 ? rawDur : rawDur * 1000) : inheritedDurMs;
+
+        const urlKeys = [
+          'main_url',
+          'main_play_url',
+          'MainPlayUrl',
+          'MainUrl',
+          'url',
+          'play_url',
+          'backup_url',
+          'backup_url_1',
+          'backup_play_url',
+          'BackupPlayUrl',
+          'BackupUrl',
+        ];
+        const candidateUrl = urlKeys
+          .map(k => safeMediaUrl(entry[k]))
+          .find(u => u && !/Action=GetPlayInfo/i.test(u));
+
+        if (candidateUrl && !ownAuth) {
+          const isPreview = fullDurMs > 45_000 && durMs > 0 && durMs < fullDurMs - 2_000;
+          if (!isPreview) {
+            const rawBr = num(entry.bitrate ?? entry.Bitrate ?? entry.BitRate ?? entry.bit_rate ?? meta.bitrate ?? meta.real_bitrate);
+            const bitrate = rawBr > 0 && rawBr < 4_000 ? rawBr * 1000 : rawBr;
+            const size = num(entry.size ?? entry.Size ?? entry.file_size ?? meta.size);
+            const fmt = text(entry.codec_type ?? meta.codec_type ?? entry.format ?? entry.Format ?? entry.vtype ?? meta.format).toLowerCase();
+            const label = text(entry.quality ?? entry.Quality ?? entry.definition ?? meta.quality ?? entry.gear_des_key).toLowerCase();
+            const q: Quality =
+              fmt.includes('flac') || fmt.includes('alac') || label.includes('lossless') || label.includes('hires') || bitrate >= 700_000
+                ? 'flac'
+                : label.includes('highest') || bitrate >= 240_000
+                  ? '320k'
+                  : label.includes('higher') || bitrate >= 150_000
+                    ? '192k'
+                    : '128k';
+            out.push({ url: candidateUrl, quality: q, bitrate, size, rank: qualityRank(q) });
+          }
+        }
+
+        for (const [k, val] of Object.entries(entry)) {
+          if (k === 'encrypt_info' || k === 'EncryptInfo' || k === 'encryptInfo') continue;
+          if (val && (typeof val === 'object' || (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))))) {
+            visit(val, durMs, ownAuth, depth + 1);
+          }
+        }
+      };
+      visit(node, 0, inheritedAuth, 0);
+      return out;
+    };
+
+    const pickBest = (candidates: StreamCandidate[]): StreamCandidate | null => {
+      if (!candidates.length) return null;
+      const within = candidates.filter(c => c.rank <= desiredRank);
+      const pool = within.length ? within : candidates;
+      pool.sort((a, b) => b.rank - a.rank || b.bitrate - a.bitrate || b.size - a.size);
+      return pool[0] ?? null;
+    };
+
+    const pcUrl = queryURL('https://api.qishui.com/luna/pc/track_v2', {
+      track_id: track.origin.id,
+      media_type: 'track',
+      aid: '386088',
+      device_platform: 'web',
+      channel: 'pc_web',
+    });
+    const seoUrl = queryURL('https://api.qishui.com/luna/h5/seo_track', {
+      track_id: track.origin.id,
+      device_platform: 'web',
+    });
+    // Anonymous GET /luna/pc/track_v2 returns an empty body; go straight to h5/seo_track when unauthenticated.
+    const endpoints = cookieHeader ? [pcUrl, seoUrl] : [seoUrl, pcUrl];
+    const allCandidates: StreamCandidate[] = [];
+
     for (const url of endpoints) {
       try {
         const res = row(
@@ -806,47 +948,103 @@ export class QishuiProvider {
             8_000,
           ),
         );
-        const trackInfo = row(res.track ?? row(res.seo_track).track ?? row(res.data).track);
+        const seo = row(res.seo_track);
+        const trackInfo = row(res.track ?? seo.track ?? row(res.data).track);
+        const player = row(res.track_player ?? seo.track_player ?? res.player ?? row(res.data).track_player);
+        if (!Object.keys(player).length) continue;
+
+        const expireAt = num(player.expire_at);
+        if (expireAt > 0 && expireAt <= Math.floor(Date.now() / 1000)) continue;
+
         const fullDurMs = num(trackInfo.duration ?? track.durationMs);
-        const player = row(res.track_player ?? row(res.seo_track).track_player ?? res.player ?? row(res.data).track_player);
-        // Reject encrypted (spade_a) streams and short preview clips (< 70% of track length)
-        if (text(player.spade_a) || text(player.spadeA)) continue;
-        const playDurMs = num(player.duration ?? player.expire_time ? player.duration : 0);
-        if (fullDurMs > 45_000 && playDurMs > 0 && playDurMs < fullDurMs * 0.7) continue;
-        const streamUrl = text(player.url_player_info ?? player.url ?? player.play_url).replace(/^http:\/\//i, 'https://');
-        if (streamUrl && safePublicURL(streamUrl)) {
-          const bitrate = num(player.bitrate ?? player.bit_rate);
-          const quality: Quality = bitrate >= 700_000 ? 'flac' : bitrate >= 250_000 ? '320k' : '128k';
-          return { url: streamUrl, quality };
+        const topAuth = text(player.spade_a ?? player.spadeA ?? player.play_auth ?? player.PlayAuth);
+        if (topAuth) continue;
+
+        if (player.video_model) {
+          allCandidates.push(...collectStreams(player.video_model, fullDurMs, ''));
+        }
+
+        // Also check VOD PlayInfoList via url_player_info when present (often includes higher bitrates)
+        const vodInfoUrl = safeMediaUrl(player.url_player_info);
+        if (vodInfoUrl && /Action=GetPlayInfo/i.test(vodInfoUrl)) {
+          try {
+            const vodRes = row(
+              await bounded(
+                child =>
+                  this.http(
+                    vodInfoUrl,
+                    {
+                      method: 'GET',
+                      credentials: 'omit',
+                      headers: { Accept: 'application/json', 'User-Agent': LUNA_PC_UA },
+                    },
+                    child,
+                  ),
+                signal,
+                6_000,
+              ),
+            );
+            const vodResult = row(vodRes.Result ?? vodRes.result);
+            const vodData = row(vodResult.Data ?? vodResult.data);
+            const playInfoList = vodData.PlayInfoList ?? vodData.play_info_list;
+            if (playInfoList) {
+              allCandidates.push(...collectStreams(playInfoList, fullDurMs, ''));
+            }
+          } catch (err) {
+            throwIfAborted(signal);
+            void err;
+          }
+        } else if (vodInfoUrl && !allCandidates.length) {
+          // Legacy direct audio URL fallback (e.g. non-VOD direct CDN URL)
+          allCandidates.push(...collectStreams(player, fullDurMs, ''));
+        } else if (!allCandidates.length && (player.url || player.play_url)) {
+          allCandidates.push(...collectStreams(player, fullDurMs, ''));
+        }
+
+        const bestSoFar = pickBest(allCandidates);
+        if (bestSoFar && bestSoFar.rank >= desiredRank) {
+          return { url: bestSoFar.url, quality: bestSoFar.quality };
         }
       } catch (err) {
         throwIfAborted(signal);
         void err;
       }
     }
-    return null;
+
+    const best = pickBest(allCandidates);
+    return best ? { url: best.url, quality: best.quality } : null;
   }
 
   /** Official Qishui lyric reader via `/luna/pc/track_v2` & `/luna/h5/seo_track`. */
   async lyric(track: Track, cookieHeader: string | undefined, signal: AbortSignal): Promise<{ readonly lyric: string; readonly tlyric?: string } | string> {
     if (track.origin.kind !== 'imported' || track.origin.platform !== 'qishui') return '';
     if (!/^\d{5,30}$/.test(track.origin.id)) return '';
-    try {
-      const res = row(
-        await this.pcGet(
-          '/luna/pc/track_v2',
-          { track_id: track.origin.id, media_type: 'track', device_platform: 'web', channel: 'pc_web' },
-          signal,
-          cookieHeader,
-        ),
-      );
-      const lrcObj = row(res.lyric ?? row(res.data).lyric);
+    const extractLyric = (res: Row) => {
+      const seo = row(res.seo_track);
+      const lrcObj = row(res.lyric ?? seo.lyric ?? row(res.track).lyric ?? row(seo.track).lyric ?? row(res.data).lyric);
       const raw = text(lrcObj.content ?? lrcObj.lrc);
-      const trans = text(row(lrcObj.translations).zh ?? lrcObj.translation);
-      if (raw) return { lyric: raw, ...(trans ? { tlyric: trans } : {}) };
-    } catch (err) {
-      throwIfAborted(signal);
-      void err;
+      const transObj = row(lrcObj.translations);
+      const langObj = row(row(lrcObj.lang_translations).CHINESE);
+      const trans = text(transObj.cn ?? transObj.zh ?? langObj.content ?? lrcObj.translation);
+      return raw ? { lyric: raw, ...(trans ? { tlyric: trans } : {}) } : null;
+    };
+    const tries: Array<() => Promise<unknown>> = cookieHeader
+      ? [
+          () => this.pcGet('/luna/pc/track_v2', { track_id: track.origin.id, media_type: 'track', device_platform: 'web', channel: 'pc_web' }, signal, cookieHeader),
+          () => this.pcGet('/luna/h5/seo_track', { track_id: track.origin.id, device_platform: 'web' }, signal, cookieHeader),
+        ]
+      : [
+          () => this.pcGet('/luna/h5/seo_track', { track_id: track.origin.id, device_platform: 'web' }, signal),
+          () => this.pcGet('/luna/pc/track_v2', { track_id: track.origin.id, media_type: 'track', device_platform: 'web', channel: 'pc_web' }, signal),
+        ];
+    for (const run of tries) {
+      try {
+        const hit = extractLyric(row(await run()));
+        if (hit) return hit;
+      } catch (err) {
+        throwIfAborted(signal);
+        void err;
+      }
     }
     return '';
   }

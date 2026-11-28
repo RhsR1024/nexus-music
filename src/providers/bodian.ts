@@ -987,7 +987,7 @@ export class BodianProvider {
     if (track.origin.kind !== 'imported' || track.origin.platform !== 'bodian') return null;
     const musicId = track.origin.id;
     const freeSign = text(track.metadata.freeSign);
-    // Step 1: check official full-track right; status 3 = preview-only, status 7 = unavailable
+    // Step 1: check official full-track right; status 3 = preview-only, status 7 = unavailable, missing = unverified
     const rightRes = await this.request({
       path: '/api/play/music/v2/checkRight',
       query: { musicId, ...(freeSign ? { freeSign } : {}) },
@@ -996,7 +996,10 @@ export class BodianProvider {
       signal,
       timeoutMs: 8_000,
     });
-    const rightStatus = num(row(rightRes.data).status);
+    if (num(rightRes.code) && num(rightRes.code) !== 200) return null;
+    const rawStatus = row(rightRes.data).status;
+    if (rawStatus === undefined || rawStatus === null) return null;
+    const rightStatus = num(rawStatus);
     if (rightStatus === 3 || rightStatus === 7) return null;
 
     const candidates: { quality: Quality; format: string; br: string }[] =
@@ -1033,11 +1036,21 @@ export class BodianProvider {
         if (num(data.isTry) === 1 || num(data.status) === 3) continue;
         const url = safeHTTPS(data.audioHttpsUrl ?? data.audioUrl ?? data.url);
         if (url) {
+          const servedFormat = text(data.format).toLowerCase() || candidate.format;
+          const servedBitrate = num(data.bitrate) || undefined;
+          const actualQuality: Quality =
+            servedFormat === 'flac'
+              ? 'flac'
+              : servedBitrate && servedBitrate >= 300
+                ? '320k'
+                : servedBitrate && servedBitrate > 0 && servedBitrate < 256
+                  ? '128k'
+                  : candidate.quality;
           return {
             url,
-            quality: candidate.quality,
-            format: text(data.format) || candidate.format,
-            bitrate: num(data.bitrate) || undefined,
+            quality: actualQuality,
+            format: servedFormat,
+            bitrate: servedBitrate,
           };
         }
       } catch (err) {

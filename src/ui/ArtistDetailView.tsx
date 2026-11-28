@@ -329,7 +329,7 @@ export function ArtistDetailView({
             <View style={{ flex: 1, justifyContent: 'center', gap: 6 }}>
               <Text numberOfLines={2} style={{ fontSize: 16.5, fontWeight: '700', color: s.ink }}>{openedAlbum.title}</Text>
               <Text numberOfLines={1} style={{ fontSize: 12.5, color: s.muted }}>
-                {albumTracks.length ? `${albumTracks.length} 首曲目` : '正在加载曲目…'}
+                {albumLoading ? '正在加载曲目…' : albumError ? '曲目暂不可读取' : `${albumTracks.length} 首曲目`}
               </Text>
               {albumTracks.length > 0 && (
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 2 }}>
@@ -361,9 +361,18 @@ export function ArtistDetailView({
             </View>
           )}
           {!!albumError && (
-            <Text accessibilityRole="alert" style={{ fontSize: 13, color: s.accent, textAlign: 'center', paddingVertical: 16 }}>
-              {albumError}
-            </Text>
+            <View style={{ alignItems: 'center', gap: 10, paddingVertical: 16 }}>
+              <Text accessibilityRole="alert" style={{ fontSize: 13, color: s.accent, textAlign: 'center' }}>
+                {albumError}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => openAlbum(openedAlbum)}
+                style={{ paddingHorizontal: 16, height: 34, borderRadius: 17, backgroundColor: s.chip, borderWidth: 1, borderColor: s.chipBorder, justifyContent: 'center' }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: s.ink }}>重新加载</Text>
+              </Pressable>
+            </View>
           )}
           {!albumLoading && albumTracks.length > 0 && (
             <View style={[{ borderRadius: 20, backgroundColor: cardBg, borderWidth: 1, borderColor: s.cardBorder, overflow: 'hidden' }, s.cardShadow]}>

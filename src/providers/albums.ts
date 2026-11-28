@@ -67,9 +67,20 @@ export class AlbumProvider{
   async detail(platform:OnlinePlatform,album:BrowseItem,page:number,signal:AbortSignal,limit=100):Promise<PlaylistPage>{
     check(page,limit,signal);const id=identity(album.id);let values:unknown,total:unknown,localPaging=false,metadata:Partial<BrowseItem>={};
     if(platform==='wy'){
-      const r=row(await this.http(`https://music.163.com/api/album/${id}`,{},signal));if(r.code!==200)throw Error('此专辑暂不可公开读取，请到官方平台确认可用性');values=r.songs??row(r.album).songs;total=row(r.album).size;metadata=info(row(row(r.album).artist).name,row(r.album).publishTime,row(r.album).description);localPaging=true;
+      const r=row(await this.http(`https://music.163.com/api/v1/album/${id}`,{headers:{Referer:'https://music.163.com/'}},signal));if(r.code!==200)throw Error('此专辑暂不可公开读取，请到官方平台确认可用性');values=r.songs??row(r.album).songs;total=row(r.album).size;metadata=info(row(row(r.album).artist).name,row(r.album).publishTime,row(r.album).description);localPaging=true;
     }else if(platform==='tx'){
-      const r=row(await this.http(queryURL('https://c.y.qq.com/v8/fcg-bin/fcg_v8_album_info_cp.fcg',{albummid:id,format:'json'}),{headers:{Referer:'https://y.qq.com/'}},signal));if(r.code!==0)throw Error('此专辑暂不可公开读取');const d=row(r.data);values=d.list;total=d.total_song_num??d.total;metadata=info(d.singername,d.aDate,d.desc);localPaging=true;
+      const r=row(await this.http(queryURL('https://c.y.qq.com/v8/fcg-bin/fcg_v8_album_info_cp.fcg',{albummid:id,format:'json'}),{headers:{Referer:'https://y.qq.com/'}},signal));
+      if(r.code===0&&Array.isArray(row(r.data).list)&&row(r.data).list){
+        const d=row(r.data);values=d.list;total=d.total_song_num??d.total;metadata=info(d.singername,d.aDate,d.desc);localPaging=true;
+      }else{
+        const body=JSON.stringify({comm:{ct:24,cv:0,format:'json',uin:0},req:{module:'music.musichallAlbum.AlbumSongList',method:'GetAlbumSongList',param:{albumMid:id,begin:(page-1)*limit,num:limit,order:2}}});
+        const fallback=row(await this.http(queryURL('https://u.y.qq.com/cgi-bin/musics.fcg',{sign:await qqSignature(body,this.deps.sha1)}),{method:'POST',headers:{'Content-Type':'application/json',Referer:'https://y.qq.com/'},body},signal));
+        const req=row(fallback.req);
+        if(fallback.code!==0||req.code!==0)throw Error('此专辑暂不可公开读取');
+        const fd=row(req.data);
+        values=array(fd.songList,count(fd.totalNum)).map(entry=>row(entry).songInfo??entry);
+        total=fd.totalNum;
+      }
     }else if(platform==='kw'){
       const d=row(parseKuwoJSON(await this.textHTTP(queryURL('https://search.kuwo.cn/r.s',{pn:page-1,rn:limit,stype:'albuminfo',albumid:id,show_copyright_off:0,encoding:'utf',vipver:'MUSIC_9.1.0'}),{},signal)));values=d.musiclist;total=d.songnum;metadata=info(d.artist,d.pub,d.info);
     }else if(platform==='kg'){
@@ -77,10 +88,15 @@ export class AlbumProvider{
     }else{
       const snapshot=await miguAlbumSnapshot(this.http,album,signal);return{...snapshot,items:snapshot.items.slice((page-1)*limit,page*limit),page,hasMore:page*limit<snapshot.total};
     }
-    if(signal.aborted)throw Error('已取消');const parsedTotal=count(total);let rows=array(values,parsedTotal);
-    // These endpoints return a complete album; never silently accept a truncated snapshot.
-    if(localPaging){if(parsedTotal!==undefined&&rows.length!==parsedTotal)throw Error('专辑曲目不完整');rows=rows.slice((page-1)*limit,page*limit);}
-    const items=rows.map(value=>{const v=row(value);if(platform==='kw')return onlineTrack(platform,{...v,name:clean(v.name),artist:clean(v.artist),rid:v.id??v.rid,album:album.title,albumid:id,pic:v.pic??album.artwork,FORMATS:v.formats});if(platform==='kg'){const filename=text(v.filename),split=filename.indexOf(' - ');return onlineTrack(platform,{...v,FileHash:v.hash,SongName:split<0?filename:filename.slice(split+3),SingerName:split<0?'':filename.slice(0,split),AlbumID:id,AlbumName:album.title,Duration:v.duration,FileSize:v.filesize,HQFileHash:v['320hash'],HQFileSize:v['320filesize'],SQFileHash:v.sqhash,SQFileSize:v.sqfilesize});}if(platform==='tx')return onlineTrack(platform,{...v,file:{media_mid:v.strMediaMid,size_128mp3:v.size128,size_320mp3:v.size320,size_flac:v.sizeflac}});return onlineTrack(platform,v);});
+    if(signal.aborted)throw Error('已取消');let parsedTotal=count(total);let rows=array(values,parsedTotal);
+    // Reject empty snapshots when the album declares songs; when some tracks were
+    // removed upstream on NetEase/QQ, keep the playable catalog tracks instead of locking out the album.
+    if(localPaging){
+      if(parsedTotal!==undefined&&parsedTotal>0&&rows.length===0)throw Error('专辑曲目不完整');
+      if(parsedTotal!==undefined&&rows.length>0&&rows.length!==parsedTotal)parsedTotal=rows.length;
+      rows=rows.slice((page-1)*limit,page*limit);
+    }
+    const items=rows.map(value=>{const v=row(value);if(platform==='kw')return onlineTrack(platform,{...v,name:clean(v.name),artist:clean(v.artist),rid:v.id??v.rid,album:album.title,albumid:id,pic:v.pic??album.artwork,FORMATS:v.formats});if(platform==='kg'){const filename=text(v.filename),split=filename.indexOf(' - ');return onlineTrack(platform,{...v,FileHash:v.hash,SongName:split<0?filename:filename.slice(split+3),SingerName:split<0?'':filename.slice(0,split),AlbumID:id,AlbumName:album.title,Duration:v.duration,FileSize:v.filesize,HQFileHash:v['320hash'],HQFileSize:v['320filesize'],SQFileHash:v.sqhash,SQFileSize:v.sqfilesize});}if(platform==='tx')return onlineTrack(platform,v.file?v:{...v,file:{media_mid:v.strMediaMid,size_128mp3:v.size128,size_320mp3:v.size320,size_flac:v.sizeflac}});return onlineTrack(platform,v);});
     if(items.some(v=>!v.title))throw Error('专辑歌曲信息缺失');return{title:album.title,items,page,total:parsedTotal,info:metadata,hasMore:rows.length>0&&(parsedTotal!==undefined?page*limit<parsedTotal:rows.length>=limit)};
   }
   async complete(platform:OnlinePlatform,album:BrowseItem,signal:AbortSignal):Promise<{title:string;tracks:readonly Track[];scope?:'public'}>{
