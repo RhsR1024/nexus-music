@@ -66,9 +66,10 @@ export function parseQishuiCookiePayload(raw:string):Readonly<Record<string,stri
     if(typeof cookie!=='string'||!cookie||cookie.length>4096||!cookieName.test(name)||invalidCookieValue.test(cookie))throw new MusicAuthError('failed','汽水登录凭据格式无效');
     cookies[name]=cookie;
   }
-  const hasSession=Boolean(cookies.sessionid||cookies.sessionid_ss||cookies.sid_tt);
-  const hasIdentity=Boolean(cookies.uid_tt||cookies.uid_tt_ss||cookies.sid_guard);
-  if(!hasSession||!hasIdentity)throw new MusicAuthError('failed','汽水音乐登录未完成，请扫码确认登录');
+  const hasPrimarySession=Boolean(cookies.sessionid||cookies.sessionid_ss);
+  const hasLegacySession=Boolean(cookies.sid_tt&&(cookies.uid_tt||cookies.uid_tt_ss||cookies.sid_guard));
+  if(!hasPrimarySession&&!hasLegacySession)throw new MusicAuthError('failed','汽水音乐登录未完成，请扫码确认登录');
+  if(!cookies.sessionid&&cookies.sessionid_ss)cookies.sessionid=cookies.sessionid_ss;
   return Object.freeze(cookies);
 }
 

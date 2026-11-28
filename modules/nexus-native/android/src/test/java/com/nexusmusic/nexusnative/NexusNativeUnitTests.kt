@@ -149,6 +149,9 @@ class NexusNativeUnitTests {
     assertFalse(MusicWebLoginPolicy.allowsUrl("https://douyin.com.evil.test/", "qishui"))
     assertFalse(MusicWebLoginPolicy.allowsUrl("https://y.qq.com/", "qishui"))
     assertTrue(MusicWebLoginPolicy.ready(mapOf("sessionid" to "qs-sess", "uid_tt" to "qs-uid"), "qishui"))
-    assertFalse(MusicWebLoginPolicy.ready(mapOf("sessionid" to "qs-sess"), "qishui"))
+    assertTrue(MusicWebLoginPolicy.ready(mapOf("sessionid" to "qs-sess"), "qishui"))
+    assertTrue(MusicWebLoginPolicy.ready(mapOf("sessionid_ss" to "qs-sess-ss"), "qishui"))
+    assertFalse(MusicWebLoginPolicy.ready(mapOf("sid_tt" to "qs-sid"), "qishui"))
+    assertFalse(MusicWebLoginPolicy.ready(mapOf("uid_tt" to "qs-uid"), "qishui"))
   }
 }

@@ -74,9 +74,10 @@ internal object MusicWebLoginPolicy {
   fun ready(values: Map<String, String>, provider: String): Boolean {
     if (provider == "wy") return !values["MUSIC_U"].isNullOrEmpty()
     if (provider == "qishui") {
-      val hasSession = !values["sessionid"].isNullOrEmpty() || !values["sessionid_ss"].isNullOrEmpty() || !values["sid_tt"].isNullOrEmpty()
-      val hasIdentity = !values["uid_tt"].isNullOrEmpty() || !values["uid_tt_ss"].isNullOrEmpty() || !values["sid_guard"].isNullOrEmpty()
-      return hasSession && hasIdentity
+      val hasPrimary = !values["sessionid"].isNullOrEmpty() || !values["sessionid_ss"].isNullOrEmpty()
+      val hasLegacy = !values["sid_tt"].isNullOrEmpty() &&
+        (!values["uid_tt"].isNullOrEmpty() || !values["uid_tt_ss"].isNullOrEmpty() || !values["sid_guard"].isNullOrEmpty())
+      return hasPrimary || hasLegacy
     }
     if (provider != "tx") return false
     val loginType = values["login_type"]
@@ -204,11 +205,25 @@ class NexusAuthWebActivity : Activity() {
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
         }
       } else if (provider == "qishui") {
-        settings.userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        // Keep authentic WebView UA so navigator.userAgent matches HTTP headers for bdms.js signing.
         addJavascriptInterface(object {
           @android.webkit.JavascriptInterface
-          fun onConfirmed() {
-            handler.post { inspectCookies() }
+          fun getCsrfToken(): String {
+            val cmLocal = CookieManager.getInstance()
+            val merged = mutableMapOf<String, String>()
+            for (u in listOf("https://api.qishui.com/", "https://qishui.com/", "https://douyin.com/")) {
+              merged.putAll(MusicWebLoginPolicy.parseCookieHeader(cmLocal.getCookie(u), setOf("passport_csrf_token", "passport_csrf_token_default")))
+            }
+            return merged["passport_csrf_token"] ?: merged["passport_csrf_token_default"] ?: ""
+          }
+          @android.webkit.JavascriptInterface
+          fun md5Hex(input: String): String {
+            val md = java.security.MessageDigest.getInstance("MD5")
+            return md.digest(input.toByteArray(Charsets.UTF_8)).joinToString("") { "%02X".format(it) }
+          }
+          @android.webkit.JavascriptInterface
+          fun onConfirmed(inlineCookie: String?) {
+            handler.post { inspectCookies(inlineCookie) }
           }
           @android.webkit.JavascriptInterface
           fun onRefresh() {
@@ -249,14 +264,24 @@ class NexusAuthWebActivity : Activity() {
     handler.postDelayed(expiryRunnable, 5 * 60 * 1000L)
   }
 
-  private fun ensureQishuiNumericId(key: String): String {
-    val prefs = getSharedPreferences("nexus_qishui_auth", MODE_PRIVATE)
+  private fun ensureQishuiDigits(key: String, count: Int, minVal: Long, maxVal: Long): String {
+    val prefs = getSharedPreferences("nexus_qishui_auth_v2", MODE_PRIVATE)
     val existing = prefs.getString(key, null)
-    if (!existing.isNullOrEmpty() && existing.length >= 16) return existing
+    if (!existing.isNullOrEmpty() && existing.length == count && existing.all { it.isDigit() }) return existing
     val rng = java.security.SecureRandom()
-    val num = (rng.nextLong() and Long.MAX_VALUE) % 1_000_000_000_000_000_000L
-    val generated = "7%018d".format(num)
+    val span = (maxVal - minVal) + 1L
+    val raw = (rng.nextLong() and Long.MAX_VALUE) % span
+    val generated = (minVal + raw).toString()
     prefs.edit().putString(key, generated).apply()
+    return generated
+  }
+
+  private fun ensureQishuiPortraitId(): String {
+    val prefs = getSharedPreferences("nexus_qishui_auth_v2", MODE_PRIVATE)
+    val existing = prefs.getString("portrait_id", null)
+    if (!existing.isNullOrEmpty() && existing.endsWith(".login")) return existing
+    val generated = java.util.UUID.randomUUID().toString().lowercase() + ".login"
+    prefs.edit().putString("portrait_id", generated).apply()
     return generated
   }
 
@@ -272,8 +297,9 @@ class NexusAuthWebActivity : Activity() {
     val cm = CookieManager.getInstance()
     cm.removeAllCookies(null)
     cm.flush()
-    val did = ensureQishuiNumericId("device_id")
-    val iid = ensureQishuiNumericId("install_id")
+    val did = ensureQishuiDigits("device_id", 16, 1_000_000_000_000_000L, 9_999_999_999_999_999L)
+    val iid = ensureQishuiDigits("install_id", 15, 100_000_000_000_000L, 999_999_999_999_999L)
+    val portraitId = ensureQishuiPortraitId()
     val msToken = generateQishuiMsToken()
     val html = """
       <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -289,15 +315,14 @@ class NexusAuthWebActivity : Activity() {
       <h2>使用汽水音乐 App 扫一扫</h2>
       <p class="sub">官方 PC 端扫码会话 · 会员权限与歌单同步可用</p>
       <div class="card"><canvas id="qr" width="216" height="216"></canvas></div>
-      <div id="st">正在初始化安全会话…</div>
+      <div id="st">正在初始化汽水 PC 安全会话…</div>
       <button onclick="window.QishuiAuthBridge&&window.QishuiAuthBridge.onRefresh()">刷新二维码</button>
       <script>
       (function(){
-        var DID="$did", IID="$iid", MS="$msToken";
+        var DID="$did", IID="$iid", PORTRAIT="$portraitId", MS="$msToken";
         var stEl=document.getElementById('st'), cvs=document.getElementById('qr'), ctx=cvs.getContext('2d');
         try{localStorage.setItem('xmst',MS);localStorage.setItem('xmsty',MS);}catch(e){}
         function setSt(t){stEl.textContent=t;}
-        // Minimal self-contained ISO/IEC 18004 QR Byte-mode encoder (Versions 1-9, EC Level L)
         var GF_E=new Uint8Array(512),GF_L=new Uint8Array(256);
         (function(){var x=1;for(var i=0;i<255;i++){GF_E[i]=x;GF_L[x]=i;x<<=1;if(x&256)x^=0x11d;}for(var i=255;i<512;i++)GF_E[i]=GF_E[i-255];})();
         function gmul(a,b){return(a===0||b===0)?0:GF_E[GF_L[a]+GF_L[b]];}
@@ -361,40 +386,100 @@ class NexusAuthWebActivity : Activity() {
           ctx.fillStyle='#000000';
           for(var r=0;r<S;r++)for(var c=0;c<S;c++)if(m[r*S+c])ctx.fillRect(off+(c+quiet)*px,off+(r+quiet)*px,px,px);
         }
-        function xorHex(str){var b=new TextEncoder().encode(str),o='';for(var i=0;i<b.length;i++)o+=((b[i]^5)&255).toString(16).padStart(2,'0');return o;}
-        function readCookie(n){var m=document.cookie.match(new RegExp('(?:^|;\\s*)'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):'';}
+        function buildSourceInfo(){
+          var timing=(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0])||{};
+          var ctxObj={
+            hardwareConcurrency:navigator.hardwareConcurrency||4,webdriver:Boolean(navigator.webdriver),
+            chromedriver:false,shelldriver:false,plugins:navigator.plugins?navigator.plugins.length:0,permissions:[],
+            innerHeight:window.innerHeight,innerWidth:window.innerWidth,outerHeight:window.outerHeight,outerWidth:window.outerWidth,
+            stoargeStatus:{indexedDB:{idb:typeof indexedDB,open:typeof(indexedDB&&indexedDB.open),indexedDB:typeof indexedDB,IDBKeyRange:typeof IDBKeyRange,openDatabase:typeof window.openDatabase,isSafari:false,hasFetch:typeof fetch==='function'},localStorage:{isSupportLStorage:true,size:MS.length*2,write:true},storageQuotaStatus:{isPrivate:false}},
+            webgl:{},notificationPermission:'none',
+            performance:{timeOrigin:performance.timeOrigin||0,usedJSHeapSize:'unsupport',navigationTiming:{decodedBodySize:timing.decodedBodySize,entryType:timing.entryType,initiatorType:timing.initiatorType,name:timing.name,renderBlockingStatus:timing.renderBlockingStatus,serverTiming:'',guleStart:'none',guleDuration:'none'}},
+            request_host:'resources',request_pathname:'/main.asar/main.html',
+            browser:{t:String(Date.now()).split('').reverse().join(''),bit_protocol:'false',bit_helper:false}
+          };
+          var b=new TextEncoder().encode(JSON.stringify(ctxObj)),o='';
+          for(var i=0;i<b.length;i++)o+=((b[i]^5)&255).toString(16);
+          return o;
+        }
+        function randHex(len){var s='';while(s.length<len)s+=Math.floor(Math.random()*16).toString(16);return s.slice(0,len);}
         function xhrReq(method,url,body,headers){
           return new Promise(function(res,rej){
-            var x=new XMLHttpRequest();x.open(method,url,true);x.withCredentials=true;x.timeout=15000;
+            var x=new XMLHttpRequest();x.open(method,url,true);x.withCredentials=true;x.timeout=20000;
             if(headers)Object.keys(headers).forEach(function(k){if(headers[k])x.setRequestHeader(k,headers[k]);});
             x.onload=function(){try{res(JSON.parse(x.responseText||'{}'));}catch(e){rej(e);}};
             x.onerror=function(){rej(new Error('网络错误'));};x.ontimeout=function(){rej(new Error('请求超时'));};
             x.send(body||null);
           });
         }
-        var sdkInfo=xorHex(JSON.stringify({ua:navigator.userAgent||'',lang:navigator.language||'zh-CN',platform:'MacIntel',screen:'1440x900',tz:-(new Date().getTimezoneOffset()),cookie:true,ls:true,aid:386088,host:'api.qishui.com'}));
-        var passportToken='',stopped=false;
-        function q(){return 'aid=386088&account_sdk_source=web&passport_jssdk_version=2.4.13&passport_jssdk_type=normal&is_from_ttaccountsdk=1&next='+encodeURIComponent('https://api.qishui.com')+'&need_logo=false&need_short_url=false&is_new_login=1&device_id='+encodeURIComponent(DID)+'&iid='+encodeURIComponent(IID)+'&msToken='+encodeURIComponent(MS)+'&account_sdk_source_info='+encodeURIComponent(sdkInfo);}
-        function poll(){
+        var sdkInfo=buildSourceInfo();
+        var passportToken='',stopped=false,hasScanned=false,transientFails=0;
+        function buildQuery(extra,biz){
+          var p={
+            aid:'386088',passport_jssdk_version:'2.4.13',passport_jssdk_type:'normal',is_from_ttaccountsdk:'1',
+            language:'zh',account_sdk_source:'web',p_js_v:'2.4.13',p_js_t:'pro',p_zt:'3.3.5',p_ver:'1.0.29',p_bd:'1.0.0.41',
+            is_from_iesaccountsaas:'1',request_host:'app%3A%2F%2Fresources',is_new_login:'1',device_platform:'PC',version_code:'3.5.2',
+            device_id:DID,did:DID,install_id:IID,iid:IID,biz_trace_id:biz,msToken:MS,account_sdk_source_info:sdkInfo
+          };
+          if(extra)Object.keys(extra).forEach(function(k){p[k]=extra[k];});
+          return Object.keys(p).sort().map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(p[k]);}).join('&');
+        }
+        function passportHeaders(biz,formBody){
+          var tr=randHex(32);
+          var hdrs={'Accept':'application/json, text/javascript','X-Tt-Passport-Verify-Portrait':PORTRAIT,'X-Tt-Passport-Trace-Id':biz,'X-Tt-Trace-Id':'00-'+tr+'-'+tr.slice(0,16)+'-01'};
+          var csrf=(window.QishuiAuthBridge&&window.QishuiAuthBridge.getCsrfToken)?window.QishuiAuthBridge.getCsrfToken():'';
+          if(csrf)hdrs['X-Tt-Passport-Csrf-Token']=csrf;
+          if(formBody){
+            hdrs['Content-Type']='application/x-www-form-urlencoded';
+            if(window.QishuiAuthBridge&&window.QishuiAuthBridge.md5Hex)hdrs['X-Ss-Stub']=window.QishuiAuthBridge.md5Hex(formBody);
+          }
+          return hdrs;
+        }
+        function poll(delay){
           if(stopped||!passportToken)return;
           setTimeout(function(){
             if(stopped)return;
-            var csrf=readCookie('passport_csrf_token')||readCookie('passport_csrf_token_default');
-            var hdrs={'Content-Type':'application/x-www-form-urlencoded'};if(csrf)hdrs['X-Tt-Passport-Csrf-Token']=csrf;
-            var form='token='+encodeURIComponent(passportToken)+'&need_logo=false&need_short_url=false&is_frontier=true&is_new_login=1&next='+encodeURIComponent('https://api.qishui.com');
-            xhrReq('POST','https://api.qishui.com/passport/web/check_qrconnect/?'+q(),form,hdrs).then(function(res){
-              var d=res&&res.data?res.data:{},st=String(d.status||'').toLowerCase(),code=Number(d.error_code||0);
-              if(st==='confirmed'||st==='3'||st==='success'||st==='confirm'){setSt('已确认，正在保存汽水会话…');if(window.QishuiAuthBridge)window.QishuiAuthBridge.onConfirmed();poll();return;}
-              if(st==='scanned'||st==='2'){setSt('已扫码，请在汽水音乐 App 点击确认');poll();return;}
-              if(st==='expired'||st==='5'||code===2043){stopped=true;setSt('二维码已过期，请点击刷新');return;}
-              if(code===2046){stopped=true;setSt(String(d.description||'需要安全验证，请刷新重试'));return;}
-              poll();
-            }).catch(function(){if(!stopped)poll();});
-          },2200);
+            var biz=randHex(8);
+            var pairs=[['is_frontier','true'],['is_new_login','1'],['need_logo','false'],['need_short_url','false'],['next','https://api.qishui.com'],['token',passportToken]];
+            var form=pairs.map(function(kv){return encodeURIComponent(kv[0])+'='+encodeURIComponent(kv[1]).replace(/\+/g,'%2B');}).join('&');
+            xhrReq('POST','https://api.qishui.com/passport/web/check_qrconnect/?'+buildQuery(null,biz),form,passportHeaders(biz,form)).then(function(res){
+              var d=res&&res.data?res.data:res||{},st=String(d.status||d.qr_status||res.status||'').toLowerCase();
+              var code=Number(d.error_code||res.error_code||res.status_code||0);
+              var inlineCookie=String(d.session_cookie||'');
+              if(st==='expired'||st==='5'||st==='-1'||st==='timeout'||st==='cancelled'||st==='canceled'||code===2||code===2043||code===10001){stopped=true;setSt('二维码已过期，请点击刷新');return;}
+              if(code===2046){stopped=true;setSt('平台要求二次安全验证，请刷新重试');return;}
+              if(st==='1'||st==='2'||st==='scanned'||st==='scaned'||st==='confirmed'||st==='3'||st==='success'||st==='confirm')hasScanned=true;
+              if(code!==0){
+                if(code===7||(code===1049&&hasScanned)){
+                  transientFails++;
+                  if(transientFails<=3){setSt('正在完成汽水安全校验（重试 '+transientFails+'/3）…');poll(4500);return;}
+                }
+                stopped=true;setSt('汽水登录未通过校验（错误码 '+code+'），请刷新重试');return;
+              }
+              transientFails=0;
+              if(st==='confirmed'||st==='3'||st==='success'||st==='confirm'){
+                stopped=true;
+                setSt('已确认，正在保存汽水会话…');
+                if(window.QishuiAuthBridge){
+                  window.QishuiAuthBridge.onConfirmed(inlineCookie);
+                  setTimeout(function(){window.QishuiAuthBridge&&window.QishuiAuthBridge.onConfirmed(inlineCookie);},350);
+                  setTimeout(function(){window.QishuiAuthBridge&&window.QishuiAuthBridge.onConfirmed(inlineCookie);},1000);
+                }
+                return;
+              }
+              if(st==='1'||st==='2'||st==='scanned'||st==='scaned'){
+                setSt('已扫码，请在汽水音乐 App 点击确认');
+                if(inlineCookie&&window.QishuiAuthBridge)window.QishuiAuthBridge.onConfirmed(inlineCookie);
+                poll(1800);return;
+              }
+              poll(2000);
+            }).catch(function(){if(!stopped)poll(2400);});
+          },delay||2000);
         }
         function createQr(){
           setSt('正在获取汽水音乐登录二维码…');
-          xhrReq('GET','https://api.qishui.com/passport/web/get_qrcode/?'+q(),null,null).then(function(res){
+          var biz=randHex(8);
+          xhrReq('GET','https://api.qishui.com/passport/web/get_qrcode/?'+buildQuery({next:'https://api.qishui.com',need_logo:'false',need_short_url:'false'},biz),null,passportHeaders(biz,null)).then(function(res){
             var d=res&&res.data?res.data:{};
             if(!d.token&&!d.qrcode_index_url){setSt(String(d.description||'二维码获取失败，请刷新'));return;}
             passportToken=String(d.token||'');
@@ -402,7 +487,7 @@ class NexusAuthWebActivity : Activity() {
             var scanUrl='https://bff-pc.qishui.com/light/invoke/scan_login?token='+encodeURIComponent(scanTok).replace(/\+/g,'%2B')+'&os=Windows&computer_name=NexusMusic';
             drawQr(scanUrl);
             setSt('请使用汽水音乐 App 扫一扫确认登录');
-            poll();
+            poll(2000);
           }).catch(function(){setSt('网络请求失败，请点击刷新');});
         }
         var sc=document.createElement('script');
@@ -416,7 +501,7 @@ class NexusAuthWebActivity : Activity() {
     wv.loadDataWithBaseURL("https://api.qishui.com/", html, "text/html", "UTF-8", "https://api.qishui.com/")
   }
 
-  private fun inspectCookies() {
+  private fun inspectCookies(inlineCookie: String? = null) {
     if (finished) return
     val cm = CookieManager.getInstance()
     val allowed = MusicWebLoginPolicy.cookieNames(provider)
@@ -428,6 +513,9 @@ class NexusAuthWebActivity : Activity() {
     val merged = mutableMapOf<String, String>()
     for (u in urls) {
       merged.putAll(MusicWebLoginPolicy.parseCookieHeader(cm.getCookie(u), allowed))
+    }
+    if (!inlineCookie.isNullOrBlank()) {
+      merged.putAll(MusicWebLoginPolicy.parseCookieHeader(inlineCookie, allowed))
     }
 
     if (dailyMode) {
@@ -452,6 +540,9 @@ class NexusAuthWebActivity : Activity() {
       }
     } else {
       if (!MusicWebLoginPolicy.ready(merged, provider)) return
+      if (provider == "qishui" && merged["sessionid"].isNullOrEmpty() && !merged["sessionid_ss"].isNullOrEmpty()) {
+        merged["sessionid"] = merged["sessionid_ss"]!!
+      }
       finishWith(Result.success(JSONObject(merged as Map<*, *>).toString()))
     }
   }

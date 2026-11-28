@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { defaults as prefDefaults } from '../src/app/preferences.ts';
 import { appearanceDefaults } from '../src/domain/appearance.ts';
 import { RADIO_GLOBE_HTML } from '../src/providers/globalRadio.ts';
@@ -186,7 +188,9 @@ test('Item 13: Qishui WebView cookie validation and account login persistence ke
   assert.equal(MUSIC_WEB_LOGIN_URLS.qishui, 'https://music.douyin.com/qishui');
   const parsed = parseQishuiCookiePayload(JSON.stringify({ sessionid: 'qs-token', uid_tt: 'uid-99', random_ignored: 'drop' }));
   assert.deepEqual(parsed, { sessionid: 'qs-token', uid_tt: 'uid-99' });
-  assert.throws(() => parseQishuiCookiePayload(JSON.stringify({ sessionid: 'qs-token' })));
+  assert.deepEqual(parseQishuiCookiePayload(JSON.stringify({ sessionid: 'qs-token' })), { sessionid: 'qs-token' });
+  assert.throws(() => parseQishuiCookiePayload(JSON.stringify({ sid_tt: 'only-sid-without-identity' })));
+  assert.throws(() => parseQishuiCookiePayload(JSON.stringify({ uid_tt: 'only-uid-without-session' })));
 
   const records = new Map<string, unknown>();
   const secrets = new Map<string, string>();
@@ -277,4 +281,61 @@ test('Item 15: AudioMatch HMAC-SHA1 matches Node crypto and supports ACRCloud & 
   assert.equal(matchResult?.title, '告白气球');
   assert.equal(coordinator.getSnapshot().results.length, 1);
   assert.equal(coordinator.getSnapshot().results[0]?.title, '告白气球');
+});
+
+test('Qishui PC QR confirmation protocol: sessionid_ss normalization, sessionid-only login, and native Passport parity', async () => {
+  const ssOnly = parseQishuiCookiePayload(JSON.stringify({ sessionid_ss: 'qs-ss-token-999' }));
+  assert.equal(ssOnly.sessionid, 'qs-ss-token-999');
+  assert.equal(ssOnly.sessionid_ss, 'qs-ss-token-999');
+
+  const records = new Map<string, unknown>();
+  const secrets = new Map<string, string>();
+  let capturedCookieHeader = '';
+  const store = new QishuiAccountStore(
+    {
+      get: async <T>(k: string) => records.get(k) as T | undefined,
+      put: async (k: string, v: unknown) => { records.set(k, v); },
+    },
+    {
+      get: async k => secrets.get(k) ?? null,
+      set: async (k, v) => { secrets.set(k, v); },
+      remove: async k => { secrets.delete(k); },
+    },
+  );
+
+  const snap = await store.loginWithWebView({
+    native: { open: async () => JSON.stringify({ sessionid_ss: 'qs-pc-confirmed-only' }), cancel: async () => {} },
+    uuid: () => 'qs-pc-confirm-test',
+    http: async (_url, init) => {
+      capturedCookieHeader = String((init?.headers as Record<string, string> | undefined)?.Cookie ?? '');
+      return { my_info: { nickname: 'PC汽水会员', id: '991002', is_vip: true } };
+    },
+  });
+  assert.equal(snap.loggedIn, true);
+  assert.equal(snap.nickname, 'PC汽水会员');
+  assert.equal(snap.userId, '991002');
+  assert.equal(snap.isVip, true);
+  assert.match(capturedCookieHeader, /sessionid=qs-pc-confirmed-only/);
+
+  const iosSwift = readFileSync(resolve('modules/nexus-native/ios/NexusMusicAuthModule.swift'), 'utf8');
+  assert.match(iosSwift, /URLRequest\(url:\s*URL\(string:\s*"https:\/\/api\.qishui\.com\/"\)!\)/);
+  assert.doesNotMatch(iosSwift, /loadHTMLString\(/);
+  assert.match(iosSwift, /X-Ss-Stub/);
+  assert.match(iosSwift, /X-Tt-Passport-Csrf-Token/);
+  assert.match(iosSwift, /X-Tt-Passport-Verify-Portrait/);
+  assert.match(iosSwift, /dataObj\["session_cookie"\]/);
+  assert.match(iosSwift, /awaitConfirmedCookieSync/);
+  assert.match(iosSwift, /ucWebSecondVerify/);
+  assert.match(iosSwift, /pack_verify_ways_data/);
+
+  const androidKt = readFileSync(
+    resolve('modules/nexus-native/android/src/main/java/com/nexusmusic/nexusnative/NexusAuthWebActivity.kt'),
+    'utf8',
+  );
+  assert.match(androidKt, /fun getCsrfToken\(\)/);
+  assert.match(androidKt, /fun md5Hex\(/);
+  assert.match(androidKt, /X-Ss-Stub/);
+  assert.match(androidKt, /X-Tt-Passport-Verify-Portrait/);
+  assert.match(androidKt, /d\.session_cookie/);
+  assert.match(androidKt, /merged\["sessionid"\] = merged\["sessionid_ss"\]!!/);
 });

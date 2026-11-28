@@ -51,7 +51,10 @@ import Foundation
       expect(!MusicWebLoginPolicy.allows(URL(string: url)!, provider: "qishui"), "Qishui navigation boundary & isolation")
     }
     expect(MusicWebLoginPolicy.ready(["sessionid": "qs-sess", "uid_tt": "qs-uid"], provider: "qishui"), "Qishui authenticated cookies")
-    expect(!MusicWebLoginPolicy.ready(["sessionid": "qs-sess"], provider: "qishui"), "Qishui requires identity cookie")
+    expect(MusicWebLoginPolicy.ready(["sessionid": "qs-sess"], provider: "qishui"), "Qishui PC sessionid is sufficient")
+    expect(MusicWebLoginPolicy.ready(["sessionid_ss": "qs-sess-ss"], provider: "qishui"), "Qishui PC sessionid_ss is sufficient")
+    expect(!MusicWebLoginPolicy.ready(["sid_tt": "qs-sid"], provider: "qishui"), "Qishui sid_tt alone requires identity cookie")
+    expect(!MusicWebLoginPolicy.ready(["uid_tt": "qs-uid"], provider: "qishui"), "Qishui uid_tt alone without session is rejected")
     print("Music web login native policy passed")
   }
 }
