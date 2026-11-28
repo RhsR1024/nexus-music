@@ -12,8 +12,7 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
-          "NSAllowsLocalNetworking": true
+          "NSAllowsArbitraryLoads": true
         },
         "NSLocalNetworkUsageDescription": "连接你配置的局域网音乐服务，或在你主动配对时连接自己的电脑。",
         "UIBackgroundModes": [

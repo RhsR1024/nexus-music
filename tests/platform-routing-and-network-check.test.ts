@@ -22,6 +22,8 @@ import {
   mergeRecommendedRouting,
   NETWORK_CHECK_PLATFORMS,
   NetworkDiagnosticsCoordinator,
+  pickBestDiagnosticSample,
+  pickDiagnosticQualities,
   recommendPlatformSourceRouting,
   type NetworkCheckRow,
   type PhaseDetail,
@@ -531,4 +533,111 @@ test('recommendPlatformSourceRouting ranks by quality/latency, safely excludes b
   assert.deepEqual(partial.wy, { priority: ['src-fast-flac', 'src-slow-flac'], excluded: ['src-broken'] });
   assert.equal(partial.tx, undefined);
   assert.deepEqual(partial.kw, existing.kw);
+});
+
+test('pickBestDiagnosticSample avoids KTV/DJ/cover/short tracks and pickDiagnosticQualities builds 3-tier fallback', () => {
+  const kwItems: Track[] = [
+    onlineTrack('kw', '1', '起风了 (KTV版伴奏)', '买辣椒也用券'),
+    onlineTrack('kw', '2', '起风了 (DJ版)', 'DJ某某'),
+    { ...onlineTrack('kw', '3', '起风了', '铃声'), durationMs: 25_000 },
+    onlineTrack('kw', '4', '起风了', '买辣椒也用券'),
+  ];
+  const picked = pickBestDiagnosticSample(kwItems, 'kw', '起风了');
+  assert.equal(picked?.origin.kind === 'online' ? picked.origin.id : '', '4');
+
+  const tiers = pickDiagnosticQualities(['128k', '320k', 'flac', 'flac24bit']);
+  assert.deepEqual(
+    tiers.map(t => t.quality),
+    ['flac', '320k', '128k'],
+  );
+  const mp3Only = pickDiagnosticQualities(['320k', '128k']);
+  assert.deepEqual(
+    mp3Only.map(t => t.quality),
+    ['320k', '128k'],
+  );
+});
+
+test('startAllSourcesCheck degrades flac -> 320k/128k on resolve or probe failure and runs 4 concurrent workers across 28 sources', async () => {
+  const allCaps = (['wy', 'tx'] as const).map(platform => ({
+    platform,
+    name: platform,
+    actions: ['musicUrl' as const],
+    qualities: ['flac', '320k', '128k'],
+  }));
+  const registry = new SourceRegistry({
+    initialize: async () => allCaps,
+    destroy() {},
+  });
+  const defs = Array.from({ length: 28 }, (_, i) => ({
+    id: `src-${i + 1}`,
+    name: `测试音源 ${i + 1}`,
+    script: `s${i + 1}`,
+    fingerprint: `fp-${i + 1}`,
+  }));
+  registry.registerMany(defs);
+  await registry.setManyEnabled(defs.map(d => d.id), true);
+
+  let active = 0;
+  let peakActive = 0;
+  const coordinator = new NetworkDiagnosticsCoordinator({
+    registry,
+    openDiagnostic: async source => ({
+      capabilities: source.capabilities,
+      request: async payload => {
+        active++;
+        if (active > peakActive) peakActive = active;
+        await new Promise(r => setTimeout(r, 8));
+        active--;
+        // src-1: flac fails resolve, 320k succeeds
+        if (source.id === 'src-1' && payload.info.type === 'flac') {
+          throw new Error('FLAC_UNAVAILABLE');
+        }
+        // src-2: flac returns dead URL (403), 128k returns live URL (320k fails)
+        if (source.id === 'src-2') {
+          if (payload.info.type === 'flac') return 'https://cdn.example/dead-403.flac';
+          if (payload.info.type === '320k') throw new Error('NO_320K');
+          return 'https://cdn.example/live-128.mp3';
+        }
+        return `https://cdn.example/${source.id}/${payload.source}/${payload.info.type}.flac`;
+      },
+      dispose() {},
+    }),
+    discover: async () => 10,
+    searchSample: async (platform, keyword) => onlineTrack(platform as OnlinePlatform, '100', keyword, '原唱'),
+    resolveSample: async () => ({ url: 'https://cdn.example/ok.flac', quality: 'flac' }),
+    probe: async url => {
+      if (url.includes('dead-403')) return { state: 'http-error', bytes: 0, status: 403 };
+      if (url.includes('live-128')) return { state: 'header', bytes: 4096, status: 206, format: 'id3' };
+      return { state: 'header', bytes: 4096, status: 206, format: 'flac' };
+    },
+  });
+
+  await coordinator.startAllSourcesCheck('起风了');
+  const snap = coordinator.getSnapshot();
+  assert.equal(snap.running, false);
+  assert.equal(snap.sourceFinishReason, '检测完成');
+  assert.equal(snap.sourceGroups.length, 28);
+  assert.ok(peakActive >= 4, `expected 4-way concurrency, got peakActive=${peakActive}`);
+
+  // All 28 * 2 = 56 declared rows completed as 'ok' (zero truncated 'uncertain')
+  const declared = snap.sourceGroups.flatMap(g => g.rows).filter(r => r.kind !== 'unsupported');
+  assert.equal(declared.length, 56);
+  assert.equal(declared.filter(r => r.kind === 'ok').length, 56);
+
+  const src1Wy = snap.sourceGroups.find(g => g.sourceId === 'src-1')!.rows.find(r => r.platform === 'wy')!;
+  assert.equal(src1Wy.resolvedQuality, '320k');
+  assert.match(src1Wy.phases[2].detail, /降级验证/);
+
+  const src2Wy = snap.sourceGroups.find(g => g.sourceId === 'src-2')!.rows.find(r => r.platform === 'wy')!;
+  assert.equal(src2Wy.resolvedQuality, '128k');
+  assert.equal(src2Wy.audioFormat, 'id3');
+
+  // Ranking still puts flac sources ahead of degraded 320k (src-1) and 128k (src-2)
+  const plan = recommendPlatformSourceRouting(snap.sourceGroups);
+  const wyRec = plan.platforms.find(p => p.platform === 'wy')!;
+  const idxFlac = wyRec.priority.findIndex(c => c.sourceId === 'src-3');
+  const idx320 = wyRec.priority.findIndex(c => c.sourceId === 'src-1');
+  const idx128 = wyRec.priority.findIndex(c => c.sourceId === 'src-2');
+  assert.ok(idxFlac >= 0 && idxFlac < idx320 && idx320 < idx128);
+  coordinator.dispose();
 });

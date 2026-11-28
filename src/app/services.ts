@@ -22,7 +22,7 @@ import {CoverThemeStore} from '../appearance/coverTheme.ts';
 import {PublicComments} from '../providers/comments.ts';
 import {bindManualMatches,bindMatchPolicy} from '../playback/matchBinding.ts';
 import {SourceHealth} from '../providers/sourceHealth.ts';
-import {NetworkDiagnosticsCoordinator,type SystemNetworkInfo} from '../providers/networkDiagnostics.ts';
+import {NetworkDiagnosticsCoordinator,pickBestDiagnosticSample,type SystemNetworkInfo} from '../providers/networkDiagnostics.ts';
 import {applyPlatformSourceRouting} from '../domain/platformRouting.ts';
 import {loadAudioProbe,loadNativeDiagnosticLX} from '../providers/nativeLX.ts';
 import {createSourceDiagnostics} from '../providers/sourceDiagnostics.ts';
@@ -211,7 +211,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
   const online = new OnlineProvider({http:options.onlineHTTP, md5: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, value), sha1: value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, value), deviceId: Crypto.randomUUID });
   const covers=new CoverService(loadNativeCovers(),hash,registry,nativeLX,async(account,id,signal,size)=>(await accounts.client(account)).mediaURL('getCoverArt',{id,size},signal),(track,signal)=>track.origin.kind==='webdav'?davMedia.cover(track,signal):track.origin.kind==='device'?deviceMedia.cover(track):localAudio.cover(track),(track,signal)=>online.artwork(track,signal));
   const playbackQualityFor=(platform:MusicPlatform)=>preferences.getSnapshot().playbackQualities[platform]??preferences.getSnapshot().quality;
-  const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality, 15000, {
+  const resolver = new MultiSourceResolver(registry, nativeLX, () => preferences.getSnapshot().quality, 10000, {
     qualityForPlatform: playbackQualityFor,
     degradeMode: () => preferences.getSnapshot().smartDegradeMode,
     crossScript: () => preferences.getSnapshot().smartCrossScript,
@@ -556,8 +556,8 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
         const res=await bodian.searchSongs(keyword,1,signal,session);
         return res.items[0];
       }
-      const res=await online.search(platform,keyword,1,signal,5).catch(()=>({items:[] as readonly Track[],page:1,hasMore:false}));
-      const directHit=res.items.find(item=>item.origin.kind==='online'&&item.origin.platform===platform);
+      const res=await online.search(platform,keyword,1,signal,10).catch(()=>({items:[] as readonly Track[],page:1,hasMore:false}));
+      const directHit=pickBestDiagnosticSample(res.items,platform,keyword);
       if(directHit)return directHit;
       // Fallback to first track from platform public playlist when unsigned search returns 0 (e.g. Kugou WebFilter).
       const pls=await discovery.playlists(platform,1,undefined,signal,5).catch(()=>({items:[] as readonly {id:string}[],page:1,hasMore:false}));

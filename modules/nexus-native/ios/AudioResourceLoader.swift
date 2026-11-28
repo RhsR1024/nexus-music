@@ -60,6 +60,9 @@ final class AudioResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
     guard jobs.count < 16 else { request.finishLoading(with: URLError(.resourceUnavailable)); return true }
     var outgoing = URLRequest(url: url)
     for (name, value) in headers { outgoing.setValue(value, forHTTPHeaderField: name) }
+    if outgoing.value(forHTTPHeaderField: "User-Agent") == nil {
+      outgoing.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", forHTTPHeaderField: "User-Agent")
+    }
     if let data = request.dataRequest {
       let start = max(data.requestedOffset, data.currentOffset)
       let end = data.requestsAllDataToEndOfResource ? "" : String(data.requestedOffset + Int64(data.requestedLength) - 1)

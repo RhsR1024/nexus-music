@@ -208,7 +208,7 @@ class NexusNativeModule : Module() {
     }
 
     AsyncFunction("probeAudioURL") { id: String, url: String, promise: Promise ->
-      if (probes.containsKey(id) || probes.size >= 2) {
+      if (probes.containsKey(id) || probes.size >= 12) {
         promise.reject("PROBE_BUSY", "请等待其他检查完成", null)
         return@AsyncFunction
       }
@@ -380,7 +380,7 @@ class NexusNativeModule : Module() {
       runtimeExecutor.execute {
         val bootstrap = bootstrapText()
         if (diagnosticRuntimes.containsKey(id) ||
-          diagnosticRuntimes.size >= 2 ||
+          diagnosticRuntimes.size >= 8 ||
           script.toByteArray(StandardCharsets.UTF_8).size > 8 * 1024 * 1024 ||
           bootstrap == null
         ) {

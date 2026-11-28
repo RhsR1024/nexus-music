@@ -137,7 +137,7 @@ public final class NexusNativeModule: Module {
 #endif
     AsyncFunction("decodeImportText") { (base64: String) throws -> String in try ScriptUtilities.perform("importText", ["input": base64]) as! String }.runOnQueue(runtimeQueue)
     AsyncFunction("probeAudioURL") { (id: String, url: String, promise: Promise) in
-      guard self.probes[id] == nil, self.probes.count < 2 else { promise.reject("PROBE_BUSY", "请等待其他检查完成"); return }
+      guard self.probes[id] == nil, self.probes.count < 12 else { promise.reject("PROBE_BUSY", "请等待其他检查完成"); return }
       let client = AudioURLProbe(queue: self.probeQueue); self.probes[id] = client
       client.start(url) { [weak self] result in self?.probes.removeValue(forKey: id); promise.resolve(result) }
     }.runOnQueue(probeQueue)
@@ -239,7 +239,7 @@ public final class NexusNativeModule: Module {
       }
     }.runOnQueue(runtimeQueue)
     AsyncFunction("initializeHealthSource") { (id: String, name: String, script: String, promise: Promise) in
-      guard self.diagnosticRuntimes[id] == nil, self.diagnosticRuntimes.count < 2, script.utf8.count <= 8 * 1024 * 1024,
+      guard self.diagnosticRuntimes[id] == nil, self.diagnosticRuntimes.count < 8, script.utf8.count <= 8 * 1024 * 1024,
             let bootstrap = self.bootstrapText() else { promise.reject("HEALTH_SOURCE_BUSY", "诊断初始化失败，请稍后重试"); return }
       let runtime = ScriptRuntime(id: "diagnostic:\(id)", revision: 1); self.diagnosticRuntimes[id] = runtime
       runtime.initialize(script: script, name: name, bootstrap: bootstrap) { result in self.complete(promise, result) }

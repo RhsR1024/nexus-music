@@ -38,17 +38,22 @@ internal class AudioURLProbe {
     var url = rawUrl
     var redirects = 0
     var lastStatus = 0
+    var useRange = true
+    var retriedWithoutRange = false
     val collected = ByteArrayOutputStream()
 
     try {
       while (true) {
         if (cancelled.get()) return buildResult("cancelled", collected.size(), lastStatus)
-        val req = Request.Builder()
+        val reqBuilder = Request.Builder()
           .url(url)
           .get()
-          .header("Range", "bytes=0-4095")
           .header("Accept-Encoding", "identity")
-          .build()
+          .header("User-Agent", USER_AGENT)
+        if (useRange) {
+          reqBuilder.header("Range", "bytes=0-4095")
+        }
+        val req = reqBuilder.build()
         val call = client.newCall(req)
         currentCall = call
         call.execute().use { resp ->
@@ -64,10 +69,20 @@ internal class AudioURLProbe {
             } catch (_: Throwable) {
               return buildResult("redirect-error", collected.size(), lastStatus)
             }
-            if (!allowed(nextUrl) || (url.startsWith("https:", true) && nextUrl.startsWith("http:", true))) {
+            // Public music CDN resolvers routinely 302 from HTTPS API gateways to HTTP audio edge nodes.
+            // This probe sends zero cookies or Authorization headers, matching iOS AudioURLProbe.swift.
+            if (!allowed(nextUrl)) {
               return buildResult("redirect-error", collected.size(), lastStatus)
             }
             url = nextUrl
+            return@use
+          }
+
+          if (resp.code == 416 && !retriedWithoutRange) {
+            retriedWithoutRange = true
+            useRange = false
+            lastStatus = 0
+            collected.reset()
             return@use
           }
 
@@ -76,7 +91,7 @@ internal class AudioURLProbe {
           }
 
           if (resp.code == 206) {
-            val contentRange = resp.header("Content-Range") ?: ""
+            val contentRange = (resp.header("Content-Range") ?: "").trim()
             val match = CONTENT_RANGE_REGEX.matchEntire(contentRange)
               ?: return buildResult("range-error", collected.size(), lastStatus)
             val end = match.groupValues[1].toLongOrNull() ?: return buildResult("range-error", collected.size(), lastStatus)
@@ -131,7 +146,9 @@ internal class AudioURLProbe {
   }
 
   companion object {
-    private val CONTENT_RANGE_REGEX = Regex("^bytes 0-([0-9]+)/([0-9]+|\\*)$")
+    private const val USER_AGENT =
+      "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+    private val CONTENT_RANGE_REGEX = Regex("^bytes\\s+0-([0-9]+)/([0-9]+|\\*)$", RegexOption.IGNORE_CASE)
 
     fun allowed(raw: String): Boolean {
       if (raw.toByteArray().size > 8192) return false

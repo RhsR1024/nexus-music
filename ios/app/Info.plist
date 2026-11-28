@@ -41,8 +41,6 @@
     <dict>
       <key>NSAllowsArbitraryLoads</key>
       <true/>
-      <key>NSAllowsLocalNetworking</key>
-      <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>仅在您主动扫描电脑配对码时使用相机，以连接自己的音乐账号；不拍摄或上传照片。</string>

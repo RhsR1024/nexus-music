@@ -11,10 +11,14 @@ final class AudioURLProbe: NSObject, URLSessionDataDelegate, URLSessionTaskDeleg
   private var bytes = Data()
   private var status = 0
   private var redirects = 0
+  private var currentURL: URL?
+  private var retriedWithoutRange = false
+  private static let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
   init(queue: DispatchQueue) { self.queue = queue }
   func start(_ value: String, completion: @escaping ([String: Any]) -> Void) {
     self.completion = completion
     guard value.utf8.count <= 8192, let url = URL(string: value), Self.allowed(url) else { finish("invalid-url"); return }
+    currentURL = url
     let config = URLSessionConfiguration.ephemeral
     config.urlCache = nil; config.urlCredentialStorage = nil; config.httpCookieStorage = nil; config.httpShouldSetCookies = false
     config.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -23,17 +27,18 @@ final class AudioURLProbe: NSObject, URLSessionDataDelegate, URLSessionTaskDeleg
     session = URLSession(configuration: config, delegate: self, delegateQueue: delegates)
     let timeout = DispatchWorkItem { [weak self] in self?.finish("timeout") }; timer = timeout
     queue.asyncAfter(deadline: .now() + 12, execute: timeout)
-    task = session?.dataTask(with: Self.request(url)); task?.resume()
+    task = session?.dataTask(with: Self.request(url, withRange: true)); task?.resume()
   }
   func cancel() { finish("cancelled") }
   private static func allowed(_ url: URL) -> Bool {
     guard let scheme = url.scheme?.lowercased(), ["https", "http"].contains(scheme), let host = url.host, !host.isEmpty else { return false }
     return url.user == nil && url.password == nil && url.absoluteString.utf8.count <= 8192
   }
-  private static func request(_ url: URL) -> URLRequest {
+  private static func request(_ url: URL, withRange: Bool = true) -> URLRequest {
     var request = URLRequest(url: url); request.httpMethod = "GET"
-    request.setValue("bytes=0-4095", forHTTPHeaderField: "Range")
+    if withRange { request.setValue("bytes=0-4095", forHTTPHeaderField: "Range") }
     request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
+    request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
     request.httpShouldHandleCookies = false
     return request
   }
@@ -60,16 +65,31 @@ final class AudioURLProbe: NSObject, URLSessionDataDelegate, URLSessionTaskDeleg
   }
   func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
     redirects += 1
-    guard completion != nil, redirects <= 5, let url = request.url, Self.allowed(url), !(response.url?.scheme?.lowercased() == "https" && url.scheme?.lowercased() == "http") else { completionHandler(nil); finish("redirect-error"); return }
-    completionHandler(Self.request(url))
+    // Public music CDN resolvers routinely 302 from HTTPS API gateways to HTTP audio edge nodes
+    // (e.g. Kuwo/QQ CDNs). This probe sends zero cookies or Authorization headers, so following
+    // http/https hops within the 5-redirect and credential-free allowlist matches real playback.
+    guard completion != nil, redirects <= 5, let url = request.url, Self.allowed(url) else { completionHandler(nil); finish("redirect-error"); return }
+    currentURL = url
+    completionHandler(Self.request(url, withRange: !retriedWithoutRange))
   }
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
-    guard completion != nil, let http = response as? HTTPURLResponse else { completionHandler(.cancel); finish("network-error"); return }
+    guard completion != nil, dataTask === self.task else { completionHandler(.cancel); return }
+    guard let http = response as? HTTPURLResponse else { completionHandler(.cancel); finish("network-error"); return }
     status = http.statusCode
+    if status == 416 && !retriedWithoutRange, let fallbackURL = currentURL ?? response.url, Self.allowed(fallbackURL) {
+      retriedWithoutRange = true
+      status = 0
+      bytes.removeAll(keepingCapacity: true)
+      completionHandler(.cancel)
+      let retryTask = session.dataTask(with: Self.request(fallbackURL, withRange: false))
+      self.task = retryTask
+      retryTask.resume()
+      return
+    }
     guard status == 200 || status == 206 else { completionHandler(.cancel); finish("http-error"); return }
     if status == 206 {
-      let value = http.value(forHTTPHeaderField: "Content-Range") ?? ""
-      let regex = try! NSRegularExpression(pattern: #"^bytes 0-([0-9]+)/([0-9]+|\*)$"#)
+      let value = (http.value(forHTTPHeaderField: "Content-Range") ?? "").trimmingCharacters(in: .whitespaces)
+      let regex = try! NSRegularExpression(pattern: #"^bytes\s+0-([0-9]+)/([0-9]+|\*)$"#, options: [.caseInsensitive])
       guard let match = regex.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)),
             let endRange = Range(match.range(at: 1), in: value), let end = Int64(value[endRange]),
             let totalRange = Range(match.range(at: 2), in: value), end >= 0,
@@ -78,13 +98,13 @@ final class AudioURLProbe: NSObject, URLSessionDataDelegate, URLSessionTaskDeleg
     completionHandler(.allow)
   }
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-    guard completion != nil else { return }
+    guard completion != nil, dataTask === self.task else { return }
     bytes.append(data.prefix(max(0, 4096 - bytes.count)))
     if let format = Self.mediaHeader(bytes) { finish("header", format: format) }
     else if bytes.count >= 4096 { finish("unrecognized") }
   }
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-    guard completion != nil else { return }
+    guard completion != nil, task === self.task else { return }
     if let error = error as NSError? { finish(error.code == NSURLErrorTimedOut ? "timeout" : "network-error") }
     else if let format = Self.mediaHeader(bytes) { finish("header", format: format) }
     else { finish("unrecognized") }

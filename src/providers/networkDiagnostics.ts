@@ -20,7 +20,7 @@ import type { SourceRegistry, SourceState } from './sourceRegistry.ts';
 
 export const NETWORK_CHECK_PHASES = ['发现', '搜索', '解析', '音频'] as const;
 export const NETWORK_CHECK_TOTAL_DEADLINE_MS = 90_000;
-export const DEFAULT_NETWORK_CHECK_KEYWORD = '晴天';
+export const DEFAULT_NETWORK_CHECK_KEYWORD = '起风了';
 
 export const NETWORK_CHECK_PLATFORMS: readonly {
   readonly id: MusicPlatform;
@@ -293,17 +293,86 @@ function normalizeSystemNetwork(raw: Partial<SystemNetworkInfo> | null | undefin
   };
 }
 
-function pickDiagnosticQuality(qualities: readonly string[]): { scriptQuality: string; quality: Quality } | undefined {
-  const preferredOrder: readonly Quality[] = ['flac', '320k', '192k', '128k', 'flac24bit', 'hires', 'atmos', 'atmos_plus', 'master'];
-  for (const target of preferredOrder) {
+const DIAGNOSTIC_NOISY_SAMPLE_RE =
+  /伴奏|ktv|纯音乐|铃声|片段|\bdj\b|dj版|remix|翻唱|原唱|女声版|男声版|童声|吉他版|钢琴版|钢琴曲|作业版|奥特曼|\blive\b|现场|演唱会|串烧/i;
+
+export function pickBestDiagnosticSample(
+  items: readonly Track[],
+  platform: OnlinePlatform,
+  keyword: string,
+): Track | undefined {
+  const candidates = items.filter(
+    item => item.origin.kind === 'online' && item.origin.platform === platform,
+  );
+  if (candidates.length === 0) return undefined;
+  const normKey = keyword.trim().toLowerCase();
+  let best = candidates[0]!;
+  let bestScore = -Infinity;
+  candidates.forEach((item, index) => {
+    const title = item.title.trim();
+    const normTitle = title.toLowerCase();
+    const album = (item.album ?? '').trim();
+    let score = Math.max(0, 10 - index);
+    if (normKey && normTitle === normKey) score += 40;
+    else if (normKey && normTitle.startsWith(normKey)) score += 20;
+    else if (normKey && normTitle.includes(normKey)) score += 8;
+    if (DIAGNOSTIC_NOISY_SAMPLE_RE.test(title)) score -= 60;
+    if (DIAGNOSTIC_NOISY_SAMPLE_RE.test(album)) score -= 15;
+    if (item.durationMs !== undefined) {
+      if (item.durationMs < 60_000) score -= 40;
+      else if (item.durationMs > 600_000) score -= 25;
+      else score += 5;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  });
+  return best;
+}
+
+export function pickDiagnosticQualities(
+  qualities: readonly string[],
+): readonly { scriptQuality: string; quality: Quality }[] {
+  const result: { scriptQuality: string; quality: Quality }[] = [];
+  const seen = new Set<Quality>();
+  const add = (target: Quality) => {
+    if (seen.has(target) || result.length >= 3) return;
     const match = qualities.find(q => normalizeQuality(q) === target);
-    if (match) return { scriptQuality: match, quality: target };
+    if (match) {
+      seen.add(target);
+      result.push({ scriptQuality: match, quality: target });
+    }
+  };
+  const primaryOrder: readonly Quality[] = [
+    'flac',
+    '320k',
+    '192k',
+    '128k',
+    'flac24bit',
+    'hires',
+    'atmos',
+    'atmos_plus',
+    'master',
+  ];
+  for (const target of primaryOrder) {
+    add(target);
+    if (result.length >= 1) break;
   }
-  for (const q of qualities) {
-    const normalized = normalizeQuality(q);
-    if (normalized) return { scriptQuality: q, quality: normalized };
+  add('320k');
+  add('192k');
+  add('128k');
+  if (result.length === 0) {
+    for (const q of qualities) {
+      const normalized = normalizeQuality(q);
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized);
+        result.push({ scriptQuality: q, quality: normalized });
+        if (result.length >= 3) break;
+      }
+    }
   }
-  return undefined;
+  return result;
 }
 
 function validAudioURL(raw: unknown): string | undefined {
@@ -514,12 +583,12 @@ export class NetworkDiagnosticsCoordinator {
     });
   }
 
-  private armRun(mode: 'platform' | 'source', keyword: string) {
+  private armRun(mode: 'platform' | 'source', keyword: string, deadlineOverrideMs?: number) {
     this.stop();
     const generation = ++this.generation;
     const abort = new AbortController();
     this.abort = abort;
-    const deadlineMs = this.deps.totalDeadlineMs ?? NETWORK_CHECK_TOTAL_DEADLINE_MS;
+    const deadlineMs = deadlineOverrideMs ?? this.deps.totalDeadlineMs ?? NETWORK_CHECK_TOTAL_DEADLINE_MS;
     const deadlineSec = Math.round(deadlineMs / 1000);
     this.deadlineTimer = setTimeout(() => {
       if (generation !== this.generation) return;
@@ -724,7 +793,7 @@ export class NetworkDiagnosticsCoordinator {
       }
     };
 
-    // Concurrency 2 matches native AudioURLProbe concurrency budget (< 2 active probes).
+    // Concurrency 4 fits cleanly within native AudioURLProbe concurrency budget (< 8 active probes).
     const worker = async () => {
       while (cursor < initialRows.length && !signal.aborted && generation === this.generation) {
         const row = initialRows[cursor++]!;
@@ -733,7 +802,7 @@ export class NetworkDiagnosticsCoordinator {
     };
 
     try {
-      await Promise.all([worker(), worker()]);
+      await Promise.all(Array.from({ length: Math.min(4, initialRows.length) }, () => worker()));
     } finally {
       if (generation === this.generation && !signal.aborted) {
         if (this.deadlineTimer) {
@@ -767,7 +836,12 @@ export class NetworkDiagnosticsCoordinator {
       return;
     }
 
-    const { generation, signal, keyword } = this.armRun('source', rawKeyword);
+    // Scale total budget with source count so 20-30 enabled sources finish cleanly instead of truncating at 90s.
+    const workerCount = Math.min(6, readySources.length);
+    const dynamicSourceDeadlineMs =
+      this.deps.totalDeadlineMs ??
+      Math.max(120_000, Math.min(360_000, Math.ceil(readySources.length / workerCount) * 35_000 + 40_000));
+    const { generation, signal, keyword } = this.armRun('source', rawKeyword, dynamicSourceDeadlineMs);
 
     const groups: SourceCheckGroup[] = readySources.map(source => {
       const displayName = safeLabel(this.deps.displayNameForSource?.(source) ?? source.name);
@@ -796,10 +870,10 @@ export class NetworkDiagnosticsCoordinator {
     void this.refreshNetwork();
 
     const timeouts = {
-      discoverMs: this.deps.stageTimeouts?.discoverMs ?? 12_000,
-      searchMs: this.deps.stageTimeouts?.searchMs ?? 12_000,
-      resolveMs: this.deps.stageTimeouts?.resolveMs ?? 14_000,
-      audioMs: this.deps.stageTimeouts?.audioMs ?? 14_000,
+      discoverMs: this.deps.stageTimeouts?.discoverMs ?? 10_000,
+      searchMs: this.deps.stageTimeouts?.searchMs ?? 10_000,
+      resolveMs: this.deps.stageTimeouts?.resolveMs ?? 7_000,
+      audioMs: this.deps.stageTimeouts?.audioMs ?? 6_000,
     };
 
     // Share discovery & sample track lookups across all tested scripts in this run.
@@ -870,7 +944,7 @@ export class NetworkDiagnosticsCoordinator {
           this.patchPhase(generation, row.id, 0, { state: 'running', shortText: '初始化', detail: '正在初始化独立诊断会话…' });
         }
         try {
-          session = await bounded(child => this.deps.openDiagnostic(source, child), signal, 20_000);
+          session = await bounded(child => this.deps.openDiagnostic(source, child), signal, 10_000);
           throwIfAborted(signal);
           this.activeSessions.add(session);
         } catch (err) {
@@ -966,13 +1040,15 @@ export class NetworkDiagnosticsCoordinator {
               { sampleTitle },
             );
 
-            // Stage 2: Resolve via isolated diagnostic session
+            // Stage 2 & 3: Resolve via isolated diagnostic session + Audio header probe
+            // Mirrors real MultiSourceResolver quality degradation (flac -> 320k -> 128k) so
+            // sources serving clean 320k/128k audio are not falsely failed when flac is unavailable.
             this.patchPhase(generation, row.id, 2, { state: 'running', shortText: '检测中', detail: '正在向该音源请求播放地址…' });
             const capability = session.capabilities.find(
               cap => cap.platform === platform && cap.actions.includes('musicUrl'),
             );
-            const picked = capability ? pickDiagnosticQuality(capability.qualities) : undefined;
-            if (!capability || !picked) {
+            const tiers = capability ? pickDiagnosticQualities(capability.qualities) : [];
+            if (!capability || tiers.length === 0) {
               this.patchPhase(generation, row.id, 2, {
                 state: 'uncertain',
                 shortText: '未声明',
@@ -982,74 +1058,191 @@ export class NetworkDiagnosticsCoordinator {
               continue;
             }
 
-            const resolveStart = this.now();
-            let audioUrl: string | undefined;
-            try {
-              const rawResult = await bounded(
-                child => session!.request(makeLXRequest(sampleRes.track!, picked.scriptQuality, capability), child),
-                signal,
-                timeouts.resolveMs,
-              );
-              throwIfAborted(signal);
-              const ms = Math.max(1, this.now() - resolveStart);
-              audioUrl = validAudioURL(rawResult);
-              if (!audioUrl) {
+            const triedLabels: string[] = [];
+            let passed = false;
+            let lastResolveFailure: { timeout: boolean; invalidUrl: boolean; elapsedMs: number } | undefined;
+            let lastProbeFailure:
+              | {
+                  quality: Quality;
+                  resolveMs: number;
+                  probeMs: number;
+                  probeRes?: AudioProbeResult;
+                  timeout?: boolean;
+                }
+              | undefined;
+
+            for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
+              if (signal.aborted || generation !== this.generation) break;
+              const tier = tiers[tierIndex]!;
+              const tierLabel = tier.quality.toUpperCase();
+              triedLabels.push(tierLabel);
+              if (tierIndex > 0) {
                 this.patchPhase(generation, row.id, 2, {
-                  state: 'failed',
-                  shortText: '失败',
-                  detail: `未通过 · 音源未返回有效播放地址（${ms} ms）`,
-                  elapsedMs: ms,
+                  state: 'running',
+                  shortText: tierLabel,
+                  detail: `正在降级尝试 ${tierLabel}…`,
                 });
-                this.patchPhase(generation, row.id, 3, { state: 'skipped', shortText: '跳过', detail: '跳过 · 解析未取得可用地址' });
+                this.patchPhase(generation, row.id, 3, {
+                  state: 'pending',
+                  shortText: '等待',
+                  detail: '等待当前档位解析完成',
+                });
+              }
+
+              const tierResolveTimeout =
+                tierIndex === 0 ? timeouts.resolveMs : Math.min(timeouts.resolveMs, 5_000);
+              const resolveStart = this.now();
+              let audioUrl: string | undefined;
+              let resolveMs = 1;
+              try {
+                const rawResult = await bounded(
+                  child => session!.request(makeLXRequest(sampleRes.track!, tier.scriptQuality, capability), child),
+                  signal,
+                  tierResolveTimeout,
+                );
+                throwIfAborted(signal);
+                resolveMs = Math.max(1, this.now() - resolveStart);
+                audioUrl = validAudioURL(rawResult);
+                if (!audioUrl) {
+                  lastResolveFailure = { timeout: false, invalidUrl: true, elapsedMs: resolveMs };
+                  continue;
+                }
+              } catch (err) {
+                if (signal.aborted || generation !== this.generation) break;
+                resolveMs = Math.max(1, this.now() - resolveStart);
+                const isTimeout = err instanceof DeadlineError;
+                lastResolveFailure = { timeout: isTimeout, invalidUrl: false, elapsedMs: resolveMs };
+                // When the first tier times out (e.g. flac stalls on upstream), jump directly to the
+                // lightest fallback tier once instead of stacking multiple long timeouts.
+                if (isTimeout) {
+                  if (tierIndex === 0 && tiers.length > 2) {
+                    tierIndex = tiers.length - 2;
+                    continue;
+                  }
+                  if (tierIndex > 0) break;
+                }
                 continue;
               }
-              const resolvedLabel = `${group.sourceName} · ${picked.quality.toUpperCase()}`;
+
+              // Probe the resolved audio stream for this tier
               this.patchPhase(
                 generation,
                 row.id,
                 2,
                 {
                   state: 'ok',
-                  shortText: `${ms} ms`,
-                  detail: `完成 · ${ms} ms · ${picked.quality.toUpperCase()}`,
-                  elapsedMs: ms,
+                  shortText: `${resolveMs} ms`,
+                  detail:
+                    tierIndex > 0
+                      ? `完成 · ${resolveMs} ms · ${tierLabel}（高档不可用，已降级验证）`
+                      : `完成 · ${resolveMs} ms · ${tierLabel}`,
+                  elapsedMs: resolveMs,
                 },
-                { resolvedLabel, resolvedQuality: picked.quality },
+                {
+                  resolvedLabel: `${group.sourceName} · ${tierLabel}`,
+                  resolvedQuality: tier.quality,
+                },
               );
-            } catch (err) {
-              if (signal.aborted || generation !== this.generation) break;
-              const ms = Math.max(1, this.now() - resolveStart);
-              this.patchPhase(generation, row.id, 2, {
-                state: 'failed',
-                shortText: err instanceof DeadlineError ? '超时' : '失败',
-                detail: err instanceof DeadlineError ? `未通过 · 音源解析超时（${ms} ms）` : `未通过 · 音源解析失败（${ms} ms）`,
-                elapsedMs: ms,
+              this.patchPhase(generation, row.id, 3, {
+                state: 'running',
+                shortText: '检测中',
+                detail: `正在校验 ${tierLabel} 音频响应与容器头…`,
               });
-              this.patchPhase(generation, row.id, 3, { state: 'skipped', shortText: '跳过', detail: '跳过 · 解析未取得可用地址' });
-              continue;
+
+              const probeStart = this.now();
+              try {
+                const probeRes = await bounded(child => this.deps.probe(audioUrl!, child), signal, timeouts.audioMs);
+                throwIfAborted(signal);
+                const probeMs = Math.max(1, this.now() - probeStart);
+                if (probeRes.state === 'header') {
+                  this.patchPhase(generation, row.id, 3, describeAudioProbe(probeRes, probeMs), {
+                    audioFormat: probeRes.format,
+                    httpStatus: probeRes.status,
+                    bytes: probeRes.bytes,
+                  });
+                  passed = true;
+                  break;
+                }
+                lastProbeFailure = {
+                  quality: tier.quality,
+                  resolveMs,
+                  probeMs,
+                  probeRes,
+                };
+                if (probeRes.state === 'cancelled') break;
+              } catch (err) {
+                if (signal.aborted || generation !== this.generation) break;
+                const probeMs = Math.max(1, this.now() - probeStart);
+                lastProbeFailure = {
+                  quality: tier.quality,
+                  resolveMs,
+                  probeMs,
+                  timeout: err instanceof DeadlineError,
+                };
+              }
             }
 
-            // Stage 3: Probe audio header
-            this.patchPhase(generation, row.id, 3, { state: 'running', shortText: '检测中', detail: '正在校验音频响应与容器头…' });
-            const probeStart = this.now();
-            try {
-              const probeRes = await bounded(child => this.deps.probe(audioUrl!, child), signal, timeouts.audioMs);
-              throwIfAborted(signal);
-              const ms = Math.max(1, this.now() - probeStart);
-              this.patchPhase(generation, row.id, 3, describeAudioProbe(probeRes, ms), {
-                audioFormat: probeRes.format,
-                httpStatus: probeRes.status,
-                bytes: probeRes.bytes,
-              });
-            } catch (err) {
-              if (signal.aborted || generation !== this.generation) break;
-              const ms = Math.max(1, this.now() - probeStart);
-              this.patchPhase(generation, row.id, 3, {
-                state: 'failed',
-                shortText: err instanceof DeadlineError ? '超时' : '失败',
-                detail: err instanceof DeadlineError ? `未通过 · 音频探测超时（${ms} ms）` : `未通过 · 音频响应失败（${ms} ms）`,
-                elapsedMs: ms,
-              });
+            if (signal.aborted || generation !== this.generation) break;
+            if (!passed) {
+              if (lastProbeFailure) {
+                const tierLabel = lastProbeFailure.quality.toUpperCase();
+                this.patchPhase(
+                  generation,
+                  row.id,
+                  2,
+                  {
+                    state: 'ok',
+                    shortText: `${lastProbeFailure.resolveMs} ms`,
+                    detail: `完成 · ${lastProbeFailure.resolveMs} ms · ${tierLabel}${triedLabels.length > 1 ? `（已试 ${triedLabels.join('/')}）` : ''}`,
+                    elapsedMs: lastProbeFailure.resolveMs,
+                  },
+                  {
+                    resolvedLabel: `${group.sourceName} · ${tierLabel}`,
+                    resolvedQuality: lastProbeFailure.quality,
+                  },
+                );
+                if (lastProbeFailure.probeRes) {
+                  this.patchPhase(
+                    generation,
+                    row.id,
+                    3,
+                    describeAudioProbe(lastProbeFailure.probeRes, lastProbeFailure.probeMs),
+                    {
+                      audioFormat: lastProbeFailure.probeRes.format,
+                      httpStatus: lastProbeFailure.probeRes.status,
+                      bytes: lastProbeFailure.probeRes.bytes,
+                    },
+                  );
+                } else {
+                  this.patchPhase(generation, row.id, 3, {
+                    state: 'failed',
+                    shortText: lastProbeFailure.timeout ? '超时' : '失败',
+                    detail: lastProbeFailure.timeout
+                      ? `未通过 · 音频探测超时（${lastProbeFailure.probeMs} ms）`
+                      : `未通过 · 音频响应失败（${lastProbeFailure.probeMs} ms）`,
+                    elapsedMs: lastProbeFailure.probeMs,
+                  });
+                }
+              } else {
+                const ms = lastResolveFailure?.elapsedMs ?? 1;
+                const isTimeout = lastResolveFailure?.timeout === true;
+                const triedSuffix = triedLabels.length > 1 ? `（已试 ${triedLabels.join('/')}）` : '';
+                this.patchPhase(generation, row.id, 2, {
+                  state: 'failed',
+                  shortText: isTimeout ? '超时' : '失败',
+                  detail: isTimeout
+                    ? `未通过 · 音源解析超时${triedSuffix}（${ms} ms）`
+                    : lastResolveFailure?.invalidUrl
+                      ? `未通过 · 音源未返回有效播放地址${triedSuffix}（${ms} ms）`
+                      : `未通过 · 音源解析失败${triedSuffix}（${ms} ms）`,
+                  elapsedMs: ms,
+                });
+                this.patchPhase(generation, row.id, 3, {
+                  state: 'skipped',
+                  shortText: '跳过',
+                  detail: '跳过 · 解析未取得可用地址',
+                });
+              }
             }
           }
         } finally {
@@ -1061,9 +1254,22 @@ export class NetworkDiagnosticsCoordinator {
       }
     };
 
-    // Concurrency 2 matches native diagnosticRuntimes.count < 2 and probes.count < 2.
+    // Pre-warm shared platform discovery & sample track lookups in parallel before source workers start.
+    const declaredPlatforms = new Set<OnlinePlatform>();
+    for (const group of groups) {
+      for (const row of group.rows) {
+        if (row.kind !== 'unsupported') declaredPlatforms.add(row.platform as OnlinePlatform);
+      }
+    }
+    await Promise.all(
+      [...declaredPlatforms].map(async platform => {
+        await Promise.all([getDiscovery(platform), getSample(platform)]);
+      }),
+    );
+
+    // Concurrency 6 fits cleanly within native diagnosticRuntimes (< 8) and probes (< 12) budgets.
     try {
-      await Promise.all([worker(), worker()]);
+      await Promise.all(Array.from({ length: workerCount }, () => worker()));
     } finally {
       if (generation === this.generation && !signal.aborted) {
         if (this.deadlineTimer) {
@@ -1134,11 +1340,11 @@ function sourceFailureReason(row: NetworkCheckRow): string {
     return row.phases[2].shortText === '超时' ? '解析超时' : '解析失败';
   }
   if (row.phases[3].state === 'failed') {
-    return row.phases[3].shortText === '超时'
-      ? '音频响应超时'
-      : row.httpStatus
-        ? `音频 HTTP ${row.httpStatus}`
-        : '音频不可达';
+    if (row.phases[3].shortText === '超时') return '音频响应超时';
+    if (row.httpStatus) return `音频 HTTP ${row.httpStatus}`;
+    if (row.phases[3].detail.includes('重定向')) return '音频重定向失败';
+    if (row.phases[3].detail.includes('分段')) return '音频分段无效';
+    return '音频不可达';
   }
   return row.badge;
 }

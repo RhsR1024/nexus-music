@@ -133,10 +133,10 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
   const platformFailed = state.platformRows.filter(row => row.kind === 'failed').length;
 
   const allSourceRows = state.sourceGroups.flatMap(g => g.rows).filter(r => r.kind !== 'unsupported');
-  const sourceDone = allSourceRows.filter(r => r.kind !== 'pending' && r.kind !== 'running').length;
   const sourceOk = allSourceRows.filter(r => r.kind === 'ok').length;
   const sourceFailed = allSourceRows.filter(r => r.kind === 'failed').length;
   const sourceUncertain = allSourceRows.filter(r => r.kind === 'uncertain').length;
+  const sourceTested = sourceOk + sourceFailed;
 
   const selectedRow: NetworkCheckRow | undefined = selectedRowId
     ? state.platformRows.find(r => r.id === selectedRowId) ??
@@ -166,7 +166,7 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
     `计费/低数据模式：${state.network.isExpensive ? '计费网络' : '非计费'}${
       state.network.isConstrained ? ' · 低数据模式' : ''
     }${state.network.dnsCount !== undefined && state.network.dnsCount >= 0 ? ` · DNS ${state.network.dnsCount} 项` : ''}`,
-    '检测流程：发现 → 搜索 → 解析 → 音频；每项仅校验 4 KiB 媒体头，单轮上限 90 秒。',
+    '检测流程：发现 → 搜索 → 解析 → 音频；每项仅校验 4 KiB 媒体头，自动按 FLAC → 320K → 128K 降级验证；多源批量检测自动按音源数量动态扩展时间上限。',
     '所有结果仅保留在本机，绝不上传；检测期间不影响当前播放与队列。',
   ].join('\n');
 
@@ -176,7 +176,7 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
   }
 
   return (
-    <View style={{ gap: 14, paddingTop: 4 }}>
+    <View style={{ gap: 14, paddingTop: 4, paddingBottom: 24 }}>
       {/* Top summary card matching Wayferar-Music structure with Sollin polish */}
       <View
         testID="network-check-summary-card"
@@ -471,8 +471,8 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
             </Text>
             <Text style={{ color: s.muted, fontSize: 12, lineHeight: 17 }}>
               {state.sourceGroups.length > 0
-                ? `${state.sourceFinishReason ? `${state.sourceFinishReason} · ` : ''}${state.sourceGroups.length} 个音源 · 已测 ${sourceDone}/${allSourceRows.length}（正常 ${sourceOk} · 异常 ${sourceFailed} · 未确认 ${sourceUncertain}）`
-                : state.sourceFinishReason ?? '独立诊断会话逐源检验 5 平台解析与音频头，不改选源顺序'}
+                ? `${state.sourceFinishReason ? `${state.sourceFinishReason} · ` : ''}${state.sourceGroups.length} 个音源 · 已完成 ${sourceTested}/${allSourceRows.length}（正常 ${sourceOk} · 异常 ${sourceFailed}${sourceUncertain > 0 ? ` · 未确认 ${sourceUncertain}` : ''}）`
+                : state.sourceFinishReason ?? '6 路并发独立诊断会话检验 5 平台解析与音频头（自动降级验证），不改选源顺序'}
             </Text>
           </View>
 
@@ -612,7 +612,7 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
               {recommendationPlan.totalExcluded > 0
                 ? `，并建议排除 ${recommendationPlan.totalExcluded} 项本轮解析或音频失败的音源`
                 : ''}
-              。确认后即可生效，也可随时手动微调。
+              。{sourceUncertain > 0 ? `另有 ${sourceUncertain} 项未完成/未确认，已自动保留、不会误排。` : '确认后即可生效，也可随时手动微调。'}
             </Text>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               <Pressable
