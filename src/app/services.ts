@@ -518,8 +518,10 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     openDiagnostic,
     discover:async(platform,signal)=>{
       if(platform==='qishui'){
-        const charts=await qishui.fetchCharts(signal);
-        return charts.length;
+        const charts=await qishui.fetchCharts(signal).catch(()=>[]);
+        if(charts.length>0)return charts.length;
+        const pub=await qishui.publicDiagnosticTrack(signal);
+        return pub?1:0;
       }
       if(platform==='bodian'){
         const session=bodianAccount.getSnapshot().loggedIn?await bodianAccount.session().catch(()=>null):null;
@@ -535,22 +537,34 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
     },
     searchSample:async(platform,keyword,signal)=>{
       if(platform==='qishui'){
-        const charts=await qishui.fetchCharts(signal);
+        const snap=qishuiAccount.getSnapshot();
+        const localTrack=snap.recent[0]??snap.liked[0]??snap.playlists[0]?.tracks[0];
+        if(localTrack&&/^\d{5,30}$/.test(localTrack.origin.id))return localTrack;
+        const charts=await qishui.fetchCharts(signal).catch(()=>[]);
         for(const chart of charts){
           if(chart.previewTracks.length>0)return chart.previewTracks[0];
         }
         const firstChart=charts[0];
-        if(!firstChart)return undefined;
-        const tracks=await qishui.fetchChartTracks(firstChart.id,signal);
-        return tracks[0];
+        if(firstChart){
+          const tracks=await qishui.fetchChartTracks(firstChart.id,signal).catch(()=>[]);
+          if(tracks[0])return tracks[0];
+        }
+        return qishui.publicDiagnosticTrack(signal);
       }
       if(platform==='bodian'){
         const session=bodianAccount.getSnapshot().loggedIn?await bodianAccount.session().catch(()=>null):null;
         const res=await bodian.searchSongs(keyword,1,signal,session);
         return res.items[0];
       }
-      const res=await online.search(platform,keyword,1,signal,5);
-      return res.items.find(item=>item.origin.kind==='online'&&item.origin.platform===platform);
+      const res=await online.search(platform,keyword,1,signal,5).catch(()=>({items:[] as readonly Track[],page:1,hasMore:false}));
+      const directHit=res.items.find(item=>item.origin.kind==='online'&&item.origin.platform===platform);
+      if(directHit)return directHit;
+      // Fallback to first track from platform public playlist when unsigned search returns 0 (e.g. Kugou WebFilter).
+      const pls=await discovery.playlists(platform,1,undefined,signal,5).catch(()=>({items:[] as readonly {id:string}[],page:1,hasMore:false}));
+      const firstPl=pls.items[0];
+      if(!firstPl)return undefined;
+      const detail=await discovery.detail(platform,firstPl.id,1,signal,false,5).catch(()=>({title:'',items:[] as readonly Track[],page:1,hasMore:false}));
+      return detail.items.find(item=>item.origin.kind==='online'&&item.origin.platform===platform);
     },
     resolveSample:(track,signal)=>resolveTrack(track,signal),
     enrichOnlineTrack:(track,signal)=>online.enrich(track,signal),

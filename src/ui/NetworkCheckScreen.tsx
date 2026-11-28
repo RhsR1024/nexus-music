@@ -7,13 +7,17 @@ import type { Services } from '../app/services.ts';
 import {
   DEFAULT_NETWORK_CHECK_KEYWORD,
   formatNetworkSummary,
+  mergeRecommendedRouting,
   NETWORK_CHECK_PHASES,
+  recommendPlatformSourceRouting,
   type NetworkCheckRow,
   type PhaseState,
   type RowKind,
 } from '../providers/networkDiagnostics.ts';
+import type { MusicPlatform } from '../domain/track.ts';
 import { SheetModal } from './AdaptiveModal.tsx';
 import { PlatformLogo } from './PlatformLogo.tsx';
+import { PlatformSourceRoutingModal } from './PlatformSourceRoutingModal.tsx';
 import { Text, TextInput } from './Typography.tsx';
 import { useTheme } from './theme.tsx';
 import { sollinTokens } from './tokens.ts';
@@ -25,10 +29,69 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
     services.networkDiagnostics.subscribe,
     services.networkDiagnostics.getSnapshot,
   );
+  const prefs = useSyncExternalStore(
+    services.preferences.subscribe,
+    services.preferences.getSnapshot,
+  );
   const [keyword, setKeyword] = useState(state.sampleKeyword || DEFAULT_NETWORK_CHECK_KEYWORD);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [shareNote, setShareNote] = useState('');
+  const [recommendOpen, setRecommendOpen] = useState(false);
+  const [selectedRecommendPlatforms, setSelectedRecommendPlatforms] = useState<ReadonlySet<MusicPlatform>>(
+    () => new Set<MusicPlatform>(['wy', 'tx', 'kw', 'kg', 'mg', 'qishui', 'bodian']),
+  );
+  const [manualRoutingOpen, setManualRoutingOpen] = useState(false);
+  const [routingSavedMessage, setRoutingSavedMessage] = useState('');
+  const [savingRecommendation, setSavingRecommendation] = useState(false);
+
+  const recommendationPlan = recommendPlatformSourceRouting(
+    state.sourceGroups,
+    prefs.platformSourceRouting,
+  );
+  const actionableRecommendations = recommendationPlan.platforms.filter(
+    item => item.priority.length > 0 || item.excluded.length > 0,
+  );
+
+  const openRecommendationSheet = () => {
+    setRoutingSavedMessage('');
+    setSelectedRecommendPlatforms(new Set(actionableRecommendations.map(item => item.platform)));
+    setRecommendOpen(true);
+  };
+
+  const toggleRecommendPlatform = (plat: MusicPlatform) => {
+    setSelectedRecommendPlatforms(prev => {
+      const next = new Set(prev);
+      if (next.has(plat)) next.delete(plat);
+      else next.add(plat);
+      return next;
+    });
+  };
+
+  const applyRecommendedRouting = async (openManualAfter = false) => {
+    if (savingRecommendation || selectedRecommendPlatforms.size === 0) return;
+    setSavingRecommendation(true);
+    setRoutingSavedMessage('');
+    try {
+      const nextRouting = mergeRecommendedRouting(
+        prefs.platformSourceRouting,
+        recommendationPlan.platforms,
+        selectedRecommendPlatforms,
+      );
+      await services.preferences.update({ platformSourceRouting: nextRouting });
+      setRecommendOpen(false);
+      setRoutingSavedMessage(
+        `已保存 ${selectedRecommendPlatforms.size} 个平台的推荐音源优先级与排除配置`,
+      );
+      if (openManualAfter) {
+        setManualRoutingOpen(true);
+      }
+    } catch {
+      setRoutingSavedMessage('推荐配置未保存，请重试。');
+    } finally {
+      setSavingRecommendation(false);
+    }
+  };
 
   useEffect(() => {
     void services.networkDiagnostics.refreshNetwork();
@@ -520,7 +583,393 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
             </View>
           );
         })}
+
+        {/* Auto-recommended per-platform routing banner + manual configuration entry */}
+        <View
+          accessible={false}
+          style={{ height: StyleSheet.hairlineWidth, backgroundColor: s.hairline, marginTop: 4 }}
+        />
+        {!state.running && recommendationPlan.hasRecommendations ? (
+          <View
+            testID="network-check-recommend-banner"
+            style={{
+              padding: 13,
+              borderRadius: 16,
+              backgroundColor: s.accentSoft,
+              borderWidth: 1,
+              borderColor: s.control + '33',
+              gap: 9,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+              <Ionicons name="sparkles-outline" size={16} color={s.control} />
+              <Text style={{ flex: 1, color: s.ink, fontSize: 14, fontWeight: '700' }}>
+                已生成分平台音源智能推荐
+              </Text>
+            </View>
+            <Text style={{ color: s.muted, fontSize: 12, lineHeight: 17.5 }}>
+              根据本轮实测，已为 {recommendationPlan.affectedPlatforms} 个平台按音质与速度排好优先级
+              {recommendationPlan.totalExcluded > 0
+                ? `，并建议排除 ${recommendationPlan.totalExcluded} 项本轮解析或音频失败的音源`
+                : ''}
+              。确认后即可生效，也可随时手动微调。
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+              <Pressable
+                testID="network-check-review-recommendation"
+                accessibilityRole="button"
+                accessibilityLabel="查看并确认推荐的分平台音源配置"
+                onPress={openRecommendationSheet}
+                style={{
+                  flex: 1,
+                  minWidth: 150,
+                  minHeight: 38,
+                  paddingHorizontal: 14,
+                  borderRadius: 19,
+                  backgroundColor: s.control,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <Ionicons name="checkmark-done-outline" size={16} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>查看并确认推荐</Text>
+              </Pressable>
+              <Pressable
+                testID="network-check-open-manual-routing"
+                accessibilityRole="button"
+                accessibilityLabel="手动配置分平台音源路由"
+                onPress={() => setManualRoutingOpen(true)}
+                style={{
+                  minHeight: 38,
+                  paddingHorizontal: 13,
+                  borderRadius: 19,
+                  backgroundColor: s.card,
+                  borderWidth: 1,
+                  borderColor: s.cardBorder,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                }}
+              >
+                <Ionicons name="git-branch-outline" size={15} color={s.ink} />
+                <Text style={{ color: s.ink, fontSize: 12.5, fontWeight: '600' }}>手动微调</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            testID="network-check-open-manual-routing"
+            accessibilityRole="button"
+            accessibilityLabel="手动配置分平台音源优先级与排除"
+            onPress={() => setManualRoutingOpen(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 4,
+              gap: 8,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 }}>
+              <Ionicons name="git-branch-outline" size={16} color={s.control} />
+              <Text numberOfLines={1} style={{ color: s.ink, fontSize: 13, fontWeight: '600' }}>
+                分平台音源优先级与排除配置
+              </Text>
+            </View>
+            <Text style={{ color: s.muted, fontSize: 12 }}>
+              测试全部音源后可自动推荐
+            </Text>
+            <Ionicons name="chevron-forward" size={15} color={s.subtle} />
+          </Pressable>
+        )}
+
+        {!!routingSavedMessage && (
+          <View
+            testID="network-check-routing-saved"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 7,
+              paddingHorizontal: 12,
+              paddingVertical: 9,
+              borderRadius: 12,
+              backgroundColor: okBg,
+            }}
+          >
+            <Ionicons name="checkmark-circle-outline" size={16} color={okColor} />
+            <Text style={{ flex: 1, color: okColor, fontSize: 12.5, fontWeight: '600' }}>
+              {routingSavedMessage}
+            </Text>
+          </View>
+        )}
       </View>
+
+      {/* Auto-recommendation confirmation sheet */}
+      <SheetModal
+        allowSwipeDismissal
+        visible={recommendOpen}
+        animationType="slide"
+        onRequestClose={() => {
+          if (!savingRecommendation) setRecommendOpen(false);
+        }}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: s.sheetGradient[0] }} edges={['bottom']}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[...s.sheetGradient]}
+            start={{ x: 0.15, y: 0 }}
+            end={{ x: 0.85, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            style={{
+              alignSelf: 'center',
+              width: 38,
+              height: 4.5,
+              borderRadius: 2.25,
+              backgroundColor: s.subtle + '66',
+              marginTop: 10,
+              marginBottom: 4,
+            }}
+          />
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+              <Text accessibilityRole="header" style={{ color: s.ink, fontSize: 19, fontWeight: '700' }}>
+                确认智能推荐路由
+              </Text>
+              <Text style={{ color: s.muted, fontSize: 12, lineHeight: 17 }}>
+                可勾选需要应用的平台，保存后仍可随时手动增删或调序
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="关闭推荐确认"
+              disabled={savingRecommendation}
+              onPress={() => setRecommendOpen(false)}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: s.chip,
+                borderWidth: 1,
+                borderColor: s.chipBorder,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="close" size={20} color={s.ink} />
+            </Pressable>
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 10 }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                gap: 8,
+                padding: 11,
+                borderRadius: 14,
+                backgroundColor: s.dark ? 'rgba(255,255,255,0.045)' : 'rgba(42,36,31,0.035)',
+              }}
+            >
+              <Ionicons name="shield-checkmark-outline" size={16} color={okColor} style={{ marginTop: 1 }} />
+              <Text style={{ flex: 1, color: s.muted, fontSize: 11.5, lineHeight: 17 }}>
+                安全保护：仅排除本轮存在其他可用源且自身解析/音频失败的脚本；未声明某平台的脚本播放时会自动跳过，不会误排。
+              </Text>
+            </View>
+
+            {recommendationPlan.platforms.map(rec => {
+              const actionable = rec.priority.length > 0 || rec.excluded.length > 0;
+              const checked = actionable && selectedRecommendPlatforms.has(rec.platform);
+              return (
+                <Pressable
+                  key={rec.platform}
+                  testID={`recommend-platform-${rec.platform}`}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked, disabled: !actionable }}
+                  disabled={!actionable}
+                  onPress={() => toggleRecommendPlatform(rec.platform)}
+                  style={[
+                    {
+                      padding: 13,
+                      borderRadius: 18,
+                      backgroundColor: s.card,
+                      borderWidth: 1,
+                      borderColor: checked ? s.control + '66' : s.cardBorder,
+                      gap: 8,
+                      opacity: actionable ? 1 : 0.62,
+                    },
+                    s.cardShadow,
+                  ]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons
+                      name={!actionable ? 'remove-circle-outline' : checked ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={checked ? s.control : s.subtle}
+                    />
+                    <PlatformLogo platform={rec.platform} size={20} />
+                    <Text style={{ flex: 1, color: s.ink, fontSize: 14.5, fontWeight: '700' }}>
+                      {rec.platformLabel}
+                    </Text>
+                    <Text style={{ color: actionable ? s.control : s.subtle, fontSize: 11.5, fontWeight: '600' }}>
+                      {actionable
+                        ? `优先 ${rec.priority.length}${rec.excluded.length > 0 ? ` · 排除 ${rec.excluded.length}` : ''}`
+                        : '保持原样'}
+                    </Text>
+                  </View>
+
+                  {rec.priority.length > 0 && (
+                    <View style={{ gap: 4, paddingLeft: 28 }}>
+                      <Text style={{ color: s.muted, fontSize: 11, fontWeight: '600' }}>推荐优先顺序</Text>
+                      {rec.priority.map((item, idx) => (
+                        <View key={item.sourceId} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderRadius: 9,
+                              backgroundColor: idx === 0 ? okBg : s.chip,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Text style={{ color: idx === 0 ? okColor : s.muted, fontSize: 10.5, fontWeight: '700' }}>
+                              {idx + 1}
+                            </Text>
+                          </View>
+                          <Text numberOfLines={1} style={{ flex: 1, color: s.ink, fontSize: 12.5, fontWeight: '600' }}>
+                            {item.sourceName}
+                          </Text>
+                          <Text style={{ color: s.muted, fontSize: 11, fontVariant: ['tabular-nums'] }}>
+                            {item.reason}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {rec.excluded.length > 0 && (
+                    <View style={{ gap: 4, paddingLeft: 28 }}>
+                      <Text style={{ color: failColor, fontSize: 11, fontWeight: '600' }}>建议排除</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {rec.excluded.map(item => (
+                          <View
+                            key={item.sourceId}
+                            style={{
+                              paddingHorizontal: 8,
+                              paddingVertical: 3.5,
+                              borderRadius: 10,
+                              backgroundColor: failBg,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <Ionicons name="ban-outline" size={12} color={failColor} />
+                            <Text style={{ color: failColor, fontSize: 11.5, fontWeight: '600' }}>
+                              {item.sourceName}（{item.reason}）
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {!!rec.note && (
+                    <Text style={{ paddingLeft: 28, color: s.subtle, fontSize: 11, lineHeight: 16 }}>
+                      {rec.note}
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <View
+            style={{
+              paddingHorizontal: 20,
+              paddingTop: 10,
+              paddingBottom: 14,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: s.hairline,
+              gap: 8,
+            }}
+          >
+            <Pressable
+              testID="recommend-confirm-save"
+              accessibilityRole="button"
+              accessibilityLabel="确认并保存推荐的分平台音源配置"
+              disabled={savingRecommendation || selectedRecommendPlatforms.size === 0}
+              onPress={() => {
+                void applyRecommendedRouting(false);
+              }}
+              style={{
+                minHeight: 46,
+                borderRadius: 23,
+                backgroundColor: s.control,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 7,
+                opacity: savingRecommendation || selectedRecommendPlatforms.size === 0 ? 0.45 : 1,
+              }}
+            >
+              {savingRecommendation ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+              )}
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
+                确认并保存推荐配置（{selectedRecommendPlatforms.size} 平台）
+              </Text>
+            </Pressable>
+            <Pressable
+              testID="recommend-save-and-edit"
+              accessibilityRole="button"
+              accessibilityLabel="保存后继续手动调整"
+              disabled={savingRecommendation || selectedRecommendPlatforms.size === 0}
+              onPress={() => {
+                void applyRecommendedRouting(true);
+              }}
+              style={{
+                minHeight: 40,
+                borderRadius: 20,
+                backgroundColor: s.chip,
+                borderWidth: 1,
+                borderColor: s.chipBorder,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: savingRecommendation || selectedRecommendPlatforms.size === 0 ? 0.45 : 1,
+              }}
+            >
+              <Text style={{ color: s.ink, fontSize: 13.5, fontWeight: '600' }}>保存并进入手动微调</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </SheetModal>
+
+      <PlatformSourceRoutingModal
+        catalog={services.catalog}
+        preferences={services.preferences}
+        visible={manualRoutingOpen}
+        onClose={() => setManualRoutingOpen(false)}
+      />
 
       {/* Layered detail modal when user taps any platform card or source cell */}
       <SheetModal

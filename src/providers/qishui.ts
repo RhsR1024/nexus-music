@@ -767,6 +767,36 @@ export class QishuiProvider {
   }
 
   /**
+   * Public anonymous H5 diagnostic probe (`/luna/h5/seo_track`) that verifies
+   * `api.qishui.com` reachability and returns a real playable public sample track
+   * even when the user has not signed in to a Qishui PC session.
+   */
+  async publicDiagnosticTrack(
+    signal: AbortSignal,
+    trackId = '6777691046773000193',
+  ): Promise<Track | undefined> {
+    throwIfAborted(signal);
+    const res = row(
+      await this.http(
+        queryURL('https://api.qishui.com/luna/h5/seo_track', { track_id: trackId }),
+        {
+          method: 'GET',
+          credentials: 'omit',
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+            Referer: 'https://music.douyin.com/',
+          },
+        },
+        signal,
+      ),
+    );
+    const rawTrack = row(row(res.seo_track).track ?? res.track ?? res.data);
+    if (!text(rawTrack.id ?? rawTrack.name)) return undefined;
+    return qishuiTrackFromRaw(rawTrack, trackId) ?? undefined;
+  }
+
+  /**
    * Official direct playback via `/luna/pc/track_v2` & `/luna/h5/seo_track`.
    * Parses both inline `track_player.video_model` (`video_list[]`) and
    * `track_player.url_player_info` VOD JSON (`Result.Data.PlayInfoList[]`),

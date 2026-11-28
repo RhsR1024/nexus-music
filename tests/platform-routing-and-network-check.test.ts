@@ -19,8 +19,13 @@ import { MatchedResolver } from '../src/providers/matchedResolver.ts';
 import { MultiSourceResolver, type LXTransport } from '../src/providers/multiSourceResolver.ts';
 import {
   formatNetworkSummary,
+  mergeRecommendedRouting,
   NETWORK_CHECK_PLATFORMS,
   NetworkDiagnosticsCoordinator,
+  recommendPlatformSourceRouting,
+  type NetworkCheckRow,
+  type PhaseDetail,
+  type SourceCheckGroup,
 } from '../src/providers/networkDiagnostics.ts';
 import { SourceRegistry } from '../src/providers/sourceRegistry.ts';
 import { cleanBackupSettings } from '../src/storage/backupSettings.ts';
@@ -426,4 +431,104 @@ test('NetworkDiagnosticsCoordinator runs all 7 platforms 4-stage check, source m
   assert.deepEqual(hung.getSnapshot(), afterStop);
   hung.dispose();
   coordinator.dispose();
+});
+
+test('recommendPlatformSourceRouting ranks by quality/latency, safely excludes broken sources, and respects selective merge', () => {
+  const okPhase = (ms: number): PhaseDetail => ({ state: 'ok', shortText: `${ms} ms`, detail: `完成 · ${ms} ms`, elapsedMs: ms });
+  const failPhase = (detail: string, shortText = '失败'): PhaseDetail => ({ state: 'failed', shortText, detail });
+  const skipPhase = (): PhaseDetail => ({ state: 'skipped', shortText: '跳过', detail: '跳过' });
+
+  const makeRow = (
+    sourceId: string,
+    sourceName: string,
+    platform: OnlinePlatform,
+    kind: NetworkCheckRow['kind'],
+    phases: readonly [PhaseDetail, PhaseDetail, PhaseDetail, PhaseDetail],
+    extra: Partial<Pick<NetworkCheckRow, 'resolvedQuality' | 'audioFormat' | 'httpStatus'>> = {},
+  ): NetworkCheckRow => ({
+    id: `source:${sourceId}:${platform}`,
+    mode: 'source',
+    platform,
+    platformLabel: platform,
+    platformShort: platform,
+    sourceId,
+    sourceName,
+    kind,
+    badge: kind === 'ok' ? '正常' : kind === 'unsupported' ? '未声明' : '失败',
+    phases,
+    ...extra,
+  });
+
+  const groups: SourceCheckGroup[] = [
+    {
+      sourceId: 'src-fast-flac',
+      sourceName: '高速无损源',
+      rows: [
+        makeRow('src-fast-flac', '高速无损源', 'wy', 'ok', [okPhase(50), okPhase(80), okPhase(120), okPhase(90)], { resolvedQuality: 'flac', audioFormat: 'flac' }),
+        makeRow('src-fast-flac', '高速无损源', 'tx', 'ok', [okPhase(50), okPhase(80), okPhase(150), okPhase(100)], { resolvedQuality: '320k', audioFormat: 'mpeg' }),
+        makeRow('src-fast-flac', '高速无损源', 'kw', 'failed', [okPhase(50), okPhase(80), failPhase('未通过 · 音源解析失败'), skipPhase()]),
+        makeRow('src-fast-flac', '高速无损源', 'kg', 'failed', [okPhase(50), failPhase('未通过 · 搜索接口失败'), skipPhase(), skipPhase()]),
+        makeRow('src-fast-flac', '高速无损源', 'mg', 'unsupported', [skipPhase(), skipPhase(), skipPhase(), skipPhase()]),
+      ],
+    },
+    {
+      sourceId: 'src-slow-flac',
+      sourceName: '慢速无损源',
+      rows: [
+        makeRow('src-slow-flac', '慢速无损源', 'wy', 'ok', [okPhase(50), okPhase(80), okPhase(500), okPhase(400)], { resolvedQuality: 'flac', audioFormat: 'flac' }),
+        makeRow('src-slow-flac', '慢速无损源', 'tx', 'ok', [okPhase(50), okPhase(80), okPhase(400), okPhase(300)], { resolvedQuality: 'flac', audioFormat: 'flac' }),
+        makeRow('src-slow-flac', '慢速无损源', 'kw', 'failed', [okPhase(50), okPhase(80), okPhase(200), failPhase('未通过 · HTTP 403')], { httpStatus: 403 }),
+        makeRow('src-slow-flac', '慢速无损源', 'kg', 'ok', [okPhase(50), okPhase(80), okPhase(220), okPhase(110)], { resolvedQuality: '320k', audioFormat: 'mpeg' }),
+        makeRow('src-slow-flac', '慢速无损源', 'mg', 'ok', [okPhase(50), okPhase(80), okPhase(180), okPhase(100)], { resolvedQuality: '320k', audioFormat: 'mpeg' }),
+      ],
+    },
+    {
+      sourceId: 'src-broken',
+      sourceName: '失效音源',
+      rows: [
+        makeRow('src-broken', '失效音源', 'wy', 'failed', [okPhase(50), okPhase(80), failPhase('未通过 · 音源解析超时', '超时'), skipPhase()]),
+        makeRow('src-broken', '失效音源', 'tx', 'failed', [okPhase(50), okPhase(80), okPhase(100), failPhase('未通过 · HTTP 403')], { httpStatus: 403 }),
+        makeRow('src-broken', '失效音源', 'kw', 'unsupported', [skipPhase(), skipPhase(), skipPhase(), skipPhase()]),
+        makeRow('src-broken', '失效音源', 'kg', 'unsupported', [skipPhase(), skipPhase(), skipPhase(), skipPhase()]),
+        makeRow('src-broken', '失效音源', 'mg', 'unsupported', [skipPhase(), skipPhase(), skipPhase(), skipPhase()]),
+      ],
+    },
+  ];
+
+  const existing = normalizePlatformSourceRouting({
+    kw: { priority: ['custom-keep'], excluded: [] },
+  });
+  const plan = recommendPlatformSourceRouting(groups, existing);
+  assert.equal(plan.hasRecommendations, true);
+  assert.equal(plan.testedSources, 3);
+
+  const byPlat = new Map(plan.platforms.map(p => [p.platform, p]));
+  // wy: both flac -> faster src-fast-flac (210ms) beats src-slow-flac (900ms); src-broken excluded
+  assert.deepEqual(byPlat.get('wy')?.priority.map(c => c.sourceId), ['src-fast-flac', 'src-slow-flac']);
+  assert.deepEqual(byPlat.get('wy')?.excluded.map(c => c.sourceId), ['src-broken']);
+  // tx: flac (src-slow-flac) beats 320k (src-fast-flac); src-broken excluded with HTTP 403 reason
+  assert.deepEqual(byPlat.get('tx')?.priority.map(c => c.sourceId), ['src-slow-flac', 'src-fast-flac']);
+  assert.equal(byPlat.get('tx')?.excluded[0]?.sourceId, 'src-broken');
+  assert.match(byPlat.get('tx')?.excluded[0]?.reason ?? '', /403/);
+  // kw: ALL declared sources failed -> safety guard emits ZERO exclusions and keeps existing kw rule untouched
+  assert.deepEqual(byPlat.get('kw')?.priority, []);
+  assert.deepEqual(byPlat.get('kw')?.excluded, []);
+  assert.match(byPlat.get('kw')?.note ?? '', /暂不自动排除/);
+  assert.deepEqual(plan.routing.kw, existing.kw);
+  // kg: src-fast-flac failed at SEARCH (platform-side), NOT resolve/audio -> must NOT be excluded!
+  assert.deepEqual(byPlat.get('kg')?.priority.map(c => c.sourceId), ['src-slow-flac']);
+  assert.deepEqual(byPlat.get('kg')?.excluded, []);
+  // mg: src-fast-flac & src-broken are undeclared ('unsupported') -> must NOT pollute excluded!
+  assert.deepEqual(byPlat.get('mg')?.priority.map(c => c.sourceId), ['src-slow-flac']);
+  assert.deepEqual(byPlat.get('mg')?.excluded, []);
+  // qishui & bodian: ranked by okCount desc (src-slow-flac passed 4 vs src-fast-flac passed 2); src-broken passed 0 -> excluded
+  assert.deepEqual(byPlat.get('qishui')?.priority.map(c => c.sourceId), ['src-slow-flac', 'src-fast-flac']);
+  assert.deepEqual(byPlat.get('qishui')?.excluded.map(c => c.sourceId), ['src-broken']);
+  assert.deepEqual(byPlat.get('bodian')?.priority.map(c => c.sourceId), ['src-slow-flac', 'src-fast-flac']);
+
+  // Selective platform merge: only apply wy, keep tx untouched
+  const partial = mergeRecommendedRouting(existing, plan.platforms, new Set(['wy']));
+  assert.deepEqual(partial.wy, { priority: ['src-fast-flac', 'src-slow-flac'], excluded: ['src-broken'] });
+  assert.equal(partial.tx, undefined);
+  assert.deepEqual(partial.kw, existing.kw);
 });

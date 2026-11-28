@@ -5,7 +5,12 @@
 // Strictly local: never uploads reports, never retains audio URLs/credentials,
 // never alters playback queue or source ordering, bounded to 90s per run.
 
-import { normalizeQuality, type Quality } from '../domain/quality.ts';
+import {
+  normalizePlatformSourceRouting,
+  type PlatformSourceRouting,
+  type PlatformSourceRule,
+} from '../domain/platformRouting.ts';
+import { normalizeQuality, qualityOrder, type Quality } from '../domain/quality.ts';
 import type { MusicPlatform, OnlinePlatform, Track } from '../domain/track.ts';
 import { bounded, DeadlineError, throwIfAborted } from './async.ts';
 import type { AudioProbe, AudioProbeResult } from './audioProbe.ts';
@@ -66,9 +71,45 @@ export interface NetworkCheckRow {
   readonly phases: readonly [PhaseDetail, PhaseDetail, PhaseDetail, PhaseDetail];
   readonly sampleTitle?: string;
   readonly resolvedLabel?: string;
+  readonly resolvedQuality?: Quality;
   readonly audioFormat?: AudioProbeResult['format'];
   readonly httpStatus?: number;
   readonly bytes?: number;
+}
+
+export interface RecommendedPlatformCandidate {
+  readonly sourceId: string;
+  readonly sourceName: string;
+  readonly quality?: Quality;
+  readonly format?: AudioProbeResult['format'];
+  readonly latencyMs?: number;
+  readonly okPlatforms?: number;
+  readonly reason: string;
+}
+
+export interface RecommendedPlatformExclusion {
+  readonly sourceId: string;
+  readonly sourceName: string;
+  readonly reason: string;
+}
+
+export interface PlatformRoutingRecommendation {
+  readonly platform: MusicPlatform;
+  readonly platformLabel: string;
+  readonly platformShort: string;
+  readonly directLx: boolean;
+  readonly priority: readonly RecommendedPlatformCandidate[];
+  readonly excluded: readonly RecommendedPlatformExclusion[];
+  readonly note?: string;
+}
+
+export interface RoutingRecommendationPlan {
+  readonly hasRecommendations: boolean;
+  readonly testedSources: number;
+  readonly affectedPlatforms: number;
+  readonly totalExcluded: number;
+  readonly platforms: readonly PlatformRoutingRecommendation[];
+  readonly routing: PlatformSourceRouting;
 }
 
 export interface SourceCheckGroup {
@@ -461,7 +502,9 @@ export class NetworkDiagnosticsCoordinator {
     rowId: string,
     phaseIndex: 0 | 1 | 2 | 3,
     phase: PhaseDetail,
-    extra?: Partial<Pick<NetworkCheckRow, 'sampleTitle' | 'resolvedLabel' | 'audioFormat' | 'httpStatus' | 'bytes'>>,
+    extra?: Partial<
+      Pick<NetworkCheckRow, 'sampleTitle' | 'resolvedLabel' | 'resolvedQuality' | 'audioFormat' | 'httpStatus' | 'bytes'>
+    >,
   ) {
     this.updateRow(generation, rowId, row => {
       const nextPhases = [...row.phases] as [PhaseDetail, PhaseDetail, PhaseDetail, PhaseDetail];
@@ -625,6 +668,7 @@ export class NetworkDiagnosticsCoordinator {
         ]
           .filter(Boolean)
           .join(' · ');
+        const resolvedQuality = media.quality ? normalizeQuality(media.quality) : undefined;
         this.patchPhase(
           generation,
           row.id,
@@ -635,7 +679,7 @@ export class NetworkDiagnosticsCoordinator {
             detail: `完成 · ${ms} ms · ${resolvedLabel}`,
             elapsedMs: ms,
           },
-          { resolvedLabel },
+          { resolvedLabel, ...(resolvedQuality ? { resolvedQuality } : {}) },
         );
       } catch (err) {
         if (signal.aborted || generation !== this.generation) return;
@@ -970,7 +1014,7 @@ export class NetworkDiagnosticsCoordinator {
                   detail: `完成 · ${ms} ms · ${picked.quality.toUpperCase()}`,
                   elapsedMs: ms,
                 },
-                { resolvedLabel },
+                { resolvedLabel, resolvedQuality: picked.quality },
               );
             } catch (err) {
               if (signal.aborted || generation !== this.generation) break;
@@ -1070,3 +1114,255 @@ export class NetworkDiagnosticsCoordinator {
     return lines.join('\n');
   }
 }
+
+const LOSSLESS_FORMATS = new Set<AudioProbeResult['format']>(['flac', 'wav', 'aiff']);
+
+function isSourceSideFailure(row: NetworkCheckRow): boolean {
+  if (row.kind !== 'failed') return false;
+  // Init failure (phase 0 mentions 诊断会话初始化) or resolve/audio stage failure is source-side.
+  // Pure discovery/search failures are platform-side and must not blacklist a script.
+  if (row.phases[2].state === 'failed' || row.phases[3].state === 'failed') return true;
+  if (row.phases[0].state === 'failed' && row.phases[0].detail.includes('诊断会话初始化')) return true;
+  return false;
+}
+
+function sourceFailureReason(row: NetworkCheckRow): string {
+  if (row.phases[0].state === 'failed' && row.phases[0].detail.includes('诊断会话初始化')) {
+    return '脚本初始化失败';
+  }
+  if (row.phases[2].state === 'failed') {
+    return row.phases[2].shortText === '超时' ? '解析超时' : '解析失败';
+  }
+  if (row.phases[3].state === 'failed') {
+    return row.phases[3].shortText === '超时'
+      ? '音频响应超时'
+      : row.httpStatus
+        ? `音频 HTTP ${row.httpStatus}`
+        : '音频不可达';
+  }
+  return row.badge;
+}
+
+function rowLatencyMs(row: NetworkCheckRow): number {
+  const resolveMs = row.phases[2].elapsedMs;
+  const probeMs = row.phases[3].elapsedMs;
+  if (resolveMs === undefined && probeMs === undefined) return Number.MAX_SAFE_INTEGER;
+  return (resolveMs ?? 0) + (probeMs ?? 0);
+}
+
+function qualityRank(quality?: Quality): number {
+  if (!quality) return qualityOrder.length;
+  const idx = qualityOrder.indexOf(quality);
+  return idx >= 0 ? idx : qualityOrder.length;
+}
+
+/**
+ * Generates per-platform LX source priority & exclusion recommendations from completed
+ * all-sources diagnostic results across all 7 NexusMusic platforms.
+ *
+ * Safety guarantees:
+ * - Only recommends excluding scripts that failed on source-side stages (init / resolve / audio),
+ *   never for platform search hiccups or undeclared platforms.
+ * - Never wipes out all sources for a platform: exclusions are only emitted when at least one
+ *   verified working source exists for that platform.
+ */
+export function recommendPlatformSourceRouting(
+  sourceGroups: readonly SourceCheckGroup[],
+  currentRouting: PlatformSourceRouting = {},
+): RoutingRecommendationPlan {
+  if (sourceGroups.length === 0) {
+    return {
+      hasRecommendations: false,
+      testedSources: 0,
+      affectedPlatforms: 0,
+      totalExcluded: 0,
+      platforms: [],
+      routing: normalizePlatformSourceRouting(currentRouting),
+    };
+  }
+
+  const recommendations: PlatformRoutingRecommendation[] = [];
+
+  // 1. Direct LX platforms (wy / tx / kw / kg / mg)
+  for (const meta of SOURCE_CHECK_PLATFORMS) {
+    const okCandidates: Array<{
+      candidate: RecommendedPlatformCandidate;
+      qRank: number;
+      losslessRank: number;
+      latency: number;
+    }> = [];
+    const failedCandidates: RecommendedPlatformExclusion[] = [];
+    let declaredCount = 0;
+
+    for (const group of sourceGroups) {
+      const row = group.rows.find(r => r.platform === meta.id);
+      if (!row || row.kind === 'unsupported') continue;
+      declaredCount++;
+      if (row.kind === 'ok') {
+        const latency = rowLatencyMs(row);
+        const displayLatency = Number.isFinite(latency) && latency < Number.MAX_SAFE_INTEGER ? latency : undefined;
+        const reasonParts = [
+          row.resolvedQuality ? row.resolvedQuality.toUpperCase() : '',
+          row.audioFormat ? row.audioFormat.toUpperCase() : '',
+          displayLatency !== undefined ? `${displayLatency} ms` : '',
+        ].filter(Boolean);
+        okCandidates.push({
+          candidate: {
+            sourceId: group.sourceId,
+            sourceName: group.sourceName,
+            ...(row.resolvedQuality ? { quality: row.resolvedQuality } : {}),
+            ...(row.audioFormat ? { format: row.audioFormat } : {}),
+            ...(displayLatency !== undefined ? { latencyMs: displayLatency } : {}),
+            reason: reasonParts.join(' · ') || '实测可用',
+          },
+          qRank: qualityRank(row.resolvedQuality),
+          losslessRank: LOSSLESS_FORMATS.has(row.audioFormat) ? 0 : 1,
+          latency,
+        });
+      } else if (isSourceSideFailure(row)) {
+        failedCandidates.push({
+          sourceId: group.sourceId,
+          sourceName: group.sourceName,
+          reason: sourceFailureReason(row),
+        });
+      }
+    }
+
+    okCandidates.sort((a, b) => {
+      if (a.qRank !== b.qRank) return a.qRank - b.qRank;
+      if (a.losslessRank !== b.losslessRank) return a.losslessRank - b.losslessRank;
+      return a.latency - b.latency;
+    });
+
+    const priority = okCandidates.map(item => item.candidate);
+    // Safety guard: never exclude all sources if zero verified sources succeeded.
+    const excluded = priority.length > 0 ? failedCandidates : [];
+    const note =
+      declaredCount === 0
+        ? '当前已启用音源均未声明支持该平台'
+        : priority.length === 0 && failedCandidates.length > 0
+          ? '本轮暂无通过检测的音源，为避免无源可用暂不自动排除'
+          : undefined;
+
+    recommendations.push({
+      platform: meta.id,
+      platformLabel: meta.label,
+      platformShort: meta.short,
+      directLx: true,
+      priority,
+      excluded,
+      ...(note ? { note } : {}),
+    });
+  }
+
+  // 2. Imported platforms (qishui / bodian) cross-platform LX fallback ranking
+  const crossStats = sourceGroups.map(group => {
+    const declared = group.rows.filter(r => r.kind !== 'unsupported');
+    const okRows = declared.filter(r => r.kind === 'ok');
+    const failedRows = declared.filter(isSourceSideFailure);
+    const latencies = okRows
+      .map(rowLatencyMs)
+      .filter(ms => Number.isFinite(ms) && ms < Number.MAX_SAFE_INTEGER);
+    const avgLatency = latencies.length
+      ? Math.round(latencies.reduce((sum, n) => sum + n, 0) / latencies.length)
+      : Number.MAX_SAFE_INTEGER;
+    const bestQRank = okRows.length
+      ? Math.min(...okRows.map(r => qualityRank(r.resolvedQuality)))
+      : qualityOrder.length;
+    return {
+      sourceId: group.sourceId,
+      sourceName: group.sourceName,
+      declaredCount: declared.length,
+      okCount: okRows.length,
+      failedCount: failedRows.length,
+      avgLatency,
+      bestQRank,
+      bestQuality: bestQRank < qualityOrder.length ? qualityOrder[bestQRank] : undefined,
+    };
+  });
+
+  const crossWorking = crossStats
+    .filter(item => item.okCount > 0)
+    .sort((a, b) => {
+      if (a.okCount !== b.okCount) return b.okCount - a.okCount;
+      if (a.bestQRank !== b.bestQRank) return a.bestQRank - b.bestQRank;
+      return a.avgLatency - b.avgLatency;
+    });
+
+  const crossPriority: RecommendedPlatformCandidate[] = crossWorking.map(item => {
+    const latencyMs = item.avgLatency < Number.MAX_SAFE_INTEGER ? item.avgLatency : undefined;
+    const parts = [
+      `通过 ${item.okCount}/${item.declaredCount} 平台`,
+      item.bestQuality ? item.bestQuality.toUpperCase() : '',
+      latencyMs !== undefined ? `均耗 ${latencyMs} ms` : '',
+    ].filter(Boolean);
+    return {
+      sourceId: item.sourceId,
+      sourceName: item.sourceName,
+      ...(item.bestQuality ? { quality: item.bestQuality } : {}),
+      ...(latencyMs !== undefined ? { latencyMs } : {}),
+      okPlatforms: item.okCount,
+      reason: parts.join(' · '),
+    };
+  });
+
+  const crossExcluded: RecommendedPlatformExclusion[] =
+    crossPriority.length > 0
+      ? crossStats
+          .filter(item => item.okCount === 0 && item.failedCount > 0)
+          .map(item => ({
+            sourceId: item.sourceId,
+            sourceName: item.sourceName,
+            reason: `本轮 ${item.failedCount} 个声明平台均未通过`,
+          }))
+      : [];
+
+  for (const importedMeta of [
+    { id: 'qishui' as const, label: '汽水音乐', short: '汽水' },
+    { id: 'bodian' as const, label: '波点音乐', short: '波点' },
+  ]) {
+    recommendations.push({
+      platform: importedMeta.id,
+      platformLabel: importedMeta.label,
+      platformShort: importedMeta.short,
+      directLx: false,
+      priority: crossPriority,
+      excluded: crossExcluded,
+      note:
+        crossPriority.length > 0
+          ? '官方/账号直连受限时，按跨平台实测通过率与速度依次换源'
+          : '本轮暂无通过检测的 LX 音源，暂不修改跨平台换源规则',
+    });
+  }
+
+  const actionable = recommendations.filter(r => r.priority.length > 0 || r.excluded.length > 0);
+  const totalExcluded = recommendations.reduce((sum, r) => sum + r.excluded.length, 0);
+  const routing = mergeRecommendedRouting(currentRouting, recommendations);
+
+  return {
+    hasRecommendations: actionable.length > 0,
+    testedSources: sourceGroups.length,
+    affectedPlatforms: actionable.length,
+    totalExcluded,
+    platforms: recommendations,
+    routing,
+  };
+}
+
+export function mergeRecommendedRouting(
+  currentRouting: PlatformSourceRouting,
+  recommendations: readonly PlatformRoutingRecommendation[],
+  selectedPlatforms?: ReadonlySet<MusicPlatform>,
+): PlatformSourceRouting {
+  const next: Record<string, PlatformSourceRule | undefined> = { ...currentRouting };
+  for (const rec of recommendations) {
+    if (selectedPlatforms && !selectedPlatforms.has(rec.platform)) continue;
+    if (rec.priority.length === 0 && rec.excluded.length === 0) continue;
+    next[rec.platform] = {
+      priority: rec.priority.map(item => item.sourceId),
+      excluded: rec.excluded.map(item => item.sourceId),
+    };
+  }
+  return normalizePlatformSourceRouting(next);
+}
+
