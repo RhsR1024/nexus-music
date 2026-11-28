@@ -11,7 +11,7 @@ import {
   type PlatformSourceRule,
 } from '../domain/platformRouting.ts';
 import { normalizeQuality, qualityOrder, type Quality } from '../domain/quality.ts';
-import type { MusicPlatform, OnlinePlatform, Track } from '../domain/track.ts';
+import { trackPlatform, type MusicPlatform, type OnlinePlatform, type Track } from '../domain/track.ts';
 import { bounded, DeadlineError, throwIfAborted } from './async.ts';
 import type { AudioProbe, AudioProbeResult } from './audioProbe.ts';
 import { makeLXRequest } from './lx.ts';
@@ -37,16 +37,26 @@ export const NETWORK_CHECK_PLATFORMS: readonly {
 ];
 
 export const SOURCE_CHECK_PLATFORMS: readonly {
-  readonly id: OnlinePlatform;
+  readonly id: MusicPlatform;
   readonly label: string;
   readonly short: string;
-}[] = [
-  { id: 'wy', label: '网易云音乐', short: '网易云' },
-  { id: 'tx', label: 'QQ 音乐', short: 'QQ' },
-  { id: 'kw', label: '酷我音乐', short: '酷我' },
-  { id: 'kg', label: '酷狗音乐', short: '酷狗' },
-  { id: 'mg', label: '咪咕音乐', short: '咪咕' },
-];
+}[] = NETWORK_CHECK_PLATFORMS;
+
+const PLATFORM_SHORT_MAP: Record<MusicPlatform, string> = {
+  wy: '网易云',
+  tx: 'QQ',
+  kw: '酷我',
+  kg: '酷狗',
+  mg: '咪咕',
+  qishui: '汽水',
+  bodian: '波点',
+};
+
+export function formatCompactMs(ms: number): string {
+  const safe = Math.max(1, Math.round(ms));
+  if (safe < 1000) return `${safe}ms`;
+  return `${(safe / 1000).toFixed(1)}s`;
+}
 
 export type PhaseState = 'pending' | 'running' | 'ok' | 'uncertain' | 'failed' | 'skipped';
 export type RowKind = 'pending' | 'running' | 'ok' | 'uncertain' | 'failed' | 'unsupported';
@@ -72,6 +82,8 @@ export interface NetworkCheckRow {
   readonly sampleTitle?: string;
   readonly resolvedLabel?: string;
   readonly resolvedQuality?: Quality;
+  readonly resolvedMode?: 'direct' | 'cross-platform';
+  readonly matchedPlatform?: OnlinePlatform;
   readonly audioFormat?: AudioProbeResult['format'];
   readonly httpStatus?: number;
   readonly bytes?: number;
@@ -155,6 +167,7 @@ export interface NetworkDiagnosticsDeps {
     track: Track,
     signal: AbortSignal,
   ) => Promise<{ readonly url: string; readonly sourceName?: string; readonly quality?: string; readonly matchedTrack?: Track }>;
+  readonly matchSample?: (track: Track, signal: AbortSignal) => Promise<readonly Track[]>;
   readonly enrichOnlineTrack?: (track: Track, signal: AbortSignal) => Promise<Track>;
   readonly probe: AudioProbe;
   readonly readNetworkStatus?: () => Promise<Partial<SystemNetworkInfo> | null | undefined>;
@@ -209,7 +222,7 @@ function makeIdleRow(
 }
 
 function makeUnsupportedRow(
-  platform: { readonly id: OnlinePlatform; readonly label: string; readonly short: string },
+  platform: { readonly id: MusicPlatform; readonly label: string; readonly short: string },
   source: { readonly id: string; readonly name: string },
 ): NetworkCheckRow {
   const skipped: PhaseDetail = {
@@ -298,12 +311,10 @@ const DIAGNOSTIC_NOISY_SAMPLE_RE =
 
 export function pickBestDiagnosticSample(
   items: readonly Track[],
-  platform: OnlinePlatform,
+  platform: MusicPlatform,
   keyword: string,
 ): Track | undefined {
-  const candidates = items.filter(
-    item => item.origin.kind === 'online' && item.origin.platform === platform,
-  );
+  const candidates = items.filter(item => trackPlatform(item) === platform);
   if (candidates.length === 0) return undefined;
   const normKey = keyword.trim().toLowerCase();
   let best = candidates[0]!;
@@ -572,7 +583,17 @@ export class NetworkDiagnosticsCoordinator {
     phaseIndex: 0 | 1 | 2 | 3,
     phase: PhaseDetail,
     extra?: Partial<
-      Pick<NetworkCheckRow, 'sampleTitle' | 'resolvedLabel' | 'resolvedQuality' | 'audioFormat' | 'httpStatus' | 'bytes'>
+      Pick<
+        NetworkCheckRow,
+        | 'sampleTitle'
+        | 'resolvedLabel'
+        | 'resolvedQuality'
+        | 'resolvedMode'
+        | 'matchedPlatform'
+        | 'audioFormat'
+        | 'httpStatus'
+        | 'bytes'
+      >
     >,
   ) {
     this.updateRow(generation, rowId, row => {
@@ -634,7 +655,7 @@ export class NetworkDiagnosticsCoordinator {
         if (count > 0) {
           this.patchPhase(generation, row.id, 0, {
             state: 'ok',
-            shortText: `${ms} ms`,
+            shortText: formatCompactMs(ms),
             detail: `完成 · ${ms} ms · 返回 ${count} 项`,
             elapsedMs: ms,
           });
@@ -689,7 +710,7 @@ export class NetworkDiagnosticsCoordinator {
           1,
           {
             state: 'ok',
-            shortText: `${ms} ms`,
+            shortText: formatCompactMs(ms),
             detail: `完成 · ${ms} ms · 样本「${sampleTitle}」`,
             elapsedMs: ms,
           },
@@ -744,7 +765,7 @@ export class NetworkDiagnosticsCoordinator {
           2,
           {
             state: 'ok',
-            shortText: `${ms} ms`,
+            shortText: formatCompactMs(ms),
             detail: `完成 · ${ms} ms · ${resolvedLabel}`,
             elapsedMs: ms,
           },
@@ -845,11 +866,24 @@ export class NetworkDiagnosticsCoordinator {
 
     const groups: SourceCheckGroup[] = readySources.map(source => {
       const displayName = safeLabel(this.deps.displayNameForSource?.(source) ?? source.name);
+      const hasAnyOnlineCap = source.capabilities.some(
+        cap =>
+          (cap.platform === 'wy' ||
+            cap.platform === 'tx' ||
+            cap.platform === 'kw' ||
+            cap.platform === 'kg' ||
+            cap.platform === 'mg') &&
+          cap.actions.includes('musicUrl') &&
+          cap.qualities.length > 0,
+      );
       const rows = SOURCE_CHECK_PLATFORMS.map(platform => {
-        const supports = source.capabilities.some(
+        const directSupport = source.capabilities.some(
           cap => cap.platform === platform.id && cap.actions.includes('musicUrl') && cap.qualities.length > 0,
         );
-        return supports
+        const importedSupport =
+          (platform.id === 'qishui' || platform.id === 'bodian') &&
+          (directSupport || (Boolean(this.deps.matchSample) && hasAnyOnlineCap));
+        return directSupport || importedSupport
           ? makeIdleRow('source', platform, { id: source.id, name: displayName })
           : makeUnsupportedRow(platform, { id: source.id, name: displayName });
       });
@@ -876,17 +910,18 @@ export class NetworkDiagnosticsCoordinator {
       audioMs: this.deps.stageTimeouts?.audioMs ?? 6_000,
     };
 
-    // Share discovery & sample track lookups across all tested scripts in this run.
+    // Share discovery, sample tracks & imported-platform cross-matches across all tested scripts in this run.
     const discoverCache = new Map<
-      OnlinePlatform,
+      MusicPlatform,
       Promise<{ ok: boolean; count: number; elapsedMs: number; timeout?: boolean }>
     >();
     const sampleCache = new Map<
-      OnlinePlatform,
+      MusicPlatform,
       Promise<{ track?: Track; elapsedMs: number; timeout?: boolean; failed?: boolean }>
     >();
+    const matchCache = new Map<MusicPlatform, Promise<readonly Track[]>>();
 
-    const getDiscovery = (platform: OnlinePlatform) => {
+    const getDiscovery = (platform: MusicPlatform) => {
       let cached = discoverCache.get(platform);
       if (!cached) {
         const started = this.now();
@@ -903,7 +938,7 @@ export class NetworkDiagnosticsCoordinator {
       return cached;
     };
 
-    const getSample = (platform: OnlinePlatform) => {
+    const getSample = (platform: MusicPlatform) => {
       let cached = sampleCache.get(platform);
       if (!cached) {
         const started = this.now();
@@ -911,7 +946,7 @@ export class NetworkDiagnosticsCoordinator {
           .then(async track => {
             if (!track) return { elapsedMs: Math.max(1, this.now() - started) };
             let enriched = track;
-            if (this.deps.enrichOnlineTrack) {
+            if (this.deps.enrichOnlineTrack && track.origin.kind === 'online') {
               try {
                 enriched = await bounded(child => this.deps.enrichOnlineTrack!(track, child), signal, 6_000);
               } catch {
@@ -926,6 +961,34 @@ export class NetworkDiagnosticsCoordinator {
             failed: true,
           }));
         sampleCache.set(platform, cached);
+      }
+      return cached;
+    };
+
+    const getMatches = (platform: MusicPlatform, sampleTrack: Track) => {
+      let cached = matchCache.get(platform);
+      if (!cached) {
+        cached = !this.deps.matchSample
+          ? Promise.resolve([])
+          : bounded(child => this.deps.matchSample!(sampleTrack, child), signal, 10_000)
+              .then(async items => {
+                const enriched: Track[] = [];
+                for (const item of items) {
+                  if (item.origin.kind !== 'online') continue;
+                  let readyTrack = item;
+                  if (this.deps.enrichOnlineTrack) {
+                    try {
+                      readyTrack = await bounded(child => this.deps.enrichOnlineTrack!(item, child), signal, 5_000);
+                    } catch {
+                      throwIfAborted(signal);
+                    }
+                  }
+                  enriched.push(readyTrack);
+                }
+                return enriched;
+              })
+              .catch(() => []);
+        matchCache.set(platform, cached);
       }
       return cached;
     };
@@ -964,9 +1027,166 @@ export class NetworkDiagnosticsCoordinator {
         }
 
         try {
+          type TrackOutcome = {
+            quality: Quality;
+            resolveMs: number;
+            probeMs: number;
+            probeRes: AudioProbeResult;
+          };
+          const verifiedByOnlineTrack = new Map<string, TrackOutcome>();
+          const passedOnlinePlatforms = new Set<OnlinePlatform>();
+
+          const runTieredResolveAndProbe = async (
+            rowId: string,
+            targetTrack: Track,
+            capability: DiagnosticSession['capabilities'][number],
+            modeTag: string,
+            resolvedMode: 'direct' | 'cross-platform',
+            matchedPlatform?: OnlinePlatform,
+            firstTierTimeoutMs = timeouts.resolveMs,
+          ): Promise<{
+            passed: boolean;
+            quality?: Quality;
+            resolveMs?: number;
+            probeMs?: number;
+            probeRes?: AudioProbeResult;
+            triedLabels: string[];
+            lastResolveFailure?: { timeout: boolean; invalidUrl: boolean; elapsedMs: number };
+            lastProbeFailure?: {
+              quality: Quality;
+              resolveMs: number;
+              probeMs: number;
+              probeRes?: AudioProbeResult;
+              timeout?: boolean;
+            };
+          }> => {
+            const tiers = pickDiagnosticQualities(capability.qualities);
+            const triedLabels: string[] = [];
+            let lastResolveFailure: { timeout: boolean; invalidUrl: boolean; elapsedMs: number } | undefined;
+            let lastProbeFailure:
+              | {
+                  quality: Quality;
+                  resolveMs: number;
+                  probeMs: number;
+                  probeRes?: AudioProbeResult;
+                  timeout?: boolean;
+                }
+              | undefined;
+
+            for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
+              if (signal.aborted || generation !== this.generation) break;
+              const tier = tiers[tierIndex]!;
+              const tierLabel = tier.quality.toUpperCase();
+              triedLabels.push(tierLabel);
+              if (tierIndex > 0) {
+                this.patchPhase(generation, rowId, 2, {
+                  state: 'running',
+                  shortText: tierLabel,
+                  detail: `正在降级尝试 ${modeTag ? `${modeTag} · ` : ''}${tierLabel}…`,
+                });
+                this.patchPhase(generation, rowId, 3, {
+                  state: 'pending',
+                  shortText: '等待',
+                  detail: '等待当前档位解析完成',
+                });
+              }
+
+              const tierResolveTimeout =
+                tierIndex === 0 ? firstTierTimeoutMs : Math.min(firstTierTimeoutMs, 5_000);
+              const resolveStart = this.now();
+              let audioUrl: string | undefined;
+              let resolveMs = 1;
+              try {
+                const rawResult = await bounded(
+                  child => session!.request(makeLXRequest(targetTrack, tier.scriptQuality, capability), child),
+                  signal,
+                  tierResolveTimeout,
+                );
+                throwIfAborted(signal);
+                resolveMs = Math.max(1, this.now() - resolveStart);
+                audioUrl = validAudioURL(rawResult);
+                if (!audioUrl) {
+                  lastResolveFailure = { timeout: false, invalidUrl: true, elapsedMs: resolveMs };
+                  continue;
+                }
+              } catch (err) {
+                if (signal.aborted || generation !== this.generation) break;
+                resolveMs = Math.max(1, this.now() - resolveStart);
+                const isTimeout = err instanceof DeadlineError;
+                lastResolveFailure = { timeout: isTimeout, invalidUrl: false, elapsedMs: resolveMs };
+                if (isTimeout) {
+                  if (tierIndex === 0 && tiers.length > 2) {
+                    tierIndex = tiers.length - 2;
+                    continue;
+                  }
+                  if (tierIndex > 0) break;
+                }
+                continue;
+              }
+
+              this.patchPhase(
+                generation,
+                rowId,
+                2,
+                {
+                  state: 'ok',
+                  shortText: formatCompactMs(resolveMs),
+                  detail: `完成 · ${resolveMs} ms · ${modeTag ? `${modeTag} · ` : ''}${tierLabel}${tierIndex > 0 ? '（高档不可用，已降级验证）' : ''}`,
+                  elapsedMs: resolveMs,
+                },
+                {
+                  resolvedLabel: `${group.sourceName} · ${modeTag ? `${modeTag} · ` : ''}${tierLabel}`,
+                  resolvedQuality: tier.quality,
+                  resolvedMode,
+                  ...(matchedPlatform ? { matchedPlatform } : {}),
+                },
+              );
+              this.patchPhase(generation, rowId, 3, {
+                state: 'running',
+                shortText: '检测中',
+                detail: `正在校验 ${tierLabel} 音频响应与容器头…`,
+              });
+
+              const probeStart = this.now();
+              try {
+                const probeRes = await bounded(child => this.deps.probe(audioUrl!, child), signal, timeouts.audioMs);
+                throwIfAborted(signal);
+                const probeMs = Math.max(1, this.now() - probeStart);
+                if (probeRes.state === 'header') {
+                  this.patchPhase(generation, rowId, 3, describeAudioProbe(probeRes, probeMs), {
+                    audioFormat: probeRes.format,
+                    httpStatus: probeRes.status,
+                    bytes: probeRes.bytes,
+                  });
+                  return {
+                    passed: true,
+                    quality: tier.quality,
+                    resolveMs,
+                    probeMs,
+                    probeRes,
+                    triedLabels,
+                  };
+                }
+                lastProbeFailure = { quality: tier.quality, resolveMs, probeMs, probeRes };
+                if (probeRes.state === 'cancelled') break;
+              } catch (err) {
+                if (signal.aborted || generation !== this.generation) break;
+                const probeMs = Math.max(1, this.now() - probeStart);
+                lastProbeFailure = {
+                  quality: tier.quality,
+                  resolveMs,
+                  probeMs,
+                  timeout: err instanceof DeadlineError,
+                };
+              }
+            }
+
+            return { passed: false, triedLabels, lastResolveFailure, lastProbeFailure };
+          };
+
           for (const row of testableRows) {
             if (signal.aborted || generation !== this.generation) break;
-            const platform = row.platform as OnlinePlatform;
+            const platform = row.platform;
 
             // Stage 0: Discover (cached per run)
             const disc = await getDiscovery(platform);
@@ -979,7 +1199,7 @@ export class NetworkDiagnosticsCoordinator {
                 ? disc.count > 0
                   ? {
                       state: 'ok',
-                      shortText: `${disc.elapsedMs} ms`,
+                      shortText: formatCompactMs(disc.elapsedMs),
                       detail: `完成 · ${disc.elapsedMs} ms · 返回 ${disc.count} 项`,
                       elapsedMs: disc.elapsedMs,
                     }
@@ -1033,33 +1253,22 @@ export class NetworkDiagnosticsCoordinator {
               1,
               {
                 state: 'ok',
-                shortText: `${sampleRes.elapsedMs} ms`,
+                shortText: formatCompactMs(sampleRes.elapsedMs),
                 detail: `完成 · ${sampleRes.elapsedMs} ms · 样本「${sampleTitle}」`,
                 elapsedMs: sampleRes.elapsedMs,
               },
               { sampleTitle },
             );
 
-            // Stage 2 & 3: Resolve via isolated diagnostic session + Audio header probe
-            // Mirrors real MultiSourceResolver quality degradation (flac -> 320k -> 128k) so
-            // sources serving clean 320k/128k audio are not falsely failed when flac is unavailable.
+            // Stage 2 & 3: Direct LX capability first, then cross-platform fallback for qishui/bodian
             this.patchPhase(generation, row.id, 2, { state: 'running', shortText: '检测中', detail: '正在向该音源请求播放地址…' });
-            const capability = session.capabilities.find(
-              cap => cap.platform === platform && cap.actions.includes('musicUrl'),
+            const directCap = session.capabilities.find(
+              cap => cap.platform === platform && cap.actions.includes('musicUrl') && cap.qualities.length > 0,
             );
-            const tiers = capability ? pickDiagnosticQualities(capability.qualities) : [];
-            if (!capability || tiers.length === 0) {
-              this.patchPhase(generation, row.id, 2, {
-                state: 'uncertain',
-                shortText: '未声明',
-                detail: '未确认 · 音源未声明可用音质档位',
-              });
-              this.patchPhase(generation, row.id, 3, { state: 'skipped', shortText: '跳过', detail: '跳过 · 未取得音频地址' });
-              continue;
-            }
+            const isImported = platform === 'qishui' || platform === 'bodian';
 
-            const triedLabels: string[] = [];
             let passed = false;
+            let lastTriedLabels: string[] = [];
             let lastResolveFailure: { timeout: boolean; invalidUrl: boolean; elapsedMs: number } | undefined;
             let lastProbeFailure:
               | {
@@ -1068,137 +1277,176 @@ export class NetworkDiagnosticsCoordinator {
                   probeMs: number;
                   probeRes?: AudioProbeResult;
                   timeout?: boolean;
+                  modeTag?: string;
+                  resolvedMode?: 'direct' | 'cross-platform';
+                  matchedPlatform?: OnlinePlatform;
                 }
               | undefined;
 
-            for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
+            // 1. Direct native capability test (all 5 online platforms + scripts declaring qs/qishui/bodian)
+            if (directCap) {
+              const modeTag = isImported ? `${PLATFORM_SHORT_MAP[platform]}直连` : '';
+              const outcome = await runTieredResolveAndProbe(
+                row.id,
+                sampleRes.track,
+                directCap,
+                modeTag,
+                'direct',
+              );
+              lastTriedLabels = outcome.triedLabels;
+              if (outcome.passed && outcome.quality && outcome.probeRes) {
+                passed = true;
+                if (!isImported && sampleRes.track.origin.kind === 'online') {
+                  passedOnlinePlatforms.add(sampleRes.track.origin.platform);
+                  verifiedByOnlineTrack.set(
+                    `${sampleRes.track.origin.platform}:${sampleRes.track.origin.id}`,
+                    {
+                      quality: outcome.quality,
+                      resolveMs: outcome.resolveMs ?? 1,
+                      probeMs: outcome.probeMs ?? 1,
+                      probeRes: outcome.probeRes,
+                    },
+                  );
+                }
+              } else {
+                lastResolveFailure = outcome.lastResolveFailure;
+                if (outcome.lastProbeFailure) {
+                  lastProbeFailure = { ...outcome.lastProbeFailure, modeTag, resolvedMode: 'direct' };
+                }
+              }
+            }
+
+            // 2. For qishui / bodian without working direct LX capability, verify real cross-platform LX fallback
+            if (!passed && isImported && !signal.aborted && generation === this.generation) {
+              const allMatches = await getMatches(platform, sampleRes.track);
               if (signal.aborted || generation !== this.generation) break;
-              const tier = tiers[tierIndex]!;
-              const tierLabel = tier.quality.toUpperCase();
-              triedLabels.push(tierLabel);
-              if (tierIndex > 0) {
+              const eligible = allMatches.filter(cand => {
+                if (cand.origin.kind !== 'online') return false;
+                const candPlatform = cand.origin.platform;
+                return session!.capabilities.some(
+                  cap => cap.platform === candPlatform && cap.actions.includes('musicUrl') && cap.qualities.length > 0,
+                );
+              });
+              // Prioritize candidates whose target platform already passed on this source in this run.
+              const prioritized = [
+                ...eligible.filter(c => c.origin.kind === 'online' && passedOnlinePlatforms.has(c.origin.platform)),
+                ...eligible.filter(c => c.origin.kind === 'online' && !passedOnlinePlatforms.has(c.origin.platform)),
+              ];
+              const maxCandidates = passedOnlinePlatforms.size > 0 ? 2 : 1;
+              const toTry = prioritized.slice(0, maxCandidates);
+
+              if (toTry.length === 0 && !directCap) {
                 this.patchPhase(generation, row.id, 2, {
-                  state: 'running',
-                  shortText: tierLabel,
-                  detail: `正在降级尝试 ${tierLabel}…`,
+                  state: 'uncertain',
+                  shortText: '无匹配',
+                  detail: '未确认 · 未找到该音源支持平台的跨平台匹配样本',
                 });
                 this.patchPhase(generation, row.id, 3, {
-                  state: 'pending',
-                  shortText: '等待',
-                  detail: '等待当前档位解析完成',
+                  state: 'skipped',
+                  shortText: '跳过',
+                  detail: '跳过 · 未取得跨平台测试样本',
                 });
-              }
-
-              const tierResolveTimeout =
-                tierIndex === 0 ? timeouts.resolveMs : Math.min(timeouts.resolveMs, 5_000);
-              const resolveStart = this.now();
-              let audioUrl: string | undefined;
-              let resolveMs = 1;
-              try {
-                const rawResult = await bounded(
-                  child => session!.request(makeLXRequest(sampleRes.track!, tier.scriptQuality, capability), child),
-                  signal,
-                  tierResolveTimeout,
-                );
-                throwIfAborted(signal);
-                resolveMs = Math.max(1, this.now() - resolveStart);
-                audioUrl = validAudioURL(rawResult);
-                if (!audioUrl) {
-                  lastResolveFailure = { timeout: false, invalidUrl: true, elapsedMs: resolveMs };
-                  continue;
-                }
-              } catch (err) {
-                if (signal.aborted || generation !== this.generation) break;
-                resolveMs = Math.max(1, this.now() - resolveStart);
-                const isTimeout = err instanceof DeadlineError;
-                lastResolveFailure = { timeout: isTimeout, invalidUrl: false, elapsedMs: resolveMs };
-                // When the first tier times out (e.g. flac stalls on upstream), jump directly to the
-                // lightest fallback tier once instead of stacking multiple long timeouts.
-                if (isTimeout) {
-                  if (tierIndex === 0 && tiers.length > 2) {
-                    tierIndex = tiers.length - 2;
-                    continue;
-                  }
-                  if (tierIndex > 0) break;
-                }
                 continue;
               }
 
-              // Probe the resolved audio stream for this tier
-              this.patchPhase(
-                generation,
-                row.id,
-                2,
-                {
-                  state: 'ok',
-                  shortText: `${resolveMs} ms`,
-                  detail:
-                    tierIndex > 0
-                      ? `完成 · ${resolveMs} ms · ${tierLabel}（高档不可用，已降级验证）`
-                      : `完成 · ${resolveMs} ms · ${tierLabel}`,
-                  elapsedMs: resolveMs,
-                },
-                {
-                  resolvedLabel: `${group.sourceName} · ${tierLabel}`,
-                  resolvedQuality: tier.quality,
-                },
-              );
-              this.patchPhase(generation, row.id, 3, {
-                state: 'running',
-                shortText: '检测中',
-                detail: `正在校验 ${tierLabel} 音频响应与容器头…`,
-              });
-
-              const probeStart = this.now();
-              try {
-                const probeRes = await bounded(child => this.deps.probe(audioUrl!, child), signal, timeouts.audioMs);
-                throwIfAborted(signal);
-                const probeMs = Math.max(1, this.now() - probeStart);
-                if (probeRes.state === 'header') {
-                  this.patchPhase(generation, row.id, 3, describeAudioProbe(probeRes, probeMs), {
-                    audioFormat: probeRes.format,
-                    httpStatus: probeRes.status,
-                    bytes: probeRes.bytes,
+              for (const cand of toTry) {
+                if (signal.aborted || generation !== this.generation || cand.origin.kind !== 'online') break;
+                const candPlat = cand.origin.platform;
+                const candShort = PLATFORM_SHORT_MAP[candPlat];
+                const modeTag = `跨平台(${candShort})`;
+                const sameTrackKey = `${candPlat}:${cand.origin.id}`;
+                const reused = verifiedByOnlineTrack.get(sameTrackKey);
+                if (reused) {
+                  const tierLabel = reused.quality.toUpperCase();
+                  this.patchPhase(
+                    generation,
+                    row.id,
+                    2,
+                    {
+                      state: 'ok',
+                      shortText: formatCompactMs(reused.resolveMs),
+                      detail: `完成 · ${reused.resolveMs} ms · ${modeTag} · ${tierLabel}（同曲复用本轮实测）`,
+                      elapsedMs: reused.resolveMs,
+                    },
+                    {
+                      resolvedLabel: `${group.sourceName} · ${modeTag} · ${tierLabel}`,
+                      resolvedQuality: reused.quality,
+                      resolvedMode: 'cross-platform',
+                      matchedPlatform: candPlat,
+                    },
+                  );
+                  this.patchPhase(generation, row.id, 3, describeAudioProbe(reused.probeRes, reused.probeMs), {
+                    audioFormat: reused.probeRes.format,
+                    httpStatus: reused.probeRes.status,
+                    bytes: reused.probeRes.bytes,
                   });
                   passed = true;
                   break;
                 }
-                lastProbeFailure = {
-                  quality: tier.quality,
-                  resolveMs,
-                  probeMs,
-                  probeRes,
-                };
-                if (probeRes.state === 'cancelled') break;
-              } catch (err) {
-                if (signal.aborted || generation !== this.generation) break;
-                const probeMs = Math.max(1, this.now() - probeStart);
-                lastProbeFailure = {
-                  quality: tier.quality,
-                  resolveMs,
-                  probeMs,
-                  timeout: err instanceof DeadlineError,
-                };
+
+                const candCap = session.capabilities.find(
+                  cap => cap.platform === candPlat && cap.actions.includes('musicUrl') && cap.qualities.length > 0,
+                );
+                if (!candCap) continue;
+                const outcome = await runTieredResolveAndProbe(
+                  row.id,
+                  cand,
+                  candCap,
+                  modeTag,
+                  'cross-platform',
+                  candPlat,
+                  passedOnlinePlatforms.size > 0 ? timeouts.resolveMs : Math.min(timeouts.resolveMs, 5_000),
+                );
+                lastTriedLabels = outcome.triedLabels;
+                if (outcome.passed) {
+                  passed = true;
+                  break;
+                }
+                if (outcome.lastResolveFailure) lastResolveFailure = outcome.lastResolveFailure;
+                if (outcome.lastProbeFailure) {
+                  lastProbeFailure = {
+                    ...outcome.lastProbeFailure,
+                    modeTag,
+                    resolvedMode: 'cross-platform',
+                    matchedPlatform: candPlat,
+                  };
+                }
               }
             }
 
             if (signal.aborted || generation !== this.generation) break;
             if (!passed) {
+              if (!directCap && !isImported) {
+                this.patchPhase(generation, row.id, 2, {
+                  state: 'uncertain',
+                  shortText: '未声明',
+                  detail: '未确认 · 音源未声明可用音质档位',
+                });
+                this.patchPhase(generation, row.id, 3, {
+                  state: 'skipped',
+                  shortText: '跳过',
+                  detail: '跳过 · 未取得音频地址',
+                });
+                continue;
+              }
               if (lastProbeFailure) {
                 const tierLabel = lastProbeFailure.quality.toUpperCase();
+                const tagPrefix = lastProbeFailure.modeTag ? `${lastProbeFailure.modeTag} · ` : '';
                 this.patchPhase(
                   generation,
                   row.id,
                   2,
                   {
                     state: 'ok',
-                    shortText: `${lastProbeFailure.resolveMs} ms`,
-                    detail: `完成 · ${lastProbeFailure.resolveMs} ms · ${tierLabel}${triedLabels.length > 1 ? `（已试 ${triedLabels.join('/')}）` : ''}`,
+                    shortText: formatCompactMs(lastProbeFailure.resolveMs),
+                    detail: `完成 · ${lastProbeFailure.resolveMs} ms · ${tagPrefix}${tierLabel}${lastTriedLabels.length > 1 ? `（已试 ${lastTriedLabels.join('/')}）` : ''}`,
                     elapsedMs: lastProbeFailure.resolveMs,
                   },
                   {
-                    resolvedLabel: `${group.sourceName} · ${tierLabel}`,
+                    resolvedLabel: `${group.sourceName} · ${tagPrefix}${tierLabel}`,
                     resolvedQuality: lastProbeFailure.quality,
+                    ...(lastProbeFailure.resolvedMode ? { resolvedMode: lastProbeFailure.resolvedMode } : {}),
+                    ...(lastProbeFailure.matchedPlatform ? { matchedPlatform: lastProbeFailure.matchedPlatform } : {}),
                   },
                 );
                 if (lastProbeFailure.probeRes) {
@@ -1226,7 +1474,7 @@ export class NetworkDiagnosticsCoordinator {
               } else {
                 const ms = lastResolveFailure?.elapsedMs ?? 1;
                 const isTimeout = lastResolveFailure?.timeout === true;
-                const triedSuffix = triedLabels.length > 1 ? `（已试 ${triedLabels.join('/')}）` : '';
+                const triedSuffix = lastTriedLabels.length > 1 ? `（已试 ${lastTriedLabels.join('/')}）` : '';
                 this.patchPhase(generation, row.id, 2, {
                   state: 'failed',
                   shortText: isTimeout ? '超时' : '失败',
@@ -1254,16 +1502,19 @@ export class NetworkDiagnosticsCoordinator {
       }
     };
 
-    // Pre-warm shared platform discovery & sample track lookups in parallel before source workers start.
-    const declaredPlatforms = new Set<OnlinePlatform>();
+    // Pre-warm shared platform discovery, sample tracks & imported-platform matches in parallel.
+    const declaredPlatforms = new Set<MusicPlatform>();
     for (const group of groups) {
       for (const row of group.rows) {
-        if (row.kind !== 'unsupported') declaredPlatforms.add(row.platform as OnlinePlatform);
+        if (row.kind !== 'unsupported') declaredPlatforms.add(row.platform);
       }
     }
     await Promise.all(
       [...declaredPlatforms].map(async platform => {
-        await Promise.all([getDiscovery(platform), getSample(platform)]);
+        const [, sample] = await Promise.all([getDiscovery(platform), getSample(platform)]);
+        if ((platform === 'qishui' || platform === 'bodian') && sample.track && this.deps.matchSample) {
+          await getMatches(platform, sample.track);
+        }
       }),
     );
 
@@ -1389,25 +1640,38 @@ export function recommendPlatformSourceRouting(
 
   const recommendations: PlatformRoutingRecommendation[] = [];
 
-  // 1. Direct LX platforms (wy / tx / kw / kg / mg)
-  for (const meta of SOURCE_CHECK_PLATFORMS) {
+  const buildPlatformRecommendation = (
+    meta: { readonly id: MusicPlatform; readonly label: string; readonly short: string },
+    directLx: boolean,
+  ): PlatformRoutingRecommendation | undefined => {
     const okCandidates: Array<{
       candidate: RecommendedPlatformCandidate;
       qRank: number;
+      directRank: number;
       losslessRank: number;
       latency: number;
     }> = [];
     const failedCandidates: RecommendedPlatformExclusion[] = [];
     let declaredCount = 0;
+    let foundRowCount = 0;
 
     for (const group of sourceGroups) {
       const row = group.rows.find(r => r.platform === meta.id);
-      if (!row || row.kind === 'unsupported') continue;
+      if (!row) continue;
+      foundRowCount++;
+      if (row.kind === 'unsupported') continue;
       declaredCount++;
       if (row.kind === 'ok') {
         const latency = rowLatencyMs(row);
         const displayLatency = Number.isFinite(latency) && latency < Number.MAX_SAFE_INTEGER ? latency : undefined;
+        const modeTag =
+          !directLx && row.resolvedMode === 'direct'
+            ? `${meta.short}直连`
+            : !directLx && row.matchedPlatform
+              ? `跨平台(${PLATFORM_SHORT_MAP[row.matchedPlatform]})`
+              : '';
         const reasonParts = [
+          modeTag,
           row.resolvedQuality ? row.resolvedQuality.toUpperCase() : '',
           row.audioFormat ? row.audioFormat.toUpperCase() : '',
           displayLatency !== undefined ? `${displayLatency} ms` : '',
@@ -1422,6 +1686,7 @@ export function recommendPlatformSourceRouting(
             reason: reasonParts.join(' · ') || '实测可用',
           },
           qRank: qualityRank(row.resolvedQuality),
+          directRank: row.resolvedMode === 'direct' ? 0 : 1,
           losslessRank: LOSSLESS_FORMATS.has(row.audioFormat) ? 0 : 1,
           latency,
         });
@@ -1434,8 +1699,11 @@ export function recommendPlatformSourceRouting(
       }
     }
 
+    if (!directLx && foundRowCount === 0) return undefined;
+
     okCandidates.sort((a, b) => {
       if (a.qRank !== b.qRank) return a.qRank - b.qRank;
+      if (a.directRank !== b.directRank) return a.directRank - b.directRank;
       if (a.losslessRank !== b.losslessRank) return a.losslessRank - b.losslessRank;
       return a.latency - b.latency;
     });
@@ -1443,102 +1711,124 @@ export function recommendPlatformSourceRouting(
     const priority = okCandidates.map(item => item.candidate);
     // Safety guard: never exclude all sources if zero verified sources succeeded.
     const excluded = priority.length > 0 ? failedCandidates : [];
+    const hasDirectSuccess = !directLx && okCandidates.some(item => item.directRank === 0);
     const note =
       declaredCount === 0
         ? '当前已启用音源均未声明支持该平台'
         : priority.length === 0 && failedCandidates.length > 0
           ? '本轮暂无通过检测的音源，为避免无源可用暂不自动排除'
-          : undefined;
+          : !directLx && priority.length > 0
+            ? hasDirectSuccess
+              ? '按本轮实测（原生直连 + 跨平台换源）音质与耗时排序'
+              : '官方/账号直连受限时，按本轮真实跨平台换源实测排序'
+            : undefined;
 
-    recommendations.push({
+    return {
       platform: meta.id,
       platformLabel: meta.label,
       platformShort: meta.short,
-      directLx: true,
+      directLx,
       priority,
       excluded,
       ...(note ? { note } : {}),
-    });
+    };
+  };
+
+  // 1. Online direct LX platforms (wy / tx / kw / kg / mg)
+  for (const meta of NETWORK_CHECK_PLATFORMS.slice(0, 5)) {
+    const rec = buildPlatformRecommendation(meta, true);
+    if (rec) recommendations.push(rec);
   }
 
-  // 2. Imported platforms (qishui / bodian) cross-platform LX fallback ranking
-  const crossStats = sourceGroups.map(group => {
-    const declared = group.rows.filter(r => r.kind !== 'unsupported');
-    const okRows = declared.filter(r => r.kind === 'ok');
-    const failedRows = declared.filter(isSourceSideFailure);
-    const latencies = okRows
-      .map(rowLatencyMs)
-      .filter(ms => Number.isFinite(ms) && ms < Number.MAX_SAFE_INTEGER);
-    const avgLatency = latencies.length
-      ? Math.round(latencies.reduce((sum, n) => sum + n, 0) / latencies.length)
-      : Number.MAX_SAFE_INTEGER;
-    const bestQRank = okRows.length
-      ? Math.min(...okRows.map(r => qualityRank(r.resolvedQuality)))
-      : qualityOrder.length;
-    return {
-      sourceId: group.sourceId,
-      sourceName: group.sourceName,
-      declaredCount: declared.length,
-      okCount: okRows.length,
-      failedCount: failedRows.length,
-      avgLatency,
-      bestQRank,
-      bestQuality: bestQRank < qualityOrder.length ? qualityOrder[bestQRank] : undefined,
-    };
-  });
+  // 2. Imported platforms (qishui / bodian): use real tested rows when available;
+  // gracefully fall back to cross-platform aggregate stats only for legacy 5-platform snapshots.
+  const importedMetas = NETWORK_CHECK_PLATFORMS.slice(5);
+  const missingImported: Array<(typeof importedMetas)[number]> = [];
+  for (const meta of importedMetas) {
+    const directTested = buildPlatformRecommendation(meta, false);
+    if (directTested) {
+      recommendations.push(directTested);
+    } else {
+      missingImported.push(meta);
+    }
+  }
 
-  const crossWorking = crossStats
-    .filter(item => item.okCount > 0)
-    .sort((a, b) => {
-      if (a.okCount !== b.okCount) return b.okCount - a.okCount;
-      if (a.bestQRank !== b.bestQRank) return a.bestQRank - b.bestQRank;
-      return a.avgLatency - b.avgLatency;
+  if (missingImported.length > 0) {
+    const crossStats = sourceGroups.map(group => {
+      const declared = group.rows.filter(r => r.kind !== 'unsupported');
+      const okRows = declared.filter(r => r.kind === 'ok');
+      const failedRows = declared.filter(isSourceSideFailure);
+      const latencies = okRows
+        .map(rowLatencyMs)
+        .filter(ms => Number.isFinite(ms) && ms < Number.MAX_SAFE_INTEGER);
+      const avgLatency = latencies.length
+        ? Math.round(latencies.reduce((sum, n) => sum + n, 0) / latencies.length)
+        : Number.MAX_SAFE_INTEGER;
+      const bestQRank = okRows.length
+        ? Math.min(...okRows.map(r => qualityRank(r.resolvedQuality)))
+        : qualityOrder.length;
+      return {
+        sourceId: group.sourceId,
+        sourceName: group.sourceName,
+        declaredCount: declared.length,
+        okCount: okRows.length,
+        failedCount: failedRows.length,
+        avgLatency,
+        bestQRank,
+        bestQuality: bestQRank < qualityOrder.length ? qualityOrder[bestQRank] : undefined,
+      };
     });
 
-  const crossPriority: RecommendedPlatformCandidate[] = crossWorking.map(item => {
-    const latencyMs = item.avgLatency < Number.MAX_SAFE_INTEGER ? item.avgLatency : undefined;
-    const parts = [
-      `通过 ${item.okCount}/${item.declaredCount} 平台`,
-      item.bestQuality ? item.bestQuality.toUpperCase() : '',
-      latencyMs !== undefined ? `均耗 ${latencyMs} ms` : '',
-    ].filter(Boolean);
-    return {
-      sourceId: item.sourceId,
-      sourceName: item.sourceName,
-      ...(item.bestQuality ? { quality: item.bestQuality } : {}),
-      ...(latencyMs !== undefined ? { latencyMs } : {}),
-      okPlatforms: item.okCount,
-      reason: parts.join(' · '),
-    };
-  });
+    const crossWorking = crossStats
+      .filter(item => item.okCount > 0)
+      .sort((a, b) => {
+        if (a.okCount !== b.okCount) return b.okCount - a.okCount;
+        if (a.bestQRank !== b.bestQRank) return a.bestQRank - b.bestQRank;
+        return a.avgLatency - b.avgLatency;
+      });
 
-  const crossExcluded: RecommendedPlatformExclusion[] =
-    crossPriority.length > 0
-      ? crossStats
-          .filter(item => item.okCount === 0 && item.failedCount > 0)
-          .map(item => ({
-            sourceId: item.sourceId,
-            sourceName: item.sourceName,
-            reason: `本轮 ${item.failedCount} 个声明平台均未通过`,
-          }))
-      : [];
-
-  for (const importedMeta of [
-    { id: 'qishui' as const, label: '汽水音乐', short: '汽水' },
-    { id: 'bodian' as const, label: '波点音乐', short: '波点' },
-  ]) {
-    recommendations.push({
-      platform: importedMeta.id,
-      platformLabel: importedMeta.label,
-      platformShort: importedMeta.short,
-      directLx: false,
-      priority: crossPriority,
-      excluded: crossExcluded,
-      note:
-        crossPriority.length > 0
-          ? '官方/账号直连受限时，按跨平台实测通过率与速度依次换源'
-          : '本轮暂无通过检测的 LX 音源，暂不修改跨平台换源规则',
+    const crossPriority: RecommendedPlatformCandidate[] = crossWorking.map(item => {
+      const latencyMs = item.avgLatency < Number.MAX_SAFE_INTEGER ? item.avgLatency : undefined;
+      const parts = [
+        `通过 ${item.okCount}/${item.declaredCount} 平台`,
+        item.bestQuality ? item.bestQuality.toUpperCase() : '',
+        latencyMs !== undefined ? `均耗 ${latencyMs} ms` : '',
+      ].filter(Boolean);
+      return {
+        sourceId: item.sourceId,
+        sourceName: item.sourceName,
+        ...(item.bestQuality ? { quality: item.bestQuality } : {}),
+        ...(latencyMs !== undefined ? { latencyMs } : {}),
+        okPlatforms: item.okCount,
+        reason: parts.join(' · '),
+      };
     });
+
+    const crossExcluded: RecommendedPlatformExclusion[] =
+      crossPriority.length > 0
+        ? crossStats
+            .filter(item => item.okCount === 0 && item.failedCount > 0)
+            .map(item => ({
+              sourceId: item.sourceId,
+              sourceName: item.sourceName,
+              reason: `本轮 ${item.failedCount} 个声明平台均未通过`,
+            }))
+        : [];
+
+    for (const importedMeta of missingImported) {
+      recommendations.push({
+        platform: importedMeta.id,
+        platformLabel: importedMeta.label,
+        platformShort: importedMeta.short,
+        directLx: false,
+        priority: crossPriority,
+        excluded: crossExcluded,
+        note:
+          crossPriority.length > 0
+            ? '官方/账号直连受限时，按跨平台实测通过率与速度依次换源'
+            : '本轮暂无通过检测的 LX 音源，暂不修改跨平台换源规则',
+      });
+    }
   }
 
   const actionable = recommendations.filter(r => r.priority.length > 0 || r.excluded.length > 0);

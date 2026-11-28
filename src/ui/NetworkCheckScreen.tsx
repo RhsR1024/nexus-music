@@ -429,6 +429,8 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
                           <Text style={{ color: s.subtle, fontSize: 10 }}>{phaseName}</Text>
                           <Text
                             numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.78}
                             style={{
                               color: colorForPhase(cell.state),
                               fontSize: 10.5,
@@ -472,7 +474,7 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
             <Text style={{ color: s.muted, fontSize: 12, lineHeight: 17 }}>
               {state.sourceGroups.length > 0
                 ? `${state.sourceFinishReason ? `${state.sourceFinishReason} · ` : ''}${state.sourceGroups.length} 个音源 · 已完成 ${sourceTested}/${allSourceRows.length}（正常 ${sourceOk} · 异常 ${sourceFailed}${sourceUncertain > 0 ? ` · 未确认 ${sourceUncertain}` : ''}）`
-                : state.sourceFinishReason ?? '6 路并发独立诊断会话检验 5 平台解析与音频头（自动降级验证），不改选源顺序'}
+                : state.sourceFinishReason ?? '6 路并发独立诊断会话检验全 7 平台解析与音频头（含汽水直连/跨平台换源），不改选源顺序'}
             </Text>
           </View>
 
@@ -489,23 +491,28 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
               }
             }}
             style={{
-              minHeight: 38,
-              paddingHorizontal: 13,
-              borderRadius: 19,
-              backgroundColor: sourceRunning ? failBg : s.accentSoft,
-              borderWidth: 1,
-              borderColor: sourceRunning ? failColor + '55' : s.control + '44',
+              minHeight: 40,
+              paddingHorizontal: 15,
+              borderRadius: 20,
+              backgroundColor: sourceRunning ? failBg : s.control,
+              borderWidth: sourceRunning ? 1 : 0,
+              borderColor: sourceRunning ? failColor + '55' : 'transparent',
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 5,
+              justifyContent: 'center',
+              gap: 6,
               opacity: platformRunning ? 0.42 : 1,
             }}
           >
-            {sourceRunning && <ActivityIndicator size="small" color={failColor} />}
+            {sourceRunning ? (
+              <ActivityIndicator size="small" color={failColor} />
+            ) : (
+              <Ionicons name="layers-outline" size={16} color="#FFFFFF" />
+            )}
             <Text
               style={{
-                color: sourceRunning ? failColor : s.control,
-                fontSize: 12.5,
+                color: sourceRunning ? failColor : '#FFFFFF',
+                fontSize: 13.5,
                 fontWeight: '700',
               }}
             >
@@ -524,6 +531,8 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
               : allDone
                 ? warnColor
                 : s.muted;
+          const firstRow = group.rows.slice(0, 4);
+          const secondRow = group.rows.slice(4);
 
           return (
             <View key={group.sourceId} style={{ gap: 8 }}>
@@ -543,42 +552,52 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
                   {okCount}/{declaredRows.length} 正常
                 </Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {group.rows.map(row => {
-                  const tone = colorForKind(row.kind);
-                  return (
-                    <Pressable
-                      key={row.id}
-                      testID={`network-source-cell-${group.sourceId}-${row.platform}`}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${group.sourceName} ${row.platformLabel} ${row.badge}`}
-                      onPress={() => setSelectedRowId(row.id)}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 8,
-                        paddingHorizontal: 4,
-                        borderRadius: 12,
-                        backgroundColor: s.dark ? 'rgba(255,255,255,0.04)' : 'rgba(42,36,31,0.03)',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <Text numberOfLines={1} style={{ color: s.muted, fontSize: 11, fontWeight: '600' }}>
-                        {row.platformShort}
-                      </Text>
-                      <Text
-                        numberOfLines={1}
-                        style={{
-                          color: row.kind === 'unsupported' ? s.subtle : tone.text,
-                          fontSize: 11,
-                          fontWeight: '700',
-                        }}
-                      >
-                        {row.badge}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              <View style={{ gap: 6 }}>
+                {[firstRow, ...(secondRow.length > 0 ? [secondRow] : [])].map((chunk, chunkIdx) => (
+                  <View key={chunkIdx} style={{ flexDirection: 'row', gap: 6 }}>
+                    {chunk.map(row => {
+                      const tone = colorForKind(row.kind);
+                      return (
+                        <Pressable
+                          key={row.id}
+                          testID={`network-source-cell-${group.sourceId}-${row.platform}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${group.sourceName} ${row.platformLabel} ${row.badge}`}
+                          onPress={() => setSelectedRowId(row.id)}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 8,
+                            paddingHorizontal: 4,
+                            borderRadius: 12,
+                            backgroundColor: s.dark ? 'rgba(255,255,255,0.04)' : 'rgba(42,36,31,0.03)',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <Text numberOfLines={1} style={{ color: s.muted, fontSize: 11, fontWeight: '600' }}>
+                            {row.platformShort}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.82}
+                            style={{
+                              color: row.kind === 'unsupported' ? s.subtle : tone.text,
+                              fontSize: 11,
+                              fontWeight: '700',
+                            }}
+                          >
+                            {row.badge}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                    {chunk.length < 4 &&
+                      Array.from({ length: 4 - chunk.length }).map((_, padIdx) => (
+                        <View key={`pad-${padIdx}`} style={{ flex: 1 }} />
+                      ))}
+                  </View>
+                ))}
               </View>
             </View>
           );
@@ -670,19 +689,21 @@ export function NetworkCheckScreen({ services }: { services: Services }) {
               alignItems: 'center',
               justifyContent: 'space-between',
               paddingVertical: 4,
-              gap: 8,
+              gap: 10,
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 }}>
-              <Ionicons name="git-branch-outline" size={16} color={s.control} />
-              <Text numberOfLines={1} style={{ color: s.ink, fontSize: 13, fontWeight: '600' }}>
-                分平台音源优先级与排除配置
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+              <Ionicons name="git-branch-outline" size={17} color={s.control} />
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text numberOfLines={1} style={{ color: s.ink, fontSize: 13.5, fontWeight: '600' }}>
+                  分平台音源优先级与排除配置
+                </Text>
+                <Text numberOfLines={1} style={{ color: s.muted, fontSize: 11.5 }}>
+                  测试全部音源后可一键应用推荐，也可随时手动微调
+                </Text>
+              </View>
             </View>
-            <Text style={{ color: s.muted, fontSize: 12 }}>
-              测试全部音源后可自动推荐
-            </Text>
-            <Ionicons name="chevron-forward" size={15} color={s.subtle} />
+            <Ionicons name="chevron-forward" size={16} color={s.subtle} />
           </Pressable>
         )}
 

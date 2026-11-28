@@ -12,7 +12,7 @@ import {
   pinSourceTopForPlatform,
   setSourceExcludedForPlatform,
 } from '../domain/platformRouting.ts';
-import type { MusicPlatform, OnlinePlatform } from '../domain/track.ts';
+import type { MusicPlatform } from '../domain/track.ts';
 import type { SourceCatalog, SourceView } from '../providers/sourceCatalog.ts';
 import { SheetModal } from './AdaptiveModal.tsx';
 import { PlatformLogo } from './PlatformLogo.tsx';
@@ -35,12 +35,14 @@ export const ALL_MUSIC_PLATFORM_ITEMS: readonly {
   { id: 'bodian', label: '波点音乐', short: '波点', directLx: false },
 ];
 
-const SHORT_PLATFORM_NAMES: Record<OnlinePlatform, string> = {
+const SHORT_PLATFORM_NAMES: Record<MusicPlatform, string> = {
   wy: '网易云',
   tx: 'QQ',
   kw: '酷我',
   kg: '酷狗',
   mg: '咪咕',
+  qishui: '汽水',
+  bodian: '波点',
 };
 
 export function formatDeclaredPlatforms(source: SourceView): string {

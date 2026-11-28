@@ -1,4 +1,4 @@
-import type { MusicPlatform, OnlinePlatform, Track } from '../domain/track.ts';
+import { trackPlatform, type MusicPlatform, type Track } from '../domain/track.ts';
 import { applyPlatformSourceRouting, type PlatformSourceRouting } from '../domain/platformRouting.ts';
 import { fallbackQualities, normalizeQuality, type Quality } from '../domain/quality.ts';
 import type { MediaResolver, ResolvedMedia } from '../playback/controller.ts';
@@ -28,7 +28,7 @@ function mediaURL(result: unknown): string | undefined {
 }
 
 export interface SmartSwitchPolicy {
-  qualityForPlatform?: (platform: OnlinePlatform) => Quality;
+  qualityForPlatform?: (platform: MusicPlatform) => Quality;
   degradeMode?: () => 'progressive' | 'direct128k';
   crossScript?: () => boolean;
   sourceRouting?: () => PlatformSourceRouting;
@@ -42,8 +42,8 @@ export class MultiSourceResolver {
   }
   async resolve(track: Track, signal: AbortSignal, excluded: ReadonlySet<string> = new Set(), qualityScope?:readonly Quality[], trace?:PlaybackTraceSink, originPlatform?:MusicPlatform): Promise<RoutedMedia> {
     throwIfAborted(signal);
-    if (track.origin.kind !== 'online') throw new Error('LX仅处理在线平台歌曲');
-    const platform = track.origin.platform;
+    const platform = trackPlatform(track);
+    if (!platform) throw new Error('LX仅处理在线或平台曲目');
     const preference = this.policy.qualityForPlatform?.(platform) ?? this.preference();
     const readySources = this.registry.getSnapshot().filter(source => this.registry.isCurrent(source));
     const sources = applyPlatformSourceRouting(readySources, platform, this.policy.sourceRouting?.(), originPlatform);

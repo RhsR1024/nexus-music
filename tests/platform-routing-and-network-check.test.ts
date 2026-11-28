@@ -18,6 +18,7 @@ import { createDownloadResolver } from '../src/providers/downloadResolver.ts';
 import { MatchedResolver } from '../src/providers/matchedResolver.ts';
 import { MultiSourceResolver, type LXTransport } from '../src/providers/multiSourceResolver.ts';
 import {
+  formatCompactMs,
   formatNetworkSummary,
   mergeRecommendedRouting,
   NETWORK_CHECK_PLATFORMS,
@@ -25,6 +26,7 @@ import {
   pickBestDiagnosticSample,
   pickDiagnosticQualities,
   recommendPlatformSourceRouting,
+  SOURCE_CHECK_PLATFORMS,
   type NetworkCheckRow,
   type PhaseDetail,
   type SourceCheckGroup,
@@ -639,5 +641,143 @@ test('startAllSourcesCheck degrades flac -> 320k/128k on resolve or probe failur
   const idx320 = wyRec.priority.findIndex(c => c.sourceId === 'src-1');
   const idx128 = wyRec.priority.findIndex(c => c.sourceId === 'src-2');
   assert.ok(idxFlac >= 0 && idxFlac < idx320 && idx320 < idx128);
+  coordinator.dispose();
+});
+
+test('all-7-platform source check tests native qs (qishui) direct + qishui/bodian cross-platform fallback and recommends accurately', async () => {
+  assert.equal(SOURCE_CHECK_PLATFORMS.length, 7);
+  assert.equal(formatCompactMs(170), '170ms');
+  assert.equal(formatCompactMs(2898), '2.9s');
+
+  const registry = new SourceRegistry({
+    initialize: async source => {
+      if (source.id === 's-qs-direct') {
+        return [
+          { platform: 'wy', name: 'wy', actions: ['musicUrl'], qualities: ['flac', '320k'] },
+          { platform: 'qishui', scriptPlatform: 'qs', name: 'qs', actions: ['musicUrl'], qualities: ['320k', '128k'] },
+        ];
+      }
+      if (source.id === 's-cross-flac') {
+        return [
+          { platform: 'wy', name: 'wy', actions: ['musicUrl'], qualities: ['flac', '320k'] },
+          { platform: 'kw', name: 'kw', actions: ['musicUrl'], qualities: ['flac', '320k'] },
+        ];
+      }
+      return [{ platform: 'kw', name: 'kw', actions: ['musicUrl'], qualities: ['flac'] }];
+    },
+    destroy() {},
+  });
+  registry.registerMany([
+    { id: 's-qs-direct', name: '汽水直连源', script: 'a', fingerprint: 'fp-a' },
+    { id: 's-cross-flac', name: '全能无损源', script: 'b', fingerprint: 'fp-b' },
+    { id: 's-broken', name: '异常源', script: 'c', fingerprint: 'fp-c' },
+  ]);
+  await registry.setManyEnabled(['s-qs-direct', 's-cross-flac', 's-broken'], true);
+
+  const seenRequests: Array<{ sourceId: string; wireSource: string; trackId: string }> = [];
+  const coordinator = new NetworkDiagnosticsCoordinator({
+    registry,
+    openDiagnostic: async source => ({
+      capabilities: source.capabilities,
+      request: async payload => {
+        seenRequests.push({
+          sourceId: source.id,
+          wireSource: payload.source,
+          trackId: String(payload.info.musicInfo.songmid),
+        });
+        if (source.id === 's-broken') throw new Error('FAIL');
+        if (source.id === 's-qs-direct' && payload.source === 'qs') {
+          return 'https://cdn.example/qs-direct.mp4';
+        }
+        return `https://cdn.example/${source.id}/${payload.source}.flac`;
+      },
+      dispose() {},
+    }),
+    discover: async () => 10,
+    searchSample: async (platform, keyword) => {
+      if (platform === 'qishui') return importedTrack('qishui', '700123456', '汽水测试歌', '歌手A');
+      if (platform === 'bodian') return importedTrack('bodian', '800654321', keyword, '歌手B');
+      return onlineTrack(platform, `${platform}-1`, keyword, '歌手B');
+    },
+    matchSample: async track => {
+      if (track.origin.kind === 'imported' && track.origin.platform === 'qishui') {
+        return [onlineTrack('wy', 'wy-qs-match', '汽水测试歌', '歌手A'), onlineTrack('kw', 'kw-qs-match', '汽水测试歌', '歌手A')];
+      }
+      if (track.origin.kind === 'imported' && track.origin.platform === 'bodian') {
+        return [onlineTrack('kw', 'kw-1', track.title, track.artist), onlineTrack('wy', 'wy-1', track.title, track.artist)];
+      }
+      return [];
+    },
+    resolveSample: async () => ({ url: 'https://cdn.example/ok.flac', quality: 'flac' }),
+    probe: async url => ({
+      state: 'header',
+      bytes: 4096,
+      status: 206,
+      format: url.endsWith('.mp4') ? 'mp4' : 'flac',
+    }),
+  });
+
+  await coordinator.startAllSourcesCheck('起风了');
+  const snap = coordinator.getSnapshot();
+  assert.equal(snap.sourceFinishReason, '检测完成');
+  assert.equal(snap.sourceGroups.length, 3);
+  for (const g of snap.sourceGroups) {
+    assert.equal(g.rows.length, 7);
+  }
+
+  // Native qs direct source actually invoked wireSource === 'qs' with Qishui track ID
+  assert.ok(seenRequests.some(r => r.sourceId === 's-qs-direct' && r.wireSource === 'qs' && r.trackId === '700123456'));
+  const qsDirectRow = snap.sourceGroups.find(g => g.sourceId === 's-qs-direct')!.rows.find(r => r.platform === 'qishui')!;
+  assert.equal(qsDirectRow.kind, 'ok');
+  assert.equal(qsDirectRow.resolvedMode, 'direct');
+  assert.equal(qsDirectRow.audioFormat, 'mp4');
+
+  const qsCrossRow = snap.sourceGroups.find(g => g.sourceId === 's-cross-flac')!.rows.find(r => r.platform === 'qishui')!;
+  assert.equal(qsCrossRow.kind, 'ok');
+  assert.equal(qsCrossRow.resolvedMode, 'cross-platform');
+  assert.equal(qsCrossRow.matchedPlatform, 'wy');
+
+  const bdCrossRow = snap.sourceGroups.find(g => g.sourceId === 's-cross-flac')!.rows.find(r => r.platform === 'bodian')!;
+  assert.equal(bdCrossRow.kind, 'ok');
+  assert.equal(bdCrossRow.resolvedMode, 'cross-platform');
+
+  // Smart routing uses real qishui & bodian rows (including excluding s-broken accurately)
+  const plan = recommendPlatformSourceRouting(snap.sourceGroups);
+  const qsRec = plan.platforms.find(p => p.platform === 'qishui')!;
+  assert.equal(qsRec.priority.length, 2);
+  assert.ok(qsRec.priority.some(c => c.sourceId === 's-qs-direct' && c.reason.includes('汽水直连')));
+  assert.ok(qsRec.priority.some(c => c.sourceId === 's-cross-flac' && c.reason.includes('跨平台(网易云)')));
+  assert.deepEqual(qsRec.excluded.map(e => e.sourceId), ['s-broken']);
+
+  const bdRec = plan.platforms.find(p => p.platform === 'bodian')!;
+  assert.equal(bdRec.priority.length, 2);
+  assert.deepEqual(bdRec.excluded.map(e => e.sourceId), ['s-broken']);
+
+  // Real playback via MatchedResolver also uses direct qs capability on qishui tracks before cross-matching
+  let matcherCalled = false;
+  const multi = new MultiSourceResolver(
+    registry,
+    {
+      request: async (_source, payload) => `https://cdn.example/${payload.source}/${payload.info.musicInfo.songmid}.mp4`,
+    },
+    () => '320k',
+  );
+  const matched = new MatchedResolver({
+    matcher: {
+      candidates: async () => {
+        matcherCalled = true;
+        return { items: [], failedPlatforms: [] };
+      },
+    },
+    library: { matchFor: () => undefined, setMatch: async () => {} },
+    router: multi,
+    available: () => ['wy', 'kw'],
+    directAvailable: p => p === 'qishui',
+    quality: () => '320k',
+    hash: async v => v,
+  });
+  const directMedia = await matched.resolve(importedTrack('qishui', '700123456', '汽水测试歌', '歌手A'), new AbortController().signal);
+  assert.equal(directMedia.sourceId, 's-qs-direct');
+  assert.equal(matcherCalled, false);
   coordinator.dispose();
 });

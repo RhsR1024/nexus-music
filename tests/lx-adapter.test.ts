@@ -6,12 +6,16 @@ import { SourceRegistry } from '../src/providers/sourceRegistry.ts';
 import type { SourceDefinition } from '../src/providers/sourceRegistry.ts';
 import { track } from './fixtures.ts';
 
-test('capabilities only expose first-release platforms/actions, preserving real qualities', () => {
+test('capabilities expose supported 7 platforms (mapping qs -> qishui) and ignore unknown platforms/actions', () => {
   const sources = readLXCapabilities({ sources: {
     tx: { name: 'QQ', actions: ['musicUrl', 'lyric', 'unknown'], qualitys: ['128k', 'flac', 'flac'] },
-    qs: { actions: ['musicUrl'], qualitys: ['128k'] },
+    qs: { actions: ['musicUrl'], qualitys: ['128k', '320k'] },
+    bili: { actions: ['musicUrl'], qualitys: ['128k'] },
   } });
-  assert.deepEqual(sources, [{ platform: 'tx', name: 'QQ', actions: ['musicUrl', 'lyric'], qualities: ['128k', 'flac'] }]);
+  assert.deepEqual(sources, [
+    { platform: 'tx', name: 'QQ', actions: ['musicUrl', 'lyric'], qualities: ['128k', 'flac'] },
+    { platform: 'qishui', scriptPlatform: 'qs', name: 'qishui', actions: ['musicUrl'], qualities: ['128k', '320k'] },
+  ]);
   assert.throws(() => readLXCapabilities({ sources: { tx: { actions: [], qualitys: [128] } } }));
 });
 

@@ -275,6 +275,11 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
         }
       }
       return out;
+    },
+    directAvailable:(platform:MusicPlatform)=>{
+      const ready=registry.getSnapshot().filter(source=>registry.isCurrent(source));
+      const routed=applyPlatformSourceRouting(ready,platform,preferences.getSnapshot().platformSourceRouting);
+      return routed.some(source=>source.capabilities.some(value=>value.platform===platform&&value.actions.includes('musicUrl')));
     }});
   const preloadCache=new PreloadCache({maxEntries:12,ttlMs:180_000});
   const preloadQualityFor=(track:Track)=>{const platform=trackPlatform(track);return platform?playbackQualityFor(platform):preferences.getSnapshot().quality;};
@@ -554,7 +559,7 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
       if(platform==='bodian'){
         const session=bodianAccount.getSnapshot().loggedIn?await bodianAccount.session().catch(()=>null):null;
         const res=await bodian.searchSongs(keyword,1,signal,session);
-        return res.items[0];
+        return pickBestDiagnosticSample(res.items,'bodian',keyword)??res.items[0];
       }
       const res=await online.search(platform,keyword,1,signal,10).catch(()=>({items:[] as readonly Track[],page:1,hasMore:false}));
       const directHit=pickBestDiagnosticSample(res.items,platform,keyword);
@@ -567,6 +572,19 @@ export async function createServices(options:{onlineHTTP?:HTTPClient;onlineTextH
       return detail.items.find(item=>item.origin.kind==='online'&&item.origin.platform===platform);
     },
     resolveSample:(track,signal)=>resolveTrack(track,signal),
+    matchSample:async(track,signal)=>{
+      const res=await matching.candidates(track,signal).catch(()=>({items:[] as readonly {track:Track;automatic:boolean}[],failedPlatforms:[]}));
+      const seen=new Set<OnlinePlatform>();
+      const out:Track[]=[];
+      for(const item of res.items){
+        if(item.track.origin.kind!=='online')continue;
+        if(seen.has(item.track.origin.platform))continue;
+        if(!item.automatic&&out.length>0)continue;
+        seen.add(item.track.origin.platform);
+        out.push(item.track);
+      }
+      return out;
+    },
     enrichOnlineTrack:(track,signal)=>online.enrich(track,signal),
     probe:audioProbe,
     readNetworkStatus:async()=>nativeAux?.getNetworkStatus?nativeAux.getNetworkStatus():undefined,
