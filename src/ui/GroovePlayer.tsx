@@ -6,15 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { GrooveSpinSpeed } from '../app/preferences.ts';
 import { trackKey, type Track } from '../domain/track.ts';
-import { activeLyric } from '../lyrics/parser.ts';
-import { LyricPreview } from '../lyrics/preview.ts';
+import { displayLyricIndex } from '../lyrics/parser.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { SheetModal } from './AdaptiveModal.tsx';
 import { Cover } from './Cover.tsx';
-import { Lyrics } from './Lyrics.tsx';
+import { Lyrics, useLyricDocument } from './Lyrics.tsx';
+import { PlayModeButton } from './PlayModeButton.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { SkipGlyph } from './SkipGlyph.tsx';
+import { Toast, useToast } from './Toast.tsx';
 import { Text } from './Typography.tsx';
 import { useStablePlaybackStatus } from './usePlaybackStatus.ts';
 
@@ -68,13 +69,9 @@ export function GroovePlayer({
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const toast = useToast();
 
-  const preview = useMemo(() => new LyricPreview((t, sig) => services.lyrics.load(t, sig)), [services]);
-  const lyricSnap = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
-  useEffect(() => {
-    void preview.load(lyricTrack);
-    return () => preview.clear();
-  }, [preview, lyricTrack]);
+  const { value: lyricResult } = useLyricDocument(services, lyricTrack);
 
   useEffect(() => {
     let alive = true;
@@ -111,9 +108,9 @@ export function GroovePlayer({
     return () => { active = false; anim?.stop(); rotation.stopAnimation(); };
   }, [playing, spinSpeed, reduceMotion, foreground, rotation]);
 
-  const doc = lyricSnap.document;
+  const doc = lyricResult?.document;
   const offsetMs = lyricOffset(preferences.lyricOffsetMs, preferences.lyricOffsets, trackKey(lyricTrack.origin));
-  const activeIdx = doc?.synced ? activeLyric(doc.lines, state.position * 1000, offsetMs) : -1;
+  const activeIdx = doc?.synced ? displayLyricIndex(doc.lines, state.position * 1000, offsetMs) : -1;
   const lineText = (idx: number) => {
     if (!doc) return '';
     if (!doc.synced) return doc.plain[idx]?.trim() ?? '';
@@ -253,7 +250,7 @@ export function GroovePlayer({
       >
         <Text numberOfLines={1} style={styles.lyricDim}>{prevLine || ' '}</Text>
         <Text numberOfLines={2} style={[styles.lyricActive, font ? { fontFamily: font } : undefined]}>
-          {currLine || (lyricSnap.loading ? '正在载入螺旋槽歌词…' : '暂无同步歌词，轻触查看全部')}
+          {currLine || (!lyricResult ? '正在载入螺旋槽歌词…' : '暂无同步歌词，轻触查看全部')}
         </Text>
         <Text numberOfLines={1} style={styles.lyricDim}>{nextLine || ' '}</Text>
       </Pressable>
@@ -279,9 +276,17 @@ export function GroovePlayer({
         <PlaybackProgress services={services} adaptive variant="immersive" />
 
         <View style={styles.transport}>
-          <Pressable accessibilityRole="button" accessibilityLabel="循环模式" onPress={() => void services.preferences.update({ repeat: preferences.repeat === 'off' ? 'all' : preferences.repeat === 'all' ? 'one' : 'off' }).catch(() => {})} style={styles.hit}>
-            <Ionicons name="repeat" size={21} color={preferences.repeat === 'off' ? 'rgba(255,255,255,0.5)' : '#F2C689'} />
-          </Pressable>
+          <PlayModeButton
+            repeat={preferences.repeat}
+            shuffle={preferences.shuffle}
+            color="#F2C689"
+            activeColor="#F2C689"
+            mutedColor="rgba(255,255,255,0.5)"
+            size={21}
+            onCycle={next => {
+              void services.preferences.update({ repeat: next.repeat, shuffle: next.shuffle }).then(() => toast.show(next.label)).catch(() => {});
+            }}
+          />
           <Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={() => services.playback.next(-1)} style={styles.hit}>
             <SkipGlyph direction="back" width={19} height={24} gap={3.5} color="#FFFFFF" />
           </Pressable>
@@ -327,6 +332,7 @@ export function GroovePlayer({
           <Lyrics services={services} track={lyricTrack} font={font} presentation="immersive" />
         </View>
       </SheetModal>
+      <Toast message={toast.message} onDismiss={toast.clear} />
     </View>
   );
 }

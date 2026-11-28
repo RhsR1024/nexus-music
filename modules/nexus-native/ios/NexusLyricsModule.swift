@@ -32,7 +32,7 @@ final class NexusLyricLineView: ExpoView {
   private var styledRanges: [(range: NSRange, style: LyricInlineStyle)] = []
   private var untimedRanges: [NSRange] = []
   private var sparseCues: [LyricCueRange]?
-  private var position = 0.0, anchor = 0.0, playing = false
+  private var position = 0.0, anchor = 0.0, rate = 1.0, playing = false
   private var signature = "", color = UIColor.white
   private var observers: [NSObjectProtocol] = []
   private var blur = 0.0, emphasis = true, embolden = 0.0
@@ -100,6 +100,8 @@ final class NexusLyricLineView: ExpoView {
     guard json.utf8.count < LyricCueRanges.configurationByteLimit, let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
           let text = object["text"] as? String, text.utf16.count <= 20000 else { return }
     position = (object["position"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 0
+    let requestedRate = (object["rate"] as? Double).flatMap { $0.isFinite ? $0 : nil } ?? 1.0
+    rate = min(3.0, max(0.5, requestedRate))
     anchor = CACurrentMediaTime(); playing = object["playing"] as? Bool == true
     let size = min(100, max(10, object["size"] as? Double ?? 24))
     let center = object["center"] as? Bool == true
@@ -267,7 +269,7 @@ final class NexusLyricLineView: ExpoView {
     )
   }
   fileprivate func tick() {
-    if position + (CACurrentMediaTime() - anchor) * 1000 >= (words.map { $0.end }.max() ?? 0) { position = words.map { $0.end }.max() ?? position; anchor = CACurrentMediaTime(); clock?.invalidate(); clock = nil }
+    if position + (CACurrentMediaTime() - anchor) * 1000 * rate >= (words.map { $0.end }.max() ?? 0) { position = words.map { $0.end }.max() ?? position; anchor = CACurrentMediaTime(); clock?.invalidate(); clock = nil }
     setNeedsDisplay()
   }
   private func updateClock() {
@@ -515,7 +517,7 @@ final class NexusLyricLineView: ExpoView {
       context.restoreGState()
       for range in untimedRanges { drawInk(manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil), in: context) }
     }
-    let time = position + (playing && clock != nil ? min(1000, (CACurrentMediaTime() - anchor) * 1000) : 0)
+    let time = position + (playing && clock != nil ? min(1000 * rate, (CACurrentMediaTime() - anchor) * 1000 * rate) : 0)
     for word in words {
       let fraction = word.end > word.start ? min(1, max(0, (time - word.start) / (word.end - word.start))) : (time >= word.start ? 1.0 : 0.0)
       guard fraction > 0 else { continue }

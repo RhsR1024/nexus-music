@@ -5,12 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { TeletypeTheme } from '../app/preferences.ts';
 import { trackKey, type Track } from '../domain/track.ts';
-import { activeLyric } from '../lyrics/parser.ts';
-import { LyricPreview } from '../lyrics/preview.ts';
+import { displayLyricIndex, lyricLineProgress } from '../lyrics/parser.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { teletypeVisibleChars } from '../lyrics/teletype.ts';
 import { Cover } from './Cover.tsx';
+import { useLyricDocument } from './Lyrics.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { Text } from './Typography.tsx';
 import { useStablePlaybackStatus } from './usePlaybackStatus.ts';
@@ -89,12 +89,7 @@ export function TeletypePlayer({
   useSyncExternalStore(services.songFavorites.subscribe, services.songFavorites.getSnapshot);
   const status = useStablePlaybackStatus(state, { resolving: '正在择源…', buffering: '缓冲中…' });
 
-  const preview = useMemo(() => new LyricPreview((t, sig) => services.lyrics.load(t, sig)), [services]);
-  const lyricSnap = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
-  useEffect(() => {
-    void preview.load(lyricTrack);
-    return () => preview.clear();
-  }, [preview, lyricTrack]);
+  const { value: lyricResult } = useLyricDocument(services, lyricTrack);
 
   const [cursorOn, setCursorOn] = useState(true);
   useEffect(() => {
@@ -104,10 +99,10 @@ export function TeletypePlayer({
 
   const themeKey = preferences.teletypeTheme;
   const pal = PALETTES[themeKey];
-  const doc = lyricSnap.document;
+  const doc = lyricResult?.document;
   const posMs = state.position * 1000;
   const offsetMs = lyricOffset(preferences.lyricOffsetMs, preferences.lyricOffsets, trackKey(lyricTrack.origin));
-  const activeIdx = doc?.synced ? activeLyric(doc.lines, posMs, offsetMs) : -1;
+  const activeIdx = doc?.synced ? displayLyricIndex(doc.lines, posMs, offsetMs) : -1;
 
   const historyLines = useMemo(() => {
     if (!doc) return [] as { idx: number; text: string; time: string }[];
@@ -127,14 +122,9 @@ export function TeletypePlayer({
   const activeLine = doc?.synced && activeIdx >= 0 ? doc.lines[activeIdx] : undefined;
   const nextLine = doc?.synced && activeIdx >= 0 ? doc.lines[activeIdx + 1] : undefined;
   const activeFull = activeLine ? convertLyricScript(activeLine.text, preferences.lyricChineseMode) : '';
-  const lineDuration = activeLine
-    ? (activeLine.endMs && activeLine.endMs > activeLine.startMs
-        ? activeLine.endMs - activeLine.startMs
-        : nextLine
-          ? Math.max(800, nextLine.startMs - activeLine.startMs)
-          : 3500)
-    : 3000;
-  const typedText = activeLine ? teletypeVisibleChars(activeFull, posMs - offsetMs - activeLine.startMs, lineDuration) : '';
+  const progress = activeLine ? lyricLineProgress(activeLine, posMs - offsetMs, nextLine?.startMs) : 0;
+  const chars = Array.from(activeFull);
+  const typedText = activeLine ? chars.slice(0, Math.max(1, Math.ceil(chars.length * Math.max(0.05, progress)))).join('') : '';
 
   const isFav = services.songFavorites.isFavorite(favoriteTrack);
   const controller = services.playback.controller;
@@ -217,7 +207,7 @@ export function TeletypePlayer({
             </View>
           ) : (
             <Text style={{ fontFamily: MONO_FONT, fontSize: 14, color: pal.muted, paddingVertical: 16 }}>
-              {lyricSnap.loading ? '>> RECEIVING LYRIC FEED...' : '>> NO SYNCED TELEGRAPH LYRICS AVAILABLE'}
+              {!lyricResult ? '>> RECEIVING LYRIC FEED...' : '>> NO SYNCED TELEGRAPH LYRICS AVAILABLE'}
               <Text style={{ color: pal.accent, opacity: cursorOn ? 1 : 0.15 }}>▌</Text>
             </Text>
           )}

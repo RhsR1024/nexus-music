@@ -66,6 +66,52 @@ function extractMiguArtwork(value: Row): string | undefined {
   }
   return pickFromArray(value.albumImgs) ?? pickFromArray(value.imgItems) ?? normalizePublicArtwork(row(list(value.singerImg ? Object.values(row(value.singerImg)) : [])[0]).miguImgUrl, 'https://d.musicapp.migu.cn');
 }
+function extractKuwoArtwork(value: Row): string | undefined {
+  for (const direct of [value.pic, value.hts_MVPIC, value.albumpic, value.albumPic, value.cover]) {
+    const url = normalizePublicArtwork(direct);
+    if (url) return url;
+  }
+  const albumShort = text(value.web_albumpic_short ?? value.albumpic_short).trim();
+  if (albumShort) {
+    if (/^https?:\/\//i.test(albumShort)) return albumShort.replace(/^http:\/\//i, 'https://');
+    const clean = albumShort.replace(/^\/+/, '').replace(/^120\//, '500/');
+    return `https://img4.kuwo.cn/star/albumcover/${clean}`;
+  }
+  const mvPic = text(value.MVPIC).trim();
+  if (mvPic) {
+    if (/^https?:\/\//i.test(mvPic)) return mvPic.replace(/^http:\/\//i, 'https://');
+    return `https://img2.kuwo.cn/wmvpic/${mvPic.replace(/^\/+/, '')}`;
+  }
+  const artistShort = text(value.web_artistpic_short).trim();
+  if (artistShort) {
+    if (/^https?:\/\//i.test(artistShort)) return artistShort.replace(/^http:\/\//i, 'https://');
+    const clean = artistShort.replace(/^\/+/, '').replace(/^120\//, '300/');
+    return `https://img3.kuwo.cn/star/starheads/${clean}`;
+  }
+  return undefined;
+}
+function extractQQArtwork(value: Row, album: Row): string | undefined {
+  const albumMid = text(album.mid ?? value.albummid).trim();
+  if (albumMid && albumMid !== '00000000000000') {
+    return `https://y.gtimg.cn/music/photo_new/T002R500x500M000${albumMid}.jpg`;
+  }
+  const vs = list(value.vs).map(item => text(item).trim()).filter(Boolean);
+  for (const vsId of [vs[1], vs[0], ...vs.slice(2)]) {
+    if (vsId && /^[A-Za-z0-9]{10,24}$/.test(vsId)) {
+      return `https://y.gtimg.cn/music/photo_new/T062R300x300M000${vsId}.jpg`;
+    }
+  }
+  const albumPmid = text(album.pmid ?? value.albumpmid).trim();
+  if (albumPmid && /^[A-Za-z0-9_]{10,32}$/.test(albumPmid)) {
+    return `https://y.gtimg.cn/music/photo_new/T002R500x500M000${albumPmid}.jpg`;
+  }
+  const firstSinger = row(list(value.singer)[0]);
+  const singerMid = text(firstSinger.mid ?? firstSinger.pmid).trim();
+  if (singerMid && /^[A-Za-z0-9]{10,24}$/.test(singerMid)) {
+    return `https://y.gtimg.cn/music/photo_new/T001R300x300M000${singerMid}.jpg`;
+  }
+  return undefined;
+}
 export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
   const value = row(raw);
   let track: Track;
@@ -80,15 +126,17 @@ export function onlineTrack(platform: OnlinePlatform, raw: unknown): Track {
   } else if (platform === 'tx') {
     const album = row(value.album), file = row(value.file), mid = id(value.mid ?? value.songmid), albumMid = text(album.mid ?? value.albummid);
     const duration = number(value.interval);
+    const txArtwork = extractQQArtwork(value, album);
     track = { origin: { kind: 'online', platform, id: mid }, title: text(value.title ?? value.name ?? value.songname), artist: names(value.singer), album: text(album.name ?? value.albumname),
-      ...(duration !== undefined ? { durationMs: duration * 1000 } : {}), artwork: albumMid ? `https://y.gtimg.cn/music/photo_new/T002R500x500M000${albumMid}.jpg` : undefined,
+      ...(duration !== undefined ? { durationMs: duration * 1000 } : {}), ...(txArtwork ? { artwork: txArtwork } : {}),
       metadata: { id: text(value.id ?? value.songid), songId: mid, albumId: albumMid, albumMid, strMediaMid: text(file.media_mid ?? value.media_mid), songmid: mid },
       qualities: qualities({ '128k': file.size_128mp3, '320k': file.size_320mp3, flac: file.size_flac, flac24bit: file.size_hires }) };
   } else if (platform === 'kw') {
     const songId = id(value.MUSICRID ?? value.rid).replace(/^MUSIC_/, ''), duration = number(value.DURATION ?? value.duration);
     const info = text(value.N_MINFO), available = ['128k', '320k', 'flac', 'flac24bit'].filter((_, index) => info.includes(`bitrate:${[128,320,2000,4000][index]},`));
+    const kwArtwork = extractKuwoArtwork(value);
     track = { origin: { kind: 'online', platform, id: songId }, title: decoded(value.SONGNAME ?? value.name), artist: decoded(value.ARTIST ?? value.artist).replaceAll('&', ' / '), album: decoded(value.ALBUM ?? value.album),
-      ...(duration !== undefined ? { durationMs: duration*1000 } : {}), artwork: text(value.pic) || undefined,
+      ...(duration !== undefined ? { durationMs: duration*1000 } : {}), ...(kwArtwork ? { artwork: kwArtwork } : {}),
       metadata: { albumId: text(value.ALBUMID ?? value.albumid), formats: text(value.FORMATS), N_MINFO: info }, qualities: available.map(id => ({ id })) };
   } else if (platform === 'kg') {
     const hash = id(value.FileHash ?? value.hash), duration = number(value.Duration ?? value.duration), audioId = text(value.Audioid ?? value.audio_id);
@@ -117,13 +165,29 @@ export class OnlineProvider {
   private sha1: NonNullable<OnlineDependencies['sha1']>;
   constructor(dependencies: OnlineDependencies) { this.http = dependencies.http ?? requestJSON; this.md5 = dependencies.md5; this.deviceId = dependencies.deviceId; this.sha1 = dependencies.sha1 ?? (async () => { throw new Error('SHA1不可用'); }); }
   async artwork(track:Track,signal:AbortSignal):Promise<string|undefined>{
-    if(track.origin.kind!=='online'||track.origin.platform!=='wy'||!/^\d+$/.test(track.origin.id))return undefined;
-    const id=track.origin.id;
-    const body=Object.entries({c:JSON.stringify([{id}]),ids:JSON.stringify([id])}).map(([key,value])=>`${key}=${encodeURIComponent(value)}`).join('&');
-    const response=row(await this.http('https://music.163.com/api/v3/song/detail',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Referer:'https://music.163.com/'},body},signal));
-    if(response.code!==200)throw new Error('封面元数据暂不可用');
-    const song=list(response.songs).map(row).find(song=>text(song.id)===id);
-    return song?text(row(song.al??song.album).picUrl)||undefined:undefined;
+    if(track.origin.kind!=='online')return undefined;
+    if(track.origin.platform==='wy'&&/^\d+$/.test(track.origin.id)){
+      const id=track.origin.id;
+      const body=Object.entries({c:JSON.stringify([{id}]),ids:JSON.stringify([id])}).map(([key,value])=>`${key}=${encodeURIComponent(value)}`).join('&');
+      const response=row(await this.http('https://music.163.com/api/v3/song/detail',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Referer:'https://music.163.com/'},body},signal));
+      if(response.code!==200)throw new Error('封面元数据暂不可用');
+      const song=list(response.songs).map(row).find(song=>text(song.id)===id);
+      return song?text(row(song.al??song.album).picUrl)||undefined:undefined;
+    }
+    if(track.origin.platform==='kw'&&/^\d+$/.test(track.origin.id)){
+      const response=row(await this.http(queryURL('https://m.kuwo.cn/newh5/singles/songinfoandlrc',{musicId:track.origin.id}),{},signal));
+      const info=row(row(response.data).songinfo);
+      return extractKuwoArtwork(info);
+    }
+    if(track.origin.platform==='kg'){
+      const hash=text(track.metadata.hash).toUpperCase();
+      if(!/^[A-F0-9]{32}$/.test(hash))return undefined;
+      const response=row(await this.http('https://gateway.kugou.com/v2/album_audio/audio',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json','x-router':'kmr.service.kugou.com'},body:JSON.stringify({area_code:'1',show_privilege:1,show_album_info:'1',is_publish:'',appid:1005,clientver:11451,mid:'1',dfid:'-',clienttime:Date.now(),key:'OIlwieks28dk2k092lksi2UIkp',fields:'album_info,audio_info,authors,base,trans_param',data:[{hash}]})},signal));
+      const first=Array.isArray(response.data)?response.data[0]:undefined;
+      const item=row(Array.isArray(first)?first[0]:first);
+      return extractKugouArtwork(item);
+    }
+    return undefined;
   }
   async enrich(track:Track,signal:AbortSignal):Promise<Track>{
     if(track.origin.kind!=='online'||track.origin.platform!=='tx'||track.metadata.needsMetadata!==true)return track;

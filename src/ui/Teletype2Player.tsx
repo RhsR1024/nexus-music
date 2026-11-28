@@ -6,11 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import { move, remove, select } from '../domain/queue.ts';
 import { trackKey, type Track } from '../domain/track.ts';
-import type { LyricDocument } from '../lyrics/parser.ts';
-import { activeLyric } from '../lyrics/parser.ts';
+import { displayLyricIndex, lyricLineProgress } from '../lyrics/parser.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { Modal } from './AdaptiveModal.tsx';
+import { useLyricDocument } from './Lyrics.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { SliderControl } from './SliderControl.tsx';
 import { Text } from './Typography.tsx';
@@ -18,6 +18,7 @@ import { Text } from './Typography.tsx';
 const NativeLocalCanvas = requireNativeView<
   ViewProps & {
     html: string;
+    assetsJson?: string;
     stateJson: string;
     onAction?: (event: { nativeEvent: Record<string, unknown> }) => void;
   }
@@ -64,7 +65,7 @@ const TELETYPE2_HTML = `<!doctype html>
     activeIndex:0,lineProgress:0,lines:[],
     params:{paperTone:'cream',inkDensity:0.88,ribbonWear:0.18,fontSize:15,redChorusRibbon:true,showTimestamps:true,showTranslation:true}
   };
-  var scrollY=0,needle=0.15,carriageX=0,lastNow=performance.now();
+  var scrollY=0,needle=0.15,carriageX=0,lastNow=performance.now(),pausedLoop=false,rafId=0;
 
   function resize(){
     W=window.innerWidth||360;H=window.innerHeight||420;
@@ -79,6 +80,7 @@ const TELETYPE2_HTML = `<!doctype html>
   }
 
   function draw(now){
+    if(pausedLoop){rafId=0;return;}
     var dt=Math.min(0.05,(now-lastNow)/1000);lastNow=now;
     var p=state.params;
     var fasciaH=76;
@@ -226,18 +228,29 @@ const TELETYPE2_HTML = `<!doctype html>
     ctx.stroke();
     ctx.beginPath();ctx.arc(mx+mw/2,my+mh-4,3,0,Math.PI*2);ctx.fillStyle='#221E1B';ctx.fill();
 
-    requestAnimationFrame(draw);
+    rafId=requestAnimationFrame(draw);
   }
 
   window.nexusCanvas={
+    setAssets:function(next){
+      if(!next||typeof next!=='object')return;
+      if(typeof next.title==='string')state.title=next.title;
+      if(typeof next.artist==='string')state.artist=next.artist;
+      if(Array.isArray(next.lines))state.lines=next.lines;
+    },
     setState:function(next){
       if(!next||typeof next!=='object')return;
       state=Object.assign(state,next);
+    },
+    setPaused:function(flag){
+      pausedLoop=!!flag;
+      if(pausedLoop&&rafId){cancelAnimationFrame(rafId);rafId=0;}
+      else if(!pausedLoop&&!rafId){lastNow=performance.now();rafId=requestAnimationFrame(draw);}
     }
   };
   window.addEventListener('resize',resize);
   resize();
-  requestAnimationFrame(draw);
+  rafId=requestAnimationFrame(draw);
 })();
 </script>
 </body>
@@ -266,40 +279,30 @@ export function Teletype2Player({
   const [paramsOpen, setParamsOpen] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const [doc, setDoc] = useState<LyricDocument | null>(null);
 
   const key = trackKey(lyricTrack.origin);
-  useEffect(() => {
-    const abort = new AbortController();
-    setDoc(null);
-    void services.lyrics.load(lyricTrack, abort.signal).then(res => {
-      if (!abort.signal.aborted) setDoc(res.document);
-    }).catch(() => {});
-    return () => abort.abort();
-  }, [services, key]);
+  const { value: lyricResult } = useLyricDocument(services, lyricTrack);
+  const doc = lyricResult?.document ?? null;
 
   const offset = lyricOffset(preferences.lyricOffsetMs, preferences.lyricOffsets, key);
   const playing = state.intent === 'playing' && !state.buffering;
-  const posMs = state.position * 1000 - offset;
+  const posMs = state.position * 1000;
   const activeIdx = useMemo(() => {
     if (!doc?.synced || !doc.lines.length) return 0;
-    return Math.max(0, activeLyric(doc.lines, state.position * 1000, offset));
-  }, [doc, state.position, offset]);
+    return Math.max(0, displayLyricIndex(doc.lines, posMs, offset));
+  }, [doc, posMs, offset]);
 
   const lineProgress = useMemo(() => {
     if (!doc?.synced || !doc.lines.length) return 1;
     const cur = doc.lines[activeIdx];
     if (!cur) return 1;
-    const next = doc.lines[activeIdx + 1];
-    const endMs = cur.endMs ?? next?.startMs ?? (cur.startMs + 4200);
-    const span = Math.max(800, endMs - cur.startMs);
-    return Math.max(0.05, Math.min(1, (posMs - cur.startMs) / span));
-  }, [doc, activeIdx, posMs]);
+    return Math.max(0.05, lyricLineProgress(cur, posMs - offset, doc.lines[activeIdx + 1]?.startMs));
+  }, [doc, activeIdx, posMs, offset]);
 
   const canvasLines = useMemo(() => {
     const raw = doc?.synced
       ? doc.lines.map(l => ({ ms: l.startMs, t: convertLyricScript(l.text, preferences.lyricChineseMode), tr: l.translation ? convertLyricScript(l.translation, preferences.lyricChineseMode) : '' }))
-      : (doc?.plain ?? []).slice(0, 80).map((t, idx) => ({ ms: idx * 3500, t: convertLyricScript(t, preferences.lyricChineseMode), tr: '' }));
+      : (doc?.plain ?? []).slice(0, 120).map((t, idx) => ({ ms: idx * 3500, t: convertLyricScript(t, preferences.lyricChineseMode), tr: '' }));
     const counts = new Map<string, number>();
     for (const item of raw) {
       const k = item.t.trim().toLowerCase();
@@ -312,18 +315,19 @@ export function Teletype2Player({
     ? spectrum.bands.slice(0, 8).reduce((a, b) => a + b, 0) / 8
     : playing ? 0.42 : 0;
 
-  const stateJson = useMemo(() => JSON.stringify({
+  const assetsJson = useMemo(() => JSON.stringify({
     title: track.title,
     artist: track.artist,
-    playing,
-    position: state.position,
-    duration: state.duration || 180,
-    energy,
-    activeIndex: activeIdx,
-    lineProgress,
     lines: canvasLines,
+  }), [track.title, track.artist, canvasLines]);
+
+  const stateJson = useMemo(() => JSON.stringify({
+    playing,
+    energy: Math.round(energy * 20) / 20,
+    activeIndex: activeIdx,
+    lineProgress: Math.round(lineProgress * 25) / 25,
     params,
-  }), [track.title, track.artist, playing, Math.round(state.position * 6), state.duration, Math.round(energy * 20), activeIdx, Math.round(lineProgress * 25), canvasLines, params]);
+  }), [playing, Math.round(energy * 10), activeIdx, Math.round(lineProgress * 25), params]);
 
   const isFav = services.songFavorites.isFavorite(favoriteTrack);
   const togglePlay = () => {
@@ -403,7 +407,7 @@ export function Teletype2Player({
 
       {/* High-DPI Tractor-Feed Paper + Model 33 Fascia + Analog VU Meter Canvas */}
       <View style={{ flex: 1, minHeight: 240 }}>
-        <NativeLocalCanvas html={TELETYPE2_HTML} stateJson={stateJson} style={StyleSheet.absoluteFill} />
+        <NativeLocalCanvas html={TELETYPE2_HTML} assetsJson={assetsJson} stateJson={stateJson} style={StyleSheet.absoluteFill} />
       </View>
 
       {/* Tactile 3D Mechanical Bottom Console */}

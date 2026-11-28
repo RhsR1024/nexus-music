@@ -149,6 +149,7 @@ class NexusNativeModule : Module() {
       Name("LocalCanvas")
       Events("onAction")
       Prop("html") { view: NexusLocalCanvasView, value: String -> view.html = value }
+      Prop("assetsJson") { view: NexusLocalCanvasView, value: String -> view.assetsJson = value }
       Prop("stateJson") { view: NexusLocalCanvasView, value: String -> view.stateJson = value }
       OnViewDidUpdateProps { view: NexusLocalCanvasView -> view.applyProps() }
     }

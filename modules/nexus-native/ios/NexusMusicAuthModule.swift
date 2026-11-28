@@ -1,6 +1,8 @@
 import ExpoModulesCore
 import UIKit
 import WebKit
+import CoreImage
+import Photos
 import CryptoKit
 import Security
 import AVFoundation
@@ -45,7 +47,7 @@ enum MusicWebLoginPolicy {
       }
     }
     if provider == "qishui" {
-      return ["douyin.com", "qishui.com", "bytedance.com", "snssdk.com", "iesdouyin.com", "toutiao.com", "zijieapi.com", "bytegoofy.com", "douyinpic.com", "douyincdn.com", "byteimg.com"].contains {
+      return ["douyin.com", "qishui.com", "bytedance.com", "snssdk.com", "iesdouyin.com", "toutiao.com", "zijieapi.com", "bytegoofy.com", "douyinpic.com", "douyincdn.com", "byteimg.com", "yhgfb-cn-static.com", "bytetos.com", "bytegecko.com", "amemv.com"].contains {
         host == $0 || host.hasSuffix(".\($0)")
       }
     }
@@ -84,8 +86,12 @@ enum MusicWebLoginPolicy {
   }
 }
 
+private protocol LoginSessionHandle: AnyObject {
+  func cancel()
+}
+
 public final class NexusMusicAuthModule: Module {
-  private var sessions: [String: MusicWebLoginSession] = [:]
+  private var sessions: [String: LoginSessionHandle] = [:]
   private var transfer: AccountTransferRequest?
   private var scanner: AccountTransferScanner?
 
@@ -128,6 +134,20 @@ public final class NexusMusicAuthModule: Module {
         }
         guard let presenter = Self.presenter else {
           promise.reject("AUTH_UNAVAILABLE", "暂时无法打开登录页面")
+          return
+        }
+        if provider == "qishui" {
+          let session = QishuiQrLoginSession(id: id) { [weak self] id, result in
+            self?.sessions.removeValue(forKey: id)
+            switch result {
+            case .success(let json): promise.resolve(json)
+            case .cancelled: promise.reject("AUTH_CANCELLED", "登录已取消")
+            case .expired: promise.reject("AUTH_EXPIRED", "登录已过期")
+            case .failed: promise.reject("AUTH_FAILED", "登录失败，请重试")
+            }
+          }
+          self.sessions[id] = session
+          session.start(from: presenter)
           return
         }
         let session = MusicWebLoginSession(id: id, provider: provider, initialURL: url) { [weak self] id, result in
@@ -232,7 +252,7 @@ public final class NexusMusicAuthModule: Module {
   }
 }
 
-private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDelegate {
+private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDelegate, LoginSessionHandle {
   enum Result { case success(String), cancelled, expired, failed }
 
   private let id: String
@@ -569,6 +589,547 @@ private final class MusicWebLoginSession: NSObject, WKNavigationDelegate, WKUIDe
         self.completion(self.id, result)
       }
       if presenter == nil { self.completion(self.id, result) }
+    }
+  }
+}
+
+private final class WeakQishuiScriptProxy: NSObject, WKScriptMessageHandler {
+  weak var target: WKScriptMessageHandler?
+  init(_ target: WKScriptMessageHandler) { self.target = target }
+  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    target?.userContentController(userContentController, didReceive: message)
+  }
+}
+
+/// Clean-room native Qishui PC QR login session.
+/// Loads ByteDance's official browser security SDK (bdms.js) at runtime inside an isolated
+/// non-persistent WKWebView anchored at https://api.qishui.com/, signs /passport/web/get_qrcode/
+/// and /passport/web/check_qrconnect/ via same-origin XHR, renders the official PC scan route
+/// (/light/invoke/scan_login) natively via CoreImage, and harvests HttpOnly session cookies
+/// directly from WKHTTPCookieStore after user confirmation.
+private final class QishuiQrLoginSession: NSObject, WKScriptMessageHandler, WKNavigationDelegate, LoginSessionHandle {
+  private static let ciContext = CIContext(options: [.cacheIntermediates: false])
+  private static let deviceIdKey = "nexus.qishui.device_id.v1"
+  private static let installIdKey = "nexus.qishui.install_id.v1"
+
+  private let id: String
+  private let completion: (String, MusicWebLoginSession.Result) -> Void
+  private var presenter: UIViewController?
+  private var navController: UINavigationController?
+  private var dataStore: WKWebsiteDataStore?
+  private var webView: WKWebView?
+  private var expiryTimer: Timer?
+  private var cookieRetryTimer: Timer?
+  private var generation = 0
+  private var finished = false
+  private var qrImage: UIImage?
+  private var currentScanURL = ""
+
+  private let qrImageView = UIImageView()
+  private let spinner = UIActivityIndicatorView(style: .large)
+  private let statusLabel = UILabel()
+  private let hintLabel = UILabel()
+  private let saveButton = UIButton(type: .system)
+  private let refreshButton = UIButton(type: .system)
+  private let qrCardStack = UIStackView()
+  private let verifyContainer = UIView()
+
+  init(id: String, completion: @escaping (String, MusicWebLoginSession.Result) -> Void) {
+    self.id = id
+    self.completion = completion
+  }
+
+  func start(from presenter: UIViewController) {
+    self.presenter = presenter
+    let vc = UIViewController()
+    vc.title = "汽水音乐扫码登录"
+    vc.view.backgroundColor = .systemBackground
+    vc.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "关闭", style: .plain, target: self, action: #selector(cancelTapped))
+    vc.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "刷新", style: .plain, target: self, action: #selector(refreshTapped))
+
+    let titleLbl = UILabel()
+    titleLbl.text = "使用汽水音乐 App 扫一扫"
+    titleLbl.font = .systemFont(ofSize: 20, weight: .bold)
+    titleLbl.textColor = .label
+    titleLbl.textAlignment = .center
+
+    let subLbl = UILabel()
+    subLbl.text = "登录官方 PC 端会话 · 会员权限与歌单同步可用"
+    subLbl.font = .systemFont(ofSize: 13, weight: .regular)
+    subLbl.textColor = .secondaryLabel
+    subLbl.textAlignment = .center
+    subLbl.numberOfLines = 2
+
+    let qrBox = UIView()
+    qrBox.backgroundColor = .white
+    qrBox.layer.cornerRadius = 20
+    qrBox.layer.shadowColor = UIColor.black.cgColor
+    qrBox.layer.shadowOpacity = 0.08
+    qrBox.layer.shadowRadius = 16
+    qrBox.layer.shadowOffset = CGSize(width: 0, height: 6)
+    qrBox.translatesAutoresizingMaskIntoConstraints = false
+
+    qrImageView.contentMode = .scaleAspectFit
+    qrImageView.layer.magnificationFilter = .nearest
+    qrImageView.accessibilityLabel = "汽水音乐登录二维码"
+    qrImageView.translatesAutoresizingMaskIntoConstraints = false
+    spinner.hidesWhenStopped = true
+    spinner.translatesAutoresizingMaskIntoConstraints = false
+    qrBox.addSubview(qrImageView)
+    qrBox.addSubview(spinner)
+    NSLayoutConstraint.activate([
+      qrBox.widthAnchor.constraint(equalToConstant: 248),
+      qrBox.heightAnchor.constraint(equalToConstant: 248),
+      qrImageView.leadingAnchor.constraint(equalTo: qrBox.leadingAnchor, constant: 16),
+      qrImageView.trailingAnchor.constraint(equalTo: qrBox.trailingAnchor, constant: -16),
+      qrImageView.topAnchor.constraint(equalTo: qrBox.topAnchor, constant: 16),
+      qrImageView.bottomAnchor.constraint(equalTo: qrBox.bottomAnchor, constant: -16),
+      spinner.centerXAnchor.constraint(equalTo: qrBox.centerXAnchor),
+      spinner.centerYAnchor.constraint(equalTo: qrBox.centerYAnchor),
+    ])
+
+    statusLabel.text = "正在初始化安全登录会话…"
+    statusLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+    statusLabel.textColor = .label
+    statusLabel.textAlignment = .center
+    statusLabel.numberOfLines = 3
+
+    hintLabel.text = "单机用户可点击「保存二维码到相册」，再打开汽水音乐 App 扫一扫相册识别。"
+    hintLabel.font = .systemFont(ofSize: 12.5)
+    hintLabel.textColor = .secondaryLabel
+    hintLabel.textAlignment = .center
+    hintLabel.numberOfLines = 3
+
+    saveButton.setTitle("保存二维码到相册", for: .normal)
+    saveButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
+    saveButton.backgroundColor = UIColor.systemTeal.withAlphaComponent(0.14)
+    saveButton.tintColor = .systemTeal
+    saveButton.layer.cornerRadius = 22
+    saveButton.isEnabled = false
+    saveButton.contentEdgeInsets = UIEdgeInsets(top: 11, left: 22, bottom: 11, right: 22)
+    saveButton.addTarget(self, action: #selector(saveQrTapped), for: .touchUpInside)
+
+    refreshButton.setTitle("刷新二维码", for: .normal)
+    refreshButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+    refreshButton.tintColor = .secondaryLabel
+    refreshButton.addTarget(self, action: #selector(refreshTapped), for: .touchUpInside)
+
+    qrCardStack.axis = .vertical
+    qrCardStack.alignment = .center
+    qrCardStack.spacing = 14
+    qrCardStack.translatesAutoresizingMaskIntoConstraints = false
+    for v in [titleLbl, subLbl, qrBox, statusLabel, saveButton, refreshButton, hintLabel] {
+      qrCardStack.addArrangedSubview(v)
+    }
+
+    verifyContainer.isHidden = true
+    verifyContainer.backgroundColor = .systemBackground
+    verifyContainer.translatesAutoresizingMaskIntoConstraints = false
+
+    vc.view.addSubview(qrCardStack)
+    vc.view.addSubview(verifyContainer)
+    NSLayoutConstraint.activate([
+      qrCardStack.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor, constant: 24),
+      qrCardStack.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor, constant: -24),
+      qrCardStack.centerYAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.centerYAnchor, constant: -10),
+      verifyContainer.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
+      verifyContainer.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),
+      verifyContainer.topAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.topAnchor),
+      verifyContainer.bottomAnchor.constraint(equalTo: vc.view.bottomAnchor),
+    ])
+
+    let nav = UINavigationController(rootViewController: vc)
+    nav.modalPresentationStyle = .fullScreen
+    self.navController = nav
+    presenter.present(nav, animated: true)
+
+    expiryTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: false) { [weak self] _ in
+      self?.finish(.expired)
+    }
+    startNewQrSession()
+  }
+
+  func cancel() { finish(.cancelled) }
+  @objc private func cancelTapped() { cancel() }
+  @objc private func refreshTapped() { startNewQrSession() }
+
+  @objc private func saveQrTapped() {
+    guard let image = qrImage else { return }
+    saveButton.isEnabled = false
+    let performSave = {
+      PHPhotoLibrary.shared().performChanges({
+        PHAssetChangeRequest.creationRequestForAsset(from: image)
+      }) { [weak self] success, _ in
+        DispatchQueue.main.async {
+          guard let self, !self.finished else { return }
+          self.saveButton.isEnabled = true
+          self.hintLabel.text = success
+            ? "已保存到相册！请打开汽水音乐 App 扫一扫，从相册选择该二维码确认后返回音枢。"
+            : "未能保存到相册，请检查照片权限或使用另一台设备扫码。"
+        }
+      }
+    }
+    if #available(iOS 14, *) {
+      PHPhotoLibrary.requestAuthorization(for: .addOnly) { [weak self] status in
+        if status == .authorized || status == .limited {
+          performSave()
+        } else {
+          DispatchQueue.main.async {
+            self?.saveButton.isEnabled = true
+            self?.hintLabel.text = "需要允许添加照片权限才能保存二维码，也可直接用另一台设备扫码。"
+          }
+        }
+      }
+    } else {
+      PHPhotoLibrary.requestAuthorization { [weak self] status in
+        if status == .authorized { performSave() }
+        else {
+          DispatchQueue.main.async {
+            self?.saveButton.isEnabled = true
+            self?.hintLabel.text = "需要照片权限才能保存二维码，也可直接用另一台设备扫码。"
+          }
+        }
+      }
+    }
+  }
+
+  private static func ensureNumericId(key: String) -> String {
+    if let existing = UserDefaults.standard.string(forKey: key), existing.count >= 16 { return existing }
+    var bytes = [UInt8](repeating: 0, count: 8)
+    _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+    let raw = bytes.reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
+    let generated = "7\(String(format: "%018llu", raw % 1_000_000_000_000_000_000))"
+    UserDefaults.standard.set(generated, forKey: key)
+    return generated
+  }
+
+  private static func generateMsTokenSeed() -> String {
+    var bytes = Data(count: 88)
+    _ = bytes.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 88, $0.baseAddress!) }
+    return bytes.base64EncodedString()
+      .replacingOccurrences(of: "+", with: "-")
+      .replacingOccurrences(of: "/", with: "_")
+  }
+
+  private static func renderQrCode(_ text: String) -> UIImage? {
+    guard let data = text.data(using: .utf8),
+          let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
+    filter.setValue(data, forKey: "inputMessage")
+    filter.setValue("M", forKey: "inputCorrectionLevel")
+    guard let output = filter.outputImage else { return nil }
+    let scale = max(10, floor(460 / max(1, output.extent.width)))
+    let scaled = output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+    guard let cg = ciContext.createCGImage(scaled, from: scaled.extent) else { return nil }
+    let pad: CGFloat = 28
+    let total = CGSize(width: scaled.extent.width + pad * 2, height: scaled.extent.height + pad * 2)
+    let renderer = UIGraphicsImageRenderer(size: total)
+    return renderer.image { ctx in
+      UIColor.white.setFill()
+      ctx.fill(CGRect(origin: .zero, size: total))
+      ctx.cgContext.interpolationQuality = .none
+      UIImage(cgImage: cg).draw(in: CGRect(x: pad, y: pad, width: scaled.extent.width, height: scaled.extent.height))
+    }
+  }
+
+  private func teardownWebView() {
+    cookieRetryTimer?.invalidate()
+    cookieRetryTimer = nil
+    if let old = webView {
+      old.configuration.userContentController.removeScriptMessageHandler(forName: "QishuiAuth")
+      old.navigationDelegate = nil
+      old.stopLoading()
+      old.removeFromSuperview()
+    }
+    webView = nil
+    dataStore = nil
+  }
+
+  private func startNewQrSession() {
+    guard !finished else { return }
+    generation += 1
+    let gen = generation
+    teardownWebView()
+    verifyContainer.isHidden = true
+    qrImage = nil
+    currentScanURL = ""
+    qrImageView.image = nil
+    saveButton.isEnabled = false
+    spinner.startAnimating()
+    statusLabel.text = "正在获取汽水音乐登录二维码…"
+    statusLabel.textColor = .label
+
+    let store = WKWebsiteDataStore.nonPersistent()
+    dataStore = store
+    let config = WKWebViewConfiguration()
+    config.websiteDataStore = store
+    let ucc = WKUserContentController()
+    ucc.add(WeakQishuiScriptProxy(self), name: "QishuiAuth")
+    config.userContentController = ucc
+
+    let wv = WKWebView(frame: .zero, configuration: config)
+    wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    wv.navigationDelegate = self
+    wv.translatesAutoresizingMaskIntoConstraints = false
+    verifyContainer.addSubview(wv)
+    NSLayoutConstraint.activate([
+      wv.leadingAnchor.constraint(equalTo: verifyContainer.leadingAnchor),
+      wv.trailingAnchor.constraint(equalTo: verifyContainer.trailingAnchor),
+      wv.topAnchor.constraint(equalTo: verifyContainer.topAnchor),
+      wv.bottomAnchor.constraint(equalTo: verifyContainer.bottomAnchor),
+    ])
+    webView = wv
+
+    let did = Self.ensureNumericId(key: Self.deviceIdKey)
+    let iid = Self.ensureNumericId(key: Self.installIdKey)
+    let msToken = Self.generateMsTokenSeed()
+    let html = Self.buildHostHTML(generation: gen, deviceId: did, installId: iid, msToken: msToken)
+    wv.loadHTMLString(html, baseURL: URL(string: "https://api.qishui.com/")!)
+  }
+
+  private static func buildHostHTML(generation: Int, deviceId: String, installId: String, msToken: String) -> String {
+    """
+    <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+    <script>
+    (function(){
+      var GEN=\(generation), DID="\(deviceId)", IID="\(installId)", MS="\(msToken)";
+      var post=function(msg){try{window.webkit.messageHandlers.QishuiAuth.postMessage(Object.assign({gen:GEN},msg));}catch(e){}};
+      try{localStorage.setItem('xmst',MS);localStorage.setItem('xmsty',MS);}catch(e){}
+      function xorHex(str){
+        var bytes=new TextEncoder().encode(str), out='';
+        for(var i=0;i<bytes.length;i++) out+=((bytes[i]^5)&255).toString(16).padStart(2,'0');
+        return out;
+      }
+      function browserInfoHex(){
+        var info={
+          ua:navigator.userAgent||'',
+          lang:navigator.language||'zh-CN',
+          platform:'MacIntel',
+          screen:(screen.width||1440)+'x'+(screen.height||900),
+          tz:-(new Date().getTimezoneOffset()),
+          cookie:!!navigator.cookieEnabled,
+          ls:true,
+          aid:386088,
+          host:'api.qishui.com'
+        };
+        return xorHex(JSON.stringify(info));
+      }
+      function readCookie(name){
+        var m=document.cookie.match(new RegExp('(?:^|;\\s*)'+name+'=([^;]*)'));
+        return m?decodeURIComponent(m[1]):'';
+      }
+      function xhrReq(method,url,body,headers){
+        return new Promise(function(resolve,reject){
+          var x=new XMLHttpRequest();
+          x.open(method,url,true);
+          x.withCredentials=true;
+          if(headers){Object.keys(headers).forEach(function(k){if(headers[k])x.setRequestHeader(k,headers[k]);});}
+          x.onload=function(){
+            try{resolve(JSON.parse(x.responseText||'{}'));}catch(e){reject(new Error('invalid_json'));}
+          };
+          x.onerror=function(){reject(new Error('network_error'));};
+          x.ontimeout=function(){reject(new Error('timeout'));};
+          x.timeout=15000;
+          x.send(body||null);
+        });
+      }
+      function extractScanToken(urlStr,fallback){
+        try{
+          var u=new URL(urlStr);
+          return u.searchParams.get('token')||fallback;
+        }catch(e){return fallback;}
+      }
+      var sdkInfo=browserInfoHex();
+      var pollTimer=null, stopped=false, passportToken='';
+      function commonQuery(){
+        return 'aid=386088&account_sdk_source=web&passport_jssdk_version=2.4.13&passport_jssdk_type=normal&is_from_ttaccountsdk=1'
+          +'&next='+encodeURIComponent('https://api.qishui.com')
+          +'&need_logo=false&need_short_url=false&is_new_login=1'
+          +'&device_id='+encodeURIComponent(DID)
+          +'&iid='+encodeURIComponent(IID)
+          +'&msToken='+encodeURIComponent(MS)
+          +'&account_sdk_source_info='+encodeURIComponent(sdkInfo);
+      }
+      function startPoll(){
+        if(stopped||!passportToken)return;
+        pollTimer=setTimeout(function(){
+          if(stopped)return;
+          var csrf=readCookie('passport_csrf_token')||readCookie('passport_csrf_token_default');
+          var form='token='+encodeURIComponent(passportToken)+'&need_logo=false&need_short_url=false&is_frontier=true&is_new_login=1&next='+encodeURIComponent('https://api.qishui.com');
+          var hdrs={'Content-Type':'application/x-www-form-urlencoded'};
+          if(csrf) hdrs['X-Tt-Passport-Csrf-Token']=csrf;
+          xhrReq('POST','https://api.qishui.com/passport/web/check_qrconnect/?'+commonQuery(),form,hdrs)
+            .then(function(res){
+              if(stopped)return;
+              var d=res&&res.data?res.data:{};
+              var st=String(d.status||'').toLowerCase();
+              var code=Number(d.error_code||0);
+              if(code===2046){
+                stopped=true;
+                post({type:'verify',detail:String(d.description||'需要安全验证'),verifyUrl:String(d.verify_url||'')});
+                return;
+              }
+              if(st==='confirmed'||st==='3'||st==='success'||st==='confirm'){
+                post({type:'confirmed'});
+                startPoll();
+                return;
+              }
+              if(st==='scanned'||st==='2'){
+                post({type:'status',status:'scanned'});
+                startPoll();
+                return;
+              }
+              if(st==='expired'||st==='5'||code===2043){
+                stopped=true;
+                post({type:'status',status:'expired'});
+                return;
+              }
+              if(code&&code!==0){
+                post({type:'status',status:'waiting',code:code});
+              }
+              startPoll();
+            })
+            .catch(function(){if(!stopped)startPoll();});
+        },2200);
+      }
+      function createQr(){
+        xhrReq('GET','https://api.qishui.com/passport/web/get_qrcode/?'+commonQuery(),null,null)
+          .then(function(res){
+            if(stopped)return;
+            var d=res&&res.data?res.data:{};
+            if(!d.token&&!d.qrcode_index_url){
+              post({type:'error',detail:String(d.description||res.message||'未能获取汽水登录二维码')});
+              return;
+            }
+            passportToken=String(d.token||'');
+            var scanTok=extractScanToken(String(d.qrcode_index_url||''),passportToken);
+            var encTok=encodeURIComponent(scanTok).replace(/\\+/g,'%2B');
+            var scanUrl='https://bff-pc.qishui.com/light/invoke/scan_login?token='+encTok+'&os=Windows&computer_name=NexusMusic';
+            post({type:'qr',scanUrl:scanUrl});
+            startPoll();
+          })
+          .catch(function(e){post({type:'error',detail:String(e&&e.message||'网络请求失败')});});
+      }
+      var s=document.createElement('script');
+      s.src='https://lf-headquarters-speed.yhgfb-cn-static.com/obj/rc-client-security/web/stable/1.0.0.41/bdms.js';
+      s.async=true;
+      s.onload=function(){
+        Promise.resolve().then(function(){
+          if(window.bdms&&typeof window.bdms.init==='function'){
+            return window.bdms.init({aid:386088,paths:['/passport']});
+          }
+        }).then(createQr).catch(createQr);
+      };
+      s.onerror=function(){post({type:'error',detail:'安全组件加载失败，请检查网络后刷新'});};
+      document.head.appendChild(s);
+    })();
+    </script></body></html>
+    """
+  }
+
+  func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    guard let url = navigationAction.request.url else { decisionHandler(.cancel); return }
+    if MusicWebLoginPolicy.allows(url, provider: "qishui") {
+      decisionHandler(.allow)
+    } else {
+      decisionHandler(.cancel)
+    }
+  }
+
+  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    guard !finished, message.name == "QishuiAuth", let body = message.body as? [String: Any],
+          let gen = body["gen"] as? Int, gen == generation,
+          let type = body["type"] as? String else { return }
+
+    switch type {
+    case "qr":
+      guard let scanUrl = body["scanUrl"] as? String, !scanUrl.isEmpty else { return }
+      currentScanURL = scanUrl
+      let img = Self.renderQrCode(scanUrl)
+      qrImage = img
+      qrImageView.image = img
+      spinner.stopAnimating()
+      saveButton.isEnabled = img != nil
+      statusLabel.text = "请打开汽水音乐 App 扫码登录"
+      statusLabel.textColor = .label
+    case "status":
+      let st = body["status"] as? String ?? ""
+      if st == "scanned" {
+        statusLabel.text = "已扫码，请在汽水音乐 App 中点击确认"
+        statusLabel.textColor = .systemTeal
+        harvestCookies(gen: gen)
+      } else if st == "expired" {
+        statusLabel.text = "二维码已过期，请点击下方「刷新二维码」"
+        statusLabel.textColor = .systemRed
+        saveButton.isEnabled = false
+      }
+    case "confirmed":
+      statusLabel.text = "已确认登录，正在保存汽水会话…"
+      statusLabel.textColor = .systemGreen
+      harvestCookies(gen: gen)
+      cookieRetryTimer?.invalidate()
+      cookieRetryTimer = Timer.scheduledTimer(withTimeInterval: 0.9, repeats: true) { [weak self] _ in
+        self?.harvestCookies(gen: gen)
+      }
+    case "verify":
+      let detail = body["detail"] as? String ?? "需要完成安全验证"
+      statusLabel.text = "\(detail)，请在验证后重试"
+      statusLabel.textColor = .systemOrange
+      if let raw = body["verifyUrl"] as? String, let url = URL(string: raw), MusicWebLoginPolicy.allows(url, provider: "qishui") {
+        verifyContainer.isHidden = false
+        webView?.load(URLRequest(url: url))
+      }
+    case "error":
+      spinner.stopAnimating()
+      statusLabel.text = (body["detail"] as? String) ?? "二维码获取失败，请点击刷新重试"
+      statusLabel.textColor = .systemRed
+    default:
+      break
+    }
+  }
+
+  private func harvestCookies(gen: Int) {
+    guard !finished, gen == generation, let store = dataStore else { return }
+    store.httpCookieStore.getAllCookies { [weak self] cookies in
+      guard let self, !self.finished, gen == self.generation else { return }
+      var values: [String: String] = [:]
+      let ordered = cookies.sorted {
+        $0.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).count <
+          $1.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).count
+      }
+      for cookie in ordered {
+        let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        let allowed = domain == "qishui.com" || domain.hasSuffix(".qishui.com") || domain == "douyin.com" || domain.hasSuffix(".douyin.com")
+        if allowed, MusicWebLoginPolicy.cookieNames("qishui").contains(cookie.name),
+           !cookie.value.isEmpty, cookie.expiresDate == nil || cookie.expiresDate! > Date() {
+          values[cookie.name] = cookie.value
+        }
+      }
+      guard MusicWebLoginPolicy.ready(values, provider: "qishui") else { return }
+      guard JSONSerialization.isValidJSONObject(values),
+            let data = try? JSONSerialization.data(withJSONObject: values),
+            let json = String(data: data, encoding: .utf8) else {
+        self.finish(.failed)
+        return
+      }
+      self.finish(.success(json))
+    }
+  }
+
+  private func finish(_ result: MusicWebLoginSession.Result) {
+    if finished { return }
+    finished = true
+    expiryTimer?.invalidate()
+    expiryTimer = nil
+    teardownWebView()
+    let presenter = self.presenter
+    self.presenter = nil
+    self.navController = nil
+    DispatchQueue.main.async {
+      if let presenter {
+        presenter.dismiss(animated: true) { self.completion(self.id, result) }
+      } else {
+        self.completion(self.id, result)
+      }
     }
   }
 }

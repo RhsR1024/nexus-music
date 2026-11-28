@@ -8,12 +8,15 @@ import {coverThemeGradient} from '../domain/appearance.ts';
 import {SheetModal} from './AdaptiveModal.tsx';
 import {Cover} from './Cover.tsx';
 import {Lyrics} from './Lyrics.tsx';
+import {PlayModeButton} from './PlayModeButton.tsx';
 import {PlaybackProgress} from './PlaybackProgress.tsx';
+import {QualityPill,qualityBadgeText} from './QualityPickerSheet.tsx';
 import {SkipGlyph} from './SkipGlyph.tsx';
 import {Vinyl} from './PlayerVisuals.tsx';
 import {Text} from './Typography.tsx';
 import {paper,space,typography} from './tokens.ts';
 import {useStablePlaybackStatus} from './usePlaybackStatus.ts';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 function PaperBackdrop({services,track}:{services:Services;track:Track}){
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -32,16 +35,19 @@ function PaperBackdrop({services,track}:{services:Services;track:Track}){
   </View>;
 }
 
-export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue,onSleep}:{
+export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore,onStyle,onLyricsSettings,onQueue,onSleep,onQuality,onNotify}:{
   services:Services;track:Track;favoriteTrack:Track;lyricTrack:Track;font?:string;
   onMore:()=>void;onStyle:()=>void;onLyricsSettings:()=>void;onQueue:()=>void;onSleep:()=>void;
+  onQuality?:()=>void;onNotify?:(msg:string)=>void;
 }){
   const {width,height}=useWindowDimensions();
+  const insets=useSafeAreaInsets();
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const status=useStablePlaybackStatus(state,{resolving:'正在选择可用音源…',buffering:'正在缓冲…'});
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
   useSyncExternalStore(services.songFavorites.subscribe,services.songFavorites.getSnapshot);
   const [lyricsOpen,setLyricsOpen]=useState(false);
+  const [inlineLyrics,setInlineLyrics]=useState(false);
   // IMG_4851 deck: 370.33x351pt at x29.67/y155.67 on the 430x932 reference.
   const deck=Math.max(1,Math.min(width-59.34,370.33));
   const isFavorite=services.songFavorites.isFavorite(favoriteTrack);
@@ -52,28 +58,56 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
       <Ionicons name={name} size={size} color={paper.vinylIcon}/>
     </Pressable>);
   const toggleFavorite=()=>{void services.songFavorites.toggle(favoriteTrack).catch(()=>Alert.alert('收藏未保存','已有数据保留，请重试。'));};
+  const qualityLabel=qualityBadgeText(state.media?.quality??preferences.quality);
   return <View style={styles.root}>
     <PaperBackdrop services={services} track={track}/>
-    <View style={[styles.content,{paddingTop:Math.max(96,height*(155.67/932))}]}>
-      <View style={{alignSelf:'center'}}>
-        <Vinyl services={services} track={track} playing={state.phase==='ready'&&playing&&!state.buffering} width={deck}/>
-      </View>
-      <View style={styles.titleRow}>
-        <View style={{flex:1,minWidth:0,gap:4,marginLeft:-7.5}}>
-          <Text numberOfLines={1} style={styles.title}>{track.title}</Text>
-          <Text numberOfLines={1} style={styles.artist}>{track.artist}</Text>
+    <View style={[styles.content,{paddingTop:inlineLyrics?Math.max(insets.top+54,104):Math.max(96,height*(155.67/932))}]}>
+      {inlineLyrics?<>
+        <View style={{flexDirection:'row',alignItems:'center',gap:12,marginBottom:8}}>
+          <Pressable testID="vinyl-lyrics-back" accessibilityRole="button" accessibilityLabel="返回黑胶唱片" onPress={()=>setInlineLyrics(false)} style={{flexDirection:'row',alignItems:'center',gap:12,flex:1,minWidth:0}}>
+            <Cover services={services} track={track} size={46} radius={10}/>
+            <View style={{flex:1,minWidth:0,gap:2}}>
+              <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:paper.titleInk}}>{track.title}</Text>
+              <Text numberOfLines={1} style={{fontSize:13,color:paper.artistInk}}>{track.artist}</Text>
+            </View>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" onPress={toggleFavorite} style={styles.hit}>
+            <Ionicons name={isFavorite?'heart':'heart-outline'} size={22} color={paper.heartInk}/>
+          </Pressable>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:isFavorite?'已收藏':'未收藏'}} onPress={toggleFavorite} style={[styles.hit,{marginRight:-5}]}>
-          <Ionicons name={isFavorite?'heart':'heart-outline'} size={24} color={paper.heartInk}/>
+        <View testID="vinyl-inline-lyrics" style={{flex:1,minHeight:160,overflow:'hidden'}}>
+          <Lyrics services={services} track={lyricTrack} font={font} presentation="classicFull" chrome={false}/>
+        </View>
+      </>:<>
+        <Pressable testID="vinyl-artwork-toggle" accessibilityRole="button" accessibilityLabel="点击黑胶唱片切换歌词视图" onPress={()=>setInlineLyrics(true)} style={{alignSelf:'center'}}>
+          <Vinyl services={services} track={track} playing={state.phase==='ready'&&playing&&!state.buffering} width={deck}/>
         </Pressable>
-      </View>
-      <View style={{flex:1,minHeight:space.lg}}/>
+        <View style={styles.titleRow}>
+          <View style={{flex:1,minWidth:0,gap:4,marginLeft:-7.5}}>
+            <Text numberOfLines={1} style={styles.title}>{track.title}</Text>
+            <Text numberOfLines={1} style={styles.artist}>{track.artist}</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="收藏歌曲" accessibilityValue={{text:isFavorite?'已收藏':'未收藏'}} onPress={toggleFavorite} style={[styles.hit,{marginRight:-5}]}>
+            <Ionicons name={isFavorite?'heart':'heart-outline'} size={24} color={paper.heartInk}/>
+          </Pressable>
+        </View>
+        <View style={{flex:1,minHeight:space.lg}}/>
+      </>}
       <View style={{minHeight:22,justifyContent:'center'}}>{!!status.text&&<Text accessibilityLiveRegion="polite" style={styles.status}>{status.text}</Text>}</View>
       <View style={styles.progress}><PlaybackProgress services={services} variant="paper"/></View>
       {/* IMG_4851 transport: 64pt play at screen centre, outer tools 68pt from
           the screen edges, 9.5x12.7pt triangles with a 2pt gap. */}
       <View style={styles.transport}>
-        {icon('repeat',`循环：${preferences.repeat}`,()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));})}
+        <PlayModeButton
+          repeat={preferences.repeat}
+          shuffle={preferences.shuffle}
+          color={paper.vinylIcon}
+          activeColor={paper.accent}
+          mutedColor={paper.vinylIcon}
+          size={23}
+          style={{width:space.section}}
+          onCycle={next=>{void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).then(()=>onNotify?.(next.label)).catch(()=>Alert.alert('设置未保存'));}}
+        />
         <Pressable accessibilityRole="button" accessibilityLabel="上一首" onPress={()=>services.playback.next(-1)} style={[styles.hit,{width:space.section}]}><SkipGlyph direction="back" width={9.5} height={12.7} gap={2} color={paper.skipInk}/></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={playing?'暂停':'播放'} onPress={()=>{if(playing)controller.pause();else void controller.play();}} style={styles.play}>
           {playing?<View style={{flexDirection:'row',gap:2.7}}><View style={{width:4.7,height:16,borderRadius:1,backgroundColor:'#FFFFFF'}}/><View style={{width:4.7,height:16,borderRadius:1,backgroundColor:'#FFFFFF'}}/></View>:<Ionicons name="play" size={26} color="#FFFFFF" style={{marginLeft:3}}/>}
@@ -118,7 +152,9 @@ export function VinylPlayer({services,track,favoriteTrack,lyricTrack,font,onMore
         </Pressable>
         {icon('ellipsis-horizontal','更多播放控制',onMore,22)}
       </View>
-      <Text numberOfLines={1} style={styles.caption}>{state.media?.quality?`${state.media.quality.toUpperCase()} 音源`:'等待音源'}</Text>
+      <View style={{alignItems:'center',marginTop:10}}>
+        <QualityPill label={qualityLabel} dark={false} accent={paper.accent} onPress={()=>onQuality?.()}/>
+      </View>
     </View>
     <SheetModal allowSwipeDismissal visible={lyricsOpen} onRequestClose={()=>setLyricsOpen(false)}>
       <View style={{flex:1}}>

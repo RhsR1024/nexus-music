@@ -252,6 +252,25 @@ export class PlaybackController {
     this.backend.stop(this.invalidate());this.update({intent:'paused',phase:'idle',media:null,token:null,error:null,buffering:false});
   }
 
+  /** Re-resolves the active entry (e.g. after a live quality switch) and resumes from the current playback cursor. */
+  async reloadAtCurrentPosition():Promise<void> {
+    const entry=currentEntry(this.state.queue);
+    if(this.disposed||!entry)return;
+    const wasPlaying=this.state.intent==='playing'||this.state.phase==='resolving';
+    const seconds=Number.isFinite(this.state.position)&&this.state.position>0?this.state.position:0;
+    this.rejectedRoutes.clear();
+    this.cursor={entryId:entry.id,seconds};
+    this.playable=false;
+    this.loadedTrack=undefined;
+    if(wasPlaying){
+      await this.start(this.state.queue);
+    }else{
+      if(this.state.phase==='resolving'&&this.state.token)this.finishTrace(this.state.token,'cancelled','音质偏好已更新','cancelled');
+      this.backend.stop(this.invalidate());
+      this.update({intent:'paused',phase:'idle',media:null,token:null,error:null,buffering:false,position:seconds});
+    }
+  }
+
   setQueue(queue: QueueState): void {
     if (this.disposed) throw new Error('播放器已释放');
     const changed = queue.currentId !== this.state.queue.currentId ||

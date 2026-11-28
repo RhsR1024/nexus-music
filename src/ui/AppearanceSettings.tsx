@@ -135,9 +135,9 @@ export function AppearanceSettings({services,section:page,onStyleSaved,accentFie
       ['photo','写真歌词','image','写真封面、长歌词与轻触快捷操作'],
       ['stage','歌词舞台','text','全屏逐字大字舞台与多种视觉风格'],
       ['groove','黑胶螺旋槽','disc','同心螺旋音槽、频谱律动光环与唱针聚焦歌词'],
-      ['groove2','黑胶螺旋槽 2','aperture-outline','Sollin 风格刻槽黑胶：阿基米德螺旋刻字、光学放大镜、衍射光扇与刻槽参数'],
+      ['groove2','黑胶螺旋槽 2','aperture-outline','刻槽黑胶体验：阿基米德螺旋刻字、光学放大镜、衍射光扇与刻槽参数'],
       ['teletype','电报打字机','terminal-outline','复古纸带与磷光终端，逐字敲击电传歌词'],
-      ['teletype2','电报打字机 2','print-outline','Sollin Model 33 机械电传机：链式打孔纸带、指针 VU 表、副歌红带与立体机械键'],
+      ['teletype2','电报打字机 2','print-outline','Model 33 机械电传机：链式打孔纸带、指针 VU 表、副歌红带与立体机械键'],
     ] as const).map(([id,label,icon,detail],index)=>{
       const selected=value.playerLayout===id;
       return <View key={id}>

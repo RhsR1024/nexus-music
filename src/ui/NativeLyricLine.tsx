@@ -5,7 +5,7 @@ import type {StageStyle} from '../app/preferences.ts';
 import type {LyricLine} from '../lyrics/parser.ts';
 const NativeLine=requireNativeView<ViewProps&{configuration:string}>('NexusLyrics');
 // RN measures the same font/line height; native draws and animates visible ink.
-export const NativeLyricLine=memo(function NativeLyricLine({line,position,playing,size,color,center,font,fontURI,lineHeight=1.35,blur=0,emphasis=true,stageStyle='classic',weight='600',embolden=0,maxLines}:{line:LyricLine;position:number;playing:boolean;size:number;color:string;center:boolean;font?:string;fontURI?:string;lineHeight?:number;blur?:number;emphasis?:boolean;stageStyle?:StageStyle;weight?:'500'|'600'|'700'|'800'|'900';embolden?:number;maxLines?:number}) {
+export const NativeLyricLine=memo(function NativeLyricLine({line,position,playing,rate=1,size,color,center,font,fontURI,lineHeight=1.35,blur=0,emphasis=true,stageStyle='classic',weight='600',embolden=0,maxLines}:{line:LyricLine;position:number;playing:boolean;rate?:number;size:number;color:string;center:boolean;font?:string;fontURI?:string;lineHeight?:number;blur?:number;emphasis?:boolean;stageStyle?:StageStyle;weight?:'500'|'600'|'700'|'800'|'900';embolden?:number;maxLines?:number}) {
   // TextKit receives explicit points. Measure with those same points instead
   // of scaling only the invisible RN placeholder at accessibility text sizes.
   const {fontScale}=useWindowDimensions(),points=Math.min(100,Math.max(10,size*fontScale));
@@ -19,7 +19,7 @@ export const NativeLyricLine=memo(function NativeLyricLine({line,position,playin
   const rubyLineSpacing=fontScale>1.8||line.words?.some(word=>word.rubyAlign==='withBase')?rubyInset+rubyAfterInset:0;
   const measured=line.words?.some(word=>word.style);
   return <View pointerEvents="none" style={rubyInset||rubyAfterInset?{...(rubyInset?{paddingTop:rubyInset}:{}),...(rubyAfterInset?{paddingBottom:rubyAfterInset}:{})}:undefined}><Text accessible={false} allowFontScaling={false} numberOfLines={maxLines} style={{fontSize:points,lineHeight:Math.ceil(points*lineHeight)+rubyLineSpacing,fontFamily:font,fontWeight:font?'400':weight,textAlign:center?'center':'left',opacity:0}}>{measured&&line.words?line.words.map((word,index)=><Text key={index} style={measurementStyle(word.style)}>{word.text}</Text>):line.text}</Text>
-    <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden,maxLines,rubyInset,rubyAfterInset,rubyLineSpacing})}/>
+    <NativeLine testID={line.words?'native-word-lyrics':line.timedCues?.length?'native-sparse-lyrics':'native-lyric-line'} accessible={false} style={StyleSheet.absoluteFill} configuration={JSON.stringify({text:line.text,words:line.words,timedCues:line.timedCues,position,playing,rate,size:points,color,center,fontURI,lineHeight,blur,emphasis,stageStyle,weight,embolden,maxLines,rubyInset,rubyAfterInset,rubyLineSpacing})}/>
   </View>;
 });
 function measurementStyle(style:NonNullable<NonNullable<LyricLine['words']>[number]['style']>|undefined):TextStyle|undefined {

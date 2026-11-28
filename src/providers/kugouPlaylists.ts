@@ -3,7 +3,7 @@
 // Protocol alignment for /v4/get_list_all_file & concept-client fallback: Coda 22bc58e.
 import {AccountPlaylistError,type AccountPlaylist} from './accountPlaylists.ts';
 import {validKugouDailySession} from './kugouDaily.ts';
-import {resolveKugouTracks,KugouTrackDetailError} from './kugouTrackDetails.ts';
+import {resolveKugouTracks,enrichKugouTrackArtworks,KugouTrackDetailError} from './kugouTrackDetails.ts';
 import {queryURL,type HTTPClient} from './http.ts';
 import type {MusicAccount,MusicSession} from './musicAccounts.ts';
 import {cleanTrack,safePublicURL} from '../storage/cleanTrack.ts';
@@ -31,7 +31,9 @@ function extractInlineTrack(rawValue:unknown):Track|null{
   }
   if(!title)title='未知歌曲';
   const trans=row(item.trans_param),albumInfo=row(item.album_info??item.albuminfo);
-  const rawCover=text(item.cover??albumInfo.sizable_cover??trans.union_cover??item.pic);
+  const firstAuthor=Array.isArray(item.authors)&&item.authors.length?row(item.authors[0]):{};
+  const rawCover=[item.cover,albumInfo.sizable_cover,trans.union_cover,item.sizable_cover,item.pic,item.img,firstAuthor.sizable_avatar]
+    .map(v=>text(v).trim()).find(Boolean)??'';
   const durationMs=Number(item.timelen??item.timelength??0);
   const durationSec=Number.isFinite(durationMs)&&durationMs>0?(durationMs>10000?durationMs/1000:durationMs):0;
   try{
@@ -166,14 +168,15 @@ export class KugouPlaylists{
         if(lenient&&resolved.length<hashes.length&&inlineByHash.size){
           const byHash=new Map<string,Track>();
           for(const t of resolved){byHash.set(String(t.metadata.hash??t.origin.id).toUpperCase(),t);}
-          return hashes.map(h=>byHash.get(h)??inlineByHash.get(h)).filter((t):t is Track=>!!t);
+          const merged=hashes.map(h=>byHash.get(h)??inlineByHash.get(h)).filter((t):t is Track=>!!t);
+          return [...await enrichKugouTrackArtworks(this.deps.http,merged,signal)];
         }
-        return resolved;
+        return lenient?[...await enrichKugouTrackArtworks(this.deps.http,resolved,signal)]:resolved;
       }
     }
     if(lenient&&hashes.length){
-      try{return (await resolveKugouTracks(this.deps,hashes,signal,check,{lenient:true})).map(cleanTrack);}
-      catch{check();return hashes.map(h=>inlineByHash.get(h)).filter((t):t is Track=>!!t);}
+      try{return [...await enrichKugouTrackArtworks(this.deps.http,(await resolveKugouTracks(this.deps,hashes,signal,check,{lenient:true})).map(cleanTrack),signal)];}
+      catch{check();const fallback=hashes.map(h=>inlineByHash.get(h)).filter((t):t is Track=>!!t);return [...await enrichKugouTrackArtworks(this.deps.http,fallback,signal)];}
     }
     return fail();
   }
@@ -196,6 +199,6 @@ export class KugouPlaylists{
       const total=Number(data.count??0);
       if(!songs.length||(total>0?out.length>=total:songs.length<200))break;
     }
-    return out;
+    return [...await enrichKugouTrackArtworks(this.deps.http,out,signal)];
   }
 }

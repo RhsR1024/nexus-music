@@ -6,11 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import { trackKey, type Track } from '../domain/track.ts';
-import type { LyricDocument } from '../lyrics/parser.ts';
-import { activeLyric } from '../lyrics/parser.ts';
+import { displayLyricIndex, lyricLineProgress } from '../lyrics/parser.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { Modal } from './AdaptiveModal.tsx';
+import { useLyricDocument } from './Lyrics.tsx';
 import { PlaybackProgress } from './PlaybackProgress.tsx';
 import { SkipGlyph } from './SkipGlyph.tsx';
 import { SliderControl } from './SliderControl.tsx';
@@ -19,6 +19,7 @@ import { Text } from './Typography.tsx';
 const NativeLocalCanvas = requireNativeView<
   ViewProps & {
     html: string;
+    assetsJson?: string;
     stateJson: string;
     onAction?: (event: { nativeEvent: Record<string, unknown> }) => void;
   }
@@ -71,10 +72,10 @@ const GROOVE2_HTML = `<!doctype html>
   var dpr=Math.min(window.devicePixelRatio||1,2.2),W=360,H=460;
   var state={
     title:'',artist:'',playing:false,position:0,duration:180,energy:0,
-    activeIndex:0,lines:[],chorusSet:{},coverData:'',
+    activeIndex:0,lineProgress:0.5,lines:[],chorusSet:{},coverData:'',
     params:{material:'wood',spinMode:'lyric',loupe:true,loupeZoom:1.8,diffraction:0.55,fanWidth:0.45,chorusVinyl:true,needleBounce:true,dust:true,fingerprint:true}
   };
-  var coverImg=null,coverSrc='';
+  var coverImg=null,coverSrc='',pausedLoop=false,rafId=0;
   var angle=0,targetAngle=0,lastNow=performance.now();
   var dustMotes=[];
   for(var i=0;i<26;i++)dustMotes.push({a:Math.random()*6.28,r:0.36+Math.random()*0.60,s:0.6+Math.random()*1.4,p:Math.random()*6.28});
@@ -329,21 +330,25 @@ const GROOVE2_HTML = `<!doctype html>
   }
 
   function frame(now){
+    if(pausedLoop){rafId=0;return;}
     var dt=Math.min(0.05,(now-lastNow)/1000);
     lastNow=now;
     buildSpiralLayout();
 
     var p=state.params;
-    // Compute active spiral coordinate
+    // Track exact character along active spiral line using word/line progress
     var activeBound=lineCharBounds[state.activeIndex];
-    var activeCharIdx=activeBound?Math.min(spiralChars.length-1,Math.floor((activeBound.start+activeBound.end)/2)):0;
+    var lp=Math.max(0,Math.min(1,typeof state.lineProgress==='number'?state.lineProgress:0.5));
+    var activeCharIdx=activeBound
+      ?Math.min(spiralChars.length-1,Math.max(activeBound.start,Math.floor(activeBound.start+(activeBound.end-activeBound.start)*lp)))
+      :0;
     var activeChar=spiralChars[activeCharIdx]||{theta:0,r:0.68};
     if(p.spinMode==='lyric'){
       targetAngle=-activeChar.theta;
       var diff=targetAngle-angle;
       while(diff>Math.PI)diff-=Math.PI*2;
       while(diff<-Math.PI)diff+=Math.PI*2;
-      angle+=diff*Math.min(1,dt*4.5);
+      angle+=diff*Math.min(1,dt*5.5);
     }else if(state.playing){
       angle=(angle+dt*0.58)%(Math.PI*2);
     }
@@ -383,10 +388,20 @@ const GROOVE2_HTML = `<!doctype html>
     }
 
     drawTonearm(ctx,cx,cy,R,stylusX,stylusY);
-    requestAnimationFrame(frame);
+    rafId=requestAnimationFrame(frame);
   }
 
   window.nexusCanvas={
+    setAssets:function(next){
+      if(!next||typeof next!=='object')return;
+      if(typeof next.title==='string')state.title=next.title;
+      if(typeof next.artist==='string')state.artist=next.artist;
+      if(Array.isArray(next.lines)){state.lines=next.lines;lastLinesKey='';}
+      if(typeof next.coverData==='string'&&next.coverData!==coverSrc){
+        coverSrc=next.coverData;
+        if(coverSrc){var img=new Image();img.src=coverSrc;coverImg=img;}else{coverImg=null;}
+      }
+    },
     setState:function(next){
       if(!next||typeof next!=='object')return;
       state=Object.assign(state,next);
@@ -394,11 +409,16 @@ const GROOVE2_HTML = `<!doctype html>
         coverSrc=next.coverData;
         var img=new Image();img.src=coverSrc;coverImg=img;
       }
+    },
+    setPaused:function(flag){
+      pausedLoop=!!flag;
+      if(pausedLoop&&rafId){cancelAnimationFrame(rafId);rafId=0;}
+      else if(!pausedLoop&&!rafId){lastNow=performance.now();rafId=requestAnimationFrame(frame);}
     }
   };
   window.addEventListener('resize',resize);
   resize();
-  requestAnimationFrame(frame);
+  rafId=requestAnimationFrame(frame);
 })();
 </script>
 </body>
@@ -428,18 +448,11 @@ export function Groove2Player({
   const [params, setParams] = useState<Groove2Params>(DEFAULT_PARAMS);
   const [paramsOpen, setParamsOpen] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
-  const [doc, setDoc] = useState<LyricDocument | null>(null);
   const [coverData, setCoverData] = useState('');
 
   const key = trackKey(lyricTrack.origin);
-  useEffect(() => {
-    const abort = new AbortController();
-    setDoc(null);
-    void services.lyrics.load(lyricTrack, abort.signal).then(res => {
-      if (!abort.signal.aborted) setDoc(res.document);
-    }).catch(() => {});
-    return () => abort.abort();
-  }, [services, key]);
+  const { value: lyricResult } = useLyricDocument(services, lyricTrack);
+  const doc = lyricResult?.document ?? null;
 
   useEffect(() => {
     const abort = new AbortController();
@@ -456,21 +469,29 @@ export function Groove2Player({
 
   const offset = lyricOffset(preferences.lyricOffsetMs, preferences.lyricOffsets, key);
   const playing = state.intent === 'playing' && !state.buffering;
+  const posMs = state.position * 1000;
   const activeIdx = useMemo(() => {
     if (!doc?.synced || !doc.lines.length) return 0;
-    return Math.max(0, activeLyric(doc.lines, state.position * 1000, offset));
-  }, [doc, state.position, offset]);
+    return Math.max(0, displayLyricIndex(doc.lines, posMs, offset));
+  }, [doc, posMs, offset]);
+
+  const lineProgress = useMemo(() => {
+    if (!doc?.synced || !doc.lines.length) return 0.5;
+    const cur = doc.lines[activeIdx];
+    if (!cur) return 0.5;
+    return lyricLineProgress(cur, posMs - offset, doc.lines[activeIdx + 1]?.startMs);
+  }, [doc, activeIdx, posMs, offset]);
 
   const canvasLines = useMemo(() => {
     const rawLines = doc?.synced
       ? doc.lines.map(l => convertLyricScript(l.text, preferences.lyricChineseMode))
-      : (doc?.plain ?? []).slice(0, 60).map(l => convertLyricScript(l, preferences.lyricChineseMode));
+      : (doc?.plain ?? []).slice(0, 120).map(l => convertLyricScript(l, preferences.lyricChineseMode));
     const counts = new Map<string, number>();
     for (const t of rawLines) {
       const k = t.trim().toLowerCase();
       if (k.length >= 4) counts.set(k, (counts.get(k) ?? 0) + 1);
     }
-    return rawLines.slice(0, 70).map(t => ({
+    return rawLines.slice(0, 220).map(t => ({
       t,
       c: (counts.get(t.trim().toLowerCase()) ?? 0) >= 2,
     }));
@@ -480,18 +501,23 @@ export function Groove2Player({
     ? spectrum.bands.slice(0, 8).reduce((a, b) => a + b, 0) / 8
     : playing ? 0.35 : 0;
 
-  const stateJson = useMemo(() => JSON.stringify({
+  // Heavy static payloads (cover base64 + all engraved lyrics) only transfer once per song/lyric change.
+  const assetsJson = useMemo(() => JSON.stringify({
     title: track.title,
     artist: track.artist,
-    playing,
-    position: state.position,
-    duration: state.duration || 180,
-    energy,
-    activeIndex: activeIdx,
     lines: canvasLines,
     coverData,
+  }), [track.title, track.artist, canvasLines, coverData]);
+
+  // Lightweight playback tick state (<200 bytes) keeps WebKit main thread responsive and dead-on synced.
+  const clampedActive = canvasLines.length ? Math.min(activeIdx, canvasLines.length - 1) : 0;
+  const stateJson = useMemo(() => JSON.stringify({
+    playing,
+    energy: Math.round(energy * 20) / 20,
+    activeIndex: clampedActive,
+    lineProgress: Math.round(lineProgress * 25) / 25,
     params,
-  }), [track.title, track.artist, playing, Math.round(state.position * 4), state.duration, Math.round(energy * 20), activeIdx, canvasLines, coverData, params]);
+  }), [playing, Math.round(energy * 10), clampedActive, Math.round(lineProgress * 20), params]);
 
   const isFav = services.songFavorites.isFavorite(favoriteTrack);
   const togglePlay = () => {
@@ -543,7 +569,7 @@ export function Groove2Player({
 
       {/* High-DPI Interactive Spiral Vinyl Canvas */}
       <View style={{ flex: 1, minHeight: 260 }}>
-        <NativeLocalCanvas html={GROOVE2_HTML} stateJson={stateJson} style={StyleSheet.absoluteFill} />
+        <NativeLocalCanvas html={GROOVE2_HTML} assetsJson={assetsJson} stateJson={stateJson} style={StyleSheet.absoluteFill} />
       </View>
 
       {/* Bottom 3 quick pills matching Sollin Groove 2 */}

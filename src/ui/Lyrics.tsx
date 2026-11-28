@@ -11,7 +11,7 @@ import {trackKey} from '../domain/track.ts';
 import {buildStageTimeline,activeStageGroup} from '../lyrics/stage.ts';
 import type {LyricDocument,LyricLine} from '../lyrics/parser.ts';
 import type {LyricStyle} from '../lyrics/settings.ts';
-import {activeLyric,lyricSpokenText} from '../lyrics/parser.ts';
+import {activeLyric,displayLyricIndex,lyricSpokenText} from '../lyrics/parser.ts';
 import {convertLyricScript} from '../lyrics/chineseScript.ts';
 import type {SelectedLyrics} from '../lyrics/selection.ts';
 import {lyricSignature} from '../domain/matching.ts';
@@ -36,7 +36,7 @@ function convertDocument(doc:LyricDocument|undefined,mode:LyricChineseMode):Lyri
     })),
   };
 }
-export function Lyrics({services,track,font,presentation,visibleLines,chrome=true,chromeOnly=false,openRequest=0}:{services:Services;track:Track;font?:string;presentation?:'am'|'immersive'|'photo'|'stage'|'am2'|'wave';visibleLines?:number;chrome?:boolean;chromeOnly?:boolean;openRequest?:number}){
+export function Lyrics({services,track,font,presentation,visibleLines,chrome=true,chromeOnly=false,openRequest=0}:{services:Services;track:Track;font?:string;presentation?:'am'|'immersive'|'photo'|'stage'|'am2'|'wave'|'classicFull';visibleLines?:number;chrome?:boolean;chromeOnly?:boolean;openRequest?:number}){
   const theme=useTheme(),s=sollinTokens(theme.mode,theme.palette.accent,theme.appearance);
   const state=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
   const preferences=useSyncExternalStore(services.preferences.subscribe,services.preferences.getSnapshot);
@@ -62,7 +62,7 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     if(delta>1.5)setSeekRevision(value=>value+1);
   },[state.position]);
   const chooser=<LyricChoiceModal services={services} track={choosing?track:null} onClose={()=>setChoosing(false)}/>;
-  const offset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,key),center=preferences.lyricAlignment==='center'||preferences.lyricAlignment==='auto'&&(presentation==='immersive'||presentation==='wave');
+  const offset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,key),center=presentation==='classicFull'||preferences.lyricAlignment==='center'||preferences.lyricAlignment==='auto'&&(presentation==='immersive'||presentation==='wave');
   const seek=useCallback((startMs:number,index:number,now:number)=>{const elapsed=now-lastTap.current.time;if(screenReader||lastTap.current.key===key&&lastTap.current.index===index&&elapsed>=0&&elapsed<350){services.playback.controller.seek(Math.max(0,(startMs+offset)/1000));lastTap.current={index:-1,time:0,key:''};}else lastTap.current={index,time:now,key};},[services,key,offset,screenReader]);
   const openAllLyrics=useCallback(()=>setExpanded(true),[]);
   const settings=<View style={{gap:10,padding:14,borderRadius:16,backgroundColor:s.card,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.muted,fontSize:13}}>歌词偏移：全局 {preferences.lyricOffsetMs}ms · 本曲 {preferences.lyricOffsets[key]??0}ms（正值延后）</Text><View style={{flexDirection:'row',gap:8}}>{(['track','global'] as const).map(value=><Pressable key={value} accessibilityRole="radio" accessibilityState={{selected:scope===value}} onPress={()=>setScope(value)} style={{paddingHorizontal:14,paddingVertical:8,borderRadius:999,backgroundColor:scope===value?s.control:s.chip}}><Text style={{color:scope===value?'#FFFFFF':s.ink,fontSize:13,fontWeight:'600'}}>{value==='track'?'调整本曲':'调整全局'}</Text></Pressable>)}</View><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{[-500,-100,0,100,500].map(delta=><Pressable key={delta} accessibilityRole="button" onPress={()=>{const current=scope==='global'?preferences.lyricOffsetMs:preferences.lyricOffsets[key]??0,next=delta===0?0:Math.max(-600000,Math.min(600000,current+delta));void (scope==='global'?services.preferences.update({lyricOffsetMs:next}):services.preferences.setLyricOffset(key,next)).then(()=>setSettingError('')).catch(()=>setSettingError('偏移未保存，原设置保留'));}} style={{paddingHorizontal:12,paddingVertical:8,borderRadius:10,backgroundColor:s.chip,borderWidth:1,borderColor:s.cardBorder}}><Text style={{color:s.ink,fontSize:13,fontWeight:'600'}}>{delta===0?'重置':`${delta>0?'+':''}${delta}ms`}</Text></Pressable>)}</View>{!!settingError&&<Text accessibilityRole="alert" style={{color:s.accent,fontSize:12}}>{settingError}</Text>}</View>;
@@ -71,15 +71,18 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
   const stageLines=useMemo(()=>document&&presentation==='stage'?buildStageTimeline(document,state.duration*1000):[],[document,presentation,state.duration]);
   const stageGroup=activeStageGroup(stageLines,state.position*1000,offset);
   const active=document?activeLyric(document.lines,state.position*1000,offset):-1;
+  const displayActive=document?displayLyricIndex(document.lines,state.position*1000,offset):-1;
   const {fontScale:systemFontScale}=useWindowDimensions();
-  const fullPage=presentation==='am'||presentation==='am2'||presentation==='photo',alignStart=(presentation==='am'||presentation==='photo')&&systemFontScale>1.8;
-  const count=visibleLines??(presentation==='am'||presentation==='wave'?3:presentation?2:4),firstVisible=Math.max(0,active-(count===1?0:1));
-  useEffect(()=>{if(expanded&&active>=0)list.current?.scrollToIndex({index:active,animated:true,viewPosition:.45});},[active,expanded]);
-  const size=(presentation==='stage'?84:presentation==='am'?21:presentation==='am2'?24:presentation==='photo'?20:presentation==='wave'?17:presentation?20:19)*preferences.fontScale;
+  const fullPage=presentation==='am'||presentation==='am2'||presentation==='photo'||presentation==='classicFull',alignStart=(presentation==='am'||presentation==='photo')&&systemFontScale>1.8;
+  const count=visibleLines??(presentation==='am'||presentation==='wave'?3:presentation?2:4),firstVisible=Math.max(0,displayActive-(count===1?0:1));
+  useEffect(()=>{if(expanded&&displayActive>=0)list.current?.scrollToIndex({index:displayActive,animated:true,viewPosition:.45});},[displayActive,expanded]);
+  const size=(presentation==='stage'?84:presentation==='am'?21:presentation==='am2'?24:presentation==='photo'?22:presentation==='classicFull'?19:presentation==='wave'?17:presentation?20:19)*preferences.fontScale;
   const style=preferences.lyricStyle;
   const showTrans=style.showTranslation!==false,showRoma=style.showRomanization!==false,secScale=style.secondaryScale??1;
   const auxiliaryFont={fontFamily:font,fontSize:Math.round(14*secScale),lineHeight:Math.ceil(14*secScale*style.lineHeight)};
-  const activeColor=style.activeColor==='auto'?(presentation==='stage'&&preferences.stageStyle==='classic'?'rgba(255,255,255,0.68)':presentation?'#FFFFFF':s.accent):style.activeColor,inactiveColor=style.inactiveColor==='auto'?(presentation==='am'||presentation==='photo'?'rgba(255,255,255,0.32)':presentation?'rgba(255,255,255,0.45)':s.muted):style.inactiveColor;
+  const classicLight=presentation==='classicFull'&&theme.mode==='light';
+  const activeColor=style.activeColor==='auto'?(classicLight?classicInk.text:presentation==='stage'&&preferences.stageStyle==='classic'?'rgba(255,255,255,0.68)':presentation?'#FFFFFF':s.accent):style.activeColor;
+  const inactiveColor=style.inactiveColor==='auto'?(classicLight?classicInk.lyricInactive:presentation==='am'||presentation==='photo'?'rgba(255,255,255,0.34)':presentation?'rgba(255,255,255,0.45)':s.muted):style.inactiveColor;
   return <View style={{gap:12,...(presentation?{height:'100%'}:{})}}>
     {!chrome?null:<View style={presentation==='stage'?{position:'absolute',top:0,left:44,right:44,height:44,zIndex:2,flexDirection:'row',alignItems:'center',justifyContent:'space-between'}:{flexDirection:'row',alignItems:'center',gap:12}}>
     <Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>setChoosing(true)} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:presentation?(presentation==='stage'?'rgba(255,255,255,0.5)':'#FFFFFF'):theme.palette.accent,fontSize:13}}>选择歌词来源</Text></Pressable>
@@ -95,20 +98,20 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
     {(result?.variants.length??0)>1&&<View style={{flexDirection:'row',gap:10,flexWrap:'wrap'}}>{result!.variants.map((item,index)=><Pressable key={index} onPress={()=>setVariant(index)}><Text style={{color:variant===index?theme.color('#D9F49B'):theme.color('#959EAC')}}>{item.label}</Text></Pressable>)}</View>}
     {document?.synced&&!presentation&&<Pressable accessibilityRole="button" onPress={()=>setExpanded(true)}><Text style={{color:theme.color('#D9F49B')}}>全部歌词 · 双击行定位，长按打开设置</Text></Pressable>}
     {fullPage&&document?.synced&&!expanded&&<View style={{flex:1}}>
-      <AM2LyricRows alignStart={alignStart} testID={presentation==='photo'?'photo-lyrics-list':presentation==='am'?'am-lyrics-list':'am2-lyrics-list'} services={services} lines={document.lines} active={active} center={center} font={font} size={size} offset={offset} style={style} activeColor={activeColor} inactiveColor={inactiveColor} seek={seek} openSettings={openAllLyrics} footer={presentation!=='am'&&presentation!=='photo'}/>
+      <AM2LyricRows alignStart={alignStart} testID={presentation==='photo'?'photo-lyrics-list':presentation==='am'?'am-lyrics-list':presentation==='classicFull'?'classic-full-lyrics-list':'am2-lyrics-list'} services={services} lines={document.lines} active={displayActive} singingIndex={active} center={center} font={font} size={size} offset={offset} style={presentation==='photo'?{...style,blur:Math.max(style.blur,1.8),spacing:Math.max(style.spacing,11)}:presentation==='classicFull'?{...style,blur:0,spacing:Math.max(style.spacing,10)}:style} activeColor={activeColor} inactiveColor={inactiveColor} activeBoost={presentation==='classicFull'?3.5:presentation==='photo'?2:0} anchor={presentation==='classicFull'?.42:presentation==='photo'?.38:.35} rate={preferences.rate} seek={seek} openSettings={openAllLyrics} footer={presentation!=='am'&&presentation!=='photo'&&presentation!=='classicFull'}/>
     </View>}
     {presentation==='stage'&&document?.synced&&!expanded&&<View testID="lyric-stage" style={{flex:1}}>
-      <StageLyricRows services={services} lines={document.lines} group={stageGroup} font={font} offset={offset} size={size} activeColor={activeColor} inactiveColor="rgba(255,255,255,0.16)" seek={seek} openSettings={openAllLyrics} playing={state.intent==='playing'&&!state.buffering} position={state.position*1000-offset} stageStyle={preferences.stageStyle}/>
+      <StageLyricRows services={services} lines={document.lines} group={stageGroup} font={font} offset={offset} size={size} activeColor={activeColor} inactiveColor="rgba(255,255,255,0.16)" seek={seek} openSettings={openAllLyrics} playing={state.intent==='playing'&&!state.buffering} position={state.position*1000-offset} rate={preferences.rate} stageStyle={preferences.stageStyle}/>
     </View>}
         {presentation!=='stage'&&!fullPage&&document?.synced&&!expanded&&document.lines.slice(firstVisible,firstVisible+count).map((item,index)=>{
       const actual=firstVisible+index,time=state.position*1000-offset,singing=time>=item.startMs&&(item.endMs===undefined||time<item.endMs);
-      const isWave=presentation==='wave',isImmersive=presentation==='immersive',live=actual===active||!!item.background&&singing;
-      const dist=active>=0?Math.abs(actual-active):index;
+      const isWave=presentation==='wave',isImmersive=presentation==='immersive',live=actual===displayActive||!!item.background&&singing;
+      const dist=displayActive>=0?Math.abs(actual-displayActive):index;
       const rowOpacity=item.background?.65:isImmersive?(live?1:dist<=1?.65:.36):1;
       // Give every row a stable Pressable owner. Replacing an inline onPress
       // while the first seek realigns a FlatList can cancel the second tap.
       return <LyricGesture key={actual} accessibilityRole="button" accessibilityLabel={lyricSpokenText(item)} onTap={now=>seek(item.startMs,actual,now)} onLongPress={()=>setExpanded(true)} accessibilityHint="双击歌词定位，长按歌词设置" style={{paddingVertical:isWave||isImmersive?4:item.background?4:count===1?0:style.spacing,opacity:rowOpacity}}>
-        <NativeLyricLine line={live?item:inactiveLyric(item)} position={live?state.position*1000-offset:0} playing={live&&state.intent==='playing'&&!state.buffering} size={isWave&&live?size+1.5:isImmersive&&live?size+1:size} font={font} fontURI={services.fonts.selectedURI()} color={live?activeColor:inactiveColor} center={center} maxLines={isWave||isImmersive?1:undefined} lineHeight={isWave||isImmersive?1.35:style.lineHeight} blur={live?0:style.blur} emphasis={style.emphasis} weight={isWave||isImmersive?(live?'700':'500'):undefined}/>
+        <NativeLyricLine line={live?item:inactiveLyric(item)} position={live?state.position*1000-offset:0} playing={live&&actual===active&&state.intent==='playing'&&!state.buffering} rate={preferences.rate} size={isWave&&live?size+1.5:isImmersive&&live?size+1:size} font={font} fontURI={services.fonts.selectedURI()} color={live?activeColor:inactiveColor} center={center} maxLines={isWave||isImmersive?1:undefined} lineHeight={isWave||isImmersive?1.35:style.lineHeight} blur={live?0:style.blur} emphasis={style.emphasis} weight={isWave||isImmersive?(live?'700':'500'):undefined}/>
         {!isWave&&!isImmersive&&showTrans&&item.translation&&<LyricText style={{...auxiliaryFont,color:theme.color('#BFC8D9')}}>{item.translation}</LyricText>}{!isWave&&!isImmersive&&showRoma&&item.romanization&&<LyricText style={{...auxiliaryFont,fontSize:Math.round(13*secScale),color:theme.color('#959EAC')}}>{item.romanization}</LyricText>}
       </LyricGesture>;
     })}
@@ -137,10 +140,10 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
             </View>
           </ScrollView>
           {!document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} data={document?.plain.slice(0,300)??[]} keyExtractor={(_,index)=>String(index)} renderItem={({item})=><LyricText style={{fontSize:18*preferences.fontScale,color:s.ink,fontFamily:font,marginVertical:style.spacing}}>{item}</LyricText>} showsVerticalScrollIndicator={false}/>}
-          {document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} ref={list} data={document?.lines??[]} extraData={[active,font,size,state.intent,offset,seekRevision,preferences.lyricChineseMode,showTrans,showRoma,secScale]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
+          {document?.synced&&<FlatList testID="full-lyrics-list" style={{flex:1}} ref={list} data={document?.lines??[]} extraData={[displayActive,active,font,size,state.intent,offset,seekRevision,preferences.lyricChineseMode,preferences.rate,showTrans,showRoma,secScale]} keyExtractor={(_,index)=>String(index)} initialNumToRender={8} windowSize={5}
             onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})}
             renderItem={({item,index})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>seek(item.startMs,index,time)} accessibilityHint="双击歌词定位" style={{paddingVertical:style.spacing}}>
-              <View><NativeLyricLine line={index===active?item:inactiveLyric(item)} position={index===active?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} size={18*preferences.fontScale} font={font} fontURI={services.fonts.selectedURI()} color={index===active?s.accent:s.muted} center={center} lineHeight={style.lineHeight} blur={index===active?0:style.blur} emphasis={style.emphasis}/></View>{showTrans&&item.translation&&<LyricText style={{...auxiliaryFont,color:s.muted}}>{item.translation}</LyricText>}{showRoma&&item.romanization&&<LyricText style={{...auxiliaryFont,color:s.subtle}}>{item.romanization}</LyricText>}
+              <View><NativeLyricLine line={index===displayActive?item:inactiveLyric(item)} position={index===displayActive?state.position*1000-offset:0} playing={index===active&&state.intent==='playing'&&!state.buffering} rate={preferences.rate} size={18*preferences.fontScale} font={font} fontURI={services.fonts.selectedURI()} color={index===displayActive?s.accent:s.muted} center={center} lineHeight={style.lineHeight} blur={index===displayActive?0:style.blur} emphasis={style.emphasis}/></View>{showTrans&&item.translation&&<LyricText style={{...auxiliaryFont,color:s.muted}}>{item.translation}</LyricText>}{showRoma&&item.romanization&&<LyricText style={{...auxiliaryFont,color:s.subtle}}>{item.romanization}</LyricText>}
             </LyricGesture>} showsVerticalScrollIndicator={false}/>}
         </View>}
       </View>
@@ -150,24 +153,28 @@ export function Lyrics({services,track,font,presentation,visibleLines,chrome=tru
 
 // Only the active row subscribes to the playback clock. FlatList props remain
 // stable during position ticks; inactive rows never receive per-tick positions.
-const AM2LyricRows=memo(function AM2LyricRows({alignStart,testID,services,lines,active,center,font,size,offset,style,activeColor,inactiveColor,seek,openSettings,bias=0,anchor=.35,footer=true}:{alignStart:boolean;testID:string;services:Services;lines:readonly LyricLine[];active:number;center:boolean;font?:string;size:number;offset:number;style:LyricStyle;activeColor:string;inactiveColor:string;seek:(start:number,index:number,time:number)=>void;openSettings:()=>void;bias?:number;anchor?:number;footer?:boolean}){
+const AM2LyricRows=memo(function AM2LyricRows({alignStart,testID,services,lines,active,singingIndex,center,font,size,offset,style,activeColor,inactiveColor,activeBoost=0,rate=1,seek,openSettings,bias=0,anchor=.35,footer=true}:{alignStart:boolean;testID:string;services:Services;lines:readonly LyricLine[];active:number;singingIndex?:number;center:boolean;font?:string;size:number;offset:number;style:LyricStyle;activeColor:string;inactiveColor:string;activeBoost?:number;rate?:number;seek:(start:number,index:number,time:number)=>void;openSettings:()=>void;bias?:number;anchor?:number;footer?:boolean}){
   const list=useRef<FlatList<LyricLine>>(null),actions=useRef({seek,openSettings});actions.current={seek,openSettings};
-  const extra=useMemo(()=>[active,center,font,size,offset,style,activeColor,inactiveColor],[active,center,font,size,offset,style,activeColor,inactiveColor]);
-  useEffect(()=>{if(active>=0)list.current?.scrollToIndex({index:active,viewPosition:alignStart?0:anchor,animated:false});},[active,alignStart]);
+  const extra=useMemo(()=>[active,singingIndex,center,font,size,offset,style,activeColor,inactiveColor,activeBoost,rate],[active,singingIndex,center,font,size,offset,style,activeColor,inactiveColor,activeBoost,rate]);
+  useEffect(()=>{if(active>=0)list.current?.scrollToIndex({index:active,viewPosition:alignStart?0:anchor,animated:true});},[active,alignStart,anchor]);
   const showTrans=style.showTranslation!==false,showRoma=style.showRomanization!==false,secSize=Math.round(14*(style.secondaryScale??1));
-  const render=useCallback(({item,index}:{item:LyricLine;index:number})=><LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>actions.current.seek(item.startMs,index,time)} onLongPress={()=>actions.current.openSettings()} accessibilityHint="双击定位，长按调整偏移" style={{paddingVertical:style.spacing}}>
-    {index===active?<AM2ActiveLyric services={services} line={item} center={center} offset={offset} size={size} font={font} color={activeColor} style={style}/>:<NativeLyricLine line={inactiveLyric(item)} position={0} playing={false} center={center} size={size} font={font} fontURI={services.fonts.selectedURI()} color={inactiveColor} lineHeight={style.lineHeight} blur={style.blur} emphasis={style.emphasis}/>}
-    {showTrans&&item.translation&&<LyricText style={{fontFamily:font,color:'#D5D5DA',fontSize:secSize,marginTop:8,textAlign:center?'center':'left'}}>{item.translation}</LyricText>}{showRoma&&item.romanization&&<LyricText style={{fontFamily:font,color:'#D5D5DA',fontSize:secSize,marginTop:6,textAlign:center?'center':'left'}}>{item.romanization}</LyricText>}
-  </LyricGesture>,[services,active,center,font,size,offset,style,activeColor,inactiveColor,showTrans,showRoma,secSize]);
+  const render=useCallback(({item,index}:{item:LyricLine;index:number})=>{
+    const isCurrent=index===active;
+    const isSinging=singingIndex===undefined?isCurrent:index===singingIndex;
+    return <LyricGesture accessibilityRole="button" accessibilityLabel={`定位歌词：${lyricSpokenText(item)}`} onTap={time=>actions.current.seek(item.startMs,index,time)} onLongPress={()=>actions.current.openSettings()} accessibilityHint="双击定位，长按调整偏移" style={{paddingVertical:style.spacing}}>
+      {isCurrent?<AM2ActiveLyric services={services} line={item} center={center} offset={offset} size={size+activeBoost} font={font} color={activeColor} style={style} rate={rate} singing={isSinging} weight={activeBoost>0?'700':'600'}/>:<NativeLyricLine line={inactiveLyric(item)} position={0} playing={false} rate={rate} center={center} size={size} font={font} fontURI={services.fonts.selectedURI()} color={inactiveColor} lineHeight={style.lineHeight} blur={style.blur} emphasis={style.emphasis}/>}
+      {showTrans&&item.translation&&<LyricText style={{fontFamily:font,color:inactiveColor,fontSize:secSize,marginTop:6,textAlign:center?'center':'left'}}>{item.translation}</LyricText>}{showRoma&&item.romanization&&<LyricText style={{fontFamily:font,color:inactiveColor,fontSize:secSize,marginTop:4,textAlign:center?'center':'left'}}>{item.romanization}</LyricText>}
+    </LyricGesture>;
+  },[services,active,singingIndex,center,font,size,offset,style,activeColor,inactiveColor,activeBoost,rate,showTrans,showRoma,secSize]);
   const failed=useCallback((info:{averageItemLength:number;index:number})=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false}),[]);
   const footerNode=useMemo(()=><Pressable accessibilityRole="button" accessibilityLabel="打开全部歌词与偏移设置" onPress={openSettings} style={{minHeight:44,justifyContent:'center'}}><Text style={{color:'#D5D5DA'}}>全部歌词与偏移设置</Text></Pressable>,[openSettings]);
-  return <FlatList testID={testID} ref={list} data={lines} extraData={extra} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={failed} ListFooterComponent={footer?footerNode:null} contentContainerStyle={{paddingTop:30+bias,paddingBottom:30}} showsVerticalScrollIndicator={false}/>;
+  return <FlatList testID={testID} ref={list} data={lines} extraData={extra} keyExtractor={lyricRowKey} initialNumToRender={10} windowSize={7} renderItem={render} onScrollToIndexFailed={failed} ListFooterComponent={footer?footerNode:null} contentContainerStyle={{paddingTop:30+bias,paddingBottom:60}} showsVerticalScrollIndicator={false}/>;
 });
 const lyricRowKey=(_:LyricLine,index:number)=>String(index);
 // IMG_4872 keeps three to four 80pt lines on screen with the active line white
 // and the surrounding lines near-black on the pure-black stage. The accessible
 // group still names the current word batch so word-timing stays observable.
-const StageLyricRows=memo(function StageLyricRows({services,lines,group,font,offset,size,activeColor,inactiveColor,seek,openSettings,playing,position,stageStyle}:{services:Services;lines:readonly LyricLine[];group?:{id:string;line:LyricLine};font?:string;offset:number;size:number;activeColor:string;inactiveColor:string;seek:(start:number,index:number,time:number)=>void;openSettings:()=>void;playing:boolean;position:number;stageStyle:StageStyle}){
+const StageLyricRows=memo(function StageLyricRows({services,lines,group,font,offset,size,activeColor,inactiveColor,seek,openSettings,playing,position,rate=1,stageStyle}:{services:Services;lines:readonly LyricLine[];group?:{id:string;line:LyricLine};font?:string;offset:number;size:number;activeColor:string;inactiveColor:string;seek:(start:number,index:number,time:number)=>void;openSettings:()=>void;playing:boolean;position:number;rate?:number;stageStyle:StageStyle}){
   const largeText=useWindowDimensions().fontScale>1.4;
   const list=useRef<FlatList<LyricLine>>(null),actions=useRef({seek,openSettings});actions.current={seek,openSettings};
   const active=group?Number(group.id.split(':')[0]):-1;
@@ -176,14 +183,14 @@ const StageLyricRows=memo(function StageLyricRows({services,lines,group,font,off
     ?<LyricGesture key={index} testID="lyric-stage-group" accessibilityRole="button" accessibilityLabel={lyricSpokenText(group.line)}
       accessibilityValue={{text:group.line.words?'逐字歌词':group.line.timedCues?.length?'部分逐字歌词':'行级歌词'}} accessibilityHint="双击定位到当前段，长按打开歌词设置"
       onTap={time=>actions.current.seek(group.line.startMs,index,time)} onLongPress={()=>actions.current.openSettings()}>
-      <NativeLyricLine line={item} position={position} playing={playing} size={size} font={font} fontURI={services.fonts.selectedURI()} color={activeColor} center lineHeight={1.14} emphasis stageStyle={stageStyle}/>
+      <NativeLyricLine line={item} position={position} playing={playing} rate={rate} size={size} font={font} fontURI={services.fonts.selectedURI()} color={activeColor} center lineHeight={1.14} emphasis stageStyle={stageStyle}/>
     </LyricGesture>
-    :<NativeLyricLine key={index} line={inactiveLyric(item)} position={0} playing={false} size={size} font={font} fontURI={services.fonts.selectedURI()} color={inactiveColor} center lineHeight={1.14} blur={0} emphasis={false}/>;
-  return <FlatList testID="lyric-stage-list" ref={list} data={lines} extraData={[active,group?.line.text,size,font,position,playing,activeColor,stageStyle]} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})} contentContainerStyle={{paddingTop:largeText?24:206,paddingBottom:24}} showsVerticalScrollIndicator={false}/>;
+    :<NativeLyricLine key={index} line={inactiveLyric(item)} position={0} playing={false} rate={rate} size={size} font={font} fontURI={services.fonts.selectedURI()} color={inactiveColor} center lineHeight={1.14} blur={0} emphasis={false}/>;
+  return <FlatList testID="lyric-stage-list" ref={list} data={lines} extraData={[active,group?.line.text,size,font,position,playing,rate,activeColor,stageStyle]} keyExtractor={lyricRowKey} initialNumToRender={8} windowSize={5} renderItem={render} onScrollToIndexFailed={info=>list.current?.scrollToOffset({offset:info.averageItemLength*info.index,animated:false})} contentContainerStyle={{paddingTop:largeText?24:206,paddingBottom:24}} showsVerticalScrollIndicator={false}/>;
 });
-function AM2ActiveLyric({services,line,center,offset,size,font,color,style}:{services:Services;line:LyricLine;center:boolean;offset:number;size:number;font?:string;color:string;style:LyricStyle}){
+function AM2ActiveLyric({services,line,center,offset,size,font,color,style,rate=1,singing=true,weight}:{services:Services;line:LyricLine;center:boolean;offset:number;size:number;font?:string;color:string;style:LyricStyle;rate?:number;singing?:boolean;weight?:'500'|'600'|'700'|'800'|'900'}){
   const playback=useSyncExternalStore(services.playback.controller.subscribe,services.playback.controller.getSnapshot);
-  return <NativeLyricLine line={line} position={playback.position*1000-offset} playing={playback.intent==='playing'&&!playback.buffering} center={center} size={size} font={font} fontURI={services.fonts.selectedURI()} color={color} lineHeight={style.lineHeight} emphasis={style.emphasis}/>;
+  return <NativeLyricLine line={line} position={playback.position*1000-offset} playing={singing&&playback.intent==='playing'&&!playback.buffering} rate={rate} center={center} size={size} font={font} fontURI={services.fonts.selectedURI()} color={color} lineHeight={style.lineHeight} emphasis={style.emphasis} weight={weight}/>;
 }
 
 const NativeLyricGesture=requireNativeView<ViewProps&{onDoubleTap?:()=>void;onLongPress?:()=>void}>('NexusNative','LyricGesture');
@@ -234,10 +241,11 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
   const key=trackKey(track.origin);
   const offset=lyricOffset(preferences.lyricOffsetMs,preferences.lyricOffsets,key);
   const active=document?activeLyric(document.lines,state.position*1000,offset):-1;
+  const displayActive=document?displayLyricIndex(document.lines,state.position*1000,offset):-1;
   // IMG_4854 keeps ~35pt between classic lyric baselines; the shared lyric style
   // default (1.5) is too tight for that composition.
   const style=preferences.lyricStyle,lineHeight=classicLyricRow(false,preferences.fontScale,style.lineHeight).height;
-  const first=Math.max(0,active-(visibleLines===1?0:1));
+  const first=Math.max(0,displayActive-(visibleLines===1?0:1));
   const lastTap=useRef({index:-1,time:0,key:''});
   const [screenReader,setScreenReader]=useState(false);
   useEffect(()=>{void AccessibilityInfo.isScreenReaderEnabled().then(setScreenReader);const listener=AccessibilityInfo.addEventListener('screenReaderChanged',setScreenReader);return()=>listener.remove();},[]);
@@ -252,9 +260,9 @@ export function ClassicLyrics({services,track,font,visibleLines=3,onOpenSettings
     {!error&&value&&!document?.lines.length&&!document?.plain.length&&<Text style={{textAlign:'center',color:theme.palette.secondary,fontSize:13}}>暂无歌词</Text>}
     {document?.synced&&document.lines.slice(first,first+visibleLines).map((item,index)=>{
       const actual=first+index,now=state.position*1000-offset,singing=now>=item.startMs&&(item.endMs===undefined||now<item.endMs);
-      const live=actual===active||!!item.background&&singing,row=classicLyricRow(live,preferences.fontScale,style.lineHeight);
+      const live=actual===displayActive||!!item.background&&singing,row=classicLyricRow(live,preferences.fontScale,style.lineHeight);
       return <LyricGesture key={actual} accessibilityRole="button" accessibilityLabel={lyricSpokenText(item)} accessibilityHint="双击歌词定位，长按打开歌词设置" onTap={time=>tap(item.startMs,actual,time)} onLongPress={onOpenSettings} style={{minHeight:lineHeight,justifyContent:'center'}}>
-        <NativeLyricLine line={live?item:inactiveLyric(item)} position={live?now:0} playing={live&&state.intent==='playing'&&!state.buffering} center size={row.size} font={font} fontURI={services.fonts.selectedURI()} color={live?(theme.mode==='dark'?'#FFFFFF':classicInk.text):(theme.mode==='dark'?'rgba(255,255,255,0.48)':classicInk.lyricInactive)} maxLines={1} lineHeight={row.lineHeight} emphasis={style.emphasis} weight={row.weight} embolden={row.embolden}/>
+        <NativeLyricLine line={live?item:inactiveLyric(item)} position={live?now:0} playing={live&&(actual===active||!!item.background&&singing)&&state.intent==='playing'&&!state.buffering} rate={preferences.rate} center size={row.size} font={font} fontURI={services.fonts.selectedURI()} color={live?(theme.mode==='dark'?'#FFFFFF':classicInk.text):(theme.mode==='dark'?'rgba(255,255,255,0.48)':classicInk.lyricInactive)} maxLines={1} lineHeight={row.lineHeight} emphasis={style.emphasis} weight={row.weight} embolden={row.embolden}/>
       </LyricGesture>;
     })}
     {!document?.synced&&!!document?.plain.length&&<Text numberOfLines={2} style={{textAlign:'center',color:theme.palette.secondary,fontSize:15}}>{document.plain[0]}</Text>}

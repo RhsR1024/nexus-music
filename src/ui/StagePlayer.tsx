@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Services } from '../app/services.ts';
 import type { StageStyle } from '../app/preferences.ts';
 import { trackKey, type Track } from '../domain/track.ts';
-import { activeLyric, lyricSpokenText, type LyricLine } from '../lyrics/parser.ts';
+import { displayLyricIndex, lyricLineProgress, lyricSpokenText } from '../lyrics/parser.ts';
 import { lyricOffset } from '../lyrics/settings.ts';
 import { convertLyricScript } from '../lyrics/chineseScript.ts';
 import { Lyrics, useLyricDocument } from './Lyrics.tsx';
@@ -27,31 +27,6 @@ const activeSweeps: Record<StageStyle, { lit: string; dim: string; glow: string 
   cyberpunk: { lit: '#FF7CE5', dim: 'rgba(255,90,190,0.34)', glow: '#FF2A9D' },
   aurora: { lit: '#9CFFD6', dim: 'rgba(130,255,215,0.34)', glow: '#52E8A8' },
 };
-
-function computeSweepProgress(line: LyricLine, posMs: number, nextStartMs?: number): number {
-  if (line.words && line.words.length > 0) {
-    const totalChars = line.words.reduce((acc, w) => acc + w.text.length, 0);
-    if (totalChars > 0) {
-      let litChars = 0;
-      for (const w of line.words) {
-        const end = Math.max(w.startMs + 80, w.endMs);
-        if (posMs >= end) {
-          litChars += w.text.length;
-        } else if (posMs > w.startMs) {
-          const frac = (posMs - w.startMs) / Math.max(80, end - w.startMs);
-          litChars += w.text.length * Math.max(0, Math.min(1, frac));
-          break;
-        } else {
-          break;
-        }
-      }
-      return Math.max(0, Math.min(1, litChars / totalChars));
-    }
-  }
-  const endMs = line.endMs ?? nextStartMs ?? (line.startMs + 4200);
-  const span = Math.max(1200, endMs - line.startMs);
-  return Math.max(0, Math.min(1, (posMs - line.startMs) / span));
-}
 
 function stageFontSize(text: string, width: number, fontScale: number): number {
   const len = text.trim().length;
@@ -117,7 +92,7 @@ export function StagePlayer({
 
   const activeIdx = useMemo(() => {
     if (!doc?.synced || !doc.lines.length) return -1;
-    return activeLyric(doc.lines, smoothMs, offset);
+    return displayLyricIndex(doc.lines, smoothMs, offset);
   }, [doc, smoothMs, offset]);
 
   const activeLine = activeIdx >= 0 && doc?.synced ? doc.lines[activeIdx] : undefined;
@@ -155,7 +130,7 @@ export function StagePlayer({
 
   const backdrop = prefs.stageBackdrop && prefs.stageStyle !== 'classic';
   const palette = activeSweeps[prefs.stageStyle];
-  const sweep = activeLine ? computeSweepProgress(activeLine, effectiveMs, nextLine?.startMs) : 1;
+  const sweep = activeLine ? lyricLineProgress(activeLine, effectiveMs, nextLine?.startMs) : 1;
   const chars = useMemo(() => Array.from(currentDisplayText), [currentDisplayText]);
   const litExact = sweep * chars.length;
   const fullLitCount = Math.floor(litExact);

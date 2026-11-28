@@ -52,6 +52,92 @@ export interface FeaturedHomeHelpers {
   popularArtists?:(signal:AbortSignal)=>Promise<readonly {id:string;title:string;artwork?:string}[]>;
 }
 function required(value:unknown){const id=text(value);if(!id)throw new Error('平台响应缺少有效ID');return id;}
+function extractAssignedJSON(html:string,pattern:RegExp):string|undefined{
+  const m=pattern.exec(html);
+  if(!m)return undefined;
+  let i=m.index+m[0].length;
+  while(i<html.length&&/\s/.test(html[i]!))i++;
+  const open=html[i];
+  if(open!=='['&&open!=='{')return undefined;
+  const close=open==='['?']':'}';
+  let depth=0,inStr=false,esc=false;
+  for(let j=i;j<html.length;j++){
+    const ch=html[j]!;
+    if(inStr){
+      if(esc)esc=false;
+      else if(ch==='\\')esc=true;
+      else if(ch==='"')inStr=false;
+      continue;
+    }
+    if(ch==='"'){inStr=true;continue;}
+    if(ch===open)depth++;
+    else if(ch===close){
+      depth--;
+      if(depth===0)return html.slice(i,j+1);
+    }
+  }
+  return undefined;
+}
+function decodeHtmlEntities(raw:string):string{
+  return raw
+    .replace(/&amp;/g,'&')
+    .replace(/&quot;/g,'"')
+    .replace(/&#39;/g,"'")
+    .replace(/&lt;/g,'<')
+    .replace(/&gt;/g,'>')
+    .replace(/&nbsp;/g,' ')
+    .trim();
+}
+function parseKugouSpecialHtml(html:string):BrowseItem[]{
+  const items:BrowseItem[]=[];
+  const seen=new Set<string>();
+  const liRe=/<li\b[^>]*class=["'][^"']*\bs_(\d+)\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi;
+  let m:RegExpExecArray|null;
+  while((m=liRe.exec(html))){
+    const id=m[1]!;
+    if(seen.has(id))continue;
+    seen.add(id);
+    const body=m[2]!;
+    const titleRaw=body.match(/title=["']([^"']+)["']/i)?.[1]
+      ??body.match(/<strong>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i)?.[1]?.replace(/<[^>]+>/g,'')
+      ??'';
+    const title=decodeHtmlEntities(titleRaw);
+    if(!title)continue;
+    const rawCover=body.match(/_src=["']([^"']+)["']/i)?.[1]
+      ??body.match(/<img[^>]+src=["'](https?:\/\/[^"']+)["']/i)?.[1];
+    let artwork=rawCover?.trim();
+    if(artwork){
+      if(artwork.startsWith('http://'))artwork=`https://${artwork.slice(7)}`;
+      artwork=artwork.replace(/\/150\//,'/400/').replace(/\{size\}/g,'400');
+    }
+    const authorRaw=body.match(/<em>\s*(?:制作人[：:]\s*)?([^<]+)<\/em>/i)?.[1];
+    const author=authorRaw?decodeHtmlEntities(authorRaw):undefined;
+    items.push({id,title,...(artwork?{artwork}:{}),...(author?{author}:{})});
+  }
+  return items;
+}
+function parseKugouSpecialCategories(html:string):BrowseCategory[]{
+  const seen=new Set<string>();
+  const cats:BrowseCategory[]=[];
+  const re=/href=["'][^"']*\/yy\/special\/index\/1-(\d+)-(\d+)\.html["'][^>]*>([^<]+)<\/a>/gi;
+  let m:RegExpExecArray|null;
+  while((m=re.exec(html))){
+    const id=`${m[1]}-${m[2]}`;
+    const title=decodeHtmlEntities(m[3]!);
+    if(!title||seen.has(id))continue;
+    seen.add(id);
+    cats.push({id,title,group:'排序'});
+  }
+  if(!cats.length){
+    return [
+      {id:'5-0',title:'推荐',group:'排序'},
+      {id:'6-0',title:'最热',group:'排序'},
+      {id:'3-0',title:'热藏',group:'排序'},
+      {id:'8-0',title:'飙升',group:'排序'},
+    ];
+  }
+  return cats;
+}
 function tree(value:unknown,depth=0):Row[]{if(depth>12)return[];if(Array.isArray(value))return value.slice(0,2000).flatMap(item=>tree(item,depth+1));const object=row(value);return Object.keys(object).length?[object,...Object.values(object).filter(item=>item&&typeof item==='object').flatMap(item=>tree(item,depth+1))]:[];}
 function unique(items:BrowseItem[]){
   const byId=new Map<string,BrowseItem>();
@@ -164,9 +250,8 @@ export class DiscoveryProvider {
     if(platform==='tx'){const data=await this.qq('playlist.PlaylistAllCategoriesServer','get_all_categories',{qq:''},signal);return list(data.v_group).flatMap(group=>list(row(group).v_item).map(value=>({id:required(row(value).id),title:text(row(value).name),group:text(row(group).group_name)})));}
     if(platform==='kw'){const raw=await this.http('https://wapi.kuwo.cn/api/pc/classify/playlist/getTagList?cmd=rcm_keyword_playlist&user=0&prod=kwplayer_pc_9.0.5.0',{},signal);const items=tree(raw).filter(value=>value.id&&value.name&&['43','10000'].includes(text(value.digest)));if(!items.length)throw new Error('分类响应无效');return items.map(value=>({id:`${required(value.id)}-${text(value.digest)}`,title:text(value.name)}));}
     if(platform==='mg'){const raw=await this.http('https://app.c.nf.migu.cn/pc/v1.0/template/musiclistplaza-taglist/release',{},signal);const items=tree(raw).filter(value=>Array.isArray(value.texts)&&list(value.texts).length>=2);if(!items.length)throw new Error('分类暂不可用');return items.map(value=>({id:required(list(value.texts)[1]),title:text(list(value.texts)[0])}));}
-    const raw=row(await this.http('http://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_smarty=1&',{},signal));
-    if(raw.status!==1||!Object.keys(row(row(raw.data).tagids)).length)throw new Error('酷狗分类响应无效');
-    return Object.entries(row(row(raw.data).tagids)).flatMap(([group,value])=>list(row(value).data).map(item=>({id:required(row(item).id),title:text(row(item).name),group})));
+    const html=await this.textHTTP('https://www.kugou.com/yy/html/special.html',{headers:{'User-Agent':DESKTOP_UA}},signal);
+    return parseKugouSpecialCategories(html);
   }
   async playlists(platform:OnlinePlatform,page:number,category:string|undefined,signal:AbortSignal,limit=30):Promise<BrowsePage>{
     if(!Number.isInteger(page)||page<1||!Number.isInteger(limit)||limit<1||limit>100)throw new Error('分页参数无效');
@@ -194,10 +279,28 @@ export class DiscoveryProvider {
       const raw=row(await this.http(queryURL(url,{loginUid:0,loginSid:0,appUid:76039576,pn:page,rn:limit,order:'hot',...(tag?{id:tag[1]}:{})}),{},signal)),data=row(raw.data);
       if(!Array.isArray(data.data))throw new Error('酷我歌单服务暂时不可用');items=list(data.data).map(value=>{const v=row(value);return item(v.id,v.name,v.img,v.desc,v.total);});hasMore=count(data.total)!==undefined?page*limit<Number(data.total):items.length>=limit;
     }else if(platform==='kg'){
-      if(category){const raw=row(await this.http(queryURL('http://www2.kugou.kugou.com/yueku/v9/special/getSpecial',{is_ajax:1,cdn:'cdn',t:5,c:category,p:page}),{},signal));if(raw.status!==1||!Array.isArray(raw.special_db))throw new Error('酷狗分类歌单响应无效');
-        const values=list(raw.special_db).map(value=>{const v=row(value);return item(v.specialid,v.specialname,v.img,v.intro,v.song_count);});return{items:values,hasMore:values.length>=20,page};}
-      const raw=row(await this.http(queryURL('https://m.kugou.com/plist/index',{json:true,page}),{},signal)),data=row(raw.plist);
-      const values=row(data.list).info;if(!Array.isArray(values))throw new Error('酷狗歌单响应无效');items=list(values).map(value=>{const v=row(value);return item(v.specialid,v.specialname,text(v.imgurl).replace('{size}','400'),v.intro,v.songcount);});hasMore=count(row(data.list).total)!==undefined?page*Number(raw.pagesize??30)<Number(row(data.list).total):items.length>=30;
+      if(!category){
+        try{
+          const raw=row(await this.http(queryURL('https://m.kugou.com/plist/index',{json:true,page}),{},signal)),data=row(raw.plist);
+          const values=row(data.list).info;
+          if(Array.isArray(values)&&values.length){
+            items=list(values).map(value=>{const v=row(value);return item(v.specialid,v.specialname,text(v.imgurl).replace('{size}','400'),v.intro,v.songcount);});
+            hasMore=count(row(data.list).total)!==undefined?page*Number(raw.pagesize??30)<Number(row(data.list).total):items.length>=30;
+            return{items,hasMore,page};
+          }
+        }catch(err){if(signal.aborted)throw err;}
+      }
+      const sortTag=category?.match(/^(\d+)-(\d+)$/);
+      const sort=sortTag?sortTag[1]:'5';
+      const tag=sortTag?sortTag[2]:(category&&/^\d+$/.test(category)?category:'0');
+      const url=page===1&&sort==='5'&&tag==='0'
+        ?'https://www.kugou.com/yy/html/special.html'
+        :`https://www.kugou.com/yy/special/index/${page}-${sort}-${tag}.html`;
+      const html=await this.textHTTP(url,{headers:{'User-Agent':DESKTOP_UA}},signal);
+      items=parseKugouSpecialHtml(html);
+      if(!items.length)throw new Error('酷狗歌单广场暂不可用，请重试');
+      hasMore=items.length>=20;
+      return{items,hasMore,page};
     }else{
       const url=category?queryURL('https://app.c.nf.migu.cn/pc/v1.0/template/musiclistplaza-listbytag/release',{pageNumber:page,templateVersion:2,tagId:category}):queryURL('https://app.c.nf.migu.cn/pc/bmw/page-data/playlist-square-recommend/v1.0',{templateVersion:2,pageNo:page});
       const raw=row(await this.http(url,{},signal));if(raw.code!=='000000')throw new Error('咪咕歌单服务暂时不可用');
@@ -262,32 +365,79 @@ export class DiscoveryProvider {
       const data=row(await this.http(url,{},signal));const values=data.musiclist;if(!Array.isArray(values))throw new Error('酷我歌单响应无效');title=text(data.title??data.name);total=count(data.total??data.totalmusic);rows=list(values).map(value=>{const v=row(value);return{...v,rid:v.id??v.rid,name:v.name,artist:v.artist,album:v.album,duration:v.duration,N_MINFO:v.n_minfo};});hasMore=total!==undefined?page*limit<total:rows.length>=limit;
     }else if(platform==='kg'){
       if(!rank){
-        // The mobile endpoint exposes a preview that repeats on subsequent pages.
-        // The public PC page includes the complete ordered hash list.
-        const html=await this.textHTTP(`http://www2.kugou.kugou.com/yueku/v9/special/single/${id}-5-9999.html`,{headers:{'User-Agent':'Mozilla/5.0'}},signal);
-        const embedded=html.match(/global\.data\s*=\s*(\[[\s\S]*?\]);/);
-        if(!embedded)throw new Error('酷狗完整歌单暂不可用，未导入预览列表');
-        const values=parseProviderJSON(embedded[1]!) as unknown;if(!Array.isArray(values))throw new Error('酷狗完整歌单格式无效');
-        const name=html.match(/specialname\s*:\s*"([^"\n]*)"/)?.[1]??html.match(/<title>([^<]*)<\/title>/)?.[1]??'酷狗公开歌单';
-        const mapped=values.map(value=>{const v=row(value),filename=text(v.filename??v.FileName??v.songname),split=filename.indexOf(' - ');return onlineTrack('kg',{...v,FileHash:v.hash??v.FileHash,Audioid:v.audio_id??v.audioid,SongName:split>=0?filename.slice(split+3):filename,SingerName:split>=0?filename.slice(0,split):text(v.singername),Duration:count(v.duration)!==undefined?Number(v.duration)/1000:undefined,FileSize:v.filesize,AlbumID:v.album_id,AlbumName:v.album_name,HQFileHash:v.hash_320,HQFileSize:v.filesize_320,SQFileHash:v.hash_flac,SQFileSize:v.filesize_flac});});
-        const slice=mapped.slice((page-1)*limit,page*limit);
-        const enriched=await enrichKugouTrackArtworks(this.http,slice,signal);
-        return{title:name,items:enriched,total:mapped.length,hasMore:page*limit<mapped.length,page};
+        // Use official HTTPS PC special page (avoids iOS ATS rejection on plaintext http://www2.kugou.kugou.com).
+        const html=await this.textHTTP(`https://www.kugou.com/yy/special/single/${id}.html`,{headers:{'User-Agent':DESKTOP_UA}},signal);
+        const embedded=extractAssignedJSON(html,/(?:global\.data|var\s+data)\s*=\s*/);
+        if(embedded){
+          const values=parseProviderJSON(embedded) as unknown;
+          if(!Array.isArray(values))throw new Error('酷狗完整歌单格式无效');
+          const infoRaw=extractAssignedJSON(html,/(?:var\s+)?specialInfo\s*=\s*/);
+          let parsedName='';
+          if(infoRaw){
+            try{const infoObj=row(parseProviderJSON(infoRaw));parsedName=text(infoObj.specialname??infoObj.name).trim();}catch{}
+          }
+          const titleTag=html.match(/<title>([^<]*)<\/title>/i)?.[1]?.replace(/_精选歌单.*$|_酷狗音乐.*$/,'').trim();
+          const name=parsedName||html.match(/specialname\s*:\s*"([^"\n]*)"/)?.[1]||titleTag||'酷狗公开歌单';
+          const mapped=values.map(value=>{
+            const v=row(value);
+            const filename=text(v.filename??v.FileName??v.songname??v.audio_name);
+            const split=filename.indexOf(' - ');
+            const rawDur=count(v.duration??v.timelength);
+            const durSec=rawDur!==undefined?(rawDur>10000?rawDur/1000:rawDur):undefined;
+            const songName=text(v.songname??v.audio_name).trim()||(split>=0?filename.slice(split+3):filename);
+            const singerName=text(v.singername??v.author_name).trim()||(split>=0?filename.slice(0,split):'');
+            return onlineTrack('kg',{
+              ...v,
+              FileHash:v.hash??v.HASH??v.FileHash,
+              Audioid:v.audio_id??v.audioid,
+              SongName:songName,
+              SingerName:singerName,
+              Duration:durSec,
+              FileSize:v.filesize??v.size,
+              AlbumID:v.album_id,
+              AlbumName:v.album_name,
+              HQFileHash:v.hash_320,
+              HQFileSize:v.filesize_320,
+              SQFileHash:v.hash_flac,
+              SQFileSize:v.filesize_flac,
+            });
+          });
+          const slice=mapped.slice((page-1)*limit,page*limit);
+          const enriched=await enrichKugouTrackArtworks(this.http,slice,signal);
+          return{title:name,items:enriched,total:mapped.length,hasMore:page*limit<mapped.length,page};
+        }
+        // Fallback to HTTPS mobile plist endpoint if PC special page omits embedded data
+        const mRaw=row(await this.http(queryURL(`https://m.kugou.com/plist/list/${id}/`,{page,json:true}),{headers:{'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148'}},signal));
+        const mData=row(mRaw.list),mNested=row(mData.list);
+        const mValues=Array.isArray(mData.list)?mData.list:mNested.info;
+        if(!Array.isArray(mValues))throw new Error('酷狗完整歌单暂不可用，请重试');
+        const info=row(list(row(mRaw.info).list)[0]);
+        title=text(info.specialname)||'酷狗公开歌单';
+        total=count(mData.total??mNested.total);
+        rows=list(mValues).map(value=>{const v=row(value),filename=text(v.filename),split=filename.indexOf(' - ');return{...v,FileHash:v.hash,Audioid:v.audio_id,SongName:split>=0?filename.slice(split+3):filename,SingerName:split>=0?filename.slice(0,split):'',Duration:v.duration,FileSize:v.filesize,AlbumID:v.album_id};});
+        hasMore=total!==undefined?page*Number(mRaw.pagesize??30)<total:rows.length>=30;
+        const enriched=await enrichKugouTrackArtworks(this.http,rows.map(value=>onlineTrack('kg',value)),signal);
+        return{title,items:enriched,total,hasMore,page};
       }
-      const url=rank?queryURL('https://m.kugou.com/rank/info',{rankid:id,page,json:true}):queryURL(`https://m.kugou.com/plist/list/${id}/`,{page,json:true});
+      const url=queryURL('https://m.kugou.com/rank/info',{rankid:id,page,json:true});
       const raw=row(await this.http(url,{headers:{'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148'}},signal)),data=row(raw.songs??raw.list),nested=row(data.list);let values:unknown=Array.isArray(data.list)?data.list:nested.info;
-      if(!Array.isArray(values)&&rank){
-        // Fallback to mobilecdnbj rank song API when m.kugou.com returns an anti-bot redirect stub.
-        const fbRaw=row(await this.http(queryURL('https://mobilecdnbj.kugou.com/api/v3/rank/song',{version:9108,ranktype:1,plat:0,pagesize:Math.min(limit,50),area_code:1,page,rankid:id,with_res_tag:0}),{},signal));
-        const fbData=row(fbRaw.data);
-        if(Array.isArray(fbData.info)){
-          values=fbData.info;
-          title=title||'酷狗排行榜';
-          total=count(fbData.total);
-          rows=list(values).map(value=>{const v=row(value),filename=text(v.filename),split=filename.indexOf(' - ');return{...v,FileHash:v.hash,Audioid:v.audio_id,SongName:text(v.songname)||(split>=0?filename.slice(split+3):filename),SingerName:split>=0?filename.slice(0,split):'',Duration:v.duration,FileSize:v.filesize,AlbumID:v.album_id};});
-          hasMore=total!==undefined?page*Math.min(limit,50)<total:rows.length>=Math.min(limit,50);
-          const enriched=await enrichKugouTrackArtworks(this.http,rows.map(value=>onlineTrack('kg',value)),signal);
-          return{title,items:enriched,total,hasMore,page};
+      if(!Array.isArray(values)){
+        // Fallback to HTTPS www.kugou.com rank page (mobilecdnbj fails TLS on iOS ATS).
+        const rHtml=await this.textHTTP(`https://www.kugou.com/yy/rank/home/${page}-${id}.html`,{headers:{'User-Agent':DESKTOP_UA}},signal);
+        const featRaw=extractAssignedJSON(rHtml,/global\.features\s*=\s*/);
+        if(featRaw){
+          const parsed=parseProviderJSON(featRaw);
+          if(Array.isArray(parsed)){
+            const titleTag=rHtml.match(/<title>([^<]*)<\/title>/i)?.[1]?.replace(/_排行榜.*$|_酷狗音乐.*$/,'').trim();
+            title=titleTag||'酷狗排行榜';
+            const mapped=parsed.map(value=>{
+              const v=row(value),filename=text(v.FileName??v.filename??v.songname),split=filename.indexOf(' - ');
+              const rawDur=count(v.Duration??v.duration);
+              return onlineTrack('kg',{...v,FileHash:v.Hash??v.hash??v.FileHash,Audioid:v.audio_id??v.Audioid,SongName:text(v.songname)||(split>=0?filename.slice(split+3):filename),SingerName:text(v.singername)||(split>=0?filename.slice(0,split):''),Duration:rawDur!==undefined?(rawDur>10000?rawDur/1000:rawDur):undefined,AlbumID:v.album_id??v.AlbumID});
+            });
+            const enriched=await enrichKugouTrackArtworks(this.http,mapped,signal);
+            return{title,items:enriched,total:enriched.length,hasMore:false,page};
+          }
         }
       }
       if(!Array.isArray(values))throw new Error('酷狗歌曲响应无效');const info=row(list(row(raw.info).list)[0]);title=text(info.specialname??row(raw.info).rankname);total=count(data.total??nested.total);rows=list(values).map(value=>{const v=row(value),filename=text(v.filename),split=filename.indexOf(' - ');return{...v,FileHash:v.hash,Audioid:v.audio_id,SongName:split>=0?filename.slice(split+3):filename,SingerName:split>=0?filename.slice(0,split):'',Duration:v.duration,FileSize:v.filesize,AlbumID:v.album_id};});hasMore=total!==undefined?page*Number(raw.pagesize??30)<total:rows.length>=30;

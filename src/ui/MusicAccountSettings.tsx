@@ -309,13 +309,13 @@ export function MusicAccountSettings({services,active,onRevealQr}:{services:Serv
           </Pressable>
         </View>}
         <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>
-          <Pressable testID="login-music-account-qishui" accessibilityRole="button" accessibilityLabel="汽水音乐抖音扫码登录" disabled={qishuiLoggingIn||waiting} onPress={()=>{void loginQishuiAccount();}} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:qishuiLoggingIn||waiting?.6:1}}>
+          <Pressable testID="login-music-account-qishui" accessibilityRole="button" accessibilityLabel="汽水音乐扫码登录" disabled={qishuiLoggingIn||waiting} onPress={()=>{void loginQishuiAccount();}} style={{minHeight:44,paddingHorizontal:18,borderRadius:22,backgroundColor:s.control,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,opacity:qishuiLoggingIn||waiting?.6:1}}>
             {qishuiLoggingIn?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="qr-code-outline" size={17} color="#FFFFFF"/>}
-            <Text style={{fontSize:14.5,fontWeight:'700',color:'#FFFFFF'}}>{qishuiLoggingIn?'等待抖音扫码登录…':qishuiAccount.loggedIn?'重新扫码登录':'抖音扫码 / 网页登录汽水'}</Text>
+            <Text style={{fontSize:14.5,fontWeight:'700',color:'#FFFFFF'}}>{qishuiLoggingIn?'等待汽水扫码登录…':qishuiAccount.loggedIn?'重新扫码登录':'汽水音乐扫码登录'}</Text>
           </Pressable>
         </View>
         <Text style={{fontSize:12,lineHeight:18,color:s.muted}}>
-          点击上方按钮将打开汽水音乐官方网页登录页（桌面模式直接展示抖音扫码二维码，也支持手机验证码），确认后自动保存本机会话；亦可直接粘贴任意汽水歌单链接绑定到发现页畅听。
+          点击上方按钮将生成汽水音乐官方 PC 端登录二维码（支持保存二维码到相册以便单机扫码），打开汽水音乐 App 扫一扫确认后自动保存本机会话；亦可直接粘贴任意汽水歌单链接绑定到发现页畅听。
         </Text>
       </View>
       <View style={{height:StyleSheet.hairlineWidth,backgroundColor:s.hairline}}/>

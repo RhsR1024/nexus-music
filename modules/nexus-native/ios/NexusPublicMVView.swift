@@ -436,6 +436,20 @@ final class NexusPublicMVView: ExpoView, WKNavigationDelegate, WKUIDelegate {
   }
 }
 
+private final class WeakScriptMessageProxy: NSObject, WKScriptMessageHandler {
+  weak var target: WKScriptMessageHandler?
+  init(_ target: WKScriptMessageHandler) { self.target = target }
+  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    target?.userContentController(userContentController, didReceive: message)
+  }
+}
+
+private func safeInlineJSON(_ json: String) -> String {
+  json
+    .replacingOccurrences(of: "\u{2028}", with: "\\u2028")
+    .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
+}
+
 /// Offline-safe local HTML WebView host for the Global Radio 3D interactive globe.
 final class NexusRadioGlobeView: ExpoView, WKScriptMessageHandler, WKNavigationDelegate {
   let onSelect = EventDispatcher()
@@ -461,13 +475,20 @@ final class NexusRadioGlobeView: ExpoView, WKScriptMessageHandler, WKNavigationD
     web.scrollView.isScrollEnabled = false
     web.scrollView.bounces = false
     web.navigationDelegate = self
-    ucc.add(self, name: "RadioGlobe")
+    ucc.add(WeakScriptMessageProxy(self), name: "RadioGlobe")
     addSubview(web)
   }
 
   deinit {
     web.configuration.userContentController.removeScriptMessageHandler(forName: "RadioGlobe")
     web.stopLoading()
+  }
+
+  override func willMove(toWindow newWindow: UIWindow?) {
+    super.willMove(toWindow: newWindow)
+    if newWindow == nil {
+      web.evaluateJavaScript("window.nexusGlobe && window.nexusGlobe.pause && window.nexusGlobe.pause();", completionHandler: nil)
+    }
   }
 
   override func layoutSubviews() {
@@ -492,13 +513,13 @@ final class NexusRadioGlobeView: ExpoView, WKScriptMessageHandler, WKNavigationD
   private func pushDataIfNeeded() {
     guard pointsJson != appliedPoints, !pointsJson.isEmpty else { return }
     appliedPoints = pointsJson
-    web.evaluateJavaScript("window.nexusGlobe && window.nexusGlobe.setData(\(pointsJson));", completionHandler: nil)
+    web.evaluateJavaScript("window.nexusGlobe && window.nexusGlobe.setData(\(safeInlineJSON(pointsJson)));", completionHandler: nil)
   }
 
   private func pushCommandIfNeeded() {
     guard commandJson != appliedCommand, !commandJson.isEmpty else { return }
     appliedCommand = commandJson
-    web.evaluateJavaScript("window.nexusGlobe && window.nexusGlobe.command(\(commandJson));", completionHandler: nil)
+    web.evaluateJavaScript("window.nexusGlobe && window.nexusGlobe.command(\(safeInlineJSON(commandJson)));", completionHandler: nil)
   }
 
   func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -529,9 +550,11 @@ final class NexusLocalCanvasView: ExpoView, WKScriptMessageHandler, WKNavigation
   private let web: WKWebView
   private var loaded = false
   private var appliedHtmlHash = 0
+  private var appliedAssets = ""
   private var appliedState = ""
 
   var html = ""
+  var assetsJson = ""
   var stateJson = "{}"
 
   required init(appContext: AppContext? = nil) {
@@ -549,13 +572,23 @@ final class NexusLocalCanvasView: ExpoView, WKScriptMessageHandler, WKNavigation
     web.scrollView.isScrollEnabled = false
     web.scrollView.bounces = false
     web.navigationDelegate = self
-    ucc.add(self, name: "NexusCanvas")
+    ucc.add(WeakScriptMessageProxy(self), name: "NexusCanvas")
     addSubview(web)
   }
 
   deinit {
     web.configuration.userContentController.removeScriptMessageHandler(forName: "NexusCanvas")
     web.stopLoading()
+  }
+
+  override func willMove(toWindow newWindow: UIWindow?) {
+    super.willMove(toWindow: newWindow)
+    if newWindow == nil {
+      // Stop any rAF animation loop immediately when switching away from Canvas skins.
+      web.evaluateJavaScript("window.nexusCanvas && window.nexusCanvas.setPaused && window.nexusCanvas.setPaused(true);", completionHandler: nil)
+    } else if loaded {
+      web.evaluateJavaScript("window.nexusCanvas && window.nexusCanvas.setPaused && window.nexusCanvas.setPaused(false);", completionHandler: nil)
+    }
   }
 
   override func layoutSubviews() {
@@ -572,19 +605,28 @@ final class NexusLocalCanvasView: ExpoView, WKScriptMessageHandler, WKNavigation
       return
     }
     if loaded {
+      pushAssetsIfNeeded()
       pushStateIfNeeded()
     }
+  }
+
+  private func pushAssetsIfNeeded() {
+    guard assetsJson != appliedAssets, !assetsJson.isEmpty else { return }
+    appliedAssets = assetsJson
+    web.evaluateJavaScript("window.nexusCanvas && (window.nexusCanvas.setAssets ? window.nexusCanvas.setAssets(\(safeInlineJSON(assetsJson))) : window.nexusCanvas.setState(\(safeInlineJSON(assetsJson))));", completionHandler: nil)
   }
 
   private func pushStateIfNeeded() {
     guard stateJson != appliedState, !stateJson.isEmpty else { return }
     appliedState = stateJson
-    web.evaluateJavaScript("window.nexusCanvas && window.nexusCanvas.setState(\(stateJson));", completionHandler: nil)
+    web.evaluateJavaScript("window.nexusCanvas && window.nexusCanvas.setState(\(safeInlineJSON(stateJson)));", completionHandler: nil)
   }
 
   func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
     loaded = true
+    appliedAssets = ""
     appliedState = ""
+    pushAssetsIfNeeded()
     pushStateIfNeeded()
   }
 

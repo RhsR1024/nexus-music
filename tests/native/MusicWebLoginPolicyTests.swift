@@ -44,7 +44,7 @@ import Foundation
     expect(!MusicWebLoginPolicy.documentReady(["state":"complete","body":true],observedEpoch:1,currentEpoch:2,committedEpoch:2), "Reject old document callback")
     expect(!MusicWebLoginPolicy.documentReady(["state":"complete","body":true],observedEpoch:2,currentEpoch:2,committedEpoch:nil), "Provisional navigation cannot use the previous DOM")
     expect(MusicWebLoginPolicy.initialURL("qishui") == "https://music.douyin.com/qishui", "Official Qishui entry")
-    for url in ["https://music.douyin.com/qishui", "https://sso.douyin.com/login", "https://beta-luna.douyin.com/luna/pc/me", "https://www.qishui.com/"] {
+    for url in ["https://music.douyin.com/qishui", "https://sso.douyin.com/login", "https://beta-luna.douyin.com/luna/pc/me", "https://www.qishui.com/", "https://api.qishui.com/passport/web/get_qrcode/", "https://lf-headquarters-speed.yhgfb-cn-static.com/obj/rc-client-security/web/stable/1.0.0.41/bdms.js"] {
       expect(MusicWebLoginPolicy.allows(URL(string: url)!, provider: "qishui"), "Official Qishui / Douyin auth domains")
     }
     for url in ["http://music.douyin.com/", "https://douyin.com.evil.test/", "https://y.qq.com/", "https://music.163.com/"] {

@@ -235,8 +235,9 @@ private data class LyricWordCue(
  */
 class NexusLyricLineView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
   private var text: String = ""
-  private var positionSec: Double = 0.0
-  private var anchorSec: Double = 0.0
+  private var positionMs: Double = 0.0
+  private var anchorMs: Double = 0.0
+  private var rate: Double = 1.0
   private var playing: Boolean = false
   private var signature: String = ""
 
@@ -292,8 +293,9 @@ class NexusLyricLineView(context: Context, appContext: AppContext) : ExpoView(co
     val nextText = obj.optString("text", "")
     if (nextText.length > 20_000) return
 
-    positionSec = obj.optDouble("position", 0.0).takeIf { it.isFinite() } ?: 0.0
-    anchorSec = SystemClock.elapsedRealtime() / 1000.0
+    positionMs = obj.optDouble("position", 0.0).takeIf { it.isFinite() } ?: 0.0
+    rate = (obj.optDouble("rate", 1.0).takeIf { it.isFinite() } ?: 1.0).coerceIn(0.5, 3.0)
+    anchorMs = SystemClock.elapsedRealtime().toDouble()
     playing = obj.optBoolean("playing", false)
 
     val nextSize = obj.optDouble("size", 24.0).takeIf { it.isFinite() }?.coerceIn(10.0, 100.0)?.toFloat() ?: 24f
@@ -518,8 +520,8 @@ class NexusLyricLineView(context: Context, appContext: AppContext) : ExpoView(co
   }
 
   private fun currentTimeMs(): Double {
-    val elapsed = if (playing) max(0.0, SystemClock.elapsedRealtime() / 1000.0 - anchorSec) else 0.0
-    return (positionSec + elapsed) * 1000.0
+    val elapsedMs = if (playing) min(1000.0 * rate, max(0.0, (SystemClock.elapsedRealtime().toDouble() - anchorMs) * rate)) else 0.0
+    return positionMs + elapsedMs
   }
 
   private fun updateClock() {

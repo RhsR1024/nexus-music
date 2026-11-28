@@ -81,6 +81,54 @@ export function activeLyric(lines:readonly LyricLine[],positionMs:number,userOff
   return -1;
 }
 
+// Display anchor index for synced lyric views: matches activeLyric() whenever a
+// line is actively sung, and smoothly holds the last sung non-background line
+// during inter-line breaths/instrumentals (common in YRC/KRC/QRC word-timed
+// lyrics that carry explicit endMs) instead of snapping back to -1 / line 0.
+export function displayLyricIndex(lines:readonly LyricLine[],positionMs:number,userOffsetMs=0):number {
+  const live=activeLyric(lines,positionMs,userOffsetMs);
+  if(live>=0)return live;
+  if(!lines.length)return -1;
+  const time=positionMs-userOffsetMs;
+  let low=0,high=lines.length-1,result=-1;
+  while(low<=high){const middle=(low+high)>>>1;if(lines[middle]!.startMs<=time){result=middle;low=middle+1;}else high=middle-1;}
+  for(let i=result;i>=0;i--){
+    const line=lines[i]!;
+    if(!line.background&&line.text.trim())return i;
+  }
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i]!;
+    if(!line.background&&line.text.trim())return i;
+  }
+  return -1;
+}
+
+// Compute smooth 0..1 reveal progress along a lyric line, prioritizing real
+// word-level timestamps (YRC/KRC/QRC/TTML) when present and falling back to
+// line duration otherwise.
+export function lyricLineProgress(line:LyricLine,effectiveMs:number,nextStartMs?:number):number {
+  if(line.words&&line.words.length>0){
+    let totalChars=0;
+    for(const w of line.words)totalChars+=[...w.text].length;
+    if(totalChars>0){
+      let litChars=0;
+      for(const w of line.words){
+        const len=[...w.text].length;
+        const end=Math.max(w.startMs+60,w.endMs);
+        if(effectiveMs>=end){litChars+=len;}
+        else if(effectiveMs>w.startMs){
+          litChars+=len*Math.max(0,Math.min(1,(effectiveMs-w.startMs)/Math.max(60,end-w.startMs)));
+          break;
+        }else break;
+      }
+      return Math.max(0,Math.min(1,litChars/totalChars));
+    }
+  }
+  const endMs=line.endMs&&line.endMs>line.startMs?line.endMs:(nextStartMs&&nextStartMs>line.startMs?nextStartMs:line.startMs+4000);
+  const span=Math.max(600,endMs-line.startMs);
+  return Math.max(0,Math.min(1,(effectiveMs-line.startMs)/span));
+}
+
 // VoiceOver otherwise reads only the ruby base and silently drops the
 // pronunciation. Keep the visible line unchanged and expose annotations as
 // compact auxiliary text for the row's existing accessible owner.

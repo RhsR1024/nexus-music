@@ -15,6 +15,7 @@ import type { OnlinePlatform, Track } from '../domain/track.ts';
 import { trackKey } from '../domain/track.ts';
 import { normalizeSearchQuery, suggestSearchQueries } from '../domain/searchHistory.ts';
 import { platforms, type SearchGroup } from '../providers/searchCoordinator.ts';
+import { asQishuiMatchedTrack } from '../providers/qishui.ts';
 import {TrackActions} from './TrackActions.tsx';
 import {BatchSelectionBar, type BatchAction} from './BatchSelectionBar.tsx';
 import {PlaylistPicker} from './PlaylistPicker.tsx';
@@ -24,18 +25,32 @@ import {Ionicons} from '@expo/vector-icons';
 import type {DownloadSubmission} from '../app/downloadSubmission.ts';
 import {DownloadSubmissionModal} from './DownloadSubmission.tsx';
 
-export const platformNames: Readonly<Record<OnlinePlatform,string>> = {wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕'};
+export type SearchPlatform = OnlinePlatform | 'qishui' | 'bodian';
+export const platformNames: Readonly<Record<SearchPlatform,string>> = {wy:'网易云',tx:'QQ音乐',kw:'酷我',kg:'酷狗',mg:'咪咕',qishui:'汽水',bodian:'波点'};
 
 const kindNames={song:'歌曲',playlist:'歌单',album:'专辑',artist:'艺术家',mv:'MV'} as const;
 const kindIcons={all:'apps',song:'musical-note',playlist:'albums-outline',album:'disc-outline',artist:'person-circle-outline',mv:'play-circle-outline'} as const;
-const platformIcons={all:'grid',wy:'musical-note',tx:'albums-outline',kw:'pulse',kg:'mic-outline',mg:'sparkles-outline'} as const;
-const platformRows:[readonly ('all'|OnlinePlatform)[],readonly ('all'|OnlinePlatform)[]]=[['all','wy','tx'],['kw','kg','mg']];
+const platformIcons:Readonly<Record<'all'|SearchPlatform,React.ComponentProps<typeof Ionicons>['name']>>={all:'grid',wy:'musical-note',tx:'albums-outline',kw:'pulse',kg:'mic-outline',mg:'sparkles-outline',qishui:'water-outline',bodian:'radio-outline'};
+const platformRows:[readonly ('all'|SearchPlatform)[],readonly ('all'|SearchPlatform)[]]=[['all','wy','tx','kw'],['kg','mg','qishui','bodian']];
 type SearchKind=keyof typeof kindNames;
 type SearchTab='all'|SearchKind;
 export interface SearchSession {
   kind:SearchTab;
   query:string;
-  platform:OnlinePlatform|'all';
+  platform:SearchPlatform|'all';
+}
+interface ExtraSearchGroup {
+  platform:'qishui'|'bodian';
+  query:string;
+  items:readonly Track[];
+  page:number;
+  hasMore:boolean;
+  loading:boolean;
+  error?:string;
+  note?:string;
+}
+function isOnlinePlatform(p:SearchPlatform|'all'):p is OnlinePlatform{
+  return p==='wy'||p==='tx'||p==='kw'||p==='kg'||p==='mg';
 }
 interface GroupSelection { platform: OnlinePlatform; model: SelectionModel }
 const unifiedKinds=['song','playlist','album','artist','mv'] as const;
@@ -60,7 +75,10 @@ export function Search({
   const {kind,query,platform}=session;
   const setKind=(kind:SearchTab)=>onSessionChange({kind});
   const setQuery=(query:string)=>onSessionChange({query});
-  const setPlatform=(platform:OnlinePlatform|'all')=>onSessionChange({platform});
+  const setPlatform=(platform:SearchPlatform|'all')=>onSessionChange({platform});
+  const [extraGroups,setExtraGroups]=useState<readonly ExtraSearchGroup[]>([]);
+  const extraAbort=useRef<AbortController|null>(null);
+  useEffect(()=>()=>{extraAbort.current?.abort();},[]);
   const [collection,setCollection]=useState<DiscoveryTarget|null>(null),[video,setVideo]=useState<{platform:OnlinePlatform;item:VideoItem}|null>(null);
   const albumState=useSyncExternalStore(services.albumSearch.subscribe,services.albumSearch.getSnapshot);
   const artistState=useSyncExternalStore(services.artistSearch.subscribe,services.artistSearch.getSnapshot);
@@ -89,18 +107,104 @@ export function Search({
   const activeGroups=kind==='all'?[songState.groups,playlistState.groups,albumState.groups,artistState.groups,videoState.groups]:[state.groups];
   const emptyResults=!!state.query&&activeGroups.every(groups=>groups.length>0&&groups.every(group=>!group.loading&&!group.error&&group.items.length===0));
   // Show hot keywords alongside history whenever input is empty (Sollin 299-global-search).
+  const assistancePlatform:OnlinePlatform|'all'=isOnlinePlatform(platform)?platform:'all';
   const assistanceMode=!draft?'hot':draft&&(editing||draft!==state.query||emptyResults)?'suggest':null;
   useEffect(()=>{
     services.searchAssistance.clear();
     if(!assistanceMode)return;
-    const timer=setTimeout(()=>{void services.searchAssistance.load(assistanceMode,draft,platform);},assistanceMode==='hot'?0:300);
+    const timer=setTimeout(()=>{void services.searchAssistance.load(assistanceMode,draft,assistancePlatform);},assistanceMode==='hot'?0:300);
     return()=>{clearTimeout(timer);services.searchAssistance.clear();};
-  },[services,assistanceMode,draft,platform,kind]);
+  },[services,assistanceMode,draft,assistancePlatform,kind]);
 
-  const searchFor=(type:SearchTab,value:string,selected:OnlinePlatform|'all')=>{
+  const runExtraSearch=async(target:'qishui'|'bodian',cleaned:string,page=1,append=false)=>{
+    if(!cleaned){setExtraGroups([]);return;}
+    if(!append){extraAbort.current?.abort();extraAbort.current=new AbortController();}
+    const signal=(extraAbort.current??(extraAbort.current=new AbortController())).signal;
+    setExtraGroups(prev=>{
+      const existing=prev.find(g=>g.platform===target);
+      const next:ExtraSearchGroup={platform:target,query:cleaned,items:append&&existing?existing.items:[],page,hasMore:false,loading:true};
+      return prev.some(g=>g.platform===target)?prev.map(g=>g.platform===target?next:g):[...prev,next];
+    });
+    try{
+      if(target==='bodian'){
+        const sess=await services.bodianAccount.session().catch(()=>undefined);
+        const res=await services.bodian.searchSongs(cleaned,page,signal,sess);
+        if(signal.aborted)return;
+        setExtraGroups(prev=>prev.map(g=>g.platform!=='bodian'?g:{
+          platform:'bodian',query:cleaned,
+          items:append?[...g.items,...res.items]:res.items,
+          page,hasMore:res.hasMore,loading:false,
+        }));
+      }else{
+        // Search Qishui bound playlists + liked + recent + public charts + cross-matched online catalog
+        const snap=services.qishuiAccount.getSnapshot();
+        const needle=cleaned.toLowerCase();
+        const localPool:Track[]=[];
+        const seenIds=new Set<string>();
+        const pushUnique=(t:Track)=>{
+          const k=`${t.title.toLowerCase()}::${t.artist.toLowerCase()}`;
+          if(seenIds.has(k))return;
+          seenIds.add(k);
+          localPool.push(t);
+        };
+        for(const t of [...snap.liked,...snap.recent,...snap.playlists.flatMap(p=>p.tracks)]){
+          if(t.title.toLowerCase().includes(needle)||t.artist.toLowerCase().includes(needle)||(t.album??'').toLowerCase().includes(needle)){
+            pushUnique(t);
+          }
+        }
+        try{
+          const charts=await services.qishui.fetchCharts(signal);
+          const topChartTracks=await Promise.allSettled(charts.slice(0,2).map(ch=>services.qishui.fetchChartTracks(ch.id,signal)));
+          for(const tr of topChartTracks){
+            if(tr.status!=='fulfilled')continue;
+            for(const t of tr.value){
+              if(t.title.toLowerCase().includes(needle)||t.artist.toLowerCase().includes(needle)){pushUnique(t);}
+            }
+          }
+        }catch{}
+        // Supplement with matched online search results tagged as Qishui roaming matches
+        const onlineHits=await Promise.allSettled([
+          services.online.search('wy',cleaned,page,signal),
+          services.online.search('tx',cleaned,page,signal),
+        ]);
+        if(signal.aborted)return;
+        for(const r of onlineHits){
+          if(r.status==='fulfilled'){
+            for(const t of r.value.items.slice(0,18))pushUnique(asQishuiMatchedTrack(t));
+          }
+        }
+        setExtraGroups(prev=>prev.map(g=>g.platform!=='qishui'?g:{
+          platform:'qishui',query:cleaned,
+          items:append?[...g.items,...localPool]:localPool,
+          page,hasMore:localPool.length>=15&&page<3,loading:false,
+          note:'包含汽水已绑定曲库、榜单与智能匹配歌曲',
+        }));
+      }
+    }catch(err){
+      if(signal.aborted)return;
+      const msg=err instanceof Error?err.message:'搜索失败，请重试';
+      setExtraGroups(prev=>prev.map(g=>g.platform!==target?g:{...g,loading:false,error:msg}));
+    }
+  };
+
+  const searchFor=(type:SearchTab,value:string,selected:SearchPlatform|'all')=>{
     const catalogs={song:services.search,playlist:services.playlistSearch,album:services.albumSearch,artist:services.artistSearch,mv:services.videoSearch};
+    if(selected==='qishui'||selected==='bodian'){
+      for(const catalog of Object.values(catalogs))void catalog.search('','all');
+      if(!value){setExtraGroups([]);return;}
+      setExtraGroups([]);
+      void runExtraSearch(selected,value,1,false);
+      return;
+    }
     const targets:readonly SearchKind[]=type==='all'?unifiedKinds:[type];
     for(const [name,catalog] of Object.entries(catalogs))void catalog.search(targets.includes(name as SearchKind)?value:'',selected);
+    if(selected==='all'&&value&&(type==='song'||type==='all')){
+      setExtraGroups([]);
+      void runExtraSearch('bodian',value,1,false);
+    }else{
+      extraAbort.current?.abort();
+      setExtraGroups([]);
+    }
   };
   function searchOnly(type:SearchKind,value:string,selected:OnlinePlatform|'all'){
     const catalogs={song:services.search,playlist:services.playlistSearch,album:services.albumSearch,artist:services.artistSearch,mv:services.videoSearch};
@@ -111,6 +215,10 @@ export function Search({
     const cleaned=normalizeSearchQuery(query);
     setKind(type);Keyboard.dismiss();setEditing(false);
     if(!cleaned)return;
+    if(platform==='qishui'||platform==='bodian'){
+      void runExtraSearch(platform,cleaned,1,false);
+      return;
+    }
     const catalogs={song:services.search,playlist:services.playlistSearch,album:services.albumSearch,artist:services.artistSearch,mv:services.videoSearch};
     const targets:readonly SearchKind[]=type==='all'?unifiedKinds:[type];
     const expectedPlatforms=platform==='all'?platforms:[platform];
@@ -124,7 +232,7 @@ export function Search({
     if(type==='mv'){if(platform!=='mg')services.playback.controller.pause();setVideo({platform,item:item as VideoItem});}
     else setCollection({platform,collection:item,...(type==='album'?{kind:'album' as const}:type==='artist'?{kind:'artist' as const}:{})});
   }
-  const submit=(value=query,selected:OnlinePlatform|'all'=platform,record=true,type:SearchTab=kind)=>{
+  const submit=(value=query,selected:SearchPlatform|'all'=platform,record=true,type:SearchTab=kind)=>{
     const cleaned=normalizeSearchQuery(value);
     Keyboard.dismiss();setEditing(false);setQuery(cleaned);
     if(cleaned&&record)void services.searchHistory.record(cleaned).catch(()=>{});
@@ -264,7 +372,7 @@ export function Search({
     </View>}
 
     {/* History section with per-item remove × button + clear all */}
-    {!state.query&&!suggestions.length&&<View style={styles.section}>
+    {!state.query&&!extraGroups.length&&!suggestions.length&&<View style={styles.section}>
       {history.length?<>
         <View style={styles.sectionHeader}>
           <Text style={styles.heading}>搜索历史</Text>
@@ -284,7 +392,32 @@ export function Search({
     {/* Hot keywords always visible below history when input is empty */}
     {assistance.mode==='hot'&&assistanceSections}
 
-    {kind==='all'&&<View testID="unified-search-results">
+    {extraGroups.map(group=><View key={`extra-${group.platform}`} testID={`search-extra-group-${group.platform}`} style={styles.group}>
+      <Text style={styles.heading}>{platformNames[group.platform]}　<Text style={styles.caption}>{group.items.length} 首已载入</Text></Text>
+      {!!group.note&&<Text style={[styles.caption,{marginBottom:4}]}>{group.note}</Text>}
+      {group.items.map((track,index)=><View key={`${index}-${trackKey(track.origin)}`} style={styles.trackRow}>
+        <Pressable accessibilityRole="button" testID={`search-track-${group.platform}-${index}`} accessibilityLabel={`播放${track.title}`} style={{flex:1,minHeight:48,flexDirection:'row',alignItems:'center',gap:12}} onPress={()=>services.playTracks(group.items,index)}>
+          <Cover services={services} track={track} size={46} radius={10}/>
+          <View style={{flex:1,gap:3}}>
+            <Text numberOfLines={1} style={styles.track}>{track.title}</Text>
+            <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+              <QualityBadge track={track}/>
+              <Text numberOfLines={1} style={[styles.caption,{flex:1}]}>{track.artist}{track.album?` · ${track.album}`:''} · {platformNames[group.platform]}</Text>
+            </View>
+          </View>
+        </Pressable>
+        <Pressable testID={`search-more-${group.platform}-${index}`} accessibilityRole="button" accessibilityLabel={`更多操作：${track.title}`} onPress={()=>setMenuTrack(track)} style={styles.more}><Ionicons name="ellipsis-horizontal" size={20} color={s.muted}/></Pressable>
+      </View>)}
+      {group.loading&&!group.items.length&&<View testID={`search-loading-${group.platform}`} style={styles.status}><ActivityIndicator color={theme.palette.accent}/><Text style={styles.caption}>正在搜索{platformNames[group.platform]}…</Text></View>}
+      {!!group.error&&<View testID={`search-error-${group.platform}`} style={styles.status}>
+        <Text style={styles.error}>{group.error}</Text>
+        <Pressable testID={`search-retry-${group.platform}`} accessibilityRole="button" disabled={group.loading} onPress={()=>{void runExtraSearch(group.platform,group.query,1,false);}} style={styles.button}><Text style={styles.text}>重试</Text></Pressable>
+      </View>}
+      {!group.loading&&!group.error&&!group.items.length&&<Text testID={`search-empty-${group.platform}`} style={styles.caption}>未找到匹配的{platformNames[group.platform]}歌曲，请更换关键词</Text>}
+      {!group.loading&&!group.error&&group.hasMore&&<Pressable testID={`search-load-more-${group.platform}`} accessibilityRole="button" onPress={()=>{void runExtraSearch(group.platform,group.query,group.page+1,true);}} style={styles.button}><Text style={styles.text}>加载更多</Text></Pressable>}
+    </View>)}
+
+    {kind==='all'&&(platform==='all'||isOnlinePlatform(platform))?<View testID="unified-search-results">
       <View style={styles.section}><Text accessibilityRole="header" style={styles.heading}>跨类型结果</Text><Text style={styles.caption}>按平台分组；歌曲、歌单、专辑、艺术家与MV各自保留加载、失败和分页状态。</Text></View>
       {platforms.map(platformName=>{
         const songGroup=songState.groups.find(group=>group.platform===platformName),playlistGroup=playlistState.groups.find(group=>group.platform===platformName),albumGroup=albumState.groups.find(group=>group.platform===platformName),artistGroup=artistState.groups.find(group=>group.platform===platformName),videoGroup=videoState.groups.find(group=>group.platform===platformName);
@@ -298,7 +431,7 @@ export function Search({
           {renderUnifiedEntity('mv',platformName,videoGroup)}
         </View>;
       })}
-    </View>}
+    </View>:null}
 
     {/* Sollin 303/337: clean frameless song rows with QualityBadge */}
     {kind==='song'&&songState.groups.map(group => {const model=selection?.platform===group.platform?selection.model:selectionNone;const hasItems=group.items.length>0;return <View key={group.platform} style={styles.group}>
@@ -375,9 +508,9 @@ const makeStyles=(theme:Theme)=>{
     kindLabelActive:{color:'#FFFFFF'},
     platformRows:{gap:8},
     platformRow:{flexDirection:'row',gap:8},
-    platformTile:{flex:1,minHeight:42,borderRadius:13,backgroundColor:soft,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6},
+    platformTile:{flex:1,minHeight:42,borderRadius:13,backgroundColor:soft,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:4,paddingHorizontal:4},
     platformTileActive:{backgroundColor:s.accent,...s.cardShadow},
-    platformLabel:{color:s.ink,fontSize:13,fontWeight:'600'},
+    platformLabel:{color:s.ink,fontSize:12.5,fontWeight:'600'},
     platformLabelActive:{color:'#FFFFFF'},
     inputRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:14,marginBottom:4},
     inputShell:{flex:1,flexDirection:'row',alignItems:'center',gap:8,minHeight:46,paddingHorizontal:14,borderRadius:23,backgroundColor:s.inputBg},

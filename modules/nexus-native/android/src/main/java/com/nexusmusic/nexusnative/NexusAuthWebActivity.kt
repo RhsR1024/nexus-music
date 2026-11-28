@@ -49,7 +49,8 @@ internal object MusicWebLoginPolicy {
       }
       "qishui" -> listOf(
         "douyin.com", "qishui.com", "bytedance.com", "snssdk.com", "iesdouyin.com",
-        "toutiao.com", "zijieapi.com", "bytegoofy.com", "douyinpic.com", "douyincdn.com", "byteimg.com"
+        "toutiao.com", "zijieapi.com", "bytegoofy.com", "douyinpic.com", "douyincdn.com", "byteimg.com",
+        "yhgfb-cn-static.com", "bytetos.com", "bytegecko.com", "amemv.com"
       ).any { host == it || host.endsWith(".$it") }
       else -> false
     }
@@ -176,7 +177,7 @@ class NexusAuthWebActivity : Activity() {
       setOnClickListener { finishWith(Result.failure(RuntimeException("AUTH_CANCELLED"))) }
     }
     val titleView = TextView(this).apply {
-      text = if (dailyMode) "QQ 日推授权" else if (provider == "tx") "QQ 音乐登录" else if (provider == "qishui") "汽水音乐登录" else "网易云音乐登录"
+      text = if (dailyMode) "QQ 日推授权" else if (provider == "tx") "QQ 音乐登录" else if (provider == "qishui") "汽水音乐扫码登录" else "网易云音乐登录"
       textSize = 16f
       setTextColor(Color.BLACK)
       setPadding(24, 0, 0, 0)
@@ -204,6 +205,16 @@ class NexusAuthWebActivity : Activity() {
         }
       } else if (provider == "qishui") {
         settings.userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        addJavascriptInterface(object {
+          @android.webkit.JavascriptInterface
+          fun onConfirmed() {
+            handler.post { inspectCookies() }
+          }
+          @android.webkit.JavascriptInterface
+          fun onRefresh() {
+            handler.post { loadQishuiQrHost() }
+          }
+        }, "QishuiAuthBridge")
       }
       cm.setAcceptThirdPartyCookies(this, true)
       webViewClient = object : WebViewClient() {
@@ -229,9 +240,180 @@ class NexusAuthWebActivity : Activity() {
     root.addView(wv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     setContentView(root)
 
-    wv.loadUrl(startUrl)
+    if (provider == "qishui" && !dailyMode) {
+      loadQishuiQrHost()
+    } else {
+      wv.loadUrl(startUrl)
+    }
     handler.postDelayed(pollRunnable, 1200L)
     handler.postDelayed(expiryRunnable, 5 * 60 * 1000L)
+  }
+
+  private fun ensureQishuiNumericId(key: String): String {
+    val prefs = getSharedPreferences("nexus_qishui_auth", MODE_PRIVATE)
+    val existing = prefs.getString(key, null)
+    if (!existing.isNullOrEmpty() && existing.length >= 16) return existing
+    val rng = java.security.SecureRandom()
+    val num = (rng.nextLong() and Long.MAX_VALUE) % 1_000_000_000_000_000_000L
+    val generated = "7%018d".format(num)
+    prefs.edit().putString(key, generated).apply()
+    return generated
+  }
+
+  private fun generateQishuiMsToken(): String {
+    val bytes = ByteArray(88)
+    java.security.SecureRandom().nextBytes(bytes)
+    return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+      .replace('+', '-').replace('/', '_')
+  }
+
+  private fun loadQishuiQrHost() {
+    val wv = webView ?: return
+    val cm = CookieManager.getInstance()
+    cm.removeAllCookies(null)
+    cm.flush()
+    val did = ensureQishuiNumericId("device_id")
+    val iid = ensureQishuiNumericId("install_id")
+    val msToken = generateQishuiMsToken()
+    val html = """
+      <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>
+        body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;font-family:-apple-system,sans-serif;background:#F8F6F7;color:#1D1A1E;text-align:center;}
+        h2{margin:0 0 6px;font-size:20px;}
+        .sub{margin:0 0 20px;font-size:13px;color:#6D6670;}
+        .card{width:248px;height:248px;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
+        canvas{width:216px;height:216px;image-rendering:pixelated;}
+        #st{margin:18px 0 12px;font-size:15px;font-weight:600;}
+        button{border:none;border-radius:22px;background:#0D9488;color:#fff;padding:11px 24px;font-size:14px;font-weight:600;}
+      </style></head><body>
+      <h2>使用汽水音乐 App 扫一扫</h2>
+      <p class="sub">官方 PC 端扫码会话 · 会员权限与歌单同步可用</p>
+      <div class="card"><canvas id="qr" width="216" height="216"></canvas></div>
+      <div id="st">正在初始化安全会话…</div>
+      <button onclick="window.QishuiAuthBridge&&window.QishuiAuthBridge.onRefresh()">刷新二维码</button>
+      <script>
+      (function(){
+        var DID="$did", IID="$iid", MS="$msToken";
+        var stEl=document.getElementById('st'), cvs=document.getElementById('qr'), ctx=cvs.getContext('2d');
+        try{localStorage.setItem('xmst',MS);localStorage.setItem('xmsty',MS);}catch(e){}
+        function setSt(t){stEl.textContent=t;}
+        // Minimal self-contained ISO/IEC 18004 QR Byte-mode encoder (Versions 1-9, EC Level L)
+        var GF_E=new Uint8Array(512),GF_L=new Uint8Array(256);
+        (function(){var x=1;for(var i=0;i<255;i++){GF_E[i]=x;GF_L[x]=i;x<<=1;if(x&256)x^=0x11d;}for(var i=255;i<512;i++)GF_E[i]=GF_E[i-255];})();
+        function gmul(a,b){return(a===0||b===0)?0:GF_E[GF_L[a]+GF_L[b]];}
+        function rsRem(data,ec){
+          var poly=[1];for(var i=0;i<ec;i++){var n=new Array(poly.length+1).fill(0);for(var j=0;j<poly.length;j++){n[j]^=poly[j];n[j+1]^=gmul(poly[j],GF_E[i]);}poly=n;}
+          var rem=new Array(ec).fill(0);
+          for(var i=0;i<data.length;i++){var f=data[i]^rem[0];rem.shift();rem.push(0);if(f)for(var j=0;j<ec;j++)rem[j]^=gmul(poly[j+1],f);}
+          return rem;
+        }
+        var VERS=[
+          {v:1,s:21,dc:19,b:1,ec:7,a:[]},{v:2,s:25,dc:34,b:1,ec:10,a:[6,18]},{v:3,s:29,dc:55,b:1,ec:15,a:[6,22]},
+          {v:4,s:33,dc:80,b:1,ec:20,a:[6,26]},{v:5,s:37,dc:108,b:1,ec:26,a:[6,30]},{v:6,s:41,dc:136,b:2,ec:18,a:[6,34]},
+          {v:7,s:45,dc:156,b:2,ec:20,a:[6,22,38],vi:0x07c94},{v:8,s:49,dc:194,b:2,ec:24,a:[6,24,42],vi:0x085bc},{v:9,s:53,dc:232,b:2,ec:30,a:[6,26,46],vi:0x09a99}
+        ];
+        function drawQr(text){
+          var bytes=Array.from(new TextEncoder().encode(text));
+          var sp=VERS.find(function(x){return bytes.length+2<=x.dc;});
+          if(!sp)return;
+          var bits=[];function pb(v,l){for(var i=l-1;i>=0;i--)bits.push((v>>>i)&1);}
+          pb(4,4);pb(bytes.length,8);bytes.forEach(function(b){pb(b,8);});
+          for(var i=0;i<Math.min(4,sp.dc*8-bits.length);i++)bits.push(0);
+          while(bits.length%8)bits.push(0);
+          var data=[];for(var i=0;i<bits.length;i+=8){var v=0;for(var j=0;j<8;j++)v=(v<<1)|bits[i+j];data.push(v);}
+          for(var t=0;data.length<sp.dc;t++)data.push(t%2?0x11:0xec);
+          var bl=sp.dc/sp.b,dbs=[],ebs=[];
+          for(var b=0;b<sp.b;b++){var sl=data.slice(b*bl,(b+1)*bl);dbs.push(sl);ebs.push(rsRem(sl,sp.ec));}
+          var cw=[];for(var i=0;i<bl;i++)for(var b=0;b<sp.b;b++)cw.push(dbs[b][i]);
+          for(var i=0;i<sp.ec;i++)for(var b=0;b<sp.b;b++)cw.push(ebs[b][i]);
+          var S=sp.s,m=new Uint8Array(S*S),f=new Uint8Array(S*S);
+          function setM(r,c,v){if(r>=0&&r<S&&c>=0&&c<S){m[r*S+c]=v?1:0;f[r*S+c]=1;}}
+          function finder(r0,c0){for(var r=-1;r<=7;r++)for(var c=-1;c<=7;c++){var inside=r>=0&&r<7&&c>=0&&c<7;var dk=inside&&(r===0||r===6||c===0||c===6||(r>=2&&r<=4&&c>=2&&c<=4));setM(r0+r,c0+c,dk);}}
+          finder(0,0);finder(0,S-7);finder(S-7,0);
+          for(var i=8;i<S-8;i++){setM(6,i,i%2===0);setM(i,6,i%2===0);}
+          setM(S-8,8,1);
+          for(var i=0;i<sp.a.length;i++)for(var j=0;j<sp.a.length;j++){
+            var ar=sp.a[i],ac=sp.a[j];if(f[ar*S+ac])continue;
+            for(var dr=-2;dr<=2;dr++)for(var dc=-2;dc<=2;dc++)setM(ar+dr,ac+dc,Math.max(Math.abs(dr),Math.abs(dc))!==1);
+          }
+          for(var i=0;i<9;i++){if(i!==6){f[8*S+i]=1;f[i*S+8]=1;}}
+          for(var i=0;i<8;i++){f[8*S+(S-1-i)]=1;f[(S-1-i)*S+8]=1;}
+          if(sp.vi){for(var i=0;i<18;i++){var bit=(sp.vi>>>i)&1,r=Math.floor(i/3),c=S-11+(i%3);setM(r,c,bit);setM(c,r,bit);}}
+          var bi=0,up=true;
+          for(var c=S-1;c>=1;c-=2){
+            if(c===6)c--;
+            for(var step=0;step<S;step++){
+              var r=up?S-1-step:step;
+              for(var dc=0;dc<2;dc++){
+                var cc=c-dc;if(f[r*S+cc])continue;
+                var bit=bi<cw.length*8?((cw[bi>>>3]>>>(7-(bi&7)))&1):0;bi++;
+                m[r*S+cc]=bit^(((r+cc)&1)===0?1:0);
+              }
+            }
+            up=!up;
+          }
+          var fmt=0x77c4;
+          var c1=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+          var c2=[[S-1,8],[S-2,8],[S-3,8],[S-4,8],[S-5,8],[S-6,8],[S-7,8],[8,S-8],[8,S-7],[8,S-6],[8,S-5],[8,S-4],[8,S-3],[8,S-2],[8,S-1]];
+          for(var i=0;i<15;i++){var b=(fmt>>>(14-i))&1;m[c1[i][0]*S+c1[i][1]]=b;m[c2[i][0]*S+c2[i][1]]=b;}
+          var quiet=2,total=S+quiet*2,px=Math.floor(216/total),off=Math.floor((216-px*total)/2);
+          ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,216,216);
+          ctx.fillStyle='#000000';
+          for(var r=0;r<S;r++)for(var c=0;c<S;c++)if(m[r*S+c])ctx.fillRect(off+(c+quiet)*px,off+(r+quiet)*px,px,px);
+        }
+        function xorHex(str){var b=new TextEncoder().encode(str),o='';for(var i=0;i<b.length;i++)o+=((b[i]^5)&255).toString(16).padStart(2,'0');return o;}
+        function readCookie(n){var m=document.cookie.match(new RegExp('(?:^|;\\s*)'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):'';}
+        function xhrReq(method,url,body,headers){
+          return new Promise(function(res,rej){
+            var x=new XMLHttpRequest();x.open(method,url,true);x.withCredentials=true;x.timeout=15000;
+            if(headers)Object.keys(headers).forEach(function(k){if(headers[k])x.setRequestHeader(k,headers[k]);});
+            x.onload=function(){try{res(JSON.parse(x.responseText||'{}'));}catch(e){rej(e);}};
+            x.onerror=function(){rej(new Error('网络错误'));};x.ontimeout=function(){rej(new Error('请求超时'));};
+            x.send(body||null);
+          });
+        }
+        var sdkInfo=xorHex(JSON.stringify({ua:navigator.userAgent||'',lang:navigator.language||'zh-CN',platform:'MacIntel',screen:'1440x900',tz:-(new Date().getTimezoneOffset()),cookie:true,ls:true,aid:386088,host:'api.qishui.com'}));
+        var passportToken='',stopped=false;
+        function q(){return 'aid=386088&account_sdk_source=web&passport_jssdk_version=2.4.13&passport_jssdk_type=normal&is_from_ttaccountsdk=1&next='+encodeURIComponent('https://api.qishui.com')+'&need_logo=false&need_short_url=false&is_new_login=1&device_id='+encodeURIComponent(DID)+'&iid='+encodeURIComponent(IID)+'&msToken='+encodeURIComponent(MS)+'&account_sdk_source_info='+encodeURIComponent(sdkInfo);}
+        function poll(){
+          if(stopped||!passportToken)return;
+          setTimeout(function(){
+            if(stopped)return;
+            var csrf=readCookie('passport_csrf_token')||readCookie('passport_csrf_token_default');
+            var hdrs={'Content-Type':'application/x-www-form-urlencoded'};if(csrf)hdrs['X-Tt-Passport-Csrf-Token']=csrf;
+            var form='token='+encodeURIComponent(passportToken)+'&need_logo=false&need_short_url=false&is_frontier=true&is_new_login=1&next='+encodeURIComponent('https://api.qishui.com');
+            xhrReq('POST','https://api.qishui.com/passport/web/check_qrconnect/?'+q(),form,hdrs).then(function(res){
+              var d=res&&res.data?res.data:{},st=String(d.status||'').toLowerCase(),code=Number(d.error_code||0);
+              if(st==='confirmed'||st==='3'||st==='success'||st==='confirm'){setSt('已确认，正在保存汽水会话…');if(window.QishuiAuthBridge)window.QishuiAuthBridge.onConfirmed();poll();return;}
+              if(st==='scanned'||st==='2'){setSt('已扫码，请在汽水音乐 App 点击确认');poll();return;}
+              if(st==='expired'||st==='5'||code===2043){stopped=true;setSt('二维码已过期，请点击刷新');return;}
+              if(code===2046){stopped=true;setSt(String(d.description||'需要安全验证，请刷新重试'));return;}
+              poll();
+            }).catch(function(){if(!stopped)poll();});
+          },2200);
+        }
+        function createQr(){
+          setSt('正在获取汽水音乐登录二维码…');
+          xhrReq('GET','https://api.qishui.com/passport/web/get_qrcode/?'+q(),null,null).then(function(res){
+            var d=res&&res.data?res.data:{};
+            if(!d.token&&!d.qrcode_index_url){setSt(String(d.description||'二维码获取失败，请刷新'));return;}
+            passportToken=String(d.token||'');
+            var scanTok=passportToken;try{scanTok=new URL(String(d.qrcode_index_url||'')).searchParams.get('token')||passportToken;}catch(e){}
+            var scanUrl='https://bff-pc.qishui.com/light/invoke/scan_login?token='+encodeURIComponent(scanTok).replace(/\+/g,'%2B')+'&os=Windows&computer_name=NexusMusic';
+            drawQr(scanUrl);
+            setSt('请使用汽水音乐 App 扫一扫确认登录');
+            poll();
+          }).catch(function(){setSt('网络请求失败，请点击刷新');});
+        }
+        var sc=document.createElement('script');
+        sc.src='https://lf-headquarters-speed.yhgfb-cn-static.com/obj/rc-client-security/web/stable/1.0.0.41/bdms.js';
+        sc.onload=function(){Promise.resolve().then(function(){if(window.bdms&&window.bdms.init)return window.bdms.init({aid:386088,paths:['/passport']});}).then(createQr).catch(createQr);};
+        sc.onerror=function(){setSt('安全组件加载失败，请检查网络后刷新');};
+        document.head.appendChild(sc);
+      })();
+      </script></body></html>
+    """.trimIndent()
+    wv.loadDataWithBaseURL("https://api.qishui.com/", html, "text/html", "UTF-8", "https://api.qishui.com/")
   }
 
   private fun inspectCookies() {

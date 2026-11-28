@@ -23,7 +23,10 @@ import type {Track} from '../domain/track.ts';
 import {QueuePanel,QueueView} from './QueueView.tsx';
 import {useTheme,useThemedStyles,type Theme} from './theme.tsx';
 import {classicArtworkLayout,classicBlushBackground,classicInk,classicLyricLayout,classicMetadataLayout,classicSkipIcon,paper,sollinTokens} from './tokens.ts';
-import { ClassicLyrics,ClassicLyricChrome } from './Lyrics.tsx';
+import { ClassicLyrics,ClassicLyricChrome,Lyrics } from './Lyrics.tsx';
+import { PlayModeButton } from './PlayModeButton.tsx';
+import { QualityPickerSheet,QualityPill,qualityBadgeText } from './QualityPickerSheet.tsx';
+import { Toast,useToast } from './Toast.tsx';
 import { LyricChoiceModal } from './LyricChoiceModal.tsx';
 import { FontSettings } from './FontSettings.tsx';
 import { EqualizerSettings } from './EqualizerSettings.tsx';
@@ -90,6 +93,8 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
   useSyncExternalStore(services.offlineDownloads.subscribe,services.offlineDownloads.getSnapshot);
   const [commenting,setCommenting]=useState<Track|null>(null),[similarTrack,setSimilarTrack]=useState<Track|null>(null);
   const [choosingLyric,setChoosingLyric]=useState(false),[classicLyricRequest,setClassicLyricRequest]=useState(0);
+  const [classicLyricsMode,setClassicLyricsMode]=useState(false),[qualitySheetOpen,setQualitySheetOpen]=useState(false);
+  const toast=useToast();
   const [matching,setMatching]=useState<Track|null>(null),[adding,setAdding]=useState<readonly Track[]>([]);
   const [open, setOpen] = useState(false);
   const launchApplied=useRef(false);
@@ -112,7 +117,7 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
   const [download,setDownload]=useState<{track:Track;returnPanel:'menu'|'content'|null;submitting:boolean;report?:DownloadSubmission;error?:string}|null>(null),downloadSerial=useRef(0);
   useEffect(()=>{
     downloadSerial.current++;setDownload(null);
-    if(!open){setDetails(false);setPanel(null);setCommenting(null);setAdding([]);setMatching(null);setChoosingLyric(false);setReturnPanel(null);}
+    if(!open){setDetails(false);setPanel(null);setCommenting(null);setAdding([]);setMatching(null);setChoosingLyric(false);setReturnPanel(null);setClassicLyricsMode(false);setQualitySheetOpen(false);}
     else if(detailPanel==='download'||detailPanel==='similar')setDetails(false);
   },[open,state.queue.currentId]);
   useEffect(()=>()=>{downloadSerial.current++;},[]);
@@ -186,9 +191,9 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
         ['photo','写真歌词','写真封面、长歌词与轻触快捷操作','person-outline'],
         ['stage','歌词舞台','全屏逐字大字舞台，支持经典/霓虹/赛博/炫彩','text-outline'],
         ['groove','黑胶螺旋槽','同心螺旋音槽、频谱律动光环与唱针聚焦歌词','disc'],
-        ['groove2','黑胶螺旋槽 2','Sollin 风格刻槽黑胶：阿基米德螺旋刻字、光学放大镜、衍射光扇与刻槽参数','aperture-outline'],
+        ['groove2','黑胶螺旋槽 2','刻槽黑胶体验：阿基米德螺旋刻字、光学放大镜、衍射光扇与刻槽参数','aperture-outline'],
         ['teletype','电报打字机','复古纸带与磷光终端，逐字敲击实时电传歌词','terminal-outline'],
-        ['teletype2','电报打字机 2','Sollin Model 33 机械电传机：链式打孔纸带、指针 VU 表、副歌红带与立体机械键','print-outline'],
+        ['teletype2','电报打字机 2','Model 33 机械电传机：链式打孔纸带、指针 VU 表、副歌红带与立体机械键','print-outline'],
       ] as const).map(([id,title,desc,icon],idx)=>{
         const active=preferences.playerLayout===id;
         return <View key={id}>
@@ -296,26 +301,22 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
     </View>);
   // Rounded double-triangle ink from the existing official font.
   const skipGlyph=(dir:'back'|'forward')=><View style={{flexDirection:'row',gap:classicSkipIcon.gap}}>{[0,1].map(index=><View key={index} style={{width:classicSkipIcon.triangleWidth,height:classicSkipIcon.lineHeight,alignItems:'center'}}><CupertinoGlyph name="playFill" size={classicSkipIcon.size} color={classicHeaderInk} style={{width:24,lineHeight:classicSkipIcon.lineHeight,textAlign:'center',transform:[{scaleX:dir==='back'?-classicSkipIcon.scaleX:classicSkipIcon.scaleX}]}}/></View>)}</View>;
-  const cycleRepeat=()=>{void services.preferences.update({repeat:preferences.repeat==='off'?'all':preferences.repeat==='all'?'one':'off'}).catch(()=>Alert.alert('设置未保存'));};
+  const cyclePlayMode=(next:{repeat:'off'|'one'|'all';shuffle:boolean;label:string})=>{
+    void services.preferences.update({repeat:next.repeat,shuffle:next.shuffle}).then(()=>toast.show(next.label)).catch(()=>Alert.alert('设置未保存'));
+  };
+  const qualityPillLabel=entry.track.origin.kind==='local'
+    ?(typeof entry.track.metadata.localFormat==='string'?entry.track.metadata.localFormat.toUpperCase():'本地')
+    :qualityBadgeText(state.media?.quality??preferences.quality);
+  const openQualityPicker=()=>{
+    if(entry.track.origin.kind==='local'){toast.show('本地音频以原始文件播放');return;}
+    setQualitySheetOpen(true);
+  };
   // IMG_4854: 308pt square at 430pt width (61pt side margins), transport 70pt play.
   const artworkSide=Math.min(width-122,308);
-  const classicHero=<>
-    {/* IMG_4854 places the menu dots 5pt higher and 14pt further right than
-        the shared 24pt inset; the 35pt row preserves the menu anchor. */}
-    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:35}}>
-      <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
-      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setReturnPanel(null);setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicHeaderInk,{transform:[{translateY:-1.83}]})}</View>
-    </View>
-    <View testID="classic-artwork" collapsable={false} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><PlayerCover services={services} track={entry.track} size={artworkSide}/></View>
-    <View style={{marginTop:classicArtworkLayout.titleBefore,alignItems:'center',gap:2}}>
-      <Text numberOfLines={1} style={{fontSize:classicMetadataLayout.titleSize,lineHeight:classicMetadataLayout.titleLineHeight,fontWeight:'700',color:theme.mode==='dark'?theme.palette.text:classicInk.text,transform:[{translateY:classicMetadataLayout.titleOffset}]}}>{entry.track.title}</Text>
-      {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
-      <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.mode==='dark'?theme.palette.secondary:classicInk.secondary,transform:[{translateY:classicMetadataLayout.artistOffset}]}}>{entry.track.artist}</Text>
-    </View>
-    <View style={{marginTop:classicLyricLayout.before,marginBottom:classicLyricLayout.after}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></View>
+  const classicTransportAndTools=<>
     {/* Reference metrics: track 42..388pt, centre 668pt; 17pt artist pushes the
         stack down 3.6pt, so -4.5pt keeps the transport/tools on their anchors. */}
-    <View style={{marginHorizontal:18,marginTop:-4.5}}><PlaybackProgress services={services} variant={theme.mode==='dark'?'default':'paper'}/></View>
+    <View style={{marginHorizontal:18,marginTop:classicLyricsMode?4:-4.5}}><PlaybackProgress services={services} variant={theme.mode==='dark'?'default':'paper'}/></View>
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:24.5,marginTop:2}}>
       {glyphButton(skipGlyph('back'),'上一首',()=>services.playback.next(-1))}
       {/* IMG_4854 pause is two 6.3x22.55pt capsule bars 6.6pt apart, not the Ionicons glyph. */}
@@ -324,16 +325,51 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
     </View>
     {/* IMG_4854 tool centres run 71.5..358.2pt; 4th icon adds to playlist, 5th opens dedicated queue. */}
     <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:0,marginHorizontal:25.5}}>
-      {glyphButton(<Ionicons name="repeat" size={26} color={classicToolInk} style={{transform:[{scaleX:1.047},{scaleY:1.171}]}}/>,`循环：${preferences.repeat}`,cycleRepeat)}
+      <PlayModeButton repeat={preferences.repeat} shuffle={preferences.shuffle} color={classicToolInk} activeColor={theme.mode==='dark'?theme.palette.accent:paper.accent} mutedColor={classicToolInk} size={25} onCycle={cyclePlayMode}/>
       {glyphButton(<Ionicons name="chatbubbles-outline" size={20} color={classicToolInk} style={{transform:[{scaleX:-1.164},{scaleY:.957}]}}/>,'歌曲评论',()=>openComments(entry.track,false))}
-      {glyphButton(<MaterialIcons name={isFav?'favorite':'favorite-border'} size={24} color={classicToolInk}/>,'收藏歌曲',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},isFav?'已收藏':'未收藏')}
+      {glyphButton(<MaterialIcons name={isFav?'favorite':'favorite-border'} size={24} color={isFav?(theme.mode==='dark'?theme.palette.accent:paper.accent):classicToolInk}/>,'收藏歌曲',()=>{void services.songFavorites.toggle(entry.track).catch(()=>Alert.alert('保存失败','原有收藏保留，请重试。'));},isFav?'已收藏':'未收藏')}
       <Pressable accessibilityRole="button" accessibilityLabel="加入歌单" onPress={()=>openPlaylist([entry.track],false)} style={{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center'}}>{playlistJar}</Pressable>
       {glyphButton(<MaterialIcons name="format-list-bulleted" size={24} color={classicToolInk} style={{transform:[{scaleX:1.091}]}}/>,'查看播放队列',()=>openQueueSheet(null))}
     </View>
-    {/* Kept above the safe-area fold (932pt screen, ~898pt viewport) so the
-        reference's last line stays crisp on a single clean non-scrolling screen. */}
-    <Text style={{textAlign:'center',marginTop:-9,fontSize:11,color:theme.palette.secondary}}>{status.text?status.text:(localQuality??`${preferences.quality} 档位 · ${state.media?.quality??'待解析'}${qualityNotice} 实际请求`)}</Text>
+    <View style={{alignItems:'center',marginTop:-8}}>
+      {status.text
+        ?<Text style={{textAlign:'center',fontSize:11,color:theme.palette.secondary}}>{status.text}</Text>
+        :<QualityPill label={qualityPillLabel} dark={theme.mode==='dark'} accent={theme.mode==='dark'?theme.palette.accent:paper.accent} onPress={openQualityPicker}/>}
+    </View>
     <ClassicLyricChrome chrome={false} services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} openRequest={classicLyricRequest}/>
+  </>;
+  const classicHero=classicLyricsMode?<>
+    <View style={{flexDirection:'row',alignItems:'center',gap:12,minHeight:48}}>
+      <Pressable testID="classic-lyrics-back" accessibilityRole="button" accessibilityLabel="返回封面视图" onPress={()=>setClassicLyricsMode(false)} style={{flexDirection:'row',alignItems:'center',gap:12,flex:1,minWidth:0}}>
+        <View style={{width:46,height:46,borderRadius:10,overflow:'hidden',borderWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
+          <Cover services={services} track={entry.track} size={46} radius={10}/>
+        </View>
+        <View style={{flex:1,minWidth:0,gap:2}}>
+          <Text numberOfLines={1} style={{fontSize:16,fontWeight:'700',color:theme.mode==='dark'?theme.palette.text:classicInk.text}}>{entry.track.title}</Text>
+          <Text numberOfLines={1} style={{fontSize:13,color:theme.mode==='dark'?theme.palette.secondary:classicInk.secondary}}>{entry.track.artist}</Text>
+        </View>
+      </Pressable>
+      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setReturnPanel(null);setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicHeaderInk)}</View>
+    </View>
+    <View testID="classic-full-lyrics-viewport" style={{flex:1,minHeight:180,overflow:'hidden'}}>
+      <Lyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} presentation="classicFull" chrome={false}/>
+    </View>
+    {classicTransportAndTools}
+  </>:<>
+    {/* IMG_4854 places the menu dots 5pt higher and 14pt further right than
+        the shared 24pt inset; the 35pt row preserves the menu anchor. */}
+    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:35}}>
+      <Pressable testID="player-drag-handle" accessibilityRole="button" accessibilityLabel="收起播放页" onTouchStart={startTouch(dismissTouchStart)} onTouchEnd={finishTouch(dismissTouchStart,'down',()=>setOpen(false))} onPress={()=>setOpen(false)} style={{minWidth:44,minHeight:44,justifyContent:'center'}}><Ionicons name="chevron-down" size={24} color={theme.palette.secondary}/></Pressable>
+      <View style={{marginRight:-14}}>{iconButton('ellipsis-vertical','更多播放控制',()=>{setReturnPanel(null);setDetailPanel('menu');setDetails(true);},theme.mode==='dark'?22:20,theme.mode==='dark'?theme.palette.secondary:classicHeaderInk,{transform:[{translateY:-1.83}]})}</View>
+    </View>
+    <Pressable testID="classic-artwork" accessibilityRole="button" accessibilityLabel="点击封面切换全屏歌词" collapsable={false} onPress={()=>setClassicLyricsMode(true)} style={{marginTop:classicArtworkLayout.before,alignSelf:'center',width:artworkSide,height:artworkSide,borderRadius:preferences.coverRadius,overflow:'hidden'}}><PlayerCover services={services} track={entry.track} size={artworkSide}/></Pressable>
+    <View style={{marginTop:classicArtworkLayout.titleBefore,alignItems:'center',gap:2}}>
+      <Text numberOfLines={1} style={{fontSize:classicMetadataLayout.titleSize,lineHeight:classicMetadataLayout.titleLineHeight,fontWeight:'700',color:theme.mode==='dark'?theme.palette.text:classicInk.text,transform:[{translateY:classicMetadataLayout.titleOffset}]}}>{entry.track.title}</Text>
+      {/* IMG_4854: artist ink 493.7..508.3pt is 0.74x the 22pt title, i.e. 17pt. */}
+      <Text numberOfLines={1} style={{marginTop:10,fontSize:17,color:theme.mode==='dark'?theme.palette.secondary:classicInk.secondary,transform:[{translateY:classicMetadataLayout.artistOffset}]}}>{entry.track.artist}</Text>
+    </View>
+    <Pressable accessibilityRole="button" accessibilityLabel="查看完整歌词" onPress={()=>setClassicLyricsMode(true)} style={{marginTop:classicLyricLayout.before,marginBottom:classicLyricLayout.after}}><ClassicLyrics services={services} track={lyricTrack} font={effectiveLyricFont(fonts)} onOpenSettings={()=>setClassicLyricRequest(value=>value+1)}/></Pressable>
+    {classicTransportAndTools}
   </>;
   const miniInner=<View style={[styles.mini,fontScale>1.45&&{flexWrap:'wrap'}]}>
       <View style={{width:40,height:40,borderRadius:10,overflow:'hidden',borderWidth:StyleSheet.hairlineWidth,borderColor:s.hairline}}>
@@ -366,7 +402,7 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
           {preferences.playerLayout==='immersive'||preferences.playerLayout==='am'||preferences.playerLayout==='am2'||preferences.playerLayout==='groove'||preferences.playerLayout==='groove2'||preferences.playerLayout==='teletype2'?<View style={{width:36,height:36,borderRadius:18,backgroundColor:preferences.playerLayout==='teletype2'?'#2B2826':preferences.playerLayout==='immersive'?'rgba(0,0,0,0.28)':'rgba(255,255,255,0.14)',borderWidth:preferences.playerLayout==='teletype2'?1:0,borderColor:'rgba(255,255,255,0.16)',alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-down" color="#FFFFFF" size={22}/></View>:preferences.playerLayout==='vinyl'||(preferences.playerLayout==='teletype'&&preferences.teletypeTheme==='paper')?<View style={{width:36,height:36,borderRadius:18,backgroundColor:'rgba(66,62,60,0.07)',alignItems:'center',justifyContent:'center'}}><Ionicons name="chevron-down" color={paper.icon} size={22}/></View>:<Ionicons name="chevron-down" color={preferences.playerLayout==='photo'?'rgba(255,255,255,0.82)':'#FFFFFF'} size={26}/>}
         </Pressable>
         {(preferences.playerLayout==='wave'||preferences.playerLayout==='immersive'||preferences.playerLayout==='am2')&&<Pressable accessibilityRole="button" accessibilityLabel="选择歌词来源" onPress={()=>openLyricChoice(false)} style={{position:'absolute',top:landscape?8:Platform.OS==='android'&&preferences.playerLayout==='wave'?Math.max(insets.top+2,30):Math.max(insets.top+4,52),right:16,minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',zIndex:4}}>{preferences.playerLayout==='immersive'||preferences.playerLayout==='am2'?<View style={{width:36,height:36,borderRadius:18,backgroundColor:preferences.playerLayout==='immersive'?'rgba(0,0,0,0.28)':'rgba(255,255,255,0.14)',alignItems:'center',justifyContent:'center'}}><Ionicons name="language-outline" size={19} color="rgba(255,255,255,0.86)"/></View>:<Ionicons name="language-outline" size={20} color="rgba(255,255,255,0.68)"/>}</Pressable>}
-        {open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setReturnPanel(null);setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setReturnPanel(null);setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setReturnPanel(null);setDetailPanel('lyrics');setDetails(true);}} onLyricSource={()=>openLyricChoice(false)} onQueue={()=>openQueueSheet(null)} onComments={()=>openComments(actualMatch??entry.track,false)} onSleep={()=>{setPanelReturnsToMenu(false);setPanel('sleep');}} onPlaylist={()=>openPlaylist([entry.track],false)} onArtistPress={handleArtistPress}/>}
+        {open&&<ModernPlayer key={JSON.stringify([entry.id,lyricTrack.origin,lyricTrack.metadata.davVersion])} services={services} track={actualMatch??entry.track} favoriteTrack={entry.track} lyricTrack={lyricTrack} font={effectiveLyricFont(fonts)} layout={preferences.playerLayout} visible={!details} onMore={()=>{setReturnPanel(null);setDetailPanel('menu');setDetails(true);}} onStyle={()=>{styleReturnsToMenu.current=false;setReturnPanel(null);setDetailPanel('style');setDetails(true);}} onLyricsSettings={()=>{setReturnPanel(null);setDetailPanel('lyrics');setDetails(true);}} onLyricSource={()=>openLyricChoice(false)} onQueue={()=>openQueueSheet(null)} onComments={()=>openComments(actualMatch??entry.track,false)} onSleep={()=>{setPanelReturnsToMenu(false);setPanel('sleep');}} onPlaylist={()=>openPlaylist([entry.track],false)} onArtistPress={handleArtistPress} onQuality={openQualityPicker} onNotify={msg=>toast.show(msg)}/>}
       </View>:<PlayerScroll classic scrollable={landscape||fontScale>1.35}>
         {classicHero}
       </PlayerScroll>}</View>
@@ -408,6 +444,8 @@ export function Player({ services, fused=false, barVariant='liquid', onSearchArt
           </ScrollView>
         </SafeAreaView>
       </View>}
+      <QualityPickerSheet services={services} track={entry.track} visible={open&&qualitySheetOpen} onClose={()=>setQualitySheetOpen(false)} onSelected={msg=>toast.show(msg)}/>
+      <Toast message={toast.message} onDismiss={toast.clear}/>
     </Modal>
   </>;
 }

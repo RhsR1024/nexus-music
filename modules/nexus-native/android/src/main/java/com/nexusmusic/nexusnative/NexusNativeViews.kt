@@ -881,11 +881,16 @@ class NexusLocalCanvasView(context: Context, appContext: AppContext) : ExpoView(
   val onAction by EventDispatcher()
 
   var html: String = ""
+  var assetsJson: String = ""
   var stateJson: String = "{}"
 
   private var loaded = false
   private var appliedHtmlHash = 0
+  private var appliedAssets = ""
   private var appliedState = ""
+
+  private fun safeInlineJson(raw: String): String =
+    raw.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
 
   private inner class CanvasBridge {
     @android.webkit.JavascriptInterface
@@ -916,7 +921,9 @@ class NexusLocalCanvasView(context: Context, appContext: AppContext) : ExpoView(
       override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = true
       override fun onPageFinished(view: WebView?, url: String?) {
         loaded = true
+        appliedAssets = ""
         appliedState = ""
+        pushAssetsIfNeeded()
         pushStateIfNeeded()
       }
     }
@@ -936,17 +943,27 @@ class NexusLocalCanvasView(context: Context, appContext: AppContext) : ExpoView(
       return
     }
     if (loaded) {
+      pushAssetsIfNeeded()
       pushStateIfNeeded()
     }
+  }
+
+  private fun pushAssetsIfNeeded() {
+    if (assetsJson == appliedAssets || assetsJson.isEmpty()) return
+    appliedAssets = assetsJson
+    val safe = safeInlineJson(assetsJson)
+    webView.evaluateJavascript("window.nexusCanvas && (window.nexusCanvas.setAssets ? window.nexusCanvas.setAssets($safe) : window.nexusCanvas.setState($safe));", null)
   }
 
   private fun pushStateIfNeeded() {
     if (stateJson == appliedState || stateJson.isEmpty()) return
     appliedState = stateJson
-    webView.evaluateJavascript("window.nexusCanvas && window.nexusCanvas.setState($stateJson);", null)
+    val safe = safeInlineJson(stateJson)
+    webView.evaluateJavascript("window.nexusCanvas && window.nexusCanvas.setState($safe);", null)
   }
 
   override fun onDetachedFromWindow() {
+    webView.evaluateJavascript("window.nexusCanvas && window.nexusCanvas.setPaused && window.nexusCanvas.setPaused(true);", null)
     webView.removeJavascriptInterface("NexusCanvasBridge")
     webView.stopLoading()
     webView.destroy()
