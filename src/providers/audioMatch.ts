@@ -68,6 +68,7 @@ export interface AudioMatchState {
 }
 
 const STORAGE_KEY = 'audioMatch.v1';
+export const AUDIO_MATCH_RECORD_VERSION = 2;
 const SECRETS_KEY = 'nexus.audiomatch.keys.v1';
 export const MAX_UPLOAD_CLIP_BYTES = 1_500_000; // 1.5 MiB bounded upload clip
 
@@ -503,7 +504,7 @@ export class AudioMatchCoordinator {
     }
     if (this.repo) {
       await this.repo.put(STORAGE_KEY, {
-        version: 2,
+        version: AUDIO_MATCH_RECORD_VERSION,
         history: this.state.history,
         cloud: { provider: next.provider, acrHost: next.acrHost },
       });
@@ -714,7 +715,7 @@ export class AudioMatchCoordinator {
     if (this.repo) {
       await this.repo
         .put(STORAGE_KEY, {
-          version: 2,
+          version: AUDIO_MATCH_RECORD_VERSION,
           history: next,
           cloud: { provider: this.state.cloudConfig.provider, acrHost: this.state.cloudConfig.acrHost },
         })
@@ -727,7 +728,7 @@ export class AudioMatchCoordinator {
     if (this.repo) {
       await this.repo
         .put(STORAGE_KEY, {
-          version: 2,
+          version: AUDIO_MATCH_RECORD_VERSION,
           history: [],
           cloud: { provider: this.state.cloudConfig.provider, acrHost: this.state.cloudConfig.acrHost },
         })

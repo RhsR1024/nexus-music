@@ -1,10 +1,10 @@
 import type {Repository} from './repository.ts';
 // Preserve the exact original JSON, including malformed bytes, before allowing
 // new snapshots to be written. Future versions must remain untouched.
-export async function restoreRecord(repository:Pick<Repository,'get'|'quarantine'>,key:string,restore:()=>Promise<void>,uuid:()=>string):Promise<boolean>{
+export async function restoreRecord(repository:Pick<Repository,'get'|'quarantine'>,key:string,restore:()=>Promise<void>,uuid:()=>string,maxVersion=1):Promise<boolean>{
   try{
     const raw=await repository.get<unknown>(key);
-    if(raw&&typeof raw==='object'&&!Array.isArray(raw)&&typeof (raw as {version?:unknown}).version==='number'&&(raw as {version:number}).version>1)throw new FutureRecordError();
+    if(raw&&typeof raw==='object'&&!Array.isArray(raw)&&typeof (raw as {version?:unknown}).version==='number'&&(raw as {version:number}).version>maxVersion)throw new FutureRecordError();
   }catch(error){if(error instanceof FutureRecordError)throw error;if(!(error instanceof SyntaxError))throw error;await repository.quarantine(key,`recovery.${key}.${uuid()}`);return false;}
   try{await restore();return true;}catch(error){if(!(error instanceof InvalidRecordError))throw error;await repository.quarantine(key,`recovery.${key}.${uuid()}`);return false;}
 }

@@ -13,3 +13,15 @@ test('storage read failures are not mistaken for corrupted records',async()=>{
 });
 
 test('operational failures during restore keep active data untouched',async()=>{let moved=false;const repository={get:async<T>()=>({version:1} as T),quarantine:async()=>{moved=true;}};await assert.rejects(restoreRecord(repository,'sources.v1',async()=>{throw Error('native module unavailable');},()=> 'fixture'));assert.equal(moved,false);});
+
+test('versioned records allow up to maxVersion and still reject strictly newer future versions',async()=>{
+  const quarantined:string[]=[];
+  let restored=false;
+  const repository={get:async<T>()=>({version:2,history:[],cloud:{provider:'audd'}} as T),quarantine:async(key:string,backup:string)=>{quarantined.push(key,backup);}};
+  assert.equal(await restoreRecord(repository,'audioMatch.v1',async()=>{restored=true;},()=>'fixture',2),true);
+  assert.equal(restored,true);
+  assert.equal(quarantined.length,0);
+  repository.get=async<T>()=>({version:3} as T);
+  await assert.rejects(restoreRecord(repository,'audioMatch.v1',async()=>{},()=>'fixture',2),FutureRecordError);
+  assert.equal(quarantined.length,0);
+});

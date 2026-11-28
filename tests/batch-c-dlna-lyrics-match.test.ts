@@ -8,7 +8,8 @@ import {
   parseUpnpDeviceDescription,
   parseUpnpTime,
 } from '../src/providers/dlna.ts';
-import { assessAcousticSignal, AudioMatchCoordinator } from '../src/providers/audioMatch.ts';
+import { assessAcousticSignal, AUDIO_MATCH_RECORD_VERSION, AudioMatchCoordinator } from '../src/providers/audioMatch.ts';
+import { restoreRecord } from '../src/storage/recovery.ts';
 import { formatBluetoothLyric } from '../src/lyrics/bluetoothLyrics.ts';
 import { defaults, PreferenceStore, validatePreferences } from '../src/app/preferences.ts';
 import type { Track } from '../src/domain/track.ts';
@@ -169,6 +170,32 @@ test('AudioMatchCoordinator assesses acoustic signal, searches phrases across pl
   assert.equal(found.length, 1);
   await coord.recordMatch(found[0]!);
   assert.equal(coord.getSnapshot().history.length, 1);
+
+  await coord.saveCloudConfig({ provider: 'audd', acrHost: 'identify-cn-north-1.acrcloud.cn' });
+  const quarantined: string[] = [];
+  const nextCoord = new AudioMatchCoordinator({
+    native: null,
+    repository: {
+      get: async <T>(k: string) => db.get(k) as T | undefined,
+      put: async (k, v) => { db.set(k, v); },
+    },
+    search: async () => ({ items: [] }),
+  });
+  const ok = await restoreRecord(
+    {
+      get: async <T>(k: string) => db.get(k) as T | undefined,
+      quarantine: async (k, b) => { quarantined.push(k, b); },
+    },
+    'audioMatch.v1',
+    () => nextCoord.restore(),
+    () => 'cold-restart',
+    AUDIO_MATCH_RECORD_VERSION,
+  );
+  assert.equal(ok, true);
+  assert.equal(quarantined.length, 0);
+  assert.equal(nextCoord.getSnapshot().cloudConfig.provider, 'audd');
+  assert.equal(nextCoord.getSnapshot().history.length, 1);
+  assert.equal(nextCoord.getSnapshot().history[0]?.track.title, '七里香');
 });
 
 test('Bluetooth lyrics formatting and floating/car lyric preferences validate and persist', async () => {
